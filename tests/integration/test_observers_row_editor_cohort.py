@@ -132,6 +132,24 @@ def test_the_selection_template_still_posts_with_the_bulk_form(
     assert "row-editor-bar" not in body
 
 
+def test_a_rejected_edit_keeps_the_stored_rule_in_the_builder(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #2988: the error path re-renders with the operator's
+    values, and the builder must still hold the stored rule."""
+    rs, observer = _session(client, db, "orc-reject")
+    db.add(Observer(session_id=rs.id, email="taken@example.org", status="active"))
+    db.commit()
+    response = client.post(
+        f"/operator/sessions/{rs.id}/observers/{observer.id}/update",
+        data={"email": "taken@example.org", "display_name": "O",
+              "tag_1": "", "status": "active"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert _rule_attr(_bar(response.text)) == RULE
+
+
 def test_save_still_saves_the_row_alone(client: TestClient, db: Session) -> None:
     """Rung 2: the builder's fields reach the route and are ignored."""
     rs, observer = _session(client, db, "orc-save")

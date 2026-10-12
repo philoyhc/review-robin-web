@@ -84,6 +84,12 @@ def _require_observer_in_session(
     return observer
 
 
+#: `_render_observers_page`'s default for the row editor's rule: the edited
+#: observer's stored one (none on `Add`). A sentinel rather than ``None``,
+#: because ``None`` is a rule a caller can mean: an emptied builder.
+_STORED_RULE: Any = object()
+
+
 def _render_observers_page(
     *,
     request: Request,
@@ -98,7 +104,7 @@ def _render_observers_page(
     panel_open: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
-    edit_cohort_rule: dict[str, Any] | None = None,
+    edit_cohort_rule: dict[str, Any] | None = _STORED_RULE,
     selected_ids: set[int] | None = None,
     focus_id: int | None = None,
     issues: list | None = None,
@@ -167,9 +173,16 @@ def _render_observers_page(
                 "tag_1": edited.tag_1 or "",
                 "status": edited.status,
             }
-            # operator pages Item 4 — the row editor's builder loads the
-            # observer's saved rule.
-            edit_cohort_rule = edited.cohort_rule
+    # operator pages Item 4 — the row editor's builder loads the observer's
+    # stored rule. Resolved apart from `edit_values`: a rejected save
+    # (a taken email, say) re-renders with the operator's values, and the
+    # builder must not come back empty while the rule is still stored.
+    if edit_cohort_rule is _STORED_RULE:
+        edited = (
+            next((o for o in all_observers if o.id == edit_id), None)
+            if edit_id is not None else None
+        )
+        edit_cohort_rule = edited.cohort_rule if edited is not None else None
     if edit_values is None and add_mode:
         edit_values = {
             "email": "",
