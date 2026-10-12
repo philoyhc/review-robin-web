@@ -419,3 +419,19 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **A rejected save.** `Edit`, type an email another observer uses,
   Save: the error shows under the row and the builder still holds the
   rule as edited.
+
+## Edit opens the editor; several rows edit their rule alone (operator pages Item 4, rung 4)
+
+- [ ] **No builder on selection.** Tick a row: the expander shows the
+  count, `Edit`, `Inactivate`/`Activate` and `Delete`, and no rule
+  builder.
+- [ ] **One row.** `Edit`: the row editor opens with the rule under it,
+  as `Add new` does.
+- [ ] **Several rows.** Tick two with the same rule, `Edit`: both rows
+  highlighted and read-only, "The 2 selected observers are able to see
+  responses where" under the last, the rule loaded. Change it and Save:
+  both rows' Cohort column follows.
+- [ ] **Differing rules.** Tick two with different rules, `Edit`: the
+  builder starts empty with the "different cohort rules" note.
+- [ ] **Leaving.** In any editor, change something and click another
+  Setup tab: the browser asks before leaving; Cancel and Save do not.

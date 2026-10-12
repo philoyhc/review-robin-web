@@ -98,8 +98,8 @@ def test_observers_nav_tab_visible_when_flag_on(
 def test_observers_page_renders_core_cards(
     client: TestClient, db: Session
 ) -> None:
-    """Upload + Operator actions render; preview table empty-state
-    sits between them; Danger Zone is hidden until rows exist."""
+    """Upload and the selection's bulk form render; the preview
+    table's empty state shows; Danger Zone is hidden until rows exist."""
     review_session = _make_session(client, db, "obs-cards")
     _enable_observers(db, review_session)
     body = client.get(
@@ -107,7 +107,7 @@ def test_observers_page_renders_core_cards(
     ).text
     assert 'id="upload-csv"' in body
     assert "Upload Observers" in body
-    assert "Operator actions" in body
+    assert 'id="observers-bulk-form"' in body
     # No rows yet → no Danger Zone.
     assert "Delete all observers" not in body
     # Empty-state hint.
@@ -353,9 +353,12 @@ def test_observer_cohort_rule_save_rejects_empty_selection(
     assert response.status_code == 400
 
 
-def test_observer_cohort_rule_save_drops_blank_rule(
+def test_observer_cohort_rule_save_refuses_a_value_without_a_field(
     client: TestClient, db: Session
 ) -> None:
+    """A typed value with no field is half-filled (operator pages
+    Item 4): refused with the editor re-rendered, nothing written. It
+    was dropped silently before, saving an empty rule over the old."""
     review_session = _make_session(client, db, "obs-cohort-blank")
     _enable_observers(db, review_session)
     obs = Observer(
@@ -378,18 +381,48 @@ def test_observer_cohort_rule_save_drops_blank_rule(
         follow_redirects=False,
     )
 
+    assert response.status_code == 400
+    assert "Finish or clear each rule cell" in response.text
+    db.refresh(obs)
+    assert obs.cohort_rule is None
+
+
+def test_observer_cohort_rule_save_of_blank_cells_clears_the_rule(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, "obs-cohort-clear")
+    _enable_observers(db, review_session)
+    obs = Observer(
+        session_id=review_session.id, email="x@example.org", display_name="X",
+        cohort_rule={"combinator": "AND", "rules": [{
+            "field": "reviewer.tag1", "op": "IS",
+            "operand_tag": "", "operand_value": "math",
+        }]},
+    )
+    db.add(obs)
+    db.commit()
+    db.refresh(obs)
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        data={
+            "observer_ids": [obs.id],
+            "cohort_combinator": "AND",
+            "cohort_rule_field": [""],
+            "cohort_rule_op": ["IS THE SAME AS"],
+            "cohort_rule_operand_tag": ["observer.name"],
+            "cohort_rule_operand_value": [""],
+        },
+        follow_redirects=False,
+    )
     assert response.status_code == 303, response.text
     db.refresh(obs)
-    assert obs.cohort_rule == {"combinator": "AND", "rules": []}
+    assert obs.cohort_rule is None
 
 
 def test_observer_cohort_rule_round_trips_into_template(
     client: TestClient, db: Session
 ) -> None:
-    """After a save, the next GET should expose the saved rule on
-    each affected row's ``data-observer-cohort-rule`` signature
-    attribute, and the Cohort column should carry the friendly
-    summary."""
+    """After a save, the Cohort column carries the friendly summary."""
     review_session = _make_session(client, db, "obs-cohort-roundtrip")
     _enable_observers(db, review_session)
     o1 = Observer(
@@ -428,73 +461,9 @@ def test_observer_cohort_rule_round_trips_into_template(
     assert get_response.status_code == 200
     body = get_response.text
     assert f"observer-row-{o1.id}" in body
-    # Saved observer's row carries a populated signature; the
-    # other observer's row carries the empty placeholder.
-    assert (
-        'data-observer-cohort-rule="{&#34;combinator&#34;: &#34;AND&#34;,'
-        in body
-        or 'data-observer-cohort-rule=\'{"combinator": "AND",' in body
-        or "data-observer-cohort-rule=\"{" in body
-    )
     # Without configured friendly labels for reviewer.tag1, the
     # summary falls back to the canonical key.
     assert "reviewer.tag1 IS" in body
-
-
-def test_observer_cohort_rule_signature_is_byte_identical_across_rows(
-    client: TestClient, db: Session
-) -> None:
-    """The mixed-state JS does a string-set distinct-count over
-    ``data-observer-cohort-rule``; two rows saved with the same
-    rule must therefore render byte-identical signature strings.
-    Pins it: save the same payload to two observers via the
-    route, GET the page, assert both rows' attributes match
-    exactly."""
-    review_session = _make_session(client, db, "obs-cohort-bytewise")
-    _enable_observers(db, review_session)
-    o1 = Observer(
-        session_id=review_session.id, email="a@example.org", display_name="A"
-    )
-    o2 = Observer(
-        session_id=review_session.id, email="b@example.org", display_name="B"
-    )
-    db.add_all([o1, o2])
-    db.commit()
-    db.refresh(o1)
-    db.refresh(o2)
-
-    save_response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
-        data={
-            "observer_ids": [o1.id, o2.id],
-            "cohort_combinator": "AND",
-            "cohort_rule_field": ["reviewer.tag1"],
-            "cohort_rule_op": ["IS"],
-            "cohort_rule_operand_tag": [""],
-            "cohort_rule_operand_value": ["math"],
-        },
-        follow_redirects=False,
-    )
-    assert save_response.status_code == 303
-
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
-    ).text
-    import re
-
-    def _sig_for(row_id: int) -> str:
-        match = re.search(
-            rf'observer-row-{row_id}.*?data-observer-cohort-rule="([^"]*)"',
-            body,
-            re.DOTALL,
-        )
-        assert match, f"row {row_id} missing data-observer-cohort-rule"
-        return match.group(1)
-
-    sig1 = _sig_for(o1.id)
-    sig2 = _sig_for(o2.id)
-    assert sig1 == sig2
-    assert sig1  # non-empty (the saved rule produced a signature)
 
 
 def test_observer_cohort_rule_save_allowed_when_session_is_ready(

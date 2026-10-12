@@ -523,6 +523,16 @@ Taken 2026-10-12 at `ddd589d3`.
   operator with no value (`CONTAINS ""` matches every row) was refused
   only by the route — `CohortRule` now refuses it under every writer,
   the Observers CSV import included.
+- Rung 4 (2026-10-12), `Edit` opens the editor: the expander's builder,
+  its `<template>`, dirty gate and discard guard are gone; `Edit` is live
+  at any arity (`?edit_id=` for one row, `?rule_id=…` for several). The
+  several-row editor hangs under the last selected row, the rows
+  read-only, loading a shared rule or none with the "different cohort
+  rules" note, and posts `/observers/cohort-rule`, which now reads cells
+  as the row editor does (blank clears, half-filled 400s). The editor
+  took over the page's leave guard (`rrwLeaveWillPrompt`), now covering
+  row fields too. A browser test caught Save disabled in rule-only mode
+  (no email field read as an empty one); fixed before push.
 
 ### PR ladder
 
@@ -566,4 +576,6 @@ Taken 2026-10-12 at `ddd589d3`.
 
 - `spec/setup_pages.md` — the Observers row editor carries the cohort builder and one Save; "Cohort match rule editor" names both places it appears.
 - `spec/operator_button_audit.md` — the row editor's Save covers the rule; its disabled state.
+- `spec/ui_elements.md` — `.row-expander-body.is-split` serves the row editor; the leave-guard hook names it (added at rung 4).
+- `spec/sessions_overview.md` — the "Discard unsaved changes?" string no longer has an Observers user (added at rung 4).
 - `guide/things_to_check_in_browser.md` — a section per code rung.

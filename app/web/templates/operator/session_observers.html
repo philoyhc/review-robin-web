@@ -5,7 +5,7 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  {% set edit_mode = (edit_id is not none) or add_mode %}
+  {% set edit_mode = (edit_id is not none) or add_mode or (rule_edit_ids | length > 0) %}
   {# 19P.2 rung 6 — the Unlock panel's condition, named once because
      three things read it: the roster card that holds the panel, the
      panel's own two cards, and the `Unlock` / `Lock` control.
@@ -40,10 +40,21 @@
                data-observer-edit-cohort
                data-rule="{{ edit_cohort_rule | tojson | forceescape }}">
             <h3 class="row-expander-label">
-              {{ "The new observer is able to see responses where" if add_mode
-                 else "This observer is able to see responses where" }}
+              {% if rule_edit_ids %}
+                The {{ rule_edit_ids | length }} selected observers are able to see responses where
+              {% elif add_mode %}
+                The new observer is able to see responses where
+              {% else %}
+                This observer is able to see responses where
+              {% endif %}
             </h3>
             {{ cohort_builder("observer-edit-form", blank_field=true) }}
+            {% if rule_edit_mixed %}
+              <p class="observers-cohort-mixed-message"
+                 style="margin: var(--space-3) 0 0 0; color: var(--text-subtle);">
+                The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
+              </p>
+            {% endif %}
           </div>
           <div class="row-expander-pane row-expander-pane-right">
           {# The mode, for assistive tech only. The card that went
@@ -54,7 +65,8 @@
              `aria-live` so it is read when a failed save re-renders the
              page into edit mode under the operator. #}
           <span class="visually-hidden" aria-live="polite">
-            {{ "Add new observer" if add_mode else "Edit observer" }}
+            {{ "Edit the selected observers' cohort rule" if rule_edit_ids
+               else "Add new observer" if add_mode else "Edit observer" }}
           </span>
           {# The save error, which lived in the card until that card
              went. It belongs with the row anyway: the message is about
@@ -73,7 +85,7 @@
                     form="observer-edit-form" data-observer-edit-save>Save</button>
             {# Cancel leaves the editor for the list, so it lands where
                the list is — the same anchor `Clear` and `Search` take. #}
-            <a class="btn secondary"
+            <a class="btn secondary" data-observer-edit-cancel
                href="{{ observers_base_url }}#{{ pager_anchor }}">Cancel</a>
           </div>
           </div>
@@ -211,31 +223,6 @@
     </p>
     {% endcall %}
 
-  {# The cohort rule builder, server-rendered ONCE into an inert
-     `<template>` and cloned into the expander's left column by the
-     script below.
-
-     A template rather than JS-built markup because the selects carry
-     live tag labels — `cohort_match_tags` is per-session data, and
-     rebuilding those option lists in a string literal would put the
-     same list in two places. A `<template>`'s content is inert: it is
-     parsed but not rendered, its controls are not form-associated and
-     not focusable, so the ids and `form=` attributes inside it do not
-     collide with the clone the panel makes.
-
-     Gated exactly where the expander is: no selection surface, nothing
-     to clone into. #}
-  {% if not edit_mode and not is_archived %}
-    <template id="observers-cohort-template">
-      {{ cohort_builder("observers-bulk-form") }}
-      <p class="observers-cohort-mixed-message" hidden
-         style="margin: var(--space-3) 0 0 0;
-                color: var(--text-subtle);">
-        The selected observers currently have different cohort rules. Saving replaces them all with the rule above.
-      </p>
-    </template>
-  {% endif %}
-
   {# Hidden form shells the table checkboxes / edit inputs attach
      to via ``form=``. #}
   {# ``filter_*`` carry the active search / status filter through the
@@ -249,9 +236,15 @@
      find. Named `filter_*` to match its neighbours — same job,
      carrying the view the operator was looking at through the POST. #}
   {% if edit_mode %}
-    {% set edit_action = observers_base_url ~ "/create" if add_mode
+    {# operator pages Item 4 — `Edit` on several rows posts their rule
+       alone, to the route the selection expander's builder used. #}
+    {% set edit_action = observers_base_url ~ "/cohort-rule" if rule_edit_ids
+          else observers_base_url ~ "/create" if add_mode
           else observers_base_url ~ "/" ~ edit_id ~ "/update" %}
     <form id="observer-edit-form" method="post" action="{{ edit_action }}">
+      {% for oid in rule_edit_ids %}
+        <input type="hidden" name="observer_ids" value="{{ oid }}">
+      {% endfor %}
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
       <input type="hidden" name="filter_offset" value="{{ current_offset }}">
@@ -759,16 +752,16 @@
                arrives second from the top with a neighbour above it
                for context, rather than flush against the viewport
                edge. 19P.2 rung 1, on the Reviewers analogy. #}
+            {% set _rule_editing = observer.id in rule_edit_ids %}
             <tr id="observer-row-{{ observer.id }}"
-                class="row-action-target"
+                class="row-action-target{% if _rule_editing %} session-row-selected{% endif %}"
                 {# 19P.2 rung 4 — the expander reads this to decide which
                    status action the selection admits: `Inactivate` acts
                    on active rows and `Activate` on inactive ones, so a
                    selection that is all one status gets exactly one
                    actionable button. Rendering the other would offer a
                    control that no-ops on every row. #}
-                data-status="{{ observer.status }}"
-                {% if selectable %}data-observer-cohort-rule="{{ cohort_rule_views[observer.id].signature }}"{% endif %}>
+                data-status="{{ observer.status }}">
               <td>
                 {% if selectable %}
                   <input type="checkbox" class="observer-select"
@@ -790,6 +783,11 @@
               </td>
               <td>{{ observer.updated_at | format_datetime }}</td>
             </tr>
+            {# operator pages Item 4 — `Edit` on several rows: their rule's
+               builder hangs under the last of them, the rows read-only. #}
+            {% if observer.id == rule_edit_last %}
+              {{ row_editor_bar(edit_col_count) }}
+            {% endif %}
           {% endif %}
         {% endfor %}
         </tbody>
@@ -899,14 +897,6 @@
         var valInput = clone.querySelector('[data-observer-operand-value]');
         if (tagSel) tagSel.style.display = '';
         if (valInput) valInput.style.display = 'none';
-        // 19P.2 rung 5 — a clone is a pristine RULE CELL, and `Save`
-        // is not part of one. It rides in the last cell's flex row, so
-        // when there is only one cell `first` IS that cell and the
-        // clone carries a second Save into the list. Measured: two
-        // buttons after one click of `+`.
-        clone.querySelectorAll('.cohort-save-btn').forEach(function (b) {
-          b.remove();
-        });
         // Enable the cloned cell's X.
         clone.querySelectorAll('[data-observer-rule-remove]').forEach(function (b) {
           b.disabled = false;
@@ -1041,7 +1031,8 @@
         var block = pane.querySelector("[data-observer-cohort-builder]");
         window.observerFillRule(block, rule);
 
-        // Save only when savable: an email, and no half-filled rule cell
+        // Save only when savable: an email (when the row is edited), and
+        // no half-filled rule cell
         // (a field with a typed operator and no value, or a value with no
         // field). Blank cells are fine — they save as no rule. The
         // server refuses the same cases; this only spares the round trip.
@@ -1065,7 +1056,8 @@
         }
         function sync() {
           if (!save) return;
-          var ok = !!(email && email.value.trim()) && !halfFilled();
+          // No email field when several rows edit their rule alone.
+          var ok = (!email || email.value.trim() !== "") && !halfFilled();
           save.disabled = !ok;
           if (ok) save.removeAttribute("aria-disabled");
           else save.setAttribute("aria-disabled", "true");
@@ -1078,40 +1070,59 @@
         // input event; re-read after their inline handlers have run.
         block.addEventListener("click", function () { setTimeout(sync, 0); });
         sync();
+
+        // The nav-away guard. The selection expander's builder carried
+        // one for an unsaved rule; the editor holds that state now, so
+        // it carries the guard: leaving with anything changed asks
+        // first, and Save and Cancel — leaving on purpose — do not.
+        // `FormData` reads every control the edit form owns, row fields
+        // and rule cells alike, through their `form=` attributes.
+        var form = document.getElementById("observer-edit-form");
+        function snapshot() {
+          if (!form) return "";
+          try {
+            return JSON.stringify(Array.from(new FormData(form).entries()));
+          } catch (e) {
+            return "";
+          }
+        }
+        var baseline = snapshot();
+        var intentionalNav = false;
+        if (form) {
+          form.addEventListener("submit", function () { intentionalNav = true; });
+        }
+        var cancel = document.querySelector("[data-observer-edit-cancel]");
+        if (cancel) {
+          cancel.addEventListener("click", function () { intentionalNav = true; });
+        }
+        function willPrompt() {
+          return !intentionalNav && snapshot() !== baseline;
+        }
+        // Read by base.html's navigation busy indicator, which stands
+        // aside rather than sit behind the prompt
+        // (`guide/operator_pages_enhancements.md` Item 2).
+        window.rrwLeaveWillPrompt = willPrompt;
+        window.addEventListener("beforeunload", function (e) {
+          if (!willPrompt()) return undefined;
+          e.preventDefault();
+          e.returnValue = "";
+          return "";
+        });
       })();
     {% else %}
       (function () {
-        // 19P.2 rung 4 — the four row actions, the count and the delete
-        // gate moved out of the `Operator actions` card and into a row
-        // expander this script builds. Rung 5 brought the cohort
-        // editor in beside them, cloned per rebuild from the page's
-        // `<template>`, so this script owns the whole panel.
+        // 19P.2 rung 4 — the row actions, the count and the delete gate
+        // live in a row expander this script builds against the
+        // selection. operator pages Item 4 rung 4 took the cohort
+        // builder out of it: `Edit` opens the one editing surface
+        // instead — the row editor for one row, the rule alone for
+        // several — so the panel holds no unsaved state and needs no
+        // discard guard.
         var selectAll = document.getElementById("observers-select-all");
         var table = document.getElementById("observers-table");
         var OBS_BASE = {{ observers_base_url | tojson }};
-        var COHORT_TPL = document.getElementById("observers-cohort-template");
         var tickOrder = [];
         var panel = null;
-
-        // The cohort editor's nodes are found INSIDE the panel, not by
-        // page id. Every one of them is a clone made this rebuild —
-        // holding a reference across rebuilds would point at a detached
-        // node, which is the shape of bug the card version could not
-        // have.
-        function cohortNodes() {
-          if (!panel) return null;
-          var block = panel.querySelector("[data-observer-cohort-builder]");
-          if (!block) return null;
-          return {
-            block: block,
-            root: block.parentNode,
-            mixed: panel.querySelector(".observers-cohort-mixed-message"),
-            // May be null before `placeSaveButton` has run — the
-            // button is created after the editor's markup settles, and
-            // is rebound on every mutation that can destroy it.
-            save: panel.querySelector(".cohort-save-btn"),
-          };
-        }
 
         function rows() {
           if (!table) return [];
@@ -1128,8 +1139,6 @@
         }
         // Anchors after the most recently ticked row STILL selected, DOM
         // order as fallback — the rule `sessions_list.html:585` settled.
-        // A single remembered id is not enough: it clears on any untick
-        // and the panel jumps back up the table.
         function currentAnchor() {
           for (var i = tickOrder.length - 1; i >= 0; i--) {
             var row = document.getElementById(tickOrder[i]);
@@ -1139,12 +1148,8 @@
           }
           return null;
         }
-        // Which status actions the selection admits. `Inactivate` acts
-        // on active rows and `Activate` on inactive ones, so a selection
-        // that is all one status has exactly one actionable button;
-        // rendering the other offers a control that no-ops on every row.
-        // Orthogonal to arity, which says how many rows each action
-        // takes.
+        // Which status actions the selection admits: `Inactivate` acts
+        // on active rows and `Activate` on inactive ones.
         function statusActions(sel) {
           var out = [];
           var hasActive = false;
@@ -1170,35 +1175,13 @@
           tr.id = "observers-row-expander";
           var td = document.createElement("td");
           td.colSpan = visibleColumnCount();
-          // 19P.2 rung 5 — two panes. Left: the cohort rule builder,
-          // cloned from the page's `<template>` after this string is in
-          // the DOM. Right: the count, the delete confirm and the row
-          // actions, inline and flush right.
-          //
-          // `is-split` is a modifier on `.row-expander-body`, like the
-          // toolbar's: the lobby and Reviewers put a single flex line
-          // in this element, so turning the shared rule into a grid
-          // would re-lay-out both.
-          //
           // Bare text, not a `.pill-count`: `spec/ui_elements.md` calls
-          // the panel "a pill-free zone" — its fill resolves to the same
-          // primitive the pale pills do, so a pill here is invisible.
-          // The card this came from could afford one; the panel cannot.
+          // the panel "a pill-free zone".
+          var ids = sel.map(function (row) {
+            return row.querySelector(".observer-select").value;
+          });
           var html =
-            '<div class="row-expander-body' +
-              (COHORT_TPL ? " is-split" : "") + '">' +
-            (COHORT_TPL
-              ? '<div class="row-expander-pane row-expander-pane-left">' +
-                  '<h3 class="row-expander-label">' +
-                    (sel.length === 1
-                      ? "Selected observer is able to see responses where"
-                      : "Selected observers are able to see responses where") +
-                  "</h3>" +
-                "</div>"
-              : "") +
-            (COHORT_TPL
-              ? '<div class="row-expander-pane row-expander-pane-right">'
-              : "") +
+            '<div class="row-expander-body">' +
               '<span class="row-expander-count"><strong>' + sel.length +
               "</strong> of " + rows().length + " selected</span>" +
               '<label class="confirm-label exp-confirm-label">' +
@@ -1218,19 +1201,13 @@
                     if delete_discards_responses else "") | tojson }} +
               "</label>" +
               '<span class="row-expander-actions">';
-          // `Edit` acts on exactly one row.
-          var editable = sel.length === 1;
-          var editId = editable
-            ? sel[0].querySelector(".observer-select").value : "";
+          // `Edit` acts on any selection: one row opens the row editor,
+          // several open their rule alone (operator pages Item 4).
           html += '<button type="button" class="btn secondary exp-edit"' +
-                  (editable
-                    ? ' data-edit-id="' + editId + '"'
-                    : ' disabled aria-disabled="true"') +
-                  ">Edit</button>";
+                  ' data-edit-ids="' + ids.join(",") + '">Edit</button>';
           // The selection reaches the POST through the row checkboxes'
           // own `form=` + `name="observer_ids"`, so these need only say
-          // where to send it. Same routes and `formaction`s as the card
-          // they came from.
+          // where to send it.
           statusActions(sel).forEach(function (label) {
             html += '<button type="submit" class="btn secondary exp-submit"' +
                     ' form="observers-bulk-form" formaction="' +
@@ -1247,118 +1224,13 @@
                   OBS_BASE + '/bulk-delete"' +
                   ' data-delete-btn="observers-bulk-delete"' +
                   ' disabled aria-disabled="true">Delete</button>' +
-                  "</span>" + (COHORT_TPL ? "</div>" : "") + "</div>";
+                  "</span></div>";
           td.innerHTML = html;
           tr.appendChild(td);
           return tr;
         }
 
-        // The builder is cloned in AFTER the panel's own markup, because
-        // `innerHTML` would discard live nodes. Cloning rather than
-        // moving: the template stays intact so the next rebuild has
-        // something to clone, and a moved builder would carry the
-        // previous selection's rule state into the new panel.
-        function fillCohortPane(tr) {
-          if (!COHORT_TPL) return;
-          var pane = tr.querySelector(".row-expander-pane-left");
-          if (!pane) return;
-          pane.appendChild(COHORT_TPL.content.cloneNode(true));
-        }
-
-        // `Save` sits inline immediately after the LAST rule cell's `X`,
-        // so it trails the list as rules are added rather than floating
-        // under it. Placed in that cell's own flex row, so it inherits
-        // the row's 4px gap instead of carrying a margin of its own.
-        //
-        // Created once per panel and MOVED thereafter, and called after
-        // every mutation rather than once at build time. Two things
-        // would otherwise destroy or strand it, and both are ordinary
-        // operations here:
-        //
-        //   - `setEditorToDefault` and `loadEditorFromRule` replace the
-        //     cell list's `innerHTML` wholesale. A Save appended at
-        //     build time was inside that markup and went with it — the
-        //     first version of this rung shipped exactly that, and the
-        //     button simply never appeared.
-        //   - `observerAddRule` clones the FIRST cell and appends it,
-        //     so a Save sitting in the old last cell is left mid-list.
-        // The dirty flag, readable from outside the gate. The panel is
-        // rebuilt constantly, so this is a module-level fact about "is
-        // there an unsaved rule edit right now" rather than state on a
-        // node that is about to be replaced.
-        //
-        // Instruments does the same job WITHOUT a flag: its unload
-        // guard queries the DOM live
-        // (`[data-instrument-card][data-instrument-dirty="true"]`,
-        // `instruments_index.html`), so it cannot go stale. A mirrored
-        // flag can, and one already did once here — see `renderPanel`.
-        // It is mirrored anyway because the dirty answer is a
-        // comparison against a baseline captured when the panel was
-        // built, not a property readable off a node.
-        var cohortDirty = false;
-        // Set by the deliberate navigations so the nav-away guard does
-        // not fire on the very act of leaving on purpose. Named for
-        // Instruments' `_newModelIntentionalNav`, but not the same
-        // shape: Instruments sets it on one code PATH, because its Save
-        // is an async fetch that never navigates. Ours is a form
-        // submit, so it is set on the nodes.
-        var intentionalNav = false;
-
-        function placeSaveButton(nodes) {
-          if (!nodes || !nodes.root) return null;
-          // De-duplicate before moving. `observerAddRule` strips Save
-          // from its clone, which is the fix at source; this keeps the
-          // invariant true whatever else learns to clone a rule cell,
-          // because a second Save is not a cosmetic bug — both post the
-          // same form, and the stale one carries the stale rule.
-          var all = nodes.root.querySelectorAll(".cohort-save-btn");
-          for (var i = 1; i < all.length; i++) all[i].remove();
-          var save = all[0] || null;
-          if (!save) {
-            save = document.createElement("button");
-            save.className = "btn secondary cohort-cell-btn cohort-save-btn";
-            save.type = "submit";
-            save.setAttribute("form", "observers-bulk-form");
-            save.setAttribute("formaction", OBS_BASE + "/cohort-rule");
-            save.textContent = "Save";
-            save.disabled = true;
-            save.setAttribute("aria-disabled", "true");
-            // Wired HERE, at the creation site, rather than once per
-            // panel in `armDirtyGate`: every Save node in this page's
-            // life is built by this branch, so every Save node carries
-            // the flag, exactly once.
-            //
-            // Attaching it to the panel's first Save was a live defect.
-            // `X` on the LAST rule cell destroys the Save riding inside
-            // it, this branch builds a replacement, and the replacement
-            // had no listener — so pressing Save after an `X` raised
-            // the browser's "Leave site?", and dismissing that (the
-            // answer that reads as "stay") cancelled the submit. The
-            // operator pressed Save and nothing was written, with no
-            // error. Same control, `X` on the last cell, that broke the
-            // Save/`sync` rebind one rung earlier.
-            save.addEventListener("click", function () {
-              intentionalNav = true;
-            });
-          }
-          var cells = nodes.block.querySelectorAll("[data-observer-rule-cell]");
-          var last = cells[cells.length - 1];
-          var xBtn = last && last.querySelector("[data-observer-rule-remove]");
-          if (xBtn && xBtn.parentNode) xBtn.parentNode.appendChild(save);
-          else nodes.block.appendChild(save);
-          return save;
-        }
-
         function renderPanel() {
-          // The panel is about to be thrown away, and with it whatever
-          // edit it held. Clearing the flag here rather than trusting
-          // `armDirtyGate` to reset it: the gate only runs when a panel
-          // EXISTS, so after the last row is unticked nothing would
-          // have cleared it and `beforeunload` would have blocked every
-          // subsequent navigation, forever, over an edit the operator
-          // had already agreed to discard. `sync()` re-raises it
-          // immediately if the rebuilt panel is dirty.
-          cohortDirty = false;
           if (panel) { panel.remove(); panel = null; }
           rows().forEach(function (row) {
             row.classList.remove("session-row-selected");
@@ -1369,7 +1241,6 @@
             row.classList.add("session-row-selected");
           });
           panel = buildPanel(sel);
-          fillCohortPane(panel);
           (currentAnchor() || sel[sel.length - 1])
             .insertAdjacentElement("afterend", panel);
         }
@@ -1384,216 +1255,8 @@
           }
           return n;
         }
-        function setBtn(btn, disabled) {
-          btn.disabled = disabled;
-          if (disabled) {
-            btn.setAttribute("aria-disabled", "true");
-          } else {
-            btn.removeAttribute("aria-disabled");
-          }
-        }
-        // Snapshot the pristine first cell's outerHTML once, from the
-        // TEMPLATE rather than from a live builder, so
-        // ``setEditorToDefault`` can restore a single-cell state
-        // without losing the rendered option lists (which include the
-        // live tag labels).
-        //
-        // 19P.2 rung 5 — the source moved with the editor. Snapshotting
-        // a live clone would capture whatever the previous selection
-        // had typed into it; the template is never edited, so it is
-        // pristine by construction.
-        var defaultCellHTML = null;
-        function ensureDefaultCellSnapshot() {
-          if (defaultCellHTML !== null) return;
-          if (!COHORT_TPL) return;
-          var first = COHORT_TPL.content.querySelector('[data-observer-rule-cell]');
-          if (first) defaultCellHTML = first.outerHTML;
-        }
-        function setEditorToDefault(cohortBlock) {
-          if (!cohortBlock) return;
-          ensureDefaultCellSnapshot();
-          var cells = cohortBlock.querySelector('[data-observer-cohort-cells]');
-          if (cells && defaultCellHTML !== null) {
-            cells.innerHTML = defaultCellHTML;
-          }
-          var combBtn = cohortBlock.querySelector('[data-observer-combinator-toggle]');
-          var combInput = cohortBlock.querySelector('[data-observer-combinator-input]');
-          if (combBtn) combBtn.textContent = 'AND';
-          if (combInput) combInput.value = 'AND';
-        }
-        function loadEditorFromRule(cohortBlock, rule) {
-          if (!cohortBlock) return;
-          setEditorToDefault(cohortBlock);
-          window.observerFillRule(cohortBlock, rule);
-        }
-        // The rule as the controls currently hold it, as a string.
-        // Compared rather than diffed: the question is only "has
-        // anything changed", and every control that can change is in
-        // this list.
-        function ruleSignature(block) {
-          if (!block) return "";
-          var parts = [];
-          var comb = block.querySelector("[data-observer-combinator-input]");
-          parts.push(comb ? comb.value : "");
-          var cells = block.querySelectorAll("[data-observer-rule-cell]");
-          for (var i = 0; i < cells.length; i++) {
-            var c = cells[i];
-            var field = c.querySelector('select[name="cohort_rule_field"]');
-            var op = c.querySelector("[data-observer-op-input]");
-            var tag = c.querySelector("[data-observer-operand-tag]");
-            var val = c.querySelector("[data-observer-operand-value]");
-            parts.push([
-              field ? field.value : "",
-              op ? op.value : "",
-              tag ? tag.value : "",
-              val ? val.value : "",
-            ].join("\u0001"));
-          }
-          return parts.join("\u0002");
-        }
-
-        // Re-armed on every rebuild — see the call site. `input` and
-        // `change` both, because the operand is a text box on some
-        // operators and a select on others; and a delegated `click`,
-        // because `+`, `X` and the two cycle buttons mutate the rule
-        // without firing either.
-        function armDirtyGate(nodes) {
-          if (!nodes || !nodes.save) return;
-          var baseline = ruleSignature(nodes.block);
-          function sync() {
-            var dirty = ruleSignature(nodes.block) !== baseline;
-            cohortDirty = dirty;
-            nodes.save.disabled = !dirty;
-            if (dirty) nodes.save.removeAttribute("aria-disabled");
-            else nodes.save.setAttribute("aria-disabled", "true");
-          }
-          nodes.block.addEventListener("input", sync);
-          nodes.block.addEventListener("change", sync);
-          nodes.block.addEventListener("click", function () {
-            // After the inline `onclick` has run, not before it: `+`
-            // and `X` rebuild the cell list, so Save has to be moved to
-            // the new last cell before its state is re-read.
-            //
-            // The return value is REBOUND, not discarded. `Save` rides
-            // inside the last cell's flex row, so `X` on that cell
-            // destroys it; `placeSaveButton` then builds a replacement,
-            // and a `nodes.save` still pointing at the removed node
-            // meant `sync()` toggled a detached button while the
-            // visible one stayed greyed out for the rest of that
-            // selection. In a two-cell builder the first cell's `X` is
-            // disabled, so the only removable cell is the last — every
-            // `X` in a two-rule edit hit this.
-            setTimeout(function () {
-              nodes.save = placeSaveButton(nodes);
-              sync();
-            }, 0);
-          });
-          sync();
-        }
-
-        function refresh() {
-          var all = boxes();
-          var n = countChecked();
-          // The count, the delete gate and the four buttons all live in
-          // the panel now, and it is rebuilt wholesale on every change —
-          // so the "clear the tick when the selection changes" dance the
-          // card needed is structural here: a fresh panel carries a
-          // fresh, unticked checkbox and a `disabled` Delete. The rule
-          // it enforced still holds ("Yes, delete these" names the
-          // selection as it stood when it was ticked); it is now a
-          // consequence of the rebuild rather than a thing to remember.
-          renderPanel();
-          syncSelectAll();
-          // ── The cohort editor, now the panel's left pane ──────
-          //
-          // Everything below reaches into the CLONE this rebuild made.
-          // There is no persistent card any more, so there is no
-          // "empty placeholder" to swap against and no heading to
-          // retitle on the way to zero: at `n === 0` the whole panel is
-          // gone, which says it better than a muted sentence did.
-          var nodes = cohortNodes();
-          if (!nodes) return;
-
-          // Mixed-state detection: gather the per-row cohort-rule
-          // signatures (set server-side per ``observers.cohort_rule``;
-          // empty string = no saved rule). Shared signature → load that
-          // rule into the editor; mixed → reset to default and show the
-          // message. Author's call, 2026-09-16: mixed keeps today's
-          // behavior rather than growing per-box "(Multiple values)",
-          // which needs per-field comparison the signature cannot do.
-          var seen = {};
-          var distinct = 0;
-          for (var j = 0; j < all.length; j++) {
-            if (!all[j].checked) continue;
-            var row = all[j].closest("tr");
-            var sig = row ? (row.getAttribute("data-observer-cohort-rule") || "") : "";
-            if (!Object.prototype.hasOwnProperty.call(seen, sig)) {
-              seen[sig] = true;
-              distinct++;
-            }
-          }
-          if (nodes.mixed) nodes.mixed.hidden = (distinct <= 1);
-
-          if (distinct === 1) {
-            var onlySig = Object.keys(seen)[0];
-            if (onlySig === "") {
-              setEditorToDefault(nodes.block);
-            } else {
-              try {
-                loadEditorFromRule(nodes.block, JSON.parse(onlySig));
-              } catch (e) {
-                setEditorToDefault(nodes.block);
-              }
-            }
-          } else {
-            setEditorToDefault(nodes.block);
-          }
-
-          // The dirty gate. `Save` is disabled until the rule differs
-          // from what the selection already has — a `Save` that is live
-          // on arrival invites a write that changes nothing, and on a
-          // mixed selection that write would silently flatten every
-          // rule to the blank default.
-          //
-          // The snapshot is re-taken on EVERY rebuild, not once: the
-          // panel is thrown away and rebuilt on every selection change,
-          // so a snapshot held across rebuilds would compare this
-          // selection's rule against the previous one's and leave
-          // `Save` enabled against an unchanged rule.
-          nodes.save = placeSaveButton(nodes);
-          armDirtyGate(nodes);
-        }
-        // 19P.2 rung 5a — an unsaved rule edit is DISCARDED by any
-        // selection change, because the panel is rebuilt wholesale and
-        // the builder is re-cloned from the pristine template. Measured
-        // before this: untick the row, tick a second one, or navigate,
-        // and the edit vanished with nothing written and nothing said.
-        //
-        // Same idiom as Instruments (18R Item 2): a `confirm` on the
-        // in-page discards, a `beforeunload` on the navigations. The
-        // wording is Instruments' verbatim — an operator meets this
-        // sentence on two pages and should not have to read it twice.
-        //
-        // Returns true when it is safe to proceed.
-        function okToDiscardCohortEdit() {
-          if (!cohortDirty) return true;
-          return window.confirm("Discard unsaved changes?");
-        }
-
-        // Re-check the box the operator just cleared (or cleared by
-        // select-all), so declining the confirm leaves the selection —
-        // and therefore the panel and the edit — exactly as it was.
-        function restoreBox(box, wasChecked) {
-          box.checked = wasChecked;
-        }
-
         // The header checkbox is tri-state: ticked when every row is,
-        // dashed when some are, clear when none are. Factored out of
-        // `refresh()` because the discard-declined path below has to
-        // restore it too, and restoring only `checked` left a plain
-        // unticked box sitting above a selection that still had rows in
-        // it — the browser clears `indeterminate` on the way into the
-        // click, and nothing put it back.
+        // dashed when some are, clear when none are.
         function syncSelectAll() {
           if (!selectAll) return;
           var all = boxes();
@@ -1601,39 +1264,29 @@
           selectAll.checked = (n > 0 && n === all.length);
           selectAll.indeterminate = (n > 0 && n < all.length);
         }
+        function refresh() {
+          // Rebuilt wholesale on every change, so a fresh panel carries
+          // a fresh, unticked delete confirm and a `disabled` Delete.
+          renderPanel();
+          syncSelectAll();
+        }
 
         document.addEventListener("change", function (e) {
           var t = e.target;
           if (!t) return;
           if (t === selectAll) {
-            if (!okToDiscardCohortEdit()) {
-              // Put select-all back where it was: the operator said no,
-              // so nothing about the selection may move. Recomputed
-              // from the rows rather than inverted, which restores the
-              // dash as well as the tick — see `syncSelectAll`.
-              syncSelectAll();
-              return;
-            }
             var all = boxes();
             for (var i = 0; i < all.length; i++) {
               all[i].checked = selectAll.checked;
             }
             // Rebuild wholesale rather than append: the anchor is a
-            // function of the order, and a stale entry for a row that
-            // was unticked and re-ticked would anchor the panel at that
-            // row instead of the last one.
+            // function of the order.
             tickOrder = selectAll.checked
               ? rows().map(function (row) { return row.id; })
               : [];
             refresh();
           } else if (t.classList &&
                      t.classList.contains("observer-select")) {
-            if (!okToDiscardCohortEdit()) {
-              restoreBox(t, !t.checked);
-              return;
-            }
-            // Prune on untick as well as push on tick — the lobby does
-            // both (`sessions_list.html:596-614`).
             var row = t.closest("tr");
             if (row) {
               tickOrder = tickOrder.filter(function (id) {
@@ -1646,89 +1299,34 @@
         });
         // `Edit` is a client-side GET, not a form post, so it carries
         // the editor's landing anchor itself. Delegated from the table
-        // because the panel is injected and replaced on every selection
-        // change — binding the button directly would bind a button that
-        // is about to be thrown away.
+        // because the panel is injected and replaced on every change.
         if (table) {
           table.addEventListener("click", function (event) {
-            // `Inactivate`, `Activate` and `Delete` post the bulk form
-            // and leave the page, taking an unsaved rule edit with
-            // them — the same loss `Edit` makes, so the same question.
-            // Before this they fell through to `beforeunload` and got
-            // the browser's "Leave site?", whose Cancel silently
-            // abandoned the bulk action the operator had just asked
-            // for. Marked with a class rather than matched on
-            // `formaction`, so a fourth panel action inherits the guard
-            // by joining the set rather than by being remembered.
-            var submit = event.target.closest
-              ? event.target.closest(".exp-submit") : null;
-            if (submit) {
-              if (!okToDiscardCohortEdit()) {
-                event.preventDefault();
-                return;
-              }
-              intentionalNav = true;
-              return;
-            }
             var edit = event.target.closest
-              ? event.target.closest(".exp-edit[data-edit-id]") : null;
+              ? event.target.closest(".exp-edit[data-edit-ids]") : null;
             if (!edit) return;
-            if (!okToDiscardCohortEdit()) return;
-            // Answered yes (or nothing to lose), so this navigation is
-            // deliberate and must not also trip `beforeunload`.
-            intentionalNav = true;
-            var editId = edit.getAttribute("data-edit-id");
+            var ids = (edit.getAttribute("data-edit-ids") || "")
+              .split(",").filter(Boolean);
+            if (!ids.length) return;
             // `#observer-row-<id>`: entering edit mode is a navigation,
             // and without a fragment it lands at the top of the
-            // document — the same 821px defect the row actions fix. The
-            // edit row keeps its own id, so the fragment resolves onto
-            // the row being typed into.
-            window.location = OBS_BASE + "?edit_id=" +
-              encodeURIComponent(editId) +
-              "#observer-row-" + encodeURIComponent(editId);
+            // document. One row edits the row and its rule; several,
+            // their rule alone, the panel landing on the first.
+            var query = ids.length === 1
+              ? "?edit_id=" + encodeURIComponent(ids[0])
+              : "?" + ids.map(function (id) {
+                  return "rule_id=" + encodeURIComponent(id);
+                }).join("&");
+            window.location = OBS_BASE + query +
+              "#observer-row-" + encodeURIComponent(ids[0]);
           });
         }
-
-        // The nav-away guard, for the leaves-the-page paths that have
-        // no handler of their own: `Search`, `Clear`, the pager and
-        // `Add new`. The panel's own actions (`Edit` and the three
-        // `.exp-submit` buttons) ask the page's question first and then
-        // set `intentionalNav`, so they never reach this.
-        //
-        // `beforeunload` cannot carry custom text in any current
-        // browser — the string is ignored and the browser's own wording
-        // shows — so this is a stop, not an explanation. The
-        // explanation is the `confirm` above, which covers the paths
-        // that stay on the page.
-        function willPrompt() {
-          return !intentionalNav && !!cohortDirty;
-        }
-        // Read by base.html's navigation busy indicator, which stands
-        // aside rather than sit behind the prompt
-        // (`guide/operator_pages_enhancements.md` Item 2).
-        window.rrwLeaveWillPrompt = willPrompt;
-        window.addEventListener("beforeunload", function (e) {
-          if (!willPrompt()) return undefined;
-          e.preventDefault();
-          e.returnValue = "";
-          return "";
-        });
 
         // A selection can arrive already made: the bulk routes redirect
         // through `_redirect_keeping_selection`, which carries the
         // acted-on ids as `?selected=` and the server re-checks those
-        // boxes. Without the `refresh()` below, those rows would have
-        // neither rails nor a panel until the operator toggled
-        // something.
-        //
-        // The seed loop itself is belt-and-braces, not load-bearing:
-        // it walks `rows()` in DOM order, so the order it seeds is the
-        // order `currentAnchor()`'s fallback would pick anyway. An
-        // earlier version of this comment claimed the anchor would
-        // otherwise be wrong, which is not true. It earns its place by
-        // keeping `tickOrder` consistent with the boxes from the first
-        // render, so the first untick prunes a list that knows about
-        // the restored rows.
+        // boxes. Seed `tickOrder` from them so the first untick prunes
+        // a list that knows about the restored rows.
         rows().forEach(function (row) {
           var box = row.querySelector(".observer-select");
           if (box && box.checked) tickOrder.push(row.id);

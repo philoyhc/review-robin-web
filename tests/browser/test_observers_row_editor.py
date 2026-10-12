@@ -209,3 +209,76 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
         engine.dispose()
     assert name == "Renamed"
     assert rule == stale
+
+
+def _rules(database_url: str, session_id: int) -> list[object]:
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Observer
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            return list(db.execute(
+                select(Observer.cohort_rule)
+                .where(Observer.session_id == session_id)
+                .order_by(Observer.id)
+            ).scalars())
+    finally:
+        engine.dispose()
+
+
+def test_edit_on_several_rows_saves_one_rule_to_each(
+    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """Rung 4: the expander shows no builder; `Edit` on two rows opens
+    their rule alone, and its Save writes it to both."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Observer
+
+    session_id = new_session()
+    _seed_observer(live_server.database_url, session_id)
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            db.add(Observer(session_id=session_id, email="p@example.org",
+                            display_name="P", status="active"))
+            db.commit()
+    finally:
+        engine.dispose()
+
+    page.goto(f"/operator/sessions/{session_id}/observers")
+    boxes = page.locator("input.observer-select")
+    boxes.nth(0).check()
+    boxes.nth(1).check()
+    expander = page.locator("#observers-row-expander")
+    assert expander.locator("[data-observer-cohort-builder]").count() == 0
+    expander.locator(".exp-edit").click()
+    page.wait_for_load_state("load")
+    assert page.url.count("rule_id=") == 2
+
+    builder = page.locator(
+        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
+    )
+    # The two differ (a rule and none), so the builder starts empty.
+    assert page.get_by_text("currently have different cohort rules").is_visible()
+    cell = builder.locator("[data-observer-rule-cell]").first
+    cell.locator('select[name="cohort_rule_field"]').select_option("reviewee.tag1")
+    op = cell.locator("[data-observer-op-cycle]")
+    while op.inner_text() != "IS":
+        op.click()
+    cell.locator("[data-observer-operand-value]").fill("Green")
+    page.locator("[data-observer-edit-save]").click()
+    page.wait_for_load_state("load")
+
+    rules = _rules(live_server.database_url, session_id)
+    assert len(rules) == 2
+    for rule in rules:
+        (cell,) = rule["rules"]
+        # Both operands ride along in storage (the schema's idiom); the
+        # operator picks which one counts.
+        assert (cell["field"], cell["op"], cell["operand_value"]) == (
+            "reviewee.tag1", "IS", "Green")

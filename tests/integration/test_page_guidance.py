@@ -325,8 +325,8 @@ def test_the_observers_guidance_leads_the_left_column(
     )
     # First, and before the table it introduces.
     assert body.index(CARD) < body.index('id="observers-table-card"')
-    # The cohort editor is in the expander's template now, below it.
-    assert body.index(CARD) < body.index('id="observers-cohort-template"')
+    # No cohort editor renders until `Edit` (operator pages Item 4).
+    assert 'id="observers-cohort-template"' not in body
 
 
 def test_the_disclosure_uses_the_instrument_cards_triangle(

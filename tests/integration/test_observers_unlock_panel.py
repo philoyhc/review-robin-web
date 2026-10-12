@@ -561,15 +561,18 @@ def test_the_tag_column_reads_tag_not_tag1(
     # Every DISPLAY site moves together, or one row reads `Tag` in its
     # column header and `Observer: Tag 1` in its Cohort cell. The cold
     # read found both of these still carrying the digit.
-    assert "Observer: Tag 1" not in markup, (
+    # The builder renders in the row editor since operator pages Item 4
+    # (the selection expander's copy went), so read it there.
+    builder = _markup(_page(client, _session(client, db, "unl-18b"), "?add=1"))
+    assert "Observer: Tag 1" not in builder, (
         "the cohort rule builder still offers `Observer: Tag 1`"
     )
-    assert ">Observer: Tag</option>" in markup
+    assert ">Observer: Tag</option>" in builder
     from app.web.views._observers import _COHORT_OBSERVER_FRIENDLY
     assert _COHORT_OBSERVER_FRIENDLY["observer.tag1"] == "Observer: Tag"
     # The stored KEY is not a display label and must not move — a saved
     # `cohort_rule` holds it.
-    assert 'value="observer.tag1"' in markup
+    assert 'value="observer.tag1"' in builder
 
 
 def test_the_danger_zone_is_gated_on_rows_and_upload_is_not(

@@ -152,6 +152,16 @@ def _validated_cohort_rule(payload: dict[str, Any] | None) -> dict[str, Any] | N
     return ruleset.model_dump(mode="json")
 
 
+def _same_rule(a: dict[str, Any] | None, b: dict[str, Any] | None) -> bool:
+    """Equal rules, counting ``None`` and an empty ``rules`` list as the
+    same "no rule": an imported observer can hold the explicit empty set,
+    and an untouched editor posts ``None`` — saving its name must not
+    rewrite one as the other with an event."""
+    def norm(rule: dict[str, Any] | None) -> dict[str, Any] | None:
+        return rule if rule and rule.get("rules") else None
+    return norm(a) == norm(b)
+
+
 def _write_cohort_rule_event(
     db: Session,
     *,
@@ -304,7 +314,7 @@ def update_observer(
     rule: dict[str, Any] | None = None
     if cohort_rule is not _UNSET:
         rule = _validated_cohort_rule(cohort_rule)  # type: ignore[arg-type]
-        rule_changed = rule != observer.cohort_rule
+        rule_changed = not _same_rule(rule, observer.cohort_rule)
     proposed: dict[str, object] = {}
     if email is not _UNSET:
         proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
