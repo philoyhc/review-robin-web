@@ -226,8 +226,9 @@ Taken 2026-10-12 at `7acfac1e`.
   (`app/web/templates/operator/partials/_quick_setup_card.html`).
 - `tests/integration/test_quick_setup_observers_slot.py` asserts the
   hidden slot while observers are off; that test inverts.
-- One spec line names the conditional slot:
-  `spec/quick_setup_card_spec.md` "Slots".
+- Live prose naming the conditional slot (`grep -rn "Observers conditional\|Observers slot when\|Observers when" spec README.md`, archive aside):
+  `spec/quick_setup_card_spec.md` "Slots", `spec/session_home.md` (prose and lifecycle table),
+  `spec/csv_contracts.md`, `spec/README.md`, `spec/rrw_functional_spec.md`, `README.md`.
 - `session.feature_toggled` has 1 schema entry in `app/services/audit.py`.
 
 ### PR ladder
@@ -267,3 +268,9 @@ Taken 2026-10-12 at `7acfac1e`.
 
 - `spec/quick_setup_card_spec.md` — "Slots": Observers always renders on both variants; "Per-slot dispatch" or "Result reporting": an upload that populates Observers or Relationships turns its toggle on; "New-session variant": the Observers bullet (Item 2).
 - `spec/participant_model.md` — the "Lock-on-data invariant": the converse, that a Quick Setup upload which populates a roster turns its flag on (Item 2).
+- `spec/session_home.md` — the Quick Setup card: five slots whatever the toggles, in its prose and its lifecycle table (Item 2).
+- `spec/csv_contracts.md` — the inbound-paths row for the Quick Setup slots (Item 2).
+- `spec/README.md` — the `quick_setup_card_spec.md` row (Item 2).
+- `spec/rrw_functional_spec.md` — the Session Home Quick Setup card bullet (Item 2).
+- `spec/settings_inventory.md` — the `relationships_enabled` / `observers_enabled` rows: also turned on by an upload (Item 2).
+- `README.md` — the Quick Setup card bullet (Item 2).
