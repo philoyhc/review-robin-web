@@ -1,12 +1,12 @@
 """What a participant is shown of their own roster entry.
 
-`guide/participant_info.md` Items 1, 3 and 4. Each participant type has
+`guide/participant_info.md` Items 1, 3, 4 and 5. Each participant type has
 one session-wide selection of its roster fields, shown to that
 participant after the role pills on their own pages, chosen in a card on
 its roster page's Unlock panel and reported in that page's readout row.
 
-One core, parameterized by a `SelfSpec`, so the reviewer (Item 1) and
-reviewee (Item 4) sides cannot drift apart. The selections themselves,
+One core, parameterized by a `SelfSpec`, so the reviewer (Item 1),
+reviewee (Item 4) and observer (Item 5) sides cannot drift apart. The selections themselves,
 their defaults and their storage live in ``app.services.participant_info``;
 this module shapes them for the pages.
 """
@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from app.db.models import ReviewSession
 from app.services import field_labels as field_labels_service
 from app.services.participant_info import (
+    OBSERVER_SELF_DEFAULT,
+    OBSERVER_SELF_FIELD_KEYS,
     REVIEWEE_SELF_DEFAULT,
     REVIEWEE_SELF_FIELD_KEYS,
     REVIEWER_SELF_DEFAULT,
@@ -28,6 +30,7 @@ from app.services.participant_info import (
 from ._setup import ColumnReadout
 
 __all__ = [
+    "OBSERVER_SPEC",
     "REVIEWEE_SPEC",
     "REVIEWER_SPEC",
     "SelfFieldChip",
@@ -83,6 +86,17 @@ REVIEWEE_SPEC = SelfSpec(
         "name": "Name", "email_or_identifier": "Email",
         "profile_link": "Profile",
     },
+)
+
+
+#: Observers carry no field labels (no `_field_labels_editor` on their
+#: page), so every key has a fixed name: the roster index's own.
+OBSERVER_SPEC = SelfSpec(
+    source_type="observer",
+    keys=OBSERVER_SELF_FIELD_KEYS,
+    default=OBSERVER_SELF_DEFAULT,
+    slot_to_key={"name": "display_name", "email": "email", "tag-1": "tag_1"},
+    fixed_labels={"display_name": "Name", "email": "Email", "tag_1": "Tag"},
 )
 
 

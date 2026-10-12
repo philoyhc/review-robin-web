@@ -89,6 +89,11 @@ def observer_collation(
                 review_session=review_session,
                 active_role="observer",
             ),
+            # participant info Item 5 — the observer's own roster fields
+            # after the role pills.
+            "observer_self_fields": views.observer_self_line_for(
+                review_session, observer
+            ),
             "collation": context,
         },
     )

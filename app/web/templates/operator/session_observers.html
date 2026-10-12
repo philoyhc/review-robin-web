@@ -341,6 +341,19 @@
           </span>
         {% endif %}
       </div>
+      {# participant info Item 5 — what an observer sees of their own
+         roster entry, after the role pills on `/collation`. In every
+         state, as Reviewers' `Reviewers see:`. #}
+      <div class="roster-readout" data-observer-self-readout>
+        <span class="roster-readout-label">Observers see:</span>
+        <span class="roster-readout-values">
+          {% for label in self_field_readout %}
+            <span class="pill pill-count">{{ label }}</span>
+          {% else %}
+            <span class="roster-readout-empty">none</span>
+          {% endfor %}
+        </span>
+      </div>
     </div>
 
     {% if unlock_available %}
@@ -349,12 +362,11 @@
          decides what the page ARRIVES as. Both tenants answer with a
          redirect, and a panel that always shipped collapsed would shut
          itself on every one — the `Lock` control is what closes it. #}
-      {# The Danger Zone is gated on rows, so on an EMPTY roster the
-         right column has nothing in it. `Lock` used to follow whichever
-         column held a card (19P.2, `data-lock-home`); since participant
-         info Item 2 it always ends the right column, and the column
-         stretches to the row so an empty one puts `Lock` at its foot
-         rather than level with Upload's heading. #}
+      {# The Danger Zone is gated on rows; the own-entry card (participant
+         info Item 5) is not, so the right column always holds a card.
+         `Lock` used to follow whichever column held one (19P.2,
+         `data-lock-home`); since Item 2 it always ends the right column,
+         which stretches to the row. #}
       {% set danger_visible = total_row_count and total_row_count > 0 %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: the import card. #}
@@ -429,9 +441,30 @@
           </section>
         </div>
 
-        {# Right column: the Danger Zone (and, with its later item, what
-           observers see of their own entry above it). #}
+        {# Right column: what observers see of their own entry
+           (participant info Item 5) over the Danger Zone. #}
         <div class="unlock-stack unlock-right">
+          {# participant info Item 5 rung 2 — SCAFFOLD, inert: the chips
+             sit at the default and toggle only on screen, nothing posts,
+             and Save / Cancel stay disabled. Rung 3 stores the selection.
+             Name and Email always; Tag while some row holds one. #}
+          <section class="card" id="observer-self-fields"
+                   aria-labelledby="observer-self-fields-h"
+                   data-observer-self-card>
+            <h2 id="observer-self-fields-h">What observers see of their own entry</h2>
+            <div class="reviewer-self-chips">
+              {% for chip in self_field_chips %}
+                <label class="pill pill-count tag-chip">
+                  <input type="checkbox" class="visually-hidden"
+                         name="fields" value="{{ chip.key }}"
+                         {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+              {% endfor %}
+            </div>
+            <div class="unlock-col-actions">
+              <button type="button" class="btn secondary" disabled>Cancel</button>
+              <button type="button" class="btn secondary" disabled>Save</button>
+            </div>
+          </section>
           {# The `total_row_count > 0` gate is unchanged by the move,
              and it is not cosmetic. `delete_all_observers` is not a
              no-op on an empty roster — it writes an audit row reading
