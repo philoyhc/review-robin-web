@@ -444,26 +444,63 @@
         {# Right column: what observers see of their own entry
            (participant info Item 5) over the Danger Zone. #}
         <div class="unlock-stack unlock-right">
-          {# participant info Item 5 rung 2 — SCAFFOLD, inert: the chips
-             sit at the default and toggle only on screen, nothing posts,
-             and Save / Cancel stay disabled. Rung 3 stores the selection.
-             Name and Email always; Tag while some row holds one. #}
+          {# participant info Item 5 — what observers see of their own
+             entry, after the role pills on `/collation`. As the Reviewers
+             and Reviewees cards: Name and Email always, Tag while some
+             row holds one; a selected key the card cannot offer rides as
+             a hidden `keep` input; Save / Cancel wait for a chip to move. #}
           <section class="card" id="observer-self-fields"
                    aria-labelledby="observer-self-fields-h"
                    data-observer-self-card>
             <h2 id="observer-self-fields-h">What observers see of their own entry</h2>
-            <div class="reviewer-self-chips">
-              {% for chip in self_field_chips %}
-                <label class="pill pill-count tag-chip">
-                  <input type="checkbox" class="visually-hidden"
-                         name="fields" value="{{ chip.key }}"
-                         {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+            <form method="post" action="{{ observers_base_url }}/self-fields"
+                  id="observer-self-fields-form" autocomplete="off">
+              <div class="reviewer-self-chips">
+                {% for chip in self_field_chips %}
+                  <label class="pill pill-count tag-chip">
+                    <input type="checkbox" class="visually-hidden"
+                           name="fields" value="{{ chip.key }}"
+                           {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+                {% endfor %}
+              </div>
+              {% for key in self_field_kept %}
+                <input type="hidden" name="keep" value="{{ key }}">
               {% endfor %}
-            </div>
-            <div class="unlock-col-actions">
-              <button type="button" class="btn secondary" disabled>Cancel</button>
-              <button type="button" class="btn secondary" disabled>Save</button>
-            </div>
+              <div class="unlock-col-actions">
+                <button type="button" class="btn secondary"
+                        data-observer-self-cancel disabled>Cancel</button>
+                <button type="submit" class="btn secondary"
+                        data-observer-self-save disabled>Save</button>
+              </div>
+            </form>
+            <script>
+              (function () {
+                var form = document.getElementById("observer-self-fields-form");
+                if (!form) return;
+                var saveBtn = form.querySelector("[data-observer-self-save]");
+                var cancelBtn = form.querySelector("[data-observer-self-cancel]");
+                var boxes = form.querySelectorAll('input[type="checkbox"]');
+                var initial = Array.prototype.map.call(boxes, function (b) {
+                  return b.checked;
+                });
+                function refresh() {
+                  var dirty = Array.prototype.some.call(boxes, function (b, i) {
+                    return b.checked !== initial[i];
+                  });
+                  saveBtn.disabled = !dirty;
+                  cancelBtn.disabled = !dirty;
+                }
+                Array.prototype.forEach.call(boxes, function (b) {
+                  b.addEventListener("change", refresh);
+                });
+                cancelBtn.addEventListener("click", function () {
+                  Array.prototype.forEach.call(boxes, function (b, i) {
+                    b.checked = initial[i];
+                  });
+                  refresh();
+                });
+              })();
+            </script>
           </section>
           {# The `total_row_count > 0` gate is unchanged by the move,
              and it is not cosmetic. `delete_all_observers` is not a

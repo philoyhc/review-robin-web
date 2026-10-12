@@ -371,7 +371,7 @@ the cross-references to them stay true.
 
 > **Lifecycle.** This page does **not** read `is_editable`. Every
 > mutating route takes `_require_not_archived`, so **every mutating
-> control below** — rows 165, 167–174 and 176–180 — renders through `ready` and
+> control below** — rows 165, 167–174, 176–180 and 273–274 — renders through `ready` and
 > `expired` and is absent only on `archived`. That is the exception the
 > gate note above §6 describes; `spec/lifecycle.md` §5 carries the
 > reason.
@@ -403,6 +403,8 @@ the cross-references to them stay true.
 | 178 | Roster card | Unlock / Lock | `<button type="button">` | `btn secondary` | Secondary | Toggles the Unlock panel. **One element, two homes** — the card's last child when collapsed, the right column's last child when open, under its last card (at the column's foot on an empty roster). The label names the state it moves *to*. Each home carries a `<noscript>` twin (`?unlocked=1#roster-card` and back), the panel being unreachable without JS otherwise. |
 | 179 | Unlock panel — Upload Observers | Upload | `<button type="submit">` | `btn secondary` | Secondary | Posts `/observers/import`. On a roster with rows it ships `disabled` behind the `replace-observers` confirm; on an empty roster it renders enabled, that being the initial bulk create. **Left** column, as on the other three roster pages — see `spec/setup_pages.md` § *The roster card and the Unlock panel*. |
 | 180 | Unlock panel — Danger Zone | Delete all observers | `<button type="submit">` | `btn destructive` | Destructive | Posts `/observers/delete-all`; `disabled` until the `delete-all` confirm is ticked, and the route 400s without it. No response-loss acknowledgement: nothing references an observer, so the loss the gate guards cannot occur. |
+| 273 | What observers see of their own entry | Cancel | `<button type="button">` | `btn secondary` | Secondary | As #269. **Heads the Unlock panel's right column**, above the Danger Zone; suppressed with the panel only when the session is `archived`. |
+| 274 | What observers see of their own entry | Save | `<button type="submit">` | `btn secondary` | Secondary | As #270, posting `/observers/self-fields`. |
 
 Row 175, the selection expander's cohort `Save`, is retired with that
 expander's builder; the number is not reused.

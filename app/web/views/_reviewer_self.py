@@ -17,7 +17,6 @@ from collections.abc import Iterable
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
 from app.services.participant_info import (
-    OBSERVER_SELF_DEFAULT,
     REVIEWER_SELF_DEFAULT,
     REVIEWER_SELF_FIELD_KEYS,
     effective_reviewer_self_fields,
@@ -174,11 +173,10 @@ def observer_self_card_context(
 
     The Observers index lists all three columns whatever their counts, so
     the card offers the tag only while some row holds one; Name and Email
-    are always offered, as on the other pages. Rung 2 renders the
-    default: nothing reads the stored column yet.
+    are always offered, as on the other pages.
     """
     offered = [r for r in readouts if r.slot != "tag-1" or r.count]
-    selected = OBSERVER_SELF_DEFAULT
+    selected = effective_self_fields(review_session, "observer")
     chips = self_chips(OBSERVER_SPEC, offered, selected)
     return {
         "self_field_chips": chips,
@@ -191,5 +189,10 @@ def observer_self_line_for(
     review_session: ReviewSession, observer: Observer
 ) -> list[SelfFieldValue]:
     """The observer's own line on ``/collation``, after the role pills,
-    at the default until rung 3 stores a selection."""
-    return self_line(OBSERVER_SPEC, review_session, observer, OBSERVER_SELF_DEFAULT)
+    under the session's selection, stored or default."""
+    return self_line(
+        OBSERVER_SPEC,
+        review_session,
+        observer,
+        effective_self_fields(review_session, "observer"),
+    )

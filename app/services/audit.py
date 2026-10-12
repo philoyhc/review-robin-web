@@ -714,6 +714,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     "session.reviewer_self_fields_set": EventSchema(_IDENTITY | {"changes"}),
     # participant info Item 4 — what reviewees see of their own entry.
     "session.reviewee_self_fields_set": EventSchema(_IDENTITY | {"changes"}),
+    # participant info Item 5 — what observers see of their own entry.
+    "session.observer_self_fields_set": EventSchema(_IDENTITY | {"changes"}),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
     "session_field_label.set": EventSchema(
         _IDENTITY | {"changes", "context"}

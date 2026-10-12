@@ -426,9 +426,10 @@ One row of readouts in the roster card, the same on all four pages:
 `Roster:`, then one run of `pill-count` pills — the roster count as
 `<Noun> (N)` (`Reviewers (3)`, `Relationships (0)`), a muted `|`
 divider (`.roster-readout-sep`, `aria-hidden`), then one pill per
-column showing its label and how many rows hold a value. Reviewers and
-Reviewees each add a second readout to the row, `Reviewers see:` and
-`Reviewees see:` (§ *Reviewers page*, § *Reviewees page*).
+column showing its label and how many rows hold a value. Reviewers,
+Reviewees and Observers each add a second readout to the row,
+`Reviewers see:`, `Reviewees see:` and `Observers see:` (§ *Reviewers
+page*, § *Reviewees page*, § *Observers page*).
 
 **Whole-roster counts** — a search or a page turn does not shrink them.
 
@@ -1479,8 +1480,10 @@ axes. Restated here only as far as its own reasons go:
   `delete-all` included, so on `ready` and `expired` both tenants are
   live and hiding them would withhold controls their own routes accept.
 - **`Upload Observers` is on the left, as on the other three, and the
-  `Danger Zone` alone on the right**: this page has no label slots.
-  On an empty roster the right column holds only `Lock`, at its foot.
+  own-entry card over the `Danger Zone` on the right**: this page has
+  no label slots. The `Danger Zone` is gated on rows and the card is
+  not, so on an empty roster the right column holds the card with
+  `Lock` under it.
 - **`.card-columns` is absent**, as on the other three; the cohort
   editor lives in the row editor (§ *Cohort match rule editor*).
 
@@ -1524,6 +1527,26 @@ an omission. `Tag (0)` says the CSV carried no `ObserverTag1` column.
 Labels come from this page's own headers, not a resolver: it has no
 `_field_labels_editor`, so `Tag` is the literal `<th>` string and a
 resolver call would invent a label the table never shows.
+
+### What an observer sees of their own entry
+
+As reviewers' (§ *Reviewers page*), for `sessions.observer_self_fields`;
+its keys, default and gate are in `spec/settings_inventory.md` §2 and
+the line it drives is in `spec/participant_model.md` §4.
+
+- **The `Observers see:` readout**, last in the roster card's readout
+  row, in every lifecycle state, with the same pills and `none`. The
+  pills read `Name`, `Email` and `Tag`, the index's own labels.
+- **The card** (`#observer-self-fields`), heading the Unlock panel's
+  right column above the `Danger Zone`: `Name` and `Email` always, and
+  `Tag` while some row holds one. The index lists `Tag` even at zero
+  (above); the card does not offer a field no observer could show. Save
+  and Cancel as reviewers'; Save posts `POST …/observers/self-fields`
+  and returns to `?unlocked=1#roster-card`.
+
+A selected key with no chip on offer is kept on Save, as reviewers'. The
+route answers 409 only when the session is archived, the page's own gate
+(§ *Lifecycle gate*), and 422 on an unknown key.
 
 ### Lifecycle gate
 

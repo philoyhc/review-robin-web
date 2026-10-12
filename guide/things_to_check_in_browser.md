@@ -462,3 +462,18 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Collation.** As an observer, `/collation` shows the name and
   email after the `Observer` pill, muted, as `/results` shows a
   reviewee's.
+
+
+## An observer's own entry: the live card (participant info Item 5, rung 3)
+
+- [ ] **Save.** Unlock Observers, untick Name, tick Tag (with a tagged
+  row): Save and Cancel enable; Save returns to the open panel and the
+  readout reads `Observers see:` Email, Tag.
+- [ ] **Cancel.** Move a chip, Cancel: the chips return and the pair
+  disables again.
+- [ ] **Collation.** As that observer, `/collation` shows the email and
+  `Tag: <value>` after the `Observer` pill, and no name.
+- [ ] **Running session.** On a `ready` session the card is still there
+  and saves (the Observers roster stays open until archived).
+- [ ] **Archived.** Archive the session: the readout stays, the card
+  goes with the panel.
