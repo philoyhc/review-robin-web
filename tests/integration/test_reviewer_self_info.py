@@ -23,6 +23,7 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import Reviewer, ReviewSession
 from app.web import views
 
+from ._unlock_panel import panel_columns
 from .test_reviewer_surface_display_fields import (
     _activate,
     _operator_creates_session_with_pair,
@@ -139,9 +140,9 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     assert card, "the reviewer-information card is missing"
     card_html = card.group(0)
     assert "What reviewers see of their own entry" in card_html
-    # Above `Upload Reviewers`, in the panel's right column.
-    right = html.index("unlock-stack unlock-right")
-    assert right < html.index("data-reviewer-self-card") < html.index('id="upload-csv"')
+    # Above `Upload Reviewers`, in the panel's left column (Item 2).
+    _, left, _ = panel_columns(html)
+    assert left.index("data-reviewer-self-card") < left.index('id="upload-csv"')
     chips = re.findall(
         r'<input type="checkbox"[^>]*value="(\w+)"([^>]*)>([^<]*)</label>',
         card_html,

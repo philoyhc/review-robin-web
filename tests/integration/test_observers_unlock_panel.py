@@ -29,6 +29,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession
 
+from ._unlock_panel import assert_lock_at_panel_foot
+
 CSV = b"ObserverEmail,ObserverName\no1@example.org,O1\no2@example.org,O2\n"
 
 
@@ -215,8 +217,8 @@ def test_upload_goes_left_and_the_danger_zone_right(
 def test_the_lock_control_ships_as_the_cards_last_child(
     client: TestClient, db: Session
 ) -> None:
-    """Collapsed, the control is the card's last child; open, it belongs
-    under the Danger Zone inside the panel. One element, two homes — the
+    """Collapsed, the control is the card's last child; open, it is the
+    panel's foot (participant info Item 2). One element, two homes — the
     toggle MOVES it, so where it *starts* decides whether the first
     click moves it out of a place it was never in.
     """
@@ -228,79 +230,41 @@ def test_the_lock_control_ships_as_the_cards_last_child(
     # panel is a lock state, not a form being finished.
     assert _control_label(card) == "Unlock", _control_label(card)
 
-    # Open, it is inside the panel's right-hand stack instead — below
-    # the Danger Zone, which is the card that stack holds.
+    # Open, it is the panel's own last child, after both columns.
     open_card = _card(
         _page(client, _session(client, db, "unl-3b"), "?unlocked=1")
     )
-    right = open_card.index('class="unlock-stack unlock-right"')
-    danger = open_card.index("danger-zone")
-    actions = open_card.index('class="roster-card-actions"')
-    assert right < danger < actions, (
-        "the open control is not under the Danger Zone in the right stack"
-    )
-    assert open_card.index('aria-expanded="true"') > right
+    assert_lock_at_panel_foot(open_card)
     assert _control_label(open_card) == "Lock", _control_label(open_card)
 
     # And the toggle knows both homes, which is what makes one element
-    # serve two positions — the open one read off the template's marker
-    # rather than named as a column, see the empty-roster test below.
+    # serve two positions.
     toggle = _toggle(_page(client, _session(client, db, "unl-3c")))
     assert "card.appendChild(actions)" in toggle
-    assert 'panel.querySelector("[data-lock-home]").appendChild(actions)' in (
-        toggle
-    )
+    assert "panel.appendChild(actions)" in toggle
 
 
-def test_the_lock_control_follows_the_column_that_has_a_card(
+def test_the_lock_control_stays_at_the_foot_on_an_empty_roster(
     client: TestClient, db: Session
 ) -> None:
-    """`Lock` sits beneath the card its column holds — and on an EMPTY
-    roster the right column holds none, because the Danger Zone is gated
-    on rows.
+    """On an EMPTY roster the right column holds nothing — the Danger
+    Zone is gated on rows. Until participant info Item 2 `Lock` followed
+    whichever column held a card (`data-lock-home`); now it is the
+    panel's foot either way, so an empty column cannot strand it.
 
-    The first draft left it floating at the top of that empty column,
-    level with the Upload card's heading. It lands on the two likeliest
-    paths, not an edge case: first use, and immediately after
-    `delete-all` — which redirects back `?unlocked=1` precisely because
-    uploading a replacement is the likely next move.
-
-    Reviewers cannot reach this, its right column holding the
-    always-rendered Upload card, so following Reviewers means keeping
-    the RELATIONSHIP rather than the column.
+    The empty case is not an edge: it is first use, and the state
+    `delete-all` redirects into (`?unlocked=1`).
     """
-    # Populated: the marker is on the right stack, under the Danger Zone.
     full = _card(
         _page(client, _session(client, db, "unl-20", rows=2), "?unlocked=1")
     )
-    right = full.index('class="unlock-stack unlock-right"')
-    assert full.index("data-lock-home") > right, (
-        "the lock home is not the right stack on a populated roster"
-    )
-    assert full.index("danger-zone") < full.index(
-        'class="roster-card-actions"'
-    ), "Lock is not beneath the Danger Zone"
-
-    # Empty: it moves to the left stack, under Upload.
     empty = _card(
         _page(client, _session(client, db, "unl-21", rows=0), "?unlocked=1")
     )
-    assert "danger-zone" not in empty
-    left = empty.index('class="unlock-stack"')
-    right_empty = empty.index('class="unlock-stack unlock-right"')
-    home = empty.index("data-lock-home")
-    assert left < home < right_empty, (
-        "Lock is stranded in the empty right column"
-    )
-    assert empty.index('id="upload-csv"') < empty.index(
-        'class="roster-card-actions"'
-    ) < right_empty, "Lock is not beneath the Upload card"
-
-    # One control either way — the macro has one definition and only
-    # one branch renders it.
+    assert "danger-zone" in full and "danger-zone" not in empty
     for card in (full, empty):
-        assert card.count('id="roster-unlock-btn"') == 1
-        assert card.count("data-lock-home") == 1
+        assert_lock_at_panel_foot(card)
+        assert "data-lock-home" not in card
 
 
 def test_the_panel_ships_hidden_and_unlocked_opens_it(

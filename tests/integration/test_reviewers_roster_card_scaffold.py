@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewer, ReviewSession
 
 from ._feature_toggles import enable_observers, enable_relationships
+from ._unlock_panel import assert_lock_at_panel_foot, panel_columns
 
 R_CSV = b"ReviewerName,ReviewerEmail\nR1,r1@example.com\nR2,r2@example.com\n"
 
@@ -706,10 +707,13 @@ def test_tick_order_prunes_on_untick_and_rebuilds_on_select_all(client, db):
     )
 
 
-def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
-    """Left column: `Reviewer tag labels` over `Danger Zone`, stacked.
-    Right column: `Upload Reviewers`. Author's arrangement, so it is
-    pinned — a refactor that reflowed the panel would otherwise undo it
+def test_the_unlock_panel_puts_self_and_upload_left_labels_and_danger_right(
+    client, db
+):
+    """Left column: `What reviewers see of their own entry` over `Upload
+    Reviewers`. Right column: `Reviewer tag labels` over `Danger Zone`.
+    The author's arrangement (participant info Item 2), so it is pinned
+    — a refactor that reflowed the panel would otherwise undo it
     silently.
 
     Asserts DOM order and stack membership, which is what the markup
@@ -729,25 +733,22 @@ def test_the_unlock_panel_puts_the_edit_cards_left_and_upload_right(client, db):
     # `field-labels-h-<source_type>`, but this reads the card class:
     # the ordering claim is about the three cards, and the class is
     # what all three orderings below have in common.
+    self_card = body.index("data-reviewer-self-card")
+    upload = body.index('id="reviewers-upload-h"')
     labels = body.index('class="card field-labels-editor"')
     danger = body.index('id="reviewers-danger-h"')
-    upload = body.index('id="reviewers-upload-h"')
-    assert labels < danger < upload, (
-        "expected labels, then danger zone, then upload"
+    assert self_card < upload < labels < danger, (
+        "expected the self card, upload, labels, then the danger zone"
     )
 
-    # The first two share the stack; upload is the grid's second child.
-    # Div-balanced like the panel scope above it. This was
-    # `.*?\n        </div>` — a boundary anchored on eight spaces of
-    # indentation, which resolved correctly only because nothing in the
-    # stack happened to close at that depth. The panel boundary two
-    # lines up had already broken that way once.
-    stack_html = _div_block(body, '<div class="unlock-stack">')
-    assert stack_html, "left-column stack not found"
-    assert 'class="card field-labels-editor"' in stack_html
-    assert 'id="reviewers-danger-h"' in stack_html
-    assert 'id="reviewers-upload-h"' not in stack_html, (
-        "upload belongs in the right column, not the stack"
+    # Stack membership, div-balanced: a boundary anchored on indentation
+    # resolved correctly only by luck of nothing closing at that depth.
+    _, left, right = panel_columns(body)
+    assert "data-reviewer-self-card" in left and 'id="reviewers-upload-h"' in left
+    assert 'class="card field-labels-editor"' in right
+    assert 'id="reviewers-danger-h"' in right
+    assert 'id="reviewers-upload-h"' not in right, (
+        "upload belongs in the left column"
     )
 
 
@@ -821,17 +822,17 @@ def test_the_lock_control_ships_as_the_cards_last_child(client, db):
     )
 
 
-def test_the_upload_card_sits_in_its_own_right_column_stack(client, db):
-    """A stack, not a second grid row. A grid row begins below the TALLER
-    column, which would drop the Lock control to the panel's foot —
-    measured at 125px under the upload card before this — rather than
-    directly beneath the card it acts on."""
+def test_the_lock_row_spans_both_columns(client, db):
+    """Open, `Lock` is a row of its own at the panel's foot, so it sits
+    at the bottom right of the whole card whichever column is taller
+    (participant info Item 2). The suite has no layout engine, so the
+    rule that places it is asserted as a rule."""
     html = _page(client, _with_reviewers(client, db, "rc24"))
-    right = re.search(
-        r'<div class="unlock-stack unlock-right">.*?id="reviewers-upload-h"',
-        html, re.S
+    assert (
+        "body.ui-v2 .unlock-panel > .roster-card-actions { grid-column: 1 / -1; }"
+        in html
     )
-    assert right, "upload card is not inside a right-column stack"
+    assert ".unlock-right > .roster-card-actions" not in html
 
 
 def test_the_lock_control_moves_between_its_two_homes(client, db):
@@ -846,7 +847,7 @@ def test_the_lock_control_moves_between_its_two_homes(client, db):
     assert handler, "toggle handler not found"
     body = handler.group(0)
     assert "card.appendChild(actions)" in body, body
-    assert '.unlock-right").appendChild(actions)' in body, body
+    assert "panel.appendChild(actions)" in body, body
 
 
 
@@ -1811,18 +1812,12 @@ def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
     assert 'id="roster-unlock-btn"' not in _panel(closed), (
         "the control starts inside the panel while closed"
     )
-    # Inside `.unlock-right` specifically, not merely somewhere in the
-    # panel. The toggle reopens into `panel.querySelector(".unlock-right")`,
-    # so a server render anywhere else puts the control in one place on
-    # arrival and another after a Lock/Unlock round trip — and the panel's
-    # foot is exactly where a sibling test measures it as 125px adrift
-    # from the card it belongs under.
-    right = _div_block(opened, '<div class="unlock-stack unlock-right">')
-    assert 'id="roster-unlock-btn"' in right, (
-        "arriving open, the control is not in the right-hand stack the "
-        "toggle would move it back into"
-    )
-    assert opened.count('id="roster-unlock-btn"') == 1, "two Lock controls"
+    # At the panel's foot specifically, not merely somewhere in the
+    # panel. The toggle reopens into `panel.appendChild`, the panel's
+    # last child (participant info Item 2), so a server render anywhere
+    # else puts the control in one place on arrival and another after a
+    # Lock/Unlock round trip.
+    assert_lock_at_panel_foot(opened)
     # The label is on its own line inside the button, so match the
     # element and read its text rather than needling `>Lock<`.
     btn = re.search(

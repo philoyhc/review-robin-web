@@ -242,118 +242,8 @@
          303s, and a panel that always shipped collapsed would shut
          itself on every save — the Lock control is what closes it. #}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
-        {# Left column: the two cards an operator edits, stacked. #}
+        {# Left column: what reviewers see of themselves, over the upload card (participant info Item 2). #}
         <div class="unlock-stack">
-          {# 19P.1 rung 3a — WIRED. The scaffold hand-copied this card's
-             markup so the shape could be reviewed; the real partial
-             replaces that copy rather than the copy being kept and the
-             include deleted. `_field_labels_editor.html` serves three
-             roster templates, and it already takes every parameter this
-             needs, so a second hand-maintained copy would drift from the
-             other two pages with nothing to catch it.
-
-             Its own `.field-labels-actions` replaces the scaffold's
-             `.unlock-col-actions`: the two resolve identically
-             (`flex`, `flex-end`, 8px gap, 12px top margin — `--space-2`
-             and `--space-3` are those values), so no rule follows the
-             markup here. Measured in Chromium, not read off the
-             stylesheet.
-
-             The partial also brings the dirty-check script the scaffold
-             copy had no reason to carry — Save and Cancel enable only
-             once an input actually changes.
-
-             Its parameters are set once at the top of the page, with
-             `unlock_available` — see there. #}
-          {% include "operator/partials/_field_labels_editor.html" %}
-
-          {# 19P.1 rung 3b — WIRED, and gated.
-
-             The scaffold rendered this unconditionally while the live
-             card it replaces was `{% if total_row_count > 0 %}`. The
-             gate wins, and the reason recorded here first was wrong:
-             the route does NOT refuse an empty delete-all. POSTed on a
-             roster of zero it answers 303 and writes an audit row
-             reading "Deleted all 0 reviewers".
-
-             The real reason is worse than a no-op. `_delete_all` opens
-             with `lifecycle.invalidate_if_validated(...)` before it
-             counts anything, so an ungated Delete-all knocks a
-             `validated` session back to `draft` while deleting nothing
-             at all.
-
-             The scaffold's `.confirm-label` is kept over the live
-             card's `<label style="font-weight: normal;">` — the class
-             carries that weight plus the checkbox alignment, and
-             `CLAUDE.md` asks for a class rather than an inline style.
-
-             Everything the route needs travels verbatim: the confirm's
-             `data-delete-confirm` key and the button's `data-delete-btn`
-             (one pair on the page, because the old card goes in this
-             same slice — two identical keys and `sync`'s first-match
-             `querySelector` resolves the wrong button), and the hidden
-             `acknowledge_response_loss`, without which
-             `_require_response_loss_ack` 400s and Delete-all is
-             unreachable on any session that has collected an answer. #}
-          {% if total_row_count and total_row_count > 0 %}
-          {# `danger-zone` kept, not dropped. It is the only reach for
-             `base.html`'s amber framing, which `spec/ui_elements.md`
-             §.card.danger-zone says exists "so the operator's eye
-             recognises the category" — and the other three roster pages
-             still carry it, so dropping it here would make one
-             destructive control plain and three amber. The first draft
-             of this slice lost the class by rewriting the element
-             instead of moving it, and recorded no decision either way.
-             Whether amber reads well INSIDE the panel's own frame is a
-             dev-slot question; losing it silently was not. #}
-          <section class="card danger-zone"
-                   aria-labelledby="reviewers-danger-h">
-            <h2 id="reviewers-danger-h">Danger Zone</h2>
-            <form method="post"
-                  action="{{ reviewers_base_url }}/delete-all">
-              {# Names what goes, modelled on the Instruments page
-                 (Segment 19I Item 3). The response clause is what the
-                 label was missing: `delete-all` destroys every saved
-                 answer under this roster and said nothing. #}
-              <label class="confirm-label">
-                <input type="checkbox" name="confirm" value="true" required
-                       data-delete-confirm="delete-all">
-                {# One <span>, so the sentence is ONE flex item. Without
-                   it `.confirm-label`'s `display: flex` makes every bare
-                   text node its own item and puts an 8px `gap` between
-                   each, which detaches the closing "." from the pill
-                   before it — visible in Chromium as
-                   "8 REVIEWERS  ." The gap is for the checkbox, not for
-                   the words. #}
-                <span>Yes, delete the existing
-                <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
-                and their associated
-                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
-                and
-                <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}{% if status_pills.relationship_count > 0 %}
-                and the
-                <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
-                involving them{% endif %}.</span>
-              </label>
-              {% if roster_response_count > 0 %}
-                <input type="hidden" id="reviewers-delete-all-ack"
-                       name="acknowledge_response_loss" value="true">
-              {% endif %}
-              <div class="unlock-col-actions">
-                <button class="btn destructive" type="submit"
-                        data-delete-btn="delete-all"
-                        disabled aria-disabled="true">Delete all reviewers</button>
-              </div>
-            </form>
-          </section>
-          {% endif %}
-        </div>
-
-        {# Right column: what reviewers see of themselves, the upload
-           card, and — while open — the Lock control beneath them. A stack, not a second grid row: a grid row
-           starts below the TALLER column, which would drop the button to
-           the panel's foot, far from the card it sits under. #}
-        <div class="unlock-stack unlock-right">
         {# participant info Item 1 — what reviewers see of their own
            entry, after the role pills on the reviewer surface. One chip
            per populated column (Name and Email always), as the roster
@@ -523,6 +413,119 @@
             </div>
           </form>
         </section>
+        </div>
+
+        {# Right column: the tag labels over the Danger Zone. #}
+        <div class="unlock-stack unlock-right">
+          {# 19P.1 rung 3a — WIRED. The scaffold hand-copied this card's
+             markup so the shape could be reviewed; the real partial
+             replaces that copy rather than the copy being kept and the
+             include deleted. `_field_labels_editor.html` serves three
+             roster templates, and it already takes every parameter this
+             needs, so a second hand-maintained copy would drift from the
+             other two pages with nothing to catch it.
+
+             Its own `.field-labels-actions` replaces the scaffold's
+             `.unlock-col-actions`: the two resolve identically
+             (`flex`, `flex-end`, 8px gap, 12px top margin — `--space-2`
+             and `--space-3` are those values), so no rule follows the
+             markup here. Measured in Chromium, not read off the
+             stylesheet.
+
+             The partial also brings the dirty-check script the scaffold
+             copy had no reason to carry — Save and Cancel enable only
+             once an input actually changes.
+
+             Its parameters are set once at the top of the page, with
+             `unlock_available` — see there. #}
+          {% include "operator/partials/_field_labels_editor.html" %}
+
+          {# 19P.1 rung 3b — WIRED, and gated.
+
+             The scaffold rendered this unconditionally while the live
+             card it replaces was `{% if total_row_count > 0 %}`. The
+             gate wins, and the reason recorded here first was wrong:
+             the route does NOT refuse an empty delete-all. POSTed on a
+             roster of zero it answers 303 and writes an audit row
+             reading "Deleted all 0 reviewers".
+
+             The real reason is worse than a no-op. `_delete_all` opens
+             with `lifecycle.invalidate_if_validated(...)` before it
+             counts anything, so an ungated Delete-all knocks a
+             `validated` session back to `draft` while deleting nothing
+             at all.
+
+             The scaffold's `.confirm-label` is kept over the live
+             card's `<label style="font-weight: normal;">` — the class
+             carries that weight plus the checkbox alignment, and
+             `CLAUDE.md` asks for a class rather than an inline style.
+
+             Everything the route needs travels verbatim: the confirm's
+             `data-delete-confirm` key and the button's `data-delete-btn`
+             (one pair on the page, because the old card goes in this
+             same slice — two identical keys and `sync`'s first-match
+             `querySelector` resolves the wrong button), and the hidden
+             `acknowledge_response_loss`, without which
+             `_require_response_loss_ack` 400s and Delete-all is
+             unreachable on any session that has collected an answer. #}
+          {% if total_row_count and total_row_count > 0 %}
+          {# `danger-zone` kept, not dropped. It is the only reach for
+             `base.html`'s amber framing, which `spec/ui_elements.md`
+             §.card.danger-zone says exists "so the operator's eye
+             recognises the category" — and the other three roster pages
+             still carry it, so dropping it here would make one
+             destructive control plain and three amber. The first draft
+             of this slice lost the class by rewriting the element
+             instead of moving it, and recorded no decision either way.
+             Whether amber reads well INSIDE the panel's own frame is a
+             dev-slot question; losing it silently was not. #}
+          <section class="card danger-zone"
+                   aria-labelledby="reviewers-danger-h">
+            <h2 id="reviewers-danger-h">Danger Zone</h2>
+            <form method="post"
+                  action="{{ reviewers_base_url }}/delete-all">
+              {# Names what goes, modelled on the Instruments page
+                 (Segment 19I Item 3). The response clause is what the
+                 label was missing: `delete-all` destroys every saved
+                 answer under this roster and said nothing. #}
+              <label class="confirm-label">
+                <input type="checkbox" name="confirm" value="true" required
+                       data-delete-confirm="delete-all">
+                {# One <span>, so the sentence is ONE flex item. Without
+                   it `.confirm-label`'s `display: flex` makes every bare
+                   text node its own item and puts an 8px `gap` between
+                   each, which detaches the closing "." from the pill
+                   before it — visible in Chromium as
+                   "8 REVIEWERS  ." The gap is for the checkbox, not for
+                   the words. #}
+                <span>Yes, delete the existing
+                <span class="pill pill-empty">{{ total_row_count }} reviewer{% if total_row_count != 1 %}s{% endif %}</span>{% if assignment_count and assignment_count > 0 %}
+                and their associated
+                <span class="pill pill-empty">{{ assignment_count }} assignment{% if assignment_count != 1 %}s{% endif %}</span>{% endif %}{% if roster_response_count > 0 %}
+                and
+                <span class="pill pill-empty">{{ roster_response_count }} reviewer response{% if roster_response_count != 1 %}s{% endif %}</span>{% endif %}{% if status_pills.relationship_count > 0 %}
+                and the
+                <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
+                involving them{% endif %}.</span>
+              </label>
+              {% if roster_response_count > 0 %}
+                <input type="hidden" id="reviewers-delete-all-ack"
+                       name="acknowledge_response_loss" value="true">
+              {% endif %}
+              <div class="unlock-col-actions">
+                <button class="btn destructive" type="submit"
+                        data-delete-btn="delete-all"
+                        disabled aria-disabled="true">Delete all reviewers</button>
+              </div>
+            </form>
+          </section>
+          {% endif %}
+        </div>
+
+        {# Open, `Lock` is the panel's last child: a row of its own
+           spanning both columns, so it sits at the bottom right of
+           the whole card whichever column is taller (participant
+           info Item 2). #}
         {% if panel_open %}
         <div class="roster-card-actions">
           <button type="button" class="btn secondary" id="roster-unlock-btn"
@@ -538,12 +541,11 @@
           </noscript>
         </div>
         {% endif %}
-        </div>
       </div>
 
 
       {# Collapsed this sits here, as the card's last child; open it
-         belongs under the upload card, inside the panel. The toggle
+         is the panel's foot, inside the panel. The toggle
          MOVES the one element between those two homes rather than
          rendering two copies, so arriving open has to start it in the
          panel — otherwise the first Lock click would move it out of a
@@ -595,8 +597,8 @@
           var panel = document.getElementById("roster-unlock-panel");
           if (!btn || !panel) return;
           // The control has two homes, and one element. Collapsed it is
-          // the card's last child; open it belongs under the upload card,
-          // in the panel's right column — which means inside the panel,
+          // the card's last child; open it belongs at the panel's foot,
+          // after both columns — which means inside the panel,
           // and the panel is `display: none` when closed. So it moves,
           // rather than being rendered twice: two copies of one control
           // is how they drift apart.
@@ -605,7 +607,7 @@
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
             if (open) card.appendChild(actions);
-            else panel.querySelector(".unlock-right").appendChild(actions);
+            else panel.appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves to, not "Done":
             // the panel is a lock state, not a form being finished.

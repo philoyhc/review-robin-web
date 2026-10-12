@@ -28,6 +28,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
+from ._unlock_panel import assert_lock_at_panel_foot, panel_columns
+
 #: The muted divider between the roster count and the column pills.
 _SEP = '<span class="roster-readout-sep" aria-hidden="true">|</span>'
 
@@ -197,15 +199,15 @@ def test_the_toggle_moves_one_control_rather_than_rendering_two(
     client: TestClient, db: Session, page: str, noun: str, Noun: str
 ) -> None:
     """Two copies of one control is how they drift apart. Source
-    assertion on the script, with the behaviour measured in Chromium:
-    the control's parent goes `.card.roster-card` -> `.unlock-stack
-    .unlock-right` -> back on each click.
+    assertion on the script: the control's parent goes
+    `.card.roster-card` -> the panel itself (its foot, participant info
+    Item 2) -> back on each click.
     """
     body = _get(client, _mk(client, db, f"up-m-{page[:4]}"), page)
     assert body.count('class="roster-card-actions"') == 1, (
         "two copies of the Lock control"
     )
-    assert 'panel.querySelector(".unlock-right").appendChild(actions)' in body, (
+    assert "panel.appendChild(actions)" in body, (
         "the control has no second home; opening the panel orphans it"
     )
     assert "card.appendChild(actions)" in body
@@ -250,21 +252,23 @@ def test_both_cards_moved_in_and_nothing_stays_below(
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)
-def test_the_labels_editor_goes_left_over_the_danger_zone(
+def test_upload_goes_left_and_the_labels_editor_right_over_the_danger_zone(
     client: TestClient, db: Session, page: str, noun: str, Noun: str
 ) -> None:
-    """Reviewers' arrangement: editor over Danger Zone on the left,
-    Upload on the right."""
+    """The author's order (participant info Item 2): `Upload` on the
+    left; the editor over the Danger Zone on the right; `Lock` at the
+    panel's foot, after both columns."""
     rs = _mk(client, db, f"up-a-{page[:4]}")
     _seed(db, rs.id, page)
     card = _card(_get(client, rs, page, "?unlocked=1"), page)
 
-    left_at = card.index('class="unlock-stack"')
-    right_at = card.index('class="unlock-stack unlock-right"')
-    assert left_at < right_at
-    assert left_at < card.index("field-labels-form") < right_at
-    assert left_at < card.index('class="card danger-zone"') < right_at
-    assert card.index('id="upload-csv"') > right_at
+    _, left, right = panel_columns(card)
+    assert 'id="upload-csv"' in left and "field-labels-form" not in left
+    assert "field-labels-form" in right and 'id="upload-csv"' not in right
+    assert right.index("field-labels-form") < right.index(
+        'class="card danger-zone"'
+    ), "the Danger Zone is not under the labels editor"
+    assert_lock_at_panel_foot(card)
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)

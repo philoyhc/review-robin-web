@@ -150,11 +150,9 @@
      19P.3 rung 4 — the roster card: what the roster holds, and an Unlock
      panel holding the three controls that change it.
 
-     Reviewers' arrangement, not Observers': the tag-labels editor over
-     the `Danger Zone` on the left, `Upload` on the right, `Lock`
-     beneath the upload card. Observers has no labels editor and
-     flips the two cards (Upload left, Danger Zone right); its own
-     comment says where its `Lock` goes.
+     Every roster page's arrangement (participant info Item 2): `Upload`
+     on the left, the tag-labels editor over the `Danger Zone` on the
+     right, and `Lock` at the panel's foot, bottom right.
      ------------------------------------------------------------------ #}
   <div class="card roster-card" id="roster-card">
     <div class="roster-readouts">
@@ -186,44 +184,8 @@
        above stay — they are informational in every state. #}
     {% if unlock_available %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
-        {# Left column: the two cards an operator edits, stacked. #}
+        {# Left column: the upload card (participant info Item 2). #}
         <div class="unlock-stack">
-          {% include "operator/partials/_field_labels_editor.html" %}
-
-          {# Gated on the roster having rows, as Reviewers' is. The
-             route does NOT refuse an empty delete-all — it answers 303
-             and writes an audit row reading "Deleted all 0" — and worse,
-             `_delete_all` opens with `invalidate_if_validated(...)`
-             before it counts anything, so an ungated Delete-all knocks a
-             `validated` session back to `draft` while deleting nothing
-             at all. #}
-          {% if total_row_count and total_row_count > 0 %}
-            <section class="card danger-zone" aria-labelledby="relationships-danger-h">
-              <h2 id="relationships-danger-h">Danger Zone</h2>
-              <form method="post" action="{{ relationships_base_url }}/delete-all">
-                <p>
-                  <label class="confirm-label">
-                    <input type="checkbox" name="confirm" value="true" required
-                           data-delete-confirm="delete-all">
-                    <span>Yes, delete the existing
-                    <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.</span>
-                  </label>
-                </p>
-                <div class="unlock-col-actions">
-                  <button class="btn destructive" type="submit"
-                          data-delete-btn="delete-all"
-                          disabled aria-disabled="true">Delete all relationships</button>
-                </div>
-              </form>
-            </section>
-          {% endif %}
-        </div>
-
-        {# Right column: the upload card, and — while open — the Lock
-           control beneath it. A stack, not a second grid row: a grid row
-           starts below the TALLER column, which would drop the button to
-           the panel's foot, far from the card it sits under. #}
-        <div class="unlock-stack unlock-right">
           <section class="card" id="upload-csv" aria-labelledby="relationships-upload-h">
             <h2 id="relationships-upload-h">Upload Relationships</h2>
             <p class="form-help">
@@ -267,6 +229,45 @@
               </div>
             </form>
           </section>
+        </div>
+
+        {# Right column: the tag labels over the Danger Zone. #}
+        <div class="unlock-stack unlock-right">
+          {% include "operator/partials/_field_labels_editor.html" %}
+
+          {# Gated on the roster having rows, as Reviewers' is. The
+             route does NOT refuse an empty delete-all — it answers 303
+             and writes an audit row reading "Deleted all 0" — and worse,
+             `_delete_all` opens with `invalidate_if_validated(...)`
+             before it counts anything, so an ungated Delete-all knocks a
+             `validated` session back to `draft` while deleting nothing
+             at all. #}
+          {% if total_row_count and total_row_count > 0 %}
+            <section class="card danger-zone" aria-labelledby="relationships-danger-h">
+              <h2 id="relationships-danger-h">Danger Zone</h2>
+              <form method="post" action="{{ relationships_base_url }}/delete-all">
+                <p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="confirm" value="true" required
+                           data-delete-confirm="delete-all">
+                    <span>Yes, delete the existing
+                    <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.</span>
+                  </label>
+                </p>
+                <div class="unlock-col-actions">
+                  <button class="btn destructive" type="submit"
+                          data-delete-btn="delete-all"
+                          disabled aria-disabled="true">Delete all relationships</button>
+                </div>
+              </form>
+            </section>
+          {% endif %}
+        </div>
+
+        {# Open, `Lock` is the panel's last child: a row of its own
+           spanning both columns, so it sits at the bottom right of
+           the whole card whichever column is taller (participant
+           info Item 2). #}
         {% if panel_open %}
         <div class="roster-card-actions">
           <button type="button" class="btn secondary" id="roster-unlock-btn"
@@ -282,11 +283,10 @@
           </noscript>
         </div>
         {% endif %}
-        </div>
       </div>
 
       {# Collapsed this sits here, as the card's last child; open it
-         belongs under the upload card, inside the panel. The toggle
+         is the panel's foot, inside the panel. The toggle
          MOVES the one element between those two homes rather than
          rendering two copies, so arriving open has to start it in the
          panel — otherwise the first Lock click would move it out of a
@@ -326,8 +326,8 @@
           var panel = document.getElementById("roster-unlock-panel");
           if (!btn || !panel) return;
           // The control has two homes, and one element. Collapsed it is
-          // the card's last child; open it belongs under the upload
-          // card, in the panel's right column — which means inside the
+          // the card's last child; open it belongs at the panel's foot,
+          // after both columns — which means inside the
           // panel, and the panel is `display: none` when closed. So it
           // moves, rather than being rendered twice: two copies of one
           // control is how they drift apart.
@@ -336,7 +336,7 @@
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
             if (open) card.appendChild(actions);
-            else panel.querySelector(".unlock-right").appendChild(actions);
+            else panel.appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves TO, not
             // "Done": the panel is a lock state, not a form being

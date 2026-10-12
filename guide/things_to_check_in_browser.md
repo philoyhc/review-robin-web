@@ -362,3 +362,20 @@ section (git history keeps it), so this file lists only what is owed.
   appears below the roster card while the row is open.
 - [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel
   and saves as before.
+
+## The Unlock panels' card order (participant info Item 2)
+
+- [ ] **Reviewers.** On a draft with rows, Unlock: left, "What
+  reviewers see of their own entry" over `Upload Reviewers`; right,
+  `Reviewer tag labels` over the `Danger Zone`; `Lock` at the bottom
+  right of the whole card, below both columns.
+- [ ] **Reviewees and Relationships.** Unlock: `Upload` left, tag
+  labels over the `Danger Zone` right, `Lock` bottom right.
+- [ ] **Observers.** Unlock with observers: `Upload` left, `Danger
+  Zone` right, `Lock` bottom right. With none (the right column empty),
+  `Lock` is still bottom right, not under `Upload`.
+- [ ] **The toggle.** On each page, Lock then Unlock again: `Lock`
+  returns to the same bottom-right place, and collapsed `Unlock` sits
+  where it did before.
+- [ ] **Narrow.** At 800px or less the columns stack (left's cards, then
+  right's), with `Lock` last, flush right.

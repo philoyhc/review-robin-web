@@ -235,11 +235,9 @@
     </form>
   {% endif %}
 
-  {# The `Lock` control, defined once and called from whichever column
-     actually holds a card — see `lock_home` below. A macro rather than
-     two copies of the markup: two copies of one control is how they
-     drift apart, and the toggle's `querySelector` would find only the
-     first of them anyway. #}
+  {# The `Lock` control, defined once and called at the panel's foot
+     (participant info Item 2). A macro since 19P.2, when it had two
+     homes; it keeps the markup out of the panel's flow. #}
   {% macro lock_control() %}
     <div class="roster-card-actions">
       <button type="button" class="btn secondary" id="roster-unlock-btn"
@@ -330,27 +328,14 @@
          redirect, and a panel that always shipped collapsed would shut
          itself on every one — the `Lock` control is what closes it. #}
       {# The Danger Zone is gated on rows, so on an EMPTY roster the
-         right column has nothing in it — and the first draft of this
-         rung left `Lock` floating at the top of that empty column,
-         level with the Upload card's heading and ~180px above Upload's
-         own button. Flagged by the cold read.
-
-         It lands on the two likeliest paths, not an edge case: first
-         use (empty roster, open the panel to do the initial import),
-         and immediately after `delete-all`, which redirects back
-         `?unlocked=1` precisely because uploading a replacement is the
-         likely next move.
-
-         Reviewers cannot reach this — its right column holds the
-         always-rendered Upload card — so "follow Reviewers" means
-         keeping the RELATIONSHIP (`Lock` beneath the card its column
-         holds) rather than the column. `data-lock-home` marks whichever
-         stack that is, and the toggle below reads it instead of naming
-         a column. #}
+         right column has nothing in it. `Lock` used to follow whichever
+         column held a card (19P.2, `data-lock-home`); since participant
+         info Item 2 it is the panel's last child, spanning both
+         columns, so an empty column no longer moves it. #}
       {% set danger_visible = total_row_count and total_row_count > 0 %}
       <div class="unlock-panel" id="roster-unlock-panel"{% if not panel_open %} hidden{% endif %}>
         {# Left column: the import card. #}
-        <div class="unlock-stack"{% if not danger_visible %} data-lock-home{% endif %}>
+        <div class="unlock-stack">
           <section class="card" id="upload-csv"
                    aria-labelledby="observers-upload-h">
             <h2 id="observers-upload-h">Upload Observers</h2>
@@ -419,15 +404,11 @@
               </div>
             </form>
           </section>
-          {% if panel_open and not danger_visible %}{{ lock_control() }}{% endif %}
         </div>
 
-        {# Right column: the Danger Zone, and — while open — the `Lock`
-           control beneath it. A stack, not a second grid row: a grid
-           row starts below the TALLER column, which would drop the
-           button to the panel's foot, far from the card it sits
-           under. #}
-        <div class="unlock-stack unlock-right"{% if danger_visible %} data-lock-home{% endif %}>
+        {# Right column: the Danger Zone (and, with its later item, what
+           observers see of their own entry above it). #}
+        <div class="unlock-stack unlock-right">
           {# The `total_row_count > 0` gate is unchanged by the move,
              and it is not cosmetic. `delete_all_observers` is not a
              no-op on an empty roster — it writes an audit row reading
@@ -459,12 +440,17 @@
               </form>
             </section>
           {% endif %}
-          {% if panel_open and danger_visible %}{{ lock_control() }}{% endif %}
         </div>
+
+        {# Open, `Lock` is the panel's last child: a row of its own
+           spanning both columns, at the bottom right of the whole
+           card (participant info Item 2) — on an empty roster too,
+           where the right column holds nothing. #}
+        {% if panel_open %}{{ lock_control() }}{% endif %}
       </div>
 
       {# Collapsed this sits here, as the card's last child; open it
-         belongs under the Danger Zone, inside the panel. The toggle
+         is the panel's foot, inside the panel. The toggle
          MOVES the one element between those two homes rather than
          rendering two copies, so arriving open has to start it in the
          panel — otherwise the first `Lock` click would move it out of
@@ -505,8 +491,8 @@
           var panel = document.getElementById("roster-unlock-panel");
           if (!btn || !panel) return;
           // The control has two homes and one element. Collapsed it is
-          // the card's last child; open it belongs under the Danger
-          // Zone, in the panel's right column — which means inside the
+          // the card's last child; open it belongs at the panel's
+          // foot, after both columns — which means inside the
           // panel, and the panel is `display: none` when closed. So it
           // moves rather than being rendered twice: two copies of one
           // control is how they drift apart.
@@ -514,13 +500,8 @@
           var card = document.getElementById("roster-card");
           btn.addEventListener("click", function () {
             var open = !panel.hidden;
-            // `[data-lock-home]`, not `.unlock-right`: the control
-            // belongs beneath the card its column holds, and on an
-            // empty roster the right column holds none — the Danger
-            // Zone is gated on rows. The template marks whichever stack
-            // that is, so this does not have to know the rule.
             if (open) card.appendChild(actions);
-            else panel.querySelector("[data-lock-home]").appendChild(actions);
+            else panel.appendChild(actions);
             panel.hidden = open;
             // The label names the state the control moves TO, not
             // "Done": the panel is a lock state, not a form being

@@ -313,6 +313,14 @@ Taken 2026-10-12 at `1fa68b24`.
 - `What reviewees see` and `What observers see`: later items, which
   place their cards by this Decision.
 
+### Status
+
+- Rung 2 (2026-10-12): the four templates reordered; `Lock` is the
+  panel's last child, `.unlock-panel > .roster-card-actions` spanning
+  both columns, and the toggle appends it to the panel;
+  `data-lock-home` retired. `tests/integration/_unlock_panel.py` holds
+  the one "Lock at the panel's foot" check the four pages share.
+
 ### Doc impact
 
 - `spec/setup_pages.md` — the Unlock panel's column contents on all four pages and `Lock` at the panel's foot; Observers no longer the mirror.
