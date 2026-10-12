@@ -375,12 +375,12 @@
                  data-reviewer-self-card>
           <h2 id="reviewer-self-fields-h">Reviewer information shown on surface</h2>
           <form method="post" action="{{ reviewers_base_url }}/self-fields"
-                id="reviewer-self-fields-form">
+                id="reviewer-self-fields-form" autocomplete="off">
             <div class="reviewer-self-chips">
               {% for chip in self_field_chips %}
                 <label class="pill pill-count tag-chip">
                   <input type="checkbox" class="visually-hidden"
-                         name="fields" value="{{ chip.key }}" autocomplete="off"
+                         name="fields" value="{{ chip.key }}"
                          {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
               {% endfor %}
             </div>

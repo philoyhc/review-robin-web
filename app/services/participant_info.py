@@ -89,11 +89,13 @@ def set_reviewer_self_fields(
     lifecycle.require_editable(db, review_session)
     new = normalize_reviewer_self_fields(keys)
     stored = review_session.reviewer_self_fields
-    if stored is not None and list(effective_reviewer_self_fields(review_session)) == new:
+    # Compared with what is stored, not the effective selection, so a
+    # save over a hand-edited bad value repairs it rather than no-op.
+    if stored == new:
         return
     # The audit records what was stored (``None`` while unset), not the
     # effective default, so a first save reads as NULL → list.
-    old = list(stored) if isinstance(stored, list) else None
+    old = list(stored) if isinstance(stored, list) else stored
     review_session.reviewer_self_fields = new
     db.flush()
     audit.write_event(

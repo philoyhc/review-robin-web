@@ -329,7 +329,29 @@ def test_saving_the_default_over_null_records_it(
 ) -> None:
     """With nothing stored, saving the default as it stands still writes
     it, so a later change to the default does not move this session."""
+    from app.db.models import AuditEvent
+
     rs = _pair(client, db, "rsi-default")
+    _save(client, rs, fields=["name", "email", "profile_link"])
+    db.refresh(rs)
+    assert rs.reviewer_self_fields == ["name", "email", "profile_link"]
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == rs.id,
+            AuditEvent.event_type == "session.reviewer_self_fields_set",
+        )
+    ).scalar_one()
+    assert event.detail["changes"]["reviewer_self_fields"] == [
+        None, ["name", "email", "profile_link"],
+    ]
+
+
+def test_a_save_repairs_a_hand_edited_stored_value(
+    client: TestClient, db: Session
+) -> None:
+    rs = _pair(client, db, "rsi-repair")
+    rs.reviewer_self_fields = ["status"]
+    db.commit()
     _save(client, rs, fields=["name", "email", "profile_link"])
     db.refresh(rs)
     assert rs.reviewer_self_fields == ["name", "email", "profile_link"]
