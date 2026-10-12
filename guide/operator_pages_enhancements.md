@@ -449,7 +449,13 @@ The author's ruling, 2026-10-12:
   rule is **optional**: an empty builder saves an observer with no rule,
   who sees nothing (`spec/setup_pages.md` "Cohort match rule editor").
 - **The selection expander keeps its builder** for applying one rule to
-  several observers at once.
+  several observers at once. *(Amended below.)*
+- **Amended 2026-10-12, the author's ruling at rung 3:** selecting rows
+  shows no builder; the expander keeps the count and its row actions.
+  `Edit` on **one** row opens the row editor above (row and rule, one
+  Save); `Edit` on **several** opens the builder alone for all of them,
+  the rows staying read-only, its Save applying one rule to each
+  (`/observers/cohort-rule`). One editing surface, as `Add new`'s.
 
 Rejected: making a rule required on every save. An imported observer
 without one could not have a typo in its name fixed until it was given
@@ -472,8 +478,12 @@ a rule.
 ### Judgment calls — decided
 
 - Save is gated on validity, not on a change: Cancel already discards.
-- The rule's builder is the expander's, not a second copy: the inert
-  `<template>` is cloned under the edit row and form-associated to it.
+- The rule's builder is the expander's, not a second copy: one macro,
+  `cohort_builder(form_id)`, renders it in both places.
+- The row editor's field select leads with a blank `Choose a field`
+  (2026-10-12, rung 3): the default cell was a complete rule (first tag
+  preselected), so an untouched `Add` would have saved a rule the
+  operator never chose. A blank cell is dropped; all blank is no rule.
 
 ### Blast radius (measured)
 
@@ -497,6 +507,15 @@ Taken 2026-10-12 at `ddd589d3`.
   on the pane and `window.observerFillRule`, now shared with the
   expander, loads it; the builder's handlers render whenever the page is
   not archived. The routes ignore the fields: Save saves the row alone.
+- Rung 3 (2026-10-12), the write and the gate: `create_observer` /
+  `update_observer` take `cohort_rule`, validated before any write and
+  committed with the row (`observer.cohort_rule_assigned` beside the row's
+  event, one correlation id; none when unchanged; never demotes
+  `validated`). The routes read the builder (`_row_editor_rule`): blank
+  cells dropped, half-filled refused with a 400 that keeps what was
+  posted. Save disables until there is an email and no half-filled cell.
+  Codex's #2988 finding (a rejected edit emptied the builder) missed that
+  merge and rides here.
 
 ### PR ladder
 
@@ -505,9 +524,13 @@ Taken 2026-10-12 at `ddd589d3`.
    row, loaded with the rule, its cells form-associated to the edit form;
    the routes ignore them, and Save keeps today's behavior.
 3. **The write and the gate.** The services take the rule; the routes
-   parse it; Save disables until savable; tests, specs, a browser-check
-   section. A `diff-reviewer` read on the cumulative diff from rung 2's
-   base.
+   parse it; Save disables until savable; tests, a browser-check
+   section. ~~Specs and the cumulative read~~ move to rung 4.
+4. **Edit opens the editor** (added 2026-10-12, the amendment above).
+   The expander drops its builder; `Edit` on several rows opens the
+   builder alone for them. Specs, a browser-check section, and the
+   item's `diff-reviewer` read on the cumulative diff from rung 2's base
+   (`af77fa0b`).
 
 ### Definition of done
 
@@ -515,6 +538,8 @@ Taken 2026-10-12 at `ddd589d3`.
   clearing one by emptying the builder each save in one POST, by test;
   a half-filled cell answers 400 with the editor re-rendered, by test.
 - Save disabled while unsavable, by a browser test.
+- No builder in the selection expander; `Edit` on several rows opens the
+  builder alone and saves one rule to each, by test.
 - `guide/things_to_check_in_browser.md` has a section per code rung.
 - `### Doc impact` current, every bullet checked by hand.
 - `spec-writer` run against the doc-impact specs; flags adjudicated.
@@ -526,7 +551,8 @@ Taken 2026-10-12 at `ddd589d3`.
 
 ### Out of scope
 
-- The selection expander's bulk builder, beyond sharing its template.
+- ~~The selection expander's bulk builder, beyond sharing its template.~~
+  In scope since the amendment.
 - Observer CSV import's `CohortRule` column.
 
 ### Doc impact
