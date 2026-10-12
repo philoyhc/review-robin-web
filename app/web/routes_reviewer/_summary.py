@@ -28,7 +28,7 @@ from app.services.extracts import filename, stream_csv
 from app.services.extracts.responses_extract import (
     serialize_reviewer_session_summary,
 )
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_reviewer_in_session
 from app.web.routes_reviewer._shared import (
     _templates,
@@ -109,6 +109,11 @@ def reviewer_session_summary(
                 user=user,
                 review_session=review_session,
                 active_role="reviewer",
+            ),
+            # participant info Item 3 — the reviewer's own roster
+            # fields after the role pills, as on the surface.
+            "reviewer_self_fields": views.reviewer_self_line_for(
+                review_session, reviewer
             ),
             # ``Recall my submission`` button is shown only while
             # the session is ``ready`` — recall would have no live

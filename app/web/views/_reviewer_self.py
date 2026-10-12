@@ -1,8 +1,9 @@
 """What a reviewer is shown of their own roster entry (participant info Item 1).
 
-`guide/participant_info.md` Item 1. One session-wide selection of a
-reviewer's roster fields, shown to that reviewer after the role pills on
-the reviewer surface and its operator preview, chosen on the Reviewers
+`guide/participant_info.md` Items 1 and 3. One session-wide selection of
+a reviewer's roster fields, shown to that reviewer after the role pills
+on the reviewer surface and its operator preview, ``/summary`` and the
+pre-open "opens later" page, chosen on the Reviewers
 page's Unlock panel and reported in its roster card's readout row.
 
 The selection itself, its default and its storage live in
@@ -34,6 +35,7 @@ __all__ = [
     "reviewer_self_kept",
     "reviewer_self_label",
     "reviewer_self_line",
+    "reviewer_self_line_for",
     "reviewer_self_readout",
 ]
 
@@ -171,3 +173,14 @@ def reviewer_self_line(
             )
         )
     return line
+
+
+def reviewer_self_line_for(
+    review_session: ReviewSession, reviewer: Reviewer
+) -> list[SelfFieldValue]:
+    """The reviewer's own line under the session's selection, stored or
+    default: what the surface, ``/summary`` and the pre-open page show
+    after the ``Reviewer`` pill (participant info Items 1 and 3)."""
+    return reviewer_self_line(
+        review_session, reviewer, effective_reviewer_self_fields(review_session)
+    )

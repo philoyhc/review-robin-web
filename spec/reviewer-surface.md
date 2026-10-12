@@ -875,10 +875,11 @@ GET requests behave differently depending on which gate fails:
   activated yet). The route
   short-circuits to the **pre-open page**
   (`reviewer/pre_open.html`): session name in the h1 with an
-  "opens later" suffix, an info banner explaining the review
-  hasn't opened yet, the deadline + zone if one is set, and a
-  link back to the reviewer dashboard. No response form is
-  rendered. Applies for `draft` and `validated`.
+  "opens later" suffix, a role row (a static `Reviewer` pill and the
+  reviewer's own line, § *Role-navigator chip strip*), an info banner
+  explaining the review hasn't opened yet, the deadline + zone if one
+  is set, and a link back to the reviewer dashboard. No response form
+  is rendered. Applies for `draft` and `validated`.
 
 - **Session `archived`** (reached through an old invitation link or
   a bookmark; the dashboard lists it unlinked). The same template
@@ -1243,6 +1244,9 @@ dashboard's Session column once Reviewer Status is
 - **Gate** — `responses.reviewer_session_state.pill_state ==
   "submitted"`. Otherwise redirects to `/me` with no
   flash banner; the reviewer can re-submit from the surface.
+- **Role row** — the role-navigator chips with the reviewer's own line
+  after the last pill, as on the surface (§ *Role-navigator chip
+  strip*).
 - **H1** — "Your responses — {session.name}".
 - **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
   built from `MAX(response.submitted_at)` across the
@@ -1295,7 +1299,10 @@ dropping the reviewer into a silently-disabled form, the
 route returns `reviewer/pre_open.html` — h1 with "{session
 name} — opens later", an info banner explaining the review
 hasn't opened yet, the deadline + zone when one is set, and a
-link back to the reviewer dashboard. An `archived` session renders
+link back to the reviewer dashboard. Under the h1, a role row holds a
+static `Reviewer` pill (this page has no role navigator) and the
+reviewer's own line, so they can check their details before the review
+opens (§ *Role-navigator chip strip*). An `archived` session renders
 the same template with closed copy (see the gate list above). See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
 for the gate semantics.
@@ -1449,12 +1456,14 @@ is a `pill pill-role-<role>` labeled with the capitalized role name:
   `rs-role-nav-muted`;
 - not active, not enabled → `<span>` with `rs-role-nav-muted`.
 
-**The reviewer's own line.** On the reviewer surface only (not the
-summary, `/results` or `/collation`), the partial takes an optional
+**The reviewer's own line.** On the reviewer surface, the per-session
+summary and the pre-open page's "opens later" variant (not `/results`
+or `/collation`, nor the pre-open page's closed variant), the partial
+takes an optional
 `reviewer_self_fields` and renders it in a muted `.rs-self-info` span
 **inline after the last role pill**, so it never splits the pills of a
 reviewer who also holds another role. The span is absent when the list
-is empty. The list comes from `views.reviewer_self_line`
+is empty. The list comes from `views.reviewer_self_line_for`
 (`app/web/views/_reviewer_self.py`): the fields the session selects
 (`participant_info.effective_reviewer_self_fields`; the selection, its
 default and its gate are in `spec/settings_inventory.md`), read from the
