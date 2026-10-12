@@ -488,6 +488,16 @@ Taken 2026-10-12 at `ddd589d3`.
 - Tests: `grep -rln "observers/create\|observers_create\|observers_update" tests --include=*.py | wc -l` → 10;
   `grep -rln "cohort-rule\|cohort_rule_field" tests --include=*.py` → 8 files.
 
+### Status
+
+- Rung 2 (2026-10-12), the scaffold: the builder's markup is one macro,
+  `cohort_builder(form_id)`, rendered into the selection expander's
+  `<template>` (bulk form) and the row editor's bar (edit form), which
+  now splits in two panes as the expander does. The rule rides as JSON
+  on the pane and `window.observerFillRule`, now shared with the
+  expander, loads it; the builder's handlers render whenever the page is
+  not archived. The routes ignore the fields: Save saves the row alone.
+
 ### PR ladder
 
 1. **This plan.** Prose only.

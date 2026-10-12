@@ -390,3 +390,15 @@ section (git history keeps it), so this file lists only what is owed.
   `none`, and `/results` shows the pills with no line after.
 - [ ] **Reviewer too.** A user on both rosters sees the reviewer line on
   the reviewer pages and only the reviewee line on `/results`.
+
+## The Observers row editor carries the cohort builder (operator pages Item 4, rung 2)
+
+- [ ] **Edit.** On an observer with a rule, `Edit`: under the row, "This
+  observer is able to see responses where" and the builder holding that
+  rule, cell by cell, with Save and Cancel to its right.
+- [ ] **Add.** `Add new`: "The new observer is able to see responses
+  where" and one default cell; `+`, `X`, `AND`/`OR` and the operator
+  cycle work.
+- [ ] **Save is unchanged.** Change the rule in the editor and Save: the
+  row's fields save, the rule does not (rung 3 wires it).
+- [ ] **The selection expander** still loads and saves a rule as before.
