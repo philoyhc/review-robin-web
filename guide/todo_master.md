@@ -28,9 +28,6 @@ Two sibling registers hold the open work that is not queued here:
 
 - **Participant info** — `guide/participant_info.md`: Item 1, a
   reviewer sees their own roster entry on the reviewer surface.
-  (`guide/profilelink_updates.md` Items 1–3 closed 2026-10-11,
-  `guide/operator_pages_enhancements.md` Items 1–3 closed 2026-10-09 and `guide/ux_refinements.md` Items 1–11
-  closed 2026-10-10; new items are added there.)
 
 ### Queued segments
 
