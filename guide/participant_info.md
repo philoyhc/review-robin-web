@@ -432,20 +432,215 @@ Taken 2026-10-12 at `9ec18ca1`.
 
 - What reviewees and observers see of themselves: later items.
 
-### Status
+### Status — closed 2026-10-12
 
-- Rung 2 (2026-10-12): `/summary` and the pre-open route pass
-  `reviewer_self_fields`; the pre-open "opens later" variant gains a role
-  row with a static `Reviewer` pill. A wrapper,
-  `views.reviewer_self_line_for`, answers all three pages from the
-  session's selection (the Semantics name `views.reviewer_self_line`,
-  which it calls). Its `diff-reviewer` read found this Status pasted
-  into the definition of done, `/results` and `/collation` untested,
-  a second spec description of the pre-open page and three comments
-  stale; all fixed.
-  A second read, of those fixes, found nothing new.
+Shipped as laddered (#2983 plan, #2984 build); the author's browser
+check passed 2026-10-12.
+
+- **Built:** `/summary` and the pre-open route pass
+  `reviewer_self_fields`; the "opens later" variant gains a role row
+  with a static `Reviewer` pill; a wrapper, `views.reviewer_self_line_for`
+  (the Semantics name `reviewer_self_line`, which it calls), answers all
+  three pages.
+- **Reads:** two `diff-reviewer` reads. The first found this Status
+  pasted into the definition of done, `/results` and `/collation`
+  untested, a second spec description of the pre-open page and three
+  comments stale; the second found nothing new.
+- **`spec-writer` at close:** no divergence; three edits in
+  `spec/reviewer-surface.md` (the summary's bullet order, the closed
+  pre-open variant's missing row, the chip strip's static-pill note).
 
 ### Doc impact
 
 - `spec/reviewer-surface.md` — the line on the per-session summary and on the pre-open page's "opens later" variant.
 - `guide/things_to_check_in_browser.md` — a section for the two pages.
+
+---
+
+## Item 4 — A reviewee sees their own roster entry
+
+### Opportunity
+
+Items 1 and 3 let a reviewer check what the roster holds about them. A
+reviewee cannot: `/results` shows their results, never their own name,
+identifier, `ProfileLink` or tags. Asked to "implement analogous
+affordances for Reviewees and Observers" (author, 2026-10-12).
+
+### Decision
+
+The author's ruling, 2026-10-12, by analogy with Item 1:
+
+- **Where it shows.** On the reviewee's `/results`, inline after the
+  role pills, as Item 1's line does on the reviewer surface.
+- **The card.** **What reviewees see of their own entry** in the
+  Reviewees page's Unlock panel, left column above `Upload Reviewees`
+  (Item 2's order), one chip per populated column.
+- **The readout.** The roster card's row ends with **Reviewees see:**
+  and a pill per selected field, in every state.
+
+Rejected: one selection shared by all three participants. Their rosters
+differ in columns (an observer has one tag and no profile), and an
+operator may want reviewers to check their tags while reviewees do not.
+
+### Semantics
+
+Item 1's, applied to `sessions.reviewee_self_fields` (the column Item 1's
+migration added) unless stated:
+
+- **Keys** `name`, `email_or_identifier`, `profile_link`,
+  `tag_1`–`tag_3`; **default** (`NULL`) `name`, `email_or_identifier`,
+  `profile_link`. Tags under the reviewee friendly labels.
+- **Service.** `participant_info` generalizes to a participant
+  argument (keys, default, normalize, effective, save) rather than
+  copying three functions per participant; the audit event is
+  `session.reviewee_self_fields_set`.
+- **The line.** `_role_chips.html` renders whichever own-entry line
+  the page passes, after the last pill, with a participant-specific
+  data attribute (`data-reviewee-self-info`), so a reviewer who is also
+  a reviewee still sees only the active page's line.
+- **Gate.** `is_editable`, as the Reviewees page; a save never demotes
+  `validated`.
+- **Round trip.** Settings CSV `session.reviewee_self_fields`;
+  Duplicate already copies the column.
+
+### Judgment calls — decided
+
+- The default mirrors Item 1's: what identifies the person on, tags off.
+- A reviewee with a non-email identifier never reaches `/results`, so
+  their line is moot; the card offers the identifier column as `Email`,
+  under the label the roster index already gives it.
+
+### Blast radius (measured)
+
+Taken 2026-10-12 at `5761ab7e`.
+
+- Service and views: `app/services/participant_info.py`,
+  `app/web/views/_reviewer_self.py` (generalized or joined by a sibling).
+- Routes: `app/web/routes_operator/_setup_reviewees.py` (a save route,
+  the context), `app/web/routes_operator/_shared.py` (the failed-import
+  re-render, as Item 1's Codex finding), `app/web/routes_reviewer/_results.py`.
+- Templates: `app/web/templates/operator/session_reviewees.html`,
+  `app/web/templates/reviewer/_role_chips.html`.
+- Settings CSV: `app/services/session_config_io/` (3 files);
+  `app/services/audit.py` (`EVENT_SCHEMAS`).
+- Tests: `grep -rln "reviewee_self\|observer_self" tests --include=*.py`
+  → `tests/integration/test_reviewer_self_info.py` only, whose Duplicate
+  test already asserts both columns are copied; new tests mirror it.
+
+### PR ladder
+
+1. **This plan**, with Item 3's close. Prose only.
+2. **Scaffold.** The inert card, the `Reviewees see:` readout and the
+   `/results` line, all at the default: the line shows what `NULL` will
+   mean, so no page shows a choice it later ignores (Item 1's rung 2).
+   Nothing reads or writes the column yet.
+3. **Storage and the live card.** The generalized service and audit
+   event, the save route, the Settings CSV row, specs, a browser-check
+   section. A `diff-reviewer` read on the cumulative diff from rung 2's
+   base.
+
+### Definition of done
+
+- `/results` shows the reviewee's selected fields after the role pills,
+  by test; the card offers a chip per populated column, keeps an
+  unoffered key, saves, and answers 409 locked, by test; the selection
+  round-trips the Settings CSV, by test.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None open.
+
+### Out of scope
+
+- Observers: Item 5.
+
+### Doc impact
+
+- `spec/participant_model.md` — the reviewee's own line on `/results`.
+- `spec/setup_pages.md` — the Reviewees card and `Reviewees see:` readout.
+- `spec/settings_inventory.md` — the per-session setting, default and gate.
+- `spec/csv_contracts.md` — the Settings CSV `session.reviewee_self_fields` row.
+- `spec/roundtrip_coverage.md` — the column's round trip.
+- `guide/things_to_check_in_browser.md` — a section per code rung.
+
+---
+
+## Item 5 — An observer sees their own roster entry
+
+### Opportunity
+
+As Item 4, for an observer on `/collation`.
+
+### Decision
+
+The author's ruling, 2026-10-12, by analogy with Items 1 and 4:
+
+- **Where it shows.** On the observer's `/collation`, after the role
+  pills.
+- **The card.** **What observers see of their own entry** in the
+  Observers page's Unlock panel, right column above the `Danger Zone`
+  (Item 2's Decision).
+- **The readout.** **Observers see:** at the end of the roster card's
+  row.
+
+### Semantics
+
+Item 4's, applied to `sessions.observer_self_fields`, except:
+
+- **Keys** `display_name`, `email`, `tag_1`, offered as `Name`, `Email`
+  and `Tag` (Observers has no label slots); **default** `display_name`,
+  `email`.
+- **Gate** `not is_archived`, as every Observers-page route
+  (`_require_not_archived`): the card follows the page's own predicate.
+- The empty-roster right column now holds the card, so `Lock` follows
+  it rather than sitting at the column's foot (Item 2's rule, unchanged).
+
+### Judgment calls — decided
+
+- On an empty Observers roster the card still renders, Name and Email
+  chips only (both are always offered, as on the other pages).
+
+### Blast radius (measured)
+
+Taken 2026-10-12 at `5761ab7e`.
+
+- `app/web/routes_operator/_setup_observers.py` (context, save route,
+  its own import re-render), `app/web/templates/operator/session_observers.html`,
+  `app/web/routes_reviewer/_collation.py`; the service, views, Settings
+  CSV and audit files as Item 4.
+- Tests: `grep -rln "test_observers_unlock_panel" tests` → the panel
+  tests whose empty-right-column case changes.
+
+### PR ladder
+
+1. **This plan**, with Item 3's close and Item 4's plan. Prose only.
+2. **Scaffold**, after Item 4 closes: inert card, readout, line, at
+   the default as Item 4's rung 2.
+3. **Storage and the live card**, on Item 4's generalized service. Read
+   on the cumulative diff.
+
+### Definition of done
+
+- As Item 4's, for `/collation` and the Observers page, the save
+  answering 409 only when archived.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
+
+### Open questions
+
+- None open.
+
+### Out of scope
+
+- Any change to what observers see of others.
+
+### Doc impact
+
+- `spec/participant_model.md` — the observer's own line on `/collation`.
+- `spec/setup_pages.md` — the Observers card and `Observers see:` readout.
+- `spec/settings_inventory.md` — the per-session setting, default and gate.
+- `spec/csv_contracts.md` — the Settings CSV `session.observer_self_fields` row.
+- `spec/roundtrip_coverage.md` — the column's round trip.
+- `guide/things_to_check_in_browser.md` — a section per code rung.
