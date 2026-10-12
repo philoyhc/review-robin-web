@@ -603,4 +603,6 @@ Taken 2026-10-12 at `ddd589d3`.
 - `spec/operator_button_audit.md` — the row editor's Save covers the rule; its disabled state.
 - `spec/ui_elements.md` — `.row-expander-body.is-split` serves the row editor; the leave-guard hook names it (added at rung 4).
 - `spec/sessions_overview.md` — the "Discard unsaved changes?" string no longer has an Observers user (added at rung 4).
+- `spec/settings_inventory.md` — the `cohort_rule` row: "no rule" is NULL or an empty `rules` list (added at rung 4).
+- `spec/csv_contracts.md` — `CohortRule`: a typed operator needs a value (added at rung 4; Codex on #2989).
 - `guide/things_to_check_in_browser.md` — a section per code rung.
