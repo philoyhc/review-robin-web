@@ -109,7 +109,7 @@ def _roster_count(card: str) -> str:
     almost any page, and `"observers" in card` of every one of them.
     """
     m = re.search(
-        r'roster-readout-label">Observers roster:</span>\s*'
+        r'roster-readout-label">Roster:</span>\s*'
         r'<span class="pill pill-count">(.*?)</span>',
         card, re.S,
     )
@@ -511,7 +511,7 @@ def test_the_index_lists_every_column_the_table_renders(
     """
     s = _session(client, db, "unl-16", rows=0)
     card = _card(_page(client, s))
-    assert "Observers roster:" in card
+    assert 'roster-readout-label">Roster:</span>' in card
     assert _roster_count(card) == "0 observers", _roster_count(card)
     for label in ("Name (0)", "Email (0)", "Tag (0)"):
         assert label in card, f"{label} missing from an empty roster"

@@ -162,8 +162,14 @@ def test_an_unpopulated_column_gets_no_chip(client, db):
     assert "Tag 2" not in card, card
 
 
-def test_the_panel_holds_three_wired_cards_and_nothing_else(client, db):
+def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     """The terminal form of `..._every_unwired_unlock_control_is_inert`.
+
+    Was `test_the_panel_holds_three_wired_cards_and_nothing_else`, until
+    participant info Item 1 rung 2 added a fourth card above `Upload
+    Reviewers`. That card is still a scaffold, so it is excised by its
+    own data marker; rung 3 wires it and should excise it by its route,
+    as the other three are.
 
     That test counted down: rung 1 built the panel with every control
     inert, and each rung of 3 wired one card and excised it here. Rung
@@ -237,6 +243,13 @@ def test_the_panel_holds_three_wired_cards_and_nothing_else(client, db):
     )
     scope = scope.replace(upload.group(0), "")
     assert "upload-csv" not in scope, "the excision missed a copy"
+
+    self_card = re.search(
+        r'<section[^>]*data-reviewer-self-card[^>]*>.*?</section>', scope, re.S,
+    )
+    assert self_card, "the reviewer-information card is not in the panel"
+    scope = scope.replace(self_card.group(0), "")
+    assert "data-reviewer-self-card" not in scope, "the excision missed a copy"
 
     # The excision removed three cards, not the panel: if it had taken
     # everything, "nothing left over" below would be trivially true.

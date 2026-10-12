@@ -112,6 +112,19 @@ from ._setup import (
     session_status_pills,
 )
 
+# What a reviewer is shown of their own roster entry (participant info
+# Item 1).
+from ._reviewer_self import (
+    REVIEWER_SELF_DEFAULT,
+    REVIEWER_SELF_FIELD_KEYS,
+    SelfFieldChip,
+    SelfFieldValue,
+    reviewer_self_chips,
+    reviewer_self_label,
+    reviewer_self_line,
+    reviewer_self_readout,
+)
+
 # Instruments page context + reviewer-surface heading helpers
 # (sliced in PR 6).
 from ._instruments import (
@@ -294,6 +307,14 @@ __all__ = [
     "relationship_prerequisites",
     "reviewee_column_state",
     "reviewer_column_state",
+    "REVIEWER_SELF_DEFAULT",
+    "REVIEWER_SELF_FIELD_KEYS",
+    "SelfFieldChip",
+    "SelfFieldValue",
+    "reviewer_self_chips",
+    "reviewer_self_label",
+    "reviewer_self_line",
+    "reviewer_self_readout",
     "parse_super_failure",
     "constraint_summary_for_field",
     "new_model_usable_tags",

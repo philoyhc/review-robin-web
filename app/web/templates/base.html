@@ -3183,6 +3183,12 @@
         flex-direction: column;
         gap: 20px;
       }
+      /* participant info Item 1 — the Unlock panel's selector chips. */
+      body.ui-v2 .reviewer-self-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+      }
       body.ui-v2 .unlock-col-actions {
         display: flex;
         justify-content: flex-end;
@@ -3905,6 +3911,13 @@
       }
       body.ui-v2 .rs-role-nav .rs-role-nav-active {
         font-weight: 600;
+      }
+      /* participant info Item 1 — the reviewer's own roster fields,
+         inline after the last role pill. */
+      body.ui-v2 .rs-role-nav .rs-self-info {
+        align-self: center;
+        margin-left: var(--space-2);
+        color: var(--text-subtle);
       }
       /* Banners — single .banner shell + four semantic variants. */
       body.ui-v2 .banner {

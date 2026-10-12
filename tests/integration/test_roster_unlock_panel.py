@@ -344,7 +344,7 @@ def test_the_index_reports_the_roster_and_its_populated_columns(
     card = _card(_get(client, rs, page), page)
 
     m = re.search(
-        rf'roster-readout-label">{Noun} roster:</span>\s*'
+        r'roster-readout-label">Roster:</span>\s*'
         r'<span class="pill pill-count">(.*?)</span>',
         card, re.S,
     )
@@ -387,7 +387,7 @@ def test_an_empty_roster_reports_what_its_index_can_report(
     card = _card(_get(client, rs, page), page)
 
     m = re.search(
-        rf'roster-readout-label">{Noun} roster:</span>\s*'
+        r'roster-readout-label">Roster:</span>\s*'
         r'<span class="pill pill-count">(.*?)</span>',
         card, re.S,
     )

@@ -316,6 +316,15 @@ def _render_reviewers_page(
             # round trips for one fact.
             "col_data": column_state.col_data,
             "col_readouts": column_state.readouts,
+            # participant info Item 1 — the reviewer's own fields on
+            # the surface: the Unlock panel's chips and the readout
+            # row's pills. The default until rung 3 stores a selection.
+            "self_field_chips": views.reviewer_self_chips(
+                column_state.readouts, views.REVIEWER_SELF_DEFAULT
+            ),
+            "self_field_readout": views.reviewer_self_readout(
+                review_session, views.REVIEWER_SELF_DEFAULT
+            ),
             "edit_id": edit_id,
             "add_mode": add_mode,
             # 19P.1 — the Unlock panel's open state, server-rendered.

@@ -362,3 +362,20 @@ section (git history keeps it), so this file lists only what is owed.
   appears below the roster card while the row is open.
 - [ ] **Unlocked.** On a draft, Unlock: the labels card is in the panel
   and saves as before.
+
+## A reviewer's own info: the scaffold (participant info Item 1, rung 2)
+
+- [ ] **Readout row.** On Reviewers, Reviewees, Relationships and
+  Observers the roster card reads `Roster:` and `Populated:`; on
+  Reviewers it also ends with `Shown on surface:` Name, Email, Profile,
+  on the same line, locked or unlocked.
+- [ ] **The card.** On a draft, Unlock Reviewers: "Reviewer information
+  shown on surface" sits half width above `Upload Reviewers`, with a
+  chip per populated column (Name, Email, Profile selected; tags, under
+  their labels, not). Chips toggle on screen only; Save and Cancel stay
+  disabled.
+- [ ] **The surface.** As a reviewer, the role row reads `Reviewer` then
+  the name, email and a Profile link (or `•••`), muted, on the same
+  line; a reviewer who is also a reviewee sees it after both pills.
+- [ ] **The preview.** The operator's surface preview shows a plain
+  `Reviewer` pill and the previewed reviewer's line.

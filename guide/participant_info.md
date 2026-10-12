@@ -61,7 +61,11 @@ see of a reviewer; this is what the reviewer sees of themselves).
   `ReviewSession` model) of keys from
   `name`, `email`, `profile_link`, `tag_1`–`tag_3`. `NULL` means the
   default, `name`, `email`, `profile_link`; an empty list shows nothing
-  after the pill.
+  after the pill. **One migration for all three participants** (author,
+  2026-10-12): it adds a column each for reviewers, reviewees and
+  observers. Only the reviewers' is read and written in this item; the
+  other two stay `NULL` until their items give them a control and a
+  reader, and decide what `NULL` means for them.
 - **Chips offered.** Name and Email always (both are required on
   import); Profile and each tag only while some reviewer row holds a
   value.
@@ -109,8 +113,9 @@ see of a reviewer; this is what the reviewer sees of themselves).
 
 Taken 2026-10-11 at `7e329db5`.
 
-- Model and migration: `app/db/models/review_session.py` gains one
-  nullable JSON column; one Alembic revision (89 in `alembic/versions`).
+- Model and migration: `app/db/models/review_session.py` gains three
+  nullable JSON columns, one per participant; one Alembic revision (89
+  in `alembic/versions`).
 - Readers: `app/web/templates/reviewer/review_surface.html` (the header,
   ~line 80, and the role-chips include, ~line 94),
   `app/web/routes_reviewer/_surface/_routes.py` and
@@ -128,6 +133,16 @@ Taken 2026-10-11 at `7e329db5`.
   `Populated columns` once.
 - Tests: `grep -rln "rs-role-nav" tests | wc -l` → 2;
   `grep -rln "preview_surface\|preview_mode" tests | wc -l` → 13.
+
+### Status
+
+- Rung 2 (2026-10-12), the scaffold: `views._reviewer_self` (the default,
+  the chips, the readout, the line); the readout row's renames on four
+  pages and Reviewers' `Shown on surface:`; the inert card; the line on
+  the role row, with a static `Reviewer` pill in the preview.
+  `test_the_panel_holds_three_wired_cards_and_nothing_else` became
+  `..._its_four_cards_...`, excising the scaffold card by its marker
+  until rung 3 wires it.
 
 ### PR ladder
 

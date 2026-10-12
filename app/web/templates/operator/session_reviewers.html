@@ -194,12 +194,12 @@
 
     <div class="roster-readouts">
       <div class="roster-readout">
-        <span class="roster-readout-label">Reviewers roster:</span>
+        <span class="roster-readout-label">Roster:</span>
         <span class="pill pill-count">{{ total_row_count }}
           reviewer{% if total_row_count != 1 %}s{% endif %}</span>
       </div>
       <div class="roster-readout">
-        <span class="roster-readout-label">Populated columns:</span>
+        <span class="roster-readout-label">Populated:</span>
         <span class="roster-readout-values">
           {# Label and count both come from the server: the label from the
              same `field_labels.resolve_pair` the preview's own column
@@ -221,6 +221,20 @@
              Decided once, and recorded in `spec/setup_pages.md`
              § *The roster index*. #}
             <span class="roster-readout-empty">none yet</span>
+          {% endfor %}
+        </span>
+      </div>
+      {# participant info Item 1 — what a reviewer sees of their own
+         roster entry, after the role pills on the reviewer surface. In
+         every state: locked, the operator still reads the selection
+         here though its card (in the Unlock panel) is gone. #}
+      <div class="roster-readout" data-reviewer-self-readout>
+        <span class="roster-readout-label">Shown on surface:</span>
+        <span class="roster-readout-values">
+          {% for label in self_field_readout %}
+            <span class="pill pill-count">{{ label }}</span>
+          {% else %}
+            <span class="roster-readout-empty">none</span>
           {% endfor %}
         </span>
       </div>
@@ -374,6 +388,29 @@
            a class over an inline style. It is the same left-vs-right
            question 3b's Delete-all button already opened for the dev
            slot — one answer for the panel, not two. #}
+        {# participant info Item 1 rung 2 — SCAFFOLD, inert: the chips
+           sit at the default and toggle only on screen, the form posts
+           nowhere, and Save / Cancel stay disabled. Rung 3 stores the
+           selection. One chip per populated column (Name and Email
+           always), as the roster index reads. #}
+        <section class="card" id="reviewer-self-fields"
+                 aria-labelledby="reviewer-self-fields-h"
+                 data-reviewer-self-card>
+          <h2 id="reviewer-self-fields-h">Reviewer information shown on surface</h2>
+          <div class="reviewer-self-chips">
+            {% for chip in self_field_chips %}
+              <label class="pill pill-count tag-chip">
+                <input type="checkbox" class="visually-hidden"
+                       name="fields" value="{{ chip.key }}"
+                       {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+            {% endfor %}
+          </div>
+          <div class="unlock-col-actions">
+            <button type="button" class="btn secondary" disabled>Cancel</button>
+            <button type="button" class="btn secondary" disabled>Save</button>
+          </div>
+        </section>
+
         <section class="card" id="upload-csv"
                  aria-labelledby="reviewers-upload-h">
           <h2 id="reviewers-upload-h">Upload Reviewers</h2>
