@@ -556,31 +556,29 @@ Taken 2026-10-12 at `5761ab7e`.
 
 - Observers: Item 5.
 
-### Status
+### Status — closed 2026-10-12
 
-- Rung 2 (2026-10-12), the scaffold: `views._participant_self`, one
-  core parameterized by a `SelfSpec` per participant, with
-  `views._reviewer_self`'s reviewer functions now thin wrappers over it
-  and the reviewee's beside them; the reviewee keys and default in
-  `participant_info`; the inert card, the `Reviewees see:` readout (the
-  failed-import re-render included) and the `/results` line, all at the
-  default; `_role_chips.html` renders whichever own line the page passes,
-  under `data-reviewer-self-info` or `data-reviewee-self-info`.
-- Rung 3 (2026-10-12), storage and the live card: `participant_info`
-  generic over a `_PARTICIPANTS` registry (`normalize_self_fields`,
-  `effective_self_fields`, `set_self_fields(participant=...)`; the
-  reviewer names kept as wrappers); `session.reviewee_self_fields_set`;
-  `POST …/reviewees/self-fields`; the Settings CSV row; specs, including
+Shipped as laddered, in three rungs (#2984 plan, #2985 scaffold, #2986
+storage and the live card); the author's browser check passed
+2026-10-12.
+
+- **Built:** `views._participant_self`, one core parameterized by a
+  `SelfSpec` per participant, the reviewer and reviewee functions thin
+  wrappers over it; `participant_info` generic over a `_PARTICIPANTS`
+  registry (the reviewer names kept as wrappers);
+  `session.reviewee_self_fields_set`; `POST …/reviewees/self-fields`;
+  the Settings CSV row; `_role_chips.html` renders whichever own line the
+  page passes, under a participant-specific data attribute.
+- **Scope that moved:** three specs the plan did not name —
   `spec/reviewer-surface.md`, `spec/operator_button_audit.md` (#271,
-  #272) and `spec/ui_elements.md`, which the plan's Doc impact did not
-  name.
-- One `diff-reviewer` read, on the cumulative diff from `01e54198`: no
-  code defect; a stale shared-panel sentence in `spec/setup_pages.md`,
-  the rung-2 browser check still saying Save stays disabled (Item 1's
-  read caught the same), four tests the reviewer suite has and this one
-  lacked (locked readout, `validated` kept, the column untouched on
-  409 / 422, a tag under the reviewee label), and the Settings CSV's
-  column map duplicating the service's. All fixed.
+  #272), `spec/ui_elements.md` — added to Doc impact at rung 3.
+- **Reads:** one cumulative `diff-reviewer` read from `01e54198`: no code
+  defect; a stale shared-panel sentence, the rung-2 browser check saying
+  Save stays disabled, four tests the reviewer suite had and this one
+  lacked, and the Settings CSV's column map duplicating the service's.
+  All fixed.
+- **`spec-writer` at close** (with Item 5): no divergence in Item 4's
+  eight specs.
 
 ### Doc impact
 
@@ -667,32 +665,36 @@ Taken 2026-10-12 at `5761ab7e`.
 
 - Any change to what observers see of others.
 
-### Status
+### Status — closed 2026-10-12
 
-- Rung 2 (2026-10-12), the scaffold: `OBSERVER_SPEC` on Item 4's core
-  (fixed labels Name, Email, Tag); the inert card heading the right
-  column, the `Observers see:` readout (the failed-import re-render
-  included) and the `/collation` line, all at the default. The
-  empty-roster panel test now pins the card above `Lock`. Its CI also
-  caught a race in a rung-4 Observers row-editor browser test (Save read
-  before the page's `setTimeout` re-check); fixed there, by `expect`.
-- Rung 3 (2026-10-12), storage and the live card: an `observer` entry in
-  `participant_info`'s registry, whose `require` is `require_not_archived`
-  (the registry's gate is per participant now, `require_editable` for the
+Shipped in three rungs (#2984 plan, #2991 scaffold, #2992 storage and
+the live card); the author's browser check passed 2026-10-12.
+
+- **Diverged from the plan:** rung 2 landed after Item 4's rung 3 rather
+  than its close, the ladder revised to say so (Codex on #2991).
+- **Built:** `OBSERVER_SPEC` on Item 4's core (fixed labels Name, Email,
+  Tag); an `observer` entry in `participant_info`'s registry, whose
+  lifecycle gate is now per participant (`require_not_archived` for
+  observers, the Observers page's own gate; `require_editable` for the
   other two); `session.observer_self_fields_set`;
-  `POST …/observers/self-fields`; the Settings CSV row; specs, including
-  `spec/reviewer-surface.md`, `spec/operator_button_audit.md` (#273,
-  #274) and `spec/ui_elements.md`, as Item 4's.
-- One `diff-reviewer` read, on the cumulative diff from `ac163cbf`: no
-  code defect. It found the rung-2 empty-right-column prose still in
-  three spec places beyond the one rung 3 fixed (the shared panel
-  section and its table, button-audit #178), #274 inheriting #270's
-  `is_editable` 409, "two tenants" prose and the `?unlocked=1` row
-  predating the card, the Observers audit list lacking the new event,
-  and the rung-2 browser check saying Save stays disabled (Items 1 and
-  4's reads caught the same). It also asked for the save route to call
-  `_require_not_archived` as its siblings do, and for a multi-role
-  `/collation` test. All fixed.
+  `POST …/observers/self-fields`; the Settings CSV row. The card heads
+  the Unlock panel's right column, so an empty roster's `Lock` follows it.
+- **Scope that moved:** #2991 also carried a test-only fix for a rung-4
+  Observers row-editor browser test that read Save before the page's
+  `setTimeout` re-check (its CI failed on it); kept there by the
+  author's choice. Doc impact gained the same three specs as Item 4's.
+- **Reads:** one cumulative `diff-reviewer` read from `ac163cbf`: no code
+  defect; rung-2 empty-right-column and "two tenants" prose in five spec
+  places, #274 inheriting #270's `is_editable` 409, the Observers audit
+  list missing the new event, the rung-2 browser check again saying Save
+  stays disabled; the route now calls `_require_not_archived` as its
+  siblings do, and a multi-role `/collation` test was added. All fixed.
+- **`spec-writer` at close** (with Item 4): one edit — the shared
+  panel section's contents sentence now says Observers' own-entry card
+  takes the tag-label editor's place (`spec/setup_pages.md`). It flagged
+  `_role_chips.html`'s header comment, which names only the reviewer and
+  reviewee lines as optional context; left for the next code slice to
+  touch that template, so this close stays prose.
 
 ### Doc impact
 
