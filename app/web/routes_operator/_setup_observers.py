@@ -18,7 +18,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from starlette.datastructures import FormData
 
 from fastapi import (
     APIRouter,
@@ -38,6 +37,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
+from app.schemas.observer_cohort_rule import VALUE_OPERATORS
 from app.services import csv_imports
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
@@ -106,6 +106,7 @@ def _render_observers_page(
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
     edit_cohort_rule: dict[str, Any] | None = _STORED_RULE,
+    rule_edit_ids: list[int] | None = None,
     selected_ids: set[int] | None = None,
     focus_id: int | None = None,
     issues: list | None = None,
@@ -135,6 +136,12 @@ def _render_observers_page(
     if lifecycle.is_archived(review_session):
         edit_id = None
         add_mode = False
+        rule_edit_ids = None
+    # operator pages Item 4 — `Edit` on several selected rows edits their
+    # rule alone. A single id is the row editor's job, not this mode's.
+    rule_edit_ids = list(dict.fromkeys(rule_edit_ids or []))
+    if edit_id is not None or add_mode or len(rule_edit_ids) < 2:
+        rule_edit_ids = []
 
     all_observers = _list_observers(db, review_session.id)
     filtered = views.filter_observers_rows(
@@ -156,7 +163,9 @@ def _render_observers_page(
         # a roster over one page the new row is not on the page the form
         # was submitted from and the redirect's fragment would name a row
         # this response never renders. `locate_id` moves the window to it.
-        locate_id=focus_id,
+        locate_id=focus_id if focus_id is not None else (
+            rule_edit_ids[0] if rule_edit_ids else None
+        ),
     )
     observers = window.rows
     offset = window.offset
@@ -178,6 +187,11 @@ def _render_observers_page(
     # stored rule. Resolved apart from `edit_values`: a rejected save
     # (a taken email, say) re-renders with the operator's values, and the
     # builder must not come back empty while the rule is still stored.
+    # operator pages Item 4 — the several-row editor's rows and what it
+    # loads; the view adapter owns the comparison (Codex on #2990).
+    rule_edit = views.rule_edit_state(observers, rule_edit_ids)
+    if rule_edit.ids and edit_cohort_rule is _STORED_RULE:
+        edit_cohort_rule = rule_edit.rule
     if edit_cohort_rule is _STORED_RULE:
         edited = (
             next((o for o in all_observers if o.id == edit_id), None)
@@ -321,10 +335,15 @@ def _render_observers_page(
             "edit_values": edit_values,
             "edit_error": edit_error,
             "edit_cohort_rule": edit_cohort_rule,
+            "rule_edit_ids": rule_edit.ids,
+            "rule_edit_last": rule_edit.last_id,
+            "rule_edit_mixed": rule_edit.mixed,
+            # The page's half-filled check reads the same list the
+            # server's does.
+            "cohort_value_ops": sorted(VALUE_OPERATORS),
             "cohort_match_tags": cohort_match_tags,
             "cohort_rule_views": {
                 obs.id: {
-                    "signature": views.cohort_rule_signature(obs.cohort_rule),
                     "summary": views.cohort_rule_summary(
                         obs.cohort_rule, tag_labels=cohort_match_tags
                     ),
@@ -350,6 +369,7 @@ def observers_page(
     focus: int | None = None,
     edit_id: int | None = None,
     add: int = 0,
+    rule_id: list[int] = Query(default=[]),
     unlocked: int = 0,
     selected: list[int] = Query(default=[]),
     review_session: ReviewSession = Depends(
@@ -368,6 +388,7 @@ def observers_page(
         offset=offset,
         edit_id=edit_id,
         add_mode=bool(add),
+        rule_edit_ids=rule_id,
         panel_open=bool(unlocked),
         selected_ids=set(selected),
         focus_id=focus,
@@ -596,11 +617,6 @@ def observers_bulk_reactivate(
     )
 
 
-#: The operators whose operand is typed, not picked: a cell with one of
-#: these and no value is unfinished.
-_VALUE_OPS = frozenset({"IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"})
-
-
 @dataclass(frozen=True)
 class _RowEditorRule:
     """The row editor's builder, read from its form fields."""
@@ -638,7 +654,7 @@ def _row_editor_rule(
     for field, op, tag, value in zip(
         fields, ops, operand_tags, operand_values, strict=False
     ):
-        typed = op in _VALUE_OPS
+        typed = op in VALUE_OPERATORS
         if not field and not (typed and value.strip()):
             continue
         if not field or (typed and not value.strip()):
@@ -657,59 +673,11 @@ def _row_editor_rule(
     )
 
 
-def _parse_cohort_rule_form(form: FormData) -> dict[str, Any]:
-    """Decode the Cohort match rule editor's submission into the
-    ``CohortRuleSet`` dict shape. Mirrors Band 1's
-    ``_form_rules`` (parallel arrays + blank-field guard) so a
-    cell whose ``field`` came in empty (e.g. a default cell the
-    operator never touched, or the browser-omits-empty-select
-    edge case) drops silently rather than tripping the schema
-    validator.
-
-    All four sibling arrays are padded up to ``len(ops)`` with
-    empty strings — never truncated — so a missing trailing
-    operand never silently drops an otherwise valid rule cell.
-    """
-    fields = [str(v) for v in form.getlist("cohort_rule_field")]
-    ops = [str(v) for v in form.getlist("cohort_rule_op")]
-    operand_tags = [
-        str(v) for v in form.getlist("cohort_rule_operand_tag")
-    ]
-    operand_values = [
-        str(v) for v in form.getlist("cohort_rule_operand_value")
-    ]
-
-    n = len(ops)
-    while len(fields) < n:
-        fields.append("")
-    while len(operand_tags) < n:
-        operand_tags.append("")
-    while len(operand_values) < n:
-        operand_values.append("")
-
-    rules: list[dict[str, str]] = []
-    for i in range(n):
-        if not fields[i]:
-            continue
-        rules.append(
-            {
-                "field": fields[i],
-                "op": ops[i],
-                "operand_tag": operand_tags[i],
-                "operand_value": operand_values[i],
-            }
-        )
-
-    combinator = str(form.get("cohort_combinator") or "AND").strip().upper()
-    # Don't silently coerce unknown values to AND — let
-    # ``CohortRuleSet.model_validate`` reject so a JS bug that
-    # desyncs the hidden combinator mirror surfaces as a 400
-    # rather than a silent AND save.
-
-    return {"combinator": combinator, "rules": rules}
-
-
-@router.post("/sessions/{session_id}/observers/cohort-rule")
+@router.post(
+    "/sessions/{session_id}/observers/cohort-rule",
+    response_class=HTMLResponse,
+    response_model=None,
+)
 async def observers_cohort_rule_save(
     request: Request,
     filter_status: str = Form(default="all"),
@@ -720,11 +688,12 @@ async def observers_cohort_rule_save(
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """POST handler for the Cohort match rule editor's Save
     button. Applies the editor's current rule to every observer
-    in ``observer_ids`` (sourced from the bulk-form's row
-    checkboxes); rejects an empty selection with a 400.
+    in ``observer_ids`` (the hidden inputs the several-row editor
+    carries, operator pages Item 4); rejects an empty selection with a
+    400.
 
     Lifecycle gate is ``_require_not_archived``. This route has
     used it since it was written, on the ground that cohort rules
@@ -746,22 +715,53 @@ async def observers_cohort_rule_save(
         for v in form.getlist("observer_ids")
         if str(v).isdigit()
     ]
-    payload = _parse_cohort_rule_form(form)
+    # operator pages Item 4 rung 4 — the builder now opens from `Edit` on
+    # several rows (the selection expander lost it), and reads as the row
+    # editor's does: blank cells dropped, all blank clears the rule, a
+    # half-filled cell refused with the editor re-rendered.
+    rule = _row_editor_rule(
+        fields=[str(v) for v in form.getlist("cohort_rule_field")],
+        ops=[str(v) for v in form.getlist("cohort_rule_op")],
+        operand_tags=[str(v) for v in form.getlist("cohort_rule_operand_tag")],
+        operand_values=[
+            str(v) for v in form.getlist("cohort_rule_operand_value")
+        ],
+        combinator=str(form.get("cohort_combinator") or "AND"),
+    )
     try:
+        if rule.error:
+            raise ObserverOperationError("half_filled_rule", rule.error)
         # Locks the session row (findings Bc4): off the event loop.
         await run_in_threadpool(
             observers_service.set_cohort_rule,
             db,
             review_session=review_session,
             observer_ids=observer_ids,
-            payload=payload,
+            payload=rule.payload,
             user=user,
             correlation_id=request_correlation_id(),
         )
     except ObserverOperationError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
-        ) from exc
+        if exc.code in {"empty_selection", "not_in_session"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+            ) from exc
+        return _render_observers_page(
+            request=request,
+            db=db,
+            user=user,
+            review_session=review_session,
+            status_filter=filter_status,
+            search=filter_q,
+            offset=filter_offset,
+            # One row's rule is edited in its row editor; only several
+            # open the rule alone.
+            edit_id=observer_ids[0] if len(observer_ids) == 1 else None,
+            rule_edit_ids=observer_ids,
+            edit_error=exc.message,
+            edit_cohort_rule=rule.shown,
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/observers",
         observer_ids,

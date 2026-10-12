@@ -1,8 +1,8 @@
 """View-shape helpers for the Observers Setup page.
 
-Carries the per-row adapters the Observers table uses — the
-mixed-state signature the cohort-rule editor JS compares against,
-and the friendly summary string the Cohort column renders.
+Carries the per-row adapters the Observers table uses — the friendly
+summary string the Cohort column renders — and the several-row cohort
+editor's state (operator pages Item 4).
 
 See ``guide/archive/observers.md`` "Match-axis schema — decided" for the
 storage shape these helpers translate from.
@@ -10,8 +10,12 @@ storage shape these helpers translate from.
 
 from __future__ import annotations
 
-import json
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from typing import Any
+
+from app.db.models import Observer
+from app.services.observers import same_cohort_rule
 
 # Display labels only. The KEYS are stored — they are what a saved
 # `cohort_rule` holds — so they never move; 19P.2 rung 6 changed the
@@ -25,23 +29,6 @@ _COHORT_OBSERVER_FRIENDLY: dict[str, str] = {
     "observer.email": "Observer: Email",
     "observer.tag1": "Observer: Tag",
 }
-
-
-def cohort_rule_signature(rule: dict[str, Any] | None) -> str:
-    """Stable string key for one observer's saved cohort rule.
-
-    Two observers share the same effective rule iff their
-    signatures match — used by the Observers Setup page's
-    mixed-state JS to decide whether the editor loads a shared
-    rule or shows the "differ — saving overwrites" message.
-
-    ``None`` (no rule saved) maps to ``""`` so the JS distinct-
-    count check treats unset observers as a single shared
-    "empty" group rather than as N distinct rules.
-    """
-    if rule is None:
-        return ""
-    return json.dumps(rule, sort_keys=True, ensure_ascii=False)
 
 
 def _cohort_field_friendly(
@@ -102,3 +89,43 @@ def cohort_rule_summary(
     if extra > 0:
         summary += f" + {extra} more"
     return summary
+
+
+@dataclass(frozen=True)
+class RuleEditState:
+    """The several-row cohort editor, as the page renders it."""
+
+    #: The selected ids it edits, in request order; empty when it is not
+    #: open (fewer than two of them on the rendered rows).
+    ids: list[int]
+    #: The rule to load: the one they share, or ``None`` when they differ.
+    rule: dict[str, Any] | None
+    #: Whether their rules differ (the bar says so).
+    mixed: bool
+    #: The id of the last of them on the page, which the bar hangs under.
+    last_id: int | None
+
+
+def rule_edit_state(
+    shown: Sequence[Observer], requested_ids: Iterable[int]
+) -> RuleEditState:
+    """Which selected rows the several-row editor edits, and what it
+    loads (operator pages Item 4).
+
+    Only rows this page renders are edited — a stale id (deleted, or
+    another session's) is dropped rather than edited blind — and fewer
+    than two left opens nothing: one row is the row editor's. One shared
+    rule loads; differing rules load nothing. Compared as the service
+    compares them, so NULL and an imported empty set are one "no rule".
+    """
+    by_id = {o.id: o for o in shown}
+    ids = [i for i in dict.fromkeys(requested_ids) if i in by_id]
+    if len(ids) < 2:
+        return RuleEditState(ids=[], rule=None, mixed=False, last_id=None)
+    first = by_id[ids[0]].cohort_rule
+    mixed = not all(same_cohort_rule(first, by_id[i].cohort_rule) for i in ids)
+    chosen = set(ids)
+    last_id = next((o.id for o in reversed(shown) if o.id in chosen), None)
+    return RuleEditState(
+        ids=ids, rule=None if mixed else first, mixed=mixed, last_id=last_id,
+    )

@@ -478,8 +478,16 @@ a rule.
 ### Judgment calls — decided
 
 - Save is gated on validity, not on a change: Cancel already discards.
+  In the several-row editor (rung 4) it also waits for a change: over
+  differing rules the builder arrives empty, and a live Save would clear
+  them all in one click — the job the expander's dirty gate did. The
+  change is to the form, not to what the rule means: touching `AND`/`OR`
+  or adding a blank cell enables Save, which is also the deliberate way
+  to clear differing rules in one go (the note says Save replaces them
+  all). A meaning-based gate would leave no way to do that.
 - The rule's builder is the expander's, not a second copy: one macro,
-  `cohort_builder(form_id)`, renders it in both places.
+  `cohort_builder(form_id)`, rendered in both places until rung 4 left
+  the row editor its only home.
 - The row editor's field select leads with a blank `Choose a field`
   (2026-10-12, rung 3): the default cell was a complete rule (first tag
   preselected), so an untouched `Add` would have saved a rule the
@@ -523,6 +531,33 @@ Taken 2026-10-12 at `ddd589d3`.
   operator with no value (`CONTAINS ""` matches every row) was refused
   only by the route — `CohortRule` now refuses it under every writer,
   the Observers CSV import included.
+- Rung 4 (2026-10-12), `Edit` opens the editor: the expander's builder,
+  its `<template>`, dirty gate and discard guard are gone; `Edit` is live
+  at any arity (`?edit_id=` for one row, `?rule_id=…` for several). The
+  several-row editor hangs under the last selected row, the rows
+  read-only, loading a shared rule or none with the "different cohort
+  rules" note, and posts `/observers/cohort-rule`, which now reads cells
+  as the row editor does (blank clears, half-filled 400s). The editor
+  took over the page's leave guard (`rrwLeaveWillPrompt`), now covering
+  row fields too. A browser test caught Save disabled in rule-only mode
+  (no email field read as an empty one); fixed before push.
+- One cumulative `diff-reviewer` read (from `af77fa0b`, at rung 4) found:
+  a stale cohort key loaded into a *disabled* option, which browsers
+  leave out of the submission, so a rename cleared or scrambled the rule
+  (high); the several-row Save live over differing rules; the spec's
+  route gate claiming a looser gate than the bulk routes (false — all use
+  `_require_not_archived`); NULL vs the empty rule set compared three
+  ways; `Edit` dropping the filter and page; a leave after a rejected
+  save not prompting; stale comments. All fixed in rung 4: the option is
+  selectable, Save waits for a change there, `same_cohort_rule` is the
+  one comparison (bulk saves skip unchanged observers too), `Edit`
+  carries the view, `cohort_rule_signature` retired. A focused re-read of
+  the fixes found `+` copying a stale option into a new cell, where it
+  became pickable (fixed: the clone strips it, on #2989 too), the
+  several-row gate being form- not meaning-based (kept; a judgment call
+  above), two stale wordings and the settings inventory's "no rule"
+  row (fixed), and thin coverage of `Edit` keeping the view and of the
+  rejected-save guard (tests added).
 
 ### PR ladder
 
@@ -566,4 +601,8 @@ Taken 2026-10-12 at `ddd589d3`.
 
 - `spec/setup_pages.md` — the Observers row editor carries the cohort builder and one Save; "Cohort match rule editor" names both places it appears.
 - `spec/operator_button_audit.md` — the row editor's Save covers the rule; its disabled state.
+- `spec/ui_elements.md` — `.row-expander-body.is-split` serves the row editor; the leave-guard hook names it (added at rung 4).
+- `spec/sessions_overview.md` — the "Discard unsaved changes?" string no longer has an Observers user (added at rung 4).
+- `spec/settings_inventory.md` — the `cohort_rule` row: "no rule" is NULL or an empty `rules` list (added at rung 4).
+- `spec/csv_contracts.md` — `CohortRule`: a typed operator needs a value (added at rung 4; Codex on #2989).
 - `guide/things_to_check_in_browser.md` — a section per code rung.

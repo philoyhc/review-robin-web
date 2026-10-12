@@ -7,7 +7,7 @@ waits for the next page to clear it. When the page's own
 so a page with a guard tells the indicator through
 ``window.rrwLeaveWillPrompt``. Session Home's case is in
 ``test_session_home_dirty_guard.py``; these are the Instruments page's
-dirty-card guard and the Observers expander's cohort guard.
+dirty-card guard and the Observers editor's guard (operator pages Item 4).
 
 Chromium shows a ``beforeunload`` prompt only to a page the user has
 interacted with, so edits are typed or clicked, never set from script.
@@ -92,8 +92,11 @@ def test_observers_declined_leave_arms_no_bar(
 ) -> None:
     session_id = new_session()
     _seed_observers(live_server.database_url, session_id)
+    # The rule is edited from `Edit` since operator pages Item 4.
     page.goto(f"/operator/sessions/{session_id}/observers")
     page.locator("input.observer-select").first.check()
+    page.locator(".exp-edit").click()
+    page.wait_for_load_state("load")
     combinator = page.locator(".cohort-combinator-btn:visible").first
     combinator.click()
     seen = _decline_dialogs(page)

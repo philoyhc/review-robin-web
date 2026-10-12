@@ -98,8 +98,8 @@ to CSS classes.
 > ask before being left (`window.rrwLeaveWillPrompt()` returns `true`).
 > Three pages set it, each to the predicate its `beforeunload` guard
 > reads: Session Home's details card over unsaved edits, the Instruments
-> page over a dirty card, and the Observers expander over an unsaved
-> cohort rule. Without the hook the bar would
+> page over a dirty card, and the Observers row editor over unsaved
+> changes to the row or its cohort rule. Without the hook the bar would
 > sit behind the prompt, and an operator who stays gets no load to clear
 > it. A leave the operator confirms loads without a bar.
 > *Busy control:* the clicked link or submit button gets
@@ -811,7 +811,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.roster-card` (+ `.roster-readouts`, `.roster-readout*`, `.roster-card-actions`) | The roster pages' roster card: a flex column at a 16px gap. `.roster-readouts` is one wrapping row of label + values readouts, not a one-row table; each readout wraps as a unit so a label never parts from its values. `.roster-card-actions` sits flush right. `spec/setup_pages.md` "The roster card and the Unlock panel" owns the contract. |
 | `.reviewer-self-chips` | The wrapping row of selector chips in the Reviewers and Reviewees Unlock panels' **What reviewers / reviewees see of their own entry** cards: `display: flex; flex-wrap: wrap` at a `--space-1` gap. `spec/setup_pages.md` § *Reviewers page* and § *Reviewees page* own the contract. |
 | `.unlock-panel` (+ `.unlock-stack`, `.unlock-right`, `.unlock-col-actions`) | Two equal `minmax(0, 1fr)` columns at a 20px gap, top-aligned, one column at 800px or narrower. `.unlock-stack` stacks a column's cards at the same 20px, and cards inside take no margin of their own. `.unlock-right` stretches to the row (`align-self: stretch`); open, it ends with the `Lock` row, `.roster-card-actions`, 20px under its last card, or pushed to its foot (`margin-top: auto` on `:first-child`) when it holds no card. **`.unlock-panel[hidden]` restates `display: none`**, because the grid's `display` beats the attribute's UA rule. |
-| `.row-expander-body` (+ `.row-expander-actions`, `.row-expander-pane*`, `.row-expander-label`, `.row-expander-count`) | The interior of the injected row-action panel: a wrapping flex row whose `.row-expander-actions` take `margin-left: auto`, so the buttons sit flush right. The `.is-split` modifier makes it a two-column top-aligned grid (Observers; see the expander rules below). |
+| `.row-expander-body` (+ `.row-expander-actions`, `.row-expander-pane*`, `.row-expander-label`, `.row-expander-count`) | The interior of the injected row-action panel: a wrapping flex row whose `.row-expander-actions` take `margin-left: auto`, so the buttons sit flush right. The `.is-split` modifier makes it a two-column top-aligned grid (Observers' row editor; see the expander rules below). |
 | `.session-expander-*` + `.exp-*` | The lobby expander's field and button rows. `.exp-field-name` / `-code` / `-deadline` / `-tags` share the row 3 / 2 / 2 / 3, and the bulk expander's `.exp-field-bulk-tags` takes half of it flush right. `.exp-allow-delete` is the confirm, `.exp-purge-opts` (+ `.exp-purge-title`) the purge checkboxes, grayed to 0.5 opacity by `.is-disabled`, and `.exp-sep` the divider between them. `spec/sessions_overview.md` owns the contract. |
 | `.quick-setup-*` | The Quick Setup card's layout: `.quick-setup-top-grid` is two columns, one at 800px or narrower; `.quick-setup-slot`s are separated by a top rule; `.quick-setup-body.locked` grays the body to 0.55 opacity with a `not-allowed` cursor; `.quick-setup-card-footer` holds Submit outside that body, flush right. `spec/quick_setup_card_spec.md` owns the contract. |
 | `.card.setup-coverage` (+ `.setup-coverage-*`) | Validate's setup-coverage card: the H2 and its subtitle on one line, over a grid of four columns, two at 900px or narrower and one at 500px. |
@@ -917,11 +917,12 @@ a rewrite.
   them whether or not each marks its rows. Each roster page renders both
   the expander and the bracketed variant, for its selection actions and
   for the edit row's Save / Cancel bar.
-- **Observers' expander is two-column** (`.row-expander-body.is-split`):
-  the cohort rule builder in the left pane, the count / confirm / actions
-  in the right, top-aligned, because the builder is the taller and
-  bottom-aligning would anchor `Save` to a button row it has no
-  relationship with. That variant is this page's alone.
+- **Observers' row editor bar is two-column** (`.row-expander-body.is-split`):
+  the cohort rule builder in the left pane under a `.row-expander-label`,
+  the error and `Save` / `Cancel` in the right, top-aligned, because the
+  builder is the taller and bottom-aligning would anchor `Save` to a
+  button row it has no relationship with. That variant is this page's
+  alone.
 - **One selection funnel per page.** The class is applied in the page's
   single selection funnel, which clears all rows each pass before
   marking the selected set: `refreshExpander()` on the two lobby pages,

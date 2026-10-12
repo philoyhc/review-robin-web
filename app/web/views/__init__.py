@@ -91,8 +91,9 @@ from ._observer_collation import (
     build_observer_collation_context,
 )
 from ._observers import (
-    cohort_rule_signature,
+    RuleEditState,
     cohort_rule_summary,
+    rule_edit_state,
 )
 
 # Setup overview rows + standardized status-pills row (sliced in
@@ -332,8 +333,9 @@ __all__ = [
     "profile_column_ch_width",
     "is_web_link",
     "textarea_rows_for",
-    "cohort_rule_signature",
+    "RuleEditState",
     "cohort_rule_summary",
+    "rule_edit_state",
     "email_preview_from_display",
     "filter_invitations_rows",
     "filter_observers_rows",

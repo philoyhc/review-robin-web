@@ -429,9 +429,8 @@ The lobby carries all three:
   is in `spec/ui_elements.md` under `.session-row-selected`. Because
   the re-anchor rebuilds the panel from the row's rendered cells, and
   **this panel is editable**, a sort with an unsaved edit in it first
-  asks *"Discard unsaved changes?"* — the same string Instruments and
-  the Observers cohort editor use (`spec/setup_pages.md`
-  § *Cohort match rule editor*). Declining cancels the sort outright, so
+  asks *"Discard unsaved changes?"* — the same string Instruments uses
+  (`spec/instruments.md` § *Save / Lock interaction*). Declining cancels the sort outright, so
   the panel, the edit and the row order are all left as they were.
 - **Tag filter.** A `sessions-tag-filter` chip strip ("Show
   sessions tagged with:") with one `tag-chip` per tag in the

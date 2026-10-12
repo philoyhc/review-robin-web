@@ -68,6 +68,12 @@ def _builder(body: str) -> str:
     return _code(m.group(0))
 
 
+def _markup_only(body: str) -> str:
+    """The page without its `<style>` and `<script>` blocks."""
+    body = re.sub(r"<style\b.*?</style>", "", body, flags=re.S)
+    return re.sub(r"<script\b.*?</script>", "", body, flags=re.S)
+
+
 def _code(js: str) -> str:
     """The script with `//` comments stripped.
 
@@ -208,35 +214,30 @@ def test_the_status_actions_are_chosen_by_the_selection(
         assert re.search(r'data-status="(active|inactive)"', row), row
 
 
-def test_edit_is_arity_one(client: TestClient, db: Session) -> None:
-    """The one action that cannot take a set. It renders disabled rather
-    than absent, so the panel's shape does not change under the pointer
-    as a second row is ticked."""
+def test_edit_takes_any_selection(client: TestClient, db: Session) -> None:
+    """operator pages Item 4: `Edit` on one row opens the row editor, on
+    several their rule alone — so it is live at any arity, carrying the
+    selected ids."""
     js = _builder(_page(client, _session(client, db, "exp-arity")))
 
-    assert "sel.length === 1" in js
-    # Scoped to Edit's own ternary: a bare `"disabled aria-disabled" in
-    # js` also matches the Delete button, which ships disabled for a
-    # different reason.
-    edit = re.search(r"var editable = sel\.length === 1;.*?Edit</button>", js, re.S)
-    assert edit, "no Edit branch"
-    assert "disabled aria-disabled" in edit.group(0), (
-        "Edit renders live at arity != 1"
-    )
+    edit = re.search(r'class="btn secondary exp-edit".*?Edit</button>', js, re.S)
+    assert edit, "no Edit button"
+    assert "data-edit-ids" in edit.group(0)
+    assert "disabled" not in edit.group(0), "Edit renders disabled"
 
 
-def test_edit_navigates_to_the_row_it_opens(
+def test_edit_navigates_to_the_editor_for_its_arity(
     client: TestClient, db: Session
 ) -> None:
     """Entering edit mode is a navigation, and without a fragment it
     lands at the top of the document. Delegated from the table, because
-    the panel is replaced on every selection change — binding the button
-    directly would bind one that is about to be thrown away."""
+    the panel is replaced on every selection change."""
     js = _builder(_page(client, _session(client, db, "exp-editnav")))
 
-    assert '.exp-edit[data-edit-id]' in js, "the handler is not delegated"
+    assert '.exp-edit[data-edit-ids]' in js, "the handler is not delegated"
     assert '"#observer-row-"' in js, "Edit navigates without a fragment"
-    assert '"?edit_id="' in js
+    assert '"?edit_id="' in js, "one row does not open the row editor"
+    assert '"rule_id="' in js, "several rows do not open the rule editor"
 
 
 # ── What the panel replaced ───────────────────────────────────────────
@@ -397,296 +398,30 @@ def test_the_cohort_card_and_its_grid_are_gone(
     assert 'id="observers-cohort-save-btn"' not in body
 
 
-def test_the_builder_is_server_rendered_once_into_a_template(
+def test_the_expander_carries_no_builder(
     client: TestClient, db: Session
 ) -> None:
-    """A `<template>`, not a JS string literal, because the selects
-    carry live per-session tag labels — building those option lists in
-    JS would put the same data in two places."""
-    s = _session(client, db, "coh-tpl")
-    body = _page(client, s)
+    """operator pages Item 4 rung 4, the author's ruling: selecting rows
+    shows no cohort builder; `Edit` opens the one editing surface. So the
+    page ships no builder template, and the panel neither splits nor
+    clones one — nor guards an edit it can no longer hold."""
+    body = _page(client, _session(client, db, "coh-none"))
+    js = _builder(body)
 
-    tpl = re.search(
-        r'<template id="observers-cohort-template">.*?</template>',
-        body, re.S,
-    )
-    assert tpl, "no cohort template"
-    held = tpl.group(0)
-    assert "data-observer-cohort-builder" in held
-    assert "data-observer-rule-cell" in held
-    assert "observers-cohort-mixed-message" in held
-    # Exactly one. Two would be two sources for one editor.
-    assert body.count('id="observers-cohort-template"') == 1
-
-
-def test_the_panel_splits_and_clones_the_builder_into_it(
-    client: TestClient, db: Session
-) -> None:
-    js = _builder(_page(client, _session(client, db, "coh-split")))
-
-    code = js
-    assert '" is-split"' in code, "the panel does not split"
-    assert "row-expander-pane-left" in code
-    assert "row-expander-pane-right" in code
-    assert "COHORT_TPL.content.cloneNode(true)" in code, (
-        "the builder is moved rather than cloned, or not copied at all"
-    )
-    # The label takes the Link 1 idiom, not a card heading.
-    assert "row-expander-label" in code
-    assert "<h3" in code and "<h2" not in code, "an h2 reads as a card title"
-
-
-def test_save_is_created_disabled_and_placed_after_the_last_x(
-    client: TestClient, db: Session
-) -> None:
-    js = _builder(_page(client, _session(client, db, "coh-save")))
-
-    place = re.search(r"function placeSaveButton\(nodes\) \{.*?\n        \}", js, re.S)
-    assert place, "no placeSaveButton"
-    held = place.group(0)
-    assert "cohort-save-btn" in held
-    assert "save.disabled = true" in held, "Save ships live"
-    assert "/cohort-rule" in held, "Save posts nowhere"
-    assert 'form="observers-bulk-form"' in held or \
-           '"form", "observers-bulk-form"' in held, "Save carries no selection"
-    assert "xBtn.parentNode.appendChild(save)" in held, (
-        "Save is not appended to the last cell's X row — reading the "
-        "X out of the DOM is not the same as putting Save beside it"
-    )
-    # De-duplication, which a clone of the first cell would otherwise
-    # produce: measured at two Save buttons after one click of `+`.
-    assert "for (var i = 1; i < all.length; i++) all[i].remove();" in held, (
-        "nothing removes a duplicated Save"
-    )
-
-
-def test_the_rule_clone_does_not_carry_save_with_it(
-    client: TestClient, db: Session
-) -> None:
-    """`observerAddRule` clones the FIRST rule cell. With one cell that
-    is also the LAST — the cell holding Save — so the clone brought a
-    second Save into the list, both posting the same form, the stale one
-    carrying the stale rule."""
-    body = _page(client, _session(client, db, "coh-clone"))
-
-    fn = re.search(
-        r"window\.observerAddRule = function \(btn\) \{.*?\n      \};",
-        body, re.S,
-    )
-    assert fn, "observerAddRule is gone"
-    assert "cohort-save-btn" in fn.group(0), (
-        "the clone is not stripped of Save"
-    )
-
-
-def test_the_builder_helpers_are_defined_before_the_selection_script(
-    client: TestClient, db: Session
-) -> None:
-    """The two-rule restore bug, pinned by ordering.
-
-    `refresh()` runs at the end of the selection IIFE and calls
-    `window.observerAddRule` to grow the editor to N cells. That
-    assignment used to come AFTER the IIFE, so a `?selected=` restore of
-    a shared cohort of two or more rules threw a TypeError, which the
-    `try/catch` around the rule load swallowed into
-    `setEditorToDefault()` — the operator saw a blank one-rule builder
-    for a rule that had two. Reproduced in Chromium on `main`.
-    """
-    body = _page(client, _session(client, db, "coh-order"))
-
-    assign = body.index("window.observerAddRule = function")
-    # The selection IIFE, located by something only it contains.
-    use = body.index("function armDirtyGate(nodes)")
-    assert assign < use, (
-        "observerAddRule is assigned after the script that calls it"
-    )
-
-
-def test_the_dirty_gate_is_re_armed_per_rebuild_not_once(
-    client: TestClient, db: Session
-) -> None:
-    """The panel is thrown away and rebuilt on every selection change.
-    A baseline held across rebuilds would compare this selection's rule
-    against the previous one's, leaving `Save` live against an unchanged
-    rule."""
-    js = _builder(_page(client, _session(client, db, "coh-dirty")))
-
-    assert "function armDirtyGate" in js
-    assert "var baseline = ruleSignature(nodes.block);" in js, (
-        "the baseline is not taken inside the arming function"
-    )
-    # Armed from `refresh()`, which runs per rebuild — not from the
-    # IIFE body, which runs once.
-    refresh = re.search(r"function refresh\(\) \{.*?\n        \}", js, re.S)
-    assert refresh and "armDirtyGate(nodes)" in refresh.group(0), (
-        "the gate is armed once rather than per rebuild"
-    )
-    # Every control that can change the rule reaches the gate.
-    gate = re.search(r"function armDirtyGate\(nodes\) \{.*?\n        \}", js, re.S)
-    for event in ('"input"', '"change"', '"click"'):
-        assert event in gate.group(0), f"the gate ignores {event}"
-
-
-def test_the_click_path_rebinds_the_save_it_replaces(
-    client: TestClient, db: Session
-) -> None:
-    """`X` on the last rule cell destroys `Save` and gets a replacement.
-
-    `Save` rides inside that cell's flex row — the shape the plan asked
-    for — so `observerRemoveRule` takes it with the cell.
-    `placeSaveButton` builds a new one; if the click path discards the
-    return, `nodes.save` keeps pointing at the removed node and `sync()`
-    thereafter toggles a detached button while the visible one stays
-    greyed out for the rest of that selection. In a two-cell builder the
-    first cell's `X` is `disabled`, so every `X` in a two-rule edit hits
-    this path.
-
-    **This is a text guard and cannot be more.** There is no JS runtime
-    here, so the assertion is that the assignment is written, not that
-    it works — deleting the `nodes.save =` passed all 70 tests in this
-    file's neighbourhood. What proves the behaviour is Chromium:
-    three cells, `X` the last, `Save` must come back live because two
-    cells differ from the one-cell baseline.
-    """
-    js = _builder(_page(client, _session(client, db, "coh-rebind")))
-
-    handler = re.search(
-        r'addEventListener\("click".*?\}, 0\);', js, re.S
-    )
-    assert handler, "the delegated click handler is gone"
-    assert "nodes.save = placeSaveButton(nodes);" in handler.group(0), (
-        "the click path drops the replacement Save on the floor"
-    )
-    # Twice: the click path above, and the render path in `refresh()`
-    # that was always right. Counting rather than slicing, because the
-    # two are not in a fixed order in the file.
-    assert js.count("nodes.save = placeSaveButton(nodes);") == 2, (
-        "expected the rebinding on both the render and the click path"
-    )
-
-
-def test_an_unsaved_rule_edit_is_guarded_on_every_discard_path(
-    client: TestClient, db: Session
-) -> None:
-    """An unsaved cohort edit is DISCARDED by anything that rebuilds the
-    panel or leaves the page, and was discarded silently.
-
-    Measured before this guard: untick the row, tick a second one, or
-    hit Search, and the edit vanished with nothing written to the DB and
-    nothing said. Nothing auto-saves — the only write is the explicit
-    POST — so the loss is real and total.
-
-    Four paths ask the page's own question and then declare the
-    navigation deliberate: the row checkbox, select-all, `Edit`, and the
-    three `.exp-submit` bulk buttons. `beforeunload` catches what is
-    left — `Search`, `Clear`, the pager, `Add new`.
-
-    **A text guard, like its neighbours.** There is no JS runtime here,
-    and the panel does not exist until a box is ticked. Chromium is the
-    behavioural pin. What this file can do is make each claim fail on
-    its own, so every assertion below is scoped to the ONE construct it
-    is about — the cold read on the first draft found three mutations
-    surviving because a bare substring matched a second, innocent
-    occurrence elsewhere in the same script.
-    """
-    js = _builder(_page(client, _session(client, db, "coh-guard")))
-
-    assert 'window.confirm("Discard unsaved changes?")' in js, (
-        "no confirm on the in-page discard paths"
-    )
-    # The condition, not just the call: a guard that always returns
-    # true is a guard that never asks, and reads identically otherwise.
-    assert "if (!cohortDirty) return true;" in js, (
-        "okToDiscardCohortEdit does not consult the dirty flag"
-    )
-
-    # Every discard path asks. Counted on the CALL SITE pattern, which
-    # the function's own definition line does not match — `>= 3` against
-    # the bare name passed with a call site deleted, because the
-    # definition made up the difference.
-    assert js.count("if (!okToDiscardCohortEdit())") >= 4, (
-        "a discard path does not ask — expected the row checkbox, "
-        "select-all, Edit and the bulk submits"
-    )
-
-    # Declining must leave the selection alone, or the confirm is
-    # decoration: the panel would rebuild anyway and the edit still go.
-    assert "restoreBox(t, !t.checked);" in js, (
-        "declining still unticks the row"
-    )
-    # Select-all is tri-state, so declining has to restore the dash as
-    # well as the tick — recomputed from the rows, not inverted.
-    select_all = re.search(
-        r"if \(t === selectAll\) \{.*?\n            \}", js, re.S
-    )
-    assert select_all and "syncSelectAll();" in select_all.group(0), (
-        "declining still moves select-all"
-    )
-    # And a declined bulk submit must not post.
-    assert "event.preventDefault();" in js, (
-        "declining still fires the bulk action"
-    )
-
-    # The nav-away half.
-    assert 'addEventListener("beforeunload"' in js, "no nav-away guard"
-    # One predicate, read by the guard and by base.html's busy indicator
-    # (operator pages Item 2), so the two cannot disagree.
-    assert "return !intentionalNav && !!cohortDirty;" in js, (
-        "the deliberate navigations still warn"
-    )
-    assert "if (!willPrompt()) return undefined;" in js, (
-        "the guard does not read the shared predicate"
-    )
-    assert "window.rrwLeaveWillPrompt = willPrompt;" in js, (
-        "the busy indicator is not told the page will ask"
-    )
-
-    # Save carries the flag, and carries it from the CREATION site —
-    # `X` on the last rule cell destroys the Save inside that cell and
-    # `placeSaveButton` builds a replacement, so a listener attached
-    # once per panel did not reach it and Save raised "Leave site?".
-    # Scoped to that function, because `intentionalNav = true;` also
-    # appears on the Edit and bulk-submit paths and satisfied a
-    # page-wide substring with this listener deleted.
-    place = re.search(
-        r"function placeSaveButton\(nodes\) \{.*?\n        \}", js, re.S
-    )
-    assert place and "intentionalNav = true;" in place.group(0), (
-        "a rebuilt Save does not carry the intentional-nav flag"
-    )
-
-    # And the flag is cleared when the panel goes, or `beforeunload`
-    # blocks every later navigation over an edit already discarded —
-    # which is what the first draft did.
-    render = re.search(r"function renderPanel\(\) \{.*?\n        \}", js, re.S)
-    assert render and "cohortDirty = false;" in render.group(0), (
-        "the dirty flag outlives the panel that held the edit"
-    )
-
-
-def test_a_mixed_selection_resets_the_builder_and_says_so(
-    client: TestClient, db: Session
-) -> None:
-    """Author's call, 2026-09-16: mixed keeps today's behavior rather
-    than growing per-box "(Multiple values)", which needs per-field
-    comparison the whole-rule signature cannot do."""
-    js = _builder(_page(client, _session(client, db, "coh-mixed")))
-
-    assert "distinct" in js
-    assert "nodes.mixed.hidden = (distinct <= 1)" in js, (
-        "the mixed message does not follow the signature count"
-    )
-    assert re.search(r"\} else \{\s*setEditorToDefault\(nodes\.block\);", js), (
-        "a mixed selection does not reset the builder"
-    )
+    assert 'id="observers-cohort-template"' not in body
+    assert "data-observer-cohort-builder" not in _markup_only(body)
+    for retired in ("COHORT_TPL", "is-split", "cohort-save-btn",
+                    "cohortDirty", "okToDiscardCohortEdit", "beforeunload"):
+        assert retired not in js, f"the expander still carries {retired}"
 
 
 def test_the_split_modifier_has_a_rule_behind_it(
     client: TestClient, db: Session
 ) -> None:
-    """The class the builder emits is inert without this. Read off the
-    response rather than `base.html` on disk, because what ships is what
-    the page carries."""
+    """The row editor's bar splits as the expander's panel once did
+    (operator pages Item 4), and the class is inert without this. Read
+    off the response rather than `base.html` on disk, because what ships
+    is what the page carries."""
     body = _page(client, _session(client, db, "coh-css"))
 
     assert "body.ui-v2 .row-expander-body.is-split {" in body, (

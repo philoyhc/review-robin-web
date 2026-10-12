@@ -339,7 +339,7 @@ enrolled in the reviewer response surface.
 | `display_name` | `String(255)` | Optional human-facing label. |
 | `status` | `String(32)` | `active` / `inactive`. Managed via per-row Edit / bulk inactivate-reactivate on the Observers Setup page. |
 | `tag_1` | `String(255)` | Single free-form label (no `tag_2` / `tag_3`). |
-| `cohort_rule` | `JSON` | The observer's cohort match rule — which reviewees they see — authored in the Observers page's Cohort match rule editor and validated by `CohortRuleSet`. NULL = not authored. |
+| `cohort_rule` | `JSON` | The observer's cohort match rule — which reviewees they see — authored in the Observers page's Cohort match rule editor and validated by `CohortRuleSet`. "No rule" is NULL (never authored, or cleared from an editor) or an explicit empty `rules` list (an import or an older save); both mean the observer sees nothing and compare as equal (`observers.same_cohort_rule`). |
 
 **Canonical spec:** `spec/setup_pages.md` (Reviewers / Reviewees /
 Relationships / Observers preview tables, column toggles, per-page

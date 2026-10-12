@@ -399,9 +399,10 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Add.** `Add new`: "The new observer is able to see responses
   where" and one default cell; `+`, `X`, `AND`/`OR` and the operator
   cycle work.
-- [ ] **Save is unchanged.** Change the rule in the editor and Save: the
-  row's fields save, the rule does not (rung 3 wired it; see below).
-- [ ] **The selection expander** still loads and saves a rule as before.
+- ~~**Save is unchanged.**~~ Superseded: rung 3 wired the rule into
+  Save (below).
+- ~~**The selection expander** still loads and saves a rule.~~
+  Superseded: rung 4 took the builder out of the expander (below).
 
 ## One Save writes the observer and its rule (operator pages Item 4, rung 3)
 
@@ -419,3 +420,30 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **A rejected save.** `Edit`, type an email another observer uses,
   Save: the error shows under the row and the builder still holds the
   rule as edited.
+
+## Edit opens the editor; several rows edit their rule alone (operator pages Item 4, rung 4)
+
+- [ ] **No builder on selection.** Tick a row: the expander shows the
+  count, `Edit`, `Inactivate`/`Activate` and `Delete`, and no rule
+  builder.
+- [ ] **One row.** `Edit`: the row editor opens with the rule under it,
+  as `Add new` does.
+- [ ] **Several rows.** Tick two with the same rule, `Edit`: both rows
+  highlighted and read-only, "The 2 selected observers are able to see
+  responses where" under the last, the rule loaded. Change it and Save:
+  both rows' Cohort column follows.
+- [ ] **Differing rules.** Tick two with different rules, `Edit`: the
+  builder starts empty with the "different cohort rules" note.
+  Pick a field and an `IS` operator, leave the value blank, Save: the
+  re-render keeps the note beside the error.
+- [ ] **Leaving.** In any editor, change something and click another
+  Setup tab: the browser asks before leaving; Cancel and Save do not.
+- [ ] **Waits for a change.** With two differing rules, `Edit`: Save is
+  disabled until something in the builder changes.
+- [ ] **Keeps the view.** Filter or search the roster, tick two rows,
+  `Edit`: the editor opens over them with the filter still applied.
+- [ ] **A rejected save.** Several rows, a half-filled cell, Save: the
+  error shows; clicking another tab now asks before leaving.
+- [ ] **A rule the dropdown lacks.** An observer whose rule names a
+  pair-context tag: `Edit`, rename, Save — the rule is unchanged; `+`
+  offers no `(missing label)` option in the new cell.

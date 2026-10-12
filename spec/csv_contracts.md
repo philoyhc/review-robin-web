@@ -412,7 +412,7 @@ both round-trip.
 | Tag comma | An `ObserverTag1` cell holding a comma → per-row error (§1, *Tag commas*). |
 | Cross-roster identity | As §3.1 — `check_cross_table_identity` with `kind="observers"`, against the reviewer and reviewee rosters. A row with no `ObserverName` is skipped: `Observer.display_name` is nullable and its column optional, and a missing name is not a different one. One person may be an observer and a reviewer; the check blocks only two names on one mailbox. |
 | `Status` value | Blank/absent → `active`; `active` / `inactive` only, case-insensitively and ignoring surrounding whitespace, else per-row error. |
-| `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise. Blank cell → `cohort_rule = NULL`. |
+| `CohortRule` shape | Non-blank cell must be valid JSON **and** pass `CohortRuleSet.model_validate` → per-row error otherwise; a typed operator (`IS` / `IS NOT` / `CONTAINS` / `DOES NOT CONTAIN`) needs a non-blank `operand_value`, since `CONTAINS ""` would match every row. Blank cell → `cohort_rule = NULL`. |
 
 **Save:** `save_observers(...)` wipe-and-replace within the session's
 observer roster. Emits `observers.imported` audit event on success.

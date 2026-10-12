@@ -216,7 +216,10 @@ def test_set_cohort_rule_emits_audit_event(db: Session) -> None:
     session, user = _session_with_user(db, code="cohort-audit")
     o1 = _add_observer(db, review_session=session, email="a@example.org")
     o2 = _add_observer(db, review_session=session, email="b@example.org")
-    payload = {"combinator": "AND", "rules": []}
+    payload = {"combinator": "AND", "rules": [{
+        "field": "reviewer.tag1", "op": "IS",
+        "operand_tag": "", "operand_value": "x",
+    }]}
 
     observers_service.set_cohort_rule(
         db,
@@ -247,3 +250,51 @@ def test_set_cohort_rule_emits_audit_event(db: Session) -> None:
         assert "observer_id" in detail["refs"]
         seen_ids.append(detail["refs"]["observer_id"])
     assert sorted(seen_ids) == sorted([o1.id, o2.id])
+
+
+def test_same_cohort_rule_counts_null_and_an_empty_set_alike() -> None:
+    """operator pages Item 4: "no rule" is stored two ways — NULL, and an
+    imported or older explicit empty set — and both compare as one."""
+    from app.services.observers import same_cohort_rule
+
+    empty = {"combinator": "AND", "rules": []}
+    cell = {"field": "reviewer.tag1", "op": "IS",
+            "operand_tag": "", "operand_value": "x"}
+    assert same_cohort_rule(None, empty)
+    assert same_cohort_rule(empty, {"combinator": "OR", "rules": []})
+    assert not same_cohort_rule(None, {"combinator": "AND", "rules": [cell]})
+    assert same_cohort_rule(
+        {"combinator": "AND", "rules": [cell]},
+        {"combinator": "AND", "rules": [dict(cell)]},
+    )
+
+
+def test_set_cohort_rule_skips_observers_whose_rule_is_unchanged(
+    db: Session,
+) -> None:
+    """operator pages Item 4: an untouched Save over a shared rule is not
+    N events — only observers whose rule changes are written."""
+    session, user = _session_with_user(db, code="cohort-same")
+    rule = {"combinator": "AND", "rules": [{
+        "field": "reviewer.tag1", "op": "IS",
+        "operand_tag": "", "operand_value": "x",
+    }]}
+    o1 = _add_observer(db, review_session=session, email="a@example.org")
+    o2 = _add_observer(db, review_session=session, email="b@example.org")
+    o1.cohort_rule = rule
+    db.commit()
+
+    observers_service.set_cohort_rule(
+        db, review_session=session, observer_ids=[o1.id, o2.id],
+        payload=rule, user=user,
+    )
+    refs = [
+        e.detail["refs"]["observer_id"]
+        for e in db.execute(
+            select(AuditEvent).where(
+                AuditEvent.session_id == session.id,
+                AuditEvent.event_type == "observer.cohort_rule_assigned",
+            )
+        ).scalars()
+    ]
+    assert refs == [o2.id]
