@@ -1048,6 +1048,9 @@ In preview mode:
   the operator can type into the form to test it; their keystrokes
   go nowhere because the surrounding `<form>` is a `<div>` and the
   Save/Cancel/Submit buttons are disabled.
+- The role strip shows a static `Reviewer` pill followed by the
+  previewed reviewer's own line (§ *Role-navigator chip strip*), so the
+  operator sees what that reviewer sees of their own entry.
 - The overview card renders normally — `_surface_context` builds
   the per-page status pills the same way as for the reviewer. They
   can differ in one case: preview does not apply the reviewer's
@@ -1391,9 +1394,11 @@ without going back through `/me`:
 | `GET /me/sessions/{id}/collation` | `reviewer/collation.html` | `"observer"` |
 
 `/me` itself carries no strip: it is what the strip lets a user skip.
-The reviewer surface wraps the include in `{% if not preview_mode %}`,
-so the operator preview (§ *Operator preview mode*) shows no "you are
-here" chip for the reviewer being inspected.
+The reviewer surface includes it in every mode. The operator preview
+(§ *Operator preview mode*) has no navigator, because its links would
+lead to the inspected reviewer's other surfaces: it gets one static
+`Reviewer` pill (active, not a link) in its place, so the reviewer's own
+line below has the row it reads on for the reviewer.
 
 **Builder** — `build_role_chips(db, *, user, review_session,
 active_role)` in `app/web/routes_reviewer/_shared.py`. It returns one
@@ -1444,14 +1449,35 @@ is a `pill pill-role-<role>` labeled with the capitalized role name:
   `rs-role-nav-muted`;
 - not active, not enabled → `<span>` with `rs-role-nav-muted`.
 
+**The reviewer's own line.** On the reviewer surface only (not the
+summary, `/results` or `/collation`), the partial takes an optional
+`reviewer_self_fields` and renders it in a muted `.rs-self-info` span
+**inline after the last role pill**, so it never splits the pills of a
+reviewer who also holds another role. The span is absent when the list
+is empty. The list comes from `views.reviewer_self_line`
+(`app/web/views/_reviewer_self.py`): the fields the session selects
+(`participant_info.effective_reviewer_self_fields`; the selection, its
+default and its gate are in `spec/settings_inventory.md`), read from the
+signed-in reviewer's own roster row, in roster order — Name, Email,
+Profile, Tag 1–3.
+
+- A field empty (or whitespace) on the row is skipped; the rest are
+  separated by a decorative ` · `.
+- **Name** and **Email** render as plain text.
+- **Profile** renders through `_partials/profile_value.html` with the
+  text `Profile`: a link for an `http(s)` value, a muted `•••` carrying
+  the value for any other, nothing for an empty one.
+- A **tag** renders as `<label>: <value>`, the label being the slot's
+  friendly label or its default (`field_labels.resolve_pair`).
+
 The partial branches on chip state, never on role, so a fourth role
 would touch only `_ROLE_PRIORITY`, the per-role branch in
 `build_role_chips`, and a `.pill-role-<role>` palette in `base.html`.
 A new surface adds the strip by passing `role_chips` from its route
 and including the partial under its page header and before any
-description card, wrapped in
-`{% if not preview_mode %}` if it also renders as an operator
-preview.
+description card; if it also renders as an operator preview, the
+preview must say what the strip shows there (the reviewer surface's
+static pill is the precedent).
 
 **CSS** — in `base.html` beside the `.pill-role-*` palette, every
 selector scoped under `body.ui-v2`:

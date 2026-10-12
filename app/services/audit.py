@@ -710,6 +710,8 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # Segment 18B PR 3 — per-session display-timezone override.
     # ``app/services/sessions.py`` emits.
     "session.display_timezone_set": EventSchema(_IDENTITY | {"changes"}),
+    # participant info Item 1 — what reviewers see of their own entry.
+    "session.reviewer_self_fields_set": EventSchema(_IDENTITY | {"changes"}),
     # Segment 15A Slice 1 — per-session friendly-label resolver mutations.
     "session_field_label.set": EventSchema(
         _IDENTITY | {"changes", "context"}

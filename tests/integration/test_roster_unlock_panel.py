@@ -28,6 +28,9 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
+#: The muted divider between the roster count and the column pills.
+_SEP = '<span class="roster-readout-sep" aria-hidden="true">|</span>'
+
 #: ``(page, noun, Noun)`` — the two pages this rung moves.
 PAGES = [
     ("reviewees", "reviewee", "Reviewees"),
@@ -349,19 +352,23 @@ def test_the_index_reports_the_roster_and_its_populated_columns(
         card, re.S,
     )
     assert m, "no roster readout"
-    assert " ".join(m.group(1).split()) == f"3 {noun}s"
+    assert " ".join(m.group(1).split()) == f"{Noun} (3)"
 
+    # The column pills, without the roster count pill that leads the run.
     chips = [c.strip() for c in
-             re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)]
+             re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+             if not c.strip().startswith(f"{Noun} (")]
     if page == "reviewees":
         # Identity columns are text and always listed, at their count.
         assert any("(3)" in c for c in chips), chips
-        assert "none yet" not in card
+        assert _SEP in card
     else:
         # Relationships lists pair-context tags only — see
         # `relationship_column_state`. This fixture seeds none, so the
-        # list is empty and the `{% else %}` fires.
-        assert "none yet" in card, chips
+        # list is empty and the row stops at the count: no `|`, and no
+        # `none yet` that would seem to describe a roster of three.
+        assert chips == [], chips
+        assert _SEP not in card and "none yet" not in card
 
 
 @pytest.mark.parametrize("page,noun,Noun", PAGES)
@@ -374,9 +381,9 @@ def test_an_empty_roster_reports_what_its_index_can_report(
     required column is itself worth seeing — it is what an operator who
     uploaded a CSV missing that column needs to be told.
 
-    **Relationships lists nothing**, so the chip row's `{% else %}`
-    ("none yet") fires. Its identity columns are non-nullable integer
-    FKs, which `slot_row_count` cannot even be asked about — see
+    **Relationships lists nothing**, so the row stops at the count: no
+    divider, no column pills. Its identity columns are non-nullable
+    integer FKs, which `slot_row_count` cannot even be asked about — see
     `relationship_column_state`.
 
     That asymmetry is why this test is parametrized rather than shared:
@@ -391,18 +398,45 @@ def test_an_empty_roster_reports_what_its_index_can_report(
         r'<span class="pill pill-count">(.*?)</span>',
         card, re.S,
     )
-    assert m and " ".join(m.group(1).split()) == f"0 {noun}s", card[:400]
+    assert m and " ".join(m.group(1).split()) == f"{Noun} (0)", card[:400]
 
-    chips = re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+    chips = [
+        c for c in re.findall(r'<span class="pill pill-count">([^<]*)</span>', card)
+        if not c.strip().startswith(f"{Noun} (")
+    ]
     identity = [c.strip() for c in chips if "(0)" in c]
     if page == "reviewees":
         assert len(identity) == 2, (
             f"expected both identity columns listed at zero, got {chips}"
         )
-        assert "none yet" not in card
+        assert _SEP in card
     else:
         assert identity == [], chips
-        assert "none yet" in card, "an empty index renders a bare label"
+        assert _SEP not in card, "an empty index renders no divider"
+
+
+def test_relationship_tags_run_on_from_the_count_after_the_divider(
+    client: TestClient, db: Session
+) -> None:
+    """The other half of the stop-at-the-count rule: once a pair-context
+    tag holds data, Relationships lists it after the `|`, as the other
+    pages list their columns."""
+    rs = _mk(client, db, "up-reltag")
+    _seed(db, rs.id, "relationships", n=3)
+    rel = db.query(Relationship).filter_by(session_id=rs.id).first()
+    rel.tag_1 = "Cohort A"
+    db.commit()
+    card = _card(_get(client, rs, "relationships"), "relationships")
+
+    m = re.search(
+        r'<span class="pill pill-count">\s*Relationships \(3\)\s*</span>\s*'
+        + re.escape(_SEP)
+        + r'\s*<span class="roster-readout-values">(.*?)</div>',
+        card, re.S,
+    )
+    assert m, card[:600]
+    pills = re.findall(r'<span class="pill pill-count">([^<]*)</span>', m.group(1))
+    assert [" ".join(c.split()) for c in pills] == ["Pair context 1 (1)"], pills
 
 
 def test_the_reviewees_index_lists_a_column_only_where_it_is_populated(
@@ -548,7 +582,8 @@ def test_a_failed_import_still_reports_the_real_columns(
     page had no index row yet. Once it had one, that empty list stopped
     being a placeholder: a failed import — the moment an operator is
     looking hardest at which columns arrived — answered "Populated
-    columns: none yet" over a roster of three.
+    columns: none yet" over a roster of three (the row now stops at the
+    count instead, so the `|` divider is what this pins).
 
     The 400 path is the only one that can drift this way, because it is
     the only one that assembles the context by hand rather than through
@@ -574,7 +609,7 @@ def test_a_failed_import_still_reports_the_real_columns(
     assert response.status_code == 400, response.status_code
     card = _card(response.text, page)
 
-    assert "none yet" not in card, (
+    assert _SEP in card, (
         "the failed-import re-render reports an empty index over a "
         "roster it is showing"
     )

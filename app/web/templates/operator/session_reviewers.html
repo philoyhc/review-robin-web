@@ -195,41 +195,32 @@
     <div class="roster-readouts">
       <div class="roster-readout">
         <span class="roster-readout-label">Roster:</span>
-        <span class="pill pill-count">{{ total_row_count }}
-          reviewer{% if total_row_count != 1 %}s{% endif %}</span>
-      </div>
-      <div class="roster-readout">
-        <span class="roster-readout-label">Populated:</span>
-        <span class="roster-readout-values">
-          {# Label and count both come from the server: the label from the
-             same `field_labels.resolve_pair` the preview's own column
-             headers read, so the index cannot disagree with the table
-             below it; the count from `slot_row_count`, because `col_data`
-             is a presence map and never held counts. #}
-          {% for col in col_readouts %}
-            <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
-          {% else %}
-          {# 19P.3 rung 5c — the `{% else %}` is reachable on ONE page.
-             Relationships lists pair-context tags only (its identity
-             columns are non-nullable integer FKs, which `slot_row_count`
-             cannot be asked about), so an empty roster there renders
-             `none yet`. The other three always emit identity entries and
-             never reach it. Kept identical on all four rather than
-             deleted from three: one partial's worth of markup in four
-             copies is the drift 19P.3 exists to remove, and a page that
-             later grows an all-optional index would need it back.
-             Decided once, and recorded in `spec/setup_pages.md`
-             § *The roster index*. #}
-            <span class="roster-readout-empty">none yet</span>
-          {% endfor %}
-        </span>
+        <span class="pill pill-count">Reviewers ({{ total_row_count }})</span>
+        {# The column pills run on from the count after a muted `|`; with
+           no column to report (Relationships with no pair-context tags,
+           the only page whose index can be empty) the row stops at the
+           count rather than reading `| none yet`, which would seem to
+           describe the roster. #}
+        {% if col_readouts %}
+          <span class="roster-readout-sep" aria-hidden="true">|</span>
+          <span class="roster-readout-values">
+            {# Label and count both come from the server: the label from the
+               same `field_labels.resolve_pair` the preview's own column
+               headers read, so the index cannot disagree with the table
+               below it; the count from `slot_row_count`, because `col_data`
+               is a presence map and never held counts. #}
+            {% for col in col_readouts %}
+              <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>
+            {% endfor %}
+          </span>
+        {% endif %}
       </div>
       {# participant info Item 1 — what a reviewer sees of their own
          roster entry, after the role pills on the reviewer surface. In
          every state: locked, the operator still reads the selection
          here though its card (in the Unlock panel) is gone. #}
       <div class="roster-readout" data-reviewer-self-readout>
-        <span class="roster-readout-label">Shown on surface:</span>
+        <span class="roster-readout-label">Reviewers see:</span>
         <span class="roster-readout-values">
           {% for label in self_field_readout %}
             <span class="pill pill-count">{{ label }}</span>
@@ -358,11 +349,72 @@
           {% endif %}
         </div>
 
-        {# Right column: the upload card, and — while open — the Lock
-           control beneath it. A stack, not a second grid row: a grid row
+        {# Right column: what reviewers see of themselves, the upload
+           card, and — while open — the Lock control beneath them. A stack, not a second grid row: a grid row
            starts below the TALLER column, which would drop the button to
            the panel's foot, far from the card it sits under. #}
         <div class="unlock-stack unlock-right">
+        {# participant info Item 1 — what reviewers see of their own
+           entry, after the role pills on the reviewer surface. One chip
+           per populated column (Name and Email always), as the roster
+           index reads; a selected key the card cannot offer (its column
+           holds no data) rides along as a hidden `keep` input, so a save
+           never drops it. Save / Cancel are disabled until a chip moves,
+           as the tag-labels editor's are. #}
+        <section class="card" id="reviewer-self-fields"
+                 aria-labelledby="reviewer-self-fields-h"
+                 data-reviewer-self-card>
+          <h2 id="reviewer-self-fields-h">What reviewers see of their own entry</h2>
+          <form method="post" action="{{ reviewers_base_url }}/self-fields"
+                id="reviewer-self-fields-form" autocomplete="off">
+            <div class="reviewer-self-chips">
+              {% for chip in self_field_chips %}
+                <label class="pill pill-count tag-chip">
+                  <input type="checkbox" class="visually-hidden"
+                         name="fields" value="{{ chip.key }}"
+                         {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
+              {% endfor %}
+            </div>
+            {% for key in self_field_kept %}
+              <input type="hidden" name="keep" value="{{ key }}">
+            {% endfor %}
+            <div class="unlock-col-actions">
+              <button type="button" class="btn secondary"
+                      data-reviewer-self-cancel disabled>Cancel</button>
+              <button type="submit" class="btn secondary"
+                      data-reviewer-self-save disabled>Save</button>
+            </div>
+          </form>
+          <script>
+            (function () {
+              var form = document.getElementById("reviewer-self-fields-form");
+              if (!form) return;
+              var saveBtn = form.querySelector("[data-reviewer-self-save]");
+              var cancelBtn = form.querySelector("[data-reviewer-self-cancel]");
+              var boxes = form.querySelectorAll('input[type="checkbox"]');
+              var initial = Array.prototype.map.call(boxes, function (b) {
+                return b.checked;
+              });
+              function refresh() {
+                var dirty = Array.prototype.some.call(boxes, function (b, i) {
+                  return b.checked !== initial[i];
+                });
+                saveBtn.disabled = !dirty;
+                cancelBtn.disabled = !dirty;
+              }
+              Array.prototype.forEach.call(boxes, function (b) {
+                b.addEventListener("change", refresh);
+              });
+              cancelBtn.addEventListener("click", function () {
+                Array.prototype.forEach.call(boxes, function (b, i) {
+                  b.checked = initial[i];
+                });
+                refresh();
+              });
+            })();
+          </script>
+        </section>
+
         {# 19P.1 rung 3c — WIRED, and the last of the three cards to
            move. The live card below the table goes in this same slice,
            for the reason 2b established and 3b repeated: `sync`
@@ -388,29 +440,6 @@
            a class over an inline style. It is the same left-vs-right
            question 3b's Delete-all button already opened for the dev
            slot — one answer for the panel, not two. #}
-        {# participant info Item 1 rung 2 — SCAFFOLD, inert: the chips
-           sit at the default and toggle only on screen, the form posts
-           nowhere, and Save / Cancel stay disabled. Rung 3 stores the
-           selection. One chip per populated column (Name and Email
-           always), as the roster index reads. #}
-        <section class="card" id="reviewer-self-fields"
-                 aria-labelledby="reviewer-self-fields-h"
-                 data-reviewer-self-card>
-          <h2 id="reviewer-self-fields-h">Reviewer information shown on surface</h2>
-          <div class="reviewer-self-chips">
-            {% for chip in self_field_chips %}
-              <label class="pill pill-count tag-chip">
-                <input type="checkbox" class="visually-hidden"
-                       name="fields" value="{{ chip.key }}"
-                       {% if chip.selected %}checked{% endif %}>{{ chip.label }}</label>
-            {% endfor %}
-          </div>
-          <div class="unlock-col-actions">
-            <button type="button" class="btn secondary" disabled>Cancel</button>
-            <button type="button" class="btn secondary" disabled>Save</button>
-          </div>
-        </section>
-
         <section class="card" id="upload-csv"
                  aria-labelledby="reviewers-upload-h">
           <h2 id="reviewers-upload-h">Upload Reviewers</h2>

@@ -906,6 +906,14 @@ async def _handle_import(
                 column_state = views.reviewer_column_state(db, review_session)
                 col_data = column_state.col_data
                 col_readouts = column_state.readouts
+                # participant info Item 1 — the same lesson again: the
+                # Unlock panel's self-fields card and the readout row's
+                # `Reviewers see:` pills read three keys this path owes.
+                context.update(
+                    views.reviewer_self_card_context(
+                        review_session, col_readouts
+                    )
+                )
             else:
                 status_options = views.REVIEWEES_STATUS_OPTIONS
                 search_options = views.reviewees_search_options(list_items)
@@ -914,7 +922,8 @@ async def _handle_import(
                 # a note that Reviewees had no index row yet; once it
                 # had one, the empty list stopped being a placeholder
                 # and started being a lie — a failed import rendered
-                # "Populated columns: none yet" over a roster of three.
+                # an empty index ("Populated columns: none yet", as the
+                # row then read) over a roster of three.
                 # One helper answers both keys, so they cannot drift.
                 column_state = views.reviewee_column_state(db, review_session)
                 col_data = column_state.col_data

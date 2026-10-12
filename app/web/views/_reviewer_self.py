@@ -5,8 +5,8 @@ reviewer's roster fields, shown to that reviewer after the role pills on
 the reviewer surface and its operator preview, chosen on the Reviewers
 page's Unlock panel and reported in its roster card's readout row.
 
-Rung 2 is the scaffold: nothing stores a selection yet, so every caller
-passes the default, which is what a stored ``NULL`` will mean.
+The selection itself, its default and its storage live in
+``app.services.participant_info``; this module shapes it for the pages.
 """
 
 from __future__ import annotations
@@ -16,21 +16,26 @@ from dataclasses import dataclass
 
 from app.db.models import Reviewer, ReviewSession
 from app.services import field_labels as field_labels_service
+from app.services.participant_info import (
+    REVIEWER_SELF_DEFAULT,
+    REVIEWER_SELF_FIELD_KEYS,
+    effective_reviewer_self_fields,
+)
 
 from ._setup import ColumnReadout
 
-#: Every field a reviewer can be shown of themselves, in roster order.
-REVIEWER_SELF_FIELD_KEYS: tuple[str, ...] = (
-    "name",
-    "email",
-    "profile_link",
-    "tag_1",
-    "tag_2",
-    "tag_3",
-)
-
-#: The selection while none is stored: tags can be shown but start off.
-REVIEWER_SELF_DEFAULT: tuple[str, ...] = ("name", "email", "profile_link")
+__all__ = [
+    "REVIEWER_SELF_DEFAULT",
+    "REVIEWER_SELF_FIELD_KEYS",
+    "SelfFieldChip",
+    "SelfFieldValue",
+    "reviewer_self_card_context",
+    "reviewer_self_chips",
+    "reviewer_self_kept",
+    "reviewer_self_label",
+    "reviewer_self_line",
+    "reviewer_self_readout",
+]
 
 # `reviewer_column_state` names its readouts by the preview table's chip
 # slots; the selection uses the model's column names.
@@ -97,10 +102,44 @@ def reviewer_self_chips(
     ]
 
 
+def reviewer_self_kept(
+    chips: Iterable[SelfFieldChip], selected: Iterable[str]
+) -> list[str]:
+    """Selected keys the card offers no chip for (no data in that
+    column), in roster order: the card posts them back as hidden
+    ``keep`` inputs so a save does not drop them."""
+    offered = {chip.key for chip in chips}
+    chosen = set(selected)
+    return [
+        key for key in REVIEWER_SELF_FIELD_KEYS
+        if key in chosen and key not in offered
+    ]
+
+
+def reviewer_self_card_context(
+    review_session: ReviewSession, readouts: Iterable[ColumnReadout]
+) -> dict[str, object]:
+    """The Reviewers page's three keys for this feature: the card's chips
+    and kept keys, and the readout row's pills, from the stored selection
+    or the default.
+
+    One helper for both renders of the page — the GET and the failed CSV
+    import's in-place re-render — so the second cannot ship an empty card
+    and a readout of `none` by omitting a key.
+    """
+    selected = effective_reviewer_self_fields(review_session)
+    chips = reviewer_self_chips(readouts, selected)
+    return {
+        "self_field_chips": chips,
+        "self_field_kept": reviewer_self_kept(chips, selected),
+        "self_field_readout": reviewer_self_readout(review_session, selected),
+    }
+
+
 def reviewer_self_readout(
     review_session: ReviewSession, selected: Iterable[str]
 ) -> list[str]:
-    """The roster card's `Shown on surface:` pills, in roster order."""
+    """The roster card's `Reviewers see:` pills, in roster order."""
     chosen = set(selected)
     return [
         reviewer_self_label(review_session, key)

@@ -103,6 +103,19 @@ class ReviewSession(Base, TimestampMixin):
     # 10-day max offset (e.g. ``-PT240H`` is 7 chars). All four
     # columns are nullable and inert at Part 0 — no service module
     # reads or writes these until the consumer Part lights them up.
+    # participant info (`guide/participant_info.md`) — what each
+    # participant is shown of their own roster entry: a list of roster
+    # field keys, ``NULL`` meaning that participant's default. One
+    # migration added all three; Item 1 reads and writes the reviewers'.
+    reviewer_self_fields: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    reviewee_self_fields: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True
+    )
+    observer_self_fields: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True
+    )
     invite_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     reminder_offsets: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     archive_offset: Mapped[str | None] = mapped_column(String(16), nullable=True)

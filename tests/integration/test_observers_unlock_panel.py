@@ -512,7 +512,13 @@ def test_the_index_lists_every_column_the_table_renders(
     s = _session(client, db, "unl-16", rows=0)
     card = _card(_page(client, s))
     assert 'roster-readout-label">Roster:</span>' in card
-    assert _roster_count(card) == "0 observers", _roster_count(card)
+    assert _roster_count(card) == "Observers (0)", _roster_count(card)
+    # The column pills run on from the count after a muted divider.
+    assert re.search(
+        r'<span class="pill pill-count">Observers \(0\)</span>\s*'
+        r'<span class="roster-readout-sep" aria-hidden="true">\|</span>',
+        card,
+    ), card[:600]
     for label in ("Name (0)", "Email (0)", "Tag (0)"):
         assert label in card, f"{label} missing from an empty roster"
 
@@ -523,15 +529,14 @@ def test_the_index_lists_every_column_the_table_renders(
     # against a fixture where every row had both.
     s2 = _session(client, db, "unl-17", rows=3, named=2, tagged=1)
     card2 = _card(_page(client, s2))
-    assert _roster_count(card2) == "3 observers", _roster_count(card2)
+    assert _roster_count(card2) == "Observers (3)", _roster_count(card2)
     assert "Email (3)" in card2, "Email is required, so it tracks rows"
     assert "Name (2)" in card2, "Name is not counting its own column"
     assert "Tag (1)" in card2, "Tag is not counting its own column"
 
-    # And the roster count is a real one, not the pluralizer agreeing
-    # with itself.
+    # And the roster count is a real one, tracking the rows.
     s3 = _session(client, db, "unl-17b", rows=1)
-    assert _roster_count(_card(_page(client, s3))) == "1 observer"
+    assert _roster_count(_card(_page(client, s3))) == "Observers (1)"
 
 
 def test_the_index_counts_the_whole_roster_not_the_filtered_window(
@@ -548,8 +553,8 @@ def test_the_index_counts_the_whole_roster_not_the_filtered_window(
     unfiltered = _card(_page(client, s))
     filtered = _card(_page(client, s, "?q=o0%40example.org"))
 
-    assert _roster_count(unfiltered) == "3 observers"
-    assert _roster_count(filtered) == "3 observers", (
+    assert _roster_count(unfiltered) == "Observers (3)"
+    assert _roster_count(filtered) == "Observers (3)", (
         "a search shrank the roster index"
     )
     # ...and the filter really did bite, or the assertion above is
