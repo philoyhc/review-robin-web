@@ -1,14 +1,16 @@
 """Unit tests for the cohort-rule observer view helpers.
 
-Pins the Cohort-cell summary string the Observers Setup table renders.
-(The signature helper retired with the selection expander's builder,
-operator pages Item 4; the several-row editor compares rules with
-`observers.same_cohort_rule`.)
+Pins the Cohort-cell summary string the Observers Setup table renders,
+and `rule_edit_state`, the several-row editor's state (operator pages
+Item 4; the signature helper retired with the selection expander's
+builder).
 """
 
 from __future__ import annotations
 
-from app.web.views import cohort_rule_summary
+from types import SimpleNamespace
+
+from app.web.views import cohort_rule_summary, rule_edit_state
 
 
 _TAG_LABELS_FULL = {
@@ -130,3 +132,37 @@ def test_summary_falls_back_to_canonical_key_for_missing_label() -> None:
     # reviewer.tag3 isn't in the labels dict; fall back to the
     # canonical key rather than dropping the rule.
     assert summary.startswith("reviewer.tag3 ")
+
+
+_RULE = {"combinator": "AND", "rules": [{
+    "field": "reviewee.tag1", "op": "IS",
+    "operand_tag": "", "operand_value": "Blue",
+}]}
+
+
+def _rows(*rules: object) -> list[SimpleNamespace]:
+    return [SimpleNamespace(id=i, cohort_rule=r) for i, r in enumerate(rules, 1)]
+
+
+def test_rule_edit_state_shared_rule_loads() -> None:
+    state = rule_edit_state(_rows(_RULE, None, _RULE), [3, 1])
+    assert (state.ids, state.rule, state.mixed, state.last_id) == (
+        [3, 1], _RULE, False, 3)
+
+
+def test_rule_edit_state_differing_rules_load_nothing() -> None:
+    state = rule_edit_state(_rows(_RULE, None), [1, 2])
+    assert (state.rule, state.mixed, state.last_id) == (None, True, 2)
+
+
+def test_rule_edit_state_null_and_empty_set_are_one_rule() -> None:
+    empty = {"combinator": "AND", "rules": []}
+    assert not rule_edit_state(_rows(None, empty), [1, 2]).mixed
+
+
+def test_rule_edit_state_drops_ids_the_page_does_not_show() -> None:
+    # A stale id (deleted, another session's) is not edited blind; one
+    # survivor is the row editor's job, not this mode's.
+    state = rule_edit_state(_rows(_RULE, _RULE), [1, 1, 99])
+    assert (state.ids, state.rule, state.mixed, state.last_id) == (
+        [], None, False, None)

@@ -410,6 +410,8 @@ def test_a_half_filled_rule_for_several_re_renders_their_editor(
     assert "The 2 selected observers" in bar
     assert "Finish or clear each rule cell" in bar
     assert _rule_attr(bar)["rules"][0]["field"] == "reviewee.tag1"
+    # Their stored rules still differ, so the note stays (Codex on #2990).
+    assert "currently have different cohort rules" in bar
     db.refresh(first)
     db.refresh(second)
     assert first.cohort_rule == RULE and second.cohort_rule is None

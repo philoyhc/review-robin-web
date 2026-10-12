@@ -187,28 +187,11 @@ def _render_observers_page(
     # stored rule. Resolved apart from `edit_values`: a rejected save
     # (a taken email, say) re-renders with the operator's values, and the
     # builder must not come back empty while the rule is still stored.
-    rule_edit_mixed = False
-    if rule_edit_ids:
-        # Only the rows this page shows: a stale id (deleted, or another
-        # session's) is dropped rather than edited blind.
-        shown_ids = {o.id for o in observers}
-        rule_edit_ids = [i for i in rule_edit_ids if i in shown_ids]
-        if len(rule_edit_ids) < 2:
-            rule_edit_ids = []
-    if rule_edit_ids and edit_cohort_rule is _STORED_RULE:
-        # One shared rule loads into the builder; differing rules load
-        # nothing and say so, as the selection expander did. Compared as
-        # the service compares them, so NULL and an imported empty set
-        # are the same "no rule".
-        by_id = {o.id: o for o in observers}
-        first_rule = by_id[rule_edit_ids[0]].cohort_rule
-        rule_edit_mixed = not all(
-            observers_service.same_cohort_rule(first_rule, by_id[i].cohort_rule)
-            for i in rule_edit_ids
-        )
-        edit_cohort_rule = (
-            None if rule_edit_mixed else by_id[rule_edit_ids[0]].cohort_rule
-        )
+    # operator pages Item 4 — the several-row editor's rows and what it
+    # loads; the view adapter owns the comparison (Codex on #2990).
+    rule_edit = views.rule_edit_state(observers, rule_edit_ids)
+    if rule_edit.ids and edit_cohort_rule is _STORED_RULE:
+        edit_cohort_rule = rule_edit.rule
     if edit_cohort_rule is _STORED_RULE:
         edited = (
             next((o for o in all_observers if o.id == edit_id), None)
@@ -352,12 +335,9 @@ def _render_observers_page(
             "edit_values": edit_values,
             "edit_error": edit_error,
             "edit_cohort_rule": edit_cohort_rule,
-            "rule_edit_ids": rule_edit_ids,
-            "rule_edit_last": next(
-                (o.id for o in reversed(observers) if o.id in rule_edit_ids),
-                None,
-            ),
-            "rule_edit_mixed": rule_edit_mixed,
+            "rule_edit_ids": rule_edit.ids,
+            "rule_edit_last": rule_edit.last_id,
+            "rule_edit_mixed": rule_edit.mixed,
             # The page's half-filled check reads the same list the
             # server's does.
             "cohort_value_ops": sorted(VALUE_OPERATORS),

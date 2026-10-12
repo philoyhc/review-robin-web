@@ -434,6 +434,8 @@ section (git history keeps it), so this file lists only what is owed.
   both rows' Cohort column follows.
 - [ ] **Differing rules.** Tick two with different rules, `Edit`: the
   builder starts empty with the "different cohort rules" note.
+  Pick a field and an `IS` operator, leave the value blank, Save: the
+  re-render keeps the note beside the error.
 - [ ] **Leaving.** In any editor, change something and click another
   Setup tab: the browser asks before leaving; Cancel and Save do not.
 - [ ] **Waits for a change.** With two differing rules, `Edit`: Save is
