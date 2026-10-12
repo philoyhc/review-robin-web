@@ -1556,10 +1556,11 @@
           {% macro b3_identity_chip(audience, state) %}
             {# ProfileLink updates Item 2 — how much of the reviewer a Raw
                released view names, beside that cell; the mode cycle shows
-               or hides it. A cycle chip over ``Name only`` / ``Name,
-               email`` and, only when some reviewer has a ProfileLink,
-               ``Name, email, profile``. A stored profile level renders
-               as itself either way, so it can be cycled off. The hidden
+               or hides it. A cycle chip over ``Reviewer name only`` /
+               ``Reviewer name, email`` and, only when some reviewer has a
+               ProfileLink, ``Reviewer name, email, profile``. A stored
+               profile level renders as itself either way, so it can be
+               cycled off. The hidden
                input carries the stored value (``""`` when unset) until a
                cycle writes a level. #}
             {% set _level = state.get("reviewer_identity", "name_email") %}

@@ -341,3 +341,13 @@ section (git history keeps it), so this file lists only what is owed.
   Space without scrolling the page, and the card's Save wakes. Cycling
   Reviewees "Responses released" to Raw this way brings up the identity
   chip, which is the next Tab stop.
+
+## The identity chip names the reviewer
+
+- [ ] **Instruments.** Unlock a card, set Reviewees "Responses released"
+  to Raw: the identity chip reads `Reviewer name, email` and cycles to
+  `Reviewer name only`, then (with a ProfileLink in the roster)
+  `Reviewer name, email, profile`, each fitting beside the mode chip.
+  The locked table's pill follows, and fits too.
+- [ ] **Reviewer page.** The "Who can see what you wrote" table's second
+  pill reads the same words and still fits beside the mode pill.
