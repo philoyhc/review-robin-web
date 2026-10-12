@@ -193,9 +193,6 @@ storage and the live card); the author's browser check passed
    reading the stored list, specs, a browser-check section. The item's
    last build rung: a `diff-reviewer` read on the cumulative diff from
    rung 2's base, and a `spec-writer` verify.
-3. **Lock ends the right column** (added 2026-10-12, the author's
-   browser check): the `Lock` placement and its CSS, tests, specs, the
-   browser-check section restated. Read on its own diff.
 
 ### Definition of done
 
@@ -306,6 +303,9 @@ Taken 2026-10-12 at `1fa68b24`.
 2. **The reorder.** The four templates, the `Lock` row's CSS and
    toggle, tests, the two specs, a browser-check section. One rung,
    read on its own diff.
+3. **Lock ends the right column** (added 2026-10-12, the author's
+   browser check): the `Lock` placement and its CSS, tests, specs, the
+   browser-check section restated. Read on its own diff.
 
 ### Definition of done
 
@@ -340,7 +340,8 @@ Taken 2026-10-12 at `1fa68b24`.
   Its `diff-reviewer` read found the plan still rejecting what the
   amendment adopts, three stale plan lines, no rung 3 in the ladder, the
   moved block under-indented, and no check that `Lock` is an empty
-  right column's only element; all fixed.
+  right column's only element; all fixed. A second read of those fixes
+  found the new ladder rung filed under Item 1; moved.
 - Reads: two `diff-reviewer` reads and one `spec-writer` verify. The
   first read and the verify both
   found the old placement in four specs the plan had not named (they
