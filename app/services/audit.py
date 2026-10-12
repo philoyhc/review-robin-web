@@ -685,7 +685,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
         _IDENTITY | {"changes", "refs"}
     ),
     "session.schedule_set": EventSchema(_IDENTITY | {"changes"}),
-    "session.feature_toggled": EventSchema(_IDENTITY | {"changes"}),
+    "session.feature_toggled": EventSchema(_IDENTITY | {"changes", "reason"}),
     # Participant-model S12 — operator-explicit release-window
     # buttons. ``session.responses_released`` fires when the operator
     # pressed "Release responses now" (carries the stamped

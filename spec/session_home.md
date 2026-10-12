@@ -505,14 +505,15 @@ in the Workflow card's body copy when relevant.
 The Quick Setup card sits in the bottom-left of Home's
 `.bottom-grid`, paired with the Owners card on the right, which sits
 level with it above the Danger Zone. It
-renders four wired slots — Reviewers, Reviewees, Relationships,
-Session settings — plus a conditional Observers slot when
-`observers_enabled`. The functional spec is
+renders five wired slots — Reviewers, Reviewees, Relationships,
+Observers, Session settings — whatever the session's feature toggles
+say; an upload that gives Observers or Relationships rows turns that
+tab on. The functional spec is
 `spec/quick_setup_card_spec.md`.
 
 Layout: a 2-column grid — Reviewers
-+ Reviewees stack in the left column; Relationships, Observers (when
-rendered) and Session settings stack in the right column, with Submit
++ Reviewees stack in the left column; Relationships, Observers and
+Session settings stack in the right column, with Submit
 in a footer at the bottom-right. There is **no Lock / Unlock**: the
 card is live on load while it is available — setup editable (`draft`
 or `validated`) with no persisted responses
@@ -553,8 +554,8 @@ page reuses the same class without further design work.
 
 | State (enum / display) | Workflow card | Quick Setup | Extract Data |
 |---|---|---|---|
-| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live while no responses exist (up to five slots, Observers conditional) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
-| `draft` / Draft, rosters populated (before Prepare, or after a Prepare that failed) | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live while no responses exist (up to five slots, Observers conditional) | Live (4–5 tiles, Observers conditional) |
+| `draft` / Draft, rosters empty | State 1: "Session not fully set up…" — setup-completion checklist in right column; no buttons rendered | Live while no responses exist (five slots) | Live (4–5 tiles, Observers conditional; empty-count tiles grey their Download button) |
+| `draft` / Draft, rosters populated (before Prepare, or after a Prepare that failed) | State 2: Prepare session live (Primary; runs Generate + Validate + Invite in sequence) | Live while no responses exist (five slots) | Live (4–5 tiles, Observers conditional) |
 | `validated` / Validated | States 4 / 4Err / 5 / 6: Activate session live (Primary; under the `W` overlay it detours through `/validate?activate=1`); Prepare session re-runnable (Secondary); Revert to draft live (Secondary); Send invites surfaces once invitations exist (Primary, State 5) | Live while no responses exist (an import demotes to `draft`) | Live (4–5 tiles, Observers conditional) |
 | `ready` / Activated | States 7 / 8 / 9: Send invites / Send reminders forward stages (whichever is next renders Primary; State 7 — no invitations — has none, and the copy names Revert to draft); Close session + Release responses live (Secondary); Revert to draft live (Secondary; the `ready → draft` form) | Body-greyed, controls disabled | Live (4–5 tiles, Observers conditional; identical rendering across lifecycle) |
 | `expired` / Closed | State 10: Release responses (or Stop releasing when the window's open) · Archive session (Outline-amber); Revert to draft live (Secondary, reopens for editing) | Body-greyed, controls disabled | Live |

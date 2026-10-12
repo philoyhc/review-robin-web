@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timezone
 
 from sqlalchemy import delete, select
@@ -495,6 +496,61 @@ def delete_session(
         },
     )
 
+
+
+#: The rosters with a session feature toggle, and the toggle each turns
+#: on when an upload gives it rows (``guide/quick_setup_update.md`` Item 2).
+FEATURE_TOGGLE_FOR_ROSTER = {
+    "relationships": "relationships_enabled",
+    "observers": "observers_enabled",
+}
+
+
+def turn_on_populated_features(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    populated: list[str],
+    before: Mapping[str, bool],
+    user: User,
+    reason: str,
+    correlation_id: str | None = None,
+) -> dict[str, list[bool]]:
+    """Turn on the feature toggle of each roster in ``populated`` (the
+    rosters an upload just gave rows), if it is off. The converse of the
+    lock-on-data invariant (``spec/participant_model.md``): rows never
+    sit behind a hidden tab. Rosters without a toggle are ignored.
+
+    ``before`` holds the toggles as they stood before the upload, so the
+    one ``session.feature_toggled`` event it writes records the submit's
+    net change: a Settings file in the same submit that turned a toggle
+    off is undone here without logging a flip from a state the session
+    was never left in. Flushes only — the caller's unit commits.
+    Returns the changes, empty when there are none."""
+
+    changes: dict[str, list[bool]] = {}
+    for roster in populated:
+        field_name = FEATURE_TOGGLE_FOR_ROSTER.get(roster)
+        if field_name is None:
+            continue
+        was_on = before.get(field_name, getattr(review_session, field_name))
+        if not getattr(review_session, field_name):
+            setattr(review_session, field_name, True)
+        if not was_on:
+            changes[field_name] = [False, True]
+    db.flush()
+    if changes:
+        audit.write_event(
+            db,
+            event_type="session.feature_toggled",
+            summary=f"Session {review_session.code} feature toggle(s) turned on",
+            actor_user_id=user.id,
+            session=review_session,
+            payload=audit.changes(changes),
+            reason=reason,
+            correlation_id=correlation_id,
+        )
+    return changes
 
 
 def _has_relationships(db: Session, session_id: int) -> bool:

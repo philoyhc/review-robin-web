@@ -46,7 +46,7 @@ from app.services import (
     session_tags,
     sessions,
 )
-from app.services import unit_of_work
+from app.services import session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.deps import (
@@ -676,13 +676,38 @@ def _save_uploads(
     current = staged[0].kind
     try:
         with unit_of_work.atomic(db):
+            # The toggles as they stood before this submit, read under the
+            # session lock (which re-reads the row), so a toggle another
+            # request turned on since this one loaded the session is not
+            # logged as flipped again (Codex on #3002).
+            session_guard.lock_session(db, review_session)
+            before = {
+                field_name: getattr(review_session, field_name)
+                for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
+            }
+            populated: list[str] = []
             for item in staged:
                 current = item.kind
-                _save_slot(
+                saved = _save_slot(
                     db,
                     item,
                     review_session=review_session,
                     user=user,
+                    correlation_id=correlation_id,
+                )
+                if saved:
+                    populated.append(item.kind)
+            # After every slot, Settings included, so a settings file's
+            # ``*_enabled=false`` cannot hide rows this submit just saved
+            # (Item 2): an upload that populates a roster turns its tab on.
+            if populated:
+                sessions.turn_on_populated_features(
+                    db,
+                    review_session,
+                    populated=populated,
+                    before=before,
+                    user=user,
+                    reason="quick_setup_upload",
                     correlation_id=correlation_id,
                 )
     except lifecycle.SessionStateConflict as exc:
@@ -698,7 +723,9 @@ def _save_slot(
     review_session: ReviewSession,
     user: User,
     correlation_id: str,
-) -> None:
+) -> int:
+    """Save one checked slot; returns how many roster rows it saved
+    (0 for Settings)."""
     common = {
         "session": review_session,
         "user": user,
@@ -709,12 +736,15 @@ def _save_slot(
         csv_imports.save_reviewers(
             db, rows=item.rows, field_labels_captured=item.field_labels, **common
         )
+        return len(item.rows)
     elif item.kind == "reviewees":
         csv_imports.save_reviewees(
             db, rows=item.rows, field_labels_captured=item.field_labels, **common
         )
+        return len(item.rows)
     elif item.kind == "observers":
         csv_imports.save_observers(db, rows=item.rows, **common)
+        return len(item.rows)
     elif item.kind == "relationships":
         # Parsed again against the rosters as they now stand inside the
         # unit, for their real ids — under the session lock, so a roster
@@ -746,6 +776,7 @@ def _save_slot(
             field_labels_captured=result.field_labels,
             **common,
         )
+        return len(result.rows)
     else:  # settings
         lifecycle.require_editable(db, review_session)
         result = session_config_io.apply_session_config(
@@ -764,6 +795,7 @@ def _save_slot(
                     ),
                 )
             )
+        return 0
 
 
 def _slot_redirect(
