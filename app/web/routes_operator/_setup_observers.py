@@ -98,6 +98,7 @@ def _render_observers_page(
     panel_open: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
+    edit_cohort_rule: dict[str, Any] | None = None,
     selected_ids: set[int] | None = None,
     focus_id: int | None = None,
     issues: list | None = None,
@@ -166,6 +167,9 @@ def _render_observers_page(
                 "tag_1": edited.tag_1 or "",
                 "status": edited.status,
             }
+            # operator pages Item 4 — the row editor's builder loads the
+            # observer's saved rule.
+            edit_cohort_rule = edited.cohort_rule
     if edit_values is None and add_mode:
         edit_values = {
             "email": "",
@@ -302,6 +306,7 @@ def _render_observers_page(
             "add_mode": add_mode,
             "edit_values": edit_values,
             "edit_error": edit_error,
+            "edit_cohort_rule": edit_cohort_rule,
             "cohort_match_tags": cohort_match_tags,
             "cohort_rule_views": {
                 obs.id: {
