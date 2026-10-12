@@ -320,11 +320,13 @@ Taken 2026-10-12 at `1fa68b24`.
   both columns, and the toggle appends it to the panel;
   `data-lock-home` retired. `tests/integration/_unlock_panel.py` holds
   the one "Lock at the panel's foot" check the four pages share.
-- Reads: one `diff-reviewer` read and one `spec-writer` verify. Both
+- Reads: two `diff-reviewer` reads and one `spec-writer` verify. The
+  first read and the verify both
   found the old placement in four specs the plan had not named (they
   joined `Doc impact`) and stale comments in templates and tests; the
   read also had the shared check pin `Lock` as the panel's direct last
   child, and the scaffold test file reuse its div-balancer.
+  The second read, of those fixes, found nothing new.
 
 ### Doc impact
 
