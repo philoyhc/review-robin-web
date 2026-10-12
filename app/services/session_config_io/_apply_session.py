@@ -12,6 +12,7 @@ from app.db.models import ReviewSession
 from app.services.participant_info import (
     SelfFieldsError,
     normalize_self_fields,
+    self_fields_columns,
 )
 
 from ._apply_shared import (
@@ -24,10 +25,7 @@ from ._apply_shared import (
 
 #: The Settings CSV's own-entry selections (participant info Items 1 and
 #: 4): the `session.*` key, and the participant it normalizes against.
-_SELF_FIELDS_KEYS = {
-    "reviewer_self_fields": "reviewer",
-    "reviewee_self_fields": "reviewee",
-}
+_SELF_FIELDS_KEYS = self_fields_columns()
 
 
 #: The ``session.*`` keys applied only where the destination is blank

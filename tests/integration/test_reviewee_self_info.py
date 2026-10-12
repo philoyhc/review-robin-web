@@ -223,6 +223,8 @@ def test_an_unknown_key_is_refused(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "rei-unknown")
     # `email` is a reviewer key, not a reviewee one.
     assert _save(client, rs, fields=["name", "email"]).status_code == 422
+    db.refresh(rs)
+    assert rs.reviewee_self_fields is None
 
 
 def test_a_locked_session_refuses_the_save(client: TestClient, db: Session) -> None:
@@ -230,6 +232,62 @@ def test_a_locked_session_refuses_the_save(client: TestClient, db: Session) -> N
     rs.status = "ready"
     db.commit()
     assert _save(client, rs, fields=["name"]).status_code == 409
+    db.refresh(rs)
+    assert rs.reviewee_self_fields is None
+
+
+def test_locked_the_readout_stays_and_the_card_goes(
+    client: TestClient, db: Session
+) -> None:
+    rs = _session(client, db, "rei-locked-page")
+    _alice(db, rs)
+    rs.status = "ready"
+    db.commit()
+    html = client.get(f"/operator/sessions/{rs.id}/reviewees").text
+    assert "Reviewees see:" in _div_at(html, "data-reviewee-self-readout")
+    assert "data-reviewee-self-card" not in html
+
+
+def test_a_save_leaves_a_validated_session_validated(
+    client: TestClient, db: Session
+) -> None:
+    rs = _session(client, db, "rei-valid")
+    rs.status = "validated"
+    db.commit()
+    assert _save(client, rs, fields=["name"]).status_code == 303
+    db.refresh(rs)
+    assert rs.status == "validated"
+
+
+def test_a_tag_reads_under_the_reviewee_label(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    """The reviewee slot's label, not the reviewer slot's of the same name."""
+    from app.db.models import User
+    from app.services import field_labels
+
+    rs = _session(client, db, "rei-label")
+    _alice(db, rs)
+    actor = db.execute(
+        select(User).where(User.email == "alice@example.edu")
+    ).scalar_one()
+    for source_type, label in (("reviewee", "Cohort"), ("reviewer", "Wrong")):
+        field_labels.upsert(
+            db, rs, source_type=source_type, source_field="tag_1",
+            label=label, user=actor,
+        )
+    db.commit()
+    assert _save(client, rs, fields=["name", "tag_1"]).status_code == 303
+    shown = _div_at(
+        client.get(f"/operator/sessions/{rs.id}/reviewees").text,
+        "data-reviewee-self-readout",
+    )
+    assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
+        "Name", "Cohort",
+    ]
+    grant_reviewee_visibility(rs)
+    info = _info(client.get(f"/me/sessions/{rs.id}/results").text)
+    assert "Cohort: Blue" in info and "Wrong" not in info
 
 
 def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:

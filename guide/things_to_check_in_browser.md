@@ -370,7 +370,7 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **The card.** On a draft, Unlock Reviewees: "What reviewees see of
   their own entry" sits above `Upload Reviewees` in the left column,
   chips Name, Email, Profile selected and any tag unselected; Save and
-  Cancel stay disabled (rung 3 wires them).
+  Cancel disabled until a chip changes.
 - [ ] **Results.** As a reviewee with a released result, `/results`
   shows the name, email and Profile link (or `•••`) after the
   `Reviewee` pill, muted, as the reviewer pages show a reviewer's.
@@ -387,6 +387,6 @@ section (git history keeps it), so this file lists only what is owed.
   after the name and email, under its friendly label; deselect Name and
   save, and the name drops from the line.
 - [ ] **Nothing.** Deselect every chip and save: `Reviewees see:` reads
-  nothing selected, and `/results` shows the pills with no line after.
+  `none`, and `/results` shows the pills with no line after.
 - [ ] **Reviewer too.** A user on both rosters sees the reviewer line on
   the reviewer pages and only the reviewee line on `/results`.

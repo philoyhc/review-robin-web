@@ -73,6 +73,11 @@ _PARTICIPANTS: dict[str, _Participant] = {
 }
 
 
+def self_fields_columns() -> dict[str, str]:
+    """Each selection's `sessions` column, and the participant it is."""
+    return {spec.column: name for name, spec in _PARTICIPANTS.items()}
+
+
 class SelfFieldsError(ValueError):
     """A selection named a key outside its participant's field keys."""
 

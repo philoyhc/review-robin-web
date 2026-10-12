@@ -574,6 +574,13 @@ Taken 2026-10-12 at `5761ab7e`.
   `spec/reviewer-surface.md`, `spec/operator_button_audit.md` (#271,
   #272) and `spec/ui_elements.md`, which the plan's Doc impact did not
   name.
+- One `diff-reviewer` read, on the cumulative diff from `01e54198`: no
+  code defect; a stale shared-panel sentence in `spec/setup_pages.md`,
+  the rung-2 browser check still saying Save stays disabled (Item 1's
+  read caught the same), four tests the reviewer suite has and this one
+  lacked (locked readout, `validated` kept, the column untouched on
+  409 / 422, a tag under the reviewee label), and the Settings CSV's
+  column map duplicating the service's. All fixed.
 
 ### Doc impact
 

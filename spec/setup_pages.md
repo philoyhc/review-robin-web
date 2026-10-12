@@ -310,9 +310,10 @@ not, so an operator on a locked session still reads the roster size and
 which columns arrived.
 
 **The Unlock panel** (`#roster-unlock-panel`) holds, in two columns,
-the tag-label editor, `Upload` and `Danger Zone` cards (Reviewers adds a
-fourth, § *Reviewers page*): **`Upload` on the left**, and **the
-tag-label editor over the `Danger Zone` on the right**. While the panel
+the tag-label editor, `Upload` and `Danger Zone` cards (Reviewers and
+Reviewees each add a fourth, § *Reviewers page* and § *Reviewees
+page*): **`Upload` on the left**, and **the tag-label editor over the
+`Danger Zone` on the right**. While the panel
 is open, **`Lock` ends the right column**, flush right and 20px under
 its last card. The right column stretches to the row, so where it holds
 no card (an empty Observers roster) `Lock` sits at its foot, level with
