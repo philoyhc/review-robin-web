@@ -216,6 +216,16 @@ its roster has rows.
 - **The Home card's description always lists observers**, and its
   layout keeps one fixed five-slot split.
 
+### Status
+
+Open, 2026-10-12. Built as one rung. Its `diff-reviewer` read found no
+code defect, and its notes were acted on:
+
+- Three more stale "Observers conditional" lines were fixed (`spec/session_home.md` table, `spec/rrw_functional_spec.md`, `README.md`), plus the settings inventory.
+- The refusal test now refuses inside the save.
+- The event records the submit's net change against the toggles before it, so a Settings file and an upload meeting log nothing.
+- The roster-to-toggle rule moved into `sessions`.
+
 ### Blast radius (measured)
 
 Taken 2026-10-12 at `7acfac1e`.

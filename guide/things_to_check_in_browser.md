@@ -304,7 +304,8 @@ section (git history keeps it), so this file lists only what is owed.
   Relationships and Session settings.
 - [ ] **Observers turn on.** Upload an Observers CSV with one row there:
   the Observers tab appears in Setup, and Session details shows the
-  observers toggle on (and greyed, since the roster now has rows).
+  observers toggle on and held there (it can't be turned off while the
+  roster has rows).
 - [ ] **Relationships turn on.** On a session with relationships off,
   submit Reviewers, Reviewees and a Relationships CSV together: the
   Relationships tab appears.

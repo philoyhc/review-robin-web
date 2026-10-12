@@ -68,6 +68,16 @@ def _toggled(db: Session, rs: ReviewSession) -> list[AuditEvent]:
     )
 
 
+def _bad_settings() -> bytes:
+    """Parses, then fails ``apply_session_config``: an instrument with
+    no name is a cross-row error only the apply finds."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(("field", "value", "data_type"))
+    writer.writerow(("instruments[1].short_label", "X", "string"))
+    return buf.getvalue().encode()
+
+
 def _settings(observers_enabled: str) -> bytes:
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -118,8 +128,10 @@ def test_a_header_only_file_leaves_the_tab_off(
 ) -> None:
     rs = _session(client, db, "tabs-empty", observers_enabled=False)
 
-    _submit_all(client, rs, observers=OBSERVERS_EMPTY)
+    response = _submit_all(client, rs, observers=OBSERVERS_EMPTY)
 
+    # Saved — an empty roster — not refused, and still nothing turns on.
+    assert "quick_setup_error" not in response.headers["location"]
     db.refresh(rs)
     assert rs.observers_enabled is False
     assert _toggled(db, rs) == []
@@ -135,19 +147,19 @@ def test_a_tab_already_on_writes_no_event(
     assert _toggled(db, rs) == []
 
 
-def test_a_refused_submit_leaves_the_tab_off(
+def test_a_refusal_inside_the_save_leaves_the_tab_off(
     client: TestClient, db: Session
 ) -> None:
+    """The observers rows save, then a Settings error only the apply
+    finds refuses the submit: the unit rolls back, toggle and event
+    with it."""
     rs = _session(client, db, "tabs-refused", observers_enabled=False)
 
     response = _submit_all(
-        client,
-        rs,
-        reviewees=b"RevieweeName,RevieweeEmail\nCy,\n",
-        observers=OBSERVERS,
+        client, rs, observers=OBSERVERS, settings=_bad_settings()
     )
 
-    assert "quick_setup_error=reviewees" in response.headers["location"]
+    assert "quick_setup_error=settings" in response.headers["location"]
     db.expire_all()
     assert db.get(ReviewSession, rs.id).observers_enabled is False
     assert _toggled(db, rs) == []
@@ -167,6 +179,9 @@ def test_the_upload_wins_over_a_settings_file_turning_it_off(
     assert "quick_setup_error" not in response.headers["location"]
     db.refresh(rs)
     assert rs.observers_enabled is True
+    # On before the submit and on after it: no flip to record, though
+    # Settings set it off on the way through.
+    assert _toggled(db, rs) == []
 
 
 def test_create_turns_observers_on_when_the_box_is_unticked(
@@ -200,3 +215,26 @@ def test_the_rosters_without_a_tab_turn_nothing_on(
     assert (rs.observers_enabled, rs.relationships_enabled) == (False, False)
     assert db.execute(select(Reviewer).where(Reviewer.session_id == rs.id)).first()
     assert db.execute(select(Reviewee).where(Reviewee.session_id == rs.id)).first()
+
+
+def test_create_turns_relationships_on_when_the_box_is_unticked(
+    client: TestClient, db: Session
+) -> None:
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": "tabs-create-rel"},
+        files={
+            "reviewers_file": ("r.csv", REVIEWERS, "text/csv"),
+            "reviewees_file": ("e.csv", REVIEWEES, "text/csv"),
+            "relationships_file": ("p.csv", RELATIONSHIPS, "text/csv"),
+        },
+        follow_redirects=False,
+    )
+
+    assert "quick_setup_error" not in response.headers["location"]
+    rs = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "tabs-create-rel")
+    ).scalar_one()
+    assert rs.relationships_enabled is True
+    (event,) = _toggled(db, rs)
+    assert event.detail["changes"] == {"relationships_enabled": [False, True]}

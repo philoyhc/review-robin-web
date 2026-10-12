@@ -674,6 +674,10 @@ def _save_uploads(
     back since 19C Item 1 retired them from the settings bundle."""
 
     current = staged[0].kind
+    before = {
+        field_name: getattr(review_session, field_name)
+        for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
+    }
     try:
         with unit_of_work.atomic(db):
             populated: list[str] = []
@@ -686,8 +690,8 @@ def _save_uploads(
                     user=user,
                     correlation_id=correlation_id,
                 )
-                if saved and item.kind in _FEATURE_TOGGLES:
-                    populated.append(_FEATURE_TOGGLES[item.kind])
+                if saved:
+                    populated.append(item.kind)
             # After every slot, Settings included, so a settings file's
             # ``*_enabled=false`` cannot hide rows this submit just saved
             # (Item 2): an upload that populates a roster turns its tab on.
@@ -695,7 +699,8 @@ def _save_uploads(
                 sessions.turn_on_populated_features(
                     db,
                     review_session,
-                    fields=populated,
+                    populated=populated,
+                    before=before,
                     user=user,
                     reason="quick_setup_upload",
                     correlation_id=correlation_id,
@@ -704,14 +709,6 @@ def _save_uploads(
         raise _UnitRefused(
             _SlotRefusal(current, _SlotFailure("lifecycle"))
         ) from exc
-
-
-#: The rosters with a session feature toggle, and the toggle each turns
-#: on when an upload gives it rows (guide/quick_setup_update.md Item 2).
-_FEATURE_TOGGLES = {
-    "relationships": "relationships_enabled",
-    "observers": "observers_enabled",
-}
 
 
 def _save_slot(
