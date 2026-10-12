@@ -4,6 +4,7 @@ import csv
 import io
 import json
 from dataclasses import dataclass, field
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from pydantic import ValidationError
@@ -873,6 +874,7 @@ _IDENTITY_ROSTERS: dict[str, dict[str, str]] = {
         "row_name_attr": "name",
         "label": "reviewer",
         "field": "ReviewerEmail",
+        "file": "Reviewers",
     },
     "reviewees": {
         "model_attr": "email_or_identifier",
@@ -881,6 +883,7 @@ _IDENTITY_ROSTERS: dict[str, dict[str, str]] = {
         "row_name_attr": "name",
         "label": "reviewee",
         "field": "RevieweeEmail",
+        "file": "Reviewees",
     },
     "observers": {
         "model_attr": "email",
@@ -889,6 +892,7 @@ _IDENTITY_ROSTERS: dict[str, dict[str, str]] = {
         "row_name_attr": "display_name",
         "label": "observer",
         "field": "ObserverEmail",
+        "file": "Observers",
     },
 }
 
@@ -900,10 +904,11 @@ _IDENTITY_MODELS = {
 
 
 def _identity_holders(
-    db: Session, *, session_id: int, exclude: str
+    db: Session, *, session_id: int, exclude: frozenset[str]
 ) -> dict[str, list[tuple[str, str]]]:
     """``{normalized email: [(roster label, name), ...]}`` for every
-    roster but ``exclude``, within one session.
+    roster not in ``exclude``, within one session — the rosters an
+    upload replaces are left out, since their rows are about to go.
 
     Two kinds of row are skipped, for the same reason — they cannot
     disagree with a name — see :func:`is_comparable_identity`.
@@ -930,7 +935,7 @@ def _identity_holders(
     """
     holders: dict[str, list[tuple[str, str]]] = {}
     for roster, spec in _IDENTITY_ROSTERS.items():
-        if roster == exclude:
+        if roster in exclude:
             continue
         model = _IDENTITY_MODELS[roster]
         for row in (
@@ -1002,7 +1007,7 @@ def cross_table_identity_conflict(
     if not is_comparable_identity(identifier, name):
         return None
     holders = _identity_holders(
-        db, session_id=session_id, exclude=kind
+        db, session_id=session_id, exclude=frozenset({kind})
     ).get(normalize_email(identifier), [])
     return _first_disagreeing_holder(holders, name)
 
@@ -1043,44 +1048,144 @@ def check_cross_table_identity(
     have been checked, found nothing, and reported success — a guard
     that passes by not running.
     """
-    spec = _IDENTITY_ROSTERS.get(kind)
-    if spec is None:
+    if kind not in _IDENTITY_ROSTERS:
         raise ValueError(
             f"check_cross_table_identity: unknown kind {kind!r}; "
             f"expected one of {sorted(_IDENTITY_ROSTERS)}"
         )
+    return check_incoming_identity(
+        db, session_id=session_id, incoming={kind: rows}
+    )[kind]
 
-    holders = _identity_holders(db, session_id=session_id, exclude=kind)
-    issues: list[ValidationIssue] = []
-    for index, row in enumerate(rows, start=1):
+
+def check_incoming_identity(
+    db: Session,
+    *,
+    session_id: int,
+    incoming: Mapping[str, Sequence[Any]],
+) -> dict[str, list[ValidationIssue]]:
+    """:func:`check_cross_table_identity` for several roster files
+    uploaded together, keyed by kind (``guide/quick_setup_update.md``
+    Item 1, author's rule of 2026-10-12).
+
+    Each file is checked against the **other uploaded files** and
+    against the **existing rosters not being replaced**. A roster whose
+    file is attached is about to go, so its rows hold nothing. One file
+    is exactly today's rule, which is why
+    :func:`check_cross_table_identity` is this function with one kind.
+
+    A row disagreeing with an existing roster is reported as before;
+    one that agrees there but disagrees with another uploaded file gets
+    its own ``problem``, naming that file. The skips and the exact-name
+    comparison are the single-file rule's: :func:`is_comparable_identity`
+    and :func:`_first_disagreeing_holder`.
+
+    Only checks — saves nothing — so a caller can check every file
+    before it writes any. An unrecognised kind raises.
+    """
+    unknown = sorted(set(incoming) - set(_IDENTITY_ROSTERS))
+    if unknown:
+        raise ValueError(
+            f"check_incoming_identity: unknown kind(s) {unknown}; "
+            f"expected among {sorted(_IDENTITY_ROSTERS)}"
+        )
+
+    existing = _identity_holders(
+        db, session_id=session_id, exclude=frozenset(incoming)
+    )
+    uploaded = {
+        kind: _incoming_holders(kind, rows) for kind, rows in incoming.items()
+    }
+
+    issues_by_kind: dict[str, list[ValidationIssue]] = {}
+    for kind, rows in incoming.items():
+        spec = _IDENTITY_ROSTERS[kind]
+        issues: list[ValidationIssue] = []
+        for index, row in enumerate(rows, start=1):
+            identifier = getattr(row, spec["row_attr"]) or ""
+            name = getattr(row, spec["row_name_attr"])
+            if not is_comparable_identity(identifier, name):
+                continue
+            key = normalize_email(identifier)
+            held = _first_disagreeing_holder(existing.get(key, []), name)
+            if held is not None:
+                holder_label, holder_name = held
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source=kind,
+                        row_number=index,
+                        field=spec["field"],
+                        message=(
+                            f"{spec['field']} '{identifier}' is already used "
+                            f"by {holder_label} '{holder_name}' in this "
+                            f"session — names must match (got '{name}')."
+                        ),
+                        problem=(
+                            f"{spec['field']} is already used under a "
+                            f"different name in another roster"
+                        ),
+                    )
+                )
+                continue
+            held = _first_disagreeing_holder(
+                [
+                    holder
+                    for other, holders in uploaded.items()
+                    if other != kind
+                    for holder in holders.get(key, [])
+                ],
+                name,
+            )
+            if held is None:
+                continue
+            holder_label, holder_name = held
+            holder_file = _FILE_BY_LABEL[holder_label]
+            issues.append(
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=kind,
+                    row_number=index,
+                    field=spec["field"],
+                    message=(
+                        f"{spec['field']} '{identifier}' is used by "
+                        f"{holder_label} '{holder_name}' in the uploaded "
+                        f"{holder_file} file — names must match "
+                        f"(got '{name}')."
+                    ),
+                    problem=(
+                        f"{spec['field']} is used under a different name "
+                        f"in the uploaded {holder_file} file"
+                    ),
+                )
+            )
+        issues_by_kind[kind] = issues
+    return issues_by_kind
+
+
+#: Roster label -> how a message names that roster's uploaded file.
+_FILE_BY_LABEL = {
+    spec["label"]: spec["file"] for spec in _IDENTITY_ROSTERS.values()
+}
+
+
+def _incoming_holders(
+    kind: str, rows: Sequence[Any]
+) -> dict[str, list[tuple[str, str]]]:
+    """:func:`_identity_holders` for an uploaded file's parsed rows:
+    ``{normalized email: [(roster label, name), ...]}``, skipping what
+    :func:`is_comparable_identity` skips."""
+    spec = _IDENTITY_ROSTERS[kind]
+    holders: dict[str, list[tuple[str, str]]] = {}
+    for row in rows:
         identifier = getattr(row, spec["row_attr"]) or ""
         name = getattr(row, spec["row_name_attr"])
         if not is_comparable_identity(identifier, name):
             continue
-        held = _first_disagreeing_holder(
-            holders.get(normalize_email(identifier), []), name
+        holders.setdefault(normalize_email(identifier), []).append(
+            (spec["label"], name)
         )
-        if held is None:
-            continue
-        holder_label, holder_name = held
-        issues.append(
-            ValidationIssue(
-                severity=Severity.error,
-                source=kind,
-                row_number=index,
-                field=spec["field"],
-                message=(
-                    f"{spec['field']} '{identifier}' is already used by "
-                    f"{holder_label} '{holder_name}' in this session — "
-                    f"names must match (got '{name}')."
-                ),
-                problem=(
-                    f"{spec['field']} is already used under a different "
-                    f"name in another roster"
-                ),
-            )
-        )
-    return issues
+    return holders
 
 
 def existing_reviewer_count(db: Session, session_id: int) -> int:

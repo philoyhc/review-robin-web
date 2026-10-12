@@ -83,6 +83,10 @@ that is either unsaved or committed and still undoable.
   nests. The one raw `db.commit()` on the path, in
   `_apply_settings_upload`, moves to `unit_of_work.commit`.
 - **The per-slot routes run the same pipeline with one file.**
+- **A Relationships email missing from an uploaded roster file says so**
+  ("…is not in the uploaded Reviewers file"), rather than "import
+  reviewers first", which would be wrong with that file attached
+  (rung 2, 2026-10-12).
 
 ### Blast radius (measured)
 
