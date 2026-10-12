@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from .conftest import LiveServer
 
@@ -134,18 +134,18 @@ def test_save_waits_for_an_email_and_a_finished_rule(
     field = cell.locator('select[name="cohort_rule_field"]')
     # An untouched builder is "no rule": blank field, nothing to finish.
     assert field.input_value() == ""
-    assert save.is_disabled(), "no email yet"
+    expect(save, "no email yet").to_be_disabled()
     page.locator('input[name="email"][form="observer-edit-form"]').fill(
         "gate@example.org")
-    assert save.is_enabled()
+    expect(save).to_be_enabled()
     # A field with a typed operator and no value is half-filled.
     field.select_option("reviewee.tag1")
     op = cell.locator("[data-observer-op-cycle]")
     while op.inner_text() != "IS":
         op.click()
-    assert save.is_disabled()
+    expect(save).to_be_disabled()
     cell.locator("[data-observer-operand-value]").fill("Red")
-    assert save.is_enabled()
+    expect(save).to_be_enabled()
     save.click()
     page.wait_for_load_state("load")
     rule = _stored_rule(live_server.database_url, "gate@example.org")
@@ -288,7 +288,11 @@ def test_several_rows_save_waits_for_a_change(
     page: Page, live_server: LiveServer, new_session: Callable[[], int]
 ) -> None:
     """Over differing rules the builder arrives empty; a live Save would
-    clear them all in one click, so it waits for a change."""
+    clear them all in one click, so it waits for a change.
+
+    The page re-reads Save in a `setTimeout` after a builder click, so
+    every check after one waits (`expect`) rather than reads once: a
+    bare `is_enabled()` lost that race on CI (#2991)."""
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
@@ -310,6 +314,6 @@ def test_several_rows_save_waits_for_a_change(
     page.goto(f"/operator/sessions/{session_id}/observers"
               f"?rule_id={first}&rule_id={second_id}")
     save = page.locator("[data-observer-edit-save]")
-    assert save.is_disabled(), "Save is live over an untouched builder"
+    expect(save, "Save is live over an untouched builder").to_be_disabled()
     page.locator("[data-observer-edit-cohort] [data-observer-combinator-toggle]").click()
-    assert save.is_enabled()
+    expect(save).to_be_enabled()
