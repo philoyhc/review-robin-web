@@ -1,15 +1,16 @@
 """What a participant is shown of their own roster entry.
 
-`guide/participant_info.md`. One session-wide selection per participant,
-stored as a list of roster field keys on the session row (``NULL`` means
-the participant's default). Item 1 reads and writes the reviewers'
-selection; the reviewee and observer columns exist (one migration for
-all three, author 2026-10-12) but stay ``NULL`` until their items.
+`guide/participant_info.md`. One session-wide selection per participant
+type, stored as a list of roster field keys on the session row (``NULL``
+means the participant's default). Item 1 reads and writes the reviewers'
+selection, Item 4 the reviewees'; the observer column (one migration for
+all three, author 2026-10-12) stays ``NULL`` until Item 5.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
@@ -48,43 +49,129 @@ REVIEWEE_SELF_DEFAULT: tuple[str, ...] = (
 )
 
 
+@dataclass(frozen=True)
+class _Participant:
+    """One participant type's selection: its keys, default and column."""
+
+    keys: tuple[str, ...]
+    default: tuple[str, ...]
+    #: The `sessions` column holding the stored selection.
+    column: str
+    #: The plural the audit summary reads ("reviewers see …").
+    plural: str
+
+
+_PARTICIPANTS: dict[str, _Participant] = {
+    "reviewer": _Participant(
+        REVIEWER_SELF_FIELD_KEYS, REVIEWER_SELF_DEFAULT,
+        "reviewer_self_fields", "reviewers",
+    ),
+    "reviewee": _Participant(
+        REVIEWEE_SELF_FIELD_KEYS, REVIEWEE_SELF_DEFAULT,
+        "reviewee_self_fields", "reviewees",
+    ),
+}
+
+
 class SelfFieldsError(ValueError):
-    """A selection named a key outside ``REVIEWER_SELF_FIELD_KEYS``."""
+    """A selection named a key outside its participant's field keys."""
 
 
-def normalize_reviewer_self_fields(keys: Iterable[str]) -> list[str]:
+def normalize_self_fields(participant: str, keys: Iterable[str]) -> list[str]:
     """The selection in roster order, each key once.
 
     Raises ``SelfFieldsError`` on an unknown key rather than dropping it,
     so a typo in a hand-edited Settings CSV is reported, not swallowed.
     """
+    spec = _PARTICIPANTS[participant]
     items = list(keys)
     if not all(isinstance(key, str) for key in items):
-        raise SelfFieldsError("reviewer field keys must be strings")
+        raise SelfFieldsError(f"{participant} field keys must be strings")
     chosen = {key.strip() for key in items if key.strip()}
-    unknown = sorted(chosen - set(REVIEWER_SELF_FIELD_KEYS))
+    unknown = sorted(chosen - set(spec.keys))
     if unknown:
         raise SelfFieldsError(
-            f"unknown reviewer field(s) {', '.join(unknown)}; expected "
-            f"some of {', '.join(REVIEWER_SELF_FIELD_KEYS)}"
+            f"unknown {participant} field(s) {', '.join(unknown)}; expected "
+            f"some of {', '.join(spec.keys)}"
         )
-    return [key for key in REVIEWER_SELF_FIELD_KEYS if key in chosen]
+    return [key for key in spec.keys if key in chosen]
 
 
-def effective_reviewer_self_fields(review_session: ReviewSession) -> tuple[str, ...]:
+def effective_self_fields(
+    review_session: ReviewSession, participant: str
+) -> tuple[str, ...]:
     """The stored selection, or the default while none is stored.
 
     A stored value that no longer normalizes (a hand-edited row, a
     non-list) falls back to the default rather than failing the
-    reviewer's page.
+    participant's page.
     """
-    stored = review_session.reviewer_self_fields
+    spec = _PARTICIPANTS[participant]
+    stored = getattr(review_session, spec.column)
     if not isinstance(stored, list):
-        return REVIEWER_SELF_DEFAULT
+        return spec.default
     try:
-        return tuple(normalize_reviewer_self_fields(stored))
+        return tuple(normalize_self_fields(participant, stored))
     except SelfFieldsError:
-        return REVIEWER_SELF_DEFAULT
+        return spec.default
+
+
+def set_self_fields(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    user: User,
+    participant: str,
+    keys: Iterable[str],
+    correlation_id: str | None = None,
+) -> None:
+    """Store a participant type's selection.
+
+    A no-op when the stored list already equals it. With nothing stored,
+    saving even the default writes it, so the choice is recorded and a
+    later change to the default does not move this session. Gated by
+    ``is_editable`` like every Reviewers- and Reviewees-page setting; the
+    setting is display-only, so a save never demotes ``validated``.
+    """
+    spec = _PARTICIPANTS[participant]
+    lifecycle.require_editable(db, review_session)
+    new = normalize_self_fields(participant, keys)
+    stored = getattr(review_session, spec.column)
+    # Compared with what is stored, not the effective selection, so a
+    # save over a hand-edited bad value repairs it rather than no-op.
+    if stored == new:
+        return
+    # The audit records what was stored (``None`` while unset), not the
+    # effective default, so a first save reads as NULL → list.
+    old = list(stored) if isinstance(stored, list) else stored
+    setattr(review_session, spec.column, new)
+    db.flush()
+    audit.write_event(
+        db,
+        event_type=f"session.{spec.column}_set",
+        summary=(
+            f"Session {review_session.code}: {spec.plural} see "
+            f"{', '.join(new) or 'nothing'} of their own entry"
+        ),
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes({spec.column: [old, new]}),
+        correlation_id=correlation_id,
+    )
+    unit_of_work.commit(db)
+
+
+# ── The reviewer names Item 1 shipped, kept for their callers ─────────
+
+
+def normalize_reviewer_self_fields(keys: Iterable[str]) -> list[str]:
+    """``normalize_self_fields`` for reviewers."""
+    return normalize_self_fields("reviewer", keys)
+
+
+def effective_reviewer_self_fields(review_session: ReviewSession) -> tuple[str, ...]:
+    """``effective_self_fields`` for reviewers."""
+    return effective_self_fields(review_session, "reviewer")
 
 
 def set_reviewer_self_fields(
@@ -95,36 +182,12 @@ def set_reviewer_self_fields(
     keys: Iterable[str],
     correlation_id: str | None = None,
 ) -> None:
-    """Store the reviewers' selection.
-
-    A no-op when the stored list already equals it. With nothing stored,
-    saving even the default writes it, so the choice is recorded and a
-    later change to the default does not move this session. Gated by
-    ``is_editable`` like every Reviewers-page setting; the setting is
-    display-only, so a save never demotes ``validated``.
-    """
-    lifecycle.require_editable(db, review_session)
-    new = normalize_reviewer_self_fields(keys)
-    stored = review_session.reviewer_self_fields
-    # Compared with what is stored, not the effective selection, so a
-    # save over a hand-edited bad value repairs it rather than no-op.
-    if stored == new:
-        return
-    # The audit records what was stored (``None`` while unset), not the
-    # effective default, so a first save reads as NULL → list.
-    old = list(stored) if isinstance(stored, list) else stored
-    review_session.reviewer_self_fields = new
-    db.flush()
-    audit.write_event(
+    """``set_self_fields`` for reviewers."""
+    set_self_fields(
         db,
-        event_type="session.reviewer_self_fields_set",
-        summary=(
-            f"Session {review_session.code}: reviewers see "
-            f"{', '.join(new) or 'nothing'} of their own entry"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.changes({"reviewer_self_fields": [old, new]}),
+        review_session=review_session,
+        user=user,
+        participant="reviewer",
+        keys=keys,
         correlation_id=correlation_id,
     )
-    unit_of_work.commit(db)

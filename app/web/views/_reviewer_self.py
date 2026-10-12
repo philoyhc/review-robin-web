@@ -19,6 +19,7 @@ from app.services.participant_info import (
     REVIEWER_SELF_DEFAULT,
     REVIEWER_SELF_FIELD_KEYS,
     effective_reviewer_self_fields,
+    effective_self_fields,
 )
 
 from ._participant_self import (
@@ -127,9 +128,6 @@ def reviewer_self_line_for(
 
 
 # ── Reviewees (Item 4) ───────────────────────────────────────────────
-#
-# Rung 2 is the scaffold: every reader takes the default selection, which
-# is what a NULL column will mean once rung 3 stores one.
 
 
 def reviewee_self_card_context(
@@ -138,7 +136,7 @@ def reviewee_self_card_context(
     """The Reviewees page's card chips and kept keys and its `Reviewees
     see:` pills, as `reviewer_self_card_context` gives the Reviewers
     page's — under the same three keys, since each page has one card."""
-    selected = REVIEWEE_SPEC.default
+    selected = effective_self_fields(review_session, "reviewee")
     chips = self_chips(REVIEWEE_SPEC, readouts, selected)
     return {
         "self_field_chips": chips,
@@ -150,5 +148,11 @@ def reviewee_self_card_context(
 def reviewee_self_line_for(
     review_session: ReviewSession, reviewee: Reviewee
 ) -> list[SelfFieldValue]:
-    """The reviewee's own line on ``/results``, after the role pills."""
-    return self_line(REVIEWEE_SPEC, review_session, reviewee, REVIEWEE_SPEC.default)
+    """The reviewee's own line on ``/results``, after the role pills,
+    under the session's selection, stored or default."""
+    return self_line(
+        REVIEWEE_SPEC,
+        review_session,
+        reviewee,
+        effective_self_fields(review_session, "reviewee"),
+    )

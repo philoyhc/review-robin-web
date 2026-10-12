@@ -1459,8 +1459,9 @@ is a `pill pill-role-<role>` labeled with the capitalized role name:
 - not active, not enabled → `<span>` with `rs-role-nav-muted`.
 
 **The reviewer's own line.** On the reviewer surface, the per-session
-summary and the pre-open page's "opens later" variant (not `/results`
-or `/collation`, nor the pre-open page's closed variant), the partial
+summary and the pre-open page's "opens later" variant (not `/collation`,
+nor the pre-open page's closed variant; `/results` has the reviewee's
+line, below), the partial
 takes an optional
 `reviewer_self_fields` and renders it in a muted `.rs-self-info` span
 **inline after the last role pill**, so it never splits the pills of a
@@ -1480,6 +1481,15 @@ Profile, Tag 1–3.
   the value for any other, nothing for an empty one.
 - A **tag** renders as `<label>: <value>`, the label being the slot's
   friendly label or its default (`field_labels.resolve_pair`).
+
+**The reviewee's own line.** On `/results` the partial takes
+`reviewee_self_fields` (`views.reviewee_self_line_for`) instead, and
+renders it in the same `.rs-self-info` span under
+`data-reviewee-self-info` (the reviewer's is `data-reviewer-self-info`).
+Everything above applies, except that Email is the row's
+`email_or_identifier` and a tag takes the reviewee friendly label. A page
+passes one of the two, so a reviewer who is also a reviewee sees only
+the active page's line. The selection is in `spec/settings_inventory.md`.
 
 The partial branches on chip state, never on role, so a fourth role
 would touch only `_ROLE_PRIORITY`, the per-role branch in
@@ -1503,7 +1513,7 @@ selector scoped under `body.ui-v2`:
 - `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`, keeping the
   role's own palette to read as selected.
 - `.rs-role-nav .rs-self-info` — `align-self: center; margin-left:
-  var(--space-2); color: var(--text-subtle);`, the reviewer's own line
+  var(--space-2); color: var(--text-subtle);`, a participant's own line
   beside the pills.
 - A linked chip (`a.pill.pill-role-*`) also wears the interactive-chip
   edge (`spec/ui_elements.md` "Label or control"); the `<span>` forms

@@ -425,8 +425,9 @@ One row of readouts in the roster card, the same on all four pages:
 `Roster:`, then one run of `pill-count` pills — the roster count as
 `<Noun> (N)` (`Reviewers (3)`, `Relationships (0)`), a muted `|`
 divider (`.roster-readout-sep`, `aria-hidden`), then one pill per
-column showing its label and how many rows hold a value. Reviewers adds
-a second readout to the row, `Reviewers see:` (§ *Reviewers page*).
+column showing its label and how many rows hold a value. Reviewers and
+Reviewees each add a second readout to the row, `Reviewers see:` and
+`Reviewees see:` (§ *Reviewers page*, § *Reviewees page*).
 
 **Whole-roster counts** — a search or a page turn does not shrink them.
 
@@ -1343,12 +1344,32 @@ edited row is reached as `#reviewer-row-<id>`.
 
 The shared shape — § *The roster card and the Unlock panel* — on the
 same terms as Reviewers, with neither of Observers' two differences: the
-panel holds `Upload Reviewees` on the left, the tag-label editor over
-the `Danger Zone` on the right, `Lock` ending the right column, and the
+panel holds the **What reviewees see of their own entry** card above
+`Upload Reviewees` on the left, the tag-label editor over the
+`Danger Zone` on the right, `Lock` ending the right column, and the
 suppression predicate is `is_editable`.
 
 CSV header copy lists `RevieweeName`, `RevieweeEmail` required;
 `ProfileLink`, `RevieweeTag1..3`, `Status` optional.
+
+### What a reviewee sees of their own entry
+
+As reviewers' (§ *Reviewers page*), for `sessions.reviewee_self_fields`;
+its keys, default and gate are in `spec/settings_inventory.md` §2 and
+the line it drives is in `spec/participant_model.md` §4.1.
+
+- **The `Reviewees see:` readout**, last in the roster card's readout
+  row, in every lifecycle state, with the same pills and `none`.
+- **The card** (`#reviewee-self-fields`), in the Unlock panel's left
+  column above `Upload Reviewees`: one `label.tag-chip` per column that
+  has data, from the reviewee roster's whole-roster flags. The identifier
+  column is the `Email` chip and the `Email` pill, as the roster index
+  labels it. Save and Cancel as reviewers'; Save posts
+  `POST …/reviewees/self-fields` and returns to `?unlocked=1#roster-card`.
+
+A selected key with no chip on offer is kept on Save, as reviewers'. The
+route answers 409 when the session is not `is_editable` and 422 on an
+unknown key.
 
 ### Preview table
 

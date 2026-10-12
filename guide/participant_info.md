@@ -566,6 +566,14 @@ Taken 2026-10-12 at `5761ab7e`.
   failed-import re-render included) and the `/results` line, all at the
   default; `_role_chips.html` renders whichever own line the page passes,
   under `data-reviewer-self-info` or `data-reviewee-self-info`.
+- Rung 3 (2026-10-12), storage and the live card: `participant_info`
+  generic over a `_PARTICIPANTS` registry (`normalize_self_fields`,
+  `effective_self_fields`, `set_self_fields(participant=...)`; the
+  reviewer names kept as wrappers); `session.reviewee_self_fields_set`;
+  `POST …/reviewees/self-fields`; the Settings CSV row; specs, including
+  `spec/reviewer-surface.md`, `spec/operator_button_audit.md` (#271,
+  #272) and `spec/ui_elements.md`, which the plan's Doc impact did not
+  name.
 
 ### Doc impact
 
@@ -574,6 +582,9 @@ Taken 2026-10-12 at `5761ab7e`.
 - `spec/settings_inventory.md` — the per-session setting, default and gate.
 - `spec/csv_contracts.md` — the Settings CSV `session.reviewee_self_fields` row.
 - `spec/roundtrip_coverage.md` — the column's round trip.
+- `spec/reviewer-surface.md` — the chip strip renders the reviewee's line on `/results` (added at rung 3).
+- `spec/operator_button_audit.md` — the reviewee card's Cancel / Save rows (added at rung 3).
+- `spec/ui_elements.md` — `.reviewer-self-chips` serves the Reviewees card too (added at rung 3).
 - `guide/things_to_check_in_browser.md` — a section per code rung.
 
 ---

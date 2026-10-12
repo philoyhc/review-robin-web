@@ -375,3 +375,18 @@ section (git history keeps it), so this file lists only what is owed.
   shows the name, email and Profile link (or `•••`) after the
   `Reviewee` pill, muted, as the reviewer pages show a reviewer's.
 
+
+## A reviewee's own entry: the live card (participant info Item 4, rung 3)
+
+- [ ] **Save.** On a draft, Unlock Reviewees, select a tag chip: Save
+  and Cancel enable; Save. The page reloads with the panel open, the
+  card shows the tag selected, and `Reviewees see:` gains its label.
+- [ ] **Cancel.** Toggle a chip, then Cancel: the chips return to the
+  saved selection and both buttons disable again.
+- [ ] **Results follow.** As that reviewee, `/results` shows the tag
+  after the name and email, under its friendly label; deselect Name and
+  save, and the name drops from the line.
+- [ ] **Nothing.** Deselect every chip and save: `Reviewees see:` reads
+  nothing selected, and `/results` shows the pills with no line after.
+- [ ] **Reviewer too.** A user on both rosters sees the reviewer line on
+  the reviewer pages and only the reviewee line on `/results`.

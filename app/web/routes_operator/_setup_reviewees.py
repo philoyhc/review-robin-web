@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
-from app.services import assignments, csv_imports
+from app.services import assignments, csv_imports, participant_info
 from app.services import reviewees as reviewees_service
 from app.services import roster_bulk
 from app.services import session_lifecycle as lifecycle
@@ -529,6 +529,46 @@ def reviewees_update(
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
         anchor=_row_action_anchor([reviewee_id], noun="reviewee"),
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/reviewees/self-fields",
+    response_class=RedirectResponse,
+)
+async def reviewees_save_self_fields(
+    request: Request,
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """Save what reviewees see of their own entry (participant info
+    Item 4), as the Reviewers card saves Item 1's: the ticked chips plus
+    ``keep``, the selected keys the card offered no chip for."""
+    form = await request.form()
+    keys = [str(v) for v in form.getlist("fields")]
+    keys += [str(v) for v in form.getlist("keep")]
+    try:
+        # The service locks the session row: wait for it off the loop.
+        await run_in_threadpool(
+            participant_info.set_self_fields,
+            db,
+            review_session=review_session,
+            user=user,
+            participant="reviewee",
+            keys=keys,
+            correlation_id=request_correlation_id(),
+        )
+    except participant_info.SelfFieldsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.id}/reviewees"
+            "?unlocked=1#roster-card"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

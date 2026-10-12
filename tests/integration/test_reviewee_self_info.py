@@ -1,16 +1,18 @@
 """A reviewee sees their own roster entry — participant info Item 4.
 
-`guide/participant_info.md` Item 4, rung 2 (the scaffold): the
-Reviewees page's inert "What reviewees see of their own entry" card,
-its `Reviewees see:` readout, and the reviewee's own line after the role
-pills on `/results`, all at the default selection (name, email or
-identifier, profile; tags off).
+`guide/participant_info.md` Item 4: the Reviewees page's "What reviewees
+see of their own entry" card and its save, the `Reviewees see:` readout,
+the reviewee's own line after the role pills on `/results`, and the
+selection's Settings CSV row. The default is name, email or identifier
+and profile; tags start off.
 """
 
 from __future__ import annotations
 
 import re
+from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -97,8 +99,8 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
         ("profile_link", True, "Profile"),
         ("tag_1", False, "Tag 1"),
     ]
-    # The scaffold is inert: nothing posts, Save / Cancel stay disabled.
-    assert "<form" not in card
+    # The form posts to its route; Save and Cancel wait for a change.
+    assert f'action="/operator/sessions/{rs.id}/reviewees/self-fields"' in card
     assert len(re.findall(r"<button[^>]*disabled", card)) == 2
 
 
@@ -152,3 +154,135 @@ def test_a_reviewer_who_is_also_a_reviewee_sees_only_the_active_pages_line(
     assert "Alice Reviewee" in _info(html)
     assert "Alice Reviewer" not in _info(html)
     assert "data-reviewer-self-info" not in html
+
+
+# ── Storing the selection (rung 3) ───────────────────────────────────
+
+
+def _save(client: TestClient, rs: ReviewSession, **form) -> object:
+    return client.post(
+        f"/operator/sessions/{rs.id}/reviewees/self-fields",
+        data=form,
+        follow_redirects=False,
+    )
+
+
+def test_a_save_stores_the_selection_and_results_follow(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    rs = _session(client, db, "rei-save")
+    _alice(db, rs)
+    response = _save(client, rs, fields=["email_or_identifier", "tag_1"])
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{rs.id}/reviewees?unlocked=1#roster-card"
+    )
+    db.refresh(rs)
+    assert rs.reviewee_self_fields == ["email_or_identifier", "tag_1"]
+    assert rs.reviewer_self_fields is None, "the reviewers' selection moved"
+    shown = _div_at(
+        client.get(f"/operator/sessions/{rs.id}/reviewees").text,
+        "data-reviewee-self-readout",
+    )
+    assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
+        "Email", "Tag 1",
+    ]
+    grant_reviewee_visibility(rs)
+    info = _info(client.get(f"/me/sessions/{rs.id}/results").text)
+    assert "alice@example.edu" in info and "Tag 1: Blue" in info
+    assert "Alice Reviewee" not in info and "Profile" not in info
+
+
+def test_an_empty_save_shows_nothing_after_the_pill(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    rs = _session(client, db, "rei-empty")
+    _alice(db, rs)
+    assert _save(client, rs).status_code == 303
+    db.refresh(rs)
+    assert rs.reviewee_self_fields == []
+    grant_reviewee_visibility(rs)
+    assert "data-reviewee-self-info" not in client.get(
+        f"/me/sessions/{rs.id}/results"
+    ).text
+
+
+def test_a_key_with_no_chip_survives_a_save(client: TestClient, db: Session) -> None:
+    """The NULL default selects profile_link; with no profile in the
+    roster the card offers no chip for it, so it rides as `keep`."""
+    rs = _session(client, db, "rei-keep")
+    _alice(db, rs, profile=None)
+    html = client.get(f"/operator/sessions/{rs.id}/reviewees?unlocked=1").text
+    assert '<input type="hidden" name="keep" value="profile_link">' in html
+    assert _save(client, rs, fields=["name"], keep=["profile_link"]).status_code == 303
+    db.refresh(rs)
+    assert rs.reviewee_self_fields == ["name", "profile_link"]
+
+
+def test_an_unknown_key_is_refused(client: TestClient, db: Session) -> None:
+    rs = _session(client, db, "rei-unknown")
+    # `email` is a reviewer key, not a reviewee one.
+    assert _save(client, rs, fields=["name", "email"]).status_code == 422
+
+
+def test_a_locked_session_refuses_the_save(client: TestClient, db: Session) -> None:
+    rs = _session(client, db, "rei-locked")
+    rs.status = "ready"
+    db.commit()
+    assert _save(client, rs, fields=["name"]).status_code == 409
+
+
+def test_a_save_writes_one_audit_event(client: TestClient, db: Session) -> None:
+    from app.db.models import AuditEvent
+
+    rs = _session(client, db, "rei-audit")
+    _save(client, rs, fields=["name"])
+    _save(client, rs, fields=["name"])  # a no-op: nothing changed
+    events = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == rs.id,
+            AuditEvent.event_type == "session.reviewee_self_fields_set",
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    assert events[0].detail["changes"]["reviewee_self_fields"] == [None, ["name"]]
+
+
+@pytest.mark.parametrize(
+    ("stored", "cell"),
+    [(None, ""), ([], "[]"), (["name", "tag_2"], '["name","tag_2"]')],
+)
+def test_the_settings_csv_round_trips_the_selection(
+    client: TestClient, db: Session, stored: list[str] | None, cell: str
+) -> None:
+    from app.services.session_config_io._apply_session import (
+        _apply_session_kv,
+        _apply_session_metadata,
+    )
+    from app.services.session_config_io._apply_shared import _ParsedConfig
+    from app.services.session_config_io._serialize import _session_rows
+
+    source = _session(client, db, f"rei-csv-{len(cell)}")
+    source.reviewee_self_fields = stored
+    db.commit()
+    row = next(
+        r for r in _session_rows(source) if r[0] == "session.reviewee_self_fields"
+    )
+    assert row[1] == cell
+    plan = _ParsedConfig()
+    _apply_session_kv(plan, "session.reviewee_self_fields", row[1])
+    target = SimpleNamespace(reviewee_self_fields=["name"])
+    _apply_session_metadata(target, plan)
+    assert target.reviewee_self_fields == stored
+
+
+@pytest.mark.parametrize("cell", ['["name","email"]', '{"a":1}', "name"])
+def test_the_settings_csv_refuses_a_bad_selection(cell: str) -> None:
+    from app.services.session_config_io._apply_session import _apply_session_kv
+    from app.services.session_config_io._apply_shared import (
+        _ParseError,
+        _ParsedConfig,
+    )
+
+    with pytest.raises(_ParseError):
+        _apply_session_kv(_ParsedConfig(), "session.reviewee_self_fields", cell)
