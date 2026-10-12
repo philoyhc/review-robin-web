@@ -38,12 +38,17 @@ def _seed_observer(database_url: str, session_id: int) -> int:
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
-    from app.db.models import Observer, ReviewSession
+    from app.db.models import Observer, Reviewee, ReviewSession
 
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
             db.get(ReviewSession, session_id).observers_enabled = True
+            # A populated tag, so the builder offers a field to pick.
+            db.add(Reviewee(
+                session_id=session_id, name="E",
+                email_or_identifier="e@example.org", tag_1="Blue",
+            ))
             observer = Observer(
                 session_id=session_id, email="o@example.org",
                 display_name="O", status="active", cohort_rule=RULE,
@@ -95,3 +100,112 @@ def test_add_starts_from_one_default_cell_and_the_buttons_work(
     assert builder.locator("[data-observer-combinator-input]").input_value() == "OR"
     cells.nth(1).locator("[data-observer-rule-remove]").click()
     assert cells.count() == 1
+
+
+def _stored_rule(database_url: str, email: str) -> object:
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Observer
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            return db.execute(
+                select(Observer.cohort_rule).where(Observer.email == email)
+            ).scalar_one()
+    finally:
+        engine.dispose()
+
+
+def test_save_waits_for_an_email_and_a_finished_rule(
+    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """Rung 3: Save is live only when the row and its rule are savable,
+    and one click stores both."""
+    session_id = new_session()
+    _seed_observer(live_server.database_url, session_id)
+    page.goto(f"/operator/sessions/{session_id}/observers?add=1")
+    save = page.locator("[data-observer-edit-save]")
+    builder = page.locator(
+        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
+    )
+    cell = builder.locator("[data-observer-rule-cell]").first
+    field = cell.locator('select[name="cohort_rule_field"]')
+    # An untouched builder is "no rule": blank field, nothing to finish.
+    assert field.input_value() == ""
+    assert save.is_disabled(), "no email yet"
+    page.locator('input[name="email"][form="observer-edit-form"]').fill(
+        "gate@example.org")
+    assert save.is_enabled()
+    # A field with a typed operator and no value is half-filled.
+    field.select_option("reviewee.tag1")
+    op = cell.locator("[data-observer-op-cycle]")
+    while op.inner_text() != "IS":
+        op.click()
+    assert save.is_disabled()
+    cell.locator("[data-observer-operand-value]").fill("Red")
+    assert save.is_enabled()
+    save.click()
+    page.wait_for_load_state("load")
+    rule = _stored_rule(live_server.database_url, "gate@example.org")
+    assert rule["rules"][0]["op"] == "IS"
+    assert rule["rules"][0]["operand_value"] == "Red"
+
+
+def test_a_rule_the_dropdown_lacks_survives_a_rename(
+    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """Codex on #2989: a stale key loaded into a disabled
+    option, which the browser leaves out of the submission — so a rename
+    saved from the row editor cleared or scrambled the rule. The option
+    is selectable now, and the rule round-trips unchanged."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Observer
+
+    session_id = new_session()
+    observer_id = _seed_observer(live_server.database_url, session_id)
+    stale = {
+        "combinator": "AND",
+        "rules": [{
+            # The pair-level join is not in the dropdown at all.
+            "field": "pair_context.tag1", "op": "IS THE SAME AS",
+            "operand_tag": "reviewer.tag2", "operand_value": "",
+        }],
+    }
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            db.get(Observer, observer_id).cohort_rule = stale
+            db.commit()
+    finally:
+        engine.dispose()
+
+    page.goto(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}")
+    builder = page.locator(
+        "[data-observer-edit-cohort] [data-observer-cohort-builder]"
+    )
+    # `+` clones the first cell, but not its stale option: a key the
+    # dropdown omits is not offered in a new cell.
+    builder.locator("[data-observer-rule-add]").click()
+    new_cell = builder.locator("[data-observer-rule-cell]").nth(1)
+    assert new_cell.locator("option[data-observer-stale]").count() == 0
+    new_cell.locator("[data-observer-rule-remove]").click()
+    page.locator('input[name="display_name"][form="observer-edit-form"]').fill(
+        "Renamed")
+    with page.expect_navigation():
+        page.locator("[data-observer-edit-save]").click()
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            name, rule = db.execute(
+                select(Observer.display_name, Observer.cohort_rule)
+                .where(Observer.id == observer_id)
+            ).one()
+    finally:
+        engine.dispose()
+    assert name == "Renamed"
+    assert rule == stale

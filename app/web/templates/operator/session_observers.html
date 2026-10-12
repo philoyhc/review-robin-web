@@ -32,11 +32,10 @@
     <tr class="session-expander session-expander-bracketed row-editor-bar">
       <td colspan="{{ col_count }}">
         <div class="row-expander-body is-split">
-          {# operator pages Item 4 rung 2 — SCAFFOLD: the cohort builder
-             under the row it edits, as the selection expander lays it
-             out, loaded with the observer's rule (empty on `Add`). Its
-             controls post with the edit form, and the routes ignore them
-             until rung 3: Save still saves the row alone. #}
+          {# operator pages Item 4 — the cohort builder under the row it
+             edits, as the selection expander lays it out, loaded with the
+             observer's rule (empty on `Add`). Its controls post with the
+             edit form, and one Save writes the row and the rule. #}
           <div class="row-expander-pane row-expander-pane-left"
                data-observer-edit-cohort
                data-rule="{{ edit_cohort_rule | tojson | forceescape }}">
@@ -44,7 +43,7 @@
               {{ "The new observer is able to see responses where" if add_mode
                  else "This observer is able to see responses where" }}
             </h3>
-            {{ cohort_builder("observer-edit-form") }}
+            {{ cohort_builder("observer-edit-form", blank_field=true) }}
           </div>
           <div class="row-expander-pane row-expander-pane-right">
           {# The mode, for assistive tech only. The card that went
@@ -68,8 +67,10 @@
              roster pages agree since 19P.3 rung 3; this comment counted
              "the two unmigrated pages" until then. #}
           <div class="row-expander-actions">
+            {# Disabled until the row and its rule are savable (Item 4);
+               the page script keeps it in step. #}
             <button class="btn secondary" type="submit"
-                    form="observer-edit-form">Save</button>
+                    form="observer-edit-form" data-observer-edit-save>Save</button>
             {# Cancel leaves the editor for the list, so it lands where
                the list is — the same anchor `Clear` and `Search` take. #}
             <a class="btn secondary"
@@ -85,7 +86,11 @@
      (operator pages Item 4): the selection expander's `<template>`,
      whose controls post with the bulk form, and the add / edit row
      editor, whose controls post with the edit form. #}
-  {% macro cohort_builder(form_id) %}
+  {# `blank_field`: the row editor's field select leads with an empty
+     choice, so an untouched builder means "no rule" — the rule is
+     optional there (Item 4), and a preselected first tag would save one
+     the operator never chose. #}
+  {% macro cohort_builder(form_id, blank_field=false) %}
       <div data-observer-cohort-builder
            style="display: flex; align-items: stretch; gap: 8px;">
         <div style="flex: 0 0 20%; display: flex;
@@ -112,6 +117,7 @@
             <div style="display: flex; align-items: center; gap: 4px;">
               <select form="{{ form_id }}" name="cohort_rule_field"
                       style="flex: 0 0 50%; min-width: 0; padding: 4px;">
+                {% if blank_field %}<option value="">Choose a field</option>{% endif %}
                 {% for canonical_key, friendly in cohort_match_tags.reviewer %}
                   <option value="{{ canonical_key }}">Reviewer: {{ friendly }}</option>
                 {% endfor %}
@@ -866,6 +872,12 @@
         clone.querySelectorAll('input[type="text"]').forEach(function (i) {
           i.value = '';
         });
+        // A stale key's synthetic option belongs to the cell it was
+        // loaded into: a new cell offers only the live dropdown, or `+`
+        // would make a key the dropdown omits pickable.
+        clone.querySelectorAll('option[data-observer-stale]').forEach(function (o) {
+          o.remove();
+        });
         clone.querySelectorAll('select').forEach(function (s) {
           s.selectedIndex = 0;
         });
@@ -992,13 +1004,15 @@
           if (valInput) valInput.style.display = useTag ? 'none' : '';
         }
       };
-      // Insert a disabled synthetic option carrying ``value`` so
-      // a saved rule referencing a tag slot whose friendly label
-      // has since been cleared (and is therefore missing from
-      // the live dropdown) still loads visibly into the editor.
-      // The operator sees the stale canonical key suffixed with
-      // ``(missing label)``, can't re-select it (disabled), and
-      // overwrites on save by picking a valid option.
+      // Insert a synthetic option carrying ``value`` so a saved rule
+      // referencing a slot the live dropdown lacks (a tag whose friendly
+      // label was cleared, a pair-context tag, an imported operand)
+      // still loads visibly into the editor, suffixed ``(missing
+      // label)``. Selectable, not disabled: a selected disabled option
+      // is left out of the form submission, so a rename saved from the
+      // row editor would have cleared or scrambled the stored rule
+      // (Codex on #2989). The stored key is a valid one, so it
+      // round-trips unchanged unless the operator picks another.
       function observerEnsureStaleOption(selectEl, value) {
         if (!selectEl || !value) return;
         for (var i = 0; i < selectEl.options.length; i++) {
@@ -1007,7 +1021,7 @@
         var opt = document.createElement('option');
         opt.value = value;
         opt.text = value + ' (missing label)';
-        opt.disabled = true;
+        opt.setAttribute('data-observer-stale', '');
         selectEl.appendChild(opt);
       }
 
@@ -1024,8 +1038,46 @@
         } catch (e) {
           rule = null;
         }
-        window.observerFillRule(
-          pane.querySelector("[data-observer-cohort-builder]"), rule);
+        var block = pane.querySelector("[data-observer-cohort-builder]");
+        window.observerFillRule(block, rule);
+
+        // Save only when savable: an email, and no half-filled rule cell
+        // (a field with a typed operator and no value, or a value with no
+        // field). Blank cells are fine — they save as no rule. The
+        // server refuses the same cases; this only spares the round trip.
+        var save = document.querySelector("[data-observer-edit-save]");
+        var email = document.querySelector(
+          'input[name="email"][form="observer-edit-form"]');
+        var TYPED = ["IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"];
+        function halfFilled() {
+          var cells = block.querySelectorAll("[data-observer-rule-cell]");
+          for (var i = 0; i < cells.length; i++) {
+            var field = cells[i].querySelector('select[name="cohort_rule_field"]');
+            var op = cells[i].querySelector("[data-observer-op-input]");
+            var val = cells[i].querySelector("[data-observer-operand-value]");
+            var typed = op && TYPED.indexOf(op.value) !== -1;
+            var hasValue = typed && val && val.value.trim() !== "";
+            var hasField = field && field.value !== "";
+            if (!hasField && !hasValue) continue;
+            if (!hasField || (typed && !hasValue)) return true;
+          }
+          return false;
+        }
+        function sync() {
+          if (!save) return;
+          var ok = !!(email && email.value.trim()) && !halfFilled();
+          save.disabled = !ok;
+          if (ok) save.removeAttribute("aria-disabled");
+          else save.setAttribute("aria-disabled", "true");
+        }
+        ["input", "change"].forEach(function (type) {
+          block.addEventListener(type, sync);
+          if (email) email.addEventListener(type, sync);
+        });
+        // `+`, `X` and the operator cycle change the rule without an
+        // input event; re-read after their inline handlers have run.
+        block.addEventListener("click", function () { setTimeout(sync, 0); });
+        sync();
       })();
     {% else %}
       (function () {

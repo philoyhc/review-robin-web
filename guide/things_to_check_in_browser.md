@@ -400,5 +400,22 @@ section (git history keeps it), so this file lists only what is owed.
   where" and one default cell; `+`, `X`, `AND`/`OR` and the operator
   cycle work.
 - [ ] **Save is unchanged.** Change the rule in the editor and Save: the
-  row's fields save, the rule does not (rung 3 wires it).
+  row's fields save, the rule does not (rung 3 wired it; see below).
 - [ ] **The selection expander** still loads and saves a rule as before.
+
+## One Save writes the observer and its rule (operator pages Item 4, rung 3)
+
+- [ ] **Add with a rule.** `Add new`: the first cell reads `Choose a
+  field`, and Save is disabled until an email is typed. Pick a field,
+  cycle the operator to `IS` (Save disables: no value), type a value
+  (Save enables), Save: the new row's Cohort column shows the rule.
+- [ ] **Add without one.** `Add new`, an email only, Save: the Cohort
+  column reads `—`.
+- [ ] **Edit the rule.** `Edit` an observer with a rule: change an
+  operand and Save: the Cohort column follows; the row's other fields
+  are kept.
+- [ ] **Clear it.** `Edit`, set every cell's field to `Choose a field`,
+  Save: the Cohort column reads `—`.
+- [ ] **A rejected save.** `Edit`, type an email another observer uses,
+  Save: the error shows under the row and the builder still holds the
+  rule as edited.

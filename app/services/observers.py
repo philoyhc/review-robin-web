@@ -129,6 +129,52 @@ def _email_taken(
     )
 
 
+_UNSET: object = object()
+
+
+def _validated_cohort_rule(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    """``payload`` through ``CohortRuleSet``, as stored; ``None`` stays
+    ``None`` (no rule). Raises ``invalid_cohort_rule`` before anything
+    is written, so a bad rule never lands half a save."""
+    if payload is None:
+        return None
+    try:
+        ruleset = CohortRuleSet.model_validate(payload)
+    except ValidationError as exc:
+        # Operator-facing message. The original Pydantic
+        # exception rides along via ``from exc`` so dev
+        # tracebacks still carry the field-level detail.
+        raise ObserverOperationError(
+            "invalid_cohort_rule",
+            "Couldn't save the cohort rule. Check that every "
+            "rule cell has a field selected and an operand.",
+        ) from exc
+    return ruleset.model_dump(mode="json")
+
+
+def _write_cohort_rule_event(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    observer: Observer,
+    rule: dict[str, Any] | None,
+    user: User,
+    correlation_id: str | None,
+) -> None:
+    """One ``observer.cohort_rule_assigned`` row for ``observer``."""
+    verb = "Assigned" if rule is not None else "Cleared"
+    audit.write_event(
+        db,
+        event_type="observer.cohort_rule_assigned",
+        summary=f"{verb} cohort rule for {observer.email}",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.snapshot({"cohort_rule": rule}),
+        refs={"observer_id": observer.id},
+        correlation_id=correlation_id,
+    )
+
+
 def create_observer(
     db: Session,
     *,
@@ -137,12 +183,19 @@ def create_observer(
     display_name: str | None = None,
     tag_1: str | None = None,
     status: str = "active",
+    cohort_rule: dict[str, Any] | None = None,
     user: User,
     correlation_id: str | None = None,
 ) -> Observer:
     """Insert a new Observer row. Rejects duplicate emails within
-    the session. Returns the persisted row."""
+    the session. Returns the persisted row.
+
+    ``cohort_rule`` (operator pages Item 4) is the row editor's rule,
+    written in the same commit and audited as
+    ``observer.cohort_rule_assigned`` beside ``observer.created``;
+    ``None`` saves an observer with no rule."""
     lifecycle.require_not_archived(db, review_session)
+    rule = _validated_cohort_rule(cohort_rule)
     clean_email = _normalised_email(email)
     clean_status = _normalised_status(status)
     clean_display_name = _normalised_optional(display_name)
@@ -193,6 +246,7 @@ def create_observer(
         display_name=clean_display_name,
         status=clean_status,
         tag_1=clean_tag_1,
+        cohort_rule=rule,
     )
     db.add(observer)
     db.flush()
@@ -214,11 +268,13 @@ def create_observer(
         ),
         correlation_id=correlation_id,
     )
+    if rule is not None:
+        _write_cohort_rule_event(
+            db, review_session=review_session, observer=observer,
+            rule=rule, user=user, correlation_id=correlation_id,
+        )
     db.commit()
     return observer
-
-
-_UNSET: object = object()
 
 
 def update_observer(
@@ -229,14 +285,26 @@ def update_observer(
     display_name: str | None | object = _UNSET,
     tag_1: str | None | object = _UNSET,
     status: str | object = _UNSET,
+    cohort_rule: dict[str, Any] | None | object = _UNSET,
     user: User,
     correlation_id: str | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update. Only emits ``observer.updated`` if at
     least one field actually changed; the changes envelope carries
     ``{field: [old, new]}`` for each changed field only. Returns
-    the changes dict (empty if nothing changed)."""
+    the changes dict (empty if nothing changed).
+
+    ``cohort_rule`` (operator pages Item 4): the row editor's rule,
+    ``None`` to clear it. Written in the same commit, and audited as
+    ``observer.cohort_rule_assigned`` only when it differs from the
+    stored rule. Like ``set_cohort_rule`` it never demotes
+    ``validated``; nor does it appear in the returned changes."""
     lifecycle.require_not_archived(db, observer.session)
+    rule_changed = False
+    rule: dict[str, Any] | None = None
+    if cohort_rule is not _UNSET:
+        rule = _validated_cohort_rule(cohort_rule)  # type: ignore[arg-type]
+        rule_changed = rule != observer.cohort_rule
     proposed: dict[str, object] = {}
     if email is not _UNSET:
         proposed["email"] = _normalised_email(email)  # type: ignore[arg-type]
@@ -288,31 +356,37 @@ def update_observer(
         if old_value != new_value:
             changes[field] = [old_value, new_value]
 
-    if not changes:
+    if not changes and not rule_changed:
         return {}
 
-    lifecycle.invalidate_if_validated(
-        db,
-        review_session=observer.session,
-        user=user,
-        reason="observer_updated",
-        correlation_id=correlation_id,
-    )
-
-    for field, (_, new_value) in changes.items():
-        setattr(observer, field, new_value)
-    db.flush()
-
-    audit.write_event(
-        db,
-        event_type="observer.updated",
-        summary=f"Updated observer {observer.email}",
-        actor_user_id=user.id,
-        session=observer.session,
-        payload=audit.changes(changes),
-        refs={"observer_id": observer.id},
-        correlation_id=correlation_id,
-    )
+    if changes:
+        lifecycle.invalidate_if_validated(
+            db,
+            review_session=observer.session,
+            user=user,
+            reason="observer_updated",
+            correlation_id=correlation_id,
+        )
+        for field, (_, new_value) in changes.items():
+            setattr(observer, field, new_value)
+        db.flush()
+        audit.write_event(
+            db,
+            event_type="observer.updated",
+            summary=f"Updated observer {observer.email}",
+            actor_user_id=user.id,
+            session=observer.session,
+            payload=audit.changes(changes),
+            refs={"observer_id": observer.id},
+            correlation_id=correlation_id,
+        )
+    if rule_changed:
+        observer.cohort_rule = rule
+        db.flush()
+        _write_cohort_rule_event(
+            db, review_session=observer.session, observer=observer,
+            rule=rule, user=user, correlation_id=correlation_id,
+        )
     db.commit()
     return changes
 
@@ -382,21 +456,7 @@ def set_cohort_rule(
             "No observers selected for cohort-rule save.",
         )
 
-    if payload is None:
-        validated_dump: dict[str, Any] | None = None
-    else:
-        try:
-            ruleset = CohortRuleSet.model_validate(payload)
-        except ValidationError as exc:
-            # Operator-facing message. The original Pydantic
-            # exception rides along via ``from exc`` so dev
-            # tracebacks still carry the field-level detail.
-            raise ObserverOperationError(
-                "invalid_cohort_rule",
-                "Couldn't save the cohort rule. Check that every "
-                "rule cell has a field selected and an operand.",
-            ) from exc
-        validated_dump = ruleset.model_dump(mode="json")
+    validated_dump = _validated_cohort_rule(payload)
 
     candidates = list(
         db.execute(
@@ -428,17 +488,10 @@ def set_cohort_rule(
     # ``refs["observer_id"]`` (per spec/architecture.md
     # "Audit-event detail schema" — refs carries cross-entity int
     # PKs, snapshot carries full-state row capture).
-    verb = "Assigned" if validated_dump is not None else "Cleared"
     for observer in candidates:
-        audit.write_event(
-            db,
-            event_type="observer.cohort_rule_assigned",
-            summary=f"{verb} cohort rule for {observer.email}",
-            actor_user_id=user.id,
-            session=review_session,
-            payload=audit.snapshot({"cohort_rule": validated_dump}),
-            refs={"observer_id": observer.id},
-            correlation_id=correlation_id,
+        _write_cohort_rule_event(
+            db, review_session=review_session, observer=observer,
+            rule=validated_dump, user=user, correlation_id=correlation_id,
         )
     db.commit()
     return validated_dump

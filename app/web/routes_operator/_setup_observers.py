@@ -15,6 +15,7 @@ Session Edit Details.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from starlette.datastructures import FormData
@@ -84,6 +85,12 @@ def _require_observer_in_session(
     return observer
 
 
+#: `_render_observers_page`'s default for the row editor's rule: the edited
+#: observer's stored one (none on `Add`). A sentinel rather than ``None``,
+#: because ``None`` is a rule a caller can mean: an emptied builder.
+_STORED_RULE: Any = object()
+
+
 def _render_observers_page(
     *,
     request: Request,
@@ -98,7 +105,7 @@ def _render_observers_page(
     panel_open: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
-    edit_cohort_rule: dict[str, Any] | None = None,
+    edit_cohort_rule: dict[str, Any] | None = _STORED_RULE,
     selected_ids: set[int] | None = None,
     focus_id: int | None = None,
     issues: list | None = None,
@@ -167,9 +174,16 @@ def _render_observers_page(
                 "tag_1": edited.tag_1 or "",
                 "status": edited.status,
             }
-            # operator pages Item 4 — the row editor's builder loads the
-            # observer's saved rule.
-            edit_cohort_rule = edited.cohort_rule
+    # operator pages Item 4 — the row editor's builder loads the observer's
+    # stored rule. Resolved apart from `edit_values`: a rejected save
+    # (a taken email, say) re-renders with the operator's values, and the
+    # builder must not come back empty while the rule is still stored.
+    if edit_cohort_rule is _STORED_RULE:
+        edited = (
+            next((o for o in all_observers if o.id == edit_id), None)
+            if edit_id is not None else None
+        )
+        edit_cohort_rule = edited.cohort_rule if edited is not None else None
     if edit_values is None and add_mode:
         edit_values = {
             "email": "",
@@ -371,6 +385,11 @@ def observers_create(
     display_name: str = Form(default=""),
     tag_1: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    cohort_rule_field: list[str] = Form(default=[]),
+    cohort_rule_op: list[str] = Form(default=[]),
+    cohort_rule_operand_tag: list[str] = Form(default=[]),
+    cohort_rule_operand_value: list[str] = Form(default=[]),
+    cohort_combinator: str = Form(default="AND"),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -381,7 +400,16 @@ def observers_create(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     _require_not_archived(review_session)
+    rule = _row_editor_rule(
+        fields=cohort_rule_field,
+        ops=cohort_rule_op,
+        operand_tags=cohort_rule_operand_tag,
+        operand_values=cohort_rule_operand_value,
+        combinator=cohort_combinator,
+    )
     try:
+        if rule.error:
+            raise ObserverOperationError("half_filled_rule", rule.error)
         created = observers_service.create_observer(
             db,
             review_session=review_session,
@@ -389,6 +417,7 @@ def observers_create(
             display_name=display_name,
             tag_1=tag_1,
             status=status_value,
+            cohort_rule=rule.payload,
             user=user,
             correlation_id=request_correlation_id(),
         )
@@ -406,6 +435,7 @@ def observers_create(
                 "status": status_value,
             },
             edit_error=exc.message,
+            edit_cohort_rule=rule.shown,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     # 19P.2 rung 1 — a create is the one action whose row a fragment
@@ -435,6 +465,11 @@ def observers_update(
     display_name: str = Form(default=""),
     tag_1: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    cohort_rule_field: list[str] = Form(default=[]),
+    cohort_rule_op: list[str] = Form(default=[]),
+    cohort_rule_operand_tag: list[str] = Form(default=[]),
+    cohort_rule_operand_value: list[str] = Form(default=[]),
+    cohort_combinator: str = Form(default="AND"),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -446,7 +481,16 @@ def observers_update(
 ) -> HTMLResponse | RedirectResponse:
     _require_not_archived(review_session)
     observer = _require_observer_in_session(db, review_session, observer_id)
+    rule = _row_editor_rule(
+        fields=cohort_rule_field,
+        ops=cohort_rule_op,
+        operand_tags=cohort_rule_operand_tag,
+        operand_values=cohort_rule_operand_value,
+        combinator=cohort_combinator,
+    )
     try:
+        if rule.error:
+            raise ObserverOperationError("half_filled_rule", rule.error)
         observers_service.update_observer(
             db,
             observer=observer,
@@ -454,6 +498,7 @@ def observers_update(
             display_name=display_name,
             tag_1=tag_1,
             status=status_value,
+            cohort_rule=rule.payload,
             user=user,
             correlation_id=request_correlation_id(),
         )
@@ -471,6 +516,7 @@ def observers_update(
                 "status": status_value,
             },
             edit_error=exc.message,
+            edit_cohort_rule=rule.shown,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
@@ -547,6 +593,67 @@ def observers_bulk_reactivate(
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
         anchor=_row_action_anchor(observer_ids, noun="observer"),
+    )
+
+
+#: The operators whose operand is typed, not picked: a cell with one of
+#: these and no value is unfinished.
+_VALUE_OPS = frozenset({"IS", "IS NOT", "CONTAINS", "DOES NOT CONTAIN"})
+
+
+@dataclass(frozen=True)
+class _RowEditorRule:
+    """The row editor's builder, read from its form fields."""
+
+    #: What the service stores: ``None`` when every cell is blank.
+    payload: dict[str, Any] | None
+    #: The cells as posted, blank ones dropped, for a re-render.
+    shown: dict[str, Any]
+    #: Set when a cell is half-filled.
+    error: str | None
+
+
+def _row_editor_rule(
+    *,
+    fields: list[str],
+    ops: list[str],
+    operand_tags: list[str],
+    operand_values: list[str],
+    combinator: str,
+) -> _RowEditorRule:
+    """Read the row editor's cohort builder (operator pages Item 4).
+
+    A cell with no field and nothing typed is blank and dropped, so an
+    untouched builder saves no rule. A cell with a field but a typed
+    operator and no value, or a typed value but no field, is half-filled:
+    the page disables Save on one, and this refuses it too.
+    """
+    n = len(ops)
+    pad = lambda xs: list(xs) + [""] * (n - len(xs))  # noqa: E731
+    fields, operand_tags, operand_values = (
+        pad(fields), pad(operand_tags), pad(operand_values)
+    )
+    cells: list[dict[str, str]] = []
+    half = False
+    for field, op, tag, value in zip(
+        fields, ops, operand_tags, operand_values, strict=False
+    ):
+        typed = op in _VALUE_OPS
+        if not field and not (typed and value.strip()):
+            continue
+        if not field or (typed and not value.strip()):
+            half = True
+        cells.append(
+            {"field": field, "op": op, "operand_tag": tag, "operand_value": value}
+        )
+    shown = {"combinator": (combinator or "AND").strip().upper(), "rules": cells}
+    return _RowEditorRule(
+        payload=shown if cells else None,
+        shown=shown,
+        error=(
+            "Finish or clear each rule cell: every cell needs a field "
+            "and an operand." if half else None
+        ),
     )
 
 
