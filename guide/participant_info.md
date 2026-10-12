@@ -682,8 +682,17 @@ Taken 2026-10-12 at `5761ab7e`.
   other two); `session.observer_self_fields_set`;
   `POST …/observers/self-fields`; the Settings CSV row; specs, including
   `spec/reviewer-surface.md`, `spec/operator_button_audit.md` (#273,
-  #274) and `spec/ui_elements.md`, as Item 4's. `spec/setup_pages.md`'s
-  empty-roster sentence, stale since rung 2, now names the card.
+  #274) and `spec/ui_elements.md`, as Item 4's.
+- One `diff-reviewer` read, on the cumulative diff from `ac163cbf`: no
+  code defect. It found the rung-2 empty-right-column prose still in
+  three spec places beyond the one rung 3 fixed (the shared panel
+  section and its table, button-audit #178), #274 inheriting #270's
+  `is_editable` 409, "two tenants" prose and the `?unlocked=1` row
+  predating the card, the Observers audit list lacking the new event,
+  and the rung-2 browser check saying Save stays disabled (Items 1 and
+  4's reads caught the same). It also asked for the save route to call
+  `_require_not_archived` as its siblings do, and for a multi-role
+  `/collation` test. All fixed.
 
 ### Doc impact
 

@@ -789,7 +789,10 @@ async def observers_save_self_fields(
     """Save what observers see of their own entry (participant info
     Item 5), as the Reviewers and Reviewees cards save theirs: the ticked
     chips plus ``keep``, the selected keys the card offered no chip for.
-    Refused only when archived, the Observers roster's gate."""
+    Refused only when archived, the Observers roster's gate: checked
+    here as every sibling route does, and again under the row lock in
+    the service."""
+    _require_not_archived(review_session)
     form = await request.form()
     keys = [str(v) for v in form.getlist("fields")]
     keys += [str(v) for v in form.getlist("keep")]

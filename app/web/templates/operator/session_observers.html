@@ -359,8 +359,8 @@
     {% if unlock_available %}
       {# `panel_open` is server state, not a second source of truth for
          the toggle below: the toggle owns every click, this only
-         decides what the page ARRIVES as. Both tenants answer with a
-         redirect, and a panel that always shipped collapsed would shut
+         decides what the page ARRIVES as. Every card in it answers with
+         a redirect, and a panel that always shipped collapsed would shut
          itself on every one — the `Lock` control is what closes it. #}
       {# The Danger Zone is gated on rows; the own-entry card (participant
          info Item 5) is not, so the right column always holds a card.

@@ -311,13 +311,13 @@ which columns arrived.
 
 **The Unlock panel** (`#roster-unlock-panel`) holds, in two columns,
 the tag-label editor, `Upload` and `Danger Zone` cards (Reviewers and
-Reviewees each add a fourth, § *Reviewers page* and § *Reviewees
-page*): **`Upload` on the left**, and **the tag-label editor over the
-`Danger Zone` on the right**. While the panel
+Reviewees each add a fourth, the own-entry card, § *Reviewers page* and
+§ *Reviewees page*): **`Upload` on the left**, and **the tag-label
+editor over the `Danger Zone` on the right**. While the panel
 is open, **`Lock` ends the right column**, flush right and 20px under
-its last card. The right column stretches to the row, so where it holds
-no card (an empty Observers roster) `Lock` sits at its foot, level with
-the bottom of the left column, not beside the left card's heading.
+its last card. The right column stretches to the row; it always holds
+a card on every page (Observers' own-entry card renders on an empty
+roster, where the `Danger Zone` does not).
 Collapsed, the same control is the roster card's last child; the toggle
 moves the one element between the two, and a page arriving open
 (`?unlocked=1`, a failed import) renders it at the end of the right
@@ -351,8 +351,8 @@ card's replace*.
 
 | Axis | Reviewers / Reviewees / Relationships | Observers |
 |---|---|---|
-| Suppression predicate | `is_editable` | `not is_archived` — every mutating observers route takes `_require_not_archived`, so on `ready` and `expired` both tenants are live and hiding them would withhold controls the routes accept |
-| Right column | the tag-label editor over the `Danger Zone` | the `Danger Zone` alone — no label slots — so on an **empty** roster it is empty; `Lock` ends it either way, at its foot when empty |
+| Suppression predicate | `is_editable` | `not is_archived` — every mutating observers route refuses an archived session, so on `ready` and `expired` every card in the panel is live and hiding them would withhold controls the routes accept |
+| Right column | the tag-label editor over the `Danger Zone` | the own-entry card over the `Danger Zone` — no label slots — so on an **empty** roster the card alone; `Lock` ends it either way |
 
 **Observers differs elsewhere on the page too**, and those are not
 this table's subject — they are listed once in its own § *Body layout*
@@ -1476,9 +1476,10 @@ axes. Restated here only as far as its own reasons go:
 
 - **The suppression predicate is `not is_archived`**, not the others'
   `is_editable`. Every mutating observers route takes
-  `_require_not_archived` (§ *Lifecycle gate* below), import and
-  `delete-all` included, so on `ready` and `expired` both tenants are
-  live and hiding them would withhold controls their own routes accept.
+  `_require_not_archived` (§ *Lifecycle gate* below), import,
+  `delete-all` and the own-entry save included, so on `ready` and
+  `expired` every card in the panel is live and hiding them would
+  withhold controls their own routes accept.
 - **`Upload Observers` is on the left, as on the other three, and the
   own-entry card over the `Danger Zone` on the right**: this page has
   no label slots. The `Danger Zone` is gated on rows and the card is

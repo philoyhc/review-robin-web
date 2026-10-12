@@ -165,6 +165,22 @@ def test_collation_shows_the_observers_own_line_after_the_pills(
     assert "data-reviewee-self-info" not in html
 
 
+def test_a_reviewer_who_is_also_an_observer_sees_only_the_active_pages_line(
+    client: TestClient, db: Session
+) -> None:
+    """`/collation` carries the observer line; the reviewer line stays on
+    the reviewer pages."""
+    from app.db.models import Reviewer
+
+    rs = _session(client, db, "obi-both")
+    _alice(db, rs)
+    db.add(Reviewer(session_id=rs.id, name="Alice Reviewer", email="alice@example.edu"))
+    db.commit()
+    html = client.get(f"/me/sessions/{rs.id}/collation").text
+    assert "Alice Observer" in _info(html)
+    assert "Alice Reviewer" not in _info(html)
+    assert "data-reviewer-self-info" not in html
+
 # ── Storing the selection (rung 3) ───────────────────────────────────
 
 

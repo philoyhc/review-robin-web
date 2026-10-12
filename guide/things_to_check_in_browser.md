@@ -456,7 +456,7 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **The card.** Unlock Observers: "What observers see of their own
   entry" heads the right column above the `Danger Zone`, chips Name and
   Email selected and Tag unselected (Tag only while some row has one);
-  the chips toggle on screen, Save and Cancel stay disabled.
+  Save and Cancel disabled until a chip changes.
 - [ ] **Empty roster.** Delete all observers: the card still shows, Name
   and Email only, with `Lock` under it.
 - [ ] **Collation.** As an observer, `/collation` shows the name and

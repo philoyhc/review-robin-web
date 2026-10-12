@@ -54,9 +54,9 @@ On the Create page the card sits above the Quick Setup card; on Session Home the
 The Setup-Observers page is documented in `spec/setup_pages.md` (Observers section). Key points relative to the participant model:
 
 - Routes mounted at `/operator/sessions/{id}/observers/*` are uniformly gated by `require_observers_enabled_session`. The page 404s when `observers_enabled = False`.
-- The model carries a **single `tag_1`** (not three) and an optional `display_name`; `email` is the required identity. The friendly-label editor the other three roster pages carry in their Unlock panel is intentionally absent — single-tag observers don't benefit from it, and its absence is what makes this page's panel two-tenanted (`spec/setup_pages.md` § *The roster card and the Unlock panel*).
+- The model carries a **single `tag_1`** (not three) and an optional `display_name`; `email` is the required identity. The friendly-label editor the other three roster pages carry in their Unlock panel is intentionally absent — single-tag observers don't benefit from it, so the panel's right column holds the own-entry card over the `Danger Zone` instead (`spec/setup_pages.md` § *The roster card and the Unlock panel*).
 - The CSV import contract is documented in `spec/csv_contracts.md` §3.2b — required `ObserverEmail`, optional `ObserverName` / `ObserverTag1`.
-- Audit events: `observer.created` (snapshot), `observer.updated` (changes + refs), `observer.cohort_rule_assigned` (snapshot + refs), `observer.bulk_inactivated` / `observer.bulk_reactivated` (snapshot), `observer.bulk_deleted` (counts), `observers.imported` (counts + context), `observers.deleted_all` (counts). All registered in `EVENT_SCHEMAS`.
+- Audit events: `observer.created` (snapshot), `observer.updated` (changes + refs), `observer.cohort_rule_assigned` (snapshot + refs), `observer.bulk_inactivated` / `observer.bulk_reactivated` (snapshot), `observer.bulk_deleted` (counts), `observers.imported` (counts + context), `observers.deleted_all` (counts), and the session-level `session.observer_self_fields_set` (changes) from the own-entry card. All registered in `EVENT_SCHEMAS`.
 
 ---
 
