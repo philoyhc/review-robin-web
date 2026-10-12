@@ -501,6 +501,15 @@ the round-trip notes below.
    Atomic transaction. On any apply error, raise; the caller's
    transaction handler rolls back.
 
+**`session.reviewer_self_fields`** (`json`): blank is NULL, the default selection
+(`name`, `email`, `profile_link`); `[]` is nothing; any other value is
+a JSON list of keys from `name`, `email`, `profile_link`, `tag_1`,
+`tag_2`, `tag_3`, normalized to roster order. It is force-applied. A
+value that is not a JSON list of strings, or that names another key, is
+refused in phase 1 as an error on its row, never dropped
+(`participant_info.normalize_reviewer_self_fields`). The export writes
+blank for NULL.
+
 If phase 1 finds errors, phase 2 is **not attempted** — the
 `ApplyResult` carries `errors` and the route surfaces them.
 

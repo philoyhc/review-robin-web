@@ -310,7 +310,8 @@ not, so an operator on a locked session still reads the roster size and
 which columns arrived.
 
 **The Unlock panel** (`#roster-unlock-panel`) holds, in two columns,
-the tag-label editor, `Upload` and `Danger Zone` cards. The label
+the tag-label editor, `Upload` and `Danger Zone` cards (Reviewers adds a
+fourth, § *Reviewers page*). The label
 editor is the same shared partial used elsewhere, and the two
 destructive cards' routes and gates are specified in § *The Danger Zone's `delete-all`* and § *The Upload
 card's replace*.
@@ -412,8 +413,11 @@ plus the ability to read every card the panel holds.
 
 ### The roster index
 
-One row of readouts in the roster card: the roster count, and one pill
-per column showing its label and how many rows hold a value.
+One row of readouts in the roster card, labeled the same on all four
+pages: `Roster:` carries the roster count, and `Populated:` carries one
+pill per column showing its label and how many rows hold a value.
+Reviewers adds a third readout to the row, `Shown on surface:` (§
+*Reviewers page*).
 
 **Whole-roster counts** — a search or a page turn does not shrink them.
 
@@ -1253,17 +1257,50 @@ Audit events: `reviewer.created` / `.updated` /
 
 ### Body shape
 
-The shared shape, with nothing page-specific in it: see § *The roster
-card and the Unlock panel*, which reads as this page's description with
-Observers' differences named beside it.
+The shared shape — § *The roster card and the Unlock panel*, which
+reads as this page's description with Observers' differences named
+beside it — plus one card and one readout of its own, below.
 
 Its panel holds the tag-label editor over the `Danger Zone` on the
-left, `Upload Reviewers` on the right, and `Lock` beneath the upload
-card. The suppression predicate is `is_editable`.
+left; on the right the **Reviewer information shown on surface** card
+above `Upload Reviewers`, and `Lock` beneath the upload card. The
+suppression predicate is `is_editable`.
 
 CSV header copy lists `ReviewerName`, `ReviewerEmail` required;
 `ProfileLink`, `ReviewerTag1..3`, `Status` optional (§3.1 in
 `spec/csv_contracts.md`).
+
+### What a reviewer sees of their own entry
+
+The setting is `sessions.reviewer_self_fields`; its keys, default and
+gate are in `spec/settings_inventory.md` §2, and the line it drives is
+in `spec/reviewer-surface.md` § *Role-navigator chip strip*. Two
+surfaces on this page:
+
+- **The `Shown on surface:` readout**, last in the roster card's
+  readout row, in every lifecycle state (so a locked session still
+  reports what its reviewers see). One `pill-count` pill per selected
+  field, in roster order, each under the label this page shows for that
+  column — `Name`, `Email`, `Profile`, a tag under its friendly label —
+  or `none` when nothing is selected.
+- **The card** (`#reviewer-self-fields`), in the Unlock panel's right
+  column above `Upload Reviewers`, so it renders only while the panel
+  does. One selector chip (`label.tag-chip` wrapping a checkbox, named
+  `fields`) per column that has data: `Name` and `Email` always,
+  `Profile` and each tag only while some reviewer row holds a value —
+  the same whole-roster flags the roster index reads. A chip starts
+  checked when its key is selected. The card's Save and Cancel
+  (`btn secondary`) start `disabled` and enable when a chip differs
+  from its loaded state; Cancel restores the loaded state. Save posts
+  `POST …/reviewers/self-fields` and returns to `?unlocked=1#roster-card`,
+  so the panel stays open.
+
+**A selected key with no chip on offer is not lost on Save.** It rides
+as a hidden `keep` input and is stored with the ticked chips, so
+`profile_link` stays selected while no reviewer has a profile and shows
+the moment one does; a key leaves the selection only by unticking its
+chip. The route answers 409 when the session is not `is_editable` and
+422 on an unknown key.
 
 ### Preview table
 
@@ -1638,7 +1675,7 @@ Bulk delete: `POST /operator/sessions/{id}/observers/delete-all`
   `views.<roster>_column_state` (`app/web/views/_setup.py`), which
   counts each slot with `app/services/_queries.py::tag_slot_counts`
   and derives `col_data["tag-n"]` as that count being non-zero — one
-  set of queries for both the `Populated columns` chips and the
+  set of queries for both the `Populated:` chips and the
   visibility flags. Invitations and Responses ask `tag_slot_presence`
   and re-key it with `views.chip_slots`. The route passes one
   `col_data` map; **no template computes the flag**.
