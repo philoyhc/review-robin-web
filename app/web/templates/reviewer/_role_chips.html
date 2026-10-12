@@ -15,7 +15,14 @@
 
    Renders nothing when ``role_chips`` is empty (the safety
    case — a surface route's gate should have rejected the
-   request before this point). #}
+   request before this point).
+
+   Optional: ``reviewer_self_fields`` (the reviewer surface only,
+   ``views.reviewer_self_line``) — the reviewer's own roster fields,
+   inline after the LAST pill so they never split the role pills of a
+   reviewer who holds other roles too (``guide/participant_info.md``
+   Item 1). #}
+{% from "_partials/profile_value.html" import profile_value %}
 {% if role_chips %}
   <div class="rs-role-nav">
     {% for chip in role_chips %}
@@ -28,5 +35,19 @@
         <span class="pill pill-role-{{ chip.role }} rs-role-nav-muted">{{ label }}</span>
       {% endif %}
     {% endfor %}
+    {% if reviewer_self_fields %}
+      <span class="rs-self-info" data-reviewer-self-info>
+        {%- for field in reviewer_self_fields -%}
+          {%- if not loop.first %}<span class="rs-self-info-sep" aria-hidden="true"> · </span>{% endif -%}
+          {%- if field.key == "profile_link" -%}
+            {{ profile_value(field.value, "Profile") }}
+          {%- elif field.key.startswith("tag_") -%}
+            <span>{{ field.label }}: {{ field.value }}</span>
+          {%- else -%}
+            <span>{{ field.value }}</span>
+          {%- endif -%}
+        {%- endfor -%}
+      </span>
+    {% endif %}
   </div>
 {% endif %}

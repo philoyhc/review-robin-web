@@ -305,12 +305,12 @@
        column, and that is a fact about the import, not an absence. #}
     <div class="roster-readouts">
       <div class="roster-readout">
-        <span class="roster-readout-label">Observers roster:</span>
+        <span class="roster-readout-label">Roster:</span>
         <span class="pill pill-count">{{ total_row_count }}
           observer{% if total_row_count != 1 %}s{% endif %}</span>
       </div>
       <div class="roster-readout">
-        <span class="roster-readout-label">Populated columns:</span>
+        <span class="roster-readout-label">Populated:</span>
         <span class="roster-readout-values">
           {% for col in col_readouts %}
             <span class="pill pill-count">{{ col.label }} ({{ col.count }})</span>

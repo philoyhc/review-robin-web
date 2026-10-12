@@ -88,12 +88,15 @@
     {% endif %}
   </div>
 
-  {# Role-navigator chips below the header — suppressed in the
-     operator preview (preview_mode), which reuses this template
-     but isn't a participant-facing view. #}
-  {% if not preview_mode %}
-    {% include "reviewer/_role_chips.html" %}
+  {# Role-navigator chips below the header. The operator preview
+     (preview_mode) gets no navigator — its links would lead to the
+     previewed reviewer's other surfaces — but a static `Reviewer`
+     pill, so the reviewer's own line (participant info Item 1) reads
+     on the row it reads on for the reviewer. #}
+  {% if preview_mode %}
+    {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
   {% endif %}
+  {% include "reviewer/_role_chips.html" %}
 
   {# Reviewer-surface overview card — the session description, the
      transient session-closed banner, and the per-page status pills,

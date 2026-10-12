@@ -697,4 +697,10 @@ def _surface_context(
             at=review_session.deadline,
         ),
         "preview_mode": preview_mode,
+        # participant info Item 1 — the reviewer's own roster fields
+        # after the role pills. The default until rung 3 stores a
+        # selection.
+        "reviewer_self_fields": views.reviewer_self_line(
+            review_session, reviewer, views.REVIEWER_SELF_DEFAULT
+        ),
     }
