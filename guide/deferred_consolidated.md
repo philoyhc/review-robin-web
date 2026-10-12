@@ -1124,6 +1124,35 @@ A DB-backed **shared / persistent** theme (cross-user, pushed to participants) i
 a further future beyond Stretch — it's the only part that needs a migration (a
 `themes` table + scope + governance).
 
+### Refused uploads
+
+#### Every problem a refused upload had, one link away (author, 2026-10-12)
+
+> Planned in `guide/import_error_reporting.md` Item 1 and deferred
+> unbuilt the same day. The banner's problem-type summary shipped on
+> its own (#2997).
+
+**Ships.** A refused Quick Setup file (on Session Home or Create)
+stores a short-lived, operator-scoped issue report and hands the
+redirect a token. The banner's `See every problem` link opens every
+issue (`Row` | `Column` | `Problem`) in a new tab, with the same
+report as a `.txt`. The store, page and file are built once, so
+Rehydrate and Duplicate can use them later.
+
+**Why deferred.** The banner already says what kind of problem a file
+has, and the slot's Setup page lists every row on a re-upload. The
+report costs a new table, a page and a route slice for a convenience.
+
+**Lift trigger.** Any one of:
+
+- an operator finds a refused file's rows hard to locate;
+- Rehydrate is switched on and wants its findings as a file;
+- Duplicate gains something to report.
+
+**Wire-up.** Settle the plan's Open questions first: Path A (page) or
+Path B (immediate download), and the TTL. Then re-take its Blast
+radius and follow its PR ladder, scaffold first.
+
 ---
 
 ## Part B — Deferred infrastructure & platform hardening
