@@ -779,12 +779,14 @@ def _check_instruments_no_rule_pinned(
 ) -> Iterable[ValidationIssue]:
     """Wave 5 PR 5.3 — retired. Pre-PR-5.3 the rule fired on legacy
     instruments with NULL ``rule_set_id``. With the legacy /
-    new-model split collapsed, every instrument now defaults to
-    Full Matrix on untouched Band 1 (Wave 4 PR 1), so a NULL
-    ``rule_set_id`` is never "not set up." The
-    ``instruments.no_visible_response_fields`` rule still covers
-    the readiness gap (zero visible response fields). The rule
-    key stays registered so audit history remains addressable.
+    new-model split collapsed, an instrument with no stored Band 1
+    rule evaluates as Full Matrix (Wave 4 PR 1), so a NULL
+    ``rule_set_id`` is not a setup gap in itself. Readiness is
+    checked elsewhere: ``instruments.no_visible_response_fields``
+    here, and the Band 1 "Not set" gate
+    (``instruments.is_configured``), which the Workflow card
+    enforces off-validate. The rule key stays registered so audit
+    history remains addressable.
     """
     return
     yield  # pragma: no cover — make this an Iterable
@@ -1174,10 +1176,12 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         severity=Severity.warning,
         why=(
             "Retired: this check raises no findings. An instrument "
-            "with no assignment rules set is never \"not set up\" — "
-            "it uses Full Matrix by default — and the check for "
-            "visible response fields covers whether it is ready. "
-            "It stays listed so past audit entries still name it."
+            "with no assignment rules uses Full Matrix, so a missing "
+            "rule is not a problem in itself. Whether the instrument "
+            "is ready is checked by the visible-response-fields "
+            "check and by its three Band 1 links, which must each "
+            "be set. It stays listed so past audit entries still "
+            "name it."
         ),
         fix_url=_instruments_url,
         fix_page_label="Instruments Setup",

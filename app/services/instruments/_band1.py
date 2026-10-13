@@ -367,7 +367,7 @@ def get_exclude_self_reviews(db: Session, instrument: Instrument) -> bool:
     """Read the instrument's self-review exclusion flag.
 
     Stored on the instrument's ``SessionRuleSet`` row. An instrument
-    with untouched Band 1 has ``rule_set_id = NULL`` and no row, which
+    with no stored Band 1 rule has ``rule_set_id = NULL`` and no row, which
     reads as ``False`` — the default-off state.
     """
     if instrument.rule_set_id is None:

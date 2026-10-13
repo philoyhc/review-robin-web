@@ -228,7 +228,7 @@ def _full_matrix_schema() -> Any:
     """Synthetic ``RuleSetSchema`` representing the Full Matrix
     default: empty rules, ALL_OF combinator, self-reviews allowed.
 
-    Wave 4 — new-model instruments with untouched Band 1 (both Links
+    Wave 4 — new-model instruments with no stored Band 1 rule (both Links
     in ``"all"`` mode) carry ``rule_set_id = NULL``; the engine
     treats this synthetic schema as "no filter," producing every
     (reviewer, reviewee) pair. Legacy instruments with NULL
@@ -301,7 +301,7 @@ def _diff_one_instrument(
     sums the counts for the dry-run).
 
     ``session_rule_set=None`` is the Full Matrix default — used for
-    new-model instruments with untouched Band 1 (Wave 4). The engine
+    new-model instruments with no stored Band 1 rule (Wave 4). The engine
     evaluates a synthetic empty-rules schema and the revision seed
     falls back to ``0``.
     """
@@ -691,7 +691,7 @@ class _ReconcileInputs:
     rule_set_rows: dict[int, SessionRuleSet]
 
     def rule_set_for(self, instrument: Instrument) -> SessionRuleSet | None:
-        # Wave 4 — new-model instruments with untouched Band 1 carry
+        # Wave 4 — new-model instruments with no stored Band 1 rule carry
         # ``rule_set_id = NULL``; the diff/materialise path treats
         # ``None`` as the Full Matrix default. Legacy instruments
         # with NULL ``rule_set_id`` are filtered out upstream in
