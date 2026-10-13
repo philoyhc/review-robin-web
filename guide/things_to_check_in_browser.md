@@ -10,12 +10,13 @@ delete them once no remaining section points to them.
 
 ## Email dates in the session's zone (#2720)
 
-- [ ] **The deadline reads in the session's zone.** On a session whose
+- [x] **The deadline reads in the session's zone.** On a session whose
   display zone is not UTC (Singapore, say) with a 17:00 deadline, preview
   the invitation email. `$deadline` should read 17:00, not 09:00.
 - [ ] **The submitted time does too.** Preview the responses-received
   email for a reviewer who has submitted; `$submitted_at` reads in the
-  same zone.
+  same zone. *Needs an Azure deployment; not checkable locally (author,
+  2026-10-13).*
 
 ## An inactive reviewer is not a reviewer (#2740)
 
@@ -279,3 +280,10 @@ delete them once no remaining section points to them.
   with Dismiss, not a full error page, and no response is gone. On the
   card the banner sits in, choose the file again, tick and Upload: the
   roster is replaced.
+
+## Reset links sit clear of their field (email templates)
+
+- [ ] **A gap under each field.** On Setup → Invitations, override an
+  email template's subject and body and save. "Reset subject to default"
+  and "Reset body to default" sit just below their boxes with a small
+  gap, not touching the border, and still read as links.
