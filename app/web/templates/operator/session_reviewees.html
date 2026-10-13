@@ -296,13 +296,13 @@
                     <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
                     involving them{% endif %}.</span>
                   </label>
-                  {# The acknowledgement rides with this tick, as it
-                     does on the delete gates. Without it the route's
-                     `_require_response_loss_ack` returned 400 and no
-                     upload form sent the field — so replacing a
-                     roster was impossible on any session that had
-                     collected an answer, which is exactly when an
-                     operator reverts to draft to fix it. #}
+                  {# The acknowledgment rides with this tick, as it
+                     does on the delete gates. Without it
+                     `_handle_import` answers 400 with the upload
+                     banner; before 19I no upload form sent the field,
+                     so replacing a roster was impossible on any session
+                     that had collected an answer, which is exactly when
+                     an operator reverts to draft to fix it. #}
                   {% if roster_response_count > 0 %}
                     <input type="hidden" id="reviewees-import-ack"
                            name="acknowledge_response_loss" value="true">

@@ -56,7 +56,7 @@ class UploadProblems:
     """The banner a Setup page's upload card shows for an upload that
     did not happen: a refused file's kinds of problem, or one sentence
     with no lines (the missing replace tick, or the missing response-loss
-    acknowledgement)."""
+    acknowledgment)."""
 
     message: str
     lines: list[str]
@@ -72,7 +72,7 @@ NEEDS_CONFIRM_SENTENCE = (
 
 #: The sentence when a Reviewers or Reviewees replace would discard
 #: saved responses but the request did not acknowledge it. The card
-#: sends the acknowledgement beside the tick whenever it names
+#: sends the acknowledgment beside the tick whenever it names
 #: responses, so this is a tab loaded before the session had any (or a
 #: direct POST). The re-rendered card names them; a second tick sends it.
 NEEDS_RESPONSE_ACK_SENTENCE = (
@@ -95,7 +95,7 @@ def upload_problems(
     populated roster without the replace tick says so in one sentence:
     before this, that 400 re-rendered the page with nothing on it
     (``missing_confirm`` was passed and no template read it). A replace
-    that would discard responses without the acknowledgement says so in
+    that would discard responses without the acknowledgment says so in
     one sentence too: before this, it was a full error page asking for an
     "acknowledge response loss" tick no page offers."""
 

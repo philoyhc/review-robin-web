@@ -387,8 +387,8 @@ about the panel rather than about each control:
 Two mechanisms implement it, and both are required because the controls
 answer differently. The ones that redirect (`Save labels`, `Delete all
 …`) and a **successful** import carry `?unlocked=1` on the redirect. A
-**failed** import does not redirect at all — the parse and confirm
-failures re-render the page in place with a 400, and what they show
+**failed** import does not redirect at all — the parse, confirm and
+acknowledgment failures re-render the page in place with a 400, and what they show
 renders *inside* the upload card (a refused file's error banner lists
 its kinds of problem with a count for each, never the rows: the lines
 Quick Setup's banner shows; a clean file onto a populated roster without
@@ -1427,9 +1427,9 @@ same terms as Reviewers and Reviewees: `Upload Relationships` left,
 the tag-label editor over the `Danger Zone` right, `Lock` at the
 right column's end, suppression on `is_editable`.
 
-**Two in-place 400 paths where the others have one**, both of which
-set the panel open server-side: a blocked CSV, and the
-`missing_confirm` replace state no other roster page has.
+**Two in-place 400 paths**, as on every upload card (§ *The roster
+card and the Unlock panel*), both of which set the panel open
+server-side: a blocked CSV, and the `missing_confirm` replace state.
 
 **Its roster index lists pair-context tags only**, and is the only one
 of the four that can be empty — see § *The roster index*.
