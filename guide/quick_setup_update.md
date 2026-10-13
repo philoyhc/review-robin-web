@@ -312,14 +312,29 @@ On `03_reviewers_problems.csv` (2026-10-13 browser check):
 Reviewees, Relationships, Observers) report in Quick Setup's style,
 from the same underlying code.
 
+### Decided so far (author, 2026-10-13)
+
+- **Kinds of problem with counts, never a list of rows**, on both
+  surfaces. A file with a hundred bad rows would print a hundred lines.
+  Both read the same helper (`roster_problem_details`, moved somewhere
+  both can import).
+- **Validate is left alone.** A refused file is never saved, so Validate
+  never sees it. Validate computes its own issues from the saved session
+  (`app/services/validation.py`). It shares only the template,
+  `validation_results.html`, which has a separate Validate mode. The
+  upload cards get their own small template, so that the Validate mode
+  is not changed by accident.
+
+### Consequences to carry into the plan
+
+- **Quick Setup's banner wording.** "The Reviewers Setup page shows
+  which rows" stops being true. It needs new words, and the same
+  sentence on the page cards must not point back at Quick Setup.
+- **No screen shows row numbers** until `guide/import_error_reporting.md`
+  is lifted. That plan's Out of scope line "The Setup pages' uploads
+  already list every row" becomes false and should be struck when this
+  item ships. Its lift trigger may deserve a second look.
+
 ### Open questions
 
-1. **Where do the row numbers go?** Quick Setup's banner leaves them
-   out on the grounds that "the Reviewers Setup page shows which rows".
-   If the page also drops them, no surface shows them until
-   `guide/import_error_reporting.md` lands. Recommended: one grouping
-   helper, with the page adding the rows to each kind ("ReviewerEmail is
-   blank: rows 2, 3"). The author decides.
-2. **Does the Validate page change too?** It includes the same
-   `validation_results.html`. Recommended: no, only the upload cards.
-   The author decides.
+- None yet. The plan, when written, may raise some.

@@ -35,7 +35,7 @@ Two sibling registers hold the open work that is not queued here:
   browser check.
 - `guide/quick_setup_update.md` Item 3 — the Setup pages' upload cards
   report problems in Quick Setup's style, from the same code. Jotted
-  2026-10-13; two open questions before planning.
+  2026-10-13; counts not rows, Validate untouched (author).
 
 ### Queued segments
 
