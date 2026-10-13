@@ -65,16 +65,6 @@ with the last section it covers.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## Delete user only for accounts with no activity (#2867)
-
-- [ ] **Delete stays disabled for a user with history.** On Sys Admin →
-  Accounts, select an operator who created a session (or a participant
-  who has submitted). Delete stays greyed; Revoke is still offered.
-  *Your own row can't be selected (author, 2026-10-13); checklist step
-  43 uses Alice.*
-- [x] **Delete works for an account with no activity.** Invite a fresh
-  email, select it, and Delete: the row goes.
-
 ## Upload banners read Dismiss, and a missing tick says so
 
 - [x] **Quick Setup's banner reads Dismiss.** Refuse a file in a Quick
