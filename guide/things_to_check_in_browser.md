@@ -81,22 +81,6 @@ delete them once no remaining section points to them.
   something failed, one `session.scheduled_event_failed` row per
   failing trigger, however many times the page is reloaded.
 
-## Replicate copies the set-up (A1)
-
-- [ ] **The copy is set up.** On a draft session, set an instrument's
-  Band 1 links and a filter rule, a short label, a column width and a
-  default sort, then Replicate it. The copy shows the same Band 1 pills
-  and rule (not "Not set up"), the same widths and sort, and the label
-  marked "Copy of …".
-- [ ] **Edits stay separate.** Change the copy's Band 1 rule and save:
-  the source's rule is unchanged.
-- [ ] **No new page break.** Replicate an instrument that starts a new
-  page: the copy sits on the same reviewer page as its source.
-- [ ] **Visibility and label (2026-10-03).** Give an instrument a
-  Visibility setting (reviewees see it Anonymized after release, say)
-  and the short label "Peer", then Replicate it. The copy's Visibility
-  matches the source's, and its card title reads "Copy of Peer".
-
 ## Zip all follows the other cards (D28)
 
 - [ ] **Card order.** On Extract data, the left column holds Reviewer
@@ -119,7 +103,7 @@ delete them once no remaining section points to them.
 
 ## A copy keeps its default sort and widths (A28)
 
-- [ ] **Duplicate.** On an instrument, set a default sort with a header
+- [x] **Duplicate.** On an instrument, set a default sort with a header
   badge and drag a column wider, then Duplicate the session from the
   lobby. The copy's instrument shows the same sort badge and column
   width, and its reviewer surface sorts the same way.
@@ -288,3 +272,11 @@ delete them once no remaining section points to them.
   body and save. "Reset subject to default"
   and "Reset body to default" sit just below their boxes with a small
   gap, not touching the border, and still read as links.
+
+## Deleting an instrument leaves the other cards as they were
+
+- [ ] **Nothing pops open.** On an Instruments page with three or more
+  cards, expand the first and leave the rest collapsed, then expand,
+  unlock and delete the second. After the reload the card that was
+  third is still collapsed, and the first is still open. Repeat by
+  deleting the last card: the one above it stays collapsed.
