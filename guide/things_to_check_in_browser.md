@@ -86,20 +86,3 @@ with the last section it covers.
   roster is replaced. *Reviewers passed in full and Reviewees up to
   the banner (author, 2026-10-13); the Reviewees retry from the banner's
   card is still to run.*
-
-## A relationship-tag boundary survives the card (pair-context Link 3)
-
-- [ ] **The boundary is shown and kept.** On an instrument grouped by a
-  relationship tag (the checklist's Team review, grouped by
-  `PairContextTag1`), unlock the card. Unit of review shows that tag in
-  its boundary select, not —. Save without changing it, reload: still
-  that tag, and the reviewer surface still groups by team. *The select
-  and the save passed (author, checklist step 34, 2026-10-13); the
-  reviewer surface is still to check.*
-
-## Session Home's offset boxes show examples
-
-- [ ] **Same hints as Create.** On Session Home, unlock Session details
-  on a session with no offsets set. *Send invites* shows `e.g. -P1D,
-  -PT2H` and *Send reminders* shows `e.g. -P2D, -PT4H` in grey, as on
-  New session.
