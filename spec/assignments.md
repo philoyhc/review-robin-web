@@ -312,15 +312,17 @@ Effects:
 - **`revision_seed=0`** for the engine's deterministic RNG (the
   rule-set id can't serve as seed when no row exists).
 
-**A NULL `rule_set_id` says nothing about readiness.** It is what a
-Band 1 with every Link set to `All` / `Individual` stores, and also
-what a Band 1 whose Links are still `Not set` stores. The two
-evaluate identically, but only the first is set up: `is_configured`
-also requires all three Link ids in `Instrument.band1_touched_links`
-(`spec/instruments.md` § *"Not set" pill safety gate*), and until
-then the Workflow card stays in State 1 with no Prepare. A Settings
-CSV that leaves `instruments[n].band1_touched_links` empty imports
-the instrument as not set up.
+**`rule_set_id` says nothing about readiness.** A NULL one is what a
+Band 1 stores when its Links are still `Not set`, and also when every
+Link is set to `All` / `Individual` and no row has been materialized
+yet. The two evaluate identically, but only the second can be set up:
+`is_configured` requires all three Link ids in
+`Instrument.band1_touched_links`, whatever `rule_set_id` holds, as well
+as a visible response field (`spec/instruments.md` § *"Not set" pill
+safety gate*). Until then a draft session's Workflow card stays in
+State 1 with no Prepare. A Settings CSV that leaves
+`instruments[n].band1_touched_links` empty imports the instrument as
+not set up.
 
 Materialised `SessionRuleSet` rows from Band 1 align with this
 default — `_create_band1_rule_set` sets

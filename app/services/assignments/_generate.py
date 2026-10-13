@@ -228,9 +228,9 @@ def _full_matrix_schema() -> Any:
     """Synthetic ``RuleSetSchema`` representing the Full Matrix
     default: empty rules, ALL_OF combinator, self-reviews allowed.
 
-    Wave 4 — new-model instruments with no stored Band 1 rule (both Links
-    in ``"all"`` mode) carry ``rule_set_id = NULL``; the engine
-    treats this synthetic schema as "no filter," producing every
+    Wave 4 — new-model instruments with no stored Band 1 rule (Links
+    in ``"all"`` mode, or still ``Not set``) carry
+    ``rule_set_id = NULL``; the engine treats this synthetic schema as "no filter," producing every
     (reviewer, reviewee) pair. Legacy instruments with NULL
     ``rule_set_id`` continue to be filtered out upstream — they
     require an explicit pin per Segment 13C.

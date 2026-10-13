@@ -22,8 +22,9 @@ lobby first-run card — so nothing here takes a ``ReviewSession``.
 
 No set carries a ``settings.csv``. It is not an omission: a new
 session is seeded with a default instrument (``ensure_default_instrument``)
-whose new-model rule defaults to Full Matrix, so rosters alone reach
-``validated``. A settings file would also be the one artefact here that
+whose rule defaults to Full Matrix, so the rosters need no rule file;
+the operator still sets its three Band 1 links on the Instruments page
+before Prepare is offered. A settings file would also be the one artefact here that
 could not be derived — it is a ``field,value,data_type`` dump of a whole
 live session rather than a row-shaped roster.
 
