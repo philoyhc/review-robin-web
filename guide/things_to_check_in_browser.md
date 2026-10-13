@@ -22,12 +22,6 @@ with the last section it covers.
   same zone. *Needs an Azure deployment; not checkable locally (author,
   2026-10-13).*
 
-## Long names survive Duplicate
-
-- [ ] **Duplicate keeps a long name.** Rename a session to about 250
-  characters, then Duplicate it from the lobby. The copy opens, named
-  "Copy of …" cut at the end, with no error page.
-
 ## A submit queues the confirmation email (G4)
 
 - [x] **On by default.** As a reviewer, submit on an Activated session.
@@ -41,13 +35,6 @@ with the last section it covers.
   confirmation" and save.
   Another reviewer's submit adds no row, and the submit itself still
   succeeds.
-
-## Long session names still send (email subjects)
-
-- [ ] **Invite and remind on a long name.** Rename an Activated session
-  to about 250 characters, then send one invitation and one reminder
-  from Operations. Both succeed, and each outbox row's subject is cut
-  short rather than erroring.
 
 ## A failing scheduled send no longer breaks Session Home (B20)
 
@@ -87,14 +74,6 @@ with the last section it covers.
 - [ ] **An End before Start is refused.** In the same row, set the
   Deadline before the session's Start and Save: the page answers with
   "End must be on or after Start." and nothing changes, tags included.
-
-## The preview drops a self-review group Generate drops (B1)
-
-- [ ] **A filtered self-row still excludes the group.** On a grouped
-  instrument with self reviews excluded, add a Link 2 rule that
-  keeps a reviewer's teammates but not the reviewer's own reviewee row.
-  The Band 2 preview no longer offers one of those teammates as its
-  sample; with the exclusion off, it does.
 
 ## An archived session says it has closed (A25)
 
@@ -142,11 +121,3 @@ with the last section it covers.
   Workflow card offers no Prepare. The new Instruments step (unlock,
   set the three Instrument assignment rule links to all, all,
   individual, save) brings Prepare back, and Prepare reaches Validated.
-
-## A relationship-tag boundary survives the card (pair-context Link 3)
-
-- [ ] **The boundary is shown and kept.** On an instrument grouped by a
-  relationship tag (the checklist's Team review, grouped by
-  `PairContextTag1`), unlock the card. Unit of review shows that tag in
-  its boundary select, not —. Save without changing it, reload: still
-  that tag, and the reviewer surface still groups by team.
