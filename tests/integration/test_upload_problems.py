@@ -154,21 +154,66 @@ def test_a_missing_column_reads_as_itself(
     ]
 
 
-def test_the_replace_confirmation_state_has_no_banner(
+@pytest.mark.parametrize(
+    ("kind", "first", "second"),
+    [
+        (
+            "reviewers",
+            "ReviewerName,ReviewerEmail\nAl,al@x.edu\n",
+            "ReviewerName,ReviewerEmail\nBo,bo@x.edu\n",
+        ),
+        (
+            "reviewees",
+            "RevieweeName,RevieweeEmail\nAl,al@x.edu\n",
+            "RevieweeName,RevieweeEmail\nBo,bo@x.edu\n",
+        ),
+        (
+            "observers",
+            "ObserverName,ObserverEmail\nAl,al@x.edu\n",
+            "ObserverName,ObserverEmail\nBo,bo@x.edu\n",
+        ),
+    ],
+)
+def test_a_replace_without_the_tick_says_so(
+    client: TestClient, db: Session, kind: str, first: str, second: str
+) -> None:
+    """A clean file onto a populated roster, without the tick, used to be
+    a 400 with nothing on the page (author, 2026-10-13)."""
+    rs = _session(client, db, f"up-confirm-{kind}")
+    rs.observers_enabled = True
+    db.commit()
+    assert _upload(client, rs, kind, first).status_code == 303
+
+    response = _upload(client, rs, kind, second)
+
+    assert response.status_code == 400
+    assert "data-upload-problems" in response.text
+    assert (
+        "Tick the replacement-confirmation box just above Upload, then "
+        "upload again."
+    ) in response.text
+    assert "data-upload-problem-lines" not in response.text
+
+
+def test_a_relationships_replace_without_the_tick_says_so(
     client: TestClient, db: Session
 ) -> None:
-    """A clean file onto a populated roster, without the tick: a 400 with
-    nothing to report about the file."""
-    rs = _session(client, db, "up-confirm")
-    first = _upload(client, rs, "reviewers", "ReviewerName,ReviewerEmail\nAl,al@x.edu\n")
-    assert first.status_code == 303
+    rs = _session(client, db, "up-confirm-rel")
+    rs.relationships_enabled = True
+    db.commit()
+    for kind, body in (
+        ("reviewers", "ReviewerName,ReviewerEmail\nAl,al@x.edu\n"),
+        ("reviewees", "RevieweeName,RevieweeEmail\nCy,cy@x.edu\n"),
+        ("relationships", "ReviewerEmail,RevieweeEmail\nal@x.edu,cy@x.edu\n"),
+    ):
+        assert _upload(client, rs, kind, body).status_code == 303
 
     response = _upload(
-        client, rs, "reviewers", "ReviewerName,ReviewerEmail\nBo,bo@x.edu\n"
+        client, rs, "relationships", "ReviewerEmail,RevieweeEmail\nal@x.edu,cy@x.edu\n"
     )
 
     assert response.status_code == 400
-    assert "data-upload-problems" not in response.text
+    assert "Tick the replacement-confirmation box just above Upload" in response.text
 
 
 def test_a_clean_page_has_no_banner(client: TestClient, db: Session) -> None:
@@ -191,4 +236,6 @@ def test_upload_problems_is_none_without_a_blocking_issue() -> None:
 
     assert upload_problems("reviewers", None) is None
     assert upload_problems("reviewers", [warning]) is None
+    confirm = upload_problems("reviewers", [], missing_confirm=True)
+    assert confirm is not None and confirm.lines == []
     assert problem_kinds([warning]) == []

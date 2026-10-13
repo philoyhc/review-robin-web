@@ -259,3 +259,13 @@ delete them once no remaining section points to them.
   who has submitted). Delete stays greyed; Revoke is still offered.
 - [ ] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
+
+## Upload banners read Dismiss, and a missing tick says so
+
+- [ ] **Quick Setup's banner reads Dismiss.** Refuse a file in a Quick
+  Setup slot: the banner's one button reads Dismiss and clears it.
+- [ ] **A replace without the tick says so.** On a Setup page with rows,
+  stop the page's scripts (or remove the Upload button's `disabled` in
+  the inspector), choose a clean file, leave the replace box unticked,
+  and Upload: the card shows "Tick the replacement-confirmation box just
+  above Upload, then upload again." with Dismiss, not a blank page.

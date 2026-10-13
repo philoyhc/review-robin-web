@@ -391,7 +391,9 @@ answer differently. The ones that redirect (`Save labels`, `Delete all
 failures re-render the page in place with a 400, and what they show
 renders *inside* the upload card (a refused file's error banner lists
 its kinds of problem with a count for each, never the rows: the lines
-Quick Setup's banner shows) — so that path sets the
+Quick Setup's banner shows; a clean file onto a populated roster without
+the replace tick says "Tick the replacement-confirmation box just above
+Upload, then upload again.") — so that path sets the
 panel's open state server-side instead. Leave it closed and a failed
 import answers with a collapsed panel and no visible errors.
 

@@ -830,7 +830,9 @@ async def _handle_import(
         list_key = "reviewees"
         list_items = assignments.list_reviewees(db, review_session.id)
 
-    def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
+    def render(
+        status_code: int = status.HTTP_200_OK, *, missing_confirm: bool = False
+    ) -> HTMLResponse:
         context: dict[str, object] = {
             # These two are the ids the page's own controls point at.
             # They were missing here, and Jinja's `Undefined` is falsy
@@ -878,7 +880,9 @@ async def _handle_import(
             list_key: list_items,
             "existing_count": existing,
             "assignment_count": assignment_count,
-            "upload_problems": views.upload_problems(kind, result.issues),
+            "upload_problems": views.upload_problems(
+                kind, result.issues, missing_confirm=missing_confirm
+            ),
             "filename": file.filename,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, crumb_label
@@ -1001,7 +1005,9 @@ async def _handle_import(
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
     if existing > 0 and confirm_replace != "true":
-        return render(status_code=status.HTTP_400_BAD_REQUEST)
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST, missing_confirm=True
+        )
 
     if existing > 0:
         _require_response_loss_ack(db, review_session, acknowledge_response_loss)

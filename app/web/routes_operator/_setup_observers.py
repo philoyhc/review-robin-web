@@ -110,6 +110,7 @@ def _render_observers_page(
     selected_ids: set[int] | None = None,
     focus_id: int | None = None,
     issues: list | None = None,
+    missing_confirm: bool = False,
     filename: str | None = None,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
@@ -307,7 +308,9 @@ def _render_observers_page(
                 all_observers
             ),
             "existing_count": existing_count,
-            "upload_problems": views.upload_problems("observers", issues),
+            "upload_problems": views.upload_problems(
+                "observers", issues, missing_confirm=missing_confirm
+            ),
             "filename": filename,
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
@@ -907,7 +910,9 @@ async def observers_import_submit(
         )
     existing = csv_imports.existing_observer_count(db, review_session.id)
 
-    def render(status_code: int = status.HTTP_200_OK) -> HTMLResponse:
+    def render(
+        status_code: int = status.HTTP_200_OK, *, missing_confirm: bool = False
+    ) -> HTMLResponse:
         # `panel_open=True`: this path re-renders the page in place and
         # returns 400 WITH it, so `?unlocked=1` cannot reach it. Left
         # False, a failed import would answer with a collapsed panel and
@@ -927,6 +932,7 @@ async def observers_import_submit(
             review_session=review_session,
             panel_open=True,
             issues=result.issues,
+            missing_confirm=missing_confirm,
             filename=file.filename,
             http_status=status_code,
         )
@@ -935,7 +941,9 @@ async def observers_import_submit(
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
     if existing > 0 and confirm_replace != "true":
-        return render(status_code=status.HTTP_400_BAD_REQUEST)
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST, missing_confirm=True
+        )
 
     # No response-loss gate here (Segment 19I Item 5), for the same
     # reason `delete-all` lost its in Item 3: nothing references an
