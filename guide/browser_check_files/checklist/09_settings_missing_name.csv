@@ -43,7 +43,7 @@ instruments[1].rule_set_name,,string
 instruments[1].column_widths,{},json
 instruments[1].starts_new_page,false,boolean
 instruments[1].band2_state,{},json
-instruments[1].band1_touched_links,[],json
+instruments[1].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[1].display_fields[1].source_type,reviewee,enum
 instruments[1].display_fields[1].source_field,name,string
 instruments[1].display_fields[1].visible,true,boolean
@@ -107,7 +107,7 @@ instruments[2].rule_set_name,,string
 instruments[2].column_widths,{},json
 instruments[2].starts_new_page,false,boolean
 instruments[2].band2_state,{},json
-instruments[2].band1_touched_links,[],json
+instruments[2].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[2].display_fields[1].source_type,reviewee,enum
 instruments[2].display_fields[1].source_field,name,string
 instruments[2].display_fields[1].visible,true,boolean

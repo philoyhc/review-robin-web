@@ -11,7 +11,10 @@ Every upload below gave the result shown. That run also covered:
 Prepare and Activate on the BC main session, the operator's Self review
 pills, and the collation page loading. The client cannot see layout,
 scrolling, live JavaScript or downloads; those are the parts to check by
-eye.
+eye. It also posted Prepare directly, which hid that the first 05 left
+both instruments' Band 1 links at "Not set", so Session Home offered no
+Prepare. The settings files now mark all three links set; a re-run
+through Quick Setup showed both instruments set up and Prepare offered.
 
 ## Before you start
 
@@ -41,7 +44,7 @@ eye.
 | `02_reviewees.csv` | Local Operator, Dev Patel, Erin Walsh (Team A); Fay Gomez, Gus Ito (Team B) |
 | `03_relationships.csv` | All 15 pairs, `PairContextTag1` = the reviewee's team |
 | `04_observers.csv` | Local Operator, Olive Grant |
-| `05_settings.csv` | Two instruments on one page. **Team review** ("Team"): grouped by `PairContextTag1`, Rating (required) + Comments. **Peer review** ("Peer"): individual, Score (required) + Notes + Extra. Observers see summaries while the session runs; reviewees see summaries after release. One saved shape, "By reviewer". Name and code left blank, so an import keeps the session's own. |
+| `05_settings.csv` | Two instruments on one page. **Team review** ("Team"): grouped by `PairContextTag1`, Rating (required) + Comments. **Peer review** ("Peer"): individual, Score (required) + Notes + Extra. Observers see summaries while the session runs; reviewees see summaries after release. One saved shape, "By reviewer". Both instruments' Band 1 links are set (so they count as set up) but carry no rules: every pair is assigned, self reviews included. Name and code left blank, so an import keeps the session's own. |
 | `06_settings_repeated_shape.csv` | 05 with the shape's rows copied to `data_shapes[1]` |
 | `07_settings_lowercase_integer.csv` | 05 with Peer's Score `data_type` = `integer` |
 | `08_settings_boolean_type.csv` | 05 with Peer's Score `data_type` = `Boolean` |
@@ -54,7 +57,7 @@ eye.
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
-| 1 | New session `BC main`, code `bc-main`. Quick Setup: 01, 02, 03, 04 and 05 together. | No banner. Relationships and Observers tabs appear. Instruments has Team review and Peer review. | — |
+| 1 | New session `BC main`, code `bc-main`. Quick Setup: 01, 02, 03, 04 and 05 together. | No banner. Relationships and Observers tabs appear. Instruments has Team review and Peer review, each with its three Band 1 links set (none reads "Not set"). Session Home offers **Prepare**. | — |
 | 2 | Instruments → Peer review: unlock, click the **Extra** field's chip off, Save. | Extra greys out. | — (A3 setup) |
 | 3 | On Peer review, set a default sort with a header badge and drag a column wider, then Save. | Badge and width stay after a reload. | — (A28 setup) |
 | 4 | Extract → Extract Setup: download the Settings CSV and keep it as `bc-main-settings.csv`. | — | — (A28 setup) |
