@@ -35,7 +35,8 @@ Step 34a came later and was traced through the code, not driven.
 - **Needs a second identity:** G4 "Off sends nothing" needs a second
   reviewer to submit. Restart `uvicorn` with
   `FAKE_AUTH_EMAIL=bob@example.edu FAKE_AUTH_NAME="Bob Smith"` for that
-  one step, then switch back. Skip it if you'd rather.
+  one step, then switch back. Skip it if you'd rather. Step 43 does the
+  same as Alice, since your own account can't be selected on Accounts.
 
 ## The files
 
@@ -134,17 +135,17 @@ New session `BC import`, code `bc-import`, then Quick Setup 01, 02, 03,
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
-| 38 | New session `BC sched`, code `bc-sched`, Relationships box ticked. Quick Setup 01–05. On Session Home set a Start (tomorrow), an End (a week later), invite and reminder offsets, and a release window. Save. | Saved | — |
+| 38 | New session `BC sched`, code `bc-sched`, Relationships box ticked. Quick Setup 01–05. On Session Home set a Start (tomorrow), an End (a week later), invite and reminder offsets, and a release window. Before typing the offsets, look at their two boxes. Save. | The empty offset boxes show `e.g. -P1D, -PT2H` and `e.g. -P2D, -PT4H` in grey. Saved. | Offset boxes show examples |
 | 39 | Lobby: open BC sched's row, change the Name, Save. | Session Home still shows every step-38 setting. | C1: rename |
 | 40 | Same row: set the Deadline before the Start and Save. | "End must be on or after Start." Nothing changes, tags included. | C1: End before Start |
 | 41 | **Prepare**, then open `/me/sessions/{id}/1`. | "opens later" | A25 (the Prepared half) |
-| 42 | Set the Start a minute or two ahead and save. Wait until it passes, then reload Session Home a few times. | Session Home loads each time. Admin → Sessions → audit log shows the fired events, or one `session.scheduled_event_failed` row per failing trigger. | B20 |
+| 42 | Set *Send invites* to `-PT1H` and the Start just over two hours ahead, both read in the card's Timezone: the Start, and the invite it sends an hour before, must each be at least an hour away. Save. Once the invite time has passed, reload Session Home a few times. To wait minutes instead, set `SCHEDULED_OPERATIONAL_LEAD_HOURS=0` in `.env`, restart, and put the Start just over an hour ahead. | Session Home loads each time. Admin → Sessions → audit log shows the fired invite event, or one `session.scheduled_event_failed` row per failing trigger. | B20 |
 
 ## Part 8 — Accounts
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
-| 43 | Sys Admin → Accounts: select `operator@example.edu`. | Delete stays greyed; Revoke is offered. | #2867: history |
+| 43 | Restart `uvicorn` as Alice (`FAKE_AUTH_EMAIL=alice@example.edu FAKE_AUTH_NAME="Alice Chan"`). Settings: change the default Timezone and Save. Restart as yourself. Sys Admin → Accounts: select `alice@example.edu`. (Your own row can't be selected.) | Delete stays greyed: her settings change is in the audit log. Revoke is offered: she owns no session. | #2867: history |
 | 44 | Invite `nobody@example.edu`, select it, and Delete. | The row goes. | #2867: no activity |
 
 ## Part 9 — The Guide's sample session

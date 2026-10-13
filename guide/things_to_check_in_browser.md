@@ -65,31 +65,14 @@ with the last section it covers.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## The lobby Save keeps the schedule (C1)
-
-- [ ] **A rename keeps everything else.** On a draft with a Start, an
-  End, invite and reminder offsets, a release window and Relationships
-  turned on, open its lobby row, change the Name, Save. Session Home
-  still shows every one of those settings.
-- [ ] **An End before Start is refused.** In the same row, set the
-  Deadline before the session's Start and Save: the page answers with
-  "End must be on or after Start." and nothing changes, tags included.
-
-## An archived session says it has closed (A25)
-
-- [ ] **Closed copy.** Archive a session a reviewer was invited to, then
-  open that reviewer's old invitation link (or `/me/sessions/{id}/1`)
-  as them. The page reads "{name} — closed" and "This review has
-  closed.", with no deadline line and a link back to the dashboard. A
-  Prepared session still reads "opens later". *The closed half passed
-  (author, 2026-10-13); the Prepared half is checklist step 41.*
-
 ## Delete user only for accounts with no activity (#2867)
 
 - [ ] **Delete stays disabled for a user with history.** On Sys Admin →
   Accounts, select an operator who created a session (or a participant
   who has submitted). Delete stays greyed; Revoke is still offered.
-- [ ] **Delete works for an account with no activity.** Invite a fresh
+  *Your own row can't be selected (author, 2026-10-13); checklist step
+  43 uses Alice.*
+- [x] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
 
 ## Upload banners read Dismiss, and a missing tick says so
@@ -114,14 +97,6 @@ with the last section it covers.
   the banner (author, 2026-10-13); the Reviewees retry from the banner's
   card is still to run.*
 
-## The Sample session walkthrough sets Band 1 before Prepare (#3015)
-
-- [ ] **The Guide's steps work as written.** Follow the Guide's Sample
-  session card on a fresh session. After the Quick Setup step the
-  Workflow card offers no Prepare. The new Instruments step (unlock,
-  set the three Instrument assignment rule links to all, all,
-  individual, save) brings Prepare back, and Prepare reaches Validated.
-
 ## A relationship-tag boundary survives the card (pair-context Link 3)
 
 - [ ] **The boundary is shown and kept.** On an instrument grouped by a
@@ -131,3 +106,10 @@ with the last section it covers.
   that tag, and the reviewer surface still groups by team. *The select
   and the save passed (author, checklist step 34, 2026-10-13); the
   reviewer surface is still to check.*
+
+## Session Home's offset boxes show examples
+
+- [ ] **Same hints as Create.** On Session Home, unlock Session details
+  on a session with no offsets set. *Send invites* shows `e.g. -P1D,
+  -PT2H` and *Send reminders* shows `e.g. -P2D, -PT4H` in grey, as on
+  New session.
