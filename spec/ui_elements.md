@@ -403,9 +403,7 @@ banners ("Cascade preview…") — must carry a **Cancel button**
 (`.btn.secondary`) right-aligned at the bottom of the card. The
 Cancel button links back to the page **without** the
 query-string flag, so the operator has a one-click way to
-dismiss the banner and return to the table state. A Setup page's
-upload-problems banner (a refused file, re-rendered in place) labels
-the same button **Dismiss**, since nothing is pending to cancel. For
+dismiss the banner and return to the table state. For
 confirmation-style banners (e.g. cascade-preview before a
 destructive action), Cancel sits next to the confirm button —
 `.btn.alert` (outline amber) for a recoverable proceed
@@ -415,7 +413,11 @@ regenerate-&-prepare, which drops saved responses). Cancel takes
 Secondary so the proceed button is always the louder of the two. For
 pure error banners (no
 confirm path — the operator must fix the underlying issue),
-Cancel is the only button.
+Cancel is the only button. One exception in label only: a Setup page's
+upload-problems banner is a 400 re-render of the page, not a redirect
+carrying a flag, and no edit is held in the form to back out of, so
+its one button reads **Dismiss**; it links to the page with the upload
+card open, as Cancel would.
 
 **Auto-scroll on display.** Every banner card carries the
 `banner-scroll-target` class plus a unique anchor id (e.g.
