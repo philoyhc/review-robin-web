@@ -26,9 +26,7 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- `guide/quick_setup_update.md` Item 3 — the Setup pages' upload cards
-  report problems as Quick Setup does: kinds with counts, never rows,
-  from one helper; Validate untouched. Planned 2026-10-13; build next.
+- None.
 
 ### Queued segments
 

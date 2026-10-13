@@ -4,8 +4,9 @@
    banner shows, from `views.upload_problems` / `problem_kinds`.
    Validate keeps its own `validation_results.html`.
    Per `spec/ui_elements.md` §5a it scrolls into view and carries a
-   Cancel back to the page without the file; the including page sets
-   `upload_problems_cancel_url`. #}
+   Secondary button back to the page without the file, labeled
+   Dismiss: nothing is pending to cancel (author, 2026-10-13). The
+   including page sets `upload_problems_cancel_url`. #}
 {% if upload_problems %}
   <div class="banner banner-error banner-scroll-target"
        id="upload-problems-banner" data-upload-problems>
@@ -14,7 +15,7 @@
       {% for line in upload_problems.lines %}<li>{{ line }}</li>{% endfor %}
     </ul>
     <div class="banner-actions">
-      <a class="btn secondary" href="{{ upload_problems_cancel_url }}">Cancel</a>
+      <a class="btn secondary" href="{{ upload_problems_cancel_url }}">Dismiss</a>
     </div>
   </div>
 {% endif %}

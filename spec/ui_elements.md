@@ -413,7 +413,11 @@ regenerate-&-prepare, which drops saved responses). Cancel takes
 Secondary so the proceed button is always the louder of the two. For
 pure error banners (no
 confirm path — the operator must fix the underlying issue),
-Cancel is the only button.
+Cancel is the only button. One exception in label only: a Setup page's
+upload-problems banner is a 400 re-render of the page, not a redirect
+carrying a flag, and no edit is held in the form to back out of, so
+its one button reads **Dismiss**; it links to the page with the upload
+card open, as Cancel would.
 
 **Auto-scroll on display.** Every banner card carries the
 `banner-scroll-target` class plus a unique anchor id (e.g.

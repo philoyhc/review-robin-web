@@ -117,11 +117,11 @@ def test_each_upload_card_lists_kinds_of_problem_with_counts(
     assert "Row " not in banner and "@" not in banner
     # The card no longer carries Validate's issue list.
     assert '<ul class="issue-list">' not in response.text
-    # Spec ui_elements §5a: it scrolls into view, and Cancel returns to
+    # Spec ui_elements §5a: it scrolls into view, and Dismiss returns to
     # the page with the upload card open and no file.
     assert 'class="banner banner-error banner-scroll-target"' in response.text
     assert (
-        f'href="/operator/sessions/{rs.id}/{kind}?unlocked=1#upload-csv">Cancel</a>'
+        f'href="/operator/sessions/{rs.id}/{kind}?unlocked=1#upload-csv">Dismiss</a>'
     ) in response.text
 
 
