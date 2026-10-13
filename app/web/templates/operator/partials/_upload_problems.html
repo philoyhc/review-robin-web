@@ -2,7 +2,8 @@
    (`guide/quick_setup_update.md` Item 3). The kinds of problem with how
    many rows have each, never the rows: the same lines Quick Setup's
    banner shows, from `views.upload_problems` / `problem_kinds`.
-   Validate keeps its own `validation_results.html`.
+   Validate keeps its own `validation_results.html`. With no lines it is
+   the replace-confirmation banner: one sentence asking for the tick.
    Per `spec/ui_elements.md` §5a it scrolls into view and carries a
    Secondary button back to the page without the file, labeled
    Dismiss: nothing is pending to cancel (author, 2026-10-13). The
@@ -11,9 +12,11 @@
   <div class="banner banner-error banner-scroll-target"
        id="upload-problems-banner" data-upload-problems>
     <p class="banner-lead">{{ upload_problems.message }}</p>
-    <ul data-upload-problem-lines>
-      {% for line in upload_problems.lines %}<li>{{ line }}</li>{% endfor %}
-    </ul>
+    {% if upload_problems.lines %}
+      <ul data-upload-problem-lines>
+        {% for line in upload_problems.lines %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+    {% endif %}
     <div class="banner-actions">
       <a class="btn secondary" href="{{ upload_problems_cancel_url }}">Dismiss</a>
     </div>

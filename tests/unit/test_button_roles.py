@@ -61,8 +61,9 @@ def test_each_moved_button_keeps_its_role(
     assert classes == [cls], (template, label, classes)
 
 
-# Every Cancel in the templates holding the eight banner Cancels Item 11
-# moved, banner ones included (Instruments has two instrument-card
+# Every Cancel in the templates holding the seven banner Cancels Item 11
+# moved that still read Cancel (Quick Setup's, the eighth, reads Dismiss:
+# PINNED_DISMISSES), banner ones included (Instruments has two instrument-card
 # Cancels, bottom row and header, beside its three banner ones), plus
 # the reviewer pair a comment once hid. Exact, so a dropped or
 # relabelled Cancel fails here.
@@ -70,7 +71,6 @@ PINNED_CANCELS = {
     "operator/session_validate.html": 2,
     "operator/partials/next_action_card.html": 1,
     "operator/instruments_index.html": 5,
-    "operator/partials/_quick_setup_card.html": 1,
     "operator/session_assignments.html": 1,
     "reviewer/_action_row.html": 2,
 }
@@ -89,6 +89,28 @@ def test_every_cancel_is_secondary() -> None:
                     off.append(f"{template}: {cls!r}")
     for template, count in PINNED_CANCELS.items():
         assert seen.get(template, 0) == count, (template, seen.get(template))
+    assert not off, off
+
+
+#: The upload banners' one button reads Dismiss, not Cancel: Quick Setup's
+#: slot banner and the Setup pages' upload card (spec/ui_elements.md §5a).
+PINNED_DISMISSES = {
+    "operator/partials/_quick_setup_card.html": 1,
+    "operator/partials/_upload_problems.html": 1,
+}
+
+
+def test_every_dismiss_is_secondary_and_where_it_is_pinned() -> None:
+    seen: dict[str, int] = {}
+    off = []
+    for path in sorted(TEMPLATES.rglob("*.html")):
+        template = path.relative_to(TEMPLATES).as_posix()
+        for label, cls in _buttons(template):
+            if label == "Dismiss":
+                seen[template] = seen.get(template, 0) + 1
+                if cls.split()[:2] != ["btn", "secondary"]:
+                    off.append(f"{template}: {cls!r}")
+    assert seen == PINNED_DISMISSES
     assert not off, off
 
 

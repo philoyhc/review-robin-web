@@ -221,7 +221,7 @@ session** button submits both halves.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
-| 160 | Quick Setup slot | Cancel | `<a>` | `btn secondary` | **Secondary** | Per-slot cancel on an inline `.banner.banner-error` — same banner convention as #155 |
+| 160 | Quick Setup slot | Dismiss | `<a>` | `btn secondary` | **Secondary** | Per-slot dismiss on an inline `.banner.banner-error` — the banner convention of #155, labeled Dismiss as an upload banner (`spec/ui_elements.md` §5a) |
 
 ### 5d — Extract Data — not on this page
 

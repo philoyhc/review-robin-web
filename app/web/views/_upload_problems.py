@@ -53,21 +53,57 @@ def problems_sentence(noun: str) -> str:
 
 @dataclass(frozen=True)
 class UploadProblems:
-    """The banner a Setup page's upload card shows for a refused file."""
+    """The banner a Setup page's upload card shows for an upload that
+    did not happen: a refused file's kinds of problem, or one sentence
+    with no lines (the missing replace tick, or the missing response-loss
+    acknowledgment)."""
 
     message: str
     lines: list[str]
 
 
-def upload_problems(noun: str, issues: list | None) -> UploadProblems | None:
-    """The upload card's banner for a refused file, or ``None`` when the
-    file has no blocking problem (a plain render, or the
-    replace-confirmation state, which re-renders with a clean file)."""
+#: The sentence when a clean file would replace a populated roster but
+#: the replace box was not ticked. Quick Setup's twin names its Submit.
+NEEDS_CONFIRM_SENTENCE = (
+    "Tick the replacement-confirmation box just above Upload, then "
+    "upload again."
+)
+
+
+#: The sentence when a Reviewers or Reviewees replace would discard
+#: saved responses but the request did not acknowledge it. The card
+#: sends the acknowledgment beside the tick whenever it names
+#: responses, so this is a tab loaded before the session had any (or a
+#: direct POST). The re-rendered card names them; a second tick sends it.
+NEEDS_RESPONSE_ACK_SENTENCE = (
+    "This session now holds reviewer responses, which replacing this "
+    "roster would discard. The replacement-confirmation box now names "
+    "them: tick it, then upload again."
+)
+
+
+def upload_problems(
+    noun: str,
+    issues: list | None,
+    *,
+    missing_confirm: bool = False,
+    missing_response_ack: bool = False,
+) -> UploadProblems | None:
+    """The upload card's banner, or ``None`` on a plain render.
+
+    A refused file lists its kinds of problem. A clean file onto a
+    populated roster without the replace tick says so in one sentence:
+    before this, that 400 re-rendered the page with nothing on it
+    (``missing_confirm`` was passed and no template read it). A replace
+    that would discard responses without the acknowledgment says so in
+    one sentence too: before this, it was a full error page asking for an
+    "acknowledge response loss" tick no page offers."""
 
     lines = problem_kinds(issues or [])
-    if not lines:
-        return None
-    return UploadProblems(
-        message=problems_sentence(noun),
-        lines=lines,
-    )
+    if lines:
+        return UploadProblems(message=problems_sentence(noun), lines=lines)
+    if missing_confirm:
+        return UploadProblems(message=NEEDS_CONFIRM_SENTENCE, lines=[])
+    if missing_response_ack:
+        return UploadProblems(message=NEEDS_RESPONSE_ACK_SENTENCE, lines=[])
+    return None

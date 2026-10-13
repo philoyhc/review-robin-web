@@ -78,8 +78,10 @@
 {# Slot-error banner — populated when a slot's last submit was
    rejected. Rendered above the two-column grid so a single
    full-width banner sits at the top of the card instead of
-   competing for layout space with its slot's file input. Cancel
-   returns to a clean URL with the slot fragment. #}
+   competing for layout space with its slot's file input. Dismiss
+   returns to a clean URL with the slot fragment; it reads Dismiss, as
+   the Setup pages' upload cards do, since a refused file holds nothing
+   to cancel. #}
 {% macro quick_setup_slot_banner(slot) -%}
 <div class="banner banner-error banner-scroll-target"
      id="quick-setup-{{ slot.key }}-error-banner"
@@ -91,8 +93,8 @@
         {% for line in slot.error_details %}<li>{{ line }}</li>{% endfor %}
       </ul>
     {% endif %}
-    <div style="text-align: right;">
-      <a class="btn secondary" href="{{ slot.cancel_url }}">Cancel</a>
+    <div class="banner-actions">
+      <a class="btn secondary" href="{{ slot.cancel_url }}">Dismiss</a>
     </div>
   {% endif %}
 </div>

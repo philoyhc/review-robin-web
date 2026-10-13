@@ -259,3 +259,23 @@ delete them once no remaining section points to them.
   who has submitted). Delete stays greyed; Revoke is still offered.
 - [ ] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
+
+## Upload banners read Dismiss, and a missing tick says so
+
+- [ ] **Quick Setup's banner reads Dismiss.** Refuse a file in a Quick
+  Setup slot: the banner's one button reads Dismiss and clears it.
+- [ ] **A replace without the tick says so.** On a Setup page with rows,
+  open the upload card, then in the inspector remove the Upload button's
+  `disabled` and the replace box's `required` (the browser's own checks
+  otherwise stop the submit). Choose a clean file, leave the box
+  unticked, and Upload: the card shows "Tick the replacement-confirmation box just
+  above Upload, then upload again." with Dismiss, not a blank page.
+- [ ] **A replace that would discard responses says so on the card.** On
+  Reviewers (then Reviewees) for a session reverted to Draft with saved
+  responses, open the upload card; the tick names the responses. In the
+  inspector delete the hidden `acknowledge_response_loss` input, then
+  choose a clean file, tick and Upload: the card shows "This session now
+  holds reviewer responses, which replacing this roster would discard…"
+  with Dismiss, not a full error page, and no response is gone. On the
+  card the banner sits in, choose the file again, tick and Upload: the
+  roster is replaced.

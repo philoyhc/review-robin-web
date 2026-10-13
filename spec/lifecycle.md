@@ -327,10 +327,12 @@ refuses, as it skips a `ready` one up front.
 Raises **HTTP 400 Bad Request** when responses already exist and
 the request didn't carry `acknowledge_response_loss=true`. Called
 from routes whose mutations would invalidate stored reviewer
-responses: reviewer and reviewee delete-all, the Reviewers and
-Reviewees Setup-page CSV import (`_shared.py` `_handle_import`),
-assignment Generate, and Quick Setup's roster and
-settings replaces (which answer `needs_confirm` rather than 400).
+responses: reviewer and reviewee delete-all, assignment Generate, and
+Quick Setup's roster and settings replaces (which answer `needs_confirm`
+rather than 400). The Reviewers and Reviewees Setup-page CSV import
+(`_shared.py` `_handle_import`) applies the same gate inline and
+answers its 400 in the upload card's banner rather than an error page
+(`spec/setup_pages.md`).
 **Relationship changes do not call it**, although moving a pair to
 another pair-context group deletes the group answer copy it carried
 (`spec/assignments.md` "Group-scoped fan-out"), as a reviewee tag edit

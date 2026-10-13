@@ -387,17 +387,24 @@ about the panel rather than about each control:
 Two mechanisms implement it, and both are required because the controls
 answer differently. The ones that redirect (`Save labels`, `Delete all
 …`) and a **successful** import carry `?unlocked=1` on the redirect. A
-**failed** import does not redirect at all — the parse and confirm
-failures re-render the page in place with a 400, and what they show
+**failed** import does not redirect at all — the parse, confirm and
+acknowledgment failures re-render the page in place with a 400, and what they show
 renders *inside* the upload card (a refused file's error banner lists
 its kinds of problem with a count for each, never the rows: the lines
-Quick Setup's banner shows) — so that path sets the
+Quick Setup's banner shows; a clean file onto a populated roster without
+the replace tick says "Tick the replacement-confirmation box just above
+Upload, then upload again.") — so that path sets the
 panel's open state server-side instead. Leave it closed and a failed
 import answers with a collapsed panel and no visible errors.
 
-**Relationships has two such in-place paths where the others have
-one**: a blocked CSV, and the `missing_confirm` replace state the other
-pages have no equivalent of. Both set the panel open.
+**Every upload card has two such in-place paths**: a blocked CSV, and
+the `missing_confirm` replace state (a clean file onto a populated
+roster without the tick). Reviewers and Reviewees have a third: a
+replace that would discard saved responses without
+`acknowledge_response_loss`, which says "This session now holds
+reviewer responses, which replacing this roster would discard. The
+replacement-confirmation box now names them: tick it, then upload
+again." All of them set the panel open.
 
 **Opening is sticky; staying open is not.** `?unlocked=1` is a query
 param, so every navigation that does not carry it closes the panel —
@@ -1035,11 +1042,15 @@ replaced.
 
 **The response clause and its hidden field are load-bearing.** As
 with `delete-all`, the route requires the acknowledgement,
-so an upload form that omits it makes the replace return **400 with no
-path forward from the page** on any session carrying a response — and
-that state is reached by the documented workflow, since editing a
-started session means reverting it to `draft`, which is precisely
-where the Upload card reappears.
+so an upload form that omits it makes the replace return **400** on
+any session carrying a response — and that state is reached by the
+documented workflow, since editing a started session means reverting it
+to `draft`, which is precisely where the Upload card reappears. The
+form sends it whenever the label names responses, so the 400 is reached
+only from a tab loaded before the session had any, or a direct POST. It
+renders in the upload card's banner, not as an error page, and the
+re-rendered card names the responses and carries the field, so a
+second tick goes through.
 
 **Observers' import has no response-loss gate**, for the reason its
 `delete-all` has none: nothing references an observer, so replacing
@@ -1416,9 +1427,9 @@ same terms as Reviewers and Reviewees: `Upload Relationships` left,
 the tag-label editor over the `Danger Zone` right, `Lock` at the
 right column's end, suppression on `is_editable`.
 
-**Two in-place 400 paths where the others have one**, both of which
-set the panel open server-side: a blocked CSV, and the
-`missing_confirm` replace state no other roster page has.
+**Two in-place 400 paths**, as on every upload card (§ *The roster
+card and the Unlock panel*), both of which set the panel open
+server-side: a blocked CSV, and the `missing_confirm` replace state.
 
 **Its roster index lists pair-context tags only**, and is the only one
 of the four that can be empty — see § *The roster index*.
