@@ -22,30 +22,6 @@ with the last section it covers.
   same zone. *Needs an Azure deployment; not checkable locally (author,
   2026-10-13).*
 
-## An inactive reviewer is not a reviewer (#2740)
-
-- [ ] **Their invite link answers 404.** Send a reviewer an invitation,
-  copy the link from the outbox, then set that reviewer inactive. Open
-  the link: the page is a plain 404, not the "issued to …" mismatch
-  page. Set them active again and the same link works.
-- [ ] **No reminder for them.** On Manage Invitations the inactive
-  reviewer has no row, so no **Send reminder**; the Pending reminders
-  count leaves them out.
-- [ ] **No observer CSV once archived.** As an observer, note a
-  per-instrument CSV link on `/collation`, archive the session, then
-  open that link's address directly: 404.
-
-## A stored response sort re-sorts on load (A27, #2743)
-
-- [ ] **Rows follow the badge after a reload.** On the reviewer surface
-  of a multi-row instrument, click a response column's header, then
-  reload. The rows keep the clicked order and match the badge; blank
-  answers stay last. Rows may move once as the page loads.
-- [ ] **Descending holds too.** Click the same header again, reload:
-  the rows stay in descending order.
-- [ ] **A display-column sort is unchanged.** Sort by a display column
-  and reload: the rows arrive already sorted, with no visible move.
-
 ## Long names survive Duplicate and Replicate
 
 - [ ] **Duplicate keeps a long name.** Rename a session to about 250
@@ -57,11 +33,11 @@ with the last section it covers.
 
 ## A submit queues the confirmation email (G4)
 
-- [ ] **On by default.** As a reviewer, submit on an Activated session.
+- [x] **On by default.** As a reviewer, submit on an Activated session.
   In Admin → Sessions, open that session's outbox: one
   responses-received row for that reviewer, status `queued`, its body
   naming the submit time.
-- [ ] **A second submit refreshes it.** Recall and resubmit: still one
+- [x] **A second submit refreshes it.** Recall and resubmit: still one
   queued row for that reviewer, not two.
 - [ ] **Off sends nothing.** On the session's Email Template page,
   choose Responses received, click the chip to "Don't send response
@@ -87,17 +63,17 @@ with the last section it covers.
 
 ## Zip all follows the other cards (D28)
 
-- [ ] **Card order.** On Extract data, the left column holds Reviewer
+- [x] **Card order.** On Extract data, the left column holds Reviewer
   response metadata above Reviewee response metadata. The right column
   holds By instrument above Extract all data. The intro reads "Use
   **Zip all** to download a complete set of response data, plus
   whichever files are selected below, as each card configures them."
-- [ ] **Same files as the cards.** On By instrument, turn off one
+- [x] **Same files as the cards.** On By instrument, turn off one
   instrument and Include metadata. On Reviewer response metadata, cycle
   Self-review to Exclude. Download each card's own file, then the intro's
   Zip all. The zip holds `…_responses.csv` and the same files under the
   same names, and each opens identical to its card's download.
-- [ ] **Chips leave cards out.** Turn off the intro's Reviewee response
+- [x] **Chips leave cards out.** Turn off the intro's Reviewee response
   metadata and Data shaper chips. Zip all no longer holds the reviewee
   metadata file or any shape files. No stats or `…_instrument_1.csv`
   files appear in any case.
@@ -114,27 +90,6 @@ with the last section it covers.
 - [ ] **Settings round-trip.** Download Extract Setup's Settings CSV from
   that session and import it through another session's Quick Setup. The
   imported instrument keeps the sort and the width.
-
-## Relationship changes update self-reviews (B33)
-
-- [ ] **Inactivate a relationship.** In a session whose instrument
-  groups by a relationship tag, generate assignments and note the
-  instrument's self-review count on Assignments (the N in its
-  "Include N self reviews" chip since UX refinements Item 7). On Relationships,
-  inactivate the row that puts a reviewer's group-mate in their group.
-  Back on Assignments, without generating again, the self-review count
-  drops by that row. Reactivate it and the count comes back.
-
-## Relationship changes move group answers (B34)
-
-- [ ] **Inactivate a group member.** In a session whose instrument
-  groups by a relationship tag, answer a group as a reviewer. On
-  Relationships, inactivate one member's row. The reviewer surface
-  shows that member outside the group, without the group's answer;
-  the rest of the group keeps it. Reactivate the row and the member
-  rejoins the group with its answer.
-- [ ] **Re-import unchanged.** Download the relationships CSV and import
-  it again unchanged. Every answer is still there.
 
 ## The lobby Save keeps the schedule (C1)
 
@@ -174,51 +129,14 @@ with the last section it covers.
   instead and upload again. The page shows "Could not import session
   settings." and the session is unchanged.
 
-## Missing answers name the instrument (A2)
-
-- [ ] **Two instruments on one page.** On a session with two
-  instruments on the same page, give the second a short label (say
-  "Peer"). As a reviewer, leave a required field blank on the second
-  and Submit. The card's entry starts with `#2 Peer:`, not `Page 2:`,
-  matching the `#2 Peer` status pill above it.
-
-## Observers see what reviewers see (A3, A18)
-
-- [ ] **A hidden field stays hidden.** On an instrument, click a
-  response field's chip off. As an observer on the collation page,
-  the field has no column, and the instrument's Download CSV has no
-  column for it either. The operator's By-instrument extract still has
-  it.
-- [ ] **An unanswered text field reads a dash.** On the collation page,
-  or a reviewee's results page with a summarized policy, a text field
-  nobody has answered shows "Total length: —", not "0 characters".
-
-## The reviewer's own row is marked (G7)
-
-- [ ] **A Self review pill.** In a session where a reviewer is also a
-  reviewee and self-reviews are active, sign in as that reviewer: their
-  own row shows a blue "Self review" pill after the name, and the row
-  still saves. On a group instrument, the group row the reviewer
-  belongs to shows it under the group name.
-
-## The Data shaper's Zip all works (D13)
-
-- [ ] **Greyed with no shape.** On Extract data with no saved shape,
-  the Data shaper card's Zip all is greyed and does nothing.
-- [ ] **Live once a shape saves.** Save a shape: Zip all turns live
-  without a reload and downloads `{code}_data_shapes.zip`, holding
-  that shape's file under the name its own Download gives it. Save a
-  second, download again: both files. Delete both: the button greys.
-  (Between a Delete click and the server's answer it is greyed too,
-  which is too quick to see on localhost; the browser test holds it.)
-
 ## An archived session says it has closed (A25)
 
 - [ ] **Closed copy.** Archive a session a reviewer was invited to, then
   open that reviewer's old invitation link (or `/me/sessions/{id}/1`)
   as them. The page reads "{name} — closed" and "This review has
   closed.", with no deadline line and a link back to the dashboard. A
-  Prepared session still reads "opens later".
+  Prepared session still reads "opens later". *The closed half passed
+  (author, 2026-10-13); the Prepared half is checklist step 41.*
 
 ## A Settings CSV's errors show in Quick Setup (D31)
 
@@ -230,7 +148,7 @@ with the last section it covers.
 
 ## Assignments' replace banner, and a Settings import's landing (#2809, #2810)
 
-- [ ] **The banner reads true and dismisses.** On a session with
+- [x] **The banner reads true and dismisses.** On a session with
   assignments, open `/operator/sessions/{id}/assignments?needs_confirm=1`
   (the page a direct POST to `/assignments/generate` without
   `confirm_replace` lands on). The red banner reads "Replace not
@@ -253,7 +171,7 @@ with the last section it covers.
 
 - [ ] **Quick Setup's banner reads Dismiss.** Refuse a file in a Quick
   Setup slot: the banner's one button reads Dismiss and clears it.
-- [ ] **A replace without the tick says so.** On a Setup page with rows,
+- [x] **A replace without the tick says so.** On a Setup page with rows,
   open the upload card, then in the inspector remove the Upload button's
   `disabled` and the replace box's `required` (the browser's own checks
   otherwise stop the submit). Choose a clean file, leave the box
@@ -267,7 +185,9 @@ with the last section it covers.
   holds reviewer responses, which replacing this roster would discard…"
   with Dismiss, not a full error page, and no response is gone. On the
   card the banner sits in, choose the file again, tick and Upload: the
-  roster is replaced.
+  roster is replaced. *Reviewers passed in full and Reviewees up to
+  the banner (author, 2026-10-13); the Reviewees retry from the banner's
+  card is still to run.*
 
 ## The Sample session walkthrough sets Band 1 before Prepare (#3015)
 
