@@ -751,7 +751,8 @@ def _require_instrument_in_session(
     or 404. Lifted to ``_shared.py`` in Segment 18N PR 3 so the
     Instruments-page slices (``_instruments.py``,
     ``_instruments_band2.py``, ``_instruments_pagination.py``) can
-    all share the same dependency."""
+    all share the same dependency; ``_assignments.py``'s self-review
+    toggle uses it too."""
     instrument = db.execute(
         select(Instrument).where(
             Instrument.id == instrument_id,
