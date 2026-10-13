@@ -359,7 +359,7 @@ need no deployment either, so they moved to
 **What.** Segment 19S Item 10 gave Session Home's Owners card a card
 of its own, where each Add owner and Remove saves at once
 (`spec/session_owners.md`; its Lock / Unlock retired 2026-10-09,
-`guide/operator_pages_enhancements.md` Item 1), and Item 7 put a typeahead on
+`guide/archive/operator_pages_enhancements.md` Item 1), and Item 7 put a typeahead on
 the four tag boxes. The suite pins their markup; headless Chromium
 drove the scripts, but draws no datalist popup.
 

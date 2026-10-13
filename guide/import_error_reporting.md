@@ -6,7 +6,7 @@ upload had, where the page that refused it cannot · **Related:**
 `spec/settings_inventory.md`
 
 A standalone plan at the author's naming, not a `segment_*.md`, in the
-shape of `guide/participant_info.md`: items close independently, each
+shape of `guide/archive/participant_info.md`: items close independently, each
 with its own `### Doc impact` and `### Status`, checked by hand at close
 (`tools/close_check.py` reads only `segment_*` files).
 
@@ -141,7 +141,7 @@ page.
 - Rehydrate and Duplicate are later items. Rehydrate's findings already
   render in place, and Duplicate has nothing to report yet.
 - ~~The Setup pages' uploads already list every row.~~ No longer true:
-  since `guide/quick_setup_update.md` Item 3 they list kinds of problem,
+  since `guide/archive/quick_setup_update.md` Item 3 they list kinds of problem,
   as Quick Setup does, so no surface shows rows until this plan lifts.
 
 ### Doc impact
