@@ -802,8 +802,9 @@ async def _handle_import(
 
     ``kind`` is ``"reviewers"`` or ``"reviewees"``; the *_fn callables
     are the matching ``csv_imports`` entry points. On a parse / confirm
-    / ack failure it re-renders the Setup page with the issues; on
-    success it saves and 303s back to the page."""
+    / ack failure it re-renders the Setup page with the reason in the
+    upload card's banner; on success it saves and 303s back to the
+    page."""
     _require_editable(review_session)
     content = await file.read()
     result = parse_fn(content)
@@ -831,7 +832,10 @@ async def _handle_import(
         list_items = assignments.list_reviewees(db, review_session.id)
 
     def render(
-        status_code: int = status.HTTP_200_OK, *, missing_confirm: bool = False
+        status_code: int = status.HTTP_200_OK,
+        *,
+        missing_confirm: bool = False,
+        missing_response_ack: bool = False,
     ) -> HTMLResponse:
         context: dict[str, object] = {
             # These two are the ids the page's own controls point at.
@@ -881,7 +885,10 @@ async def _handle_import(
             "existing_count": existing,
             "assignment_count": assignment_count,
             "upload_problems": views.upload_problems(
-                kind, result.issues, missing_confirm=missing_confirm
+                kind,
+                result.issues,
+                missing_confirm=missing_confirm,
+                missing_response_ack=missing_response_ack,
             ),
             "filename": file.filename,
             "breadcrumbs": breadcrumbs.operator_session_child(
@@ -1009,8 +1016,20 @@ async def _handle_import(
             status_code=status.HTTP_400_BAD_REQUEST, missing_confirm=True
         )
 
-    if existing > 0:
-        _require_response_loss_ack(db, review_session, acknowledge_response_loss)
+    # The same gate as `_require_response_loss_ack`, answered in the
+    # upload card's banner rather than as a full error page: that page
+    # asked for an "acknowledge response loss" tick no page offers. The
+    # card sends the field beside the tick whenever it names responses,
+    # so this is a tab loaded before the session had any, or a direct
+    # POST; the re-render names them and carries the field.
+    if (
+        existing > 0
+        and acknowledge_response_loss != "true"
+        and lifecycle.session_has_responses(db, review_session)
+    ):
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST, missing_response_ack=True
+        )
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.

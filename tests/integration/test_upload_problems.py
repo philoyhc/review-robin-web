@@ -252,6 +252,9 @@ def test_a_missing_tick_reads_as_one_sentence_unless_the_file_has_problems() -> 
     confirm = upload_problems("reviewers", [], missing_confirm=True)
     assert confirm is not None and confirm.lines == []
     assert confirm.message.startswith("Tick the replacement-confirmation box")
+    ack = upload_problems("reviewers", [], missing_response_ack=True)
+    assert ack is not None and ack.lines == []
+    assert ack.message.startswith("This session now holds reviewer responses")
     # A refused file's problems win: the tick is not what stopped it.
     both = upload_problems("reviewers", [blocking], missing_confirm=True)
     assert both is not None

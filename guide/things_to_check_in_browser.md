@@ -270,3 +270,12 @@ delete them once no remaining section points to them.
   otherwise stop the submit). Choose a clean file, leave the box
   unticked, and Upload: the card shows "Tick the replacement-confirmation box just
   above Upload, then upload again." with Dismiss, not a blank page.
+- [ ] **A replace that would discard responses says so on the card.** On
+  Reviewers (then Reviewees) for a session reverted to Draft with saved
+  responses, open the upload card; the tick names the responses. In the
+  inspector delete the hidden `acknowledge_response_loss` input, then
+  choose a clean file, tick and Upload: the card shows "This session now
+  holds reviewer responses, which replacing this roster would discard…"
+  with Dismiss, not a full error page, and no response is gone. On the
+  card the banner sits in, choose the file again, tick and Upload: the
+  roster is replaced.

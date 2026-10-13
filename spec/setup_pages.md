@@ -399,7 +399,12 @@ import answers with a collapsed panel and no visible errors.
 
 **Every upload card has two such in-place paths**: a blocked CSV, and
 the `missing_confirm` replace state (a clean file onto a populated
-roster without the tick). Both set the panel open.
+roster without the tick). Reviewers and Reviewees have a third: a
+replace that would discard saved responses without
+`acknowledge_response_loss`, which says "This session now holds
+reviewer responses, which replacing this roster would discard. The
+replacement-confirmation box now names them: tick it, then upload
+again." All of them set the panel open.
 
 **Opening is sticky; staying open is not.** `?unlocked=1` is a query
 param, so every navigation that does not carry it closes the panel —
@@ -1037,11 +1042,15 @@ replaced.
 
 **The response clause and its hidden field are load-bearing.** As
 with `delete-all`, the route requires the acknowledgement,
-so an upload form that omits it makes the replace return **400 with no
-path forward from the page** on any session carrying a response — and
-that state is reached by the documented workflow, since editing a
-started session means reverting it to `draft`, which is precisely
-where the Upload card reappears.
+so an upload form that omits it makes the replace return **400** on
+any session carrying a response — and that state is reached by the
+documented workflow, since editing a started session means reverting it
+to `draft`, which is precisely where the Upload card reappears. The
+form sends it whenever the label names responses, so the 400 is reached
+only from a tab loaded before the session had any, or a direct POST. It
+renders in the upload card's banner, not as an error page, and the
+re-rendered card names the responses and carries the field, so a
+second tick goes through.
 
 **Observers' import has no response-loss gate**, for the reason its
 `delete-all` has none: nothing references an observer, so replacing

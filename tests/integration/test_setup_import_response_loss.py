@@ -227,3 +227,40 @@ def test_a_blocked_upload_redisplays_the_label_with_its_clause(
     form = _upload_form(response.text, page)
     assert "2 reviewer responses" in form
     assert 'name="acknowledge_response_loss"' in form
+
+
+@pytest.mark.parametrize("page", ("reviewers", "reviewees"))
+def test_a_replace_without_the_acknowledgement_says_so_on_the_card(
+    db: Session, client: TestClient, page: str
+) -> None:
+    """A tab loaded before the session had responses sends the tick but
+    not the acknowledgement. That used to be a full error page asking for
+    an "acknowledge response loss" tick no page offers (author,
+    2026-10-13); it is the upload card's banner now, and the re-rendered
+    card names the responses and carries the field, so a second tick
+    goes through."""
+    s = _session(client, db, code=f"imp-stale-{page}")
+    _roster_with_responses(db, s, n=2)
+
+    response = client.post(
+        f"/operator/sessions/{s.id}/{page}/import",
+        files={"file": ("new.csv", CSV[page], "text/csv")},
+        data={"confirm_replace": "true"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    assert "data-upload-problems" in response.text
+    assert (
+        "This session now holds reviewer responses, which replacing this "
+        "roster would discard."
+    ) in response.text
+    assert "acknowledge response loss" not in response.text
+    assert (
+        f'href="/operator/sessions/{s.id}/{page}?unlocked=1#upload-csv">Dismiss</a>'
+    ) in response.text
+    form = _upload_form(response.text, page)
+    assert "2 reviewer responses" in form
+    assert 'name="acknowledge_response_loss"' in form
+    db.expire_all()
+    assert len(db.execute(select(Response)).scalars().all()) == 2
