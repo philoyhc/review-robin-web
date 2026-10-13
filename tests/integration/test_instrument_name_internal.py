@@ -119,3 +119,31 @@ def test_self_review_toggle_summary_names_the_label(db: Session) -> None:
         db, session, "assignments.instrument_self_reviews_active_set"
     )
     assert summary.startswith("Self-reviews on instrument Peer ")
+
+
+def test_self_review_toggle_never_names_another_sessions_instrument(
+    db: Session,
+) -> None:
+    """Cold read on #3020: the row query is scoped to the session but the
+    label lookup was not, so a foreign id put another session's label
+    into this session's audit log."""
+    session, _ = _labelled_session(db, "name-int-selfrev-a")
+    _, foreign = _labelled_session(db, "name-int-selfrev-b")
+    foreign.short_label = "Elsewhere"
+    db.commit()
+
+    flipped = set_instrument_self_reviews_active(
+        db,
+        review_session=session,
+        instrument_id=foreign.id,
+        user=_operator(db, session),
+        active=False,
+        correlation_id="c-foreign",
+    )
+
+    assert flipped == 0
+    (summary,) = _summaries(
+        db, session, "assignments.instrument_self_reviews_active_set"
+    )
+    assert summary.startswith("Self-reviews on instrument (unknown) ")
+    assert "Elsewhere" not in summary

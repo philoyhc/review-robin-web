@@ -531,8 +531,14 @@ def set_instrument_self_reviews_active(
             assignment.include = active
             flipped += 1
     db.flush()
+    # Scoped like the row query: an id from another session (or none)
+    # flips nothing and must not name that session's instrument here.
     instrument = db.get(Instrument, instrument_id)
-    label = _instrument_label(instrument) if instrument else f"#{instrument_id}"
+    label = (
+        _instrument_label(instrument)
+        if instrument is not None and instrument.session_id == review_session.id
+        else "(unknown)"
+    )
     audit.write_event(
         db,
         event_type="assignments.instrument_self_reviews_active_set",
