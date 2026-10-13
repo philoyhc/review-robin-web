@@ -58,7 +58,14 @@ def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSessio
 
 
 def _instrument(db: Session, review_session: ReviewSession, *, name: str) -> Instrument:
-    instrument = Instrument(session_id=review_session.id, name=name, order=1)
+    # ``name`` is the operator-facing short label; the internal
+    # ``Instrument.name`` differs so a test can tell which one renders.
+    instrument = Instrument(
+        session_id=review_session.id,
+        name=f"internal-{name}",
+        short_label=name,
+        order=1,
+    )
     db.add(instrument)
     db.flush()
     return instrument
@@ -169,6 +176,8 @@ def test_the_reviewee_mid_flight_grant_is_reported(
     # Session, instrument, audience, cell, stored mode, reason.
     assert "vga-re" in body
     assert "Feedback" in body
+    # The internal name is never shown (author, 2026-10-13).
+    assert "internal-Feedback" not in body
     assert '<span class="pill pill-role-reviewee">Reviewee</span>' in body
     assert "Session ongoing" in body
     assert "<code>raw</code>" in body

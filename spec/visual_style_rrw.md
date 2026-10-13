@@ -684,7 +684,8 @@ navigation"; restating in this principle's context:
     candidates on technical skills, considering their submitted
     work samples.").
   The system handle `Instrument.name` is **not** reviewer-facing
-  — it carries audit-event copy and is otherwise invisible.
+  — it travels only in the Settings CSV and audit-event detail
+  snapshots; audit summaries, like operator pages, use the short label.
 - **The per-instrument heading carries the operator's framing.**
   `short_label` reaches the reviewer in three places, none of
   them a control: the H2 above each table, the per-page status

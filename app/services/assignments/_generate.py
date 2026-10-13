@@ -32,6 +32,7 @@ from app.db.models import (
 from app.schemas.assignments import AssignmentMode
 from app.services import audit, session_lifecycle as lifecycle
 from app.services import unit_of_work
+from app.services.instruments import _instrument_label
 
 from . import _reconcile_cache
 from ._coverage import (
@@ -649,7 +650,7 @@ def _materialise_one_instrument(
         db,
         event_type="assignments.generated",
         summary=(
-            f"Reconciled assignments for {instrument.name!r}: "
+            f"Reconciled assignments for {_instrument_label(instrument)!r}: "
             f"+{len(diff.to_insert)} new, -{len(diff.to_delete)} removed, "
             f"{len(diff.to_keep)} kept via {mode.value}"
         ),

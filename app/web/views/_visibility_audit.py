@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, InstrumentViewPolicy, ReviewSession
 from app.services import session_lifecycle as lifecycle
+from app.services.instruments import _instrument_label
 from app.services.visibility_policies import (
     VisibilityPolicyError,
     decode_mode,
@@ -180,7 +181,7 @@ def build_visibility_audit_rows(db: Session) -> list[VisibilityAuditRow]:
                     session_name=review_session.name,
                     session_code=review_session.code,
                     session_status=review_session.status,
-                    instrument_label=instrument.name or f"#{instrument.order}",
+                    instrument_label=_instrument_label(instrument),
                     audience=policy.audience,
                     audience_label=_AUDIENCE_LABELS.get(
                         policy.audience, policy.audience

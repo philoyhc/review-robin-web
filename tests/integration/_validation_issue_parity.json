@@ -137,7 +137,7 @@
     {
       "field": null,
       "fix_anchor": "#instrument-1",
-      "message": "Instrument 'No fields' has no response fields",
+      "message": "Instrument 'Instrument_1' has no response fields",
       "rule_key": "instruments.no_fields",
       "severity": "error",
       "source": "instruments"
@@ -169,7 +169,7 @@
     {
       "field": null,
       "fix_anchor": "#instrument-2",
-      "message": "Instrument 'No display' has no display fields \u2014 reviewer pages will be sparse",
+      "message": "Instrument 'Instrument_2' has no display fields \u2014 reviewer pages will be sparse",
       "rule_key": "instruments.no_display_fields",
       "severity": "warning",
       "source": "instruments"
