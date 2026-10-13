@@ -532,7 +532,7 @@ def _check_instruments_no_fields(
             label = (
                 instrument.description.strip()
                 if instrument.description and instrument.description.strip()
-                else instrument.name
+                else _instrument_label(instrument)
             )
             yield ValidationIssue(
                 severity=Severity.error,
@@ -971,7 +971,7 @@ def _check_instruments_no_display_fields(
             label = (
                 instrument.description.strip()
                 if instrument.description and instrument.description.strip()
-                else instrument.name
+                else _instrument_label(instrument)
             )
             yield ValidationIssue(
                 severity=Severity.warning,

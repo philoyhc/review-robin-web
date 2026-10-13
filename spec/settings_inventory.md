@@ -254,7 +254,7 @@ Unlock, Save, Cancel, Replicate, Delete (behind a confirm tick),
 
 | Field | Type | Notes |
 |---|---|---|
-| `name` | `String(255)` | Long-form label (e.g. "Mid-semester peer evaluation"). |
+| `name` | `String(255)` | Internal handle (author, 2026-10-13): no page sets or shows it. Pages and audit summaries name an instrument by `short_label`, else the `Instrument_{N}` fallback; the two validation messages for an instrument with no response or display fields lead with its `description`, then that fallback. The name travels only in the Settings CSV and in audit-event detail snapshots. Set at creation (`Default`, `instrument_N`), by Replicate (`… (copy)`), by Duplicate, and by the Settings CSV, where it is the only way to choose it and is required. |
 | `short_label` | `String(32)` | Short label used in the reviewer-surface chrome and in dashboards. |
 | `description` | `String(2000)` | Operator-visible explanation. |
 | `order` | `Integer` | Position within the session. |

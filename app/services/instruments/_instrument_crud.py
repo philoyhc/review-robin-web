@@ -481,7 +481,7 @@ def replicate_instrument(
     audit.write_event(
         db,
         event_type="instrument.replicated",
-        summary=f"Replicated instrument {source.name}",
+        summary=f"Replicated instrument {_instrument_label(source)}",
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.snapshot(
@@ -676,6 +676,7 @@ def delete_instrument(
     )
     deleted_id = instrument.id
     deleted_name = instrument.name
+    deleted_label = _instrument_label(instrument)
     deleted_order = instrument.order
 
     db.delete(instrument)
@@ -696,7 +697,7 @@ def delete_instrument(
     audit.write_event(
         db,
         event_type="instrument.deleted",
-        summary=f"Deleted instrument {deleted_name}",
+        summary=f"Deleted instrument {deleted_label}",
         actor_user_id=actor.id if actor else None,
         session=review_session,
         payload=audit.snapshot(

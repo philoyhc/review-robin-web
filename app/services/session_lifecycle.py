@@ -1011,6 +1011,10 @@ def _reopen_while_live(
     if not is_ready(review_session):
         return
     closed = _closed(fresh=True)
+    # Imported here, not at module level: the instruments package
+    # imports this module.
+    from app.services.instruments import _instrument_label
+
     for instrument in closed:
         instrument.accepting_responses = True
         instrument.deadline_closed_at = None
@@ -1018,7 +1022,7 @@ def _reopen_while_live(
             db,
             event_type="instrument.opened",
             summary=(
-                f"Instrument {instrument.name} reopened (accepting is "
+                f"Instrument {_instrument_label(instrument)} reopened (accepting is "
                 "session-wide)"
             ),
             actor_user_id=None,
@@ -1095,13 +1099,17 @@ def observe_deadline(
         return 0
 
     closed = 0
+    # Imported here, not at module level: the instruments package
+    # imports this module.
+    from app.services.instruments import _instrument_label
+
     for instrument in instruments:
         instrument.accepting_responses = False
         instrument.deadline_closed_at = current
         audit.write_event(
             db,
             event_type="instrument.closed",
-            summary=f"Instrument {instrument.name} closed (deadline)",
+            summary=f"Instrument {_instrument_label(instrument)} closed (deadline)",
             actor_user_id=None,
             session=review_session,
             refs={"instrument_id": instrument.id},
