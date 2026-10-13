@@ -70,7 +70,9 @@ with the last section it covers.
 - [ ] **Delete stays disabled for a user with history.** On Sys Admin →
   Accounts, select an operator who created a session (or a participant
   who has submitted). Delete stays greyed; Revoke is still offered.
-- [ ] **Delete works for an account with no activity.** Invite a fresh
+  *Your own row can't be selected (author, 2026-10-13); checklist step
+  43 uses Alice.*
+- [x] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
 
 ## Upload banners read Dismiss, and a missing tick says so
@@ -94,14 +96,6 @@ with the last section it covers.
   roster is replaced. *Reviewers passed in full and Reviewees up to
   the banner (author, 2026-10-13); the Reviewees retry from the banner's
   card is still to run.*
-
-## The Sample session walkthrough sets Band 1 before Prepare (#3015)
-
-- [ ] **The Guide's steps work as written.** Follow the Guide's Sample
-  session card on a fresh session. After the Quick Setup step the
-  Workflow card offers no Prepare. The new Instruments step (unlock,
-  set the three Instrument assignment rule links to all, all,
-  individual, save) brings Prepare back, and Prepare reaches Validated.
 
 ## A relationship-tag boundary survives the card (pair-context Link 3)
 
