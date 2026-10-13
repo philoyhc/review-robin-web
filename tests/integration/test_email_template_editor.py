@@ -266,6 +266,11 @@ def test_reset_link_only_renders_for_overridden_fields(
     ).text
     assert "Reset subject to default" in body
     assert "Reset body to default" not in body
+    # The reset row sits clear of its field (author, 2026-10-13): a
+    # class with a small top margin, not the old inline
+    # `margin-top: -8px` that pulled the link onto the box.
+    assert '<div class="field-reset">' in body
+    assert "margin-top: -8px" not in body
 
 
 # ── Responses-received template (Segment 11E PR 6) ───────────────────────
