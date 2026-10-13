@@ -403,7 +403,9 @@ banners ("Cascade preview…") — must carry a **Cancel button**
 (`.btn.secondary`) right-aligned at the bottom of the card. The
 Cancel button links back to the page **without** the
 query-string flag, so the operator has a one-click way to
-dismiss the banner and return to the table state. For
+dismiss the banner and return to the table state. A Setup page's
+upload-problems banner (a refused file, re-rendered in place) labels
+the same button **Dismiss**, since nothing is pending to cancel. For
 confirmation-style banners (e.g. cascade-preview before a
 destructive action), Cancel sits next to the confirm button —
 `.btn.alert` (outline amber) for a recoverable proceed
