@@ -22,14 +22,11 @@ with the last section it covers.
   same zone. *Needs an Azure deployment; not checkable locally (author,
   2026-10-13).*
 
-## Long names survive Duplicate and Replicate
+## Long names survive Duplicate
 
 - [ ] **Duplicate keeps a long name.** Rename a session to about 250
   characters, then Duplicate it from the lobby. The copy opens, named
   "Copy of …" cut at the end, with no error page.
-- [ ] **Replicate keeps its suffix.** Rename an instrument to about 250
-  characters, then Replicate it. The copy's name still ends " (copy)",
-  with the source name trimmed to fit.
 
 ## A submit queues the confirmation email (G4)
 

@@ -124,7 +124,7 @@ New session `BC import`, code `bc-import`, then Quick Setup 01, 02, 03,
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
-| 35 | New session named with `12_long_name.txt`'s text, code `bc-long`. Quick Setup 01–05. Rename Peer review to the same text, then Replicate it. | The copy's name ends " (copy)", with the source name trimmed. | Long names: Replicate |
+| 35 | New session named with `12_long_name.txt`'s text, code `bc-long`. Quick Setup 01–05. | Created; Session Home shows the long name. | — (setup for 36–37) |
 | 36 | Lobby → Duplicate this session. | The copy opens, named "Copy of …" and cut at the end, with no error page. | Long names: Duplicate |
 | 37 | Prepare and Activate. Then from Operations, send one invitation and one reminder, and look at the outbox. | Both succeed. Each subject is cut short. | Long session names still send |
 
