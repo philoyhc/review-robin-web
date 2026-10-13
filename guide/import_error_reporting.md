@@ -140,7 +140,9 @@ page.
 
 - Rehydrate and Duplicate are later items. Rehydrate's findings already
   render in place, and Duplicate has nothing to report yet.
-- The Setup pages' uploads already list every row.
+- ~~The Setup pages' uploads already list every row.~~ No longer true:
+  since `guide/quick_setup_update.md` Item 3 they list kinds of problem,
+  as Quick Setup does, so no surface shows rows until this plan lifts.
 
 ### Doc impact
 

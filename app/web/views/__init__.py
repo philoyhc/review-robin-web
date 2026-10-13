@@ -162,6 +162,10 @@ from ._quick_setup import (
     settings_error_details,
 )
 
+# A refused roster upload's kinds of problem, shared by Quick Setup and
+# the Setup pages' upload cards (quick_setup_update Item 3).
+from ._upload_problems import UploadProblems, problem_kinds, upload_problems
+
 # Validate page view-shape adapter (sliced in PR 8).
 from ._validate import (
     IssueSourceGroup,
@@ -300,6 +304,9 @@ __all__ = [
     "extract_email_from_picker_value",
     "build_quick_setup_context",
     "roster_problem_details",
+    "UploadProblems",
+    "problem_kinds",
+    "upload_problems",
     "settings_error_details",
     "build_responses_rows",
     "build_setup_rows",

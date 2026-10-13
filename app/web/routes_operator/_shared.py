@@ -856,8 +856,8 @@ async def _handle_import(
             # re-render — this path returns 400 with the page, it does
             # not redirect. Left False, a failed import would answer
             # with a collapsed panel and the operator would see no
-            # errors at all: `validation_results.html` renders the issue
-            # list inside that card.
+            # errors at all: `_upload_problems.html` renders the file's
+            # problems inside that card.
             #
             # The suite cannot catch a regression here. With no JS
             # runtime `hidden` is an inert attribute, so the issues are
@@ -878,7 +878,7 @@ async def _handle_import(
             list_key: list_items,
             "existing_count": existing,
             "assignment_count": assignment_count,
-            "issues": result.issues,
+            "upload_problems": views.upload_problems(kind, result.issues),
             "filename": file.filename,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, crumb_label

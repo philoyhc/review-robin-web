@@ -265,7 +265,9 @@
               Other columns are ignored.
             </p>
 
-            {% include "operator/partials/validation_results.html" %}
+            {% with upload_problems_cancel_url = reviewees_base_url ~ "?unlocked=1#upload-csv" %}
+              {% include "operator/partials/_upload_problems.html" %}
+            {% endwith %}
 
             <form method="post"
                   action="{{ reviewees_base_url }}/import"

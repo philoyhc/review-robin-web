@@ -220,7 +220,13 @@ def test_post_import_invalid_csv_returns_400(
     )
     assert response.status_code == 400
     body = response.text
-    assert "Unknown reviewer" in body or "ghost@example.edu" in body
+    assert (
+        "ReviewerEmail is not on the Reviewers roster (import reviewers "
+        "first) (1 row)"
+    ) in body
+    # The kind of problem, never the row or the value (quick_setup_update
+    # Item 3).
+    assert "ghost@example.edu" not in body and "Row 2:" not in body
 
 
 def test_post_import_replace_requires_confirm(

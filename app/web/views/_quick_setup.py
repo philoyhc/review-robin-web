@@ -32,6 +32,8 @@ from app.services import csv_imports
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
 
+from ._upload_problems import problem_kinds, problems_sentence
+
 
 @dataclass(frozen=True)
 class QuickSetupSlot:
@@ -363,33 +365,11 @@ def settings_error_details(errors: list) -> list[str]:
 def roster_problem_details(issues: list) -> list[str]:
     """The kinds of problem that refused a roster file in Quick Setup,
     one line each with how many rows have it ("ReviewerEmail is blank
-    (2 rows)"). The banner names the problem, not the row (author,
-    2026-10-12): the roster's Setup page shows rows.
+    (2 rows)"), capped for the redirect. The lines are the Setup pages'
+    upload cards' too (``problem_kinds``); neither lists rows
+    (``guide/quick_setup_update.md`` Item 3)."""
 
-    Each blocking issue counts under its ``problem``; a file-level issue
-    (no row) has none and stands under its own message, which names no
-    row already. A row-level issue a parser left unlabeled falls back to
-    its field, so it is still counted rather than lost."""
-
-    rows: dict[str, int] = {}
-    for issue in issues:
-        if not issue.is_blocking:
-            continue
-        if issue.problem:
-            label = issue.problem
-        elif issue.row_number is None:
-            label = issue.message
-        else:
-            label = f"{issue.field or 'A cell'} has a problem"
-        rows.setdefault(label, 0)
-        if issue.row_number is not None:
-            rows[label] += 1
-    return _capped(
-        [
-            f"{label} ({n} row{'' if n == 1 else 's'})" if n else label
-            for label, n in rows.items()
-        ]
-    )
+    return _capped(problem_kinds(issues))
 
 
 def _capped(all_lines: list[str]) -> list[str]:
@@ -421,10 +401,10 @@ def _quick_setup_error_message(
 
     ``reason`` is a stable token from the route handler:
 
-    - ``"parse"`` — the upload couldn't be parsed / validated. The
-      message points the operator at the per-entity Setup page where
-      the per-row error feedback lives; with ``has_details`` it leads
-      into the list of the file's kinds of problem the banner shows.
+    - ``"parse"`` — the upload couldn't be parsed / validated. With
+      ``has_details`` a roster slot's message leads into the list of
+      the file's kinds of problem the banner shows; Settings lists its
+      errors under its plain sentence.
     - ``"lifecycle"`` — the submit failed the slot's inline
       ``is_editable`` check on a ``ready`` session. The message names the next move (Revert to
       draft — the operator-facing name for this transition; *Pause* is
@@ -452,24 +432,12 @@ def _quick_setup_error_message(
             "Tick the replacement-confirmation box just above "
             "Submit, then submit again."
         )
-    # Default / parse-error path. Keep the message short — the
-    # per-entity Setup page is the authoritative error surface.
-    per_entity_path = {
-        "reviewers": "reviewers",
-        "reviewees": "reviewees",
-        "relationships": "relationships",
-        "observers": "observers",
-    }.get(slot_key)
-    if per_entity_path and has_details:
-        return (
-            f"Could not import {label.lower()}. The file has these "
-            f"problems; the {label} Setup page shows which rows:"
-        )
-    if per_entity_path:
-        return (
-            f"Could not import {label.lower()}. "
-            f"Open the {label} Setup page for per-row error details."
-        )
+    # Default / parse-error path. The lines are the kinds of problem
+    # (``roster_problem_details``), as the Setup pages' upload cards
+    # show them; neither surface points at the other, and neither lists
+    # rows (``guide/quick_setup_update.md`` Item 3).
+    if has_details and slot_key != "settings":
+        return problems_sentence(label.lower())
     return f"Could not import {label.lower()}."
 
 

@@ -374,9 +374,11 @@ to CSS classes.
 > radius, border-width and margin come from the single `.banner` base,
 > and body text is the page's `--text-body`. Cancel button per the
 > "Banner behaviour conventions" sub-section below.
-> Two sub-elements sit inside the family: **`.banner-headline`**, the
-> bolded first line, and **`.banner-actions`**, the right-aligned
-> control row that carries the Cancel button §5a requires.
+> Three sub-elements sit inside the family: **`.banner-headline`**, the
+> bolded first line; **`.banner-lead`**, a plain first sentence over a
+> list (Quick Setup's slot banner and the Setup pages' upload problems);
+> and **`.banner-actions`**, the right-aligned control row that carries
+> the Cancel button §5a requires.
 >
 > **The family is not universal, and `.banner-scroll-target` is not a
 > claim of membership.** Other surfaces announce themselves with a plain

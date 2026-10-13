@@ -307,7 +307,7 @@ def _render_observers_page(
                 all_observers
             ),
             "existing_count": existing_count,
-            "issues": issues or [],
+            "upload_problems": views.upload_problems("observers", issues),
             "filename": filename,
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
@@ -325,7 +325,7 @@ def _render_observers_page(
             # `lock_when` branch on this page, and `is_editable` is
             # absent from every partial this template includes
             # (`session_top_nav`, `session_setup_status_row`,
-            # `validation_results`, `_pager_cluster`,
+            # `_upload_problems`, `_pager_cluster`,
             # `_preview_count_line`). A cold read caught the first
             # version of this comment claiming two readers that do not
             # exist. Kept for now because rungs 3-6 still move this
@@ -912,7 +912,7 @@ async def observers_import_submit(
         # returns 400 WITH it, so `?unlocked=1` cannot reach it. Left
         # False, a failed import would answer with a collapsed panel and
         # the operator would see no errors at all —
-        # `validation_results.html` renders the issue list inside the
+        # `_upload_problems.html` renders the file's problems inside the
         # card the panel now holds.
         #
         # The suite cannot catch a regression here. With no JS runtime

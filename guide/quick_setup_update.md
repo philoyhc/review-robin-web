@@ -351,6 +351,18 @@ the file, the problem being solved; they wait for
 - **One build rung:** the helper, partial, callers and wording are one
   change; splitting them would ship a page disagreeing with Quick Setup.
 
+### Status
+
+Open, 2026-10-13; one build rung, read from base `626eb38e`.
+
+- Built as planned, plus §5a's Cancel and scroll target on the page
+  banner and one shared sentence (`problems_sentence`).
+- The read found no code defect; its prose findings were fixed, adding
+  `spec/ui_elements.md` (`.banner-lead`) to Doc impact.
+- Left alone: the now-unincluded legacy branch of
+  `validation_results.html`, and (older) the unread `missing_confirm`,
+  a silent 400 when the Upload-gating script is off.
+
 ### Blast radius (measured)
 
 Taken 2026-10-13 at `626eb38e`.
@@ -399,3 +411,4 @@ Taken 2026-10-13 at `626eb38e`.
 - `spec/quick_setup_card_spec.md` — "Result reporting" / "Failure": the banner no longer points at a Setup page, and the lines come from the helper the Setup pages share (Item 3).
 - `spec/csv_contracts.md` — the "re-renders the page at **400** with the issue list" passage, now kinds with counts (Item 3).
 - `spec/setup_pages.md` — the upload card's failure: kinds of problem with counts in the card, not the Validate-style issue list (Item 3).
+- `spec/ui_elements.md` — the banner family's sub-elements gain `.banner-lead` (Item 3; added at build).
