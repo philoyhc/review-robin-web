@@ -138,7 +138,7 @@ New session `BC import`, code `bc-import`, then Quick Setup 01, 02, 03,
 | 39 | Lobby: open BC sched's row, change the Name, Save. | Session Home still shows every step-38 setting. | C1: rename |
 | 40 | Same row: set the Deadline before the Start and Save. | "End must be on or after Start." Nothing changes, tags included. | C1: End before Start |
 | 41 | **Prepare**, then open `/me/sessions/{id}/1`. | "opens later" | A25 (the Prepared half) |
-| 42 | Set the Start a minute or two ahead and save. Wait until it passes, then reload Session Home a few times. | Session Home loads each time. Admin → Sessions → audit log shows the fired events, or one `session.scheduled_event_failed` row per failing trigger. | B20 |
+| 42 | Clear *Send invites*, set the Start just over an hour ahead (Start must be at least an hour away), and Save. Once that time has passed, reload Session Home a few times. To wait minutes instead, set `SCHEDULED_OPERATIONAL_LEAD_HOURS=0` in `.env` and restart first. | Session Home loads each time. Admin → Sessions → audit log shows the fired events, or one `session.scheduled_event_failed` row per failing trigger. | B20 |
 
 ## Part 8 — Accounts
 

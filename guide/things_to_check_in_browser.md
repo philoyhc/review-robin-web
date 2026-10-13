@@ -65,25 +65,6 @@ with the last section it covers.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## The lobby Save keeps the schedule (C1)
-
-- [ ] **A rename keeps everything else.** On a draft with a Start, an
-  End, invite and reminder offsets, a release window and Relationships
-  turned on, open its lobby row, change the Name, Save. Session Home
-  still shows every one of those settings.
-- [ ] **An End before Start is refused.** In the same row, set the
-  Deadline before the session's Start and Save: the page answers with
-  "End must be on or after Start." and nothing changes, tags included.
-
-## An archived session says it has closed (A25)
-
-- [ ] **Closed copy.** Archive a session a reviewer was invited to, then
-  open that reviewer's old invitation link (or `/me/sessions/{id}/1`)
-  as them. The page reads "{name} — closed" and "This review has
-  closed.", with no deadline line and a link back to the dashboard. A
-  Prepared session still reads "opens later". *The closed half passed
-  (author, 2026-10-13); the Prepared half is checklist step 41.*
-
 ## Delete user only for accounts with no activity (#2867)
 
 - [ ] **Delete stays disabled for a user with history.** On Sys Admin →
