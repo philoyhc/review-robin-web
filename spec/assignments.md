@@ -36,7 +36,10 @@ authors a rule, where `group_kind` lives — see
 > lives on its instrument's Band 1: there is no operator-side
 > RuleSet library and no standalone Rule Builder page, and an
 > instrument with no rule at all evaluates against the synthetic
-> Full Matrix.
+> Full Matrix. That default is what Generate does, not whether the
+> instrument is ready: it reads as set up only once all three Band 1
+> Links have been set (`spec/instruments.md` § *"Not set" pill safety
+> gate*).
 
 ## Contents
 
@@ -241,7 +244,7 @@ materialised row it's typically:
 ]
 ```
 
-An untouched Link in `all` mode contributes no Composite (the
+A Link in `all` mode contributes no Composite (the
 list is empty for that slot). When both Links are `all` and no
 filter rules exist, the Band 1 save path materializes no
 `SessionRuleSet` row — the instrument keeps `rule_set_id=NULL`
@@ -308,6 +311,18 @@ Effects:
   flips `include` after generation.
 - **`revision_seed=0`** for the engine's deterministic RNG (the
   rule-set id can't serve as seed when no row exists).
+
+**`rule_set_id` says nothing about readiness.** A NULL one is what a
+Band 1 stores when its Links are still `Not set`, and also when every
+Link is set to `All` / `Individual` and no row has been materialized
+yet. The two evaluate identically, but only the second can be set up:
+`is_configured` requires all three Link ids in
+`Instrument.band1_touched_links`, whatever `rule_set_id` holds, as well
+as a visible response field (`spec/instruments.md` § *"Not set" pill
+safety gate*). Until then a draft session's Workflow card stays in
+State 1 with no Prepare. A Settings CSV that leaves
+`instruments[n].band1_touched_links` empty imports the instrument as
+not set up.
 
 Materialised `SessionRuleSet` rows from Band 1 align with this
 default — `_create_band1_rule_set` sets

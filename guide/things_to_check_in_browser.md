@@ -268,3 +268,11 @@ with the last section it covers.
   with Dismiss, not a full error page, and no response is gone. On the
   card the banner sits in, choose the file again, tick and Upload: the
   roster is replaced.
+
+## The Sample session walkthrough sets Band 1 before Prepare (#3015)
+
+- [ ] **The Guide's steps work as written.** Follow the Guide's Sample
+  session card on a fresh session. After the Quick Setup step the
+  Workflow card offers no Prepare. The new Instruments step (unlock,
+  set the three Instrument assignment rule links to all, all,
+  individual, save) brings Prepare back, and Prepare reaches Validated.

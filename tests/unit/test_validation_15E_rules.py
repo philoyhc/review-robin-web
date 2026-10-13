@@ -5,8 +5,9 @@ replacement.
 Rules covered:
 
 - ``instruments.no_rule_pinned`` — **inert since Wave 5 PR 5.3**: a
-  NULL ``rule_set_id`` is the Full Matrix default, so an unpinned
-  instrument is never "not set up". It raised a warning per unpinned
+  NULL ``rule_set_id`` is the Full Matrix default, so a missing rule
+  is not a setup gap in itself (the Band 1 "Not set" gate, off-validate,
+  decides readiness). It raised a warning per unpinned
   instrument when this file was written; the tests below now assert
   its silence, and the bullet said otherwise until 19R Item 6.
 - ``assignments.no_included_pairs`` — warning when sum of
@@ -138,9 +139,9 @@ def test_no_rule_pinned_silent_after_wave_5(
     db: Session,
 ) -> None:
     """Wave 5 PR 5.3 — ``instruments.no_rule_pinned`` retired as a
-    no-op check. Every instrument now defaults to Full Matrix on
-    untouched Band 1 (Wave 4 PR 1), so a NULL ``rule_set_id`` is
-    never "not set up." The rule key stays registered so audit
+    no-op check. An instrument with no stored Band 1 rule evaluates
+    as Full Matrix (Wave 4 PR 1), so a NULL ``rule_set_id`` is not a
+    setup gap in itself. The rule key stays registered so audit
     history remains addressable."""
     _user, review_session, _instrument, _rs = _seed(db, code="nrp-retired")
     issues = validate_session_setup(db, review_session)
@@ -163,7 +164,7 @@ def test_no_rule_pinned_silent_per_unpinned_instrument_after_wave_5(
 ) -> None:
     """Wave 5 PR 5.3 — multi-instrument sessions with some pinned
     and some unpinned no longer trigger the retired rule. Every
-    instrument defaults to Full Matrix on untouched Band 1."""
+    instrument with no stored Band 1 rule evaluates as Full Matrix."""
     _user, review_session, instrument_a, rule_set = _seed(
         db, code="nrp-multi"
     )

@@ -1693,9 +1693,10 @@ of rules against instruments. Active ones that surface here
   is excluded (`include=False`). The reviewer page would render
   zero rows even though Generate ran.
 - **`instruments.no_rule_pinned`** — raises no findings: the
-  synthetic Full Matrix covers a NULL `rule_set_id`, so an
-  unpinned instrument is never "not set up"
-  (`spec/validate_page.md` §3.2).
+  synthetic Full Matrix covers a NULL `rule_set_id`, so a missing
+  rule is not a setup gap in itself (`spec/validate_page.md` §3.2).
+  Whether the instrument is set up is the safety gate's call, in the
+  note below.
 
 Note: the "Not set" pill safety gate (see
 [the assignment rule](#instrument-assignment-rule--unit-of-review)) is enforced

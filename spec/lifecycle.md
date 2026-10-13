@@ -406,8 +406,8 @@ What a reviewer reads back after close is the visibility policy's call
 
 - **No per-instrument open or close.** Accepting is session-wide:
   `activate_session` opens every instrument (a group-scoped one
-  included, since it defaults to the synthetic Full Matrix on an
-  untouched Band 1), and `revert_session_to_draft`,
+  included, since one with no stored Band 1 rule evaluates as the
+  synthetic Full Matrix), and `revert_session_to_draft`,
   `expire_session` and `observe_deadline` close them all. So once
   a session is activated, an instrument is never closed while another
   in it accepts (a settings import can set the flag per instrument,

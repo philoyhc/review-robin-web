@@ -5900,10 +5900,10 @@ def test_wave3_priii_reviewer_surface_emits_response_column_width(
 # --------------------------------------------------------------------------- #
 
 
-def test_new_model_untouched_band1_generates_full_matrix(
+def test_new_model_no_band1_rule_generates_full_matrix(
     client: TestClient, db: Session
 ) -> None:
-    """Wave 4 PR 1 — a new-model instrument with untouched Band 1
+    """Wave 4 PR 1 — a new-model instrument with no stored Band 1 rule
     (Link 1 + Link 2 both in 'all' mode → no SessionRuleSet
     materialised → ``rule_set_id IS NULL``) is no longer silently
     skipped by ``replace_assignments``. The engine treats it as
@@ -5960,7 +5960,7 @@ def test_new_model_untouched_band1_generates_full_matrix(
     assert pair_set == expected
 
 
-def test_new_model_untouched_band1_activates_and_accepts_responses(
+def test_new_model_no_band1_rule_activates_and_accepts_responses(
     client: TestClient, db: Session
 ) -> None:
     """Wave 4 PR 1 — activation flips ``accepting_responses=True`` on
@@ -7997,7 +7997,7 @@ def test_exclude_self_reviews_checkbox_round_trips(
 def test_exclude_self_reviews_materialises_rule_set_when_none_exists(
     client: TestClient, db: Session
 ) -> None:
-    """An instrument with untouched Band 1 carries ``rule_set_id =
+    """An instrument with no stored Band 1 rule carries ``rule_set_id =
     NULL`` and has nowhere to store the flag. Turning it ON
     materializes an EMPTY rule set — output-identical to the synthetic
     Full Matrix schema the engine substitutes for NULL, so this

@@ -6,8 +6,9 @@ lobby first-run card — so nothing here takes a ``ReviewSession``.
 
 - **starter** (rung 4): one row per file. The format, to edit.
 - **demo** (rung 5): a populated tutorial cohort. Uploaded through Quick
-  Setup it builds a session that reaches ``validated`` with no
-  configuration, which is asserted end-to-end in
+  Setup, with the default instrument's three Band 1 links then set to
+  all / all / individual, it builds a session that reaches ``validated``,
+  which is asserted end-to-end in
   ``tests/integration/test_setup_template_download.py``.
 - **full** (19T Item 4): the two roster files at a realistic class size —
   154 people in eleven tutorial groups. ``operator@example.edu`` is among
@@ -22,10 +23,12 @@ lobby first-run card — so nothing here takes a ``ReviewSession``.
 
 No set carries a ``settings.csv``. It is not an omission: a new
 session is seeded with a default instrument (``ensure_default_instrument``)
-whose new-model rule defaults to Full Matrix, so rosters alone reach
-``validated``. A settings file would also be the one artefact here that
-could not be derived — it is a ``field,value,data_type`` dump of a whole
-live session rather than a row-shaped roster.
+whose rule defaults to Full Matrix, so the rosters need no rule file;
+the operator still sets its three Band 1 links on the Instruments page
+before Prepare is offered. A settings file would also be the one
+artefact here that could not be derived — it is a
+``field,value,data_type`` dump of a whole live session rather than a
+row-shaped roster.
 
 **Headers are derived, never authored.** Each template's header is the
 ``HEADER`` tuple of the extract that already serialises that file, held

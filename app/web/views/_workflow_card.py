@@ -96,11 +96,12 @@ def build_workflow_card_context(
         db, review_session.id
     )
     # Wave 4 PR 2 — switched from a rule-set-centric check to
-    # ``has_unconfigured``, which knows that new-model instruments
-    # default to Full Matrix (rule_set_id NULL is fine) but require at
-    # least one visible response field instead. The old helper it
-    # replaced kept a docstring claiming this card still drove it, and
-    # has since been deleted as dead
+    # ``has_unconfigured``: a NULL rule_set_id is fine (Generate uses
+    # Full Matrix). Since the Wave 5 "Not set" gate, an instrument also
+    # needs all three Band 1 links set (``band1_touched_links``) as
+    # well as a visible response field. The old helper it replaced kept
+    # a docstring claiming this card still drove it, and has since been
+    # deleted as dead
     # (``guide/archive/findings_2026-09-13_spec_discrepancies.md`` NF-17).
     has_unconfigured = instruments_service.has_unconfigured(
         db, review_session.id
