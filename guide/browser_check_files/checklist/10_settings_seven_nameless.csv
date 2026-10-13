@@ -43,7 +43,7 @@ instruments[1].rule_set_name,,string
 instruments[1].column_widths,{},json
 instruments[1].starts_new_page,false,boolean
 instruments[1].band2_state,{},json
-instruments[1].band1_touched_links,[],json
+instruments[1].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[1].display_fields[1].source_type,reviewee,enum
 instruments[1].display_fields[1].source_field,name,string
 instruments[1].display_fields[1].visible,true,boolean
@@ -91,7 +91,7 @@ instruments[2].rule_set_name,,string
 instruments[2].column_widths,{},json
 instruments[2].starts_new_page,false,boolean
 instruments[2].band2_state,{},json
-instruments[2].band1_touched_links,[],json
+instruments[2].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[2].display_fields[1].source_type,reviewee,enum
 instruments[2].display_fields[1].source_field,name,string
 instruments[2].display_fields[1].visible,true,boolean
@@ -139,7 +139,7 @@ instruments[3].rule_set_name,,string
 instruments[3].column_widths,{},json
 instruments[3].starts_new_page,false,boolean
 instruments[3].band2_state,{},json
-instruments[3].band1_touched_links,[],json
+instruments[3].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[3].display_fields[1].source_type,reviewee,enum
 instruments[3].display_fields[1].source_field,name,string
 instruments[3].display_fields[1].visible,true,boolean
@@ -187,7 +187,7 @@ instruments[4].rule_set_name,,string
 instruments[4].column_widths,{},json
 instruments[4].starts_new_page,false,boolean
 instruments[4].band2_state,{},json
-instruments[4].band1_touched_links,[],json
+instruments[4].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[4].display_fields[1].source_type,reviewee,enum
 instruments[4].display_fields[1].source_field,name,string
 instruments[4].display_fields[1].visible,true,boolean
@@ -235,7 +235,7 @@ instruments[5].rule_set_name,,string
 instruments[5].column_widths,{},json
 instruments[5].starts_new_page,false,boolean
 instruments[5].band2_state,{},json
-instruments[5].band1_touched_links,[],json
+instruments[5].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[5].display_fields[1].source_type,reviewee,enum
 instruments[5].display_fields[1].source_field,name,string
 instruments[5].display_fields[1].visible,true,boolean
@@ -283,7 +283,7 @@ instruments[6].rule_set_name,,string
 instruments[6].column_widths,{},json
 instruments[6].starts_new_page,false,boolean
 instruments[6].band2_state,{},json
-instruments[6].band1_touched_links,[],json
+instruments[6].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[6].display_fields[1].source_type,reviewee,enum
 instruments[6].display_fields[1].source_field,name,string
 instruments[6].display_fields[1].visible,true,boolean
@@ -331,7 +331,7 @@ instruments[7].rule_set_name,,string
 instruments[7].column_widths,{},json
 instruments[7].starts_new_page,false,boolean
 instruments[7].band2_state,{},json
-instruments[7].band1_touched_links,[],json
+instruments[7].band1_touched_links,"[""link1"",""link2"",""link3""]",json
 instruments[7].display_fields[1].source_type,reviewee,enum
 instruments[7].display_fields[1].source_field,name,string
 instruments[7].display_fields[1].visible,true,boolean
