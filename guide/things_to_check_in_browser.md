@@ -4,7 +4,9 @@ Browser checks owed on merged changes that the test suite cannot settle:
 layout, in-browser behavior and what a page shows. Every PR that owes one
 adds a section here. Run them locally (`uvicorn`, fake auth). Tick a row
 when it is checked; once every row in a section is ticked, delete the
-section (git history keeps it), so this file lists only what is owed.
+section (git history keeps it), so this file lists only what is owed. A
+section may point to upload files under `guide/browser_check_files/`;
+delete those with the section.
 
 ## Email dates in the session's zone (#2720)
 
@@ -258,17 +260,9 @@ section (git history keeps it), so this file lists only what is owed.
 - [ ] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
 
-## Quick Setup on a validated session (#2873)
-
-- [ ] **The card is live.** Prepare a session so it is Validated, with
-  no responses. On Session Home, Quick Setup's slots take a file
-  straight away (no Unlock since operator pages Item 1, PR 3).
-- [ ] **A submit lands and demotes.** Stage a Reviewers CSV, tick the
-  replace confirmation, and Submit:
-  the roster changes, the session reads Draft, and the Workflow card
-  asks to Prepare again.
-
 ## Quick Setup names the kind of problem
+
+Upload files and a run order: `guide/browser_check_files/quick_setup/README.md`.
 
 - [ ] **Roster.** On Session Home, upload through Quick Setup a Reviewers
   CSV with two blank emails and one bad Status: the banner reads "Could
@@ -279,6 +273,8 @@ section (git history keeps it), so this file lists only what is owed.
   "Missing required column: ReviewerEmail".
 
 ## Quick Setup checks files together and saves all or none (quick_setup_update Item 1)
+
+Upload files and a run order: `guide/browser_check_files/quick_setup/README.md`.
 
 - [ ] **A rename across rosters.** On a session where one person is
   "Bob Smith" on both Reviewers and Reviewees, stage a Reviewers and a
@@ -298,6 +294,8 @@ section (git history keeps it), so this file lists only what is owed.
   Reviewers roster is empty.
 
 ## Quick Setup shows Observers, and an upload turns its tab on (quick_setup_update Item 2)
+
+Upload files and a run order: `guide/browser_check_files/quick_setup/README.md`.
 
 - [ ] **The slot is there.** On a session with observers turned off,
   Session Home's Quick Setup card shows five slots, Observers between
