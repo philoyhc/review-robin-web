@@ -127,9 +127,8 @@ async def relationships_import_submit(
     # an inert attribute, so the issues are in the markup and every
     # assertion on them passes either way. Chromium is what proves it.
     #
-    # This page has TWO such paths where the shared handler has one —
-    # a blocked CSV, and the replace-confirmation state Reviewees has no
-    # equivalent of.
+    # Two such paths, as in the shared handler — a blocked CSV, and the
+    # replace-confirmation state.
     if result.is_blocked:
         return _render_relationships_page(
             request=request,

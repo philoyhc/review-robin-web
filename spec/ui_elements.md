@@ -415,8 +415,9 @@ pure error banners (no
 confirm path — the operator must fix the underlying issue),
 Cancel is the only button. One exception in label only: the upload
 banners — Quick Setup's slot banner and a Setup page's upload-problems
-banner — report a refused file, and no edit is held in a form to back
-out of, so their one button reads **Dismiss**. It does what Cancel
+banner — report an upload that did not happen (a refused file, or a
+replace without its tick), and no edit is held in a form to back out
+of, so their one button reads **Dismiss**. It does what Cancel
 would: it returns to the page without the banner (Quick Setup's drops
 the query flag; the Setup page's, a 400 re-render, reopens the upload
 card).

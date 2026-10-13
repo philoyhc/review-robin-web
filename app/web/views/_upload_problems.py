@@ -53,7 +53,9 @@ def problems_sentence(noun: str) -> str:
 
 @dataclass(frozen=True)
 class UploadProblems:
-    """The banner a Setup page's upload card shows for a refused file."""
+    """The banner a Setup page's upload card shows for an upload that
+    did not happen: a refused file's kinds of problem, or the missing
+    replace tick (no lines)."""
 
     message: str
     lines: list[str]

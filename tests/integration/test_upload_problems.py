@@ -236,6 +236,24 @@ def test_upload_problems_is_none_without_a_blocking_issue() -> None:
 
     assert upload_problems("reviewers", None) is None
     assert upload_problems("reviewers", [warning]) is None
+    assert problem_kinds([warning]) == []
+
+
+def test_a_missing_tick_reads_as_one_sentence_unless_the_file_has_problems() -> None:
+    blocking = ValidationIssue(
+        severity=Severity.error,
+        source="reviewers",
+        row_number=2,
+        field="ReviewerEmail",
+        message="m",
+        problem="ReviewerEmail is blank",
+    )
+
     confirm = upload_problems("reviewers", [], missing_confirm=True)
     assert confirm is not None and confirm.lines == []
-    assert problem_kinds([warning]) == []
+    assert confirm.message.startswith("Tick the replacement-confirmation box")
+    # A refused file's problems win: the tick is not what stopped it.
+    both = upload_problems("reviewers", [blocking], missing_confirm=True)
+    assert both is not None
+    assert both.message == "Could not import reviewers. The file has these problems:"
+    assert both.lines == ["ReviewerEmail is blank (1 row)"]

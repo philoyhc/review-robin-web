@@ -397,9 +397,9 @@ Upload, then upload again.") — so that path sets the
 panel's open state server-side instead. Leave it closed and a failed
 import answers with a collapsed panel and no visible errors.
 
-**Relationships has two such in-place paths where the others have
-one**: a blocked CSV, and the `missing_confirm` replace state the other
-pages have no equivalent of. Both set the panel open.
+**Every upload card has two such in-place paths**: a blocked CSV, and
+the `missing_confirm` replace state (a clean file onto a populated
+roster without the tick). Both set the panel open.
 
 **Opening is sticky; staying open is not.** `?unlocked=1` is a query
 param, so every navigation that does not carry it closes the panel —
