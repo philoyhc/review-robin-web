@@ -1001,7 +1001,7 @@ while creating the session.
 | Reviewees Setup page — Upload CSV | In | `parse_reviewee_csv` + `save_reviewees` | same |
 | Relationships Setup page — Upload CSV | In | `parse_relationship_csv` + `save_relationships` | same |
 | Observers Setup page — Upload CSV | In | `parse_observer_csv` + `save_observers` | same |
-| Quick Setup Reviewers / Reviewees / Relationships / Observers slots | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives | `spec/quick_setup_card_spec.md` |
+| Quick Setup Reviewers / Reviewees / Relationships / Observers slots | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives; a Relationships or Observers slot that saves rows also turns that tab's toggle on | `spec/quick_setup_card_spec.md` |
 | Quick Setup Settings slot | In | `apply_session_config` | same |
 | Guide + lobby first-run card — Download setup templates | Out | `build_zip(starter)` — a zip of four generic roster templates, headers derived from the extracts' `HEADER` tuples, one row each (`GET /templates/starter.zip`). Session-independent; see §5a. | §5a |
 | Guide "Sample session" card — Download sample session data | Out | `build_zip(demo)` — the same four files populated with a two-group cohort (`GET /templates/demo.zip`). Reaches `validated` through Quick Setup with no configuration; see §5a. | §5a |

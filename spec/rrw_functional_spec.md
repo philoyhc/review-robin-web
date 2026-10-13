@@ -1156,7 +1156,8 @@ Top → bottom:
   settings slot (Reviewers / Reviewees / Relationships / Observers /
   Settings, whatever the feature toggles; an upload that gives
   Observers or Relationships rows turns that tab on) and one
-  **Submit** button that runs the staged imports in dependency order.
+  **Submit** button that checks every staged file, then saves them all
+  or none, in dependency order.
   It is available only while setup is editable (`draft` or
   `validated`) and the session holds no responses: then it is live on
   load; otherwise it is greyed with its controls disabled.
