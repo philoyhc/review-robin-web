@@ -327,9 +327,12 @@ from the same underlying code.
 
 ### Consequences to carry into the plan
 
-- **Quick Setup's banner wording.** "The Reviewers Setup page shows
-  which rows" stops being true. It needs new words, and the same
-  sentence on the page cards must not point back at Quick Setup.
+- **Quick Setup's banner wording is already misleading** (author,
+  2026-10-13). "The Reviewers Setup page shows which rows" holds only if
+  the operator uploads the same file again there. Nothing carries over:
+  a refused file is never saved, so the page shows nothing. Item 3 drops
+  the clause, and the page cards must not point back at Quick Setup
+  either.
 - **No screen shows row numbers** until `guide/import_error_reporting.md`
   is lifted. That plan's Out of scope line "The Setup pages' uploads
   already list every row" becomes false and should be struck when this
