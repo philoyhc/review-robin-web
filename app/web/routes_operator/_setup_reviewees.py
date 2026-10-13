@@ -294,7 +294,7 @@ def _render_reviewees_page(
             ),
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
-            "issues": [],
+            "upload_problems": None,
             "is_ready": is_ready,
             "is_archived": is_archived,
             # Segment 19I Item 3 — the gate on the selection surface.

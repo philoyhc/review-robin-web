@@ -351,6 +351,20 @@ the file, the problem being solved; they wait for
 - **One build rung:** the helper, partial, callers and wording are one
   change; splitting them would ship a page disagreeing with Quick Setup.
 
+### Status
+
+Open, 2026-10-13. The build rung is local, waiting on the plan PR; the
+item's base for the read is `626eb38e`. As built:
+
+- `app/web/views/_upload_problems.py` holds `problem_kinds` (moved from
+  `roster_problem_details`, which now caps it for the redirect) and
+  `upload_problems`; `operator/partials/_upload_problems.html` renders
+  it on the four pages.
+- A `.banner-lead` class replaces Quick Setup's inline paragraph margin,
+  so both banners share it.
+- Found at build: `validation_results.html`'s legacy `issues` branch now
+  has no includer. Left in place, since Validate is out of scope.
+
 ### Blast radius (measured)
 
 Taken 2026-10-13 at `626eb38e`.

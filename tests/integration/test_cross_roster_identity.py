@@ -78,7 +78,7 @@ def test_the_add_form_and_the_csv_reach_the_same_verdict(
         files={"file": ("r.csv", csv, "text/csv")},
         follow_redirects=True,
     )
-    assert "names must match" in uploaded.text
+    assert "ReviewerEmail is already used under a different name in another roster (1 row)" in uploaded.text
     assert _rows(db, Reviewer, session.id) == []
 
     typed = _add(client, session.id, "reviewers/create",
@@ -284,7 +284,10 @@ def test_the_observer_csv_import_checks_too(
         files={"file": ("o.csv", csv, "text/csv")},
         follow_redirects=True,
     )
-    assert "names must match" in response.text
+    assert (
+        "ObserverEmail is already used under a different name in another "
+        "roster (1 row)"
+    ) in response.text
     assert _rows(db, Observer, session.id) == []
 
 
@@ -309,7 +312,7 @@ def test_an_unnamed_observer_row_in_a_csv_does_not_collide(
         files={"file": ("o.csv", csv, "text/csv")},
         follow_redirects=True,
     )
-    assert "names must match" not in response.text
+    assert "is already used under a different name" not in response.text
     assert len(_rows(db, Observer, session.id)) == 1, (
         "an unnamed observer row was blocked by the reviewer sharing its "
         "mailbox; a missing name cannot disagree with one"

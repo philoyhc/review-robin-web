@@ -1,0 +1,13 @@
+{# A refused upload's problems on a Setup page's upload card
+   (`guide/quick_setup_update.md` Item 3). The kinds of problem with how
+   many rows have each, never the rows: the same lines Quick Setup's
+   banner shows, from `views.upload_problems` / `problem_kinds`.
+   Validate keeps its own `validation_results.html`. #}
+{% if upload_problems %}
+  <div class="banner banner-error" data-upload-problems>
+    <p class="banner-lead">{{ upload_problems.message }}</p>
+    <ul>
+      {% for line in upload_problems.lines %}<li>{{ line }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}

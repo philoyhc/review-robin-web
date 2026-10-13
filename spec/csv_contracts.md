@@ -294,9 +294,11 @@ and `parse_reviewee_csv(content: bytes) -> ParseResult`.
 
 Missing-required → `ParseResult` carrying one `ValidationIssue`
 per missing column, no rows. A blocked file saves nothing. The Setup
-page's upload re-renders the page at **400** with the issue list in
-the upload card; Quick Setup's slot 303s back to Session Home with
-`?quick_setup_error=…`.
+page's upload re-renders the page at **400** with an error banner in
+the upload card listing the file's kinds of problem, each with how many
+rows have it, never the rows (`views.upload_problems`); Quick Setup's
+slot 303s back to Session Home with `?quick_setup_error=…` and shows the
+same lines.
 
 **Per-row validation** (every importer):
 

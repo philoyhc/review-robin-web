@@ -85,7 +85,7 @@
      id="quick-setup-{{ slot.key }}-error-banner"
      {% if not slot.error_message %}hidden{% endif %}>
   {% if slot.error_message %}
-    <p style="margin: 0 0 var(--space-2) 0;">{{ slot.error_message }}</p>
+    <p class="banner-lead">{{ slot.error_message }}</p>
     {% if slot.error_details %}
       <ul data-quick-setup-error-details>
         {% for line in slot.error_details %}<li>{{ line }}</li>{% endfor %}

@@ -283,7 +283,7 @@ def test_cross_table_reviewer_matches_reviewee_different_name_blocks(
 
     assert response.status_code == 400
     body = response.text
-    assert "names must match" in body
+    assert "ReviewerEmail is already used under a different name in another roster (1 row)" in body
     reviewers = list(
         db.execute(
             select(Reviewer).where(Reviewer.session_id == review_session.id)
@@ -301,7 +301,10 @@ def test_cross_table_reviewee_matches_reviewer_different_name_blocks(
     response = _post_reviewees(client, review_session.id, ("Alex", "alice@example.edu"))
 
     assert response.status_code == 400
-    assert "names must match" in response.text
+    assert (
+        "RevieweeEmail is already used under a different name in another "
+        "roster (1 row)"
+    ) in response.text
 
 
 def test_cross_table_reviewee_non_email_identifier_never_collides(

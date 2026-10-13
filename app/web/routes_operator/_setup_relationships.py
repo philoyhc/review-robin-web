@@ -814,7 +814,7 @@ def _render_relationships_page(
             "col_data": column_state.col_data,
             "col_readouts": column_state.readouts,
             "panel_open": panel_open,
-            "issues": issues,
+            "upload_problems": views.upload_problems("relationships", issues),
             "missing_confirm": missing_confirm,
             "filename": filename,
             "breadcrumbs": breadcrumbs.operator_session_child(

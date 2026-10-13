@@ -388,8 +388,10 @@ Two mechanisms implement it, and both are required because the controls
 answer differently. The ones that redirect (`Save labels`, `Delete all
 …`) and a **successful** import carry `?unlocked=1` on the redirect. A
 **failed** import does not redirect at all — the parse and confirm
-failures re-render the page in place with a 400 and its issue list, and
-that list renders *inside* the upload card — so that path sets the
+failures re-render the page in place with a 400, and what they show
+renders *inside* the upload card (a refused file's error banner lists
+its kinds of problem with a count for each, never the rows: the lines
+Quick Setup's banner shows) — so that path sets the
 panel's open state server-side instead. Leave it closed and a failed
 import answers with a collapsed panel and no visible errors.
 

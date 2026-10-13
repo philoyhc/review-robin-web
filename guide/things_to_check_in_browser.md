@@ -259,3 +259,17 @@ delete them once no remaining section points to them.
   who has submitted). Delete stays greyed; Revoke is still offered.
 - [ ] **Delete works for an account with no activity.** Invite a fresh
   email, select it, and Delete: the row goes.
+
+## The Setup pages' upload cards report problems as Quick Setup does (quick_setup_update Item 3)
+
+Upload files and a run order: `guide/browser_check_files/upload_problems/README.md`.
+
+- [ ] **Each page lists kinds, not rows.** Reviewers, Reviewees,
+  Relationships and Observers each show a red banner in the upload card,
+  with one line per kind of problem and a count. No "Row N", no Issues
+  box.
+- [ ] **A hundred bad rows make one line.** "ReviewerEmail is blank
+  (100 rows)".
+- [ ] **Quick Setup matches, and points nowhere.** The same lines, with no
+  "Setup page shows which rows".
+- [ ] **Validate is unchanged.**

@@ -3,7 +3,8 @@
 The author, 2026-10-12: the slot's banner said only "Could not import
 reviewers. Open the Reviewers Setup page for per-row error details." It
 now lists what went wrong, by type and with how many rows have it, but
-never which row: that is the Setup page's job. Each row-level issue the
+never which row. The Setup pages' upload cards show the same lines
+(``guide/quick_setup_update.md`` Item 3). Each row-level issue the
 roster parsers raise carries a row-free ``problem``
 (``app/schemas/validation.py``) for this.
 """
@@ -66,10 +67,10 @@ def test_a_refused_roster_names_each_kind_of_problem_with_a_count(
         "Status is not active or inactive (1 row)",
     ]
     body = client.get(location).text
-    assert (
-        "Could not import reviewers. The file has these problems; the "
-        "Reviewers Setup page shows which rows:"
-    ) in body
+    assert "Could not import reviewers. The file has these problems:" in body
+    # It points at no Setup page: a refused file never reaches one
+    # (quick_setup_update Item 3).
+    assert "shows which rows" not in body
     assert "<li>ReviewerEmail is blank (2 rows)</li>" in body
     # The problem, never the row or the value.
     assert "not-an-email" not in body and "Row 3" not in body
@@ -166,7 +167,7 @@ def test_the_new_session_page_carries_the_problems_too(
     )
 
 
-def test_a_link_with_no_lines_keeps_the_old_sentence(
+def test_a_link_with_no_lines_says_only_what_failed(
     client: TestClient, db: Session
 ) -> None:
     rs = _session(client, db, "qsp-old-link")
@@ -174,10 +175,8 @@ def test_a_link_with_no_lines_keeps_the_old_sentence(
         f"/operator/sessions/{rs.id}"
         "?quick_setup_error=reviewers&quick_setup_reason=parse"
     ).text
-    assert (
-        "Could not import reviewers. Open the Reviewers Setup page for "
-        "per-row error details."
-    ) in body
+    assert "Could not import reviewers." in body
+    assert "per-row error details" not in body
 
 
 def test_relationships_name_an_unknown_reviewer(
