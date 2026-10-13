@@ -42,9 +42,9 @@ from __future__ import annotations
 # Cross-slice state. ``_SAVED_STATE_EVENT_TYPES`` stays private to
 # ``_state.py`` — only ``saved_state_for_session`` is part of the
 # public surface (called from ``views.py``). ``_instrument_label``
-# is private but exercised by
-# ``tests/integration/test_segment_11l_short_label.py`` — preserve
-# it in the re-export wall so the test surface stays byte-identical.
+# is private but imported from this package by services, views and
+# ``tests/integration/test_instrument_session_seq.py`` — preserve it
+# in the re-export wall.
 from ._state import _instrument_label, saved_state_for_session
 
 # Response Type Definitions slice retired 2026-05-26 — the per-

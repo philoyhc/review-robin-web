@@ -460,6 +460,36 @@ def test_self_review_chip_tracks_the_include_state(
     assert "Include 1 self review" in mixed
 
 
+def test_toggle_route_404s_another_sessions_instrument(
+    client: TestClient, db: Session
+) -> None:
+    """The row query is scoped to the session, so a foreign instrument
+    id flipped nothing — but the route still answered 303 and wrote an
+    audit row. It now 404s, like the Instruments-page routes."""
+    from sqlalchemy import func, select
+
+    from .test_assignments_operations_page import (
+        _make_session,
+        _self_review_instrument_id,
+    )
+
+    mine = _make_session(client, db, code="sr-scope-a")
+    other = _make_session(client, db, code="sr-scope-b")
+    foreign_id = _self_review_instrument_id(db, other.id)
+    before = db.execute(select(func.count()).select_from(AuditEvent)).scalar_one()
+
+    response = client.post(
+        f"/operator/sessions/{mine.id}"
+        f"/assignments/{foreign_id}/self-reviews/active",
+        data={"active": "false"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 404
+    after = db.execute(select(func.count()).select_from(AuditEvent)).scalar_one()
+    assert after == before
+
+
 # --------------------------------------------------------------------- #
 # 19O Item 1 rung 4 — "Excluded by rule" in place of a bare 0.
 # --------------------------------------------------------------------- #

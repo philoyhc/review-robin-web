@@ -147,8 +147,9 @@ class SummarySection:
     # heading composition (``views._instruments.instrument_heading``):
     # multi-instrument sessions get ``"#{N}: {short}"`` (or bare
     # ``"#{N}"`` when ``short_label`` is unset); single-instrument
-    # sessions get just the short label, falling back to
-    # ``instrument.name`` when no short label exists.
+    # sessions get just the short label. When the title comes out
+    # empty, the operator label (``Instrument_{session_seq}``) stands
+    # in; the internal ``name`` never shows.
     heading_title: str
     position: int
     is_group: bool

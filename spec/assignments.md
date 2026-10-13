@@ -794,7 +794,8 @@ rule name here names either Band 1 or nothing.
 
 The chip's hidden box is bound to a per-instrument form
 `POST /sessions/{sid}/assignments/{iid}/self-reviews/active`
-with `active=true|false`. The service helper
+with `active=true|false`; an `iid` that is not on the session 404s.
+The service helper
 `assignments.set_instrument_self_reviews_active`:
 
 1. Selects the instrument's rows with `is_self_review` true and both

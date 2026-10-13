@@ -29,7 +29,14 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession, User
+from app.db.models import (
+    Instrument,
+    Relationship,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    User,
+)
 from app.db.session import get_db
 from app.services import (
     assignments,
@@ -46,6 +53,7 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _require_editable,
+    _require_instrument_in_session,
     _require_response_loss_ack,
     _templates,
 )
@@ -448,9 +456,8 @@ def assignments_generate(
 )
 def assignments_instrument_self_reviews_active(
     session_id: int,
-    instrument_id: int,
     active: str = Form(...),
-    review_session: ReviewSession = Depends(require_session_operator),
+    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -462,14 +469,17 @@ def assignments_instrument_self_reviews_active(
     false; ``active=true`` flips remaining deactivated rows to
     true. Audit event
     ``assignments.instrument_self_reviews_active_set`` records the
-    flipped row count + ``refs.instrument_id``."""
+    flipped row count + ``refs.instrument_id``. An instrument from
+    another session 404s rather than writing an audit row that flips
+    nothing."""
 
+    instrument, review_session = bundle
     _require_editable(review_session)
     is_active = active == "true"
     assignments.set_instrument_self_reviews_active(
         db,
         review_session=review_session,
-        instrument_id=instrument_id,
+        instrument_id=instrument.id,
         user=user,
         active=is_active,
         correlation_id=request_correlation_id(),
