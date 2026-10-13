@@ -239,9 +239,13 @@ stripes below it. Default state on first render of the
 page is **all collapsed**; cards auto-open when
 `is_editing` or `was_saved` is true so an active edit or a
 fresh save never lands hidden. After a drag-and-drop
-reorder the sessionStorage-based restore overrides the
-auto-open so each card preserves its pre-drag collapse
-state exactly.
+reorder, a `+Page break`, an instrument Delete, or Cancel's
+discard reload, the sessionStorage-based restore overrides the
+auto-open so each card keeps the collapse state it had before.
+For Delete that includes the card the redirect's
+`#instrument-<id>` names (the next instrument, or the previous
+when the last is deleted), which the hash would otherwise open:
+it stays collapsed if it was.
 
 **Collapse ⇒ lock invariant.** There is no
 unlocked-but-collapsed state. Collapsing an **unlocked**

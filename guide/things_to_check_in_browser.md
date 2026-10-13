@@ -272,3 +272,11 @@ delete them once no remaining section points to them.
   body and save. "Reset subject to default"
   and "Reset body to default" sit just below their boxes with a small
   gap, not touching the border, and still read as links.
+
+## Deleting an instrument leaves the other cards as they were
+
+- [ ] **Nothing pops open.** On an Instruments page with three or more
+  cards, expand the first and leave the rest collapsed, then expand,
+  unlock and delete the second. After the reload the card that was
+  third is still collapsed, and the first is still open. Repeat by
+  deleting the last card: the one above it stays collapsed.

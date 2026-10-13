@@ -6425,8 +6425,9 @@
 
       // sessionStorage-based open-state preservation across the
       // reload submitNewOrder triggers on success. We also fire
-      // this on +Page break form submits so creates don't snap
-      // every card back to collapsed.
+      // this on +Page break and instrument Delete form submits, and
+      // on Cancel's discard reload, so none of them snaps a card
+      // open or closed.
       //
       // The capture records BOTH open and closed states (as
       // {card_id: bool}) so the restore can override the
@@ -6478,13 +6479,21 @@
         }
       } catch (err) {}
 
-      // Hook into +Page break form submits so those reloads also
-      // preserve open state.
+      // Hook into +Page break and instrument Delete form submits so
+      // those reloads also preserve open state. Delete lands on the
+      // ``#instrument-<id>`` of ``views.instrument_delete_landing_id``
+      // (the next instrument by id, or the previous when the last was
+      // deleted), which ``openHashTarget`` would otherwise pop open;
+      // the restore runs after it and puts every card back as it was,
+      // collapsed or open (author, 2026-10-13).
       document.addEventListener('submit', function (e) {
-        const btn = e.target && e.target.querySelector(
+        const form = e.target;
+        const btn = form && form.querySelector(
           '[data-instrument-page-break-add]'
         );
-        if (btn) { captureOpenStateForReload(); }
+        const isDelete = form && form.id &&
+          form.id.indexOf('instrument-delete-') === 0;
+        if (btn || isDelete) { captureOpenStateForReload(); }
       });
     })();
   </script>
