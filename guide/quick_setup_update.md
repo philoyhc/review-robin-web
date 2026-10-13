@@ -284,3 +284,42 @@ Taken 2026-10-12 at `7acfac1e`.
 - `spec/rrw_functional_spec.md` — the Session Home Quick Setup card bullet (Item 2).
 - `spec/settings_inventory.md` — the `relationships_enabled` / `observers_enabled` rows: also turned on by an upload (Item 2).
 - `README.md` — the Quick Setup card bullet (Item 2).
+
+---
+
+## Item 3 — The Setup pages' upload cards report problems the way Quick Setup does
+
+**Jotted 2026-10-13 at the author's request; not yet planned.** The full
+shape (Decision, Blast radius, PR ladder, Doc impact) comes when the
+item is picked up.
+
+### Opportunity
+
+The two surfaces report the same refusal of the same file differently.
+On `03_reviewers_problems.csv` (2026-10-13 browser check):
+
+- **Quick Setup's banner** groups the problems by kind, using
+  `roster_problem_details` (`app/web/views/_quick_setup.py`):
+  "ReviewerEmail is blank (2 rows)", "Status is not active or inactive
+  (1 row)".
+- **The Reviewers page's upload card** lists one line per row through
+  `operator/partials/validation_results.html`: "Row 2: `ReviewerEmail`
+  ReviewerEmail is required" twice, then "Row 4: `Status` Status must be
+  one of ['active', 'inactive']; got 'maybe'". The field name prints
+  twice, and the same problem repeats once per row.
+
+**Author's direction:** make the per-page upload cards (Reviewers,
+Reviewees, Relationships, Observers) report in Quick Setup's style,
+from the same underlying code.
+
+### Open questions
+
+1. **Where do the row numbers go?** Quick Setup's banner leaves them
+   out on the grounds that "the Reviewers Setup page shows which rows".
+   If the page also drops them, no surface shows them until
+   `guide/import_error_reporting.md` lands. Recommended: one grouping
+   helper, with the page adding the rows to each kind ("ReviewerEmail is
+   blank: rows 2, 3"). The author decides.
+2. **Does the Validate page change too?** It includes the same
+   `validation_results.html`. Recommended: no, only the upload cards.
+   The author decides.
