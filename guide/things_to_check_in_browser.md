@@ -112,3 +112,10 @@ with the last section it covers.
   that tag, and the reviewer surface still groups by team. *The select
   and the save passed (author, checklist step 34, 2026-10-13); the
   reviewer surface is still to check.*
+
+## Session Home's offset boxes show examples
+
+- [ ] **Same hints as Create.** On Session Home, unlock Session details
+  on a session with no offsets set. *Send invites* shows `e.g. -P1D,
+  -PT2H` and *Send reminders* shows `e.g. -P2D, -PT4H` in grey, as on
+  New session.

@@ -1106,6 +1106,29 @@ def test_session_config_card_display_edit_swap(
     assert 'name="relationships_enabled"' in card
 
 
+def test_offset_boxes_carry_the_create_pages_examples(
+    client: TestClient, db: Session
+) -> None:
+    """Session Home's two offset boxes show the same example offsets as
+    the Create page's (author, 2026-10-13): they were blank there."""
+    import re
+
+    review_session = _make_session(client, db, code="cfg-offset-ph")
+    create = client.get("/operator/sessions/new").text
+    home = client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+
+    for create_id, home_id in (
+        ("invite_offsets", "mock-invite-offsets"),
+        ("reminder_offsets", "mock-reminder-offsets"),
+    ):
+        create_input = re.search(rf'<input[^>]*id="{create_id}"[^>]*>', create)
+        home_input = re.search(rf'<input[^>]*id="{home_id}"[^>]*>', home)
+        assert create_input and home_input
+        placeholder = re.search(r'placeholder="([^"]+)"', create_input.group(0))
+        assert placeholder
+        assert f'placeholder="{placeholder.group(1)}"' in home_input.group(0)
+
+
 def test_config_card_editing_param_renders_edit_mode(
     client: TestClient, db: Session
 ) -> None:

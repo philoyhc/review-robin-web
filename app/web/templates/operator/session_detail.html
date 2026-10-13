@@ -304,7 +304,8 @@
             </div>
             <input type="text" id="mock-invite-offsets" name="invite_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
-                   value="{{ invite_offsets_input_value }}">
+                   value="{{ invite_offsets_input_value }}"
+                   placeholder="e.g. -P1D, -PT2H">
           </div>
           <div>
             <label for="mock-reminder-offsets">Send reminders (offset from End; optional)</label>
@@ -323,7 +324,8 @@
             </div>
             <input type="text" id="mock-reminder-offsets" name="reminder_offsets"
                    data-edit-only form="config-save-{{ session.id }}"
-                   value="{{ reminder_offsets_input_value }}">
+                   value="{{ reminder_offsets_input_value }}"
+                   placeholder="e.g. -P2D, -PT4H">
           </div>
           <div>
             <label for="mock-release-until">Release responses until (optional)</label>
