@@ -511,7 +511,14 @@ def parse_link3_form(
         tag_num = slot[len("tag"):]
         if tag_num not in ("1", "2", "3"):
             continue
-        pair = (source, f"tag_{tag_num}")
+        # Stored as ``encode_group_kind`` keys them: a reviewee slot is
+        # ``tag_N``, a pair-context slot the bare ``N``. Keying both
+        # ``tag_N`` dropped every pair-context boundary to the
+        # no-boundary sentinel on save.
+        if source == "pair_context":
+            pair = (source, tag_num)
+        else:
+            pair = (source, f"tag_{tag_num}")
         if pair not in pairs:
             pairs.append(pair)
     return mode, pairs, touched

@@ -20,6 +20,7 @@ from app.db.models import (
     InstrumentDisplayField,
     InstrumentResponseField,
     Response,
+    Relationship,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -10204,3 +10205,62 @@ def test_link3_single_cell_x_is_disabled(
     )
     assert len(buttons) == 1
     assert ">X</button>" in buttons[0] and "disabled" in buttons[0]
+
+
+def test_pair_context_link3_boundary_round_trips_through_the_card(
+    client: TestClient, db: Session
+) -> None:
+    """A relationship-tag boundary survives the card: the save stores
+    ``p1`` and the page reselects that option. The form posts
+    ``pair_context.tag1``; the parser keyed it ``("pair_context",
+    "tag_1")``, which ``encode_group_kind`` does not know, so the save
+    stored the no-boundary sentinel; and the template rendered the stored
+    ``("pair_context", "1")`` as ``pair_context.1``, matching no option."""
+    review_session, new_model = _group_band2_session(
+        client, db, code="p1-round-trip"
+    )
+    reviewers = db.execute(
+        select(Reviewer).where(Reviewer.session_id == review_session.id)
+    ).scalars().all()
+    reviewees = db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars().all()
+    db.add_all(
+        [
+            Relationship(
+                session_id=review_session.id,
+                reviewer_id=r.id,
+                reviewee_id=e.id,
+                tag_1=e.tag_1,
+            )
+            for r in reviewers
+            for e in reviewees
+        ]
+    )
+    db.commit()
+
+    resp = client.post(
+        f"/operator/sessions/{review_session.id}"
+        f"/instruments/{new_model.id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_touched": "true",
+            "link2_mode": "all",
+            "link2_touched": "true",
+            "link3_mode": "grouped",
+            "link3_boundary": ["reviewee.tag2", "pair_context.tag1"],
+            "link3_touched": "true",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    db.refresh(new_model)
+    assert new_model.group_kind == "r2,p1"
+
+    page = client.get(
+        f"/operator/sessions/{review_session.id}/instruments"
+    ).text
+    for key in ("reviewee.tag2", "pair_context.tag1"):
+        assert re.search(
+            rf'<option value="{re.escape(key)}"\s+selected>', page
+        ), key

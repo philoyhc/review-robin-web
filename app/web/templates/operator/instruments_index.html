@@ -721,12 +721,13 @@
       {% set _band1_state = new_model_band1_state.get(instrument.id, {"link1": {"mode": "all", "combinator": "AND", "rules": []}, "link2": {"mode": "all", "combinator": "AND", "rules": []}}) %}
       {% set _link3_state = new_model_link3_state.get(instrument.id, {"mode": "individual", "boundary_pairs": []}) %}
       {# Canonical key lookup for the stored boundary pairs:
-         ``("reviewee", "tag_1")`` round-trips as ``"reviewee.tag1"``
-         on the UI side. Use a namespace so the loop appends
-         propagate to the outer scope. #}
+         ``("reviewee", "tag_1")`` and ``("pair_context", "1")`` both
+         round-trip as ``"<source>.tag1"`` on the UI side, the keys the
+         options carry. Use a namespace so the loop appends propagate
+         to the outer scope. #}
       {% set _ns = namespace(keys=[]) %}
       {% for source, slot in _link3_state.boundary_pairs %}
-        {% set _ns.keys = _ns.keys + [source ~ "." ~ slot | replace("_", "")] %}
+        {% set _ns.keys = _ns.keys + [source ~ ".tag" ~ (slot | replace("tag_", ""))] %}
       {% endfor %}
       {% set _link3_selected = _ns.keys %}
       {# Segment 18R Item 1 — the top band is the "Instrument assignment
