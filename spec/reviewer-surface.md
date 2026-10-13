@@ -1619,7 +1619,7 @@ optional:
 The system handle `Instrument.name` (`String(255)`, auto-generated
 as `instrument_N` on instrument create) is **not** reviewer-facing.
 It travels only in the Settings CSV and audit-event detail snapshots;
-audit summaries, like every page, use the short label (author,
+audit summaries, like operator pages, use the short label (author,
 2026-10-13).
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
