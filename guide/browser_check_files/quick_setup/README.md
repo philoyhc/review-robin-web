@@ -23,7 +23,7 @@ box, tick it. Then press Submit.
 
 ## Session A
 
-Create a session named `QS check`, with no files and both the
+Create a session named `QS check` with code `qs-check`, no files, and both the
 Relationships and Observers boxes unticked. Open its Session Home.
 
 | # | Upload | Expect | Ticks |
@@ -46,8 +46,8 @@ point. It also renames "Robert" back to "Bob".
 
 | # | On New session | Expect | Ticks |
 |---|---|---|---|
-| 11 | Name `QS create`, tag `qs-check`. Stage Reviewers `07_reviewers_new.csv` + Reviewees `08_reviewees_blank_email.csv`, then Create | You land on its Session Home with the Reviewees banner. The session has the tag `qs-check`, and its Reviewers roster is empty. | *All or none*: Create |
-| 12 | Name `QS obs`, Observers box **unticked**. Stage Observers `09_observers.csv`, then Create | No banner. The new session has an Observers tab. | *Observers*: Create |
+| 11 | Name `QS create`, code `qs-create`, tag `qs-check`. Stage Reviewers `07_reviewers_new.csv` + Reviewees `08_reviewees_blank_email.csv`, then Create | You land on its Session Home with the Reviewees banner. The session has the tag `qs-check`, and its Reviewers roster is empty. | *All or none*: Create |
+| 12 | Name `QS obs`, code `qs-obs`, Observers box **unticked**. Stage Observers `09_observers.csv`, then Create | No banner. The new session has an Observers tab. | *Observers*: Create |
 
 ## The files
 

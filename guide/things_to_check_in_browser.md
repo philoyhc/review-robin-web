@@ -6,7 +6,7 @@ adds a section here. Run them locally (`uvicorn`, fake auth). Tick a row
 when it is checked; once every row in a section is ticked, delete the
 section (git history keeps it), so this file lists only what is owed. A
 section may point to upload files under `guide/browser_check_files/`;
-delete those with the section.
+delete them once no remaining section points to them.
 
 ## Email dates in the session's zone (#2720)
 
