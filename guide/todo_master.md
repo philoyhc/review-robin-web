@@ -26,16 +26,9 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- `guide/quick_setup_update.md` Item 1 — files uploaded together are
-  checked together and saved all or nothing. Built (#2999, #3000); the
-  close follows the author's browser check.
-- `guide/quick_setup_update.md` Item 2 — Home's card always shows
-  Observers, and an upload that populates Observers or Relationships
-  turns its tab on. Built (#3002); the close follows the author's
-  browser check.
 - `guide/quick_setup_update.md` Item 3 — the Setup pages' upload cards
-  report problems in Quick Setup's style, from the same code. Jotted
-  2026-10-13; counts not rows, Validate untouched (author).
+  report problems as Quick Setup does: kinds with counts, never rows,
+  from one helper; Validate untouched. Planned 2026-10-13; build next.
 
 ### Queued segments
 

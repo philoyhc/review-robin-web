@@ -90,20 +90,24 @@ that is either unsaved or committed and still undoable.
 
 ### Status
 
-Open, 2026-10-12. Rung 2 is #2999; rung 3 is built and read
-(cumulative `diff-reviewer` from `19a4e26d`, plus a `spec-writer`
-verify). Both reads found one defect, the same one: a blocked roster
-file left out of the identity check let its old roster refuse an
-earlier slot. It was fixed by passing the file in empty, with a test.
-Decisions confirmed at build:
+**Closed 2026-10-13.** Shipped as planned in #2999 (the checks as pure
+functions) and #3000 (check everything, then save everything). The
+author's browser check passed 2026-10-13. One cumulative `diff-reviewer`
+read plus a `spec-writer` verify both found the same defect: a blocked
+roster file was left out of the identity check, so its old roster could
+refuse an earlier slot. It was fixed by passing the file in empty, with a
+test. Decisions confirmed at build:
 
 - A Relationships file refused at its save-time parse (a roster edited
   between the check and the lock) is reported as its `parse` problem,
   not raised as a 500. The plan said "raises".
 - One correlation id per submit, rather than one per slot.
 - **Deferred:** moving the pipeline from `_quick_setup.py` into a
-  service. It continues the retired helpers' placement, and the move is
-  a refactor of its own (cold read, rung 3).
+  service. It is a refactor of its own.
+
+The close `spec-writer` pass found `spec/quick_setup_card_spec.md`
+"Slots" missing its Observers slot, and `spec/rrw_functional_spec.md`
+silent on all-or-nothing. Both are fixed.
 
 ### Blast radius (measured)
 
@@ -161,6 +165,7 @@ Taken 2026-10-12 at `1c08ae3a` (#2997).
 
 - `spec/quick_setup_card_spec.md` — "Per-slot dispatch": check everything, then save everything, in one unit; "Result reporting": its closing paragraph (nothing applies when a slot fails); "Validation scope": files uploaded together; "New-session variant": its Failure mode (Item 1).
 - `spec/csv_contracts.md` — §3.1 "Cross-roster identity": files uploaded together are checked against each other, not against the rosters they replace; also the function table's incoming-set entry, the Relationships notes on incoming rosters, and the Create tag note "bails out at an earlier Quick Setup slot" (Item 1).
+- `spec/rrw_functional_spec.md` — the Session Home Quick Setup card bullet: Submit checks every staged file, then saves all or none (Item 1; added at close).
 
 ---
 
@@ -218,13 +223,14 @@ its roster has rows.
 
 ### Status
 
-Open, 2026-10-12. Built as one rung. Its `diff-reviewer` read found no
-code defect, and its notes were acted on:
-
-- Three more stale "Observers conditional" lines were fixed (`spec/session_home.md` table, `spec/rrw_functional_spec.md`, `README.md`), plus the settings inventory.
-- The refusal test now refuses inside the save.
-- The event records the submit's net change against the toggles before it, so a Settings file and an upload meeting log nothing.
-- The roster-to-toggle rule moved into `sessions`.
+**Closed 2026-10-13.** Shipped as planned, as one build rung (#3002).
+The author's browser check passed 2026-10-13. The rung's `diff-reviewer`
+read found no code defect; its notes fixed three more stale "Observers
+conditional" lines and moved the roster-to-toggle rule into `sessions`.
+A Codex review moved the toggles' before-state read under the session
+lock. The event records the submit's net change, so a Settings file and
+an upload that meet log nothing. The close `spec-writer` pass added the
+toggle note to `spec/csv_contracts.md`'s inbound-paths row.
 
 ### Blast radius (measured)
 
@@ -289,55 +295,107 @@ Taken 2026-10-12 at `7acfac1e`.
 
 ## Item 3 — The Setup pages' upload cards report problems the way Quick Setup does
 
-**Jotted 2026-10-13 at the author's request; not yet planned.** The full
-shape (Decision, Blast radius, PR ladder, Doc impact) comes when the
-item is picked up.
-
 ### Opportunity
 
-The two surfaces report the same refusal of the same file differently.
-On `03_reviewers_problems.csv` (2026-10-13 browser check):
+The same refused file reads differently on the two surfaces
+(`03_reviewers_problems.csv`, author's browser check, 2026-10-13):
 
-- **Quick Setup's banner** groups the problems by kind, using
-  `roster_problem_details` (`app/web/views/_quick_setup.py`):
-  "ReviewerEmail is blank (2 rows)", "Status is not active or inactive
-  (1 row)".
-- **The Reviewers page's upload card** lists one line per row through
-  `operator/partials/validation_results.html`: "Row 2: `ReviewerEmail`
-  ReviewerEmail is required" twice, then "Row 4: `Status` Status must be
-  one of ['active', 'inactive']; got 'maybe'". The field name prints
-  twice, and the same problem repeats once per row.
+- **Quick Setup's banner** groups by kind, with counts
+  (`roster_problem_details`, `app/web/views/_quick_setup.py`):
+  "ReviewerEmail is blank (2 rows)".
+- **The Reviewers upload card** prints one line per row through
+  `operator/partials/validation_results.html` ("Row 2: `ReviewerEmail`
+  ReviewerEmail is required"), so a hundred bad rows print a hundred
+  lines, each naming the field twice.
 
-**Author's direction:** make the per-page upload cards (Reviewers,
-Reviewees, Relationships, Observers) report in Quick Setup's style,
-from the same underlying code.
+Quick Setup's "the Reviewers Setup page shows which rows" also misleads:
+a refused file is never saved, so the page shows nothing.
 
-### Decided so far (author, 2026-10-13)
+### Decision
 
-- **Kinds of problem with counts, never a list of rows**, on both
-  surfaces. A file with a hundred bad rows would print a hundred lines.
-  Both read the same helper (`roster_problem_details`, moved somewhere
-  both can import).
-- **Validate is left alone.** A refused file is never saved, so Validate
-  never sees it. Validate computes its own issues from the saved session
-  (`app/services/validation.py`). It shares only the template,
-  `validation_results.html`, which has a separate Validate mode. The
-  upload cards get their own small template, so that the Validate mode
-  is not changed by accident.
+The author's rulings, 2026-10-13:
 
-### Consequences to carry into the plan
+- **Kinds of problem with counts, never rows**, on Quick Setup and the
+  Reviewers, Reviewees, Relationships and Observers upload cards, from one
+  helper.
+- **Validate is left alone.** It reports on the saved session
+  (`app/services/validation.py`), which a refused file never reaches. The
+  upload cards get their own partial, so Validate's template cannot change
+  by accident.
+- **Neither surface points at the other.** Quick Setup drops "the …
+  Setup page shows which rows" and its "Open the … Setup page for per-row
+  error details" fallback.
 
-- **Quick Setup's banner wording is already misleading** (author,
-  2026-10-13). "The Reviewers Setup page shows which rows" holds only if
-  the operator uploads the same file again there. Nothing carries over:
-  a refused file is never saved, so the page shows nothing. Item 3 drops
-  the clause, and the page cards must not point back at Quick Setup
-  either.
-- **No screen shows row numbers** until `guide/import_error_reporting.md`
-  is lifted. That plan's Out of scope line "The Setup pages' uploads
-  already list every row" becomes false and should be struck when this
-  item ships. Its lift trigger may deserve a second look.
+**Rejected:** row numbers under each kind ("rows 2, 3"). They grow with
+the file, the problem being solved; they wait for
+`guide/import_error_reporting.md`.
+
+### Semantics
+
+- **One helper, two callers.** The grouping (`problem`, else a
+  file-level message, else "`<field>` has a problem") moves to a views
+  module both import. Quick Setup keeps its redirect cap on top; the
+  page renders uncapped, since kinds are bounded by the parsers' strings.
+- **The card:** an error banner inside the upload card, "Could not
+  import reviewers. The file has these problems:" over the lines, in
+  place of the Issues card. The 400 re-render and open Unlock panel stay.
+- **Blocking issues only**, as Quick Setup. The roster and relationship
+  parsers raise no warnings today (`grep -c 'Severity.warning'` is 0).
+- **Out:** Settings CSV errors, which are not per-row kinds and which
+  Quick Setup already lists as lines.
+
+### Judgment calls — decided
+
+- **No scaffold rung:** an existing card's error changes; no page, card
+  or navigation is added.
+- **One build rung:** the helper, partial, callers and wording are one
+  change; splitting them would ship a page disagreeing with Quick Setup.
+
+### Blast radius (measured)
+
+Taken 2026-10-13 at `626eb38e`.
+
+- Upload contexts passing `issues` (`grep -rn '"issues"' app/web/routes_operator/`):
+  4, in `_shared.py`, `_setup_relationships.py`, `_setup_observers.py`,
+  plus two empty defaults; Validate's is separate.
+- `validation_results.html` includers
+  (`grep -rn 'validation_results.html' app/web/templates`): 5, the four
+  Setup pages and Validate.
+- `ValidationIssue(` sites with a `problem`: 16 of 23 in
+  `csv_imports.py` (the rest file-level), 6 of 6 in `relationships.py`.
+- Tests on the four import routes asserting error text: at most 6
+  (`grep -rlE '<kind>/import' tests | xargs grep -lE 'Row [0-9]|is required|issue-list'`).
+- Wording: 2 strings in `_quick_setup.py`; 1 passage in
+  `spec/quick_setup_card_spec.md` ("Failure").
+
+### PR ladder
+
+1. **This plan** (prose, with Items 1 and 2's close).
+2. **Build:** the helper and partial, the four cards and Quick Setup on
+   them, the wording, tests, specs, a browser-check section with upload
+   files, the struck `guide/import_error_reporting.md` Out of scope line
+   ("The Setup pages' uploads already list every row"), and a
+   `diff-reviewer` read on the rung.
+3. **Close** (prose).
+
+### Definition of done
+
+- By test: the four cards and Quick Setup show a refused file's kinds
+  with counts and no rows; a hundred bad rows make one line; Quick Setup
+  names no Setup page; Validate renders as before.
+- `### Doc impact` current; `spec-writer` flags adjudicated.
+- `### Status` compacted.
 
 ### Open questions
 
-- None yet. The plan, when written, may raise some.
+- None open (author, 2026-10-13; Decision).
+
+### Out of scope
+
+- Row numbers anywhere; Settings CSV error lines; the Validate page.
+
+### Doc impact
+
+- `spec/quick_setup_card_spec.md` — "Result reporting" / "Failure": the banner no longer points at a Setup page, and the lines come from the helper the Setup pages share (Item 3).
+- `spec/csv_contracts.md` — the "re-renders the page at **400** with the issue list" passage, now kinds with counts (Item 3).
+- `spec/setup_pages.md` — the upload card's failure: kinds of problem with counts in the card, not the Validate-style issue list (Item 3).

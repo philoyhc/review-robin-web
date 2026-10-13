@@ -42,7 +42,10 @@ The card contains five live slots on both variants — Reviewers, Reviewees, Rel
 - File upload accepting a Relationships CSV (`ReviewerEmail`, `RevieweeEmail`, `PairContextTag1..3`, `Status`).
 - The CSV's `tag_N` slots flow through to the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names; `status` defaults to `active` when omitted.
 
-**Slot 4 — Session settings** (right column, bottom).
+**Slot 4 — Observers** (right column, middle).
+- Same shape as Reviewers, saved through the Observers importer. Renders whatever `observers_enabled` says; an upload that saves rows turns it on (**Turning tabs on**).
+
+**Slot 5 — Session settings** (right column, bottom).
 - File upload accepting a session-settings CSV: the three-column `field,value,data_type` form `serialize_session_config` writes (`spec/csv_contracts.md` §3.3; `app/services/session_config_io/`).
 - Applies through `apply_session_config(...)`. The two-phase parse + apply contract validates every row first, then wipes and replaces; round-trip stable on the export's own output.
 
@@ -95,7 +98,7 @@ The card validates each file individually for parse correctness and per-file int
 
 ### Interaction with per-entity Setup pages
 
-The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relationships) are independent. After using Quick Setup, the operator can navigate to any per-entity page and edit individual records normally. The per-entity pages' upload affordances remain functional and behave identically to a card slot given one file — they share the same parsing, validation, and replacement semantics. Only the card takes several files at once, so only it checks files against each other and Relationships against an uploaded roster file. Settings has no dedicated Setup page; the Quick Setup Slot 4 + the Settings extract download on the Extract Setup card (on the Extract data Operations tab) are the round-trip pair.
+The Quick Setup card and the per-entity Setup pages (Reviewers, Reviewees, Relationships, Observers) are independent. After using Quick Setup, the operator can navigate to any per-entity page and edit individual records normally. The per-entity pages' upload affordances remain functional and behave identically to a card slot given one file — they share the same parsing, validation, and replacement semantics. Only the card takes several files at once, so only it checks files against each other and Relationships against an uploaded roster file. Settings has no dedicated Setup page; the Quick Setup Slot 5 + the Settings extract download on the Extract Setup card (on the Extract data Operations tab) are the round-trip pair.
 
 ### Out of scope
 
