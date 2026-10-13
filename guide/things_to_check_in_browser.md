@@ -283,7 +283,8 @@ delete them once no remaining section points to them.
 
 ## Reset links sit clear of their field (email templates)
 
-- [ ] **A gap under each field.** On Setup → Invitations, override an
-  email template's subject and body and save. "Reset subject to default"
+- [ ] **A gap under each field.** On Setup → Email Template (any of
+  Invitation, Reminder, Responses received), override the subject and
+  body and save. "Reset subject to default"
   and "Reset body to default" sit just below their boxes with a small
   gap, not touching the border, and still read as links.
