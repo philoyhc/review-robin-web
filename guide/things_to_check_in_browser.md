@@ -264,14 +264,3 @@ delete them once no remaining section points to them.
   with Dismiss, not a full error page, and no response is gone. On the
   card the banner sits in, choose the file again, tick and Upload: the
   roster is replaced.
-
-## Reset links sit clear of their field (email templates)
-
-- [ ] **A gap under each field.** On Setup → Email Template (any of
-  Invitation, Reminder, Responses received), override the subject and
-  body and save. "Reset subject to default"
-  and "Reset body to default" sit directly below their boxes with the
-  same gap under each (2026-10-13: the body's was larger), not
-  touching the border, and still read as links. On a tab with no
-  override, the space under the Body box before "Cc" matches the space
-  under Subject before "Body".
