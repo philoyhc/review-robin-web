@@ -52,6 +52,9 @@ through Quick Setup showed both instruments set up and Prepare offered.
 | `10_settings_seven_nameless.csv` | Seven instruments, none named |
 | `11_reviewers_blank_email.csv` | Alice Chan with no email |
 | `12_long_name.txt` | A 250-character name to paste |
+| `13_b1_reviewers.csv` | Local Operator only (step 34) |
+| `14_b1_reviewees.csv` | 02's five reviewees with a `Role` tag: Local Operator = Staff, the rest Student |
+| `15_b1_relationships.csv` | 03's five rows for Local Operator only |
 
 ## Part 1 — BC main, set up (Draft)
 
@@ -115,7 +118,7 @@ New session `BC import`, code `bc-import`, then Quick Setup 01, 02, 03,
 | 31 | `05_settings.csv` | Lands on Session Home at the Settings slot, with no `?config_imported=ok` in the address bar. | #2809, #2810: landing |
 | 32 | Reviewers slot: `11_reviewers_blank_email.csv` | The banner's one button reads Dismiss, and it clears the banner. | Upload banners: Dismiss |
 | 33 | `bc-main-settings.csv` (step 4) | Peer review keeps step 3's sort badge and column width. | A28: round-trip |
-| 34 | Instruments → Team review: run B1 as written. Exclude self reviews, then add a Link 2 rule that keeps reviewees whose email is not `operator@example.edu`. | As the checklist says | B1 |
+| 34 | New session `BC b1`, code `bc-b1`. Quick Setup: `13_b1_reviewers.csv`, `14_b1_reviewees.csv`, `15_b1_relationships.csv` and `05_settings.csv`. Instruments → Team review: unlock. Unit of review shows the team tag in its boundary select (not —); Save and reload, and it still does. Unlock again; set *Who is being reviewed* to Filter using tags, **Role IS Student**; turn on *Exclude self reviews*; Save, then Refresh the preview. Turn the exclusion off, Save, Refresh again. (Needs #3017 merged: before it, Save drops Team review's team grouping.) | Excluded: the preview's sample is **Fay Gomez** (Team B), not Dev or Erin, although the filter has already removed your own row from Team A. Exclusion off: the sample is **Dev Patel** (Team A). | B1; Relationship-tag boundary |
 
 ## Part 6 — BC long (long names)
 

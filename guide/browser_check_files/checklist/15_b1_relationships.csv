@@ -1,0 +1,6 @@
+ReviewerEmail,RevieweeEmail,PairContextTag1
+operator@example.edu,operator@example.edu,Team A
+operator@example.edu,dev@example.edu,Team A
+operator@example.edu,erin@example.edu,Team A
+operator@example.edu,fay@example.edu,Team B
+operator@example.edu,gus@example.edu,Team B
