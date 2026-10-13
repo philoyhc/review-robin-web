@@ -742,6 +742,13 @@
       /* The row holding a field's reset button, just under the field
          it resets: a small gap so the link does not touch the box. */
       .field-reset { margin-top: var(--space-1); }
+      /* A textarea is inline-block, so it sits on a text baseline and
+         leaves the descender's space below it; the template editor's
+         single-line inputs leave none, so the body's reset link sat
+         lower than the subject's (author, 2026-10-13).
+         Block, the two gaps match, and the space under the body box
+         when it holds no override matches the subject's too. */
+      body.ui-v2 .email-composer textarea { display: block; }
       /* Session-scoped top card: two-row chrome with double-height
          Home anchor on the left. Implements the navigation model
          spec'd in `spec/operator_ui_concept.md` "Navigation model".

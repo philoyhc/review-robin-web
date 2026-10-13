@@ -270,8 +270,11 @@ delete them once no remaining section points to them.
 - [ ] **A gap under each field.** On Setup → Email Template (any of
   Invitation, Reminder, Responses received), override the subject and
   body and save. "Reset subject to default"
-  and "Reset body to default" sit just below their boxes with a small
-  gap, not touching the border, and still read as links.
+  and "Reset body to default" sit just below their boxes with the
+  same small gap under each (2026-10-13: the body's was larger), not
+  touching the border, and still read as links. On a tab with no
+  override, the space under the Body box before "Cc" matches the space
+  under Subject before "Body".
 
 ## Deleting an instrument leaves the other cards as they were
 
