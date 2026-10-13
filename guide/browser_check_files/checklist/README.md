@@ -26,6 +26,8 @@ eye.
   Choose each file in its slot, tick the replacement box if it shows,
   then Submit.
 - **Skipped (needs Azure):** #2720 "The submitted time does too".
+- **Skipped (not ready for testing):** D28 "Rehydrate still takes it".
+  Rehydrate is off by default and not yet ready (author, 2026-10-13).
 - **Needs a second identity:** G4 "Off sends nothing" needs a second
   reviewer to submit. Restart `uvicorn` with
   `FAKE_AUTH_EMAIL=bob@example.edu FAKE_AUTH_NAME="Bob Smith"` for that
@@ -56,7 +58,7 @@ eye.
 | 2 | Instruments → Peer review: unlock, click the **Extra** field's chip off, Save. | Extra greys out. | — (A3 setup) |
 | 3 | On Peer review, set a default sort with a header badge and drag a column wider, then Save. | Badge and width stay after a reload. | — (A28 setup) |
 | 4 | Extract → Extract Setup: download the Settings CSV and keep it as `bc-main-settings.csv`. | — | — (A28 setup) |
-| 5 | Session Home → **Prepare**. | Validated. Manage Invitations lists three invitations. | — |
+| 5 | Session Home → **Prepare**, then Manage Invitations → send all. | Validated. The outbox holds three invitation rows: Prepare only creates the invitations, and sending writes the rows with their links. | — |
 | 6 | Assignments: note Team review's "Include N self reviews" (3). On Relationships, inactivate the row Local Operator → Dev Patel. Back on Assignments, without generating: 2. Reactivate the row: 3 again. | As stated | B33 |
 | 7 | Open `/operator/sessions/{id}/assignments?needs_confirm=1`. | Red banner: "Replace not confirmed. The existing assignments were kept.", with Cancel at its bottom right. Cancel returns to the page without the banner. | #2809, #2810: banner |
 | 8 | Admin → Sessions → BC main's outbox: copy Alice Chan's invitation link. Reviewers: set Alice inactive. Open the link. | A plain 404. Manage Invitations has no Alice row, and Pending reminders leaves her out. | #2740: 404, no reminder |
@@ -75,7 +77,7 @@ Open `/me` → BC main.
 | 14 | Fill every Score and every Team Rating, leave Notes empty, and Submit. In Admin → Sessions → outbox: | One responses-received row for you, `queued`, its body naming the submit time. | G4: on by default |
 | 15 | Recall, then Submit again; check the outbox. | Still one row for you. | G4: second submit |
 | 16 | *(Optional, second identity.)* Email Template → Responses received: set the chip to "Don't send response confirmation" and Save. As Bob, submit. | The submit succeeds, and no new outbox row appears. | G4: off |
-| 17 | `/me/sessions/{id}/collation`. Note the address of Peer's Download CSV link for step 24. | Peer has no Extra column, and its Download CSV has none. Notes reads "Total length: —". The operator's By instrument extract still has Extra. | A3 (both rows) |
+| 17 | `/me/sessions/{id}/collation`. Note the address of Peer's Download CSV link for step 25. | Peer has no Extra column, and its Download CSV has none. Notes reads "Total length: —". The operator's By instrument extract still has Extra. | A3 (both rows) |
 | 18 | Extract data, rows 1–3 of D28 as written. | As the checklist says | D28: card order, same files, chips |
 | 19 | Extract data → Data shaper: delete "By reviewer", then run the D13 rows as written. | As the checklist says | D13 (both rows) |
 
@@ -86,13 +88,14 @@ Open `/me` → BC main.
 | 20 | Session Home → Revert to draft. | Draft; responses kept. | — |
 | 21 | Relationships: inactivate Local Operator → Dev Patel. Preview the reviewer surface as `operator@example.edu`. | Dev shows outside Team A without its Rating; Erin and you keep it. Reactivate the row, and Dev rejoins Team A with its Rating. | B34: inactivate |
 | 22 | Relationships upload: 03 again, tick, Upload. Preview again. | Every Rating and Score is still there. | B34: re-import |
-| 23 | Reviewers: run the two upload-banner rows with `01_reviewers.csv` (tick missing; acknowledgment removed), as written. | As the checklist says. The final upload replaces the roster and discards the responses. | Upload banners: tick, acknowledgment |
+| 23 | Reviewees first: run the response-loss row's banner part with `02_reviewees.csv` (acknowledgment input removed). Stop before its final upload, which would discard the responses the Reviewers run still needs. | The banner, as the checklist says, and no response gone. | Upload banners: acknowledgment (Reviewees) |
+| 24 | Reviewers: run both upload-banner rows with `01_reviewers.csv`, as written. First the tick is missing, then the acknowledgment is removed. | As the checklist says. The final upload replaces the roster and discards the responses. | Upload banners: tick, acknowledgment (Reviewers) |
 
 ## Part 4 — BC main, closed out
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
-| 24 | **Prepare**, **Activate**, then close and **Archive** the session. Open `/me/sessions/{id}/1` and the CSV address from step 17. | The page reads "BC main — closed" and "This review has closed.", with no deadline line and a dashboard link. The CSV address answers 404. | A25: closed copy; #2740: observer CSV |
+| 25 | **Prepare**, **Activate**, then close and **Archive** the session. Open `/me/sessions/{id}/1` and the CSV address from step 17. | The page reads "BC main — closed" and "This review has closed.", with no deadline line and a dashboard link. The CSV address answers 404. | A25: closed copy; #2740: observer CSV |
 
 ## Part 5 — BC import (Settings CSV checks)
 
@@ -101,16 +104,15 @@ New session `BC import`, code `bc-import`, then Quick Setup 01, 02, 03,
 
 | # | Upload in the Session settings slot | Expect | Ticks |
 |---|---|---|---|
-| 25 | `06_settings_repeated_shape.csv` | "Could not import session settings." over `data_shapes[1].name: duplicate data_shapes name 'By reviewer' (also at data_shapes[0])`. Nothing changed. | D1 |
-| 26 | `07_settings_lowercase_integer.csv` | Imports. In the reviewer Preview, Peer's Score is a number box. | D2: `integer` |
-| 27 | `08_settings_boolean_type.csv` | "Could not import session settings." naming `'Boolean'`. Nothing changed. | D2: unknown type |
-| 28 | `09_settings_missing_name.csv` | "Could not import session settings." over `instruments[1].name: name is required`. | D31: listed |
-| 29 | `10_settings_seven_nameless.csv` | Five `instruments[n].name` lines, then "…and 2 more." | D31: five and more |
-| 30 | `05_settings.csv` | Lands on Session Home at the Settings slot, with no `?config_imported=ok` in the address bar. | #2809, #2810: landing |
-| 31 | Reviewers slot: `11_reviewers_blank_email.csv` | The banner's one button reads Dismiss, and it clears the banner. | Upload banners: Dismiss |
-| 32 | `bc-main-settings.csv` (step 4) | Peer review keeps step 3's sort badge and column width. | A28: round-trip |
-| 33 | Instruments → Team review: run B1 as written. Exclude self reviews, then add a Link 2 rule that keeps reviewees whose email is not `operator@example.edu`. | As the checklist says | B1 |
-| 34 | Give Team review the short label `responses` and Save. Download Extract Setup's Zip all and Extract data's Zip all. Rehydrate each on the lobby. | Both accepted | D28: rehydrate |
+| 26 | `06_settings_repeated_shape.csv` | "Could not import session settings." over `data_shapes[1].name: duplicate data_shapes name 'By reviewer' (also at data_shapes[0])`. Nothing changed. | D1 |
+| 27 | `07_settings_lowercase_integer.csv` | Imports. In the reviewer Preview, Peer's Score is a number box. | D2: `integer` |
+| 28 | `08_settings_boolean_type.csv` | "Could not import session settings." naming `'Boolean'`. Nothing changed. | D2: unknown type |
+| 29 | `09_settings_missing_name.csv` | "Could not import session settings." over `instruments[1].name: name is required`. | D31: listed |
+| 30 | `10_settings_seven_nameless.csv` | Five `instruments[n].name` lines, then "…and 2 more." | D31: five and more |
+| 31 | `05_settings.csv` | Lands on Session Home at the Settings slot, with no `?config_imported=ok` in the address bar. | #2809, #2810: landing |
+| 32 | Reviewers slot: `11_reviewers_blank_email.csv` | The banner's one button reads Dismiss, and it clears the banner. | Upload banners: Dismiss |
+| 33 | `bc-main-settings.csv` (step 4) | Peer review keeps step 3's sort badge and column width. | A28: round-trip |
+| 34 | Instruments → Team review: run B1 as written. Exclude self reviews, then add a Link 2 rule that keeps reviewees whose email is not `operator@example.edu`. | As the checklist says | B1 |
 
 ## Part 6 — BC long (long names)
 
