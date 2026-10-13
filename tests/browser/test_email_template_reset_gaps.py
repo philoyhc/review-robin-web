@@ -48,5 +48,7 @@ def test_both_reset_links_sit_the_same_gap_below_their_field(
     page.goto(f"/operator/sessions/{session_id}/setup-invite")
 
     subject, body = _gap(page, "subject"), _gap(page, "body")
-    assert subject > 0
+    # The row has no margin (author, 2026-10-13: closer is fine as long
+    # as the two match); neither link overlaps its field.
+    assert subject >= 0
     assert abs(subject - body) < 1, (subject, body)

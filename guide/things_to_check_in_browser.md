@@ -270,16 +270,8 @@ delete them once no remaining section points to them.
 - [ ] **A gap under each field.** On Setup → Email Template (any of
   Invitation, Reminder, Responses received), override the subject and
   body and save. "Reset subject to default"
-  and "Reset body to default" sit just below their boxes with the
-  same small gap under each (2026-10-13: the body's was larger), not
+  and "Reset body to default" sit directly below their boxes with the
+  same gap under each (2026-10-13: the body's was larger), not
   touching the border, and still read as links. On a tab with no
   override, the space under the Body box before "Cc" matches the space
   under Subject before "Body".
-
-## Deleting an instrument leaves the other cards as they were
-
-- [ ] **Nothing pops open.** On an Instruments page with three or more
-  cards, expand the first and leave the rest collapsed, then expand,
-  unlock and delete the second. After the reload the card that was
-  third is still collapsed, and the first is still open. Repeat by
-  deleting the last card: the one above it stays collapsed.
