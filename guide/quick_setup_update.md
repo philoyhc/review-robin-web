@@ -284,3 +284,60 @@ Taken 2026-10-12 at `7acfac1e`.
 - `spec/rrw_functional_spec.md` — the Session Home Quick Setup card bullet (Item 2).
 - `spec/settings_inventory.md` — the `relationships_enabled` / `observers_enabled` rows: also turned on by an upload (Item 2).
 - `README.md` — the Quick Setup card bullet (Item 2).
+
+---
+
+## Item 3 — The Setup pages' upload cards report problems the way Quick Setup does
+
+**Jotted 2026-10-13 at the author's request; not yet planned.** The full
+shape (Decision, Blast radius, PR ladder, Doc impact) comes when the
+item is picked up.
+
+### Opportunity
+
+The two surfaces report the same refusal of the same file differently.
+On `03_reviewers_problems.csv` (2026-10-13 browser check):
+
+- **Quick Setup's banner** groups the problems by kind, using
+  `roster_problem_details` (`app/web/views/_quick_setup.py`):
+  "ReviewerEmail is blank (2 rows)", "Status is not active or inactive
+  (1 row)".
+- **The Reviewers page's upload card** lists one line per row through
+  `operator/partials/validation_results.html`: "Row 2: `ReviewerEmail`
+  ReviewerEmail is required" twice, then "Row 4: `Status` Status must be
+  one of ['active', 'inactive']; got 'maybe'". The field name prints
+  twice, and the same problem repeats once per row.
+
+**Author's direction:** make the per-page upload cards (Reviewers,
+Reviewees, Relationships, Observers) report in Quick Setup's style,
+from the same underlying code.
+
+### Decided so far (author, 2026-10-13)
+
+- **Kinds of problem with counts, never a list of rows**, on both
+  surfaces. A file with a hundred bad rows would print a hundred lines.
+  Both read the same helper (`roster_problem_details`, moved somewhere
+  both can import).
+- **Validate is left alone.** A refused file is never saved, so Validate
+  never sees it. Validate computes its own issues from the saved session
+  (`app/services/validation.py`). It shares only the template,
+  `validation_results.html`, which has a separate Validate mode. The
+  upload cards get their own small template, so that the Validate mode
+  is not changed by accident.
+
+### Consequences to carry into the plan
+
+- **Quick Setup's banner wording is already misleading** (author,
+  2026-10-13). "The Reviewers Setup page shows which rows" holds only if
+  the operator uploads the same file again there. Nothing carries over:
+  a refused file is never saved, so the page shows nothing. Item 3 drops
+  the clause, and the page cards must not point back at Quick Setup
+  either.
+- **No screen shows row numbers** until `guide/import_error_reporting.md`
+  is lifted. That plan's Out of scope line "The Setup pages' uploads
+  already list every row" becomes false and should be struck when this
+  item ships. Its lift trigger may deserve a second look.
+
+### Open questions
+
+- None yet. The plan, when written, may raise some.
