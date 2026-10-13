@@ -141,3 +141,9 @@ New session `BC import`, code `bc-import`, then Quick Setup 01, 02, 03,
 |---|---|---|---|
 | 43 | Sys Admin → Accounts: select `operator@example.edu`. | Delete stays greyed; Revoke is offered. | #2867: history |
 | 44 | Invite `nobody@example.edu`, select it, and Delete. | The row goes. | #2867: no activity |
+
+## Part 9 — The Guide's sample session
+
+| # | Do | Expect | Ticks |
+|---|---|---|---|
+| 45 | Guide → Sample session: download the sample data, then follow the card's steps on a new session `BC demo`, code `bc-demo`. | After Quick Setup the Workflow card shows no Prepare; after the Instruments step it does; Prepare reaches Validated. | Sample session walkthrough |

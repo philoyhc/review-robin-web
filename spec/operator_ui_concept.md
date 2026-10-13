@@ -478,9 +478,12 @@ actually is. Contract: `spec/csv_contracts.md` §5a.
 troubleshooting" and "For reviewers" — after the operator walkthrough, before
 the role-addressed sections, because it is the optional "see it working first"
 step rather than part of the sequence above it. It offers
-`GET /templates/demo.zip` and four numbered steps: create a disposable
-session, attach all four files in Quick Setup, Prepare, then look around a
-populated session. A `.muted` line notes that everyone in it is fictional on
+`GET /templates/demo.zip` and five numbered steps: create a disposable
+session, attach all four files in Quick Setup, set the default
+instrument's three assignment-rule pills on Instruments (the Workflow
+card offers no Prepare until they are set — `spec/instruments.md`
+§ *"Not set" pill safety gate*), Prepare, then look around a populated
+session. A `.muted` line notes that everyone in it is fictional on
 `@example.edu`, that the session should be archived when done, and that the
 tag labels rename the session's tag columns as the setup templates do. The
 same card also offers `GET /templates/full.zip` — the rosters at a realistic

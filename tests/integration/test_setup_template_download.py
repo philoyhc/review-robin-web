@@ -272,7 +272,11 @@ def test_the_demo_set_builds_a_validated_session(
     card = views.build_workflow_card_context(
         db, review_session, return_to="home"
     )
-    assert card["is_setup_empty"] is True  # Band 1 links still Not set
+    # Rosters are in; only the Band 1 links are still Not set.
+    assert card["setup_checklist"]["reviewers_ok"] is True
+    assert card["setup_checklist"]["reviewees_ok"] is True
+    assert card["setup_checklist"]["instruments_configured_ok"] is False
+    assert card["prepare_visible"] is False
 
     instrument_id = db.execute(
         select(Instrument.id).where(Instrument.session_id == session_id)
@@ -296,7 +300,8 @@ def test_the_demo_set_builds_a_validated_session(
     card = views.build_workflow_card_context(
         db, review_session, return_to="home"
     )
-    assert card["is_setup_empty"] is False
+    assert card["setup_checklist"]["instruments_configured_ok"] is True
+    assert card["prepare_visible"] is True
 
     prepared = client.post(
         f"/operator/sessions/{session_id}/workflow/prepare",

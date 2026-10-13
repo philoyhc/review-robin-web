@@ -864,7 +864,7 @@ Routes: `GET /templates/starter.zip`, `GET /templates/demo.zip`,
 |---|---|---|---|
 | **starter** | one per file | *Edit this* — the format, with one example row to replace | Guide "Create and set up a session" card; lobby first-run card |
 | **demo** | six students, twelve pairs, two observers | *Watch this work* — a populated session to walk through | Guide "Sample session" card |
-| **full** | 154 people in each of two files | *Try this at scale* — a class-sized roster, no configuration | Guide "Sample session" card |
+| **full** | 154 people in each of two files | *Try this at scale* — a class-sized roster, no rule or settings file | Guide "Sample session" card |
 
 **Members.** The starter and demo sets carry `reviewers.csv`,
 `reviewees.csv`, `relationships.csv`, `observers.csv`. The full set
@@ -872,7 +872,9 @@ carries only `reviewers.csv` and `reviewees.csv`, with **no
 relationships, observers or settings file, and no round-trip test**:
 it has no pairing rule to make Full Matrix on 154 people affordable
 (23,716 assignments), so a session built from it pairs everyone with
-everyone until the operator sets a rule.
+everyone unless the operator narrows the rule (setting the three
+Band 1 links to `All` / `All` / `Individual`, which Prepare needs,
+keeps Full Matrix).
 
 **The full set's cohort.** Eleven tutorial groups of fourteen
 (`TW01`–`TW11`), each split into teams of 5 / 5 / 4 numbered across
