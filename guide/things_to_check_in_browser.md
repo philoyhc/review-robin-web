@@ -8,6 +8,10 @@ section (git history keeps it), so this file lists only what is owed. A
 section may point to upload files under `guide/browser_check_files/`;
 delete them once no remaining section points to them.
 
+A run order for every section below, with upload files, is in
+`guide/browser_check_files/checklist/README.md` (2026-10-13). Delete it
+with the last section it covers.
+
 ## Email dates in the session's zone (#2720)
 
 - [x] **The deadline reads in the session's zone.** On a session whose
