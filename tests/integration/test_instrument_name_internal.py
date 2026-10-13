@@ -17,7 +17,10 @@ from sqlalchemy.orm import Session
 from app.db.models import AuditEvent, Instrument, ReviewSession, User
 from app.services import instruments as instruments_service
 from app.services import session_lifecycle as lifecycle
-from app.services.assignments import replace_assignments
+from app.services.assignments import (
+    replace_assignments,
+    set_instrument_self_reviews_active,
+)
 
 from .test_scheduled_activation import _make_validated_session
 
@@ -96,3 +99,23 @@ def test_replicate_delete_and_generate_summaries_name_the_label(
     assert deleted == f"Deleted instrument {replica_label}"
     for summary in (generated, replicated, deleted):
         assert INTERNAL not in summary
+
+
+def test_self_review_toggle_summary_names_the_label(db: Session) -> None:
+    """Codex on #3020: the per-instrument self-review toggle named the
+    instrument by its database id."""
+    session, instrument = _labelled_session(db, "name-int-selfrev")
+    set_instrument_self_reviews_active(
+        db,
+        review_session=session,
+        instrument_id=instrument.id,
+        user=_operator(db, session),
+        active=False,
+        correlation_id="c-self",
+    )
+    db.commit()
+
+    (summary,) = _summaries(
+        db, session, "assignments.instrument_self_reviews_active_set"
+    )
+    assert summary.startswith("Self-reviews on instrument Peer ")

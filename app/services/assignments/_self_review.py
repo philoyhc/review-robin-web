@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    Instrument,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -26,6 +27,7 @@ from app.db.models import (
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import normalize_email
+from app.services.instruments import _instrument_label
 from app.services.roster_status import is_active, status_is_active
 
 
@@ -529,11 +531,13 @@ def set_instrument_self_reviews_active(
             assignment.include = active
             flipped += 1
     db.flush()
+    instrument = db.get(Instrument, instrument_id)
+    label = _instrument_label(instrument) if instrument else f"#{instrument_id}"
     audit.write_event(
         db,
         event_type="assignments.instrument_self_reviews_active_set",
         summary=(
-            f"Self-reviews on instrument {instrument_id} bulk-set "
+            f"Self-reviews on instrument {label} bulk-set "
             f"to {'active' if active else 'inactive'} "
             f"({flipped} row{'s' if flipped != 1 else ''} flipped)"
         ),
