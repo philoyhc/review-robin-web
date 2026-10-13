@@ -196,3 +196,11 @@ with the last section it covers.
   Workflow card offers no Prepare. The new Instruments step (unlock,
   set the three Instrument assignment rule links to all, all,
   individual, save) brings Prepare back, and Prepare reaches Validated.
+
+## A relationship-tag boundary survives the card (pair-context Link 3)
+
+- [ ] **The boundary is shown and kept.** On an instrument grouped by a
+  relationship tag (the checklist's Team review, grouped by
+  `PairContextTag1`), unlock the card. Unit of review shows that tag in
+  its boundary select, not —. Save without changing it, reload: still
+  that tag, and the reviewer surface still groups by team.
