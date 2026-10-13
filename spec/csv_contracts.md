@@ -887,18 +887,22 @@ set. Only reviewees carry a `ProfileLink`, a placeholder under
 **No set carries a `settings.csv`, and none is needed.** A new
 session is seeded with a default instrument
 (`ensure_default_instrument`) whose new-model rule defaults to Full
-Matrix, so the roster files alone carry a session to `validated` —
-asserted end-to-end by the demo set's round-trip test below (the
-full set has none; see Members). A settings file
+Matrix, so no rule file is needed: the roster files plus the
+operator setting that instrument's three Band 1 links (all / all /
+individual — the `Not set` safety gate, `spec/instruments.md`) carry
+a session to `validated` — asserted end-to-end by the demo set's
+round-trip test below (the full set has none; see Members). A settings file
 would also be the one artefact here that could not be derived: it
 is a `field,value,data_type` dump of a whole live session rather
 than a row-shaped roster, so there is no `HEADER` to take and its
 content would have to be authored.
 
 **The demo set's round trip is the acceptance test.** Download →
-Quick Setup submit-all → Prepare → `validated`, through the real
-import path rather than a fixture
-(`tests/integration/test_setup_template_download.py`). The test
+Quick Setup submit-all → Band 1 save → Prepare → `validated`, through
+the real import and save paths rather than a fixture
+(`tests/integration/test_setup_template_download.py`). It also
+asserts the Workflow card offers no Prepare until the Band 1 save,
+since the Prepare route itself does not check. The test
 asserts the submit redirect carries no `quick_setup_error` flag,
 because a silently-skipped slot would still let the session
 validate on the remaining rosters. A second test asserts the roster
@@ -1006,7 +1010,7 @@ while creating the session.
 | Quick Setup Reviewers / Reviewees / Relationships / Observers slots | In | same as per-page Upload — Quick Setup is a thin shell over the per-entity primitives; a Relationships or Observers slot that saves rows also turns that tab's toggle on | `spec/quick_setup_card_spec.md` |
 | Quick Setup Settings slot | In | `apply_session_config` | same |
 | Guide + lobby first-run card — Download setup templates | Out | `build_zip(starter)` — a zip of four generic roster templates, headers derived from the extracts' `HEADER` tuples, one row each (`GET /templates/starter.zip`). Session-independent; see §5a. | §5a |
-| Guide "Sample session" card — Download sample session data | Out | `build_zip(demo)` — the same four files populated with a two-group cohort (`GET /templates/demo.zip`). Reaches `validated` through Quick Setup with no configuration; see §5a. | §5a |
+| Guide "Sample session" card — Download sample session data | Out | `build_zip(demo)` — the same four files populated with a two-group cohort (`GET /templates/demo.zip`). Reaches `validated` through Quick Setup once the default instrument's three Band 1 links are set; see §5a. | §5a |
 | Guide "Sample session" card — Download the full-size sample rosters | Out | `build_zip(full)` — `reviewers.csv` and `reviewees.csv`, the same 154 people in each, tagged Tutor / Group / Team (`GET /templates/full.zip`, filename `review-robin-sample-rosters-154.zip`). No relationships, observers or settings file; see §5a. | §5a |
 
 ---

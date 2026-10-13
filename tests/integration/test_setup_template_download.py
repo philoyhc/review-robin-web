@@ -23,6 +23,7 @@ from app.auth.identity import (
 from app.config import Settings
 from app.db.models import (
     Assignment,
+    Instrument,
     Observer,
     Reviewee,
     Reviewer,
@@ -36,6 +37,7 @@ from app.services.setup_templates import (
     set_by_key,
     templates_in,
 )
+from app.web import views
 
 DOWNLOAD_URL = "/templates/starter.zip"
 DEMO_URL = "/templates/demo.zip"
@@ -223,13 +225,16 @@ def test_the_demo_roster_files_parse_with_no_issues() -> None:
 def test_the_demo_set_builds_a_validated_session(
     client: TestClient, db: Session
 ) -> None:
-    """The rung's acceptance test: download -> Quick Setup -> Prepare ->
-    `validated`, through the real import path rather than a fixture.
+    """The rung's acceptance test: download -> Quick Setup -> Band 1
+    save -> Prepare -> `validated`, through the real import and save
+    paths rather than a fixture.
 
-    Nothing is configured along the way. A new session is seeded with a
-    default instrument whose rule defaults to Full Matrix, so the four
-    roster files are sufficient on their own — which is why neither
-    template set carries a `settings.csv`.
+    A new session is seeded with a default instrument whose rule
+    defaults to Full Matrix, so no rule file is needed — which is why
+    neither template set carries a `settings.csv`. The operator still
+    sets that instrument's three Band 1 links: until then the Workflow
+    card offers no Prepare. The Prepare route does not check that
+    itself, so the card is asserted here rather than left to the POST.
     """
     files = _files("demo")
     client.post(
@@ -262,6 +267,36 @@ def test_the_demo_set_builds_a_validated_session(
     # would still let the session validate on the remaining rosters.
     assert submitted.status_code == 303
     assert "quick_setup_error" not in submitted.headers["location"]
+
+    review_session = db.get(ReviewSession, session_id)
+    card = views.build_workflow_card_context(
+        db, review_session, return_to="home"
+    )
+    assert card["is_setup_empty"] is True  # Band 1 links still Not set
+
+    instrument_id = db.execute(
+        select(Instrument.id).where(Instrument.session_id == session_id)
+    ).scalar_one()
+    saved = client.post(
+        f"/operator/sessions/{session_id}"
+        f"/instruments/{instrument_id}/fields/save",
+        data={
+            "link1_mode": "all",
+            "link1_touched": "true",
+            "link2_mode": "all",
+            "link2_touched": "true",
+            "link3_mode": "individual",
+            "link3_touched": "true",
+        },
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303
+
+    db.expire_all()
+    card = views.build_workflow_card_context(
+        db, review_session, return_to="home"
+    )
+    assert card["is_setup_empty"] is False
 
     prepared = client.post(
         f"/operator/sessions/{session_id}/workflow/prepare",
