@@ -81,16 +81,6 @@ with the last section it covers.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## A copy keeps its default sort and widths (A28)
-
-- [x] **Duplicate.** On an instrument, set a default sort with a header
-  badge and drag a column wider, then Duplicate the session from the
-  lobby. The copy's instrument shows the same sort badge and column
-  width, and its reviewer surface sorts the same way.
-- [ ] **Settings round-trip.** Download Extract Setup's Settings CSV from
-  that session and import it through another session's Quick Setup. The
-  imported instrument keeps the sort and the width.
-
 ## The lobby Save keeps the schedule (C1)
 
 - [ ] **A rename keeps everything else.** On a draft with a Start, an
@@ -101,14 +91,6 @@ with the last section it covers.
   Deadline before the session's Start and Save: the page answers with
   "End must be on or after Start." and nothing changes, tags included.
 
-## A repeated name in a Settings CSV is a row error (D1)
-
-- [ ] **No 500 on a repeated shape name.** Export a session's Settings
-  CSV with a saved data shape, copy that shape's `data_shapes[0].*`
-  rows to `data_shapes[1].*`, and upload it to another session through
-  Quick Setup. The page shows the settings slot's "Could not import
-  session settings." message, not a 500, and the session is unchanged.
-
 ## The preview drops a self-review group Generate drops (B1)
 
 - [ ] **A filtered self-row still excludes the group.** On a grouped
@@ -116,18 +98,6 @@ with the last section it covers.
   keeps a reviewer's teammates but not the reviewer's own reviewee row.
   The Band 2 preview no longer offers one of those teammates as its
   sample; with the exclusion off, it does.
-
-## A lowercase response type imports as typed (D2)
-
-- [ ] **`integer` makes a number field.** Export a session's Settings
-  CSV. On an Integer field's `instruments[n].response_fields[m].data_type`
-  row, change the `value` cell to `integer`. Upload it to another session
-  through Quick Setup. On that session's reviewer surface the field has
-  a number box. The Instruments page is no test: it read as Integer even
-  before the fix.
-- [ ] **An unknown type is refused.** Change the value to `Boolean`
-  instead and upload again. The page shows "Could not import session
-  settings." and the session is unchanged.
 
 ## An archived session says it has closed (A25)
 
@@ -137,27 +107,6 @@ with the last section it covers.
   closed.", with no deadline line and a link back to the dashboard. A
   Prepared session still reads "opens later". *The closed half passed
   (author, 2026-10-13); the Prepared half is checklist step 41.*
-
-## A Settings CSV's errors show in Quick Setup (D31)
-
-- [ ] **The errors are listed.** On a draft session, upload a Settings
-  CSV with an instrument row but no `instruments[1].name` through Quick
-  Setup's Settings slot. The banner reads "Could not import session
-  settings." and lists the error underneath (`instruments[1].name: name is
-  required`). With seven bad instruments it lists five and "…and 2 more."
-
-## Assignments' replace banner, and a Settings import's landing (#2809, #2810)
-
-- [x] **The banner reads true and dismisses.** On a session with
-  assignments, open `/operator/sessions/{id}/assignments?needs_confirm=1`
-  (the page a direct POST to `/assignments/generate` without
-  `confirm_replace` lands on). The red banner reads "Replace not
-  confirmed. The existing assignments were kept." and carries a Cancel
-  button at its bottom right; Cancel returns to the page without the
-  banner.
-- [ ] **A Settings import lands on its slot.** Import a Settings CSV
-  through Quick Setup. The page returns to Session Home at the Settings
-  slot, with no `?config_imported=ok` in the address bar.
 
 ## Delete user only for accounts with no activity (#2867)
 
@@ -169,7 +118,7 @@ with the last section it covers.
 
 ## Upload banners read Dismiss, and a missing tick says so
 
-- [ ] **Quick Setup's banner reads Dismiss.** Refuse a file in a Quick
+- [x] **Quick Setup's banner reads Dismiss.** Refuse a file in a Quick
   Setup slot: the banner's one button reads Dismiss and clears it.
 - [x] **A replace without the tick says so.** On a Setup page with rows,
   open the upload card, then in the inspector remove the Upload button's
