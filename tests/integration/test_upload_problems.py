@@ -44,7 +44,8 @@ def _upload(client: TestClient, rs: ReviewSession, kind: str, body: str):
 
 def _banner(html: str) -> str:
     match = re.search(
-        r'<div class="banner banner-error" data-upload-problems>(.*?)</div>',
+        r'id="upload-problems-banner" data-upload-problems>(.*?)'
+        r'<div class="banner-actions">',
         html,
         re.S,
     )
@@ -116,6 +117,12 @@ def test_each_upload_card_lists_kinds_of_problem_with_counts(
     assert "Row " not in banner and "@" not in banner
     # The card no longer carries Validate's issue list.
     assert '<ul class="issue-list">' not in response.text
+    # Spec ui_elements §5a: it scrolls into view, and Cancel returns to
+    # the page with the upload card open and no file.
+    assert 'class="banner banner-error banner-scroll-target"' in response.text
+    assert (
+        f'href="/operator/sessions/{rs.id}/{kind}?unlocked=1#upload-csv">Cancel</a>'
+    ) in response.text
 
 
 def test_a_hundred_bad_rows_make_one_line(
@@ -145,6 +152,23 @@ def test_a_missing_column_reads_as_itself(
     assert re.findall(r"<li>(.*?)</li>", banner) == [
         "Missing required column: ReviewerEmail"
     ]
+
+
+def test_the_replace_confirmation_state_has_no_banner(
+    client: TestClient, db: Session
+) -> None:
+    """A clean file onto a populated roster, without the tick: a 400 with
+    nothing to report about the file."""
+    rs = _session(client, db, "up-confirm")
+    first = _upload(client, rs, "reviewers", "ReviewerName,ReviewerEmail\nAl,al@x.edu\n")
+    assert first.status_code == 303
+
+    response = _upload(
+        client, rs, "reviewers", "ReviewerName,ReviewerEmail\nBo,bo@x.edu\n"
+    )
+
+    assert response.status_code == 400
+    assert "data-upload-problems" not in response.text
 
 
 def test_a_clean_page_has_no_banner(client: TestClient, db: Session) -> None:

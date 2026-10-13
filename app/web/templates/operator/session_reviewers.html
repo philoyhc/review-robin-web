@@ -351,7 +351,9 @@
              the operator a closed panel and no errors at all. The suite
              cannot see that: with no JS runtime `hidden` is inert, so
              every assertion on these issues passes either way. #}
-          {% include "operator/partials/_upload_problems.html" %}
+          {% with upload_problems_cancel_url = reviewers_base_url ~ "?unlocked=1#upload-csv" %}
+            {% include "operator/partials/_upload_problems.html" %}
+          {% endwith %}
 
           <form method="post"
                 action="{{ reviewers_base_url }}/import"

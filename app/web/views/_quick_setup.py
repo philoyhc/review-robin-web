@@ -28,10 +28,11 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.web.views._upload_problems import problem_kinds
 from app.services import csv_imports
 from app.services import relationships as relationships_service
 from app.services import session_lifecycle as lifecycle
+
+from ._upload_problems import problem_kinds, problems_sentence
 
 
 @dataclass(frozen=True)
@@ -436,10 +437,7 @@ def _quick_setup_error_message(
     # show them; neither surface points at the other, and neither lists
     # rows (``guide/quick_setup_update.md`` Item 3).
     if has_details and slot_key != "settings":
-        return (
-            f"Could not import {label.lower()}. The file has these "
-            f"problems:"
-        )
+        return problems_sentence(label.lower())
     return f"Could not import {label.lower()}."
 
 

@@ -175,7 +175,7 @@ def test_a_link_with_no_lines_says_only_what_failed(
         f"/operator/sessions/{rs.id}"
         "?quick_setup_error=reviewers&quick_setup_reason=parse"
     ).text
-    assert "Could not import reviewers." in body
+    assert '<p class="banner-lead">Could not import reviewers.</p>' in body
     assert "per-row error details" not in body
 
 

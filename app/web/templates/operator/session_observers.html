@@ -385,7 +385,9 @@
                holds — which is why a failed import must arrive with
                the panel open (`_setup_observers.py`, the import
                route's `render`). #}
-            {% include "operator/partials/_upload_problems.html" %}
+            {% with upload_problems_cancel_url = observers_base_url ~ "?unlocked=1#upload-csv" %}
+              {% include "operator/partials/_upload_problems.html" %}
+            {% endwith %}
 
             <form method="post"
                   action="{{ observers_base_url }}/import"

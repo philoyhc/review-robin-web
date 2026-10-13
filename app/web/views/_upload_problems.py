@@ -45,6 +45,12 @@ def problem_kinds(issues: list) -> list[str]:
     ]
 
 
+def problems_sentence(noun: str) -> str:
+    """The sentence over the lines, on both surfaces."""
+
+    return f"Could not import {noun}. The file has these problems:"
+
+
 @dataclass(frozen=True)
 class UploadProblems:
     """The banner a Setup page's upload card shows for a refused file."""
@@ -62,6 +68,6 @@ def upload_problems(noun: str, issues: list | None) -> UploadProblems | None:
     if not lines:
         return None
     return UploadProblems(
-        message=f"Could not import {noun}. The file has these problems:",
+        message=problems_sentence(noun),
         lines=lines,
     )

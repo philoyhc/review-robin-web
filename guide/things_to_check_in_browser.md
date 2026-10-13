@@ -270,6 +270,9 @@ Upload files and a run order: `guide/browser_check_files/upload_problems/README.
   box.
 - [ ] **A hundred bad rows make one line.** "ReviewerEmail is blank
   (100 rows)".
+- [ ] **The banner comes into view, and Cancel clears it.** On a long
+  page the banner scrolls into view; Cancel returns to the page with the
+  upload card open and no banner.
 - [ ] **Quick Setup matches, and points nowhere.** The same lines, with no
   "Setup page shows which rows".
 - [ ] **Validate is unchanged.**

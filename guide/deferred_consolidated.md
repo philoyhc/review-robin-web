@@ -1140,8 +1140,10 @@ report as a `.txt`. The store, page and file are built once, so
 Rehydrate and Duplicate can use them later.
 
 **Why deferred.** The banner already says what kind of problem a file
-has, and the slot's Setup page lists every row on a re-upload. The
-report costs a new table, a page and a route slice for a convenience.
+has, with how many rows, and so does the Setup page's upload card since
+`guide/quick_setup_update.md` Item 3. Neither shows which rows: the
+operator finds them in the file. The report costs a new table, a page
+and a route slice for that convenience.
 
 **Lift trigger.** Any one of:
 

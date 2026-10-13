@@ -116,9 +116,9 @@ async def relationships_import_submit(
     )
 
     existing = relationships_service.existing_count(db, review_session.id)
-    # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. The
-    # issue list and the `missing_confirm` notice render inside the
-    # upload card, which is inside the Unlock panel, and a 400
+    # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. A
+    # refused file's problems render inside the upload card, which is
+    # inside the Unlock panel, and a 400
     # re-renders the page rather than redirecting — so `?unlocked=1`
     # cannot reach these. A panel that shipped collapsed here would show
     # the operator a closed panel and no errors at all.
