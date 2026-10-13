@@ -297,123 +297,92 @@ Taken 2026-10-12 at `7acfac1e`.
 
 ### Opportunity
 
-The two surfaces report the same refused file differently. On
-`03_reviewers_problems.csv` (author's browser check, 2026-10-13):
+The same refused file reads differently on the two surfaces
+(`03_reviewers_problems.csv`, author's browser check, 2026-10-13):
 
-- **Quick Setup's banner** groups the problems by kind, with a count for
-  each, using `roster_problem_details` (`app/web/views/_quick_setup.py`).
-  It shows "ReviewerEmail is blank (2 rows)" and "Status is not active
-  or inactive (1 row)".
-- **The Reviewers page's upload card** lists one line per row through
-  `operator/partials/validation_results.html`. It shows "Row 2:
-  `ReviewerEmail` ReviewerEmail is required" twice, then a line for
-  Row 4. The field name prints twice, and a file with a hundred bad rows
-  prints a hundred lines.
+- **Quick Setup's banner** groups by kind, with counts
+  (`roster_problem_details`, `app/web/views/_quick_setup.py`):
+  "ReviewerEmail is blank (2 rows)".
+- **The Reviewers upload card** prints one line per row through
+  `operator/partials/validation_results.html` ("Row 2: `ReviewerEmail`
+  ReviewerEmail is required"), so a hundred bad rows print a hundred
+  lines, each naming the field twice.
 
-Quick Setup's banner is also misleading today. "The Reviewers Setup
-page shows which rows" holds only if the operator uploads the same file
-there again. A refused file is never saved, so nothing carries over.
+Quick Setup's "the Reviewers Setup page shows which rows" also misleads:
+a refused file is never saved, so the page shows nothing.
 
 ### Decision
 
 The author's rulings, 2026-10-13:
 
-- **Both surfaces list the kinds of problem, with a count for each, and
-  never a list of rows.** The Reviewers, Reviewees, Relationships and
-  Observers upload cards render the same lines as Quick Setup, from the
-  same helper.
-- **Validate is left alone.** A refused file is never saved, so Validate
-  never sees it. Validate computes its own issues from the saved session
-  (`app/services/validation.py`). Today it shares only the template
-  `validation_results.html`. The upload cards get their own partial, so
-  that the Validate mode cannot change by accident.
+- **Kinds of problem with counts, never rows**, on Quick Setup and the
+  Reviewers, Reviewees, Relationships and Observers upload cards, from one
+  helper.
+- **Validate is left alone.** It reports on the saved session
+  (`app/services/validation.py`), which a refused file never reaches. The
+  upload cards get their own partial, so Validate's template cannot change
+  by accident.
 - **Neither surface points at the other.** Quick Setup drops "the …
-  Setup page shows which rows", and its no-detail fallback "Open the …
-  Setup page for per-row error details" goes with it.
+  Setup page shows which rows" and its "Open the … Setup page for per-row
+  error details" fallback.
 
-**Rejected:** listing the row numbers under each kind ("ReviewerEmail is
-blank: rows 2, 3"). It grows with the file, which is the problem being
-solved. Row numbers wait for `guide/import_error_reporting.md`'s full
-problem list.
+**Rejected:** row numbers under each kind ("rows 2, 3"). They grow with
+the file, the problem being solved; they wait for
+`guide/import_error_reporting.md`.
 
 ### Semantics
 
-- **One helper, two callers.** The grouping (by `problem`, then the
-  message for a file-level issue, then "`<field>` has a problem")
-  moves out of `_quick_setup.py` into a views module both can import.
-  Quick Setup keeps its redirect cap (`_capped`) on top. The page
-  renders the lines uncapped: the number of kinds is bounded by the
-  parser's own problem strings, not by the file.
-- **The page card's shape:** an error banner inside the upload card,
-  reading "Could not import reviewers. The file has these problems:"
-  over the list, in place of the Issues card. The 400 re-render, the
-  open Unlock panel and the file input are unchanged.
-- **Which issues count:** blocking ones only, as in Quick Setup. Today
-  the roster and relationship parsers raise no warnings
-  (`grep -c 'Severity.warning'` over both is 0). If one ever does, it
-  doesn't refuse the file and so has no banner to join.
-- **Relationships** carries a parse refusal and its FK refusals ("…is
-  not in the session's reviewers") through the same helper. Its
-  `problem` strings already exist (6 of 6 issues).
-- **Settings CSV uploads are out of scope.** Their errors are not
-  per-row kinds (`instruments[1].name: name is required`), and Quick
-  Setup already lists them as lines.
+- **One helper, two callers.** The grouping (`problem`, else a
+  file-level message, else "`<field>` has a problem") moves to a views
+  module both import. Quick Setup keeps its redirect cap on top; the
+  page renders uncapped, since kinds are bounded by the parsers' strings.
+- **The card:** an error banner inside the upload card, "Could not
+  import reviewers. The file has these problems:" over the lines, in
+  place of the Issues card. The 400 re-render and open Unlock panel stay.
+- **Blocking issues only**, as Quick Setup. The roster and relationship
+  parsers raise no warnings today (`grep -c 'Severity.warning'` is 0).
+- **Out:** Settings CSV errors, which are not per-row kinds and which
+  Quick Setup already lists as lines.
 
 ### Judgment calls — decided
 
-- **No scaffold rung.** This changes how an existing card reports an
-  error. It adds no page, card or navigation (`CLAUDE.md`, "Consequential
-  UI lands scaffold-first").
-- **One build rung.** The helper, the partial, both callers and the
-  wording are one coherent change. Splitting them would ship a page that
-  disagrees with Quick Setup for a rung.
+- **No scaffold rung:** an existing card's error changes; no page, card
+  or navigation is added.
+- **One build rung:** the helper, partial, callers and wording are one
+  change; splitting them would ship a page disagreeing with Quick Setup.
 
 ### Blast radius (measured)
 
 Taken 2026-10-13 at `626eb38e`.
 
-- Upload routes that re-render with `issues`: 4
-  (`grep -rn '"issues"' app/web/routes_operator/`, excluding Validate's
-  and the two empty defaults). They are `_shared.py` (Reviewers and
-  Reviewees), `_setup_relationships.py` and `_setup_observers.py`.
-- `validation_results.html` is included by 5 templates
-  (`grep -rn 'validation_results.html' app/web/templates`): the four
-  Setup pages and Validate. Validate keeps it.
-- `roster_problem_details` lives in `app/web/views/_quick_setup.py`, with
-  one test file (`tests/integration/test_quick_setup_problem_types.py`).
-- Issues carrying a `problem`: 16 of 23 `ValidationIssue(` sites in
-  `csv_imports.py`, and 6 of 6 in `relationships.py`. The other seven
-  are file-level issues, whose message stands as the line.
-- Test files touching the four import routes and asserting error text
-  (`grep -rlE '<route>/import' tests | xargs grep -lE 'Row [0-9]|is required|must be one of|issue-list|pill-error'`):
-  6, an upper bound to read through at build.
-- The wording: 2 strings in `_quick_setup.py` (lines 466 and 471); 1
-  passage in `spec/quick_setup_card_spec.md` ("Failure").
+- Upload contexts passing `issues` (`grep -rn '"issues"' app/web/routes_operator/`):
+  4, in `_shared.py`, `_setup_relationships.py`, `_setup_observers.py`,
+  plus two empty defaults; Validate's is separate.
+- `validation_results.html` includers
+  (`grep -rn 'validation_results.html' app/web/templates`): 5, the four
+  Setup pages and Validate.
+- `ValidationIssue(` sites with a `problem`: 16 of 23 in
+  `csv_imports.py` (the rest file-level), 6 of 6 in `relationships.py`.
+- Tests on the four import routes asserting error text: at most 6
+  (`grep -rlE '<kind>/import' tests | xargs grep -lE 'Row [0-9]|is required|issue-list'`).
+- Wording: 2 strings in `_quick_setup.py`; 1 passage in
+  `spec/quick_setup_card_spec.md` ("Failure").
 
 ### PR ladder
 
 1. **This plan** (prose, with Items 1 and 2's close).
-2. **Build:**
-   - the shared helper and the upload-problems partial;
-   - the four page cards and Quick Setup's banner reading it;
-   - the wording change;
-   - tests: each page shows kinds with counts and no "Row N"; a
-     hundred-row file shows one line per kind; Validate's markup is
-     unchanged; Quick Setup's banner no longer names the Setup page;
-   - the specs and a browser-check section, with upload files in
-     `guide/browser_check_files/`;
-   - a `diff-reviewer` read on the rung, as the item's only build rung.
-
-   It also strikes `guide/import_error_reporting.md`'s Out of scope line
-   "The Setup pages' uploads already list every row".
+2. **Build:** the helper and partial, the four cards and Quick Setup on
+   them, the wording, tests, specs, a browser-check section with upload
+   files, the struck `guide/import_error_reporting.md` Out of scope line
+   ("The Setup pages' uploads already list every row"), and a
+   `diff-reviewer` read on the rung.
 3. **Close** (prose).
 
 ### Definition of done
 
-- By test: each of the four upload cards shows a refused file's
-  problems as kinds with counts, with no row numbers, and Quick Setup's
-  banner shows the same lines without pointing at a Setup page.
-  Validate's issue list renders as before.
+- By test: the four cards and Quick Setup show a refused file's kinds
+  with counts and no rows; a hundred bad rows make one line; Quick Setup
+  names no Setup page; Validate renders as before.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
 - `### Status` compacted.
 
@@ -423,9 +392,7 @@ Taken 2026-10-13 at `626eb38e`.
 
 ### Out of scope
 
-- Row numbers anywhere (`guide/import_error_reporting.md`, deferred).
-- Settings CSV error lines (above).
-- The Validate page.
+- Row numbers anywhere; Settings CSV error lines; the Validate page.
 
 ### Doc impact
 
