@@ -116,30 +116,32 @@
     </script>
   </div>
 
-  {# admin_pages_refine Item 3 — four lines, the author's choice sized
-     to the card: the chips' counts, each opening the table on that chip
-     alone; new accounts; Unused ones old enough to clear out; and
-     sessions one person owns. #}
+  {# admin_pages_refine Item 3 — the author's choice sized to the card:
+     the chips' counts on two rows (with a role, without), each opening
+     the table on that chip alone; new accounts; Unused ones old enough
+     to clear out; and sessions one person owns. Every number a pill. #}
   {% set ov = account_overview %}
   <div class="card" id="accounts-overview">
     <h2>Overview</h2>
     <dl class="overview-list">
-      <dt>Accounts</dt>
+      {% for row in account_overview_rows %}
+      <dt>{{ row.label }}</dt>
       <dd>
-        {%- for kind in account_overview_kinds -%}
-          <a href="{{ kind.url }}" data-overview-kind="{{ kind.key }}">{{ kind.label }} {{ kind.count }}</a>
+        {%- for kind in row.kinds -%}
+          <a href="{{ kind.url }}" data-overview-kind="{{ kind.key }}">{{ kind.label }}<span class="pill pill-count">{{ kind.count }}</span></a>
           {%- if kind.note %} {{ kind.note }}{% endif -%}
           {%- if not loop.last %} · {% endif -%}
         {%- endfor -%}
       </dd>
+      {% endfor %}
       <dt>New in the last {{ overview_days }} days</dt>
-      <dd data-overview="new">{{ ov.new_recently }}</dd>
+      <dd data-overview="new"><span class="pill pill-count">{{ ov.new_recently }}</span></dd>
       <dt>Unused for over {{ overview_days }} days</dt>
-      <dd data-overview="stale">{{ ov.unused_stale }}
+      <dd data-overview="stale"><span class="pill pill-count">{{ ov.unused_stale }}</span>
         {%- if ov.unused_stale %} · <a href="{{ account_overview_unused_url }}">Show Unused</a>{% endif -%}
       </dd>
       <dt>Sessions with one owner</dt>
-      <dd data-overview="sole">{{ ov.single_owner_sessions }}</dd>
+      <dd data-overview="sole"><span class="pill pill-count">{{ ov.single_owner_sessions }}</span></dd>
     </dl>
   </div>
   </div>{# .page-grid #}

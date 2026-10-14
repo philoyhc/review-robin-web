@@ -57,6 +57,7 @@ from ._accounts import (
     ACCOUNT_ROLE_OPTIONS,
     AccountChip,
     AccountOverviewKind,
+    AccountOverviewRow,
     AccountView,
     account_chip_url,
     account_refusal_message,
@@ -64,6 +65,7 @@ from ._accounts import (
     account_view_query,
     build_account_chips,
     build_account_overview_kinds,
+    build_account_overview_rows,
     parse_account_view,
 )
 
@@ -262,6 +264,7 @@ __all__ = [
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
     "AccountOverviewKind",
+    "AccountOverviewRow",
     "AccountView",
     "account_chip_url",
     "account_refusal_message",
@@ -269,6 +272,7 @@ __all__ = [
     "account_view_query",
     "build_account_chips",
     "build_account_overview_kinds",
+    "build_account_overview_rows",
     "parse_account_view",
     "ProgressPill",
     "progress_pill",

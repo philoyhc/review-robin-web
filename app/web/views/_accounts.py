@@ -21,6 +21,7 @@ __all__ = [
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
     "AccountOverviewKind",
+    "AccountOverviewRow",
     "AccountView",
     "account_chip_url",
     "account_refusal_message",
@@ -28,6 +29,7 @@ __all__ = [
     "account_view_query",
     "build_account_chips",
     "build_account_overview_kinds",
+    "build_account_overview_rows",
     "parse_account_view",
 ]
 
@@ -190,6 +192,31 @@ def build_account_overview_kinds(
             ),
         )
         for key, label, _ in ACCOUNT_CATEGORIES
+    ]
+
+
+@dataclass(frozen=True)
+class AccountOverviewRow:
+    """One line of the Overview card's counts by kind (author,
+    2026-10-14): the kinds with a role on one, the rest on the next."""
+
+    label: str
+    kinds: tuple[AccountOverviewKind, ...]
+
+
+_OVERVIEW_ROWS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("With a role", ("operators", "admins")),
+    ("Without a role", ("no_role", "unused")),
+)
+
+
+def build_account_overview_rows(
+    kinds: Sequence[AccountOverviewKind],
+) -> list[AccountOverviewRow]:
+    by_key = {kind.key: kind for kind in kinds}
+    return [
+        AccountOverviewRow(label=label, kinds=tuple(by_key[key] for key in keys))
+        for label, keys in _OVERVIEW_ROWS
     ]
 
 

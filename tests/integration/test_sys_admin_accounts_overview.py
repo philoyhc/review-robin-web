@@ -1,7 +1,8 @@
 """Sys Admin → Accounts: the Overview card's four lines
-(``guide/admin_pages_refine.md`` Item 3 rung 2): the counts by kind,
-each linking to its chip alone; accounts new in the last 30 days;
-Unused accounts older than that; and sessions with one owner.
+(``guide/admin_pages_refine.md`` Item 3 rungs 2 and 2a): the counts by
+kind on two rows, with a role and without, each linking to its chip
+alone; accounts new in the last 30 days; Unused accounts older than
+that; and sessions with one owner. Every number is a count pill.
 """
 
 from __future__ import annotations
@@ -66,6 +67,10 @@ def test_the_counts_split_on_age_kind_and_ownership(
     )
 
 
+def _pill(n: object) -> str:
+    return f'<span class="pill pill-count">{n}</span>'
+
+
 def _chip_count(body: str, key: str) -> str:
     chip = body.split(f'value="{key}"', 1)[1].split("</label>", 1)[0]
     return chip.rsplit("(", 1)[1].split(")", 1)[0]
@@ -94,11 +99,23 @@ def test_the_card_renders_the_four_lines_and_their_links(
     ):
         link = (
             f'<a href="{ACCOUNTS}?show={key}#accounts-table-card" '
-            f'data-overview-kind="{key}">{label} {_chip_count(body, key)}</a>'
+            f'data-overview-kind="{key}">{label}{_pill(_chip_count(body, key))}</a>'
         )
         assert link in card
-    for pinned in ("Operators 3", "Admins 1", "No role 2", "Unused 4"):
-        assert f">{pinned}</a>" in card
+    for label, n in (("Operators", 3), ("Admins", 1), ("No role", 2), ("Unused", 4)):
+        assert f">{label}{_pill(n)}</a>" in card
+    # Two rows: the kinds with a role, then the rest.
+    with_role = card.split("<dt>With a role</dt>", 1)[1].split("</dd>", 1)[0]
+    without = card.split("<dt>Without a role</dt>", 1)[1].split("</dd>", 1)[0]
+    assert 'data-overview-kind="operators"' in with_role
+    assert 'data-overview-kind="admins"' in with_role
+    assert 'data-overview-kind="no_role"' in without
+    assert 'data-overview-kind="unused"' in without
+    # The other three numbers are pills too: four new accounts plus the
+    # signed-in admin, nothing old enough to clear out, no sessions.
+    for line, n in (("new", 5), ("stale", 0), ("sole", 0)):
+        value = card.split(f'data-overview="{line}">', 1)[1]
+        assert value.startswith(_pill(n)), (line, value[:60])
     # No super-admin configured, so Admins carries no note.
     assert "super-admin" not in card
     assert "New in the last 30 days" in card
@@ -116,7 +133,7 @@ def test_a_stale_unused_account_offers_the_unused_view(
     db.commit()
     card = client.get(ACCOUNTS).text.split('id="accounts-overview"', 1)[1]
     stale = card.split('data-overview="stale">', 1)[1].split("</dd>", 1)[0]
-    assert stale.startswith("1")
+    assert stale.startswith(_pill(1))
     assert f'href="{ACCOUNTS}?show=unused#accounts-table-card">Show Unused</a>' in stale
 
 
@@ -133,5 +150,5 @@ def test_admins_counts_its_super_admins(
     _user(db, "boss@example.edu", OLD, is_operator=True, is_sys_admin=True)
     db.commit()
     card = client.get(ACCOUNTS).text.split('id="accounts-overview"', 1)[1]
-    admins = card.split('data-overview-kind="admins">', 1)[1].split(" · ", 1)[0]
-    assert admins.endswith(f"</a> {note}")
+    admins = card.split('data-overview-kind="admins">', 1)[1].split("</dd>", 1)[0]
+    assert admins.endswith(f"</span></a> {note}")

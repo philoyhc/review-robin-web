@@ -273,11 +273,13 @@ def sys_admin_users(
             # admin_pages_refine Item 3 — the Overview card: the chips'
             # own counts, each linking to the table with only that chip
             # on, and what they don't count.
-            "account_overview_kinds": views.build_account_overview_kinds(
-                page.counts,
-                super_admins=overview.super_admins,
-                base_url=_ACCOUNTS_URL,
-                anchor="accounts-table-card",
+            "account_overview_rows": views.build_account_overview_rows(
+                views.build_account_overview_kinds(
+                    page.counts,
+                    super_admins=overview.super_admins,
+                    base_url=_ACCOUNTS_URL,
+                    anchor="accounts-table-card",
+                )
             ),
             "account_overview": overview,
             "account_overview_unused_url": views.account_chip_url(
