@@ -367,26 +367,38 @@ renders only where `can_manage_admins`; `Cancel` resets it.
 
 ### Status
 
-- **Rung 1** (2026-10-14): Overview wears `.card.placeholder`, the
-  spec's scaffold treatment. The reads found `spec/ui_elements.md` and
-  `spec/session_home.md` owed bullets (below).
-- **Rung 1a** (2026-10-14): the chip and `Cancel` / `Invite` share one
-  row, chip top-left, the pair flush right (author; `.card-action-row`
-  with a new `.card-action-lead`), wrapping as a unit (the cold read; a
-  `.btn-pair` that keeps the row's 12px).
-- **Rung 2** (2026-10-14): Overview is live, the stub gone, so no page
-  uses `.card.placeholder` again. The counts by kind reuse the chips'
-  query; `account_listing.overview` adds one query over users and one
-  over sessions. A super-admin is counted only once they have an
-  account; archived sessions don't count toward one-owner sessions.
+Closed 2026-10-14: #3029 (rung 1), #3031 (rung 1a), #3040 (rung 2), and
+rung 2a with the close. Built as planned, plus rungs 1a and 2a, which
+were not:
+
+- **Rung 1a** (author, unplanned): the chip and `Cancel` / `Invite`
+  share one row, chip top-left and the pair flush right
+  (`.card-action-row` with a new `.card-action-lead`), wrapping as a
+  unit.
+- **Overview content** (author, before rung 2): four lines, chosen from
+  seven to fit the card; see Open questions.
+- **Rung 2a** (author, after rung 2 merged, folded into the close): the
+  counts by kind split onto two rows, *With a role* (Operators, Admins)
+  and *Without a role* (No role, Unused), and every number on the card
+  became a count pill (`views.build_account_overview_rows`).
+- **Decided at build.** A super-admin is counted only once they have an
+  account. Archived sessions don't count toward one-owner sessions.
   *Show Unused* opens the whole Unused chip, so the table can hold more
-  than the over-30-days count; the table has no age filter to narrow it.
-  Item 3's code shipped in rungs 1 and 1a and this one; its read
-  covers those, since main moved on with Items 1 and 2 between them.
-  The read found no defect; acted on: the super-admin rule and its note
-  untested, the note's plural and the Unused link worked out in the
-  template (now `views.build_account_overview_kinds` / `account_chip_url`),
-  one kind link of four checked.
+  than the over-30-days count, since the table has no age filter. With
+  Overview live, no page uses `.card.placeholder` again, so the
+  `spec/session_home.md` bullet is waived.
+- **Reads.** Rung 1 and 1a: one each, plus a read of their fixes; they
+  found the spec bullets owed below and the row's wrapping. Rung 2: one
+  over Item 3's code, then two of the fixes. None found a defect in the
+  card. They found the super-admin rule and its note untested, the
+  note, its plural and the Unused link worked out in the template (now
+  `views.build_account_overview_kinds` / `account_chip_url`), a URL
+  literal repeated in the route, and kind links checked one of four.
+  Rung 2a: one read, of it and the close together. No defect; acted
+  on: the kind links' text had lost its space (now a visually hidden
+  one, for screen readers and copy-paste), stale "four lines" wording,
+  the spec crediting `account_listing.overview` with the chips' counts,
+  and no check that the two rows cover every category.
 
 ### PR ladder
 
@@ -421,6 +433,6 @@ renders only where `can_manage_admins`; `Cancel` resets it.
 - `spec/permissions.md` — rows naming *Also invite as sys-admin* name the chip (Item 3).
 - `spec/operator_button_audit.md` — rows 112–113: Cancel before Invite, flush right beside the chip, and Cancel resets the chip, not a checkbox (Item 3).
 - `docs/security_posture.md` — the invite guard names the chip (Item 3).
-- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card and its four lines, with their links (Item 3).
+- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card and its lines, with their links (Item 3).
 - `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling) and its `.card-action-row` row lists the invite card, `.card-action-lead` and the `> .btn-pair` override, §9's form-control chips list the invite chip, and a row for `.overview-list`, the Overview card's label / value grid (Item 3; the §4 placeholder note dropped at rung 2, when Overview stopped being a stub).
 - `spec/session_home.md` — "Placeholder cards" no longer says no live page uses the class (Item 3). <!-- doc-impact-waived: rung 2 wired Overview, so again no live page uses the class and the sentence stands -->

@@ -958,6 +958,10 @@
       }
       .overview-list dt { color: var(--text-subtle); }
       .overview-list dd { margin: 0; }
+      /* The count pills sit flush; inside a kind link the gap before the
+         pill is a margin, so the link's underline stops at the label. */
+      .overview-list .pill.pill-count { margin: 0; }
+      .overview-list a .pill.pill-count { margin-left: 6px; }
       .page-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
