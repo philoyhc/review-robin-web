@@ -244,7 +244,13 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
         "1 of these users has acted in the audit log and cannot be deleted."
     )
 
-    # Every selected row with history: "These users have …".
+    # Every selected row with history: "These users have …". Untick
+    # first, so a browser that restores checkboxes on reload can't keep
+    # the old selection.
+    for email in (first, unused):
+        page.locator(
+            f'tr[data-user-id]:has(code:text-is("{email}")) .user-row-select'
+        ).uncheck()
     _co_own(api, new_session(), second)
     page.reload()
     _tick(page, first)
