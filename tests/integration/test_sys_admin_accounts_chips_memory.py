@@ -53,3 +53,40 @@ def test_the_cookie_round_trips_every_chip_off() -> None:
     assert views.remembered_account_chips(value) == [""]
     assert views.remembered_account_chips(None) is None
     assert views.remembered_account_chips("") is None
+
+
+def test_a_chip_selected_turns_on_is_remembered(
+    client: TestClient, admin: None
+) -> None:
+    """``?selected=`` turns the row's chip on as if clicked, and a click
+    is remembered, so leaving and coming back keeps the row in view."""
+    client.post(f"{ACCOUNTS}/invite", data={"email": "newbie@example.edu"})
+    client.get(f"{ACCOUNTS}?show=unused")
+    newbie = client.get(f"{ACCOUNTS}?show=operators&q=newbie").text
+    row_id = re.search(r'data-user-id="(\d+)"', newbie)
+    assert row_id is not None
+    client.get(f"{ACCOUNTS}?show=unused&selected={row_id.group(1)}")
+    assert _on(client.get(ACCOUNTS).text) == ["operators", "unused"]
+
+
+def test_invite_lands_with_the_invitee_in_view(
+    client: TestClient, admin: None
+) -> None:
+    """The remembered chips may hide operators; Invite selects the new
+    row, which turns its chip on."""
+    client.get(f"{ACCOUNTS}?show=unused")
+    page = client.post(f"{ACCOUNTS}/invite", data={"email": "newbie@example.edu"})
+    assert page.status_code == 200
+    assert "newbie@example.edu" in page.text
+    assert _on(page.text) == ["operators", "unused"]
+
+
+def test_the_cookie_is_http_only_scoped_to_the_page_and_kept_a_year(
+    client: TestClient, admin: None
+) -> None:
+    header = client.get(f"{ACCOUNTS}?show=no_role").headers["set-cookie"]
+    attributes = {part.strip().lower() for part in header.split(";")}
+    assert f"path={ACCOUNTS}" in attributes
+    assert "httponly" in attributes
+    assert "samesite=lax" in attributes
+    assert f"max-age={365 * 24 * 60 * 60}" in attributes

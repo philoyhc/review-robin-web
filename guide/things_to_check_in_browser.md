@@ -226,3 +226,6 @@ Sys Admin → Sessions Diagnostics.
   every chip off, with "No accounts match the chips above."
 - [ ] **Row actions.** With non-default chips on, act on a row: the page
   comes back with the same chips.
+- [ ] **Invite.** With only Unused on, invite someone: the page comes
+  back with Operators turned on and the new row in view; leave and come
+  back and Operators is still on.

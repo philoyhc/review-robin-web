@@ -304,11 +304,12 @@ def sys_admin_users(
         request.cookies.get(views.ACCOUNT_CHIPS_COOKIE)
     )
     view = views.parse_account_view(show=chips, role=role, search=q, offset=offset)
-    remembered = views.account_chips_cookie(view)
     if selected is not None:
         selected_category = account_listing.category_of(db, selected)
         if selected_category is not None:
             view = view.with_category(selected_category)
+    # After ``selected``: a chip it turned on is remembered, as a click is.
+    remembered = views.account_chips_cookie(view)
     page = account_listing.list_accounts_page(
         db,
         categories=view.show,
@@ -712,7 +713,7 @@ def invite_user(
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     try:
-        users_service.invite(
+        invited = users_service.invite(
             db,
             actor=actor,
             email=email,
@@ -722,4 +723,5 @@ def invite_user(
     except users_service.UserOperationError as exc:
         url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
-    return _users_redirect()
+    # Selected, so its chip turns on whatever chips are remembered.
+    return _users_redirect(selected_user_id=invited.id)

@@ -272,19 +272,19 @@ from ._audit_log import (
 
 __all__ = [
     "ACCOUNT_CATEGORIES",
-    "remembered_account_chips",
-    "account_chips_cookie",
     "ACCOUNT_CHIPS_COOKIE",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
     "AccountOverviewPill",
     "AccountView",
+    "account_chips_cookie",
     "account_refusal_message",
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
     "build_account_overview_pills",
     "parse_account_view",
+    "remembered_account_chips",
     "ProgressPill",
     "progress_pill",
     # Module-level constants.
