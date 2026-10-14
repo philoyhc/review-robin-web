@@ -18,16 +18,19 @@ from app.services.account_listing import CATEGORIES, SESSION_ROLES
 
 __all__ = [
     "ACCOUNT_CATEGORIES",
+    "ACCOUNT_CHIPS_COOKIE",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
     "AccountOverviewPill",
     "AccountView",
+    "account_chips_cookie",
     "account_refusal_message",
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
     "build_account_overview_pills",
     "parse_account_view",
+    "remembered_account_chips",
 ]
 
 
@@ -116,6 +119,30 @@ def account_view_query(view: AccountView, *, offset: bool = True) -> str:
     if offset and view.offset:
         pairs.append(("offset", str(view.offset)))
     return urlencode(pairs)
+
+
+#: The Workspace users chips, remembered between visits (author,
+#: 2026-10-14): the last ``show`` the page was asked for, so coming back
+#: through the tab strip or the chrome finds the same chips on.
+ACCOUNT_CHIPS_COOKIE = "rrw-accounts-chips"
+_NO_CHIPS = "none"
+
+
+def account_chips_cookie(view: AccountView) -> str:
+    """The cookie value for ``view``'s chips: their keys, or ``none``
+    for every chip off (an empty cookie value would read as absent)."""
+    return ",".join(view.show) or _NO_CHIPS
+
+
+def remembered_account_chips(value: str | None) -> list[str] | None:
+    """A ``show`` list from the cookie, for ``parse_account_view``:
+    ``None`` when nothing is remembered (the default chips), ``[""]``
+    for every chip off. Unknown keys fall out in the parse."""
+    if not value:
+        return None
+    if value == _NO_CHIPS:
+        return [""]
+    return value.split(",")
 
 
 def account_view_from_query(query: str) -> AccountView:

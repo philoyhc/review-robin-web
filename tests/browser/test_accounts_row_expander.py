@@ -299,7 +299,8 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     # sessions can't succeed for them (a batch can't add owners), so it
     # no longer renders.
     filtered = page.url
-    page.goto(f"{ACCOUNTS}?q=operator%40example.edu")
+    # Asked for outright: a bare visit takes the chips last asked for.
+    page.goto(f"{ACCOUNTS}?show=admins&q=operator%40example.edu")
     me = page.locator('tr[data-is-self="true"]').get_attribute("data-user-id")
     response = api.post(
         f"/operator/sessions/{session_id}/owners/{me}/remove",

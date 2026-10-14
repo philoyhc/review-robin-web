@@ -276,6 +276,7 @@ def sys_admin_session_audit_log(
 
 
 _ACCOUNTS_URL = "/operator/sys-admin/users"
+_ONE_YEAR = 365 * 24 * 60 * 60
 
 
 @router.get("/sys-admin/users", response_class=HTMLResponse)
@@ -296,7 +297,14 @@ def sys_admin_users(
     # and the page all filter in SQL (``account_listing``). A
     # ``?selected=`` row an action just changed turns its chip on, as if
     # clicked, and lands on its page, so the operator sees what they did.
-    view = views.parse_account_view(show=show, role=role, search=q, offset=offset)
+    # No ``show`` in the URL (the tab strip, the chrome, a bare link)
+    # takes the chips last asked for (author, 2026-10-14); an explicit
+    # one, even every chip off, is remembered for next time.
+    chips = show if show is not None else views.remembered_account_chips(
+        request.cookies.get(views.ACCOUNT_CHIPS_COOKIE)
+    )
+    view = views.parse_account_view(show=chips, role=role, search=q, offset=offset)
+    remembered = views.account_chips_cookie(view)
     if selected is not None:
         selected_category = account_listing.category_of(db, selected)
         if selected_category is not None:
@@ -314,7 +322,7 @@ def sys_admin_users(
     pager = views.build_pager(total=page.total, offset=page.offset)
     refused_user = db.get(User, refused) if refused is not None else None
     back = _admin_return_target(request, None, db)
-    return _templates.TemplateResponse(
+    response = _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
         {
@@ -384,6 +392,15 @@ def sys_admin_users(
             "selected_user_id": selected,
         },
     )
+    response.set_cookie(
+        views.ACCOUNT_CHIPS_COOKIE,
+        remembered,
+        max_age=_ONE_YEAR,
+        path=_ACCOUNTS_URL,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 @router.get("/sys-admin/users/search-options")

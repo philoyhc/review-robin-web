@@ -215,3 +215,14 @@ Sys Admin → Sessions Diagnostics.
   the Archived sessions page, New session and Settings: the back link
   names the session, "Archived sessions", "New session" and "Settings",
   and opens the page you left. The same holds for About and the Guide.
+
+## Accounts chips remembered (2026-10-14)
+
+- [ ] **Leave and come back.** On Accounts Management turn on No role
+  and turn off Operators. Go to Sessions Diagnostics, then back to
+  Accounts Management: the same chips are on. Do the same by leaving
+  for the Sessions lobby and following Admin again.
+- [ ] **Every chip off.** Turn every chip off, leave and come back: still
+  every chip off, with "No accounts match the chips above."
+- [ ] **Row actions.** With non-default chips on, act on a row: the page
+  comes back with the same chips.
