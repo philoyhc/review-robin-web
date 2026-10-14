@@ -358,8 +358,9 @@ Key landmarks in the codebase:
   carrying the canonical
   `[{"key": "...", "dir": "asc|desc"}, ...]` shape,
   percent-encoded (`encodeURIComponent`) — the SSR decoders
-  `unquote()` before parsing. The two session-list pages carry no
-  session id: `rrw-sort-lobby` and `rrw-sort-archived`, which the
+  `unquote()` before parsing. The three session-list pages carry no
+  session id: `rrw-sort-lobby`, `rrw-sort-archived` and
+  `rrw-sort-sys-admin-sessions`, which the
   primitive scopes to path `/` rather than to a session's path.
 - **Tests:**
   - `tests/unit/test_order_rows_by_sort_spec.py` — the pure helper.

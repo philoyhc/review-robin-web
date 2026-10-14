@@ -14,63 +14,105 @@
 
   {% if sessions %}
     <div class="card">
+      {# The lobby's columns, and its sort (author, 2026-10-14): the
+         `rrw-sortable` primitive, its own cookie, seeded by the route.
+         Status and Actions don't sort. The filter is the lobby's kind —
+         it hides rows already rendered, live on every keystroke, and
+         never queries — so `Cancel` clears it rather than submitting.
+         Its script is its own rather than base.html's
+         `rrwSessionFilterMatches`, which matches name, code and tags per
+         column; this one matches owners too, so it tests one
+         pre-joined string the route builds (`data-filter-text`). #}
+      <div class="table-card-toolbar is-split">
+        <div class="toolbar-pane toolbar-left"></div>
+        <div class="toolbar-pane toolbar-right">
+          <div class="operator-actions-filter" id="diagnostics-filter">
+            <div class="filter-row">
+              <label class="filter-search">
+                Filter:
+                <input type="text"
+                       list="diagnostics-filter-options"
+                       placeholder="Session name, code or owner"
+                       autocomplete="off"
+                       data-diagnostics-filter>
+                <datalist id="diagnostics-filter-options">
+                  {% for value in filter_options %}
+                    <option value="{{ value }}"></option>
+                  {% endfor %}
+                </datalist>
+              </label>
+            </div>
+            <div class="filter-actions">
+              <button type="button" class="btn secondary"
+                      data-diagnostics-filter-cancel>Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
       {# `.table-scroll` (base.html): a table wider than its card
          scrolls inside the card rather than pushing the page sideways. #}
       <div class="table-scroll">
-      <table>
+      <table data-rrw-sortable="{{ sort_cookie }}" id="diagnostics-sessions">
+        <thead>
         <tr>
-          <th>Session Name</th>
-          <th>Session Code</th>
-          <th>Deadline</th>
-          <th>Created by</th>
-          <th>Created</th>
-          <th>Last Modified</th>
+          {% for key, label in [
+            ("name", "Session Name"), ("code", "Session Code"),
+            ("created_by", "Created by"), ("created", "Created"),
+            ("deadline", "Deadline"), ("timezone", "Timezone"),
+          ] %}
+            <th class="rrw-sortable{% if key == 'timezone' %} col-shrink{% endif %}"
+                data-sort-key="{{ key }}">{{ label }}<button type="button" class="rrw-sort-btn"
+                aria-label="Sort by {{ label }}"
+                onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge">↕</span></button></th>
+          {% endfor %}
           <th>Status</th>
           <th class="col-shrink">Actions</th>
         </tr>
+        </thead>
+        <tbody class="rrw-rows">
         {% for s in sessions %}
-          <tr>
+          <tr data-filter-text="{{ filter_text_by_session[s.id] }}">
             <td>
               <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
             </td>
             <td><code>{{ s.code }}</code></td>
-            <td>
-              {% if s.deadline %}
-                <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
-              {% else %}
-                <span class="muted">No deadline</span>
-              {% endif %}
-            </td>
             <td>
               <span class="pill pill-count">{{ s.created_by_user.display_label }}</span>
             </td>
             <td>
               <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
             </td>
-            <td>
-              <span class="pill pill-count">{{ s.updated_at | format_datetime }}</span>
+            {# Deadline and Timezone carry what the route sorts by
+               (`views.session_sort_value`), not their labels: the stored
+               deadline as UTC ISO 8601 (`views.deadline_sort_value`;
+               empty, hence last either way, when there is none) and the
+               zone's IANA name. The browser compares names with
+               `localeCompare`, the route with Python's `<`, so some zone
+               names still order differently after a reload — hyphen
+               against underscore (`Port-au-Prince`, `Port_of_Spain`),
+               and legacy names (`Etc/GMT+10`, `EST`). #}
+            <td data-sort-value="{{ deadline_sort_values[s.id] }}">
+              {% if s.deadline %}
+                <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
+              {% else %}
+                <span class="muted">No deadline</span>
+              {% endif %}
+            </td>
+            {% set tz = session_timezone(s) %}
+            <td class="col-shrink" data-sort-value="{{ tz }}">
+              <span class="pill pill-count">
+                <abbr class="tz-gmt" title="{{ gmt_offset_label(tz) }} {{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
+              </span>
             </td>
             <td>
               <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
             </td>
             <td class="col-shrink">
-              {# Segment 18S Item 3 — editing a session now requires
-                 ownership. This "Manage" action self-adds the sys-admin as
-                 an owner (audited) and opens the session, replacing the old
-                 back-door link straight to /edit.
-
-                 The three actions are canonical **Secondary** buttons in a
-                 `.btn-pair` (2026-09-08). Manage was a `<button
-                 class="chrome-link">` carrying five inline properties to
-                 un-style itself into a link, and its two siblings were
-                 link-styled anchors to match it. `.btn-pair`'s own
-                 `> form { margin: 0 }` rule is what lets the form wrapper
-                 drop its inline style too. Secondary is the role for
-                 routine submits and View-detail actions per
-                 `spec/ui_elements.md` §6; the gravity of adopting a session
-                 is carried by the confirm-free audit trail and the title,
-                 not by button colour. #}
-              <div class="btn-pair">
+              {# Segment 18S Item 3 — editing a session requires ownership,
+                 so Manage self-adds the sys-admin as an owner (audited)
+                 and opens the session. All three are Secondary
+                 (`spec/ui_elements.md` §6), on one line (`.is-one-line`). #}
+              <div class="btn-pair is-one-line">
                 <form method="post"
                       action="/operator/sys-admin/sessions/{{ s.id }}/adopt">
                   <button type="submit" class="btn secondary"
@@ -84,8 +126,38 @@
             </td>
           </tr>
         {% endfor %}
+        </tbody>
       </table>
       </div>
+      <p class="muted" data-diagnostics-no-match hidden>No sessions match the filter.</p>
+      <script>
+        (function () {
+          var input = document.querySelector("[data-diagnostics-filter]");
+          var cancel = document.querySelector("[data-diagnostics-filter-cancel]");
+          var table = document.getElementById("diagnostics-sessions");
+          var none = document.querySelector("[data-diagnostics-no-match]");
+          if (!input || !table) return;
+          function apply() {
+            var term = input.value.trim().toLowerCase();
+            var shown = 0;
+            table.querySelectorAll("tbody tr[data-filter-text]").forEach(function (row) {
+              var match = !term || row.getAttribute("data-filter-text").indexOf(term) !== -1;
+              row.hidden = !match;
+              if (match) shown++;
+            });
+            if (none) none.hidden = shown > 0;
+          }
+          input.addEventListener("input", apply);
+          if (cancel) {
+            cancel.addEventListener("click", function () {
+              input.value = "";
+              apply();
+              input.focus();
+            });
+          }
+          apply();
+        })();
+      </script>
     </div>
   {% else %}
     <p class="muted">No sessions in this workspace yet.</p>

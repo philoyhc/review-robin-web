@@ -25,6 +25,8 @@ sys-admin reach a per-session outbox they aren't a
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -128,9 +130,9 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     # assertions around them check href and label only, so a revert to
     # `chrome-link` plus inline un-styling would pass every other test on
     # this page (`spec/operator_button_audit.md` §21).
-    actions = response.text.split('<td class="col-shrink">')[1].split("</td>")[0]
+    # The Actions cell is the row's last; Timezone is also col-shrink.
+    actions = response.text.split('<div class="btn-pair is-one-line">')[1].split("</td>")[0]
     assert actions.count('class="btn secondary"') == 3
-    assert '<div class="btn-pair">' in actions
     # Whitespace-independent: the template wraps these across lines, and an
     # assertion coupled to that indentation breaks on a re-wrap while
     # telling you nothing about the roles.
@@ -149,26 +151,22 @@ def test_sessions_diagnostics_columns_present(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """All eight columns render: Name, Code, Deadline, Created by,
-    Created, Last Modified, Status, Actions."""
+    """The lobby's columns, in its order (author, 2026-10-14): six that
+    sort, then Status and Actions, which don't. Last Modified is gone."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     _make_session(client, db, code="diag-cols")
 
-    response = client.get("/operator/sys-admin/sessions")
-    assert response.status_code == 200
-    for header in (
-        "Session Name",
-        "Session Code",
-        "Deadline",
-        "Created by",
-        "Created",
-        "Last Modified",
-        "Status",
-        "Actions",
-    ):
-        assert f"<th>{header}</th>" in response.text or (
-            f'<th class="col-shrink">{header}</th>' in response.text
-        )
+    body = client.get("/operator/sys-admin/sessions").text
+    head = body.split('id="diagnostics-sessions"', 1)[1].split("</thead>", 1)[0]
+    keys = [part.split('"', 1)[0] for part in head.split('data-sort-key="')[1:]]
+    assert keys == ["name", "code", "created_by", "created", "deadline", "timezone"]
+    labels = re.findall(r"<th(?:\s[^>]*)?>([^<]*)", head)
+    assert labels == [
+        "Session Name", "Session Code", "Created by", "Created", "Deadline",
+        "Timezone", "Status", "Actions",
+    ]
+    assert head.count("rrw-sort-btn") == 6
+    assert "Last Modified" not in body
 
 
 def test_sessions_diagnostics_lists_every_workspace_session(

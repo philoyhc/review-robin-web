@@ -40,44 +40,6 @@ from app.web.routes_operator._shared import (
 
 router = APIRouter()
 
-# Cookie-backed personal sort for the sessions lobby — shares the
-# ``rrw-sortable`` primitive with the Setup preview tables.
-_LOBBY_SORT_KEYS = {
-    "name", "code", "created_by", "created", "deadline", "timezone",
-    "status",
-}
-# The archived-sessions table shows an "Archived" column where the
-# lobby shows "Deadline" — backed by ``updated_at`` (an archived
-# session is inert, so its last mutation is the archive itself).
-_ARCHIVED_SORT_KEYS = {
-    "name", "code", "created_by", "created", "archived", "timezone",
-    "status",
-}
-
-
-def _session_sort_value(review_session: ReviewSession, key: str):
-    """Sort-key resolver shared by the sessions-lobby and archived
-    tables."""
-    if key == "name":
-        return review_session.name
-    if key == "code":
-        return review_session.code
-    if key == "created_by":
-        creator = review_session.created_by_user
-        return creator.display_label
-    if key == "created":
-        return review_session.created_at
-    if key == "deadline":
-        return review_session.deadline
-    if key == "archived":
-        return review_session.updated_at
-    if key == "timezone":
-        return sessions.resolve_session_timezone(review_session)
-    if key == "status":
-        return review_session.status
-    return None
-
-
 @router.get("/sessions", response_class=HTMLResponse)
 def list_sessions(
     request: Request,
@@ -100,10 +62,10 @@ def list_sessions(
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name="rrw-sort-lobby",
-        valid_keys=_LOBBY_SORT_KEYS,
+        valid_keys=views.LOBBY_SORT_KEYS,
     )
     review_sessions = views.apply_cookie_sort(
-        review_sessions, sort_spec, value_resolver=_session_sort_value
+        review_sessions, sort_spec, value_resolver=views.session_sort_value
     )
     session_ids = [s.id for s in review_sessions]
     lobby_tags = session_tags.vocabulary(db, session_ids)
@@ -151,10 +113,10 @@ def archived_sessions(
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
         cookie_name="rrw-sort-archived",
-        valid_keys=_ARCHIVED_SORT_KEYS,
+        valid_keys=views.ARCHIVED_SORT_KEYS,
     )
     archived = views.apply_cookie_sort(
-        archived, sort_spec, value_resolver=_session_sort_value
+        archived, sort_spec, value_resolver=views.session_sort_value
     )
     session_ids = [s.id for s in archived]
     archived_tags = session_tags.vocabulary(db, session_ids)

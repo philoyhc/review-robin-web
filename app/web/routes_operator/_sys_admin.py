@@ -74,6 +74,9 @@ def sys_admin_root(
     return RedirectResponse(url=target, status_code=status.HTTP_303_SEE_OTHER)
 
 
+_DIAGNOSTICS_SORT_COOKIE = "rrw-sort-sys-admin-sessions"
+
+
 @router.get("/sys-admin/sessions", response_class=HTMLResponse)
 def sys_admin_sessions(
     request: Request,
@@ -82,12 +85,32 @@ def sys_admin_sessions(
     db: Session = Depends(get_db),
 ) -> Response:
     target = resolve_return_to(return_to, db)
+    # The lobby's columns and sort (author, 2026-10-14): a cookie-backed
+    # personal sort, seeded here so the first render is already sorted.
+    sort_spec = views.decode_cookie_sort_spec(
+        cookies=dict(request.cookies),
+        cookie_name=_DIAGNOSTICS_SORT_COOKIE,
+        valid_keys=views.DIAGNOSTICS_SORT_KEYS,
+    )
+    rows = views.apply_cookie_sort(
+        sessions.list_all(db), sort_spec, value_resolver=views.session_sort_value
+    )
+    owners = session_owners.owners_by_session(db, [s.id for s in rows])
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_sessions.html",
         {
             "user": user,
-            "sessions": sessions.list_all(db),
+            "sessions": rows,
+            "sort_cookie": _DIAGNOSTICS_SORT_COOKIE,
+            # The filter matches name, code and owner; the text it
+            # matches rides each row.
+            "filter_text_by_session": {
+                s.id: views.diagnostics_filter_text(s, owners.get(s.id, []))
+                for s in rows
+            },
+            "filter_options": views.diagnostics_filter_options(rows, owners),
+            "deadline_sort_values": {s.id: views.deadline_sort_value(s) for s in rows},
             # 19C Item 10 — the workspace-wide visibility-grid audit.
             # Read-only, and sys-admin-only by construction: it spans
             # every session, which no per-session operator may see.
