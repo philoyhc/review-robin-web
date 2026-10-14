@@ -20,11 +20,13 @@ __all__ = [
     "ACCOUNT_CATEGORIES",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
+    "AccountOverviewKind",
     "AccountView",
     "account_refusal_message",
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
+    "build_account_overview_kinds",
     "parse_account_view",
 ]
 
@@ -147,6 +149,31 @@ def build_account_chips(
     return [
         AccountChip(
             key=key, label=label, count=counts.get(key, 0), selected=key in view.show
+        )
+        for key, label, _ in ACCOUNT_CATEGORIES
+    ]
+
+
+@dataclass(frozen=True)
+class AccountOverviewKind:
+    """One of the Overview card's counts by kind, linking to the table
+    with only its chip on (admin_pages_refine Item 3)."""
+
+    key: str
+    label: str
+    count: int
+    url: str
+
+
+def build_account_overview_kinds(
+    counts: Mapping[str, int], *, base_url: str, anchor: str
+) -> list[AccountOverviewKind]:
+    return [
+        AccountOverviewKind(
+            key=key,
+            label=label,
+            count=counts.get(key, 0),
+            url=f"{base_url}?{urlencode([('show', key)])}#{anchor}",
         )
         for key, label, _ in ACCOUNT_CATEGORIES
     ]

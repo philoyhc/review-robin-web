@@ -965,6 +965,16 @@
       }
       .status-row p { margin: 0; }
       .status-row p + p { margin-top: 4px; }
+      /* Accounts' Overview card (admin_pages_refine Item 3): a label
+         column sized to its longest label, the values beside it. */
+      .overview-list {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 8px 16px;
+        margin: 0;
+      }
+      .overview-list dt { color: var(--text-subtle); }
+      .overview-list dd { margin: 0; }
       .page-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;

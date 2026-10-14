@@ -374,31 +374,47 @@ renders only where `can_manage_admins`; `Cancel` resets it.
   row, chip top-left, the pair flush right (author; `.card-action-row`
   with a new `.card-action-lead`), wrapping as a unit (the cold read; a
   `.btn-pair` that keeps the row's 12px).
+- **Rung 2** (2026-10-14): Overview is live, the stub gone, so no page
+  uses `.card.placeholder` again. The counts by kind reuse the chips'
+  query; `account_listing.overview` adds one query over users and one
+  over sessions. A super-admin is counted only once they have an
+  account; archived sessions don't count toward one-owner sessions.
+  Item 3's code shipped in rungs 1 and 1a and this one; its read
+  covers those, since main moved on with Items 1 and 2 between them.
 
 ### PR ladder
 
 1. **Layout, chip and stub.** The grid, the chip with its label script
    (on `change` and the form's `reset`), and the static Overview card.
    No route change.
-2. **Overview content**, once decided.
+2. **Overview content**, once decided. A service read
+   (`account_listing.overview`) for what the chips don't already count;
+   the card a `<dl>` of four lines.
 
 ### Definition of done
 
 - The Invite and Overview cards sit side by side at equal height and
   stack below 800px.
 - Ticking the chip posts `invite_as_sys_admin=true`, as the box did.
+- Overview shows the four lines the author chose, each kind linking to
+  the table with its chip alone (`tests/integration/test_sys_admin_accounts_overview.py`).
 - The item close lines (top of this plan).
 
 ### Open questions
 
-- **What Overview shows**: counts per kind of account, at least
-  (author, 2026-10-14). Author decides before rung 2.
+- ~~What Overview shows~~ (author, 2026-10-14, from a list of seven,
+  sized to the card): the counts by kind, each a link to its chip, with
+  super-admins counted within Admins; accounts new in the last 30 days;
+  Unused accounts older than 30 days, linking to the Unused chip; and
+  sessions with one owner. Dropped: recent workspace changes (too tall)
+  and invited-but-never-signed-in, which needs a sign-in marker the
+  app doesn't keep (sign-in reuses an invited row without stamping it).
 
 ### Doc impact
 
 - `spec/permissions.md` — rows naming *Also invite as sys-admin* name the chip (Item 3).
 - `spec/operator_button_audit.md` — rows 112–113: Cancel before Invite, flush right beside the chip, and Cancel resets the chip, not a checkbox (Item 3).
 - `docs/security_posture.md` — the invite guard names the chip (Item 3).
-- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card (Item 3).
-- `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling) and its `.card-action-row` row lists the invite card, `.card-action-lead` and the `> .btn-pair` override, §9's form-control chips list the invite chip, and §4's `.card.placeholder` note names Overview while it is a stub, one with no action button to disable (Item 3).
-- `spec/session_home.md` — "Placeholder cards" no longer says no live page uses the class (Item 3).
+- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card and its four lines, with their links (Item 3).
+- `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling) and its `.card-action-row` row lists the invite card, `.card-action-lead` and the `> .btn-pair` override, §9's form-control chips list the invite chip, and a row for `.overview-list`, the Overview card's label / value grid (Item 3; the §4 placeholder note dropped at rung 2, when Overview stopped being a stub).
+- `spec/session_home.md` — "Placeholder cards" no longer says no live page uses the class (Item 3). <!-- doc-impact-waived: rung 2 wired Overview, so again no live page uses the class and the sentence stands -->
