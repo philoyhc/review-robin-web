@@ -319,7 +319,7 @@ def sys_admin_users_search_options(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     # admin_pages_refine Item 1 — the search box's typeahead, asked again
-    # as the operator types: the first 200 matches under the chips, so
+    # as the operator types: up to 200 matches under the chips, so
     # any account can be suggested, however late in the alphabet.
     view = views.parse_account_view(show=show, role=None, search=q, offset=0)
     return JSONResponse(

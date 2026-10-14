@@ -140,17 +140,19 @@ Taken 2026-10-14 at `871ba085`.
   pages" alone, since those mean the session pages.
 
 - **Rulings** (2026-10-14, after the close): the author's two answers
-  built as one slice, with its own read. The typeahead asks
+  built as one slice. The typeahead asks
   `GET …/users/search-options` again as the box changes; owning a session
   is history in the category rule (the server's Delete guards are
   unchanged and already refused owners). Re-timed with both at
   `3b25903b`: 1,200 accounts 40–68ms, 5,200 accounts 68–123ms, query
-  counts unchanged; a typeahead lookup 30ms / 52ms, 3 queries. Two
-  reads, no blocker. Acted on: the row flag's comment and
-  `spec/operator_button_audit.md` still described `has_history` as the
-  server guard alone; no test pinned the page's first list; the fetch URL
-  was a literal (now `accounts_base_url` through `tojson`); the spec
-  overstated how the typeahead orders its 200.
+  counts unchanged; a typeahead lookup 30ms / 52ms, 3 queries. Three
+  reads, no blocker; what they found is in the slice's commits and PR.
+  The substantive ones: the row flag's comment and
+  `spec/operator_button_audit.md` row 117 described `has_history` as the
+  server guard alone, and the row omitted the super-admin gate; no test
+  pinned the page's first list; the fetch URL was a literal (now
+  `accounts_base_url` through `tojson`); the spec overstated how the
+  typeahead picks its 200.
 
 ### PR ladder
 

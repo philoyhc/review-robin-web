@@ -270,9 +270,10 @@ def test_the_typeahead_offers_emails_and_names_under_the_chips(
 def test_the_typeahead_reaches_past_the_first_two_hundred(
     db: Session, client: TestClient, admin: None
 ) -> None:
-    """The page's list holds the alphabetically first 200; the box asks
-    ``search-options`` again as the operator types, which shows the first
-    200 *matches*, so a late account can still be suggested."""
+    """The page's first list stops 200 entries in, near the start of the
+    alphabet; the box asks ``search-options`` again as the operator
+    types, which shows up to 200 *matches*, so a late account can still
+    be suggested."""
     client.get(ACCOUNTS)
     _many(db, 250, is_operator=True)
     late = _seed(db, "zoe@example.edu", "Zoe Last", is_operator=True)
