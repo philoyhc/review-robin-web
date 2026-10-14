@@ -1762,6 +1762,22 @@
         flex-wrap: wrap;
       }
       body.ui-v2 .card-action-row form { margin: 0; }
+      /* A lead control on the action row's left (admin_pages_refine
+         Item 3: Accounts' invite role chip beside Cancel / Invite). It
+         takes the free space, so the buttons stay pinned right, and sits
+         at the line's top rather than centered against taller buttons.
+         Absent the lead, the row is the plain right-aligned one above. */
+      body.ui-v2 .card-action-row > .card-action-lead {
+        margin-right: auto;
+        align-self: flex-start;
+      }
+      /* A button pair on the row keeps the row's 12px spacing, and if a
+         narrow card ever splits the pair, its second button stays flush
+         right rather than falling to the left. */
+      body.ui-v2 .card-action-row > .btn-pair {
+        gap: 12px;
+        justify-content: flex-end;
+      }
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
         .page-grid { grid-template-columns: 1fr; }

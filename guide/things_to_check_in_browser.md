@@ -93,8 +93,9 @@ Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
 - [ ] **Side by side.** Invite by email on the left half, Overview on the
   right in the muted placeholder look, the same height; below about
   800px they stack. Workspace users still spans the page beneath.
-- [ ] **The role chip.** Under the email box, a solid chip reading
-  `Invite as operator`; a click turns it to `Invite as sys-admin` and
+- [ ] **The role chip.** Under the email box, one row: a solid chip
+  reading `Invite as operator` at its top-left, `Cancel` then `Invite`
+  flush right; a click turns it to `Invite as sys-admin` and
   back, staying solid. Cancel (after typing an email) returns it to
   `Invite as operator`.
 - [ ] **It still invites an admin.** Invite an address with the chip at

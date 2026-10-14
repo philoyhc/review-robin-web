@@ -59,29 +59,33 @@
                  placeholder="alice@example.edu">
         </label>
       </p>
-      {# Granting the admin flag follows the Promote rule
-         (``can_manage_admins``), so a plain admin never sees it.
+      {# One row: the role chip top-left, Cancel then Invite on the
+         right (author, 2026-10-14; `.card-action-row`). Granting the
+         admin flag follows the Promote rule (``can_manage_admins``), so
+         a plain admin sees no chip and the buttons alone.
          admin_pages_refine Item 3 — a cycle chip, always solid since
          both states are a choice: the box's tick is what it means,
          `Invite as sys-admin`, and the label names the state. #}
-      {% if can_manage_admins %}
-      <p>
-        <label class="pill pill-count tag-chip is-selected"
+      <div class="card-action-row">
+        {% if can_manage_admins %}
+        <label class="pill pill-count tag-chip is-selected card-action-lead"
                data-invite-role-chip
                title="Click to switch between inviting an operator and a sys-admin">
           <input type="checkbox" class="visually-hidden"
                  name="invite_as_sys_admin" value="true"
                  autocomplete="off" aria-label="Invite as sys-admin"><span
                  data-invite-role-label>Invite as operator</span></label>
-      </p>
-      {% endif %}
-      <div class="btn-pair">
-        <button class="btn secondary" type="submit"
-                data-invite-submit
-                disabled>Invite</button>
-        <button class="btn secondary" type="reset"
-                data-invite-cancel
-                disabled>Cancel</button>
+        {% endif %}
+        {# One unit, so a narrow card wraps the pair together rather
+           than stranding Invite on a line of its own. #}
+        <div class="btn-pair">
+          <button class="btn secondary" type="reset"
+                  data-invite-cancel
+                  disabled>Cancel</button>
+          <button class="btn secondary" type="submit"
+                  data-invite-submit
+                  disabled>Invite</button>
+        </div>
       </div>
     </form>
     <script>
