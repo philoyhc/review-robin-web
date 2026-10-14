@@ -102,3 +102,15 @@ Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
   `Invite as sys-admin`: the new row shows the Admin pill.
 - [ ] **Shorter copy.** The card's line ends "they land on the operator
   lobby directly." with no mention of `/me`.
+
+## Accounts typeahead reaches every account; owning is history (admin pages Item 1 rulings)
+
+Sys Admin → Accounts with more than 200 accounts under the chips on
+(`tools/bench_roster_scale.py seed-accounts` makes them).
+
+- [ ] **Typeahead.** Type the start of an email late in the alphabet
+  (`z…`): the suggestions show it within a moment, though the list the
+  page opened with stopped well before it. Typing more narrows it.
+- [ ] **Owners.** An account with neither flag that co-owns a session but
+  never acted shows under No role, not Unused, and its Delete stays
+  refused.

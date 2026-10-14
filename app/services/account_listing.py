@@ -13,9 +13,10 @@ exactly one chip:
 - ``admins``: ``is_sys_admin``, or a super-admin email. Admins win: an
   admin has operator access whatever its Operator flag says.
 - ``operators``: ``is_operator`` and not an admin.
-- ``no_role``: neither, with history (created a session or acted in the
-  audit log), which is what refuses Delete (``spec/permissions.md``
-  §4.1).
+- ``no_role``: neither, with history: created a session, owns one, or
+  acted in the audit log. Each refuses Delete (``spec/permissions.md``
+  §4.1), owning as ``owns_sessions`` and the other two as
+  ``has_history``.
 - ``unused``: neither, no history.
 """
 
@@ -81,8 +82,11 @@ def _is_admin() -> ColumnElement[bool]:
 
 
 def _has_history() -> ColumnElement[bool]:
+    # Owning a session counts, as the author ruled (Item 1): a co-owner
+    # who never acted is not unused, and Delete refuses them anyway.
     return or_(
         exists().where(ReviewSession.created_by_user_id == User.id),
+        exists().where(SessionOperator.user_id == User.id),
         exists().where(AuditEvent.actor_user_id == User.id),
     )
 
@@ -256,12 +260,18 @@ def _session_counts(
 
 
 def search_options(
-    db: Session, *, categories: Collection[str], cap: int = 200
+    db: Session,
+    *,
+    categories: Collection[str],
+    search: str = "",
+    cap: int = 200,
 ) -> list[str]:
     """The search box's typeahead: emails and names of the accounts
-    under ``categories``, sorted, capped. A convenience, not the search:
-    the server filter still matches anything typed past the cap."""
-    clauses = _filters(categories, None, "")
+    under ``categories`` that contain ``search``, sorted, the first
+    ``cap`` shown. The page asks again as the operator types, so the cap
+    limits what one list shows, never which accounts can be suggested:
+    typing more narrows the list to the account wanted."""
+    clauses = _filters(categories, None, search)
     emails = db.execute(
         select(User.email).where(*clauses).order_by(User.email).limit(cap)
     ).scalars()

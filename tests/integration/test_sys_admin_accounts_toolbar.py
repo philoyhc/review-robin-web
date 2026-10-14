@@ -106,7 +106,12 @@ def test_every_account_sits_under_exactly_one_chip(
     actor = _seed(db, "actor@example.edu")
     _acted(db, actor)
     creator = _seed(db, "creator@example.edu")
-    _session(db, creator, "made-by-creator")
+    made = _session(db, creator, "made-by-creator")
+    # Owning a session is history too (author, 2026-10-14): a co-owner
+    # who never acted.
+    owner = _seed(db, "owner@example.edu")
+    db.add(SessionOperator(session_id=made.id, user_id=owner.id))
+    db.commit()
     unused = _seed(db, "unused@example.edu")
     # History never moves a row with a role off its role's chip.
     busy_operator = _seed(db, "busy@example.edu", is_operator=True)
@@ -119,6 +124,7 @@ def test_every_account_sits_under_exactly_one_chip(
         super_admin: "admins",
         actor: "no_role",
         creator: "no_role",
+        owner: "no_role",
         unused: "unused",
         busy_operator: "operators",
     }
@@ -259,6 +265,42 @@ def test_the_typeahead_offers_emails_and_names_under_the_chips(
     assert '<option value="bob@example.edu">' in options
     assert '<option value="Bob Operator">' in options
     assert "Erin" not in options
+
+
+def test_the_typeahead_reaches_past_the_first_two_hundred(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    """The page's list holds the alphabetically first 200; the box asks
+    ``search-options`` again as the operator types, which shows the first
+    200 *matches*, so a late account can still be suggested."""
+    client.get(ACCOUNTS)
+    _many(db, 250, is_operator=True)
+    late = _seed(db, "zoe@example.edu", "Zoe Last", is_operator=True)
+    body = client.get(ACCOUNTS).text
+    assert late.email not in body.split('<datalist id="accounts-search-options">', 1)[1].split("</datalist>", 1)[0]
+
+    response = client.get(f"{ACCOUNTS}/search-options?q=zoe")
+    assert response.status_code == 200
+    assert response.json() == ["Zoe Last", "zoe@example.edu"]
+    # Typing little still caps the list at 200, which typing more narrows.
+    assert len(client.get(f"{ACCOUNTS}/search-options?q=user").json()) == 200
+    assert len(client.get(f"{ACCOUNTS}/search-options?q=user02").json()) == 50
+
+
+def test_the_typeahead_follows_the_chips(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    assert client.get(f"{ACCOUNTS}/search-options?q=erin").json() == []
+    assert client.get(
+        f"{ACCOUNTS}/search-options?show=unused&q=erin"
+    ).json() == ["Erin Unused", "Erin@Example.edu"]
+    # A blank ``show`` is no chip at all, as on the page.
+    assert client.get(f"{ACCOUNTS}/search-options?show=&q=bob").json() == []
+
+
+def test_the_typeahead_needs_an_admin(client: TestClient) -> None:
+    response = client.get(f"{ACCOUNTS}/search-options?q=a", follow_redirects=False)
+    assert response.status_code in {303, 403, 404}
 
 
 def test_unknown_values_fall_back_rather_than_fail(

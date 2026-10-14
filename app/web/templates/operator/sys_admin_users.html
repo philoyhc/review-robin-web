@@ -208,6 +208,48 @@
               });
             })();
           </script>
+          <script>
+            {# The typeahead asks the server again as the operator types,
+               for the first 200 matches under the chips: the list rendered
+               with the page holds only the alphabetically first 200, which
+               a late name would never be among. A reply that arrives after
+               a newer one has been asked for is dropped. #}
+            (function () {
+              var input = document.querySelector('#accounts-filter input[name="q"]');
+              var list = document.getElementById("accounts-search-options");
+              if (!input || !list || !window.fetch) return;
+              var timer = null;
+              var asked = 0;
+              function refresh() {
+                var ticket = ++asked;
+                var params = new URLSearchParams();
+                var chips = document.querySelectorAll(
+                  'input[name="show"][form="accounts-filter"]:checked'
+                );
+                if (!chips.length) params.append("show", "");
+                chips.forEach(function (box) { params.append("show", box.value); });
+                params.append("q", input.value);
+                fetch("/operator/sys-admin/users/search-options?" + params.toString(), {
+                  credentials: "same-origin",
+                  headers: { "Accept": "application/json" }
+                })
+                  .then(function (response) { return response.ok ? response.json() : null; })
+                  .then(function (labels) {
+                    if (!labels || ticket !== asked) return;
+                    list.replaceChildren.apply(list, labels.map(function (label) {
+                      var option = document.createElement("option");
+                      option.value = label;
+                      return option;
+                    }));
+                  })
+                  .catch(function () {});
+              }
+              input.addEventListener("input", function () {
+                clearTimeout(timer);
+                timer = setTimeout(refresh, 150);
+              });
+            })();
+          </script>
         </div>
       </div>{# .table-card-toolbar #}
 

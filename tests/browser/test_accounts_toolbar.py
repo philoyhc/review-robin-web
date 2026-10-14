@@ -117,3 +117,12 @@ def test_the_role_dropdown_and_the_pager(
     assert query["q"] == [f"pager-{token}"]
     assert query["show"] == ["unused"]
     assert query["offset"] == ["200"]
+
+    # The typeahead's first list stops at the alphabetically first 200,
+    # which the 201st account sorts after; typing asks again.
+    page.goto(f"{ACCOUNTS}?show=unused")
+    last = f"pager-{token}-200@example.edu"
+    option = page.locator(f'#accounts-search-options option[value="{last}"]')
+    expect(option).to_have_count(0)
+    page.fill('#accounts-filter input[name="q"]', f"pager-{token}-20")
+    expect(option).to_have_count(1)

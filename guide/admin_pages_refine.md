@@ -161,9 +161,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~Dropdown~~: session roles; ~~fourth chip~~: *Unused*, not *Invited*,
   since an invite always makes an operator or admin (author, 2026-10-14).
-- **Typeahead at scale** (author): it offers the alphabetically first 200
-  emails and names under the chips, so at 1,000 accounts mostly A–D; the
-  search still matches everything. Keep, lift the cap, or drop it?
+- ~~Typeahead at scale~~: keep the 200 cap on what it *shows*, never on
+  what it can reach; it now asks again as the box changes (author,
+  2026-10-14).
 
 ### Out of scope
 
@@ -256,9 +256,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~All or nothing?~~ Yes. ~~Promote from No role?~~ No. ~~Remove from
   all sessions on an admin?~~ Yes (author, 2026-10-14).
-- **Owning sessions isn't history** (author): a demoted co-owner who never
-  acted sits under Unused yet Delete refuses it (`owns_sessions`).
-  Should ownership count as history? (Item 1's read.)
+- ~~Is owning a session history?~~ Yes (author, 2026-10-14), so a
+  co-owner who never acted sits under No role, and Delete reaches every
+  Unused row.
 
 ### Out of scope
 

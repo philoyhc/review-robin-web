@@ -35,7 +35,7 @@ from fastapi import (
     Request,
     status,
 )
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -264,8 +264,10 @@ def sys_admin_users(
             "account_total": sum(page.counts.values()),
             "account_chips": views.build_account_chips(page.counts, view),
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
+            # The typeahead's first list, for what the box already holds;
+            # the page's script asks ``search-options`` again as it changes.
             "account_search_options": account_listing.search_options(
-                db, categories=view.show
+                db, categories=view.show, search=view.search
             ),
             # The query the action forms post back, so their redirect
             # keeps the chips, role, search and page.
@@ -306,6 +308,24 @@ def sys_admin_users(
             "toggle_error": toggle_error,
             "selected_user_id": selected,
         },
+    )
+
+
+@router.get("/sys-admin/users/search-options")
+def sys_admin_users_search_options(
+    show: list[str] | None = Query(default=None),
+    q: str | None = Query(default=None),
+    user: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    # admin_pages_refine Item 1 — the search box's typeahead, asked again
+    # as the operator types: the first 200 matches under the chips, so
+    # any account can be suggested, however late in the alphabet.
+    view = views.parse_account_view(show=show, role=None, search=q, offset=0)
+    return JSONResponse(
+        account_listing.search_options(
+            db, categories=view.show, search=view.search
+        )
     )
 
 
