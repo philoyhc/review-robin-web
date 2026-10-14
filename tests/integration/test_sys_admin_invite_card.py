@@ -23,7 +23,7 @@ def test_invite_and_overview_share_one_grid_row(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     body = _page(client)
     grid = body.split('<div class="page-grid">', 1)[1]
-    assert grid.index("<h2>Invite by email</h2>") < grid.index("<h2>Overview</h2>")
+    assert grid.index("<h2>Invite by email</h2>") < grid.index("<h2>Accounts Overview</h2>")
     # No longer the rung-1 stub: a live card, not a placeholder.
     assert '<div class="card" id="accounts-overview">' in body
     # Overview's own close, then the grid's, before the Workspace users

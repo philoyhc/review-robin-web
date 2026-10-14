@@ -965,10 +965,9 @@
       }
       .status-row p { margin: 0; }
       .status-row p + p { margin-top: 4px; }
-      /* Accounts' Overview card (admin_pages_refine Item 3): rows of
-         count pills, the pills flush either side of their separators. */
+      /* Accounts' Overview card (admin_pages_refine Item 3): a line of
+         count pills, flush either side of their separators. */
       .overview-pills { margin: 0; }
-      .overview-pills + .overview-pills { margin-top: 8px; }
       .overview-pills .pill.pill-count { margin: 0; }
       .page-grid {
         display: grid;
@@ -1680,6 +1679,12 @@
         gap: var(--space-4);
       }
       body.ui-v2 .toolbar-left > * { margin: 0; }
+      /* Accounts (author, 2026-10-14): the card's heading leads the left
+         pane, so the filter beside it starts level with the heading. The
+         pane stretches to the row, and the heading's auto margin keeps
+         the chips, pager and count line at its foot. */
+      body.ui-v2 .toolbar-left.has-heading { align-self: stretch; }
+      body.ui-v2 .toolbar-left.has-heading > h2 { margin-bottom: auto; }
       /* Right pane: the filter row, then its buttons, both flush right. */
       body.ui-v2 .toolbar-right {
         display: flex;

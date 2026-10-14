@@ -126,3 +126,21 @@ def test_the_role_dropdown_and_the_pager(
     expect(option).to_have_count(0)
     page.fill('#accounts-filter input[name="q"]', f"pager-{token}-20")
     expect(option).to_have_count(1)
+
+
+def test_the_heading_and_the_filter_share_the_toolbar_top(page: Page) -> None:
+    """The author, 2026-10-14: the heading leads the left half, level with
+    Session role / Search on the right, and the chips sit at the left
+    half's foot, level with the filter's buttons."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(ACCOUNTS)
+    toolbar = page.locator("#accounts-table-card .table-card-toolbar")
+    heading = toolbar.locator(".toolbar-left > h2").bounding_box()
+    right = toolbar.locator(".toolbar-right").bounding_box()
+    chips = toolbar.locator("[data-account-chips]").bounding_box()
+    assert heading and right and chips
+    assert heading["x"] < right["x"]
+    assert abs(heading["y"] - right["y"]) <= 2, (heading, right)
+    assert abs(
+        (chips["y"] + chips["height"]) - (right["y"] + right["height"])
+    ) <= 2, (chips, right)

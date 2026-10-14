@@ -62,7 +62,7 @@ from ._accounts import (
     account_view_from_query,
     account_view_query,
     build_account_chips,
-    build_account_overview_rows,
+    build_account_overview_pills,
     parse_account_view,
 )
 
@@ -266,7 +266,7 @@ __all__ = [
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
-    "build_account_overview_rows",
+    "build_account_overview_pills",
     "parse_account_view",
     "ProgressPill",
     "progress_pill",

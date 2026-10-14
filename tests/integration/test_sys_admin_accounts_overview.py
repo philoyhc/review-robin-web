@@ -1,7 +1,7 @@
 """Sys Admin → Accounts: the Overview card (``guide/archive/
-admin_pages_refine.md`` Item 3, cut down by the author 2026-10-14): two
-rows of count pills and nothing else, Operators · Admins · super-admins,
-then No role · Unused. No links, no other lines.
+admin_pages_refine.md`` Item 3, cut down by the author 2026-10-14): one
+line of count pills and nothing else, Operators · Admins · super-admins
+· No role · Unused, under the heading "Accounts Overview". No links.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def _pill(key: str, text: str) -> str:
     return f'<span class="pill pill-count" data-overview="{key}">{text}</span>'
 
 
-def test_the_card_is_two_rows_of_pills(
+def test_the_card_is_one_line_of_pills(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
@@ -63,17 +63,17 @@ def test_the_card_is_two_rows_of_pills(
         _user(db, f"unused{n}@example.edu")
     db.commit()
     card = _card(client)
-    rows = card.split('<p class="overview-pills">')[1:]
-    assert len(rows) == 2
+    assert "<h2>Accounts Overview</h2>" in card
+    lines = card.split('<p class="overview-pills">')[1:]
+    assert len(lines) == 1
     # The signed-in sys-admin is the one Admin; no super-admin configured.
-    assert rows[0].split("</p>", 1)[0] == (
-        _pill("operators", "3 Operators") + " · "
-        + _pill("admins", "1 Admin") + " · "
-        + _pill("super_admins", "0 super-admins")
-    )
-    assert rows[1].split("</p>", 1)[0] == (
-        _pill("no_role", "2 No role") + " · " + _pill("unused", "4 Unused")
-    )
+    assert lines[0].split("</p>", 1)[0] == " · ".join([
+        _pill("operators", "3 Operators"),
+        _pill("admins", "1 Admin"),
+        _pill("super_admins", "0 super-admins"),
+        _pill("no_role", "2 No role"),
+        _pill("unused", "4 Unused"),
+    ])
     # Nothing else on the card: no links, no other lines.
     assert "<a " not in card
     assert "<dl" not in card
