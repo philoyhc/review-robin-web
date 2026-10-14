@@ -37,7 +37,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth.roles import effective_super_admin_emails, is_super_admin
@@ -559,18 +559,7 @@ def apply_batch(
     # concurrent ``session_owners.remove_owner`` by a selected user could
     # deadlock: owner rows then user row against user row then owners.
     counts_admins = action in ("demote", "delete")
-    locked = list(
-        db.execute(
-            select(User)
-            .where(
-                or_(User.id.in_(ids), User.is_sys_admin.is_(True))
-                if counts_admins
-                else User.id.in_(ids)
-            )
-            .order_by(User.id)
-            .with_for_update(key_share=action != "delete")
-        ).scalars()
-    )
+    locked = list(db.execute(_batch_lock(action, ids)).scalars())
     by_id = {user.id: user for user in locked}
     missing = [user_id for user_id in ids if user_id not in by_id]
     if missing:
@@ -611,6 +600,23 @@ def apply_batch(
             _write_remove(db, actor, target, correlation_id)
     db.commit()
     return len(targets)
+
+
+def _batch_lock(action: str, ids: list[int]) -> Select[tuple[User]]:
+    """The selected rows, plus every sys-admin row when the action can
+    lower the admin count, in id order. ``FOR NO KEY UPDATE`` except for
+    Delete, which needs ``FOR UPDATE`` (see ``apply_batch``)."""
+    rows = (
+        or_(User.id.in_(ids), User.is_sys_admin.is_(True))
+        if action in ("demote", "delete")
+        else User.id.in_(ids)
+    )
+    return (
+        select(User)
+        .where(rows)
+        .order_by(User.id)
+        .with_for_update(key_share=action != "delete")
+    )
 
 
 def _guard_row(db: Session, actor: User, action: str, target: User) -> None:

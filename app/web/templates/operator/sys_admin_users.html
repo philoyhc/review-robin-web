@@ -346,11 +346,14 @@
           //   Admins          Demote (never a super-admin)
           //   No role, Unused Admit
           // Promote and Demote need can_manage_admins. Revoke needs every
-          // row to own no session, and Remove from all sessions every row
-          // to own one, as the toolbar gated them. Delete applies to any
+          // row to own no session; Remove from all sessions needs every row
+          // to own one and be the sole owner of none (a batch can't add
+          // owners, so a sole owner always fails). Delete applies to any
           // row but a super-admin, which config owns; its other gates
-          // (sessions, history, the last admin) are the server's, which
-          // judges the whole batch and refuses it whole, naming the row.
+          // (sessions, history, the last admin) are the server's, as are
+          // the counts no single row decides (the last admin, a session's
+          // last co-owners): it judges the whole batch and refuses it
+          // whole, naming the row.
           var table = document.getElementById("users-table");
           var BASE = {{ accounts_base_url | tojson }};
           var ROUTES = {
@@ -394,6 +397,9 @@
           function sessions(row) {
             return parseInt(row.getAttribute("data-session-count") || "0", 10);
           }
+          function soleOwned(row) {
+            return parseInt(row.getAttribute("data-sole-owner-count") || "0", 10);
+          }
           // Grouped as the toolbar groups them, so a bare "Revoke" or
           // "Promote" says which role it changes: "Operator:" then
           // Admit / Revoke and Remove from all sessions, "Admin:" then
@@ -413,7 +419,9 @@
               operator.push(["Revoke", "secondary"]);
             }
             if (!sel.some(isSuper)) {
-              if (every(sel, function (r) { return sessions(r) > 0; })) {
+              if (every(sel, function (r) {
+                return sessions(r) > 0 && soleOwned(r) === 0;
+              })) {
                 operator.push(["Remove from all sessions", "secondary"]);
               }
               danger.push(["Delete", "destructive"]);

@@ -273,7 +273,7 @@ Taken 2026-10-14 at `871ba085`.
   `.exp-confirm-label`.
 - **Rung 2** (2026-10-14): live. `users.apply_batch` takes an action
   and the selected ids: it locks the rows (and, for Demote and Delete,
-  every sys-admin row) `FOR UPDATE` in id order, runs each row's
+  every sys-admin row) in id order, runs each row's
   single-row guards plus `not_operator`, then `last_admin` and
   `sole_owner` on the state after the batch (the owner rows of every
   session the selection owns, locked in id order), and writes the same
@@ -289,8 +289,8 @@ Taken 2026-10-14 at `871ba085`.
   sentence; the batch's user-row lock is `FOR NO KEY UPDATE` except for
   Delete, as `session_guard`'s is, since a full lock could deadlock a
   bulk Remove from all sessions against `session_owners.remove_owner`;
-  Revoke and Remove from all sessions keep the toolbar's session-count
-  gates (only Delete renders for the server to refuse, for the DoD's
+  Revoke and Remove from all sessions keep the toolbar's per-row gates,
+  sole owner included (only Delete renders for a row it can't act on, for the DoD's
   mixed Delete); stale browser-check lines. The `.exp-confirm-label`
   centering it flagged was #3036's Codex fix already.
 

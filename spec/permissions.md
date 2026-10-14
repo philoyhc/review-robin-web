@@ -200,11 +200,15 @@ taking the repeated `user_ids`, the page's `view` and, for Delete,
   are selected; `sole_owner` refuses a Remove from all sessions that
   would leave any session with no owner, however many of its co-owners
   are selected. Each names a row involved.
-- **What a count reads is locked first,** `FOR UPDATE` in id order: the
-  selected rows, plus every sys-admin row for Demote and Delete, and for
+- **What a count reads is locked first,** in id order: the selected
+  rows, plus every sys-admin row for Demote and Delete, `FOR NO KEY
+  UPDATE` (Delete alone `FOR UPDATE`, since it removes them), and for
   Remove from all sessions the owner rows of every session the selection
-  owns. Otherwise two concurrent batches each pass the count and both
-  commit.
+  owns, `FOR UPDATE`. Otherwise two concurrent batches each pass the
+  count and both commit. The weaker user-row lock is the one
+  `session_guard` takes: an audit row's foreign-key check doesn't wait
+  on it, so a batch and a concurrent owner removal by a selected user
+  can't deadlock.
 - **Delete needs `confirm=true`** (the expander's *Yes, delete these*
   tick), else **400**; the button stays disabled until it is ticked.
 - **Audit.** Each row writes the event its single-row action writes
@@ -218,7 +222,7 @@ taking the repeated `user_ids`, the page's `view` and, for Delete,
   reason but `last_admin`'s does). The reason comes from the
   view's own table by code (`views.account_refusal_message`), never from
   the URL, so a link cannot put other words on the page; an unlisted code
-  reads *Couldn't apply that change (<code>)*.
+  reads the fixed *Couldn't apply that change.*
 - **Success** is a **303** that restores the view. A single non-Delete
   row also carries `?selected=<id>`.
 

@@ -256,3 +256,17 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     _tick(page, second)
     assert _expander_actions(page) == ["Promote", "Delete"]
 
+    # Once the first is the session's sole owner, Remove from all
+    # sessions can't succeed for them (a batch can't add owners), so it
+    # no longer renders.
+    filtered = page.url
+    page.goto(f"{ACCOUNTS}?q=operator%40example.edu")
+    me = page.locator('tr[data-is-self="true"]').get_attribute("data-user-id")
+    response = api.post(
+        f"/operator/sessions/{session_id}/owners/{me}/remove",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    page.goto(filtered)
+    _tick(page, first)
+    assert _expander_actions(page) == ["Promote", "Delete"]
