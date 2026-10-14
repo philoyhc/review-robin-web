@@ -78,8 +78,8 @@ checkbox-and-pill filter (author, 2026-10-14).
 - **The pager stays under a filter**, unlike the roster pages' 500-row
   cap: a role can match all 1,000 (Codex on #3025). `?offset=` clamps.
 - **A toolbar redirect keeps the view** (chips, role, search, offset). A
-  `?selected=<id>` whose row the chips would hide turns its chip on for
-  that load only.
+  `?selected=<id>` whose row the chips would hide turns its chip on, as
+  if clicked: it stays on in every link the page renders.
 - **Session role matches on email**, case-insensitive, in any session:
   a roster row, or for `Owner` a `session_operators` row.
 - **Chip state lives in the URL**, defaulting to Operators and Admins.
@@ -91,8 +91,9 @@ Taken 2026-10-14 at `871ba085`.
 - `sys_admin_users.html`; `list_workspace_users` (`app/services/users.py:76`,
   all rows in Python); route `sys_admin_users` (`_sys_admin.py:220`).
   Reused: `build_pager`, `_pager_cluster.html`, `preview_count_line`.
-- Session role reads three indexed email columns (`grep -n "index=True"
-  app/db/models/{reviewer,reviewee,observer}.py`).
+- Session role compares `lower()` of three email columns, which their
+  btree indexes can't serve (`grep -n "index=True"
+  app/db/models/{reviewer,reviewee,observer}.py`); rung 3 timed it.
 - `tests/integration/test_sys_admin_users.py` (55, `grep -c "def test_"`);
   no browser test (`grep -rln "sys-admin/users" tests/browser`).
 - Scale unmeasured (`_users_with_history` reads every audit actor):
@@ -119,6 +120,15 @@ Taken 2026-10-14 at `871ba085`.
   accounts 25–40ms, 5,000 accounts 48–75ms, 8–9 queries for every view.
   No fix needed: the one outlier, the Reviewer role filter at 478ms, was
   unanalyzed tables, and `seed-accounts` now runs `ANALYZE`.
+- **Reads**: one cumulative, from `adc01b08`, at rung 3. It found no
+  blocker. Acted on in rung 3: a `?selected=` chip stays on, as if
+  clicked (the plan said "that load only"; plan and specs now say so);
+  a crafted `view` offset such as `²` answered 500 after the commit; the
+  service and the pager each set the page size; `spec/ui_elements.md`
+  §10 was missing from Doc impact; two browser assertions that couldn't
+  fail. Left as open questions: the typeahead cap, and whether owning a
+  session is history. A non-numeric `?offset=` or `?selected=` in the
+  address bar answers 422, as on the roster pages (spec-writer); left.
 
 ### PR ladder
 
@@ -142,6 +152,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~Dropdown~~: session roles; ~~fourth chip~~: *Unused*, not *Invited*,
   since an invite always makes an operator or admin (author, 2026-10-14).
+- **Typeahead at scale** (author): it offers the alphabetically first 200
+  emails and names under the chips, so at 1,000 accounts mostly A–D; the
+  search still matches everything. Keep, lift the cap, or drop it?
 
 ### Out of scope
 
@@ -152,6 +165,7 @@ Taken 2026-10-14 at `871ba085`.
 
 - `spec/operator_ui_concept.md` — the Accounts entry describes the chips, search and pager (Item 1).
 - `spec/settings_inventory.md` — the URL parameters the Accounts table reads (Item 1).
+- `spec/ui_elements.md` — §10 `.table-card-toolbar` gains Accounts as an eighth carrier; `.table-pager-cluster` notes Accounts keeps its pager under a filter (Item 1).
 
 ---
 
@@ -233,6 +247,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~All or nothing?~~ Yes. ~~Promote from No role?~~ No. ~~Remove from
   all sessions on an admin?~~ Yes (author, 2026-10-14).
+- **Owning sessions isn't history** (author): a demoted co-owner who never
+  acted sits under Unused yet Delete refuses it (`owns_sessions`).
+  Should ownership count as history? (Item 1's read.)
 
 ### Out of scope
 

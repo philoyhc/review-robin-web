@@ -234,8 +234,8 @@ def sys_admin_users(
 ) -> Response:
     # admin_pages_refine Item 1 — the chips, the Session role, the search
     # and the page all filter in SQL (``account_listing``). A
-    # ``?selected=`` row an action just changed turns its chip on for
-    # this load and lands on its page, so the operator sees what they did.
+    # ``?selected=`` row an action just changed turns its chip on, as if
+    # clicked, and lands on its page, so the operator sees what they did.
     view = views.parse_account_view(show=show, role=role, search=q, offset=offset)
     if selected is not None:
         selected_category = account_listing.category_of(db, selected)
@@ -247,6 +247,7 @@ def sys_admin_users(
         role=None if view.role == "any" else view.role,
         search=view.search,
         offset=view.offset,
+        page_size=views.PAGE_SIZE,
         selected_user_id=selected,
     )
     view = dataclasses.replace(view, offset=page.offset)

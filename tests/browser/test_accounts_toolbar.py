@@ -44,7 +44,9 @@ def test_a_chip_filters_at_once_and_the_search_waits(page: Page) -> None:
 
     # The search waits for Search, and keeps the chips.
     page.fill('#accounts-filter input[name="q"]', email)
-    expect(page.locator("#users-table tr[data-user-id]")).not_to_have_count(1)
+    # Long enough for a debounced auto-submit to have fired, were there one.
+    page.wait_for_timeout(500)
+    assert _query(page).get("q", [""]) == [""]
     with page.expect_navigation():
         page.click('#accounts-filter button[type="submit"]')
     rows = page.locator("#users-table tr[data-user-id]")
@@ -76,6 +78,8 @@ def test_the_role_dropdown_and_the_pager(
     """Session role narrows on Search; the pager pages a filtered list and
     carries the filter (admin_pages_refine Item 1 rung 3)."""
     new_session()  # the fake operator owns a session
+    not_an_owner = f"not-owner-{uuid.uuid4().hex[:8]}@example.edu"
+    _invite(page, not_an_owner)  # an operator who owns nothing
     token = uuid.uuid4().hex[:8]
     # 201 accounts with no role, through the sign-in that creates them;
     # Unused is off by default, so no other test sees them.
@@ -96,6 +100,7 @@ def test_the_role_dropdown_and_the_pager(
         page.click('#accounts-filter button[type="submit"]')
     assert _query(page)["role"] == ["owner"]
     expect(page.locator("#users-table")).to_contain_text("operator@example.edu")
+    expect(page.locator("#users-table")).not_to_contain_text(not_an_owner)
     expect(
         page.locator('#accounts-filter select[name="role"]')
     ).to_have_value("owner")

@@ -333,15 +333,18 @@ def test_an_action_redirect_keeps_the_view(
     assert query == {"show": ["unused"], "q": ["erin"], "selected": [str(erin.id)]}
 
 
-def test_the_selected_rows_chip_turns_on_for_that_load(
+def test_the_selected_rows_chip_turns_on_as_if_clicked(
     workspace: dict[str, User], client: TestClient
 ) -> None:
-    """Admitting Erin from the Unused chip makes her an operator, whose
-    chip may be off; the redirect turns it on so she stays in view."""
-    erin = workspace["erin"]
+    """A ``?selected=`` row whose chip is off turns that chip on, so the
+    row stays in view, and the chip stays on in the links the page
+    renders: the action forms' ``view`` carries it."""
+    erin = workspace["erin"]  # Unused
     body = client.get(f"{ACCOUNTS}?show=no_role&selected={erin.id}").text
     assert "checked" in _chip(body, "unused")
     assert "Erin@Example.edu" in _emails(body)
+    view = body.split('name="view" value="', 1)[1].split('"', 1)[0]
+    assert parse_qs(view.replace("&amp;", "&"))["show"] == ["no_role", "unused"]
 
 
 def test_the_selected_row_lands_on_its_page(
@@ -365,6 +368,23 @@ def test_a_tampered_view_is_reencoded_not_echoed(
     )
     query = parse_qs(urlsplit(response.headers["location"]).query)
     assert query == {"show": ["unused"], "selected": [str(workspace["erin"].id)]}
+
+
+@pytest.mark.parametrize("offset", ["\u00b2", "9" * 5000])
+def test_an_offset_int_refuses_is_dropped_not_a_500(
+    workspace: dict[str, User], client: TestClient, offset: str
+) -> None:
+    """``"²".isdigit()`` is true and ``int`` refuses it, as it does past
+    4,300 digits: the action has committed by the redirect, so a 500
+    there would report a change that happened as a failure."""
+    response = client.post(
+        f"{ACCOUNTS}/{workspace['erin'].id}/admit",
+        data={"view": f"show=unused&offset={offset}"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert "offset" not in query
 
 
 def test_the_demote_gate_counts_admins_across_the_workspace(
