@@ -201,6 +201,10 @@ def revoke(
     inconsistent state where a non-operator owns a session.
     """
     _guard_self(actor, target)
+    # The batch's lock, before the owner count, so a concurrent owner
+    # add (``session_owners.lock_owner_eligible``) either commits first
+    # and is counted, or waits and sees the flag cleared.
+    db.execute(_batch_lock("revoke", [target.id]))
     _guard_target_not_super_admin(target, "revoked")
     _guard_not_owner(db, target)
     _write_revoke(db, actor, target, correlation_id)
@@ -606,7 +610,9 @@ def apply_batch(
 def _batch_lock(action: str, ids: list[int]) -> Select[tuple[User]]:
     """The selected rows, plus every sys-admin row when the action can
     lower the admin count, in id order. ``FOR NO KEY UPDATE`` except for
-    Delete, which needs ``FOR UPDATE`` (see ``apply_batch``)."""
+    Delete, which needs ``FOR UPDATE`` (see ``apply_batch``). The rows are
+    re-read, so a guard never judges a copy loaded before the lock; that
+    also discards any unflushed edit to them, so lock before editing."""
     rows = (
         or_(User.id.in_(ids), User.is_sys_admin.is_(True))
         if action in ("demote", "delete")
@@ -617,6 +623,7 @@ def _batch_lock(action: str, ids: list[int]) -> Select[tuple[User]]:
         .where(rows)
         .order_by(User.id)
         .with_for_update(key_share=action != "delete")
+        .execution_options(populate_existing=True)
     )
 
 

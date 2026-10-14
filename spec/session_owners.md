@@ -48,15 +48,21 @@ fields of its details card instead (19U Item 2).
 `session_owners.resolve_owners` **before** the session exists — one
 address that is not a workspace operator is a 422 and nothing is
 created. After `sessions.create_session` returns, `write_staged_owners`
-calls `session_owners.set_owners(targets=[creator, *owner_targets])`,
-which adds the co-owners (the creator is already the first owner from
-`create_session` itself). Every event this produces — the session, each
+calls `session_owners.set_owners(targets=[creator, *owner_targets],
+skip_refused=True)`, which adds the co-owners (the creator is already
+the first owner from `create_session` itself). A co-owner revoked,
+demoted or deleted between that check and the write is refused under
+the owner-add lock (`spec/permissions.md` §4.2) and skipped, silently;
+the others still land. Every event this produces — the session, each
 Quick Setup slot, the tag write, one `session.owner_added` per
 co-owner — shares one `correlation_id`.
 
-`already_owner` cannot occur here: a duplicate or the creator's own
-address collapses silently in `resolve_owners` / `set_owners` before
-`add_owner` would raise it.
+A duplicate or the creator's own address collapses silently in
+`resolve_owners` / `set_owners` before `add_owner` would raise
+`already_owner`. It can still arise if someone else adds a staged
+co-owner to the new session between its creation and the write (an
+Adopt, say); `skip_refused` skips that one too, since they are already
+an owner.
 
 ---
 
@@ -146,14 +152,20 @@ dropped.
   duplicates collapsed, every address a workspace operator or raises
   `not_in_workspace` naming it. Create's, over the whole staged list.
 - **`set_owners(db, *, review_session, actor, targets,
-  correlation_id=None) -> (added, removed)`** — replaces the
+  correlation_id=None, skip_refused=False) -> (added, removed)`** — replaces the
   whole owner set with `targets`; adds before it removes so the count
   never passes through zero; refuses an empty `targets`
-  (`last_owner`); de-duplicates its own input. Create's only caller.
+  (`last_owner`); de-duplicates its own input. Create's only caller;
+  with `skip_refused=True`, as Create passes it, a `not_in_workspace`
+  or `already_owner` refusal skips that target and the rest are still
+  added; any other refusal raises.
 - **`add_owner` / `remove_owner`** — the single-target primitives
   behind `owners/add` and `owners/{user_id}/remove`, and so behind
   Session Home's card: each validates, writes one row and its audit
-  event, and commits. `remove_owner` locks the owner rows
+  event, and commits. `add_owner` re-reads its target `FOR SHARE`
+  (`lock_owner_eligible`) before the `not_in_workspace` check, so a
+  concurrent revoke can't leave a non-operator owner
+  (`spec/permissions.md` §4.2). `remove_owner` locks the owner rows
   `FOR UPDATE` before counting, so two concurrent removes cannot leave
   a session ownerless (`last_owner`). Two concurrent adds of one address both
   pass `add_owner`'s check; `uq_session_user` refuses the second insert,
@@ -166,7 +178,7 @@ dropped.
 
 | Route | Gate | Lifecycle | Body |
 |---|---|---|---|
-| `POST /operator/sessions` (Create) | router-level `require_operator` (no session to own yet) | n/a | `owners` (repeated) |
+| `POST /operator/sessions` (Create) | router-level `require_operator` (no session to own yet), re-read under the owner-add lock before the session is made (`spec/permissions.md` §4.2) | n/a | `owners` (repeated) |
 | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | any state | `target_email` |
 | `POST /operator/sessions/{id}/owners/{user_id}/remove` | `require_session_operator` | any state | — |
 

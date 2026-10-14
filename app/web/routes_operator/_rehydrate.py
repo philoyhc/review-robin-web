@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
-from app.services import rehydrate_stash
+from app.services import rehydrate_stash, session_owners
 from app.services.extracts import stream_csv
 from app.services.extracts.responses_import import serialize_dropped_responses
 from app.services.session_rehydrate import (
@@ -48,7 +48,11 @@ from app.services.session_rehydrate import (
     unpack_file_set,
 )
 from app.web import breadcrumbs
-from app.web.deps import get_or_create_user, request_correlation_id
+from app.web.deps import (
+    OperatorAllowlistDenied,
+    get_or_create_user,
+    request_correlation_id,
+)
 from app.web.routes_operator._shared import _templates
 
 router = APIRouter()
@@ -216,6 +220,10 @@ def rehydrate_commit(
     if not report.ok:
         return _render(request, user, report=report, token=token)
 
+    # The rebuilt session's owner, re-read under the owner-add lock as on
+    # Create (``spec/permissions.md`` §4.2).
+    if not session_owners.lock_owner_eligible(db, user):
+        raise OperatorAllowlistDenied()
     try:
         result = rehydrate_session(
             db,

@@ -204,8 +204,9 @@ taking the repeated `user_ids`, the page's `view` and, for Delete,
   rows, plus every sys-admin row for Demote and Delete, `FOR NO KEY
   UPDATE` (Delete alone `FOR UPDATE`, since it removes them), and for
   Remove from all sessions the owner rows of every session the selection
-  owns, `FOR UPDATE`. Otherwise two concurrent batches each pass the
-  count and both commit. `FOR NO KEY UPDATE` is the mode
+  owns, `FOR UPDATE`. The locked rows are re-read, so no guard judges
+  a copy loaded earlier in the request. Otherwise two concurrent batches
+  each pass the count and both commit. `FOR NO KEY UPDATE` is the mode
   `session_guard` takes on its session row: an audit row's foreign-key
   check doesn't wait on it, so a batch and a concurrent owner removal by
   a selected user can't deadlock.
@@ -247,6 +248,18 @@ owner remains, and redirects to the sessions lobby. `owners/add` and
 `owners/{user_id}/remove` carry no lifecycle check; Session Home's
 Owners card posts to them directly, each action saving at once
 (`spec/session_owners.md` §2 and §7).
+
+**An owner add and a revoke of the same user can't both commit.** An
+owner row's foreign-key check takes only `FOR KEY SHARE`, which passes
+a revoke's lock, so every owner-row write first re-reads the user
+`FOR SHARE` (`session_owners.lock_owner_eligible`): `add_owner`, and so
+Create's owners and Adopt; and the creator on Create, Duplicate and
+Rehydrate, who bounce to `/me` as `require_operator` would. A revoke,
+single-row or bulk, locks the user row `FOR NO KEY UPDATE` before it
+counts owned sessions, so either the add commits first and `still_owner` counts it,
+or it waits and sees the flag cleared. A Create owner revoked, demoted
+or deleted between the 422 check and the write is skipped, silently;
+the owners staged after them still land (`spec/session_owners.md` §1).
 
 ---
 
@@ -332,6 +345,8 @@ a case when a gate changes.
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
 | every Accounts Management action and guard code | `tests/integration/test_sys_admin_users.py` |
 | the Accounts bulk actions: each action, every refusal, the two post-batch counts | `tests/integration/test_sys_admin_accounts_batch.py` |
+| an owner add and a revoke of the same user serialize (§4.2): every owner-row write re-reads under the lock, and on Postgres each side waits on the other | `tests/integration/test_owner_add_lock.py`; Rehydrate's in `tests/integration/test_rehydrate_commit_route.py` |
+| every route that makes a session takes the owner-add lock first, and only the known services write owner rows | `tests/unit/test_owner_lock_wiring.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |
