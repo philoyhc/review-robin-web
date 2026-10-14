@@ -850,12 +850,14 @@ section.
 ### 1. "Return to where you came from" is one class
 
 Pages reached as a detour from the chrome — Operator Settings (#104),
-About (#103), and the Sys Admin pages (#111, #118, #247, #251) — carry a
+About (#103), the Guide, and the Sys Admin pages (#111, #118, #247,
+#251) — carry a
 **`.back-link`**, rendered as
 `<a class="back-link" href="{{ return_to_url }}">← Back to
 {{ return_to_label }}</a>` at the top of the body, above the working
-cards. Settings and About round-trip via `?return_to=<path>` from the
-chrome top-right utility menu (#100 / #101); the Admin link (#225)
+cards. Settings, About and the Guide round-trip via `?return_to=<path>`
+from the chrome top-right utility menu (#100 / #101 / #226); the Admin
+link (#225)
 carries the same param, which `/operator/sys-admin` remembers for both
 tabs (#111, #247), while Outbox and Audit log (#118, #251) go back to
 Sessions Diagnostics. Documented in `spec/ui_elements.md` §6.

@@ -1,10 +1,11 @@
-"""Return-to-origin helper for detour destinations (About, /auth/me/debug).
+"""Return-to-origin helper for the chrome's detour pages (Operator
+Settings, About, the Guide, the Sys Admin pages, /auth/me/debug).
 
 Per `spec/visual_style_rrw.md` "Return-to-origin behavior", these pages
 render a "← Back to {context}" affordance whose target is captured via
-the ``?return_to=<path>`` query param. The path is validated against a
-tight allowlist; anything outside falls back to ``/operator/sessions``
-(the operator's natural lobby).
+the ``?return_to=<path>`` query param. The path is validated against an
+allowlist (`spec/settings_inventory.md` § *URL state*); anything outside
+falls back to ``/operator/sessions`` (the operator's natural lobby).
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from dataclasses import dataclass
 from urllib.parse import unquote
 
 from sqlalchemy.orm import Session
+from starlette.routing import Match
 
 from app.db.models import ReviewSession
 
@@ -26,8 +28,10 @@ class ReturnTarget:
 
 DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Sessions")
 
-# ``\Z``, not ``$``: ``$`` also matches before a trailing newline, which
-# would pass a control character through to a ``Location`` or a cookie.
+# ``\Z``, not ``$``: ``$`` also matches before a trailing newline. And
+# ``[0-9]``, not ``\d``: ``\d`` matches any Unicode digit, which ``int()``
+# accepts. Either would pass a character a ``Location`` or a cookie
+# refuses.
 _OPERATOR_SESSIONS = re.compile(r"^/operator/sessions/?\Z")
 # The operator pages outside a session that carry the chrome's links.
 _OPERATOR_PAGES = {
@@ -36,10 +40,22 @@ _OPERATOR_PAGES = {
     "/operator/settings": "Settings",
 }
 # A session page at any depth (a tab, an instrument's editor), so a
-# detour returns to the page it left rather than the session's home.
-_OPERATOR_SESSION = re.compile(r"^/operator/sessions/(\d+)(?:/[A-Za-z0-9_\-]+)*/?\Z")
+# detour returns to the page it left rather than the session's home, as
+# long as a GET serves it (`_is_get_page`).
+_OPERATOR_SESSION = re.compile(r"^/operator/sessions/([0-9]+)(?:/[A-Za-z0-9_\-]+)*/?\Z")
 _REVIEWER_ROOT = re.compile(r"^/me/?\Z")
-_REVIEWER_SESSION = re.compile(r"^/me/sessions/(\d+)/?\Z")
+_REVIEWER_SESSION = re.compile(r"^/me/sessions/([0-9]+)/?\Z")
+
+
+def _is_get_page(path: str) -> bool:
+    """Whether a GET route serves ``path``. The chrome builds
+    ``return_to`` from the request path, which on a page a POST rendered
+    (an import's error page) is the POST's, and going back there with a
+    GET would 405."""
+    from app.main import app  # here, not at the top: app.main imports this module
+
+    scope = {"type": "http", "path": path, "method": "GET"}
+    return any(route.matches(scope)[0] is Match.FULL for route in app.router.routes)
 
 
 def resolve_return_to(raw: str | None, db: Session) -> ReturnTarget:
@@ -64,12 +80,12 @@ def resolve_return_to(raw: str | None, db: Session) -> ReturnTarget:
     if _OPERATOR_SESSIONS.match(path):
         return ReturnTarget(url=path, label="Sessions")
 
-    page = _OPERATOR_PAGES.get(path.rstrip("/"))
+    page = _OPERATOR_PAGES.get(path.removesuffix("/"))
     if page is not None:
         return ReturnTarget(url=path, label=page)
 
     m = _OPERATOR_SESSION.match(path)
-    if m:
+    if m and _is_get_page(path):
         session = db.get(ReviewSession, int(m.group(1)))
         if session is None:
             return DEFAULT_TARGET

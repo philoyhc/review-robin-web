@@ -4,6 +4,8 @@ acts on a page in between."""
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -90,10 +92,22 @@ def test_a_return_to_wins_over_the_remembered_origin(
 
 
 @pytest.mark.parametrize("entry", ["/operator/sys-admin", SESSIONS])
-@pytest.mark.parametrize("raw", ["/operator/sessions%0A", "/operator/sessions%250A"])
-def test_a_newline_in_return_to_falls_back_to_the_lobby(
-    client: TestClient, admin: None, entry: str, raw: str
+@pytest.mark.parametrize(
+    "shape",
+    [
+        "/operator/sessions%0A",
+        "/operator/sessions%250A",
+        "/operator/sessions/{id}%0A",
+        # A fullwidth digit: ``int()`` reads it, a cookie refuses it.
+        "/operator/sessions/{fw}",
+    ],
+)
+def test_a_bad_character_in_return_to_falls_back_to_the_lobby(
+    client: TestClient, db: Session, admin: None, entry: str, shape: str
 ) -> None:
+    review_session = _session(client, db)
+    fullwidth = "".join(chr(0xFF10 + int(d)) for d in str(review_session.id))
+    raw = shape.format(id=review_session.id, fw=quote(fullwidth))
     response = client.get(f"{entry}?return_to={raw}")
     assert response.status_code == 200
     assert _back(response.text) == '/operator/sessions">&larr; Back to Sessions'
