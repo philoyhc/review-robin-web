@@ -208,32 +208,50 @@ def test_revoking_two_operators_is_one_click(page: Page, api: httpx.Client) -> N
     assert "show=unused" in page.url and "q=exp-" in page.url
 
 
-def test_a_mixed_delete_is_refused_whole_and_says_why(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
-) -> None:
-    """The DoD's refused mixed Delete: an unused account and an operator
-    who co-owns a session. The owner refuses the batch, so the unused
-    account stays too, and the banner names the owner."""
-    first, _, unused = _setup(page, api)
-    session_id = new_session()
+def _co_own(api: httpx.Client, session_id: int, email: str) -> None:
     response = api.post(
         f"/operator/sessions/{session_id}/owners/add",
-        data={"target_email": first},
+        data={"target_email": email},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
+
+
+def test_a_row_with_history_offers_no_delete_and_says_why(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """The author, 2026-10-14: the server refuses to delete a user with
+    history, so the expander doesn't offer it, and says why where the
+    confirm would sit. A co-owner counts (the listing's rule)."""
+    first, second, unused = _setup(page, api)
+    _co_own(api, new_session(), first)
     page.reload()
+    expander = page.locator("#users-row-expander")
 
     _tick(page, first)
-    _tick(page, unused)
-    page.locator("#users-row-expander .exp-confirm-label input").check()
-    with page.expect_navigation():
-        page.locator('#users-row-expander [data-expander-action="Delete"]').click()
-    expect(page.locator('[role="alert"]')).to_contain_text(
-        f"Nothing changed: {first} owns sessions"
+    assert "Delete" not in _expander_actions(page)
+    expect(expander.locator(".exp-confirm-label")).to_have_count(0)
+    expect(expander.locator("[data-delete-blocked]")).to_have_text(
+        "This user has acted in the audit log and cannot be deleted."
     )
-    expect(page.locator(f'tr[data-user-id]:has(code:text-is("{unused}"))')).to_have_count(1)
-    expect(page.locator(f'tr[data-user-id]:has(code:text-is("{first}"))')).to_have_count(1)
+    # The "|" group goes with its only button.
+    assert "|" not in expander.locator(".row-expander-group > .muted").all_inner_texts()
+
+    # One row with history rules Delete out for the whole selection.
+    _tick(page, unused)
+    assert _expander_actions(page) == []
+    expect(expander.locator("[data-delete-blocked]")).to_have_text(
+        "1 of these users has acted in the audit log and cannot be deleted."
+    )
+
+    # Without it, Delete and its confirm come back and the line goes.
+    page.locator(
+        f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select'
+    ).uncheck()
+    _tick(page, second)
+    assert _expander_actions(page)[-1] == "Delete"
+    expect(expander.locator(".exp-confirm-label")).to_have_count(1)
+    expect(expander.locator("[data-delete-blocked]")).to_have_count(0)
 
 
 def test_an_owner_offers_remove_from_all_sessions_not_revoke(
@@ -244,18 +262,14 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     where the row is the sole owner (the server's sole_owner)."""
     first, second, _ = _setup(page, api)
     session_id = new_session()
-    response = api.post(
-        f"/operator/sessions/{session_id}/owners/add",
-        data={"target_email": first},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303, response.text
+    _co_own(api, session_id, first)
     page.reload()
     _tick(page, first)
-    assert _expander_actions(page) == ["Remove from all sessions", "Promote", "Delete"]
+    # A co-owner has history, so no Delete.
+    assert _expander_actions(page) == ["Remove from all sessions", "Promote"]
     # With an operator who owns nothing, neither session control fits both.
     _tick(page, second)
-    assert _expander_actions(page) == ["Promote", "Delete"]
+    assert _expander_actions(page) == ["Promote"]
 
     # Once the first is the session's sole owner, Remove from all
     # sessions can't succeed for them (a batch can't add owners), so it
@@ -270,4 +284,4 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     assert response.status_code == 303, response.text
     page.goto(filtered)
     _tick(page, first)
-    assert _expander_actions(page) == ["Promote", "Delete"]
+    assert _expander_actions(page) == ["Promote"]

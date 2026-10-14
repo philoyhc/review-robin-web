@@ -355,11 +355,12 @@
           // row to own no session; Remove from all sessions needs every row
           // to own one and be the sole owner of none (a batch can't add
           // owners, so a sole owner always fails). Delete applies to any
-          // row but a super-admin, which config owns; its other gates
-          // (sessions, history) are the server's, as are the counts no
-          // single row decides (the last admin, a session's last
-          // co-owners): it judges the whole batch and refuses it whole,
-          // naming the row.
+          // row but a super-admin, which config owns, or one with history
+          // (it created or owns a session or acted in the audit log; the
+          // server refuses those), where a line saying so takes the
+          // confirm's place. The counts no single row decides (the last
+          // admin) are the server's: it judges the whole batch and
+          // refuses it whole, naming the row.
           var table = document.getElementById("users-table");
           var BASE = {{ accounts_base_url | tojson }};
           var ROUTES = {
@@ -406,6 +407,21 @@
           function soleOwned(row) {
             return parseInt(row.getAttribute("data-sole-owner-count") || "0", 10);
           }
+          function hasHistory(row) {
+            return row.getAttribute("data-has-history") === "true";
+          }
+          // Why Delete isn't offered, in the confirm's place (author,
+          // 2026-10-14), or "" when it is or a super-admin rules it out.
+          function deleteBlocked(sel) {
+            var acted = sel.filter(hasHistory).length;
+            if (!acted || sel.some(isSuper)) return "";
+            if (sel.length === 1) {
+              return "This user has acted in the audit log and cannot be deleted.";
+            }
+            return (acted === sel.length ? "These users have" :
+              acted + " of these users " + (acted === 1 ? "has" : "have")) +
+              " acted in the audit log and cannot be deleted.";
+          }
           // Grouped as the toolbar groups them, so a bare "Revoke" or
           // "Promote" says which role it changes: "Operator:" then
           // Admit / Revoke and Remove from all sessions, "Admin:" then
@@ -430,7 +446,7 @@
               })) {
                 operator.push(["Remove from all sessions", "secondary"]);
               }
-              danger.push(["Delete", "destructive"]);
+              if (!sel.some(hasHistory)) danger.push(["Delete", "destructive"]);
             }
             if (canManageAdmins && allOperators) admin.push(["Promote", "secondary"]);
             if (canManageAdmins && every(sel, function (r) {
@@ -455,6 +471,9 @@
                 '<input type="checkbox" name="confirm" value="true"' +
                 ' form="users-bulk-form"' +
                 ' data-delete-confirm="users-bulk-delete"> Yes, delete these</label>';
+            } else if (deleteBlocked(sel)) {
+              html += '<span class="muted" data-delete-blocked>' +
+                deleteBlocked(sel) + "</span>";
             }
             html += '<span class="row-expander-actions is-labelled">';
             // Each label and its buttons in one group, so a narrow row
