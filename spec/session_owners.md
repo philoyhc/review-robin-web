@@ -153,7 +153,10 @@ dropped.
 - **`add_owner` / `remove_owner`** — the single-target primitives
   behind `owners/add` and `owners/{user_id}/remove`, and so behind
   Session Home's card: each validates, writes one row and its audit
-  event, and commits. `remove_owner` locks the owner rows
+  event, and commits. `add_owner` re-reads its target `FOR SHARE`
+  (`lock_owner_eligible`) before the `not_in_workspace` check, so a
+  concurrent revoke can't leave a non-operator owner
+  (`spec/permissions.md` §4.2). `remove_owner` locks the owner rows
   `FOR UPDATE` before counting, so two concurrent removes cannot leave
   a session ownerless (`last_owner`). Two concurrent adds of one address both
   pass `add_owner`'s check; `uq_session_user` refuses the second insert,

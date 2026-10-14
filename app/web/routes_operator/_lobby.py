@@ -21,9 +21,11 @@ from app.services import session_purge
 from app.services import sessions
 from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
+from app.services import session_owners
 from app.services import session_tags
 from app.web import breadcrumbs, views
 from app.web.deps import (
+    OperatorAllowlistDenied,
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
@@ -403,6 +405,9 @@ def clone_session_submit(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"unknown clone mode {mode!r}",
         )
+    # The clone's owner, re-read under the owner-add lock as on Create.
+    if not session_owners.lock_owner_eligible(db, user):
+        raise OperatorAllowlistDenied()
     clone = session_clone.clone_session(
         db,
         source=review_session,

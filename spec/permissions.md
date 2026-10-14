@@ -248,6 +248,18 @@ owner remains, and redirects to the sessions lobby. `owners/add` and
 Owners card posts to them directly, each action saving at once
 (`spec/session_owners.md` §2 and §7).
 
+**An owner add and a revoke of the same user can't both commit.** An
+owner row's foreign-key check takes only `FOR KEY SHARE`, which passes
+a revoke's lock, so every owner-row write first re-reads the user
+`FOR SHARE` (`session_owners.lock_owner_eligible`): `add_owner`, and so
+Create's owners and Adopt; and the creator on Create and Duplicate,
+who bounce to `/me` as `require_operator` would. A revoke, single-row
+or bulk, locks the user row `FOR NO KEY UPDATE` before it counts owned
+sessions, so either the add commits first and `still_owner` counts it,
+or it waits and sees the flag cleared. A Create owner revoked between
+the 422 check and the write is dropped; the session keeps the owners
+added so far.
+
 ---
 
 ## 5. Failure semantics

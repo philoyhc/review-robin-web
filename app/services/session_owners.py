@@ -10,7 +10,8 @@ the normal operator routes).
 Service-layer invariants:
 
 - **add_owner**: target must be a workspace operator
-  (``is_operator OR is_sys_admin``); must not already be on
+  (``is_operator OR is_sys_admin``), read under a ``FOR SHARE`` lock
+  (``lock_owner_eligible``); must not already be on
   ``session_operators`` for this session. Raises
   ``OwnerOperationError`` with codes ``not_in_workspace`` or
   ``already_owner``.
@@ -29,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -112,6 +113,32 @@ def new_session_owner_candidates(db: Session, creator: User) -> list[User]:
     return [u for u in _workspace_operators(db) if u.id != creator.id]
 
 
+def _eligibility_lock(user_id: int) -> Select[tuple[User]]:
+    return (
+        select(User)
+        .where(User.id == user_id)
+        .with_for_update(read=True)
+        .execution_options(populate_existing=True)
+    )
+
+
+def lock_owner_eligible(db: Session, user: User) -> bool:
+    """Lock ``user``'s row ``FOR SHARE``, re-read it, and say whether
+    they may own a session (a workspace operator or sys-admin).
+
+    Every path that writes an owner row calls this first. An owner row's
+    own foreign-key check takes only ``FOR KEY SHARE`` on the user, which
+    passes the lock a revoke holds (``users.revoke``,
+    ``users.apply_batch``), so without this an add and a revoke of the
+    same user could both commit, leaving a non-operator owner. ``FOR
+    SHARE`` waits on that lock: either the revoke commits first and this
+    re-read sees the flag cleared, or the owner row commits first and the
+    revoke's ``still_owner`` count sees it.
+    """
+    locked = db.execute(_eligibility_lock(user.id)).scalar_one_or_none()
+    return locked is not None and (locked.is_operator or locked.is_sys_admin)
+
+
 def add_owner(
     db: Session,
     *,
@@ -120,7 +147,7 @@ def add_owner(
     target: User,
     correlation_id: str | None = None,
 ) -> SessionOperator:
-    if not (target.is_operator or target.is_sys_admin):
+    if not lock_owner_eligible(db, target):
         raise OwnerOperationError(
             code="not_in_workspace",
             message=(

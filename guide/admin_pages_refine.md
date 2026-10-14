@@ -326,8 +326,9 @@ and the batch service are specified in `spec/permissions.md` §4.1 and
   after the merge): `session_owners.add_owner` reads `is_operator`
   unlocked, and its insert's foreign-key `FOR KEY SHARE` passes any
   user-row lock the revoke holds, so both commit. It predates this
-  plan; the fix is a `FOR SHARE` lock in the owner-add paths, put to
-  the author.
+  plan; fixed after the close at the author's word, as its own PR: a
+  `FOR SHARE` re-read in every owner-add path
+  (`spec/permissions.md` §4.2).
 
 ### Doc impact
 

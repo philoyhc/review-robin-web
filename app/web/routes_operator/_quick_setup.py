@@ -50,6 +50,7 @@ from app.services import session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.deps import (
+    OperatorAllowlistDenied,
     get_or_create_user,
     request_correlation_id,
     require_session_operator,
@@ -240,6 +241,12 @@ async def create_session(
         )
     except ValidationError as exc:
         raise session_payload_error(exc) from exc
+    # The creator becomes the first owner. The router's allowlist gate
+    # read their flag unlocked, so it is re-read under the owner-add
+    # lock, held until ``create_session`` commits: a revoke committed
+    # since bounces as the gate would have.
+    if not session_owners.lock_owner_eligible(db, user):
+        raise OperatorAllowlistDenied()
     review_session = sessions.create_session(
         db,
         user=user,
@@ -293,19 +300,25 @@ async def create_session(
 
         The creator is always in the set, so they can never be staged
         out: a session keeps its first owner. Validated before the
-        session was created, so this cannot fail on an email. Runs on
-        every path the Tags box does — a failed upload keeps what the
-        operator staged, as it keeps what they typed.
+        session was created, so this fails only if a staged owner was
+        revoked since: ``add_owner`` re-reads them under the owner-add
+        lock and refuses, and the session keeps the owners added so far
+        rather than answering 500 after it was created. Runs on every
+        path the Tags box does — a failed upload keeps what the operator
+        staged, as it keeps what they typed.
         """
         if not owner_targets:
             return
-        session_owners.set_owners(
-            db,
-            review_session=review_session,
-            actor=user,
-            targets=[user, *owner_targets],
-            correlation_id=correlation_id,
-        )
+        try:
+            session_owners.set_owners(
+                db,
+                review_session=review_session,
+                actor=user,
+                targets=[user, *owner_targets],
+                correlation_id=correlation_id,
+            )
+        except session_owners.OwnerOperationError:
+            db.rollback()
 
     def quick_setup_error_redirect(
         kind: str, reason: str, details: list[str] | None = None
