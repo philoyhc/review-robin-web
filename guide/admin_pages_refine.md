@@ -284,15 +284,18 @@ Taken 2026-10-14 at `871ba085`.
   `refused=<id>`, and the banner names the row from the view's own
   reasons, never words from the URL. The toolbar, its script and the
   `sys_admin_count` context are gone.
-- **Rung 2 read** (cumulative from `4e770037`): no blocker. Acted on: an
-  unknown `toggle_error` was echoed into the banner, now a fixed
-  sentence; the batch's user-row lock is `FOR NO KEY UPDATE` except for
-  Delete, as `session_guard`'s is, since a full lock could deadlock a
-  bulk Remove from all sessions against `session_owners.remove_owner`;
-  Revoke and Remove from all sessions keep the toolbar's per-row gates,
-  sole owner included (only Delete renders for a row it can't act on, for the DoD's
-  mixed Delete); stale browser-check lines. The `.exp-confirm-label`
-  centering it flagged was #3036's Codex fix already.
+- **Reads** (three, the first cumulative from `4e770037`; none found a
+  blocker). First: an unknown `toggle_error` was echoed into the banner,
+  now a fixed sentence; the user-row lock is `FOR NO KEY UPDATE` (the
+  mode `session_guard` takes) except for Delete, since a full lock could
+  deadlock a bulk Remove from all sessions against
+  `session_owners.remove_owner`; Revoke and Remove from all sessions
+  keep the toolbar's per-row gates; stale browser-check lines. Its
+  `.exp-confirm-label` centering flag was #3036's Codex fix already.
+  Second: Remove from all sessions also keeps the toolbar's sole-owner
+  gate (only Delete renders for a row it can't act on, for the DoD's
+  mixed Delete), and the lock gained a Postgres-compiled test. Third:
+  wording, a docstring, and every narrow-lock action pinned.
 
 ### PR ladder
 

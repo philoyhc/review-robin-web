@@ -3,9 +3,9 @@
 
 SQLite drops ``FOR UPDATE`` altogether, so no integration test can see
 which lock ``users.apply_batch`` takes. Every action but Delete takes
-``FOR NO KEY UPDATE``, as ``session_guard`` does, which an audit row's
-foreign-key check (``FOR KEY SHARE`` on its actor) doesn't wait on, so a
-bulk Remove from all sessions can't deadlock against a concurrent owner
+``FOR NO KEY UPDATE``, the mode ``session_guard`` takes on its session
+row, which an audit row's foreign-key check (``FOR KEY SHARE`` on its
+actor) doesn't wait on, so a bulk Remove from all sessions can't deadlock against a concurrent owner
 removal by a selected user. Delete removes the rows and needs the full
 ``FOR UPDATE``.
 """
@@ -39,6 +39,9 @@ def test_an_action_that_can_lower_the_admin_count_locks_every_admin(
     assert "users.is_sys_admin IS true" in _sql(action)
 
 
-def test_others_lock_the_selection_only() -> None:
-    assert "is_sys_admin IS true" not in _sql("revoke")
-    assert "ORDER BY users.id" in _sql("revoke")
+@pytest.mark.parametrize(
+    "action", [a for a in BATCH_ACTIONS if a not in ("demote", "delete")]
+)
+def test_others_lock_the_selection_only(action: str) -> None:
+    assert "is_sys_admin IS true" not in _sql(action)
+    assert "ORDER BY users.id" in _sql(action)

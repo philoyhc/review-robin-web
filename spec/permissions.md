@@ -205,10 +205,10 @@ taking the repeated `user_ids`, the page's `view` and, for Delete,
   UPDATE` (Delete alone `FOR UPDATE`, since it removes them), and for
   Remove from all sessions the owner rows of every session the selection
   owns, `FOR UPDATE`. Otherwise two concurrent batches each pass the
-  count and both commit. The weaker user-row lock is the one
-  `session_guard` takes: an audit row's foreign-key check doesn't wait
-  on it, so a batch and a concurrent owner removal by a selected user
-  can't deadlock.
+  count and both commit. `FOR NO KEY UPDATE` is the mode
+  `session_guard` takes on its session row: an audit row's foreign-key
+  check doesn't wait on it, so a batch and a concurrent owner removal by
+  a selected user can't deadlock.
 - **Delete needs `confirm=true`** (the expander's *Yes, delete these*
   tick), else **400**; the button stays disabled until it is ticked.
 - **Audit.** Each row writes the event its single-row action writes

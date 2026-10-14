@@ -350,10 +350,10 @@
           // to own one and be the sole owner of none (a batch can't add
           // owners, so a sole owner always fails). Delete applies to any
           // row but a super-admin, which config owns; its other gates
-          // (sessions, history, the last admin) are the server's, as are
-          // the counts no single row decides (the last admin, a session's
-          // last co-owners): it judges the whole batch and refuses it
-          // whole, naming the row.
+          // (sessions, history) are the server's, as are the counts no
+          // single row decides (the last admin, a session's last
+          // co-owners): it judges the whole batch and refuses it whole,
+          // naming the row.
           var table = document.getElementById("users-table");
           var BASE = {{ accounts_base_url | tojson }};
           var ROUTES = {

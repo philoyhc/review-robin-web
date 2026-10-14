@@ -240,7 +240,8 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     page: Page, api: httpx.Client, new_session: Callable[[], int]
 ) -> None:
     """The toolbar's gates, kept: Revoke needs no sessions (the server's
-    still_owner), Remove from all sessions needs some."""
+    still_owner), Remove from all sessions needs some and no session
+    where the row is the sole owner (the server's sole_owner)."""
     first, second, _ = _setup(page, api)
     session_id = new_session()
     response = api.post(
