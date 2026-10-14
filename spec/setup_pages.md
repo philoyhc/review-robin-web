@@ -798,6 +798,12 @@ beneath the selected row, not a card beside it. It carries the selected
 count and the controls — `Edit`, `Inactivate`, `Activate`, `Delete` and
 the delete confirm — rendered client-side from the current selection.
 
+Sys Admin → Accounts uses the same expander for its multi-row actions
+(`spec/operator_ui_concept.md` §6): the count, the controls grouped
+under `Operator:` / `Admin:` / `|`, and Delete behind its confirm tick,
+which shares this section's two-stage gate. Its controls and refusals
+are `spec/operator_button_audit.md` §19 and `spec/permissions.md` §4.1.
+
 **The status pair renders only what is actionable** for the
 selection — `Inactivate` when every selected row is active, `Activate`
 when every one is inactive, both when the selection is mixed.

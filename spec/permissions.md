@@ -179,9 +179,51 @@ management.
 **Self-action is refused outright** (`self_action`), not merely for
 the dangerous cases: an admin cannot admit, revoke, promote or
 demote *themselves*, nor delete or detach their own row — the route
-returns **400** and the page hides the buttons on the actor's own
-row. The recovery path for "I demoted myself" is therefore "ask
+returns **400** and the page offers no checkbox on the actor's own
+row (it reads `(self)`). The recovery path for "I demoted myself" is therefore "ask
 another admin", never a self-service one.
+
+**Bulk actions.** The page acts only on the selection, through the row
+expander (`spec/setup_pages.md` § *The row expander*): `POST
+/operator/sys-admin/users/bulk-<action>`, `<action>` one of `admit`,
+`revoke`, `remove-from-all-sessions`, `promote`, `demote`, `delete`,
+taking the repeated `user_ids`, the page's `view` and, for Delete,
+`confirm`. Gate `require_sys_admin`; service `users.apply_batch`.
+
+- **All or nothing.** One refusal refuses the batch and nothing
+  changes. Every row first takes its own guards from the table above,
+  in that order, minus the two counts; Promote adds `not_operator` (the
+  row has neither the Operator nor the Admin flag: admit it first). The
+  first refusal in row-id order wins.
+- **The counts judge the state after the batch.** `last_admin` refuses a
+  Demote or Delete that would leave no sys-admin, however many admins
+  are selected; `sole_owner` refuses a Remove from all sessions that
+  would leave any session with no owner, however many of its co-owners
+  are selected. Each names a row involved.
+- **What a count reads is locked first,** `FOR UPDATE` in id order: the
+  selected rows, plus every sys-admin row for Demote and Delete, and for
+  Remove from all sessions the owner rows of every session the selection
+  owns. Otherwise two concurrent batches each pass the count and both
+  commit.
+- **Delete needs `confirm=true`** (the expander's *Yes, delete these*
+  tick), else **400**; the button stays disabled until it is ticked.
+- **Audit.** Each row writes the event its single-row action writes
+  (§6), all under one correlation id.
+- **Failure.** Empty selection and `self_action`: **400**. Unknown
+  action or an id that matches no account: **404**. `requires_super_admin`
+  on Promote / Demote: **403**. Every other refusal is a **303** back to
+  the page with the `view` restored and `?toggle_error=<code>&refused=<id>`,
+  not the 409 the single-row routes return; the banner reads *Nothing
+  changed: <reason>*, the reason naming the refused row's email (every
+  reason but `last_admin`'s does). The reason comes from the
+  view's own table by code (`views.account_refusal_message`), never from
+  the URL, so a link cannot put other words on the page; an unlisted code
+  reads *Couldn't apply that change (<code>)*.
+- **Success** is a **303** that restores the view. A single non-Delete
+  row also carries `?selected=<id>`.
+
+The single-row routes (`POST …/users/{user_id}/<action>`) remain and keep
+the §5 mapping; the page no longer posts to them.
 
 ### 4.2 Session ownership
 
@@ -219,8 +261,9 @@ the operation-level mappings.
 | No identity headers (fake auth off), or no email claim | **401** | `get_or_create_user` |
 | `self_action` | **400** | `_sys_admin._handle_toggle` |
 | `requires_super_admin` on Promote / Demote | **403** | same |
-| `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin` | **409** | same |
+| `last_admin`, `owns_sessions`, `has_history`, `still_owner`, `sole_owner`, `protected_super_admin`, on the single-row routes | **409** | same |
 | every Invite error (`invalid_email`, `duplicate`, `requires_super_admin`) | **303** back to the page with `?invite_error=<code>`, which renders a banner | `_sys_admin.invite_user` |
+| any other Accounts bulk refusal (§4.1) | **303** back with `?toggle_error=<code>&refused=<id>`, which renders a banner | `_sys_admin.bulk_account_action` |
 | `last_owner` on remove-owner | **409** (the card disables that Remove, so only a direct POST or a concurrent remove reaches it) | `_session_home.session_owners_remove` |
 | every other owner error on `owners/add` / `owners/{user_id}/remove` (`not_in_workspace`, `already_owner`, `not_owner`, `self_only`) | **303** back to `#owners-card` with `?owners_error=<code>` | same |
 | `not_in_workspace` on Create's Owners card — checked before the session exists, so nothing is created | **422** | `_quick_setup.create_session` |
@@ -284,6 +327,7 @@ a case when a gate changes.
 | session ids are not enumerable: for each of `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session`, an existing session the caller holds no role on is byte-identical to an id that does not exist | `tests/integration/test_session_enumeration_gate.py` |
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
 | every Accounts Management action and guard code | `tests/integration/test_sys_admin_users.py` |
+| the Accounts bulk actions: each action, every refusal, the two post-batch counts | `tests/integration/test_sys_admin_accounts_batch.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |

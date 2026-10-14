@@ -1584,8 +1584,9 @@ The sys-admin surface is workspace-scoped and reachable from
 the chrome's plain **Admin** link, shown to sys admins beside
 Settings, Guide and About. It carries:
 
-- **Accounts Management** — workspace allowlist with per-row
-  promote / demote / delete actions, a bulk toolbar, and an **Invite
+- **Accounts Management** — workspace allowlist whose rows can be
+  selected and admitted, revoked, promoted, demoted, removed from their
+  sessions or deleted together, all or nothing, and an **Invite
   by email** card that pre-seeds a user before their first sign-in,
   as an operator or as an admin; the refusals are
   [§4.1](#41-system-administrator-three-tier-model)'s.
