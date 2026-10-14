@@ -1141,7 +1141,7 @@ Rehydrate and Duplicate can use them later.
 
 **Why deferred.** The banner already says what kind of problem a file
 has, with how many rows, and so does the Setup page's upload card since
-`guide/quick_setup_update.md` Item 3. Neither shows which rows: the
+`guide/archive/quick_setup_update.md` Item 3. Neither shows which rows: the
 operator finds them in the file. The report costs a new table, a page
 and a route slice for that convenience.
 
