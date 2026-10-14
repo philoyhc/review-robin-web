@@ -97,7 +97,10 @@ def _guard_self(actor: User, target: User) -> None:
         )
 
 
-def _sys_admin_count(db: Session) -> int:
+def sys_admin_count(db: Session) -> int:
+    """Every ``is_sys_admin`` row in the workspace: what the
+    ``last_admin`` guard counts, so the page's Demote gate can ask the
+    same question rather than counting the rows it happens to show."""
     return int(
         db.execute(
             select(func.count(User.id)).where(User.is_sys_admin.is_(True))
@@ -250,7 +253,7 @@ def demote(
     _guard_self(actor, target)
     _guard_actor_super_admin(actor)
     _guard_target_not_super_admin(target, "demoted")
-    if _sys_admin_count(db) <= 1 and target.is_sys_admin:
+    if sys_admin_count(db) <= 1 and target.is_sys_admin:
         raise UserOperationError(
             code="last_admin",
             message=(
@@ -381,7 +384,7 @@ def remove_user(
     """
     _guard_self(actor, target)
     _guard_target_not_super_admin(target, "removed")
-    if target.is_sys_admin and _sys_admin_count(db) <= 1:
+    if target.is_sys_admin and sys_admin_count(db) <= 1:
         raise UserOperationError(
             code="last_admin",
             message=(

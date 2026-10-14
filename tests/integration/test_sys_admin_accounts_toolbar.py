@@ -365,3 +365,15 @@ def test_a_tampered_view_is_reencoded_not_echoed(
     )
     query = parse_qs(urlsplit(response.headers["location"]).query)
     assert query == {"show": ["unused"], "selected": [str(workspace["erin"].id)]}
+
+
+def test_the_demote_gate_counts_admins_across_the_workspace(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    """A search showing one admin must not read as "the last admin": the
+    service's ``last_admin`` guard counts the workspace, so the page's
+    Demote gate gets the same count (Codex on #3030)."""
+    body = client.get(f"{ACCOUNTS}?q=carol").text
+    assert _emails(body) == {"carol@example.edu"}
+    toolbar = body.split('id="user-actions"', 1)[1].split(">", 1)[0]
+    assert 'data-sys-admin-count="2"' in toolbar

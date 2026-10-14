@@ -217,6 +217,7 @@
          action URL based on the selected user's current state. #}
       <div id="user-actions"
            data-selected-user-id="{{ selected_user_id or '' }}"
+           data-sys-admin-count="{{ sys_admin_count }}"
            style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-start; margin-bottom:12px;">
         <span class="muted">Operator:</span>
         <form method="post" action="" data-action-form="operator-toggle"
@@ -336,12 +337,12 @@
           // Total sys-admin count drives the last-admin demote
           // guard on the client side. Service-level guard is the
           // structural safety net.
-          var sysAdminCount = 0;
-          table.querySelectorAll("tr[data-user-id]").forEach(function (tr) {
-            if (tr.getAttribute("data-is-sys-admin") === "true") {
-              sysAdminCount += 1;
-            }
-          });
+          // Workspace-wide, from the server: the table is filtered and
+          // paged, so counting its rendered rows would miss an admin a
+          // chip, search or page hides and refuse a Demote the service
+          // would accept (Codex on #3030).
+          var sysAdminCount = parseInt(
+            toolbar.getAttribute("data-sys-admin-count") || "0", 10);
 
           var actionUrls = {
             "operator-toggle": {

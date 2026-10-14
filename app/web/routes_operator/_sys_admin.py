@@ -291,6 +291,8 @@ def sys_admin_users(
                 + "&"
             ),
             "pager_anchor": "accounts-table-card",
+            # The Demote gate's ``last_admin`` count, workspace-wide.
+            "sys_admin_count": users_service.sys_admin_count(db),
             "actor_is_super_admin": user.is_super_admin,
             # Segment 18S Item 2 — the Promote/Demote controls follow the
             # same rule as the service actor guard: a super-admin actor,
