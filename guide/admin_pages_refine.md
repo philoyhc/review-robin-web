@@ -254,8 +254,10 @@ Taken 2026-10-14 at `871ba085`.
 ### Status
 
 Closed 2026-10-14: #3035 (rung 1), #3036 (rung 1a), #3037 (rung 2 and
-the close). Built as planned; the expander's controls and the batch
-service are specified in `spec/permissions.md` §4.1 and
+the close). Built as planned except where noted below: rung 1a's
+grouping, and Delete rendering for rows the server refuses, against the
+Decision's "only actionable controls render". The expander's controls
+and the batch service are specified in `spec/permissions.md` §4.1 and
 `spec/operator_button_audit.md` §19.
 
 - **Rung 1a** (author, unplanned): bare "Revoke" / "Promote" read
