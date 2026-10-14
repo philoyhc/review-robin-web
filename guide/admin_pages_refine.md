@@ -267,6 +267,9 @@ renders only where `can_manage_admins`; `Cancel` resets it.
 - **Rung 1** (2026-10-14): Overview wears `.card.placeholder`, the
   spec's scaffold treatment. The reads found `spec/ui_elements.md` and
   `spec/session_home.md` owed bullets (below).
+- **Rung 1a** (2026-10-14, author): the chip and `Cancel` / `Invite` share
+  one row, chip top-left, the pair flush right and wrapping as a unit
+  (`.card-action-row` with a new `.card-action-lead`).
 
 ### PR ladder
 
@@ -290,8 +293,8 @@ renders only where `can_manage_admins`; `Cancel` resets it.
 ### Doc impact
 
 - `spec/permissions.md` — rows naming *Also invite as sys-admin* name the chip (Item 3).
-- `spec/operator_button_audit.md` — row 113's Cancel resets the chip, not a checkbox (Item 3).
+- `spec/operator_button_audit.md` — rows 112–113: Cancel before Invite, flush right beside the chip, and Cancel resets the chip, not a checkbox (Item 3).
 - `docs/security_posture.md` — the invite guard names the chip (Item 3).
 - `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card (Item 3).
-- `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling), §9's form-control chips list the invite chip, and §4's `.card.placeholder` note names Overview while it is a stub, one with no action button to disable (Item 3).
+- `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling) and its `.card-action-row` row lists the invite card and `.card-action-lead`, §9's form-control chips list the invite chip, and §4's `.card.placeholder` note names Overview while it is a stub, one with no action button to disable (Item 3).
 - `spec/session_home.md` — "Placeholder cards" no longer says no live page uses the class (Item 3).

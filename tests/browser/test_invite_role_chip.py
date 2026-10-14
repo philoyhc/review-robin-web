@@ -69,3 +69,17 @@ def test_the_chip_sits_top_left_and_the_buttons_right(page: Page) -> None:
     assert chip["x"] + chip["width"] < cancel["x"] < invite["x"]
     # Flush right: Invite ends where the email box does.
     assert abs((invite["x"] + invite["width"]) - (email["x"] + email["width"])) < 1
+
+
+def test_a_narrow_card_wraps_the_buttons_together(page: Page) -> None:
+    """Cancel and Invite wrap as one unit, never Invite alone (cold read
+    of the one-row change, measured at 360–420px)."""
+    for width in (420, 360, 320):
+        page.set_viewport_size({"width": width, "height": 900})
+        page.goto(ACCOUNTS)
+        cancel = page.locator("[data-invite-cancel]").bounding_box()
+        invite = page.locator("[data-invite-submit]").bounding_box()
+        email = page.locator("#invite-email").bounding_box()
+        assert cancel and invite and email
+        assert cancel["y"] == invite["y"], width
+        assert abs((invite["x"] + invite["width"]) - (email["x"] + email["width"])) < 1, width

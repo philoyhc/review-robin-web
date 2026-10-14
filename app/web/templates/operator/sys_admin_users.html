@@ -76,12 +76,16 @@
                  autocomplete="off" aria-label="Invite as sys-admin"><span
                  data-invite-role-label>Invite as operator</span></label>
         {% endif %}
-        <button class="btn secondary" type="reset"
-                data-invite-cancel
-                disabled>Cancel</button>
-        <button class="btn secondary" type="submit"
-                data-invite-submit
-                disabled>Invite</button>
+        {# One unit, so a narrow card wraps the pair together rather
+           than stranding Invite on a line of its own. #}
+        <div class="btn-pair">
+          <button class="btn secondary" type="reset"
+                  data-invite-cancel
+                  disabled>Cancel</button>
+          <button class="btn secondary" type="submit"
+                  data-invite-submit
+                  disabled>Invite</button>
+        </div>
       </div>
     </form>
     <script>

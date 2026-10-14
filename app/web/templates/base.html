@@ -1781,14 +1781,13 @@
       body.ui-v2 .card-action-row form { margin: 0; }
       /* A lead control on the action row's left (admin_pages_refine
          Item 3: Accounts' invite role chip beside Cancel / Invite). It
-         takes the free space, so the buttons stay pinned right, and the
-         row aligns to the top, so a short chip sits top-left rather than
-         centered against taller buttons. Absent the lead, the row is the
-         plain right-aligned one above. */
-      body.ui-v2 .card-action-row:has(> .card-action-lead) {
-        align-items: flex-start;
+         takes the free space, so the buttons stay pinned right, and sits
+         at the line's top rather than centered against taller buttons.
+         Absent the lead, the row is the plain right-aligned one above. */
+      body.ui-v2 .card-action-row > .card-action-lead {
+        margin-right: auto;
+        align-self: flex-start;
       }
-      body.ui-v2 .card-action-row > .card-action-lead { margin-right: auto; }
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
         .page-grid { grid-template-columns: 1fr; }
