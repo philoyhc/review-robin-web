@@ -108,5 +108,14 @@ def test_the_sort_cookie_orders_the_first_render(
     assert order([{"key": "status", "dir": "asc"}]) == ["Gamma", "Alpha", "Beta"]
 
 
+def test_filter_text_lower_cases_as_the_browser_does() -> None:
+    """``lower()``, not ``casefold()``: the browser lower-cases the term
+    with ``toLowerCase``, which keeps "ß" where ``casefold`` makes it
+    "ss", so a picked "Strauß" would match nothing."""
+    owner = User(email="o@example.edu", display_name="Johann Strauß")
+    text = views.diagnostics_filter_text(ReviewSession(name="Walzer", code="w"), [owner])
+    assert "johann strauß" in text.split("\n")
+
+
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:
     assert views.LOBBY_SORT_KEYS - views.DIAGNOSTICS_SORT_KEYS == {"status"}
