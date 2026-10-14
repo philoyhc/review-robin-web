@@ -752,35 +752,49 @@ Notes:
 ## Section 19 — Accounts Management (`/operator/sys-admin/users`)
 
 Source: `app/web/templates/operator/sys_admin_users.html`.
-Sys-admin-gated. **One per-row selection checkbox and a single
-bulk-action toolbar above the table** — never per-row inline action
-buttons, which would put four destructive controls on every row.
+Sys-admin-gated. **A per-row selection checkbox (several rows may be
+ticked) and a row expander** injected beneath the most recently ticked
+row, carrying the selected count and the actions — never per-row inline
+action buttons, which would put four destructive controls on every row.
+Every expander control posts the one `users-bulk-form` to
+`/sys-admin/users/bulk-<action>` through `form=` + `formaction` and acts
+on every selected row, all or nothing (`spec/permissions.md` §4.1).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 111 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
 | 112 | Invite by email | Invite | `<button type="submit">` | `btn secondary` | Secondary | Posts `/sys-admin/users/invite`. Starts `disabled`; inline JS enables when the email input has text. |
 | 113 | Invite by email | Cancel | `<button type="reset">` | `btn secondary` | Secondary | Clears the email + sys-admin checkbox. Starts `disabled`; same dirty-check as Invite. |
-| 114 | Workspace users — bulk toolbar | Admit / Revoke | `<button type="submit">` | `btn secondary` | Secondary | Label flips based on the selected row's `is_operator`. Revoke gated client-side on `session_count == 0`; server-side guard `still_owner` returns 409 otherwise. Starts `disabled`; activates when one row is selected. |
-| 115 | Workspace users — bulk toolbar | Remove from all sessions | `<button type="submit">` | `btn secondary` | Secondary | Posts `/sys-admin/users/{id}/remove-from-all-sessions`. Active when row has `session_count > 0` AND `sole_owner_count == 0`; server-side guard `sole_owner` returns 409 otherwise. |
-| 116 | Workspace users — bulk toolbar | Promote / Demote | `<button type="submit">` | `btn secondary` | Secondary | Label flips based on the selected row's `is_sys_admin`. Demote gated client-side on `not last sys-admin`; server-side guard `last_admin` returns 409 otherwise. |
-| 117 | Workspace users — bulk toolbar | Delete | `<button type="submit">` | `btn destructive` | Destructive | Hard-deletes the `users` row. Active when `session_count == 0`, the row has no history (owns no session, created none, no audit row as actor — the Accounts category rule's history, which is the two server guards together) and the row is not a protected super-admin; server-side guards `owns_sessions`, `has_history` and `protected_super_admin` return 409 otherwise. Redirect omits `?selected=` so the deleted row isn't re-selected on the next render. |
+| 114 | Workspace users — row expander | Admit / Revoke | `<button type="submit">` | `btn secondary` | Secondary | Two buttons, each under `Operator:`. `Admit` renders when every selected row is under the **No role** or **Unused** chip; `Revoke` when every one is under **Operators** and owns no session (an admin's Operator flag is overridden by the admin flag, so Revoke is never offered on an Admins row). Server guards `protected_super_admin` and `still_owner` (a row that owns a session) refuse the whole batch. |
+| 115 | Workspace users — row expander | Remove from all sessions | `<button type="submit">` | `btn secondary` | Secondary | Under `Operator:`. Renders when every selected row owns at least one session, is the sole owner of none (`data-sole-owner-count`), and none is a super-admin; the server refuses the batch when `sole_owner` would leave a session with no owner after every selected row is detached. |
+| 116 | Workspace users — row expander | Promote / Demote | `<button type="submit">` | `btn secondary` | Secondary | Two buttons, each under `Admin:`, rendered only when the actor can manage admins (`data-can-manage-admins`). `Promote` when every selected row is under **Operators**; `Demote` when every one is under **Admins** and none is a super-admin. A row with no role is never offered Promote (`not_operator`). `last_admin` judges the state after the batch. |
+| 117 | Workspace users — row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Hard-deletes the `users` rows. Renders for any selection with no super-admin, after the group label `\|`; ships `disabled` behind the `Yes, delete these` confirm beside the count (`data-delete-confirm` / `data-delete-btn="users-bulk-delete"`), and the route re-checks `confirm == "true"` (**400**). Server guards `owns_sessions`, `has_history` (the Accounts category rule's history: created a session, owns one, or acted in the audit log), `protected_super_admin` and `last_admin` refuse the whole batch. The redirect omits `?selected=`. |
 
 Notes:
 
-- **Toolbar layout.** `display: flex; flex-wrap: wrap; gap: 8px;
-  align-items: center; justify-content: flex-start;` so the four
-  buttons cluster left-aligned, next to the row checkboxes. Group
-  labels (`Operator:` / `Sys Admin:` / `|`) live inline between the
-  buttons.
-- **Single-row selection.** Inline JS enforces one row at a time;
-  the other checkboxes grey out when one is checked. Self-row
-  renders `(self)` instead of a checkbox.
-- **Selection persistence.** Every action that doesn't delete the
-  row round-trips the selected `user_id` via the redirect's
-  `?selected={id}` query param; the template stamps `checked` on
-  the matching row so the operator can chain a second action
-  without re-selecting.
+- **Group labels.** `Operator:` / `Admin:` / `|` are muted text spans
+  inside `.row-expander-actions.is-labelled`, and each renders only when
+  its group has a button for the selection, so a selection that offers
+  only `Demote` shows `Admin:` and nothing else. The `|` labels Delete
+  and is `aria-hidden`. The count and the confirm sit on one line with
+  the buttons.
+- **Only actionable controls render.** A control shows only when it
+  applies to every selected row, as Inactivate / Activate do on the
+  roster pages: Revoke needs every row to own no session, Remove from
+  all sessions every row to own one and be the sole owner of none.
+  Delete is the exception, rendering for any selection without a
+  super-admin and leaving its other gates (sessions, history, the last
+  admin) to the server's whole-batch refusal. The counts no single row
+  decides — the last admin, a session's last co-owners — are the
+  server's for every control.
+- **Selection.** Rows tick independently; the header checkbox is a
+  tri-state select-all over the page. Self-row renders `(self)` instead
+  of a checkbox. Selection is page-local: a chip, role, search or page
+  change reloads the page and clears it. `?selected={id}` arrives with
+  that row ticked.
+- **Refusals** redirect back with a *Nothing changed* banner giving the
+  reason and, for a row-level guard, the row's email
+  (`spec/permissions.md` §4.1).
 - **No confirm checkbox on Promote / Demote.** The service-layer
   `last_admin` guard is the structural safety net, and a checkbox in
   front of it would be a second, weaker one.

@@ -29,9 +29,9 @@
     </div>
   {% endif %}
 
-  {% if toggle_error %}
+  {% if toggle_message %}
     <div class="card banner-scroll-target" role="alert">
-      <p>Couldn't apply that change ({{ toggle_error }}).</p>
+      <p>{{ toggle_message }}</p>
     </div>
   {% endif %}
 
@@ -254,71 +254,20 @@
       </div>{# .table-card-toolbar #}
 
       {% if rows %}
-      {# Bulk-action toolbar — single-row selection drives the
-         button enablement. Each form holds a hidden ``user_id``
-         input that the inline JS rewrites whenever the operator
-         flips a row checkbox. The "Admit / Revoke" and "Promote /
-         Demote" pairs share one form each — the JS swaps the
-         action URL based on the selected user's current state. #}
-      <div id="user-actions"
-           data-selected-user-id="{{ selected_user_id or '' }}"
-           data-sys-admin-count="{{ sys_admin_count }}"
-           style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-start; margin-bottom:12px;">
-        <span class="muted">Operator:</span>
-        <form method="post" action="" data-action-form="operator-toggle"
-              style="margin:0">
-          <input type="hidden" name="user_id" value="">
-          <input type="hidden" name="view" value="{{ account_view_query }}">
-          <button class="btn secondary" type="submit"
-                  data-action-btn="operator-toggle"
-                  data-label-admit="Admit"
-                  data-label-revoke="Revoke"
-                  disabled>Admit</button>
-        </form>
-        <form method="post" action="" data-action-form="remove-sessions"
-              style="margin:0">
-          <input type="hidden" name="user_id" value="">
-          <input type="hidden" name="view" value="{{ account_view_query }}">
-          <button class="btn secondary" type="submit"
-                  data-action-btn="remove-sessions"
-                  disabled>Remove from all sessions</button>
-        </form>
-        {# Admin promote / demote is super-admin-only (Segment 18S) —
-           except when no super tier is configured at all, where any
-           admin may manage admins (Item 2 fallback). ``can_manage_admins``
-           mirrors the server actor guard exactly; the server guard is the
-           real enforcement. #}
-        {% if can_manage_admins %}
-          <span class="muted">Admin:</span>
-          <form method="post" action="" data-action-form="sys-admin-toggle"
-                style="margin:0">
-            <input type="hidden" name="user_id" value="">
-            <input type="hidden" name="view" value="{{ account_view_query }}">
-            <button class="btn secondary" type="submit"
-                    data-action-btn="sys-admin-toggle"
-                    data-label-promote="Promote"
-                    data-label-demote="Demote"
-                    disabled>Promote</button>
-          </form>
-          <span class="muted" aria-hidden="true">|</span>
-        {% endif %}
-        <form method="post" action="" data-action-form="delete"
-              style="margin:0">
-          <input type="hidden" name="user_id" value="">
-          <input type="hidden" name="view" value="{{ account_view_query }}">
-          <button class="btn destructive" type="submit"
-                  data-action-btn="delete"
-                  disabled>Delete</button>
-        </form>
-      </div>
+      {# admin_pages_refine Item 2 — the row expander's form. The row
+         checkboxes join it through `form=` + `name="user_ids"`, so the
+         expander's buttons need only say where to send the selection
+         (`formaction`). It retired the single-row toolbar. #}
+      <form id="users-bulk-form" method="post" action="{{ accounts_base_url }}/bulk-admit">
+        <input type="hidden" name="view" value="{{ account_view_query }}">
+      </form>
       {# `.table-scroll` (base.html): a table wider than its card
          scrolls inside the card rather than pushing the page sideways. #}
       <div class="table-scroll">
-      {# admin_pages_refine Item 2 rung 1 — several rows can be ticked,
-         and the selection drives a row expander (the roster pages' idiom,
-         `spec/setup_pages.md` § *The row expander*). The expander is a
-         scaffold: its controls are inert until rung 2, and the toolbar
-         above stays live for a single selected row. #}
+      {# admin_pages_refine Item 2 — several rows can be ticked, and the
+         selection drives a row expander (the roster pages' idiom,
+         `spec/setup_pages.md` § *The row expander*) whose actions apply to
+         every selected row, all or nothing (`users.apply_batch`). #}
       <table id="users-table"
              data-can-manage-admins="{{ 'true' if can_manage_admins else 'false' }}">
         <tr>
@@ -351,6 +300,8 @@
               {% else %}
                 <input type="checkbox"
                        class="user-row-select"
+                       name="user_ids" value="{{ row.id }}"
+                       form="users-bulk-form"
                        aria-label="Select {{ row.email }}"
                        {% if selected_user_id and selected_user_id == row.id %}checked{% endif %}>
               {% endif %}
@@ -386,212 +337,33 @@
       {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
       <script>
         (function () {
-          var table = document.getElementById("users-table");
-          var toolbar = document.getElementById("user-actions");
-          if (!table || !toolbar) return;
-
-          // Total sys-admin count drives the last-admin demote
-          // guard on the client side. Service-level guard is the
-          // structural safety net.
-          // Workspace-wide, from the server: the table is filtered and
-          // paged, so counting its rendered rows would miss an admin a
-          // chip, search or page hides and refuse a Demote the service
-          // would accept (Codex on #3030).
-          var sysAdminCount = parseInt(
-            toolbar.getAttribute("data-sys-admin-count") || "0", 10);
-
-          var actionUrls = {
-            "operator-toggle": {
-              "admit": "/operator/sys-admin/users/{id}/admit",
-              "revoke": "/operator/sys-admin/users/{id}/revoke",
-            },
-            "remove-sessions":
-              "/operator/sys-admin/users/{id}/remove-from-all-sessions",
-            "sys-admin-toggle": {
-              "promote": "/operator/sys-admin/users/{id}/promote",
-              "demote": "/operator/sys-admin/users/{id}/demote",
-            },
-            "delete": "/operator/sys-admin/users/{id}/delete",
-          };
-
-          var checkboxes = table.querySelectorAll(".user-row-select");
-
-          // The toolbar acts on exactly one row. Several can be ticked
-          // now (Item 2 rung 1), for the row expander; until its
-          // controls go live, a selection of two or more leaves the
-          // toolbar disabled rather than acting on one of them.
-          function selectedRow() {
-            var picked = null;
-            for (var i = 0; i < checkboxes.length; i++) {
-              if (checkboxes[i].checked) {
-                if (picked) return null;
-                picked = checkboxes[i].closest("tr[data-user-id]");
-              }
-            }
-            return picked;
-          }
-
-          function setupButton(name, action, label) {
-            var btn = toolbar.querySelector(
-              '[data-action-btn="' + name + '"]'
-            );
-            var form = toolbar.querySelector(
-              '[data-action-form="' + name + '"]'
-            );
-            if (!btn || !form) return;
-            btn.disabled = action === null;
-            if (label) btn.textContent = label;
-            if (action) {
-              form.setAttribute("action", action);
-              var hidden = form.querySelector('input[name="user_id"]');
-              if (hidden && form._currentUserId) {
-                hidden.value = form._currentUserId;
-              }
-            } else {
-              form.setAttribute("action", "");
-              var hidden2 = form.querySelector('input[name="user_id"]');
-              if (hidden2) hidden2.value = "";
-            }
-          }
-
-          function refresh() {
-            var row = selectedRow();
-
-            if (!row) {
-              setupButton("operator-toggle", null, "Admit");
-              setupButton("remove-sessions", null, null);
-              setupButton("sys-admin-toggle", null, "Promote");
-              setupButton("delete", null, null);
-              return;
-            }
-            var userId = row.getAttribute("data-user-id");
-            var isOperator = row.getAttribute("data-is-operator") === "true";
-            var isSysAdmin = row.getAttribute("data-is-sys-admin") === "true";
-            // Segment 18S — a super-admin is a protected target: no
-            // in-app demote / revoke / remove / detach. Mirrors the
-            // server guards (protected_super_admin); the server stays
-            // the real enforcement.
-            var isSuperAdmin =
-              row.getAttribute("data-is-super-admin") === "true";
-            var sessionCount = parseInt(
-              row.getAttribute("data-session-count") || "0", 10);
-            var soleOwnerCount = parseInt(
-              row.getAttribute("data-sole-owner-count") || "0", 10);
-
-            // Stash the user id on each form so setupButton can
-            // populate the hidden input alongside the action URL.
-            toolbar.querySelectorAll("form[data-action-form]").forEach(
-              function (f) { f._currentUserId = userId; }
-            );
-
-            // Operator toggle: Admit when not operator, Revoke
-            // when operator. Revoke gated on sessionCount == 0
-            // (the operator must clear sessions first).
-            if (isOperator) {
-              var op = toolbar.querySelector(
-                '[data-action-btn="operator-toggle"]'
-              );
-              var revokeLabel = op.getAttribute("data-label-revoke");
-              var revokeUrl = actionUrls["operator-toggle"]["revoke"]
-                .replace("{id}", userId);
-              setupButton(
-                "operator-toggle",
-                sessionCount === 0 && !isSuperAdmin ? revokeUrl : null,
-                revokeLabel
-              );
-            } else {
-              var admitLabel = toolbar.querySelector(
-                '[data-action-btn="operator-toggle"]'
-              ).getAttribute("data-label-admit");
-              setupButton(
-                "operator-toggle",
-                actionUrls["operator-toggle"]["admit"].replace("{id}", userId),
-                admitLabel
-              );
-            }
-
-            // Remove from all sessions: only when user has
-            // sessions AND is not the sole owner of any.
-            var canRemoveSessions =
-              sessionCount > 0 && soleOwnerCount === 0 && !isSuperAdmin;
-            setupButton(
-              "remove-sessions",
-              canRemoveSessions
-                ? actionUrls["remove-sessions"].replace("{id}", userId)
-                : null,
-              null
-            );
-
-            // Sys-admin toggle: Promote when not sys-admin,
-            // Demote when sys-admin. Demote gated on
-            // not-last-sys-admin.
-            var sysBtn = toolbar.querySelector(
-              '[data-action-btn="sys-admin-toggle"]'
-            );
-            if (isSysAdmin) {
-              var demoteLabel = sysBtn.getAttribute("data-label-demote");
-              var canDemote = sysAdminCount > 1 && !isSuperAdmin;
-              setupButton(
-                "sys-admin-toggle",
-                canDemote
-                  ? actionUrls["sys-admin-toggle"]["demote"]
-                      .replace("{id}", userId)
-                  : null,
-                demoteLabel
-              );
-            } else {
-              var promoteLabel = sysBtn.getAttribute("data-label-promote");
-              setupButton(
-                "sys-admin-toggle",
-                actionUrls["sys-admin-toggle"]["promote"]
-                  .replace("{id}", userId),
-                promoteLabel
-              );
-            }
-
-            // Delete: only when user has zero sessions, no history
-            // (owns no session, created none, no audit row as actor — the
-            // Accounts category rule's history, which is the server's
-            // owns_sessions and has_history guards together) and is not a
-            // protected super-admin.
-            var hasHistory = row.getAttribute("data-has-history") === "true";
-            setupButton(
-              "delete",
-              sessionCount === 0 && !hasHistory && !isSuperAdmin
-                ? actionUrls["delete"].replace("{id}", userId)
-                : null,
-              null
-            );
-          }
-
-          // Delegated, to see the select-all as well as the rows. The
-          // select-all ticks the rows in the expander script's handler,
-          // which runs after this one, so read the selection a tick later.
-          document.addEventListener("change", function (e) {
-            var t = e.target;
-            if (t && (t.id === "users-select-all" ||
-                      (t.classList && t.classList.contains("user-row-select")))) {
-              setTimeout(refresh, 0);
-            }
-          });
-          refresh();
-        })();
-      </script>
-      <script>
-        (function () {
-          // admin_pages_refine Item 2 rung 1 — the row expander, inert.
-          // Built from the selection on every change, anchored after the
+          // admin_pages_refine Item 2 — the row expander. Built from the
+          // selection on every change, anchored after the
           // most recently ticked row still selected (the roster pages'
           // rule). It shows the count and only the controls that apply
           // to every selected row, by the row's chip:
           //   Operators       Revoke, Promote
           //   Admins          Demote (never a super-admin)
           //   No role, Unused Admit
-          // Promote and Demote need can_manage_admins. Remove from all
-          // sessions and Delete apply to any row but a super-admin, which
-          // config owns; their other gates are the server's, which judges
-          // the whole batch in rung 2.
+          // Promote and Demote need can_manage_admins. Revoke needs every
+          // row to own no session; Remove from all sessions needs every row
+          // to own one and be the sole owner of none (a batch can't add
+          // owners, so a sole owner always fails). Delete applies to any
+          // row but a super-admin, which config owns; its other gates
+          // (sessions, history) are the server's, as are the counts no
+          // single row decides (the last admin, a session's last
+          // co-owners): it judges the whole batch and refuses it whole,
+          // naming the row.
           var table = document.getElementById("users-table");
+          var BASE = {{ accounts_base_url | tojson }};
+          var ROUTES = {
+            "Admit": "/bulk-admit",
+            "Revoke": "/bulk-revoke",
+            "Remove from all sessions": "/bulk-remove-from-all-sessions",
+            "Promote": "/bulk-promote",
+            "Demote": "/bulk-demote",
+            "Delete": "/bulk-delete"
+          };
           var selectAll = document.getElementById("users-select-all");
           if (!table) return;
           var canManageAdmins =
@@ -622,6 +394,12 @@
           function isSuper(row) {
             return row.getAttribute("data-is-super-admin") === "true";
           }
+          function sessions(row) {
+            return parseInt(row.getAttribute("data-session-count") || "0", 10);
+          }
+          function soleOwned(row) {
+            return parseInt(row.getAttribute("data-sole-owner-count") || "0", 10);
+          }
           // Grouped as the toolbar groups them, so a bare "Revoke" or
           // "Promote" says which role it changes: "Operator:" then
           // Admit / Revoke and Remove from all sessions, "Admin:" then
@@ -637,9 +415,15 @@
             if (every(sel, function (r) {
               return category(r) === "no_role" || category(r) === "unused";
             })) operator.push(["Admit", "secondary"]);
-            if (allOperators) operator.push(["Revoke", "secondary"]);
+            if (allOperators && every(sel, function (r) { return sessions(r) === 0; })) {
+              operator.push(["Revoke", "secondary"]);
+            }
             if (!sel.some(isSuper)) {
-              operator.push(["Remove from all sessions", "secondary"]);
+              if (every(sel, function (r) {
+                return sessions(r) > 0 && soleOwned(r) === 0;
+              })) {
+                operator.push(["Remove from all sessions", "secondary"]);
+              }
               danger.push(["Delete", "destructive"]);
             }
             if (canManageAdmins && allOperators) admin.push(["Promote", "secondary"]);
@@ -662,7 +446,9 @@
                 "</strong> of " + boxes().length + " selected</span>";
             if (groups.some(function (g) { return g[0] === "|"; })) {
               html += '<label class="confirm-label exp-confirm-label">' +
-                '<input type="checkbox" disabled> Yes, delete these</label>';
+                '<input type="checkbox" name="confirm" value="true"' +
+                ' form="users-bulk-form"' +
+                ' data-delete-confirm="users-bulk-delete"> Yes, delete these</label>';
             }
             html += '<span class="row-expander-actions is-labelled">';
             // Each label and its buttons in one group, so a narrow row
@@ -672,10 +458,18 @@
                 '<span class="muted"' +
                 (group[0] === "|" ? ' aria-hidden="true"' : "") + ">" +
                 group[0] + "</span>";
+              // The selection reaches the POST through the row boxes' own
+              // `form=` + `name="user_ids"`; a button says only where.
+              // Delete ships disabled: the confirm's pairing (base.html)
+              // enables it on the tick, and a fresh panel is unticked.
               group[1].forEach(function (a) {
-                html += '<button type="button" class="btn ' + a[1] + '"' +
+                var del = a[0] === "Delete";
+                html += '<button type="submit" class="btn ' + a[1] + '"' +
+                  ' form="users-bulk-form" formaction="' + BASE + ROUTES[a[0]] + '"' +
                   ' data-expander-action="' + a[0] + '"' +
-                  ' disabled aria-disabled="true">' + a[0] + "</button>";
+                  (del ? ' data-delete-btn="users-bulk-delete"' +
+                         ' disabled aria-disabled="true"' : "") +
+                  ">" + a[0] + "</button>";
               });
               html += "</span>";
             });

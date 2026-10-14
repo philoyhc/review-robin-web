@@ -124,13 +124,27 @@ Sys Admin → Accounts, with a few operators and an unused account.
   header box ticks every row and shows a dash when only some are.
 - [ ] **The expander.** A tinted bar opens under the last row ticked:
   "N of M selected", then only the controls that fit every selected
-  row, grouped as the toolbar is (two operators: "Operator:" Revoke,
-  Remove from all sessions, "Admin:" Promote, "|" Delete). The count,
-  the "Yes, delete these" confirm, the labels and the buttons all sit on
-  one line. All are greyed out for now.
+  row, grouped as the toolbar was (two operators who own nothing:
+  "Operator:" Revoke, "Admin:" Promote, "|" Delete). The count, the
+  "Yes, delete these" confirm, the labels and the buttons all sit on
+  one line.
 - [ ] **Other expanders.** The same confirm on the four roster pages
   (Reviewers, Reviewees, Relationships, Observers) sits level with its
   count too, not lower.
-- [ ] **The toolbar.** It acts as before for one ticked row and greys out
-  for two or more.
+
+## Accounts row expander live (admin pages Item 2, rung 2)
+
+Sys Admin → Accounts, with a few operators and an unused account.
+
+- [ ] **No toolbar.** Nothing sits above the table but the chips and the
+  filter strip; actions are only in the expander.
+- [ ] **One click, several rows.** With Unused on, tick two operators who
+  own no session, Revoke: both lose the Operator pill and move under
+  Unused (or No role, if they have history), and the chips and search
+  stay.
+- [ ] **Delete's confirm.** Delete stays grey until "Yes, delete these"
+  is ticked.
+- [ ] **Refused whole.** Tick an unused account and a session owner,
+  confirm, Delete: a banner says "Nothing changed: … owns sessions",
+  naming the owner, and both rows are still there.
 

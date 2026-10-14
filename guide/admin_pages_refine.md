@@ -271,6 +271,31 @@ Taken 2026-10-14 at `871ba085`.
   buttons (author): `.confirm-label`'s top margin had pushed the confirm
   8px down, on every page's expander, so the fix is in the shared
   `.exp-confirm-label`.
+- **Rung 2** (2026-10-14): live. `users.apply_batch` takes an action
+  and the selected ids: it locks the rows (and, for Demote and Delete,
+  every sys-admin row) in id order, runs each row's
+  single-row guards plus `not_operator`, then `last_admin` and
+  `sole_owner` on the state after the batch (the owner rows of every
+  session the selection owns, locked in id order), and writes the same
+  events the single-row actions do under one correlation id. The
+  single-row functions now share its write helpers; their routes stay,
+  unused by the page. `POST …/users/bulk-<action>`; Delete needs
+  `confirm=true` (400). A refusal redirects with `toggle_error` and
+  `refused=<id>`, and the banner names the row from the view's own
+  reasons, never words from the URL. The toolbar, its script and the
+  `sys_admin_count` context are gone.
+- **Reads** (three, the first cumulative from `4e770037`; none found a
+  blocker). First: an unknown `toggle_error` was echoed into the banner,
+  now a fixed sentence; the user-row lock is `FOR NO KEY UPDATE` (the
+  mode `session_guard` takes) except for Delete, since a full lock could
+  deadlock a bulk Remove from all sessions against
+  `session_owners.remove_owner`; Revoke and Remove from all sessions
+  keep the toolbar's per-row gates; stale browser-check lines. Its
+  `.exp-confirm-label` centering flag was #3036's Codex fix already.
+  Second: Remove from all sessions also keeps the toolbar's sole-owner
+  gate (only Delete renders for a row it can't act on, for the DoD's
+  mixed Delete), and the lock gained a Postgres-compiled test. Third:
+  wording, a docstring, and every narrow-lock action pinned.
 
 ### PR ladder
 

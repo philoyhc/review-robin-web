@@ -224,6 +224,7 @@ def sys_admin_users(
     request: Request,
     invite_error: str | None = Query(default=None),
     toggle_error: str | None = Query(default=None),
+    refused: int | None = Query(default=None),
     selected: int | None = Query(default=None),
     show: list[str] | None = Query(default=None),
     role: str | None = Query(default=None),
@@ -252,6 +253,7 @@ def sys_admin_users(
     )
     view = dataclasses.replace(view, offset=page.offset)
     pager = views.build_pager(total=page.total, offset=page.offset)
+    refused_user = db.get(User, refused) if refused is not None else None
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
@@ -294,8 +296,6 @@ def sys_admin_users(
                 + "&"
             ),
             "pager_anchor": "accounts-table-card",
-            # The Demote gate's ``last_admin`` count, workspace-wide.
-            "sys_admin_count": users_service.sys_admin_count(db),
             "actor_is_super_admin": user.is_super_admin,
             # Segment 18S Item 2 — the Promote/Demote controls follow the
             # same rule as the service actor guard: a super-admin actor,
@@ -305,7 +305,13 @@ def sys_admin_users(
                 user.is_super_admin or not effective_super_admin_emails()
             ),
             "invite_error": invite_error,
-            "toggle_error": toggle_error,
+            # A refused batch names its row: the email is looked up, the
+            # reason comes from the view's own table, never from the URL.
+            "toggle_message": views.account_refusal_message(
+                toggle_error, refused_user.email if refused_user else None
+            )
+            if toggle_error
+            else None,
             "selected_user_id": selected,
         },
     )
@@ -384,6 +390,7 @@ def _users_redirect(
     error_code: str | None = None,
     selected_user_id: int | None = None,
     view: str = "",
+    refused_user_id: int | None = None,
 ) -> RedirectResponse:
     """Back to Accounts. ``view`` is the query the action form posted
     (admin_pages_refine Item 1): parsed and re-encoded rather than
@@ -397,6 +404,8 @@ def _users_redirect(
         )
     if error_code:
         params.append(f"toggle_error={quote(error_code, safe='')}")
+    if refused_user_id is not None:
+        params.append(f"refused={refused_user_id}")
     if selected_user_id is not None:
         params.append(f"selected={selected_user_id}")
     if params:
@@ -540,6 +549,72 @@ def remove_user(
         actor=actor,
         target=_load_target(db, user_id),
         view=view,
+    )
+
+
+#: The row expander's routes (admin_pages_refine Item 2): the path
+#: segment after ``bulk-``, mapped to ``users.apply_batch``'s action.
+_BULK_ACTIONS: dict[str, str] = {
+    "admit": "admit",
+    "revoke": "revoke",
+    "remove-from-all-sessions": "remove_from_all_sessions",
+    "promote": "promote",
+    "demote": "demote",
+    "delete": "delete",
+}
+
+
+@router.post("/sys-admin/users/bulk-{action}")
+def bulk_account_action(
+    action: str,
+    user_ids: list[int] = Form(default_factory=list),
+    view: str = Form(default=""),
+    confirm: str = Form(default=""),
+    actor: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """One action on the selected rows, all or nothing
+    (``users.apply_batch``). A refusal changes nothing and comes back to
+    the page naming the row and the reason; Delete also needs the
+    expander's confirm, like the roster pages' ``bulk-delete``."""
+    batch_action = _BULK_ACTIONS.get(action)
+    if batch_action is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    if batch_action == "delete" and confirm != "true":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tick the confirmation to delete the selected accounts.",
+        )
+    try:
+        users_service.apply_batch(
+            db,
+            actor=actor,
+            action=batch_action,
+            user_ids=user_ids,
+            correlation_id=request_correlation_id(),
+        )
+    except users_service.UserOperationError as exc:
+        db.rollback()
+        if exc.code in {"self_action", "empty_selection"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
+            ) from exc
+        if exc.code == "not_found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=exc.message
+            ) from exc
+        if exc.code == "requires_super_admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail=exc.message
+            ) from exc
+        return _users_redirect(
+            error_code=exc.code, refused_user_id=exc.user_id, view=view
+        )
+    # One row keeps the single-row actions' landing: its chip on, its
+    # page open. Several have no one row to land on; a delete, none left.
+    single = len(set(user_ids)) == 1 and batch_action != "delete"
+    return _users_redirect(
+        selected_user_id=user_ids[0] if single else None, view=view
     )
 
 
