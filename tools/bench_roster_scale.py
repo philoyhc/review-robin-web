@@ -439,8 +439,8 @@ def seed_accounts(args: argparse.Namespace) -> None:
 
 
 #: Accounts views worth timing: the default, every chip, a search, each
-#: Session role and the last page. ``bench_accounts`` adds the redirect
-#: target an action lands on, which needs a real user id.
+#: Session role, the last page and one typeahead lookup. ``bench_accounts``
+#: adds the redirect target an action lands on, which needs a real user id.
 ACCOUNTS_PAGES = (
     ("Accounts", ""),
     ("Accounts: all chips", "?show=operators&show=admins&show=no_role&show=unused"),
@@ -450,6 +450,7 @@ ACCOUNTS_PAGES = (
     ("Accounts: role=reviewee", "?show=operators&show=admins&show=no_role&show=unused&role=reviewee"),
     ("Accounts: role=observer", "?show=operators&show=admins&show=no_role&show=unused&role=observer"),
     ("Accounts: role=owner", "?show=operators&show=admins&show=no_role&show=unused&role=owner"),
+    ("Accounts: typeahead", "/search-options?show=operators&show=admins&show=no_role&show=unused&q=par"),
 )
 
 

@@ -777,12 +777,18 @@ def test_workspace_users_page_marks_rows_with_history(
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     bob = _seed_target(db, email="bob@example.edu", is_operator=True)
     carol = _seed_target(db, email="carol@example.edu", is_operator=True)
+    dan = _seed_target(db, email="dan@example.edu", is_operator=True)
     _seed_session_created_by(db, bob, carol)
     body = client.get("/operator/sys-admin/users").text
-    bob_row = body.split(f'data-user-id="{bob.id}"', 1)[1].split(">", 1)[0]
-    carol_row = body.split(f'data-user-id="{carol.id}"', 1)[1].split(">", 1)[0]
-    assert 'data-has-history="true"' in bob_row
-    assert 'data-has-history="false"' in carol_row
+
+    def row(user: User) -> str:
+        return body.split(f'data-user-id="{user.id}"', 1)[1].split(">", 1)[0]
+
+    assert 'data-has-history="true"' in row(bob)
+    # Owning a session is history (admin_pages_refine Item 1, author,
+    # 2026-10-14): Carol co-owns Bob's session without having acted.
+    assert 'data-has-history="true"' in row(carol)
+    assert 'data-has-history="false"' in row(dan)
 
 
 def test_remove_user_404s_on_missing_target(

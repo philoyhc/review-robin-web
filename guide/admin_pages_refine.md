@@ -139,6 +139,21 @@ Taken 2026-10-14 at `871ba085`.
   `spec/assignments.md` and `spec/lifecycle.md`'s "seven preview
   pages" alone, since those mean the session pages.
 
+- **Rulings** (2026-10-14, after the close): the author's two answers
+  built as one slice. The typeahead asks
+  `GET …/users/search-options` again as the box changes; owning a session
+  is history in the category rule (the server's Delete guards are
+  unchanged and already refused owners). Re-timed with both at
+  `3b25903b`: 1,200 accounts 40–68ms, 5,200 accounts 68–123ms, query
+  counts unchanged; a typeahead lookup 30ms / 52ms, 3 queries. Three
+  reads, no blocker; what they found is in the slice's commits and PR.
+  The substantive ones: the row flag's comment and
+  `spec/operator_button_audit.md` row 117 described `has_history` as the
+  server guard alone, and the row omitted the super-admin gate; no test
+  pinned the page's first list; the fetch URL was a literal (now
+  `accounts_base_url` through `tojson`); the spec overstated how the
+  typeahead picks its 200.
+
 ### PR ladder
 
 1. **Scaffold.** The two panes: four chips (real labels and counts),
@@ -161,9 +176,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~Dropdown~~: session roles; ~~fourth chip~~: *Unused*, not *Invited*,
   since an invite always makes an operator or admin (author, 2026-10-14).
-- **Typeahead at scale** (author): it offers the alphabetically first 200
-  emails and names under the chips, so at 1,000 accounts mostly A–D; the
-  search still matches everything. Keep, lift the cap, or drop it?
+- ~~Typeahead at scale~~: keep the 200 cap on what it *shows*, never on
+  what it can reach; it now asks again as the box changes (author,
+  2026-10-14).
 
 ### Out of scope
 
@@ -175,6 +190,7 @@ Taken 2026-10-14 at `871ba085`.
 - `spec/operator_ui_concept.md` — the Accounts entry describes the chips, search and pager (Item 1).
 - `spec/settings_inventory.md` — the URL parameters the Accounts table reads (Item 1).
 - `spec/ui_elements.md` — §10 `.table-card-toolbar` gains Accounts as an eighth carrier; `.table-pager-cluster` notes Accounts keeps its pager under a filter (Item 1).
+- `spec/operator_button_audit.md` — row 117's Delete gate counts owning a session as history (Item 1, rulings).
 
 ---
 
@@ -256,9 +272,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~All or nothing?~~ Yes. ~~Promote from No role?~~ No. ~~Remove from
   all sessions on an admin?~~ Yes (author, 2026-10-14).
-- **Owning sessions isn't history** (author): a demoted co-owner who never
-  acted sits under Unused yet Delete refuses it (`owns_sessions`).
-  Should ownership count as history? (Item 1's read.)
+- ~~Is owning a session history?~~ Yes (author, 2026-10-14), so a
+  co-owner who never acted sits under No role, and Delete reaches every
+  Unused row.
 
 ### Out of scope
 

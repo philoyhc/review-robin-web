@@ -102,3 +102,16 @@ Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
   `Invite as sys-admin`: the new row shows the Admin pill.
 - [ ] **Shorter copy.** The card's line ends "they land on the operator
   lobby directly." with no mention of `/me`.
+
+## Accounts typeahead reaches every account (admin pages Item 1 rulings)
+
+Sys Admin → Accounts with more than 200 accounts under the chips that
+are on. Locally, invite a few hundred by email, or sign in as many
+fake-auth users; `tools/bench_roster_scale.py seed-accounts` makes them
+too, but needs a local Postgres (`tools/README.md`). Turn on No role and
+Unused if the accounts you made sit there.
+
+- [ ] **Typeahead.** Type the start of an email late in the alphabet
+  (`z…`): the suggestions show it within a moment, though the list the
+  page opened with stopped well before it. Typing more narrows it. If
+  the open dropdown only refreshes on the next keystroke, note it.
