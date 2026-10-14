@@ -109,8 +109,11 @@
               <td>
                 <span class="pill pill-count">{{ s.updated_at | format_datetime }}</span>
               </td>
+              {# The zone's IANA name, what the route sorts by, so a
+                 header click orders rows as a reload does (as on the
+                 lobby; a few zone names still collate differently). #}
               {% set tz = session_timezone(s) %}
-              <td class="col-shrink">
+              <td class="col-shrink" data-sort-value="{{ tz }}">
                 <span class="pill pill-count">
                   <abbr class="tz-gmt" title="{{ gmt_offset_label(tz) }} {{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
                 </span>

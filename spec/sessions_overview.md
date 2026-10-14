@@ -424,6 +424,13 @@ The lobby carries all three:
   `rrw-sortable` primitive with the Setup preview tables), decoded
   server-side by `views.decode_cookie_sort_spec` /
   `apply_cookie_sort`. Default order is `created_at DESC`.
+  The Deadline and Timezone cells carry the route's sort value as
+  `data-sort-value` — the stored deadline as UTC ISO 8601
+  (`views.deadline_sort_value`; empty, hence last either way, when
+  there is none) and the zone's IANA name — so a click orders them as
+  a reload does, except where the browser's collation and Python's
+  differ on some zone names (hyphen against underscore, legacy names
+  such as `Etc/GMT+10`).
   A sort with rows selected drops the injected panel and re-anchors
   it from the shared `rrw:sorted` signal; the mechanism
   is in `spec/ui_elements.md` under `.session-row-selected`. Because
@@ -554,7 +561,8 @@ lobby's `Go to Archive`. Breadcrumb:
   `sessions.list_for_user`. Columns as the lobby's, except **Archived**
   (`updated_at` — an archived session's last write is the archive) in
   place of Deadline. Every column but Tags and the checkbox sorts; the
-  sort persists in the `rrw-sort-archived` cookie.
+  sort persists in the `rrw-sort-archived` cookie. Timezone carries
+  the zone's IANA name as its sort value, as on the lobby.
 - **Cards.** An `Archived` card with the `N archived` pill and, when
   any archived session is tagged, the tag-chip filter; and a `Filter`
   card with the lobby's per-column filter and typeahead and a `Clear`

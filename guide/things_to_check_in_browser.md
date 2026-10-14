@@ -231,3 +231,11 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Invite.** With only Unused on, invite someone: the page comes
   back with Operators turned on and the new row ticked, its expander
   open; leave and come back and Operators is still on.
+
+## Lobby and Archive: a click sorts Deadline and Timezone as a reload does (2026-10-14)
+
+- [ ] **Lobby Deadline.** With some sessions having no deadline, click
+  Deadline both ways: those stay at the bottom, and a reload keeps the
+  same order.
+- [ ] **Lobby and Archive Timezone.** Click Timezone: rows group by zone
+  name (Asia/…, Europe/…), not by the GMT label, and a reload keeps it.
