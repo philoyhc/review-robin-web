@@ -728,7 +728,7 @@ takes the next free number.
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
 | 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). The three sit on one line in a `.btn-pair.is-one-line`, however narrow the cell. |
 | 275 | Sessions table toolbar (right) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner, with a typeahead of every name, code and owner label) and shows every row again. `Cancel` by the author's ask (2026-10-14), though the lobby's own filter says `Clear` (#194a). The filter hides rendered rows live and never queries. |
-| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from. `/operator/sys-admin` remembers that origin for the visit (cookie `rrw-admin-return-to`), so this tab and Accounts (#111) keep it across the tab strip and every action's redirect |
+| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from. `/operator/sys-admin` remembers that origin for the browser session, until a later Admin link replaces it (cookie `rrw-admin-return-to`), so this tab and Accounts (#111) keep it across the tab strip and every action's redirect |
 | 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all four Sys Admin pages (§§19–22). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
 | 249 | Sys Admin tab strip | Accounts Management | `<a>` | `nav-tab` (`.active` on §19's page) | Nav (page-internal) | As #248 |
 
@@ -854,9 +854,11 @@ About (#103), and the Sys Admin pages (#111, #118, #247, #251) — carry a
 **`.back-link`**, rendered as
 `<a class="back-link" href="{{ return_to_url }}">← Back to
 {{ return_to_label }}</a>` at the top of the body, above the working
-cards. It round-trips via `?return_to=<path>` from the chrome
-top-right utility menu (#100 / #101). Documented in
-`spec/ui_elements.md` §6.
+cards. Settings and About round-trip via `?return_to=<path>` from the
+chrome top-right utility menu (#100 / #101); the Admin link (#225)
+carries the same param, which `/operator/sys-admin` remembers for both
+tabs (#111, #247), while Outbox and Audit log (#118, #251) go back to
+Sessions Diagnostics. Documented in `spec/ui_elements.md` §6.
 
 **A form editor uses Save + Cancel, not a back-link.** The two would
 navigate to the same place, but Cancel belongs to the form and reads

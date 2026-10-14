@@ -67,3 +67,33 @@ def test_a_later_admin_link_replaces_the_origin(
     client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.id}")
     client.get("/operator/sys-admin?return_to=/operator/sessions")
     assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Sessions'
+
+
+def test_diagnostics_opened_with_a_return_to_remembers_it(
+    client: TestClient, db: Session, admin: None
+) -> None:
+    review_session = _session(client, db)
+    origin = f"/operator/sessions/{review_session.id}"
+    client.get(f"{SESSIONS}?return_to={origin}")
+    assert _back(client.get(ACCOUNTS).text) == f'{origin}">&larr; Back to Spring'
+
+
+def test_a_return_to_wins_over_the_remembered_origin(
+    client: TestClient, db: Session, admin: None
+) -> None:
+    review_session = _session(client, db)
+    client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.id}")
+    page = client.get(f"{SESSIONS}?return_to=/operator/sessions/archived").text
+    expected = '/operator/sessions/archived">&larr; Back to Archived sessions'
+    assert _back(page) == expected
+    assert _back(client.get(ACCOUNTS).text) == expected
+
+
+@pytest.mark.parametrize("entry", ["/operator/sys-admin", SESSIONS])
+@pytest.mark.parametrize("raw", ["/operator/sessions%0A", "/operator/sessions%250A"])
+def test_a_newline_in_return_to_falls_back_to_the_lobby(
+    client: TestClient, admin: None, entry: str, raw: str
+) -> None:
+    response = client.get(f"{entry}?return_to={raw}")
+    assert response.status_code == 200
+    assert _back(response.text) == '/operator/sessions">&larr; Back to Sessions'

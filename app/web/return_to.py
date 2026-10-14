@@ -26,11 +26,20 @@ class ReturnTarget:
 
 DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Sessions")
 
-_OPERATOR_SESSIONS = re.compile(r"^/operator/sessions/?$")
-_OPERATOR_SESSION = re.compile(r"^/operator/sessions/(\d+)/?$")
-_OPERATOR_SESSION_TAB = re.compile(r"^/operator/sessions/(\d+)/[A-Za-z0-9_\-]+/?$")
-_REVIEWER_ROOT = re.compile(r"^/me/?$")
-_REVIEWER_SESSION = re.compile(r"^/me/sessions/(\d+)/?$")
+# ``\Z``, not ``$``: ``$`` also matches before a trailing newline, which
+# would pass a control character through to a ``Location`` or a cookie.
+_OPERATOR_SESSIONS = re.compile(r"^/operator/sessions/?\Z")
+# The operator pages outside a session that carry the chrome's links.
+_OPERATOR_PAGES = {
+    "/operator/sessions/archived": "Archived sessions",
+    "/operator/sessions/new": "New session",
+    "/operator/settings": "Settings",
+}
+# A session page at any depth (a tab, an instrument's editor), so a
+# detour returns to the page it left rather than the session's home.
+_OPERATOR_SESSION = re.compile(r"^/operator/sessions/(\d+)(?:/[A-Za-z0-9_\-]+)*/?\Z")
+_REVIEWER_ROOT = re.compile(r"^/me/?\Z")
+_REVIEWER_SESSION = re.compile(r"^/me/sessions/(\d+)/?\Z")
 
 
 def resolve_return_to(raw: str | None, db: Session) -> ReturnTarget:
@@ -55,7 +64,11 @@ def resolve_return_to(raw: str | None, db: Session) -> ReturnTarget:
     if _OPERATOR_SESSIONS.match(path):
         return ReturnTarget(url=path, label="Sessions")
 
-    m = _OPERATOR_SESSION.match(path) or _OPERATOR_SESSION_TAB.match(path)
+    page = _OPERATOR_PAGES.get(path.rstrip("/"))
+    if page is not None:
+        return ReturnTarget(url=path, label=page)
+
+    m = _OPERATOR_SESSION.match(path)
     if m:
         session = db.get(ReviewSession, int(m.group(1)))
         if session is None:

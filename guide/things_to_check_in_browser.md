@@ -211,3 +211,7 @@ Sys Admin → Sessions Diagnostics.
   both tabs still say "← Back to {that session}", and it opens it.
 - [ ] **From the lobby.** Follow Admin from the Sessions lobby: both tabs
   say "← Back to Sessions".
+- [ ] **From a deeper page.** Follow Admin from an instrument's editor,
+  the Archived sessions page, New session and Settings: the back link
+  names the session, "Archived sessions", "New session" and "Settings",
+  and opens the page you left. The same holds for About and the Guide.

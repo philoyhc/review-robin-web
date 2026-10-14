@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
-from app.web.return_to import DEFAULT_TARGET, resolve_return_to
+from app.web.return_to import DEFAULT_TARGET, ReturnTarget, resolve_return_to
 
 
 def _seed_session(db: Session, *, name: str = "Spring 2026") -> ReviewSession:
@@ -79,10 +79,42 @@ def test_query_string_and_fragment_are_stripped(db: Session) -> None:
         "/operator/sessions/abc",  # non-numeric session id
         "/operator/instruments",  # not in the allowlist
         "javascript:alert(1)",
-        "/operator/sessions/1/danger/zone",  # too deep
+        "/operator/sessions/1/a.b",  # outside the segment alphabet
+        # ``$`` matched before a trailing newline, which a cookie then
+        # refused with a 500.
+        "/operator/sessions\n",
+        "/operator/sessions/1\n",
+        "/operator/sessions%0A",
+        "/me\n",
+        "/operator/settings\n",
     ],
 )
 def test_paths_outside_allowlist_fall_back_to_default(
     db: Session, raw: str
 ) -> None:
     assert resolve_return_to(raw, db) == DEFAULT_TARGET
+
+
+def test_operator_session_page_at_any_depth_resolves_to_session_name(
+    db: Session,
+) -> None:
+    session = _seed_session(db, name="Deep Session")
+    path = f"/operator/sessions/{session.id}/instruments/7/visibility"
+    target = resolve_return_to(path, db)
+    assert target.url == path
+    assert target.label == "Deep Session"
+
+
+@pytest.mark.parametrize(
+    ("path", "label"),
+    [
+        ("/operator/sessions/archived", "Archived sessions"),
+        ("/operator/sessions/new", "New session"),
+        ("/operator/settings", "Settings"),
+        ("/operator/settings/", "Settings"),
+    ],
+)
+def test_operator_pages_outside_a_session_resolve_to_their_title(
+    db: Session, path: str, label: str
+) -> None:
+    assert resolve_return_to(path, db) == ReturnTarget(url=path, label=label)
