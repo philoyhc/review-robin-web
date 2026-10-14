@@ -300,25 +300,23 @@ async def create_session(
 
         The creator is always in the set, so they can never be staged
         out: a session keeps its first owner. Validated before the
-        session was created, so this fails only if a staged owner was
-        revoked since: ``add_owner`` re-reads them under the owner-add
-        lock and refuses, and the session keeps the owners added so far
-        rather than answering 500 after it was created. Runs on every
-        path the Tags box does — a failed upload keeps what the operator
+        session was created, so it refuses one only if they were revoked
+        since (``add_owner`` re-reads them under the owner-add lock);
+        ``skip_revoked`` leaves that one out and adds the rest, rather
+        than answering 500 on a session already made. Runs on every path
+        the Tags box does — a failed upload keeps what the operator
         staged, as it keeps what they typed.
         """
         if not owner_targets:
             return
-        try:
-            session_owners.set_owners(
-                db,
-                review_session=review_session,
-                actor=user,
-                targets=[user, *owner_targets],
-                correlation_id=correlation_id,
-            )
-        except session_owners.OwnerOperationError:
-            db.rollback()
+        session_owners.set_owners(
+            db,
+            review_session=review_session,
+            actor=user,
+            targets=[user, *owner_targets],
+            correlation_id=correlation_id,
+            skip_revoked=True,
+        )
 
     def quick_setup_error_redirect(
         kind: str, reason: str, details: list[str] | None = None

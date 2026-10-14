@@ -5,8 +5,9 @@ user, which passes the lock a revoke holds, so an owner add that read
 ``is_operator`` unlocked could commit beside a revoke that counted no
 owned sessions: a non-operator owner. Every path that writes an owner
 row now re-reads the user ``FOR SHARE`` first
-(``session_owners.lock_owner_eligible``), and the single-row revoke
-takes the batch's lock before it counts.
+(``session_owners.lock_owner_eligible``): ``add_owner``, and the creator
+on Create, Duplicate and Rehydrate; and the single-row revoke takes the
+batch's lock before it counts.
 
 SQLite ignores row locks, so the conflict itself is shown on Postgres
 only (the ``ci-postgres`` job); the rest runs everywhere.
@@ -129,12 +130,14 @@ def test_duplicate_bounces_a_creator_revoked_since_the_gate(
     assert db.execute(select(ReviewSession)).scalars().all() == [source]
 
 
-def test_create_keeps_the_session_when_a_staged_owner_was_revoked(
+def test_create_skips_a_staged_owner_revoked_since_the_check(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Revoked between the form's check and the owner write: the lock
-    refuses them, and Create lands on the new session, not a 500."""
+    refuses them, the owners staged after them still land, and Create
+    lands on the new session, not a 500."""
     bob = _seed(db, "bob@example.edu", is_operator=True)
+    carl = _seed(db, "carl@example.edu", is_operator=True)
     real = session_owners.lock_owner_eligible
     monkeypatch.setattr(
         session_owners,
@@ -143,7 +146,11 @@ def test_create_keeps_the_session_when_a_staged_owner_was_revoked(
     )
     response = client.post(
         "/operator/sessions",
-        data={"name": "S", "code": "lock-staged", "owners": ["bob@example.edu"]},
+        data={
+            "name": "S",
+            "code": "lock-staged",
+            "owners": ["bob@example.edu", "carl@example.edu"],
+        },
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -155,7 +162,7 @@ def test_create_keeps_the_session_when_a_staged_owner_was_revoked(
             SessionOperator.session_id == review_session.id
         )
     ).scalars().all()
-    assert owners == [review_session.created_by_user_id]
+    assert sorted(owners) == sorted([review_session.created_by_user_id, carl.id])
 
 
 # --- The conflict itself, on Postgres ----------------------------------------

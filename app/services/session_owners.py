@@ -357,6 +357,7 @@ def set_owners(
     actor: User,
     targets: list[User],
     correlation_id: str | None = None,
+    skip_revoked: bool = False,
 ) -> tuple[list[User], list[User]]:
     """Replace a session's owner set with ``targets``; return (added, removed).
 
@@ -369,6 +370,11 @@ def set_owners(
     the invariants are theirs; a target already an owner, or an owner
     kept, emits nothing. Validate the list with ``resolve_owners`` (Create)
     first.
+
+    ``skip_revoked`` is Create's: its list was validated before the
+    session existed, so a ``not_in_workspace`` refusal here means that
+    target was revoked since. It is skipped and the rest are still
+    added, rather than one revoke stopping every owner staged after it.
     """
     if not targets:
         raise OwnerOperationError(
@@ -387,13 +393,18 @@ def set_owners(
     added: list[User] = []
     for target in targets:
         if target.id not in current:
-            add_owner(
-                db,
-                review_session=review_session,
-                actor=actor,
-                target=target,
-                correlation_id=correlation_id,
-            )
+            try:
+                add_owner(
+                    db,
+                    review_session=review_session,
+                    actor=actor,
+                    target=target,
+                    correlation_id=correlation_id,
+                )
+            except OwnerOperationError as exc:
+                if not (skip_revoked and exc.code == "not_in_workspace"):
+                    raise
+                continue
             added.append(target)
     removed: list[User] = []
     for user_id in sorted(current - wanted):

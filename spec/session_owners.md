@@ -48,9 +48,12 @@ fields of its details card instead (19U Item 2).
 `session_owners.resolve_owners` **before** the session exists — one
 address that is not a workspace operator is a 422 and nothing is
 created. After `sessions.create_session` returns, `write_staged_owners`
-calls `session_owners.set_owners(targets=[creator, *owner_targets])`,
-which adds the co-owners (the creator is already the first owner from
-`create_session` itself). Every event this produces — the session, each
+calls `session_owners.set_owners(targets=[creator, *owner_targets],
+skip_revoked=True)`, which adds the co-owners (the creator is already
+the first owner from `create_session` itself). A co-owner revoked
+between that check and the write is refused under the owner-add lock
+(`spec/permissions.md` §4.2) and skipped, silently; the others still
+land. Every event this produces — the session, each
 Quick Setup slot, the tag write, one `session.owner_added` per
 co-owner — shares one `correlation_id`.
 
@@ -149,7 +152,9 @@ dropped.
   correlation_id=None) -> (added, removed)`** — replaces the
   whole owner set with `targets`; adds before it removes so the count
   never passes through zero; refuses an empty `targets`
-  (`last_owner`); de-duplicates its own input. Create's only caller.
+  (`last_owner`); de-duplicates its own input. Create's only caller;
+  with `skip_revoked=True`, as Create passes it, a `not_in_workspace`
+  refusal skips that target and the rest are still added.
 - **`add_owner` / `remove_owner`** — the single-target primitives
   behind `owners/add` and `owners/{user_id}/remove`, and so behind
   Session Home's card: each validates, writes one row and its audit

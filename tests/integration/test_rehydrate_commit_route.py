@@ -15,6 +15,7 @@ import datetime as dt
 import io
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -262,6 +263,29 @@ def test_commit_with_bad_token_creates_nothing(
         select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
     ).scalars().all()
     assert after == []
+
+
+def test_commit_bounces_an_operator_revoked_since_the_gate(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The rebuilt session's owner is re-read under the owner-add lock,
+    as on Create (``spec/permissions.md`` §4.2): a revoke committed since
+    the allowlist gate bounces to ``/me`` and builds nothing."""
+    from app.services import session_owners
+
+    rs = _seed(db)
+    token = _validate_for_token(client, _file_set(db, rs))
+    monkeypatch.setattr(session_owners, "lock_owner_eligible", lambda db, user: False)
+    response = client.post(
+        "/operator/sessions/rehydrate/commit",
+        data={"token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("/me")
+    assert db.execute(
+        select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
+    ).scalars().all() == []
 
 
 # --------------------------------------------------------------------------- #
