@@ -145,10 +145,12 @@ Taken 2026-10-14 at `871ba085`.
   is history in the category rule (the server's Delete guards are
   unchanged and already refused owners). Re-timed with both at
   `3b25903b`: 1,200 accounts 40–68ms, 5,200 accounts 68–123ms, query
-  counts unchanged; a typeahead lookup 30ms / 52ms, 3 queries. The read
-  found no blocker: it fixed the row flag's comment and
-  `spec/operator_button_audit.md`, which still described `has_history`
-  as the server guard alone, and added a test for the page's first list.
+  counts unchanged; a typeahead lookup 30ms / 52ms, 3 queries. Two
+  reads, no blocker. Acted on: the row flag's comment and
+  `spec/operator_button_audit.md` still described `has_history` as the
+  server guard alone; no test pinned the page's first list; the fetch URL
+  was a literal (now `accounts_base_url` through `tojson`); the spec
+  overstated how the typeahead orders its 200.
 
 ### PR ladder
 
