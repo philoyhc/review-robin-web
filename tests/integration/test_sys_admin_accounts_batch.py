@@ -150,6 +150,29 @@ def test_a_mixed_delete_is_refused_whole_naming_the_row(
     assert "Nothing changed: busy@example.edu has created a session" in banner
 
 
+def test_a_delete_with_a_co_owner_is_refused_whole_naming_them(
+    db: Session, client: TestClient, actor: User
+) -> None:
+    """The expander no longer offers Delete for an owner (the listing
+    counts owning as history), but the route still refuses one: a
+    co-owner who never acted trips ``owns_sessions``, not
+    ``has_history``."""
+    unused = _seed(db, "unused@example.edu")
+    carl = _seed(db, "carl@example.edu", is_operator=True)
+    _session(db, "co-owned", actor, carl)
+    response = _post(client, "delete", unused, carl, confirm="true")
+    assert response.status_code == 303
+    query = _query(response)
+    assert query["toggle_error"] == ["owns_sessions"]
+    assert query["refused"] == [str(carl.id)]
+    db.expire_all()
+    assert db.get(User, unused.id) is not None
+    assert db.get(User, carl.id) is not None
+
+    banner = client.get(response.headers["location"]).text
+    assert "Nothing changed: carl@example.edu owns sessions" in banner
+
+
 def test_revoking_an_owner_refuses_the_batch(
     db: Session, client: TestClient, actor: User
 ) -> None:

@@ -144,9 +144,6 @@ Sys Admin → Accounts, with a few operators and an unused account.
   stay.
 - [ ] **Delete's confirm.** Delete stays grey until "Yes, delete these"
   is ticked.
-- [ ] **Refused whole.** Tick an unused account and a session owner,
-  confirm, Delete: a banner says "Nothing changed: … owns sessions",
-  naming the owner, and both rows are still there.
 
 ## Accounts Overview cut to two rows of pills (2026-10-14)
 
@@ -162,3 +159,15 @@ Sys Admin → Accounts, with a few operators and an unused account.
 - [ ] **Spacing.** The pills sit flush against the ` · ` on either
   side, and the two rows have a small gap between them; Invite and
   Overview stay level, stacking below about 800px.
+
+## Accounts: no Delete for a user with history (2026-10-14)
+
+Sys Admin → Accounts, signed in as a super-admin.
+
+- [ ] **One row with history.** Tick an account that has acted (Alice,
+  or anyone who created or co-owns a session): the expander shows no
+  `|` Delete and no confirm tick; where the tick sat, a muted line
+  reads "This user has acted in the audit log and cannot be deleted."
+- [ ] **Mixed.** Add an Unused account to the selection: still no
+  Delete, and the line reads "1 of these users has acted …". Untick
+  the one with history: Delete and its confirm come back.
