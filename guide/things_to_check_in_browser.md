@@ -124,8 +124,13 @@ Sys Admin → Accounts, with a few operators and an unused account.
   header box ticks every row and shows a dash when only some are.
 - [ ] **The expander.** A tinted bar opens under the last row ticked:
   "N of M selected", then only the controls that fit every selected
-  row (two operators: Revoke, Promote, Remove from all sessions,
-  Delete). All are greyed out for now.
+  row, grouped as the toolbar is (two operators: "Operator:" Revoke,
+  Remove from all sessions, "Admin:" Promote, "|" Delete). The count,
+  the "Yes, delete these" confirm, the labels and the buttons all sit on
+  one line. All are greyed out for now.
+- [ ] **Other expanders.** The same confirm on the four roster pages
+  (Reviewers, Reviewees, Relationships, Observers) sits level with its
+  count too, not lower.
 - [ ] **The toolbar.** It acts as before for one ticked row and greys out
   for two or more.
 

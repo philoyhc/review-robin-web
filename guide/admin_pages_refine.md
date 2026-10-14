@@ -262,6 +262,15 @@ Taken 2026-10-14 at `871ba085`.
   all sessions and Delete render for any selection without a
   super-admin, their other gates left to the server's batch refusal,
   since the DoD's "refused mixed Delete" needs Delete to submit.
+- **Rung 1a** (2026-10-14, author): bare "Revoke" / "Promote" read
+  ambiguously, so the expander groups its buttons as the toolbar does —
+  "Operator:" (Admit / Revoke, Remove from all sessions), "Admin:"
+  (Promote / Demote), "|" Delete — each label only when its group has a
+  button. `.row-expander-actions.is-labelled` centers the labels.
+  The count and the "Yes, delete these" confirm sit on one line with the
+  buttons (author): `.confirm-label`'s top margin had pushed the confirm
+  8px down, on every page's expander, so the fix is in the shared
+  `.exp-confirm-label`.
 
 ### PR ladder
 
