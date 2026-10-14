@@ -68,7 +68,7 @@ def test_two_operators_open_an_inert_expander_and_disable_the_toolbar(
     assert _expander_actions(page) == [
         "Revoke", "Remove from all sessions", "Promote", "Delete",
     ]
-    assert expander.locator(".row-expander-actions > .muted").all_inner_texts() == [
+    assert expander.locator(".row-expander-group > .muted").all_inner_texts() == [
         "Operator:", "Admin:", "|",
     ]
     for button in expander.locator("[data-expander-action]").all():
@@ -93,7 +93,7 @@ def test_a_mixed_selection_shows_only_what_applies_to_every_row(
     assert _expander_actions(page) == ["Remove from all sessions", "Delete"]
     # No Admin control fits, so no "Admin:" label.
     assert page.locator(
-        "#users-row-expander .row-expander-actions > .muted"
+        "#users-row-expander .row-expander-group > .muted"
     ).all_inner_texts() == ["Operator:", "|"]
 
 
@@ -153,4 +153,43 @@ def test_the_count_the_confirm_and_the_buttons_share_one_line(
     button = middle(expander.locator('[data-expander-action="Delete"]'))
     assert abs(count - confirm) <= 2, (count, confirm)
     assert abs(count - button) <= 2, (count, button)
+
+
+def test_a_narrow_row_wraps_between_groups_not_inside_one(
+    page: Page, api: httpx.Client
+) -> None:
+    """Codex on #3036: each label and its buttons are one group, so a
+    label never ends a line with its buttons on the next."""
+    first, second, _ = _setup(page, api)
+    page.set_viewport_size({"width": 420, "height": 900})
+    _tick(page, first)
+    _tick(page, second)
+    groups = page.locator("#users-row-expander .row-expander-group")
+    expect(groups).to_have_count(3)
+    for group in groups.all():
+        tops = group.evaluate(
+            "g => Array.from(g.children).map(c => Math.round(c.getBoundingClientRect().top + c.getBoundingClientRect().height / 2))"
+        )
+        assert max(tops) - min(tops) <= 2, tops
+
+
+def test_a_wrapping_confirm_keeps_its_tick_by_the_first_line(page: Page) -> None:
+    """Codex on #3036: the margin reset must not center the tick on a
+    long confirm that wraps (the roster pages' longer sentences)."""
+    page.goto(ACCOUNTS)
+    top = page.evaluate(
+        """() => {
+          const label = document.createElement("label");
+          label.className = "confirm-label exp-confirm-label";
+          label.style.width = "140px";
+          label.innerHTML = '<input type="checkbox"> Yes, delete these and their associated assignments and reviewer responses';
+          document.body.appendChild(label);
+          const box = label.querySelector("input").getBoundingClientRect();
+          const whole = label.getBoundingClientRect();
+          return [box.top - whole.top, whole.height];
+        }"""
+    )
+    offset, height = top
+    assert height > 40, height  # it wrapped
+    assert offset < 10, offset  # the tick stays by the first line
 

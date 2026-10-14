@@ -665,8 +665,11 @@
                 '<input type="checkbox" disabled> Yes, delete these</label>';
             }
             html += '<span class="row-expander-actions is-labelled">';
+            // Each label and its buttons in one group, so a narrow row
+            // wraps between groups and never strands a label.
             groups.forEach(function (group) {
-              html += '<span class="muted"' +
+              html += '<span class="row-expander-group">' +
+                '<span class="muted"' +
                 (group[0] === "|" ? ' aria-hidden="true"' : "") + ">" +
                 group[0] + "</span>";
               group[1].forEach(function (a) {
@@ -674,6 +677,7 @@
                   ' data-expander-action="' + a[0] + '"' +
                   ' disabled aria-disabled="true">' + a[0] + "</button>";
               });
+              html += "</span>";
             });
             html += "</span></div>";
             td.innerHTML = html;
