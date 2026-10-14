@@ -55,14 +55,15 @@ def session_sort_value(review_session: ReviewSession, key: str):
 
 
 def diagnostics_filter_text(review_session: ReviewSession, owners: Iterable[User]) -> str:
-    """What the Diagnostics filter matches a row against, lower-cased:
+    """What the Diagnostics filter matches a row against, lower-cased as
+    the browser lower-cases the term (`toLowerCase`, so not `casefold`):
     the name, the code, and each owner's name and email, one per line so
     a term can't match across two of them."""
     parts = [review_session.name or "", review_session.code or ""]
     for owner in owners:
         parts.append(owner.display_name or "")
         parts.append(owner.email)
-    return "\n".join(part for part in parts if part).casefold()
+    return "\n".join(part for part in parts if part).lower()
 
 
 def diagnostics_filter_options(

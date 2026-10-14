@@ -18,7 +18,11 @@
          `rrw-sortable` primitive, its own cookie, seeded by the route.
          Status and Actions don't sort. The filter is the lobby's kind —
          it hides rows already rendered, live on every keystroke, and
-         never queries — so `Cancel` clears it rather than submitting. #}
+         never queries — so `Cancel` clears it rather than submitting.
+         Its script is its own rather than base.html's
+         `rrwSessionFilterMatches`, which matches name, code and tags per
+         column; this one matches owners too, so it tests one
+         pre-joined string the route builds (`data-filter-text`). #}
       <div class="table-card-toolbar is-split">
         <div class="toolbar-pane toolbar-left"></div>
         <div class="toolbar-pane toolbar-right">

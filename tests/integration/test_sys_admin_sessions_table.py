@@ -4,6 +4,8 @@ filter on name, code and owner (author, 2026-10-14)."""
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import pytest
@@ -25,8 +27,12 @@ def _user(db: Session, email: str, name: str | None = None) -> User:
     return user
 
 
-def _session(db: Session, name: str, code: str, *owners: User) -> ReviewSession:
-    review_session = ReviewSession(name=name, code=code, created_by_user_id=owners[0].id)
+def _session(
+    db: Session, name: str, code: str, *owners: User, **fields: object
+) -> ReviewSession:
+    review_session = ReviewSession(
+        name=name, code=code, created_by_user_id=owners[0].id, **fields
+    )
     db.add(review_session)
     db.flush()
     for owner in owners:
@@ -68,16 +74,23 @@ def test_a_row_carries_its_name_code_and_owners_for_the_filter(
     for value in ("Spring Review", "Spring-26", "Ann Lee", "ben@example.edu"):
         assert f'<option value="{value}">' in options
     # Cancel clears the filter; it is a button, not a submit.
-    assert 'type="button" class="btn secondary"\n                      data-diagnostics-filter-cancel>Cancel</button>' in body
+    assert re.search(
+        r'<button type="button" class="btn secondary"\s+data-diagnostics-filter-cancel>Cancel</button>',
+        body,
+    )
 
 
 def test_the_sort_cookie_orders_the_first_render(
     db: Session, client: TestClient, admin: None
 ) -> None:
     ann = _user(db, "ann@example.edu")
-    _session(db, "Beta", "zz-beta", ann)
-    _session(db, "Alpha", "zz-alpha", ann)
-    _session(db, "Gamma", "zz-gamma", ann)
+    # Statuses and ages differ, so a Status sort would visibly reorder:
+    # newest first is Gamma, Alpha, Beta; by status it would be Beta
+    # (archived), Gamma (draft), Alpha (ready).
+    now = datetime.now(timezone.utc)
+    _session(db, "Beta", "zz-beta", ann, status="archived", created_at=now - timedelta(days=3))
+    _session(db, "Alpha", "zz-alpha", ann, status="ready", created_at=now - timedelta(days=2))
+    _session(db, "Gamma", "zz-gamma", ann, status="draft", created_at=now - timedelta(days=1))
     db.commit()
 
     def order(cookie: list[dict[str, str]] | None) -> list[str]:
@@ -91,7 +104,8 @@ def test_the_sort_cookie_orders_the_first_render(
     assert order([{"key": "code", "dir": "desc"}]) == ["Gamma", "Beta", "Alpha"]
     # Status doesn't sort here, so a cookie naming it is ignored: the
     # default order (newest first) stands.
-    assert order([{"key": "status", "dir": "asc"}]) == order(None)
+    assert order(None) == ["Gamma", "Alpha", "Beta"]
+    assert order([{"key": "status", "dir": "asc"}]) == ["Gamma", "Alpha", "Beta"]
 
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:
