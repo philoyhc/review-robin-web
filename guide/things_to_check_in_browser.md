@@ -64,3 +64,19 @@ with the last section it covers.
 - [ ] **Rehydrate still takes it.** Give an instrument the short label
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
+
+## Accounts toolbar scaffold (admin pages Item 1, rung 1)
+
+Sys Admin → Accounts, signed in as an admin. Inert: nothing filters yet.
+
+- [ ] **Two panes above the table.** Left: `Show:` and four chips,
+  `Operators (N)`, `Admins (N)`, `No role (N)` and `Unused (N)`, with the
+  first two solid and the other two faint. Right: `Session role` (Any)
+  and `Search` on one row, a disabled `Search` button below. The Setup
+  pages' toolbar is the comparison, e.g. Reviewers.
+- [ ] **The counts add up.** The four counts sum to the table's rows, and
+  your own row is under Admins.
+- [ ] **Chips toggle on screen only.** A click flips a chip between solid
+  and faint; the table doesn't change, and a reload restores the default.
+- [ ] **Narrow window.** Below about 860px the two panes stack, with the
+  chips wrapping rather than overflowing.

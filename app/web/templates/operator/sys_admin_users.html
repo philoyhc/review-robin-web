@@ -96,9 +96,62 @@
     </script>
   </div>
 
-  <div class="card">
+  <div class="card table-pager-anchored" id="{{ pager_anchor }}">
     <h2 style="margin-top: 0;">Workspace users</h2>
     {% if rows %}
+      {# admin_pages_refine Item 1 rung 1 — SCAFFOLD, inert. The Setup
+         pages' two-pane toolbar (`spec/setup_pages.md` "The table
+         toolbar"): category chips where they put column chips, then
+         the pager and the count line; the filter strip on the right.
+         The chips count the whole table and toggle only on screen, the
+         dropdown and the search box post nothing, and Search stays
+         disabled. The pager includes render nothing until the route
+         passes a pager. Rung 2 filters and pages on the server. `Clear`
+         renders only while a filter is active, so it has no state to
+         appear in yet. #}
+      <div class="table-card-toolbar is-split">
+        <div class="toolbar-pane toolbar-left">
+          <p class="col-chip-row" data-account-chips>
+            <span>Show:</span>
+            {% for chip in account_chips %}
+              <label class="pill pill-count tag-chip">
+                <input type="checkbox" class="visually-hidden"
+                       name="show" value="{{ chip.key }}"
+                       {% if chip.selected %}checked{% endif %}>{{ chip.label }} ({{ chip.count }})</label>
+            {% endfor %}
+          </p>
+          {% include "operator/partials/_pager_cluster.html" %}
+          {% include "operator/partials/_preview_count_line.html" %}
+        </div>
+
+        <div class="toolbar-pane toolbar-right">
+          <form method="get"
+                action="/operator/sys-admin/users#{{ pager_anchor }}"
+                class="operator-actions-filter">
+            <div class="filter-row">
+              <label class="filter-status">
+                Session role:
+                <select name="role">
+                  {% for value, label in account_role_options %}
+                    <option value="{{ value }}"{% if loop.first %} selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="filter-search">
+                Search:
+                <input type="text"
+                       name="q"
+                       autocomplete="off"
+                       placeholder="Email or name">
+              </label>
+            </div>
+            <div class="filter-actions">
+              <button class="btn secondary" type="submit" disabled>Search</button>
+            </div>
+          </form>
+        </div>
+      </div>{# .table-card-toolbar #}
+
       {# Bulk-action toolbar — single-row selection drives the
          button enablement. Each form holds a hidden ``user_id``
          input that the inline JS rewrites whenever the operator
@@ -209,6 +262,10 @@
         {% endfor %}
       </table>
       </div>
+      {# Second copy: 200 rows is several screens, so the pager sits
+         where the reader finishes as well as where they start, as on
+         the roster pages. #}
+      {% with cluster_extra_class = "table-pager-cluster-bottom" %}{% include "operator/partials/_pager_cluster.html" %}{% endwith %}
       <script>
         (function () {
           var table = document.getElementById("users-table");

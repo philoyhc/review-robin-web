@@ -226,12 +226,23 @@ def sys_admin_users(
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
+    rows = users_service.list_workspace_users(db)
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
         {
             "user": user,
-            "rows": users_service.list_workspace_users(db),
+            "rows": rows,
+            # admin_pages_refine Item 1 rung 1 — the toolbar scaffold.
+            # The chips count the real table but filter nothing, and the
+            # dropdown and search post nothing. No pager yet: every row
+            # still renders, so a "1–200" range would be false and its
+            # links would reload the same list (Codex on #3027). Rung 2
+            # pages on the server and passes one.
+            "account_chips": views.build_account_chips(rows),
+            "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
+            "pager": None,
+            "pager_anchor": "accounts-table-card",
             "actor_is_super_admin": user.is_super_admin,
             # Segment 18S Item 2 — the Promote/Demote controls follow the
             # same rule as the service actor guard: a super-admin actor,

@@ -51,6 +51,15 @@ from ._assignments import (
 # Manage Invitations page rows (sliced in PR 3).
 from ._invitations import InvitationsRow, build_invitations_rows
 
+# Sys Admin → Accounts toolbar (guide/admin_pages_refine.md Item 1).
+from ._accounts import (
+    ACCOUNT_CATEGORIES,
+    ACCOUNT_ROLE_OPTIONS,
+    AccountChip,
+    account_category,
+    build_account_chips,
+)
+
 # Filter / search helpers shared by Invitations + Responses
 # (sliced in PR 4).
 from ._pager import PAGE_SIZE, Pager, PagerLink, build_pager, clamp_offset
@@ -242,6 +251,11 @@ from ._audit_log import (
 )
 
 __all__ = [
+    "ACCOUNT_CATEGORIES",
+    "ACCOUNT_ROLE_OPTIONS",
+    "AccountChip",
+    "account_category",
+    "build_account_chips",
     "ProgressPill",
     "progress_pill",
     # Module-level constants.
