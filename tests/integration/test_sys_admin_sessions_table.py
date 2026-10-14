@@ -10,11 +10,12 @@ from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import ReviewSession, SessionOperator, User
-from app.services import session_owners
+from app.services import operator_settings, session_owners
 from app.web import views
 
 PAGE = "/operator/sys-admin/sessions"
@@ -131,15 +132,21 @@ def test_deadline_and_timezone_sort_by_the_routes_values(
         display_timezone="Asia/Singapore",
     )
     db.commit()
+    # The viewer reads dates in Tokyo, so the cell shows 21:00; the sort
+    # key stays the UTC instant.
+    client.get(PAGE)
+    viewer = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
+    operator_settings.set_display_timezone(db, user=viewer, timezone_name="Asia/Tokyo")
+    db.commit()
     body = client.get(PAGE).text
+    assert "2026-11-01 21:00" in body
 
     def cells(code: str) -> list[str]:
         row = body.split(f"<code>{code}</code>", 1)[1].split("</tr>", 1)[0]
         return re.findall(r'<td[^>]*data-sort-value="([^"]*)"', row)
 
     assert cells("zz-open")[0] == ""  # empty sorts last, either direction
-    # The stored UTC instant to the second, whatever zone renders the cell.
-    assert cells("zz-due") == ["2026-11-01T12:00:00", "Asia/Singapore"]
+    assert cells("zz-due") == ["2026-11-01T12:00:00+00:00", "Asia/Singapore"]
 
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:

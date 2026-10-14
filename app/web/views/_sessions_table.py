@@ -9,13 +9,14 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 from app.db.models import ReviewSession, User
-from app.services import sessions
+from app.services import date_formatting, sessions
 
 __all__ = [
     "ARCHIVED_SORT_KEYS",
     "DIAGNOSTICS_SORT_KEYS",
     "LOBBY_SORT_KEYS",
     "diagnostics_filter_options",
+    "deadline_sort_value",
     "diagnostics_filter_text",
     "session_sort_value",
 ]
@@ -52,6 +53,14 @@ def session_sort_value(review_session: ReviewSession, key: str):
     if key == "status":
         return review_session.status
     return None
+
+
+def deadline_sort_value(review_session: ReviewSession) -> str:
+    """The Deadline cell's client sort key: the stored instant in UTC as
+    ISO 8601, normalised as every other render is, so the browser orders
+    it as the route does whatever zone the cell is shown in; "" for no
+    deadline, which the sort primitive puts last either way."""
+    return date_formatting.iso_in_zone(review_session.deadline, "UTC")
 
 
 def diagnostics_filter_text(review_session: ReviewSession, owners: Iterable[User]) -> str:

@@ -110,6 +110,7 @@ def sys_admin_sessions(
                 for s in rows
             },
             "filter_options": views.diagnostics_filter_options(rows, owners),
+            "deadline_sort_values": {s.id: views.deadline_sort_value(s) for s in rows},
             # 19C Item 10 — the workspace-wide visibility-grid audit.
             # Read-only, and sys-admin-only by construction: it spans
             # every session, which no per-session operator may see.
