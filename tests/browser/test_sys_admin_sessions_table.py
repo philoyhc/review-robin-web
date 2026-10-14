@@ -1,5 +1,5 @@
 """Sys Admin → Sessions Diagnostics in a browser: the filter hides rows
-by name, code or owner and Cancel brings them back; a header sorts; and
+by name, code or owner and Clear brings them back; a header sorts; and
 each row's three actions stay on one line (author, 2026-10-14)."""
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def _visible_rows(page: Page):
     return page.locator("#diagnostics-sessions tbody tr:not([hidden])")
 
 
-def test_the_filter_matches_an_owner_and_cancel_clears_it(
+def test_the_filter_matches_an_owner_and_clear_empties_it(
     page: Page, api: httpx.Client, new_session: Callable[[], int]
 ) -> None:
     owner = f"diag-{uuid.uuid4().hex[:8]}@example.edu"
@@ -50,7 +50,7 @@ def test_the_filter_matches_an_owner_and_cancel_clears_it(
     expect(_visible_rows(page)).to_have_count(0)
     expect(page.locator("[data-diagnostics-no-match]")).to_be_visible()
 
-    page.click("[data-diagnostics-filter-cancel]")
+    page.click("[data-diagnostics-filter-clear]")
     expect(box).to_have_value("")
     expect(_visible_rows(page)).to_have_count(total)
     expect(page.locator("[data-diagnostics-no-match]")).to_be_hidden()
