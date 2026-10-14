@@ -418,11 +418,11 @@
             var acted = sel.filter(hasHistory).length;
             if (!acted || sel.some(isSuper)) return "";
             if (sel.length === 1) {
-              return "This user has acted in the audit log and cannot be deleted.";
+              return "This user has sessions or audit-log activity and cannot be deleted.";
             }
             return (acted === sel.length ? "These users have" :
               acted + " of these users " + (acted === 1 ? "has" : "have")) +
-              " acted in the audit log and cannot be deleted.";
+              " sessions or audit-log activity and cannot be deleted.";
           }
           // Grouped as the toolbar groups them, so a bare "Revoke" or
           // "Promote" says which role it changes: "Operator:" then
