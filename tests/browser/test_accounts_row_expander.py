@@ -232,7 +232,7 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
     assert "Delete" not in _expander_actions(page)
     expect(expander.locator(".exp-confirm-label")).to_have_count(0)
     expect(expander.locator("[data-delete-blocked]")).to_have_text(
-        "This user has acted in the audit log and cannot be deleted."
+        "This user has sessions or audit-log activity and cannot be deleted."
     )
     # The "|" group goes with its only button.
     assert "|" not in expander.locator(".row-expander-group > .muted").all_inner_texts()
@@ -241,7 +241,7 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
     _tick(page, unused)
     assert _expander_actions(page) == []
     expect(expander.locator("[data-delete-blocked]")).to_have_text(
-        "1 of these users has acted in the audit log and cannot be deleted."
+        "1 of these users has sessions or audit-log activity and cannot be deleted."
     )
 
     # Every selected row with history: "These users have …". Untick
@@ -256,7 +256,7 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
     _tick(page, first)
     _tick(page, second)
     expect(expander.locator("[data-delete-blocked]")).to_have_text(
-        "These users have acted in the audit log and cannot be deleted."
+        "These users have sessions or audit-log activity and cannot be deleted."
     )
 
 

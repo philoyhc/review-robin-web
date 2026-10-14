@@ -167,9 +167,9 @@ Sys Admin → Accounts, signed in as a super-admin.
 - [ ] **One row with history.** Tick an account that has acted (Alice,
   or anyone who created or co-owns a session): the expander shows no
   `|` Delete and no confirm tick; where the tick sat, a muted line
-  reads "This user has acted in the audit log and cannot be deleted."
+  reads "This user has sessions or audit-log activity and cannot be deleted."
 - [ ] **Mixed.** Add an Unused account to the selection: still no
-  Delete, and the line reads "1 of these users has acted …". Untick
+  Delete, and the line reads "1 of these users has sessions or audit-log activity …". Untick
   the one with history: Delete and its confirm come back.
 
 ## Accounts: heading beside the filter, Overview on one line (2026-10-14)
