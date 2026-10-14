@@ -100,3 +100,5 @@ Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
   `Invite as operator`.
 - [ ] **It still invites an admin.** Invite an address with the chip at
   `Invite as sys-admin`: the new row shows the Admin pill.
+- [ ] **Shorter copy.** The card's line ends "they land on the operator
+  lobby directly." with no mention of `/me`.
