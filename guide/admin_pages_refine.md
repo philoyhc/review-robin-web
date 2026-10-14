@@ -139,6 +139,17 @@ Taken 2026-10-14 at `871ba085`.
   `spec/assignments.md` and `spec/lifecycle.md`'s "seven preview
   pages" alone, since those mean the session pages.
 
+- **Rulings** (2026-10-14, after the close): the author's two answers
+  built as one slice, with its own read. The typeahead asks
+  `GET …/users/search-options` again as the box changes; owning a session
+  is history in the category rule (the server's Delete guards are
+  unchanged and already refused owners). Re-timed with both at
+  `3b25903b`: 1,200 accounts 40–68ms, 5,200 accounts 68–123ms, query
+  counts unchanged; a typeahead lookup 30ms / 52ms, 3 queries. The read
+  found no blocker: it fixed the row flag's comment and
+  `spec/operator_button_audit.md`, which still described `has_history`
+  as the server guard alone, and added a test for the page's first list.
+
 ### PR ladder
 
 1. **Scaffold.** The two panes: four chips (real labels and counts),
@@ -175,6 +186,7 @@ Taken 2026-10-14 at `871ba085`.
 - `spec/operator_ui_concept.md` — the Accounts entry describes the chips, search and pager (Item 1).
 - `spec/settings_inventory.md` — the URL parameters the Accounts table reads (Item 1).
 - `spec/ui_elements.md` — §10 `.table-card-toolbar` gains Accounts as an eighth carrier; `.table-pager-cluster` notes Accounts keeps its pager under a filter (Item 1).
+- `spec/operator_button_audit.md` — row 117's Delete gate counts owning a session as history (Item 1, rulings).
 
 ---
 

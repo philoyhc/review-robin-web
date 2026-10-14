@@ -279,6 +279,11 @@ def test_the_typeahead_reaches_past_the_first_two_hundred(
     body = client.get(ACCOUNTS).text
     assert late.email not in body.split('<datalist id="accounts-search-options">', 1)[1].split("</datalist>", 1)[0]
 
+    # The page's own first list matches what the box already holds.
+    reloaded = client.get(f"{ACCOUNTS}?q=zoe").text
+    first = reloaded.split('<datalist id="accounts-search-options">', 1)[1]
+    assert '<option value="zoe@example.edu">' in first.split("</datalist>", 1)[0]
+
     response = client.get(f"{ACCOUNTS}/search-options?q=zoe")
     assert response.status_code == 200
     assert response.json() == ["Zoe Last", "zoe@example.edu"]
