@@ -192,7 +192,9 @@ Sys Admin → Sessions Diagnostics.
   Deadline, Timezone, Status, Actions — the first six with ↕, as on the
   lobby; no Last Modified.
 - [ ] **Sort.** Click a ↕: the rows reorder and the badge turns; reload
-  and the order holds (its own cookie, separate from the lobby's).
+  and the order holds (its own cookie, separate from the lobby's). Sort
+  Deadline both ways: sessions with no deadline stay at the bottom, and
+  a reload doesn't move them.
 - [ ] **Filter.** Top right of the table: type part of a session name,
   a code, or an owner's name or email, and only matching rows stay;
   type nonsense and "No sessions match the filter." shows. `Cancel`

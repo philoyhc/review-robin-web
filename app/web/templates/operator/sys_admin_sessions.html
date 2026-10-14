@@ -82,7 +82,11 @@
             <td>
               <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
             </td>
-            <td>
+            {# Deadline and Timezone carry the value the route sorts by
+               (`views.session_sort_value`), so a header click orders them
+               as a reload does: no deadline is empty, hence last either
+               way, and the zone sorts by its IANA name, not its label. #}
+            <td data-sort-value="{{ s.deadline | format_datetime }}">
               {% if s.deadline %}
                 <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
               {% else %}
@@ -90,7 +94,7 @@
               {% endif %}
             </td>
             {% set tz = session_timezone(s) %}
-            <td class="col-shrink">
+            <td class="col-shrink" data-sort-value="{{ tz }}">
               <span class="pill pill-count">
                 <abbr class="tz-gmt" title="{{ gmt_offset_label(tz) }} {{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
               </span>

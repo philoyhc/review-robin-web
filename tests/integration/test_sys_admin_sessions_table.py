@@ -117,5 +117,29 @@ def test_filter_text_lower_cases_as_the_browser_does() -> None:
     assert "johann strauß" in text.split("\n")
 
 
+def test_deadline_and_timezone_sort_by_the_routes_values(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    """Codex on #3046: the browser sorted the cell text ("No deadline",
+    "GMT+8"), the route the stored values (None last, the IANA name), so a
+    click and a reload disagreed. The cells now carry the route's value."""
+    ann = _user(db, "ann@example.edu")
+    _session(db, "Open", "zz-open", ann)
+    _session(
+        db, "Due", "zz-due", ann,
+        deadline=datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc),
+        display_timezone="Asia/Singapore",
+    )
+    db.commit()
+    body = client.get(PAGE).text
+
+    def cells(code: str) -> list[str]:
+        row = body.split(f"<code>{code}</code>", 1)[1].split("</tr>", 1)[0]
+        return re.findall(r'<td[^>]*data-sort-value="([^"]*)"', row)
+
+    assert cells("zz-open")[0] == ""  # empty sorts last, either direction
+    assert cells("zz-due") == ["2026-11-01 12:00", "Asia/Singapore"]
+
+
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:
     assert views.LOBBY_SORT_KEYS - views.DIAGNOSTICS_SORT_KEYS == {"status"}
