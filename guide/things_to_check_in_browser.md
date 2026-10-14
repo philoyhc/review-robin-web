@@ -171,3 +171,16 @@ Sys Admin → Accounts, signed in as a super-admin.
 - [ ] **Mixed.** Add an Unused account to the selection: still no
   Delete, and the line reads "1 of these users has acted …". Untick
   the one with history: Delete and its confirm come back.
+
+## Accounts: heading beside the filter, Overview on one line (2026-10-14)
+
+Sys Admin → Accounts, at a desktop width.
+
+- [ ] **No gap above the filter.** In Workspace users, the heading sits
+  top-left with Session role / Search beside it on the right, level
+  with it; `Show:` and its chips sit at the bottom of the left half,
+  level with the `Search` button. Below about 860px the halves stack:
+  heading, chips, then the filter.
+- [ ] **Accounts Overview.** The card's heading reads "Accounts
+  Overview" and its five pills sit on one line (wrapping only if the
+  card is too narrow), "·" between each.

@@ -26,7 +26,7 @@ __all__ = [
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
-    "build_account_overview_rows",
+    "build_account_overview_pills",
     "parse_account_view",
 ]
 
@@ -172,17 +172,17 @@ _OVERVIEW_SINGULAR: dict[str, str] = {
 }
 
 
-#: The Overview card's two rows (author, 2026-10-14): the kinds with a
-#: role and the super-admins among them, then the kinds without.
-_OVERVIEW_ROWS: tuple[tuple[str, ...], ...] = (
-    ("operators", "admins", "super_admins"),
-    ("no_role", "unused"),
+#: The Overview card's pills, in order, on one line (author,
+#: 2026-10-14): the kinds with a role and the super-admins among them,
+#: then the kinds without.
+_OVERVIEW_ORDER: tuple[str, ...] = (
+    "operators", "admins", "super_admins", "no_role", "unused",
 )
 
 
-def build_account_overview_rows(
+def build_account_overview_pills(
     counts: Mapping[str, int], *, super_admins: int
-) -> list[tuple[AccountOverviewPill, ...]]:
+) -> list[AccountOverviewPill]:
     """The chips' own counts by kind, plus the super-admins, each label
     singular for a count of one."""
     plurals = {key: (counts.get(key, 0), label) for key, label, _ in ACCOUNT_CATEGORIES}
@@ -194,7 +194,7 @@ def build_account_overview_rows(
             label = _OVERVIEW_SINGULAR.get(key, label)
         return AccountOverviewPill(key=key, count=count, label=label)
 
-    return [tuple(pill(key) for key in row) for row in _OVERVIEW_ROWS]
+    return [pill(key) for key in _OVERVIEW_ORDER]
 
 
 #: Why a batch was refused, by ``UserOperationError.code``: the reason

@@ -117,23 +117,20 @@
   </div>
 
   {# admin_pages_refine Item 3, cut down by the author 2026-10-14: the
-     chips' counts and the super-admins as pills on two rows, nothing
+     chips' counts and the super-admins as pills on one line, nothing
      else. #}
   <div class="card" id="accounts-overview">
-    <h2>Overview</h2>
-    {% for row in account_overview_rows %}
+    <h2>Accounts Overview</h2>
     <p class="overview-pills">
-      {%- for pill in row -%}
+      {%- for pill in account_overview_pills -%}
         <span class="pill pill-count" data-overview="{{ pill.key }}">{{ pill.count }} {{ pill.label }}</span>
         {%- if not loop.last %} · {% endif -%}
       {%- endfor -%}
     </p>
-    {% endfor %}
   </div>
   </div>{# .page-grid #}
 
   <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-    <h2>Workspace users</h2>
     {% if account_total %}
       {# admin_pages_refine Item 1 — the Setup pages' two-pane toolbar
          (`spec/setup_pages.md` "The table toolbar"): category chips where
@@ -145,9 +142,14 @@
          chip change submits it at once: a chip says what the table
          holds, where the role and the search wait for `Search`. The
          blank `show` keeps "every chip off" distinct from "no `show`
-         at all", which means the default chips. #}
+         at all", which means the default chips.
+
+         The card's heading leads the left pane (author, 2026-10-14), so
+         the filter on the right starts level with it rather than below
+         it; the chips stay at the pane's foot. #}
       <div class="table-card-toolbar is-split">
-        <div class="toolbar-pane toolbar-left">
+        <div class="toolbar-pane toolbar-left has-heading">
+          <h2>Workspace users</h2>
           <p class="col-chip-row" data-account-chips>
             <span>Show:</span>
             {% for chip in account_chips %}
@@ -546,6 +548,7 @@
         <p class="muted">No accounts match the current filter.</p>
       {% endif %}{# rows #}
     {% else %}
+      <h2>Workspace users</h2>
       <p class="muted">No users in this workspace yet.</p>
     {% endif %}
   </div>

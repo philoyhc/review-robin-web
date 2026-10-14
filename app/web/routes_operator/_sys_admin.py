@@ -269,8 +269,8 @@ def sys_admin_users(
             "account_total": sum(page.counts.values()),
             "account_chips": views.build_account_chips(page.counts, view),
             # admin_pages_refine Item 3 — the Overview card: the chips'
-            # own counts on two rows, and the super-admins.
-            "account_overview_rows": views.build_account_overview_rows(
+            # own counts on one line, and the super-admins.
+            "account_overview_pills": views.build_account_overview_pills(
                 page.counts, super_admins=account_listing.count_super_admins(db)
             ),
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
