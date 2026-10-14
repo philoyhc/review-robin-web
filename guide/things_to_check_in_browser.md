@@ -86,12 +86,12 @@ kind (invite some; sign in once as a new address for an Unused one).
 - [ ] **Narrow window.** Below about 860px the two panes stack, with the
   chips wrapping rather than overflowing.
 
-## Invite card half width, beside Overview (admin pages Item 3, rung 1)
+## Invite card half width, beside Accounts Overview (admin pages Item 3, rung 1)
 
 Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
 
-- [ ] **Side by side.** Invite by email on the left half, Overview on the
-  right, the same height; below about
+- [ ] **Side by side.** Invite by email on the left half, Accounts
+  Overview on the right, the same height; below about
   800px they stack. Workspace users still spans the page beneath.
 - [ ] **The role chip.** Under the email box, one row: a solid chip
   reading `Invite as operator` at its top-left, `Cancel` then `Invite`
@@ -145,11 +145,11 @@ Sys Admin → Accounts, with a few operators and an unused account.
 - [ ] **Delete's confirm.** Delete stays grey until "Yes, delete these"
   is ticked.
 
-## Accounts Overview cut to two rows of pills (2026-10-14)
+## Accounts Overview cut to a line of pills (2026-10-14)
 
-- [ ] **Just pills.** Overview shows two rows and nothing else:
-  "N Operators · N Admins · N super-admins", then "N No role · N
-  Unused", each number and label inside one blue pill, in capitals
+- [ ] **Just pills.** Accounts Overview shows one line and nothing
+  else: "N Operators · N Admins · N super-admins · N No role · N
+  Unused" (wrapping only if the card is too narrow), each number and label inside one blue pill, in capitals
   like every other pill. A count of 1 reads singular: "1 OPERATOR",
   "1 ADMIN", "1 SUPER-ADMIN". No links, no
   New / Unused-for-30-days / Sessions-with-one-owner lines.
@@ -157,8 +157,8 @@ Sys Admin → Accounts, with a few operators and an unused account.
   in the Workspace users toolbar; with one configured super-admin who
   has an account the pill reads "1 SUPER-ADMIN".
 - [ ] **Spacing.** The pills sit flush against the ` · ` on either
-  side, and the two rows have a small gap between them; Invite and
-  Overview stay level, stacking below about 800px.
+  side; Invite and Accounts Overview stay level, stacking below about
+  800px.
 
 ## Accounts: no Delete for a user with history (2026-10-14)
 
@@ -182,5 +182,4 @@ Sys Admin → Accounts, at a desktop width.
   level with the `Search` button. Below about 860px the halves stack:
   heading, chips, then the filter.
 - [ ] **Accounts Overview.** The card's heading reads "Accounts
-  Overview" and its five pills sit on one line (wrapping only if the
-  card is too narrow), "·" between each.
+  Overview" (its pills are the section above).
