@@ -247,7 +247,9 @@ def test_an_owner_add_holds_off_a_revoke(
                 )
         # The revoke's own row lock is what waited, not its later UPDATE,
         # so the revoke takes one. That it comes before the owner count is
-        # pinned by ``test_single_row_revoke_takes_the_batch_lock_before_counting``.
+        # pinned for the single-row path by
+        # ``test_single_row_revoke_takes_the_batch_lock_before_counting``;
+        # ``apply_batch`` judges only the rows its lock returned.
         assert "FOR NO KEY UPDATE" in str(waited.value.statement)
 
 

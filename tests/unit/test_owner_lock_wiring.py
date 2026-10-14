@@ -11,8 +11,9 @@ must check the lock on the same user as a top-level ``if not …: raise``
 before the session is made, with no commit or rollback between.
 
 What it can't see: a commit inside a service the route calls between
-the gate and the make, and an owner row written through a relationship
-collection rather than ``SessionOperator(...)`` or ``insert(...)``.
+the gate and the make, and an owner row written other than as
+``SessionOperator(...)`` or ``insert(SessionOperator)`` (through a
+relationship collection, or ``SessionOperator.__table__``).
 """
 
 from __future__ import annotations
@@ -76,8 +77,9 @@ def test_only_the_known_services_write_owner_rows() -> None:
 
 def test_every_service_reaching_an_owner_write_is_accounted_for() -> None:
     """A service wrapping a writer would hide it from the route check
-    below, as ``rehydrate_session`` once did. ``add_owner`` locks itself;
-    ``rehydrate_session`` is in ``MAKES_AN_OWNER``; nothing wraps either."""
+    below, as ``rehydrate_session`` once did. ``add_owner`` locks itself,
+    so its callers (``set_owners``) are safe and not scanned for;
+    ``rehydrate_session`` is in ``MAKES_AN_OWNER``, and nothing wraps it."""
     reached = {"create_session", "clone_session", "_insert_owner", "rehydrate_session"}
     wrappers = {
         where
