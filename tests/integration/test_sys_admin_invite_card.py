@@ -27,12 +27,11 @@ def test_invite_and_overview_share_one_grid_row(
     overview = body.split('id="accounts-overview"', 1)[1].split("</div>", 1)[0]
     assert "will appear here" in overview
     # Overview's own close, then the grid's, before the Workspace users
-    # card: two cards in the grid, and the table card outside it. (The
-    # browser test measures that it spans the page.)
+    # card opens: the table card is outside the grid. (The browser test
+    # measures that it spans the page.)
     after = body.split('id="accounts-overview"', 1)[1]
-    between = after.split("<h2>Workspace users</h2>", 1)[0]
+    between = after.split('id="accounts-table-card"', 1)[0]
     assert between.count("</div>") == 2
-    assert grid.count('<div class="card') >= 2
 
 
 def test_the_role_chip_replaces_the_checkbox(

@@ -33,11 +33,11 @@ def test_the_chip_cycles_resets_and_invites_an_admin(page: Page) -> None:
     page.goto(ACCOUNTS)
     chip = page.locator("[data-invite-role-chip]")
     expect(chip).to_have_text("Invite as operator")
-    dark = chip.evaluate("el => getComputedStyle(el).backgroundColor")
+    solid = chip.evaluate("el => getComputedStyle(el).backgroundColor")
 
     chip.click()
     expect(chip).to_have_text("Invite as sys-admin")
-    assert chip.evaluate("el => getComputedStyle(el).backgroundColor") == dark
+    assert chip.evaluate("el => getComputedStyle(el).backgroundColor") == solid
 
     # Cancel resets the form, and the label follows the box back.
     page.fill("#invite-email", "nobody@example.edu")
