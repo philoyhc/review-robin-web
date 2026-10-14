@@ -109,9 +109,10 @@ Taken 2026-10-14 at `871ba085`.
 
 ### Status
 
-- **Rung 1** (2026-10-14): the route passes the chips and the pager,
-  since a template can't count; the ladder said "touches no route". It
-  reads no new parameter. The chip rule is `app/web/views/_accounts.py`.
+- **Rung 1** (2026-10-14): the route passes the chips, since a
+  template can't count; the ladder said "touches no route". It reads no
+  new parameter. The pager waits for rung 2: over a list that still
+  renders whole, it showed a false range (Codex on #3027). The chip rule is `app/web/views/_accounts.py`.
   The item's cumulative read diffs from `adc01b08`.
 
 ### PR ladder

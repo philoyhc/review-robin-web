@@ -157,22 +157,15 @@ def test_the_scaffold_filters_nothing(
     assert "checked" not in _chip(body, "unused")
 
 
-def test_past_one_page_the_pager_renders_above_and_below(
+def test_no_pager_until_the_route_pages(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Rung 1 renders every row, so a pager past 200 accounts would
+    show a false range and links that reload the same list (Codex on
+    #3027). Rung 2 pages on the server and turns this around."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     db.add_all(User(email=f"user{n}@example.edu") for n in range(200))
     db.commit()
     body = client.get(ACCOUNTS).text
-    assert body.count('<div class="table-pager-cluster') == 2
-    assert "<summary>1–200</summary>" in body
-    assert (
-        'href="/operator/sys-admin/users?offset=200#accounts-table-card"'
-        in body
-    )
-    # Pager, then the table, then the bottom copy.
-    assert (
-        body.index('<div class="table-pager-cluster"')
-        < body.index('id="users-table"')
-        < body.index("table-pager-cluster table-pager-cluster-bottom")
-    )
+    assert '<div class="table-pager-cluster' not in body
+    assert body.count("<code>user") == 200

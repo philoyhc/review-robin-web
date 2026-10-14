@@ -234,14 +234,14 @@ def sys_admin_users(
             "user": user,
             "rows": rows,
             # admin_pages_refine Item 1 rung 1 — the toolbar scaffold.
-            # The chips count the real table but filter nothing, the
-            # dropdown and search post nothing, and the pager's links
-            # carry an ``offset`` this route doesn't read yet: rung 2
-            # filters and pages on the server.
+            # The chips count the real table but filter nothing, and the
+            # dropdown and search post nothing. No pager yet: every row
+            # still renders, so a "1–200" range would be false and its
+            # links would reload the same list (Codex on #3027). Rung 2
+            # pages on the server and passes one.
             "account_chips": views.build_account_chips(rows),
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
-            "pager": views.build_pager(total=len(rows)),
-            "pager_url_base": "/operator/sys-admin/users?",
+            "pager": None,
             "pager_anchor": "accounts-table-card",
             "actor_is_super_admin": user.is_super_admin,
             # Segment 18S Item 2 — the Promote/Demote controls follow the
