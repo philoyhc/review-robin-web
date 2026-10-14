@@ -173,8 +173,20 @@ and the **row expander** injected beneath the selected row
 count and today's toolbar actions: Admit / Revoke, Promote / Demote
 (where `can_manage_admins`), Remove from all sessions, and Delete behind
 its confirm tick. The toolbar is retired. **Only actionable controls
-render**, as with the roster pages' Inactivate / Activate: Revoke shows
-only when every selected row is an operator.
+render**, as with the roster pages' Inactivate / Activate: a control
+shows only when it applies to every selected row.
+
+**Role controls follow the row's chip** (author, 2026-10-14):
+
+| Chip | Role controls |
+|---|---|
+| Operators | Revoke, Promote |
+| Admins | Demote only; never Revoke, which flips a flag the admin flag already overrides |
+| Admins (super-admin) | none: config sets the tier, and sign-in restores it |
+| No role, Unused | Admit |
+
+Promote and Demote still need `can_manage_admins`. Remove from all
+sessions and Delete keep today's gates (Delete: Unused only).
 
 ### Semantics
 
@@ -237,6 +249,10 @@ Taken 2026-10-14 at `871ba085`.
 ### Open questions
 
 - ~~All or nothing?~~ All or nothing (author, 2026-10-14).
+- **Promote straight from No role / Unused?** Today's toolbar allows
+  it; the role-control table above doesn't. Author decides.
+- **Remove from all sessions on an admin?** Allowed today (not on a
+  super-admin); "Demote only" names role controls. Author decides.
 
 ### Out of scope
 
