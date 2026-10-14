@@ -167,3 +167,11 @@ Sys Admin → Accounts, signed in as a super-admin.
   with none, the line is just `0`.
 - [ ] **Sessions with one owner.** Add a co-owner to a session that had
   one: the count drops by one on reload.
+
+## Accounts Overview: two rows and count pills (admin pages Item 3, rung 2a)
+
+- [ ] **Two rows.** *With a role* holds Operators and Admins (with any
+  super-admin note); *Without a role* holds No role and Unused.
+- [ ] **Pills.** Every number on the card is a blue count pill. A kind
+  link's underline stops at its label, and the gap before each `·` is
+  the same as after it.

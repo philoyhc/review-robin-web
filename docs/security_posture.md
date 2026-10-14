@@ -60,9 +60,9 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
   (`_reassert_super_admin`).
 - **Admin promote / demote is super-admin-only, and so is inviting as an
   admin.** The `promote` / `demote` service functions, and `invite` when the
-  *Also invite as sys-admin* box is ticked, require the **actor** to be a
+  role chip is on `Invite as sys-admin`, require the **actor** to be a
   super-admin (`requires_super_admin`: 403 on Promote / Demote, a banner on
-  Invite, whose box a plain admin never sees); a plain sys-admin can no
+  Invite, whose chip a plain admin never sees); a plain sys-admin can no
   longer change who is an admin. Operator admit / revoke stays admin-gated. **No-super-tier
   fallback (18S Item 2):** when `SUPER_ADMIN_EMAILS` is empty (no super tier
   configured at all), this guard falls back to the pre-18S rule — any admin may

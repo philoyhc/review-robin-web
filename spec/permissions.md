@@ -30,7 +30,7 @@ membership:
 | Role | Stored as | Granted by | Revoked by |
 |---|---|---|---|
 | **Operator** | `users.is_operator` | env bootstrap on first sign-in (`OPERATOR_EMAILS`), or an admin's *Admit* | an admin's *Revoke* (refused while the user still owns any session) |
-| **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* or *Invite* with *Also invite as sys-admin* | a super-admin's *Demote* (refused for the last admin) |
+| **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* or *Invite* with the chip on `Invite as sys-admin` | a super-admin's *Demote* (refused for the last admin) |
 | **Super-admin** | *derived*, never stored — email ∈ `SUPER_ADMIN_EMAILS` (`app/auth/roles.py::is_super_admin`, case-insensitive) | deployer config only | deployer config only; no in-app path may demote, revoke or remove one |
 | **Session owner** | a `session_operators` row (`role="owner"`) | session create (the creator, plus any co-owners named on Create's Owners card), clone (the cloner), an owner's *Add owner*, or a sys-admin's audited self-add | an owner's *Remove owner* (refused for the last owner) |
 
@@ -167,7 +167,7 @@ status.
 | Demote | **super-admin** | `self_action`, `requires_super_admin`, `protected_super_admin`, `last_admin` (target is the only admin) | `sys_admin.role_demoted` |
 | Remove from all sessions | admin | `self_action`, `protected_super_admin`, `sole_owner` (target is the only owner of some session) | `workspace.user_detached_from_all_sessions` |
 | Delete user | admin | `self_action`, `protected_super_admin`, `last_admin`, `owns_sessions`, `has_history` (target created a session or acted in the audit log; an operator's access is taken away by Revoke) | `workspace.user_removed` |
-| Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to tick *Also invite as sys-admin*, which the page shows only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (admin box only) | `workspace.user_invited` |
+| Invite (pre-seed a `users` row before first sign-in) | admin; **super-admin** to switch the role chip from `Invite as operator` to `Invite as sys-admin` (it posts `invite_as_sys_admin=true`), a chip the page renders only to an actor who could Promote | `invalid_email`, `duplicate` (case-insensitive), `requires_super_admin` (sys-admin chip only) | `workspace.user_invited` |
 
 **No-super-tier fallback.** `requires_super_admin` engages only
 once a super-admin actually exists in the effective set; with
