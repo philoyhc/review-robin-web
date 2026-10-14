@@ -768,7 +768,7 @@ on every selected row, all or nothing (`spec/permissions.md` §4.1).
 | 114 | Workspace users — row expander | Admit / Revoke | `<button type="submit">` | `btn secondary` | Secondary | Two buttons, each under `Operator:`. `Admit` renders when every selected row is under the **No role** or **Unused** chip; `Revoke` when every one is under **Operators** and owns no session (an admin's Operator flag is overridden by the admin flag, so Revoke is never offered on an Admins row). Server guards `protected_super_admin` and `still_owner` (a row that owns a session) refuse the whole batch. |
 | 115 | Workspace users — row expander | Remove from all sessions | `<button type="submit">` | `btn secondary` | Secondary | Under `Operator:`. Renders when every selected row owns at least one session, is the sole owner of none (`data-sole-owner-count`), and none is a super-admin; the server refuses the batch when `sole_owner` would leave a session with no owner after every selected row is detached. |
 | 116 | Workspace users — row expander | Promote / Demote | `<button type="submit">` | `btn secondary` | Secondary | Two buttons, each under `Admin:`, rendered only when the actor can manage admins (`data-can-manage-admins`). `Promote` when every selected row is under **Operators**; `Demote` when every one is under **Admins** and none is a super-admin. A row with no role is never offered Promote (`not_operator`). `last_admin` judges the state after the batch. |
-| 117 | Workspace users — row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Hard-deletes the `users` rows. Renders for any selection with no super-admin and no row with history (`data-has-history`, the Accounts category rule's history: created a session, owns one, or acted in the audit log), after the group label `\|`; with history in the selection, a muted line takes the confirm's place instead (*This user has acted in the audit log and cannot be deleted.*, or for several rows *These users have …* / *N of these users have …*); ships `disabled` behind the `Yes, delete these` confirm beside the count (`data-delete-confirm` / `data-delete-btn="users-bulk-delete"`), and the route re-checks `confirm == "true"` (**400**). Server guards `owns_sessions`, `has_history` (the Accounts category rule's history: created a session, owns one, or acted in the audit log), `protected_super_admin` and `last_admin` refuse the whole batch. The redirect omits `?selected=`. |
+| 117 | Workspace users — row expander | Delete | `<button type="submit">` | `btn destructive` | Destructive | Hard-deletes the `users` rows. Renders for any selection with no super-admin and no row with history (`data-has-history`, the Accounts category rule's history: created a session, owns one, or acted in the audit log), after the group label `\|`; with history in the selection, a muted line takes the confirm's place instead (*This user has acted in the audit log and cannot be deleted.*, or for several rows *These users have …* / *N of these users has …* / *have …*); ships `disabled` behind the `Yes, delete these` confirm beside the count (`data-delete-confirm` / `data-delete-btn="users-bulk-delete"`), and the route re-checks `confirm == "true"` (**400**). Server guards `owns_sessions`, `has_history` (the Accounts category rule's history: created a session, owns one, or acted in the audit log), `protected_super_admin` and `last_admin` refuse the whole batch. The redirect omits `?selected=`. |
 
 Notes:
 
@@ -782,11 +782,11 @@ Notes:
   applies to every selected row, as Inactivate / Activate do on the
   roster pages: Revoke needs every row to own no session, Remove from
   all sessions every row to own one and be the sole owner of none.
-  Delete is the exception, rendering for any selection without a
-  super-admin and leaving its other gates (sessions, history, the last
-  admin) to the server's whole-batch refusal. The counts no single row
-  decides — the last admin, a session's last co-owners — are the
-  server's for every control.
+  Delete renders for any selection with no super-admin and no row
+  with history (which includes owning a session), and a line in the
+  confirm's place says why when history rules it out. The counts no
+  single row decides — the last admin, a session's last co-owners —
+  are the server's for every control.
 - **Selection.** Rows tick independently; the header checkbox is a
   tri-state select-all over the page. Self-row renders `(self)` instead
   of a checkbox. Selection is page-local: a chip, role, search or page

@@ -244,11 +244,29 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
         "1 of these users has acted in the audit log and cannot be deleted."
     )
 
-    # Without it, Delete and its confirm come back and the line goes.
+    # Every selected row with history: "These users have …".
+    _co_own(api, new_session(), second)
+    page.reload()
+    _tick(page, first)
+    _tick(page, second)
+    expect(expander.locator("[data-delete-blocked]")).to_have_text(
+        "These users have acted in the audit log and cannot be deleted."
+    )
+
+
+def test_dropping_the_row_with_history_brings_delete_back(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    first, second, _ = _setup(page, api)
+    _co_own(api, new_session(), first)
+    page.reload()
+    expander = page.locator("#users-row-expander")
+    _tick(page, first)
+    _tick(page, second)
+    expect(expander.locator("[data-delete-blocked]")).to_have_count(1)
     page.locator(
         f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select'
     ).uncheck()
-    _tick(page, second)
     assert _expander_actions(page)[-1] == "Delete"
     expect(expander.locator(".exp-confirm-label")).to_have_count(1)
     expect(expander.locator("[data-delete-blocked]")).to_have_count(0)

@@ -144,9 +144,6 @@ Sys Admin → Accounts, with a few operators and an unused account.
   stay.
 - [ ] **Delete's confirm.** Delete stays grey until "Yes, delete these"
   is ticked.
-- [ ] **Refused whole.** Tick an unused account and a session owner,
-  confirm, Delete: a banner says "Nothing changed: … owns sessions",
-  naming the owner, and both rows are still there.
 
 ## Accounts Overview cut to two rows of pills (2026-10-14)
 
