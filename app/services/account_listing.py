@@ -194,8 +194,9 @@ def list_accounts_page(
     offset = (offset // page_size) * page_size
 
     history = _has_history().label("has_history")
+    row_category = _category().label("row_category")
     page = db.execute(
-        select(User, history)
+        select(User, history, row_category)
         .where(*clauses)
         .order_by(User.id.desc())
         .offset(offset)
@@ -209,7 +210,7 @@ def list_accounts_page(
     ):
         counts[key] = count
 
-    session_total, user_sole = _session_counts(db, [user.id for user, _ in page])
+    session_total, user_sole = _session_counts(db, [user.id for user, _, _ in page])
     rows = [
         WorkspaceUserRow(
             id=user.id,
@@ -222,8 +223,9 @@ def list_accounts_page(
             session_operator_count=session_total.get(user.id, 0),
             sole_owner_count=user_sole.get(user.id, 0),
             has_history=bool(has_history),
+            category=row_category,
         )
-        for user, has_history in page
+        for user, has_history, row_category in page
     ]
     return AccountsPage(rows=rows, total=total, counts=counts, offset=offset)
 

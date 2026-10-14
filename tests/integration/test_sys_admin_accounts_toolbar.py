@@ -445,3 +445,25 @@ def test_the_demote_gate_counts_admins_across_the_workspace(
     assert _emails(body) == {"carol@example.edu"}
     toolbar = body.split('id="user-actions"', 1)[1].split(">", 1)[0]
     assert 'data-sys-admin-count="2"' in toolbar
+
+
+# --- Row expander scaffold (Item 2 rung 1) ----------------------------------
+
+
+def test_each_row_carries_its_chip_for_the_expander(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    """The expander picks its controls by the selected rows' chips, so
+    each row says which chip it sits under, from the same SQL rule."""
+    body = client.get(
+        f"{ACCOUNTS}?show=operators&show=admins&show=no_role&show=unused"
+    ).text
+    for name, category in (
+        ("bob", "operators"), ("carol", "admins"),
+        ("dave", "no_role"), ("erin", "unused"),
+    ):
+        user = workspace[name]
+        row = body.split(f'data-user-id="{user.id}"', 1)[1].split(">", 1)[0]
+        assert f'data-category="{category}"' in row, name
+    assert 'id="users-select-all"' in body
+    assert 'data-can-manage-admins="true"' in body

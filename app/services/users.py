@@ -58,6 +58,9 @@ class WorkspaceUserRow:
     session_operator_count: int
     sole_owner_count: int
     has_history: bool
+    # The Accounts chip the row sits under (``account_listing.CATEGORIES``),
+    # which decides its role controls (admin_pages_refine Item 2).
+    category: str = ""
 
 
 class UserOperationError(ValueError):

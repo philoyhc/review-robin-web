@@ -251,6 +251,18 @@ Taken 2026-10-14 at `871ba085`.
   `spec/operator_button_audit.md` (row 117 and its neighbors).
 - No lock in `app/services/users.py` (`grep -n "for_update"` → none).
 
+### Status
+
+- **Rung 1** (2026-10-14): the scaffold. The item's cumulative read diffs
+  from `4e770037`. Several rows tick, with a tri-state select-all; the
+  expander renders under the most recently ticked row with the count and
+  inert controls. The toolbar stays live for exactly one row and disables
+  for two or more. Each row carries its chip (`data-category`, from the
+  same SQL rule), which picks the controls. Decided at build: Remove from
+  all sessions and Delete render for any selection without a
+  super-admin, their other gates left to the server's batch refusal,
+  since the DoD's "refused mixed Delete" needs Delete to submit.
+
 ### PR ladder
 
 1. **Scaffold.** Checkboxes allow several rows; the expander renders

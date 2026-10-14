@@ -115,3 +115,17 @@ Unused if the accounts you made sit there.
   (`z…`): the suggestions show it within a moment, though the list the
   page opened with stopped well before it. Typing more narrows it. If
   the open dropdown only refreshes on the next keystroke, note it.
+
+## Accounts row expander scaffold (admin pages Item 2, rung 1)
+
+Sys Admin → Accounts, with a few operators and an unused account.
+
+- [ ] **Several rows.** Ticking a second row keeps the first ticked; the
+  header box ticks every row and shows a dash when only some are.
+- [ ] **The expander.** A tinted bar opens under the last row ticked:
+  "N of M selected", then only the controls that fit every selected
+  row (two operators: Revoke, Promote, Remove from all sessions,
+  Delete). All are greyed out for now.
+- [ ] **The toolbar.** It acts as before for one ticked row and greys out
+  for two or more.
+
