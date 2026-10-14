@@ -174,3 +174,5 @@ Sys Admin → Accounts, signed in as a super-admin.
 - [ ] **Pills.** Every number on the card is a blue count pill. A kind
   link's underline stops at its label, and the gap before each `·` is
   the same as after it.
+- [ ] **Link text keeps its space.** Copy a kind link (or read it with a
+  screen reader): it says "Operators 3", not "Operators3".
