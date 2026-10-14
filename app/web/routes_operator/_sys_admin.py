@@ -310,7 +310,7 @@ def sys_admin_users(
                 is_filtered=view.is_filtered,
             ),
             "pager_url_base": (
-                "/operator/sys-admin/users?"
+                f"{_ACCOUNTS_URL}?"
                 + views.account_view_query(view, offset=False)
                 + "&"
             ),
@@ -415,7 +415,7 @@ def _users_redirect(
     (admin_pages_refine Item 1): parsed and re-encoded rather than
     echoed, so the redirect keeps the chips, role, search and page and
     nothing else."""
-    url = "/operator/sys-admin/users"
+    url = _ACCOUNTS_URL
     params: list[str] = []
     if view:
         params.append(
@@ -653,6 +653,6 @@ def invite_user(
             is_sys_admin=invite_as_sys_admin == "true",
         )
     except users_service.UserOperationError as exc:
-        url = f"/operator/sys-admin/users?invite_error={quote(exc.code, safe='')}"
+        url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
     return _users_redirect()

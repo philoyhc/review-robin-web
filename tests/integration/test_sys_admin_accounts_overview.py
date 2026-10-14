@@ -75,8 +75,14 @@ def test_the_card_renders_the_four_lines_and_their_links(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    # A different count for every kind, so a link can't show another's.
     for n in range(3):
         _user(db, f"op{n}@example.edu", OLD, is_operator=True)
+    for n in range(2):
+        acted = _user(db, f"acted{n}@example.edu", OLD)
+        db.add(AuditEvent(event_type="response.submitted", summary="x", actor_user_id=acted.id, detail={}))
+    for n in range(4):
+        _user(db, f"unused{n}@example.edu", datetime.now(timezone.utc))
     db.commit()
     body = client.get(ACCOUNTS).text
     card = body.split('id="accounts-overview"', 1)[1].split("</dl>", 1)[0]
@@ -91,7 +97,8 @@ def test_the_card_renders_the_four_lines_and_their_links(
             f'data-overview-kind="{key}">{label} {_chip_count(body, key)}</a>'
         )
         assert link in card
-    assert 'data-overview-kind="operators">Operators 3</a>' in card
+    for pinned in ("Operators 3", "Admins 1", "No role 2", "Unused 4"):
+        assert f">{pinned}</a>" in card
     # No super-admin configured, so Admins carries no note.
     assert "super-admin" not in card
     assert "New in the last 30 days" in card
