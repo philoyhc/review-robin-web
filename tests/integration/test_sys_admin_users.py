@@ -975,14 +975,14 @@ def test_remove_from_all_sessions_refuses_self(
     assert response.status_code == 400
 
 
-def test_list_workspace_users_surfaces_sole_owner_count(
+def test_accounts_page_surfaces_sole_owner_count(
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``WorkspaceUserRow.sole_owner_count`` powers the toolbar
     Delete / Remove-from-all-sessions gates."""
     from app.db.models import ReviewSession
-    from app.services import users as users_service
+    from app.services import account_listing
 
     bob = _seed_target(db, email="bob@example.edu", is_operator=True)
     carol = _seed_target(db, email="carol@example.edu", is_operator=True)
@@ -996,7 +996,8 @@ def test_list_workspace_users_surfaces_sole_owner_count(
     db.add(SessionOperator(session_id=s2.id, user_id=carol.id, role="owner"))
     db.commit()
 
-    rows = {row.email: row for row in users_service.list_workspace_users(db)}
+    page = account_listing.list_accounts_page(db, categories=["operators"])
+    rows = {row.email: row for row in page.rows}
     assert rows["bob@example.edu"].session_operator_count == 2
     assert rows["bob@example.edu"].sole_owner_count == 1
     assert rows["carol@example.edu"].session_operator_count == 1

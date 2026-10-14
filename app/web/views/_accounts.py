@@ -1,29 +1,30 @@
 """Sys Admin → Accounts: the Workspace users toolbar
 (``guide/admin_pages_refine.md`` Item 1).
 
-Four category chips partition the table, and every row is under
-exactly one of them. The partition is a display rule over flags the
-service already returns, so it lives here rather than in
-``app.services.users``.
-
-Rung 1 is the scaffold: the chips carry real labels and counts but
-filter nothing yet.
+The view's state lives in the URL: which category chips are on
+(``show``), the Session role (``role``), the search (``q``) and the page
+start (``offset``). This module parses it, re-encodes it for the pager
+and the action redirects, and shapes the chips. The category rule itself
+is SQL, in ``app.services.account_listing``.
 """
 
 from __future__ import annotations
 
-from collections import Counter
-from dataclasses import dataclass
-from typing import Iterable
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
+from urllib.parse import parse_qs, urlencode
 
-from app.services.users import WorkspaceUserRow
+from app.services.account_listing import CATEGORIES, SESSION_ROLES
 
 __all__ = [
     "ACCOUNT_CATEGORIES",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
-    "account_category",
+    "AccountView",
+    "account_view_from_query",
+    "account_view_query",
     "build_account_chips",
+    "parse_account_view",
 ]
 
 
@@ -45,6 +46,87 @@ ACCOUNT_ROLE_OPTIONS: tuple[tuple[str, str], ...] = (
     ("owner", "Owner"),
 )
 
+_DEFAULT_SHOW = tuple(key for key, _, on in ACCOUNT_CATEGORIES if on)
+_SEARCH_MAX = 200
+
+
+@dataclass(frozen=True)
+class AccountView:
+    """What the table shows. ``show`` keeps toolbar order."""
+
+    show: tuple[str, ...] = _DEFAULT_SHOW
+    role: str = "any"
+    search: str = ""
+    offset: int = 0
+
+    @property
+    def is_filtered(self) -> bool:
+        """A role or a search narrows the chips' rows; chips alone don't."""
+        return self.role != "any" or bool(self.search)
+
+    def with_category(self, key: str) -> AccountView:
+        if key in self.show:
+            return self
+        return replace(
+            self, show=tuple(k for k in CATEGORIES if k in self.show or k == key)
+        )
+
+
+def parse_account_view(
+    *,
+    show: Sequence[str] | None,
+    role: str | None,
+    search: str | None,
+    offset: int | None,
+) -> AccountView:
+    """The view from query values, tolerantly: unknown chips and roles are
+    dropped, the search trimmed and capped, a negative offset zeroed.
+
+    ``show`` absent means the default chips; present but holding only
+    blanks means none. The filter form always posts one blank ``show``
+    so that turning every chip off survives the round trip.
+    """
+    if show is None:
+        chips = _DEFAULT_SHOW
+    else:
+        wanted = {value for value in show if value}
+        chips = tuple(key for key in CATEGORIES if key in wanted)
+    return AccountView(
+        show=chips,
+        role=role if role in SESSION_ROLES else "any",
+        search=(search or "").strip()[:_SEARCH_MAX],
+        offset=max(offset or 0, 0),
+    )
+
+
+def account_view_query(view: AccountView, *, offset: bool = True) -> str:
+    """The view as a query string, ``show=`` always present so an empty
+    chip set stays empty. ``offset=False`` leaves the offset off, for the
+    pager to append its own."""
+    pairs: list[tuple[str, str]] = [("show", key) for key in view.show] or [
+        ("show", "")
+    ]
+    if view.role != "any":
+        pairs.append(("role", view.role))
+    if view.search:
+        pairs.append(("q", view.search))
+    if offset and view.offset:
+        pairs.append(("offset", str(view.offset)))
+    return urlencode(pairs)
+
+
+def account_view_from_query(query: str) -> AccountView:
+    """Parse ``account_view_query``'s output back, for the actions'
+    hidden ``view`` field."""
+    values = parse_qs(query, keep_blank_values=True)
+    raw_offset = (values.get("offset") or ["0"])[0]
+    return parse_account_view(
+        show=values.get("show"),
+        role=(values.get("role") or [None])[0],
+        search=(values.get("q") or [None])[0],
+        offset=int(raw_offset) if raw_offset.isdigit() else 0,
+    )
+
 
 @dataclass(frozen=True)
 class AccountChip:
@@ -54,25 +136,13 @@ class AccountChip:
     selected: bool
 
 
-def account_category(row: WorkspaceUserRow) -> str:
-    """The one chip a row sits under.
-
-    Admins win: an admin has operator access whatever its Operator flag
-    says, so it is never also counted as an operator. A row with neither
-    flag splits on history, which is what decides whether Delete is
-    allowed (``spec/permissions.md`` §4.1).
-    """
-    if row.is_sys_admin or row.is_super_admin:
-        return "admins"
-    if row.is_operator:
-        return "operators"
-    return "no_role" if row.has_history else "unused"
-
-
-def build_account_chips(rows: Iterable[WorkspaceUserRow]) -> list[AccountChip]:
+def build_account_chips(
+    counts: Mapping[str, int], view: AccountView
+) -> list[AccountChip]:
     """One chip per category, counted over the whole table."""
-    counts = Counter(account_category(row) for row in rows)
     return [
-        AccountChip(key=key, label=label, count=counts[key], selected=default)
-        for key, label, default in ACCOUNT_CATEGORIES
+        AccountChip(
+            key=key, label=label, count=counts.get(key, 0), selected=key in view.show
+        )
+        for key, label, _ in ACCOUNT_CATEGORIES
     ]

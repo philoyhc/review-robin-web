@@ -65,19 +65,24 @@ with the last section it covers.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## Accounts toolbar scaffold (admin pages Item 1, rung 1)
+## Accounts toolbar (admin pages Item 1, rungs 1 and 2)
 
-Sys Admin → Accounts, signed in as an admin. Inert: nothing filters yet.
+Sys Admin → Accounts, signed in as an admin, with a few accounts of each
+kind (invite some; sign in once as a new address for an Unused one).
 
 - [ ] **Two panes above the table.** Left: `Show:` and four chips,
-  `Operators (N)`, `Admins (N)`, `No role (N)` and `Unused (N)`, with the
-  first two solid and the other two faint. Right: `Session role` (Any)
-  and `Search` on one row, a disabled `Search` button below. The Setup
-  pages' toolbar is the comparison, e.g. Reviewers.
-- [ ] **The counts add up.** The four counts sum to the table's rows, and
-  your own row is under Admins.
-- [ ] **Chips toggle on screen only.** A click flips a chip between solid
-  and faint; the table doesn't change, and a reload restores the default.
+  `Operators (N)`, `Admins (N)`, `No role (N)` and `Unused (N)`, the
+  first two solid. Right: `Session role` and `Search` on one row,
+  `Search` below. Compare the Reviewers page's toolbar.
+- [ ] **A chip filters at once.** Clicking `Unused` reloads with those
+  rows added; the counts don't change. Turning every chip off says "No
+  accounts match the chips above." and keeps the toolbar.
+- [ ] **Role and search wait for Search.** Pick `Owner`, type part of a
+  name, press Search: only matching rows; `Clear` appears and drops both,
+  keeping the chips. The search box offers emails and names as you type.
+- [ ] **An action keeps the view.** With a search on, Admit an Unused
+  account: the page comes back with the same search, the account
+  selected, and the Operators chip on even if it was off.
 - [ ] **Narrow window.** Below about 860px the two panes stack, with the
   chips wrapping rather than overflowing.
 
