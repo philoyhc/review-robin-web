@@ -47,7 +47,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from sqlalchemy import Engine, create_engine, event, insert, select, text  # noqa: E402
+from sqlalchemy import Engine, create_engine, event, func, insert, select, text  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 
 LOOPBACK = ("@127.0.0.1", "@localhost", "@/", "host=/")
@@ -365,13 +365,13 @@ def seed_accounts(args: argparse.Namespace) -> None:
     Admin → Accounts' own axis (``guide/admin_pages_refine.md`` Item 1).
 
     Every sign-in creates a ``users`` row, so a review of N participants
-    puts N rows on Accounts. This writes one per reviewer and reviewee
-    email in ``--session``, gives ``--history-share`` of them
+    puts N rows on Accounts. This writes one per reviewer, reviewee and
+    observer email in ``--session``, gives ``--history-share`` of them
     ``--audit-per-user`` audit rows (the saves and submits that make an
     account "No role" rather than "Unused"), and makes a few operators
     and admins, so every chip and every Session role has rows to find.
     """
-    from app.db.models import AuditEvent, Reviewee, Reviewer, User
+    from app.db.models import AuditEvent, Observer, Reviewee, Reviewer, User
 
     url = _database_url()
     engine = create_engine(url, future=True)
@@ -386,6 +386,10 @@ def seed_accounts(args: argparse.Namespace) -> None:
                 select(Reviewee.email_or_identifier).where(
                     Reviewee.session_id == args.session
                 )
+            ).scalars()
+        ) + list(
+            db.execute(
+                select(Observer.email).where(Observer.session_id == args.session)
             ).scalars()
         )
         known = set(db.execute(select(User.email)).scalars())
@@ -434,14 +438,17 @@ def seed_accounts(args: argparse.Namespace) -> None:
     )
 
 
-#: Accounts views worth timing: the default, every chip, a search, a
-#: Session role, the last page, and the redirect target an action lands on.
+#: Accounts views worth timing: the default, every chip, a search, each
+#: Session role and the last page. ``bench_accounts`` adds the redirect
+#: target an action lands on, which needs a real user id.
 ACCOUNTS_PAGES = (
     ("Accounts", ""),
     ("Accounts: all chips", "?show=operators&show=admins&show=no_role&show=unused"),
     ("Accounts: last page", "?show=operators&show=admins&show=no_role&show=unused&offset=99999"),
     ("Accounts: ?q=", "?show=operators&show=admins&show=no_role&show=unused&q=00500"),
     ("Accounts: role=reviewer", "?show=operators&show=admins&show=no_role&show=unused&role=reviewer"),
+    ("Accounts: role=reviewee", "?show=operators&show=admins&show=no_role&show=unused&role=reviewee"),
+    ("Accounts: role=observer", "?show=operators&show=admins&show=no_role&show=unused&role=observer"),
     ("Accounts: role=owner", "?show=operators&show=admins&show=no_role&show=unused&role=owner"),
 )
 
@@ -459,11 +466,15 @@ def bench_accounts(args: argparse.Namespace) -> None:
         ).scalar_one()
         user.is_sys_admin = True
         db.commit()
+        # An action's redirect: the oldest account, so the lookup of its
+        # chip and its page runs against the whole table.
+        oldest = db.execute(select(func.min(User.id))).scalar_one()
+    pages = (*ACCOUNTS_PAGES, ("Accounts: ?selected=", f"?selected={oldest}"))
     meter = _SqlMeter(engine)
     client = _client(engine, args.operator_email)
 
     print(f"{'page':26s} {'total':>9s} {'sql':>9s} {'python':>9s} {'queries':>8s} {'html':>9s}")
-    for label, query in ACCOUNTS_PAGES:
+    for label, query in pages:
         url = f"/operator/sys-admin/users{query}"
         first = client.get(url, follow_redirects=False)
         if first.status_code != 200:

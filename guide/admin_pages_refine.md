@@ -116,9 +116,13 @@ Taken 2026-10-14 at `871ba085`.
   the rendered rows (Codex on #3030).
 - **Rung 3** (2026-10-14): timed on local Postgres 16 with
   `tools/bench_roster_scale.py seed-accounts` / `bench-accounts` (20
-  audit rows for 60% of accounts), median of 5, at `a57ac950`: 1,000
-  accounts 25–40ms, 5,000 accounts 48–75ms, 8–9 queries for every view.
-  No fix needed: the one outlier, the Reviewer role filter at 478ms, was
+  audit rows for 60% of accounts), median of 5, re-taken at `5eb3a9e5`
+  once every Session role and the `?selected=` landing were in the list
+  (Codex on #3032): 1,200 accounts 44–65ms, 5,200 accounts 72–119ms,
+  8–9 queries a view and 12 for `?selected=`. The first run, at
+  `a57ac950` without those three views, measured 25–40ms and 48–75ms on
+  the same machine, so wall-clock drifts; compare query counts. No fix
+  needed: the one outlier, the Reviewer role filter at 478ms, was
   unanalyzed tables, and `seed-accounts` now runs `ANALYZE`.
 - **Reads**: one cumulative, from `adc01b08`, at rung 3. It found no
   blocker. Acted on in rung 3: a `?selected=` chip stays on, as if
