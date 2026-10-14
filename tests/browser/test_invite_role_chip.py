@@ -7,6 +7,7 @@ chip renders.
 
 from __future__ import annotations
 
+import re
 import uuid
 
 from playwright.sync_api import Page, expect
@@ -30,7 +31,8 @@ def test_the_cards_sit_side_by_side_at_one_height(page: Page) -> None:
     # Overview's pills hold labels, so they keep the labels' case rather
     # than the capitals other pills take.
     pill = overview.locator('[data-overview="super_admins"]')
-    expect(pill).to_have_text("1 super-admin")
+    # The count follows SUPER_ADMIN_EMAILS, which a local .env may set.
+    expect(pill).to_have_text(re.compile(r"^\d+ super-admins?$"))
     assert pill.evaluate("el => getComputedStyle(el).textTransform") == "none"
 
 

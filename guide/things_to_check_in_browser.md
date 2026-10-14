@@ -86,7 +86,7 @@ kind (invite some; sign in once as a new address for an Unused one).
 - [ ] **Narrow window.** Below about 860px the two panes stack, with the
   chips wrapping rather than overflowing.
 
-## Invite card half width, Overview stub (admin pages Item 3, rung 1)
+## Invite card half width, beside Overview (admin pages Item 3, rung 1)
 
 Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
 
