@@ -177,22 +177,24 @@ def test_a_refused_target_raises_without_skip_refused(db: Session) -> None:
 def test_skip_refused_skips_both_codes_and_adds_the_rest(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Both refusals come from the real ``add_owner``. ``taken`` is already
+    an owner that the starting owner list doesn't show, as when someone
+    else adds them between that read and the write."""
     alice = _user(db, "alice@example.edu")
     review_session = _owned_session(db, alice, "skip-on")
     gone = _user(db, "gone@example.edu", is_operator=False)
     taken = _user(db, "taken@example.edu")
     carl = _user(db, "carl@example.edu")
-    real = session_owners.add_owner
-
-    def add(db, *, review_session, actor, target, correlation_id=None):
-        if target.id == taken.id:  # someone else added them meanwhile
-            raise session_owners.OwnerOperationError("already_owner", "already")
-        return real(
-            db, review_session=review_session, actor=actor, target=target,
-            correlation_id=correlation_id,
-        )
-
-    monkeypatch.setattr(session_owners, "add_owner", add)
+    db.add(
+        SessionOperator(session_id=review_session.id, user_id=taken.id, role="owner")
+    )
+    db.flush()
+    real_list = session_owners.list_owners
+    monkeypatch.setattr(
+        session_owners,
+        "list_owners",
+        lambda db, rs: [row for row in real_list(db, rs) if row.user_id != taken.id],
+    )
     added, removed = session_owners.set_owners(
         db,
         review_session=review_session,
@@ -202,9 +204,13 @@ def test_skip_refused_skips_both_codes_and_adds_the_rest(
     )
     assert [u.email for u in added] == ["carl@example.edu"]
     assert removed == []
-    assert _owner_emails(db, review_session) == [
-        "alice@example.edu", "carl@example.edu"
-    ]
+    assert sorted(
+        db.execute(
+            select(User.email)
+            .join(SessionOperator, SessionOperator.user_id == User.id)
+            .where(SessionOperator.session_id == review_session.id)
+        ).scalars()
+    ) == ["alice@example.edu", "carl@example.edu", "taken@example.edu"]
 
 
 def test_skip_refused_still_raises_any_other_refusal(

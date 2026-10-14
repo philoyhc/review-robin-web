@@ -245,8 +245,9 @@ def test_an_owner_add_holds_off_a_revoke(
                 users_service.apply_batch(
                     revoking, actor=actor, action="revoke", user_ids=[bob_id]
                 )
-        # The revoke's own row lock is what waited, not its later UPDATE:
-        # counted before the lock, the count would miss the add.
+        # The revoke's own row lock is what waited, not its later UPDATE,
+        # so the revoke takes one. That it comes before the owner count is
+        # pinned by ``test_single_row_revoke_takes_the_batch_lock_before_counting``.
         assert "FOR NO KEY UPDATE" in str(waited.value.statement)
 
 

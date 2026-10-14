@@ -186,7 +186,7 @@ open work (`guide/deferred_consolidated.md`).
    `analyze_rehydrate_set` on the stashed set** (so an expired or altered
    stash fails safely), and — if still clean — re-reads the operator
    under the owner-add lock, bouncing to `/me` if they are no longer a
-   workspace operator (`spec/permissions.md` §4.2), runs the
+   workspace operator or sys-admin (`spec/permissions.md` §4.2), runs the
    reconstruction pipeline ([§6](#6-reconstruction-pipeline)) and
    redirects to the new Session Home.
 
