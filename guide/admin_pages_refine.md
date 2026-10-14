@@ -271,6 +271,19 @@ Taken 2026-10-14 at `871ba085`.
   buttons (author): `.confirm-label`'s top margin had pushed the confirm
   8px down, on every page's expander, so the fix is in the shared
   `.exp-confirm-label`.
+- **Rung 2** (2026-10-14): live. `users.apply_batch` takes an action
+  and the selected ids: it locks the rows (and, for Demote and Delete,
+  every sys-admin row) `FOR UPDATE` in id order, runs each row's
+  single-row guards plus `not_operator`, then `last_admin` and
+  `sole_owner` on the state after the batch (the owner rows of every
+  session the selection owns, locked in id order), and writes the same
+  events the single-row actions do under one correlation id. The
+  single-row functions now share its write helpers; their routes stay,
+  unused by the page. `POST …/users/bulk-<action>`; Delete needs
+  `confirm=true` (400). A refusal redirects with `toggle_error` and
+  `refused=<id>`, and the banner names the row from the view's own
+  reasons, never words from the URL. The toolbar, its script and the
+  `sys_admin_count` context are gone.
 
 ### PR ladder
 

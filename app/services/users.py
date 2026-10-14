@@ -37,7 +37,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth.roles import effective_super_admin_emails, is_super_admin
@@ -67,12 +67,16 @@ class UserOperationError(ValueError):
     """Raised when a workspace-role mutation violates an
     invariant. ``code`` is a stable machine identifier route
     handlers translate to HTTP status codes; ``message`` is the
-    human-readable explanation."""
+    human-readable explanation. ``user_id`` is the row a batch refusal
+    names (``apply_batch``), so the page can say which one."""
 
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(
+        self, code: str, message: str, user_id: int | None = None
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
+        self.user_id = user_id
 
 
 def _has_history(db: Session, user_id: int) -> bool:
@@ -160,6 +164,13 @@ def admit(
     correlation_id: str | None = None,
 ) -> None:
     _guard_self(actor, target)
+    _write_admit(db, actor, target, correlation_id)
+    db.commit()
+
+
+def _write_admit(
+    db: Session, actor: User, target: User, correlation_id: str | None
+) -> None:
     old = target.is_operator
     target.is_operator = True
     audit.write_event(
@@ -171,7 +182,6 @@ def admit(
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
-    db.commit()
 
 
 def revoke(
@@ -192,13 +202,23 @@ def revoke(
     """
     _guard_self(actor, target)
     _guard_target_not_super_admin(target, "revoked")
-    owned = int(
+    _guard_not_owner(db, target)
+    _write_revoke(db, actor, target, correlation_id)
+    db.commit()
+
+
+def _owned_count(db: Session, target: User) -> int:
+    return int(
         db.execute(
             select(func.count(SessionOperator.id)).where(
                 SessionOperator.user_id == target.id
             )
         ).scalar_one()
     )
+
+
+def _guard_not_owner(db: Session, target: User) -> None:
+    owned = _owned_count(db, target)
     if owned > 0:
         raise UserOperationError(
             code="still_owner",
@@ -209,6 +229,11 @@ def revoke(
                 "Use 'Remove from all sessions' first."
             ),
         )
+
+
+def _write_revoke(
+    db: Session, actor: User, target: User, correlation_id: str | None
+) -> None:
     old = target.is_operator
     target.is_operator = False
     audit.write_event(
@@ -220,7 +245,6 @@ def revoke(
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
-    db.commit()
 
 
 def promote(
@@ -232,6 +256,13 @@ def promote(
 ) -> None:
     _guard_self(actor, target)
     _guard_actor_super_admin(actor)
+    _write_promote(db, actor, target, correlation_id)
+    db.commit()
+
+
+def _write_promote(
+    db: Session, actor: User, target: User, correlation_id: str | None
+) -> None:
     old = target.is_sys_admin
     target.is_sys_admin = True
     audit.write_event(
@@ -243,7 +274,6 @@ def promote(
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
-    db.commit()
 
 
 def demote(
@@ -264,6 +294,13 @@ def demote(
                 "Promote another user to sys-admin before demoting this one."
             ),
         )
+    _write_demote(db, actor, target, correlation_id)
+    db.commit()
+
+
+def _write_demote(
+    db: Session, actor: User, target: User, correlation_id: str | None
+) -> None:
     old = target.is_sys_admin
     target.is_sys_admin = False
     audit.write_event(
@@ -275,7 +312,6 @@ def demote(
         refs={"target_user_id": target.id},
         correlation_id=correlation_id,
     )
-    db.commit()
 
 
 def remove_from_all_sessions(
@@ -335,7 +371,19 @@ def remove_from_all_sessions(
             ),
         )
 
-    deleted_session_ids = sorted(session_ids)
+    _write_detach(db, actor, target, rows, correlation_id)
+    db.commit()
+    return len(rows)
+
+
+def _write_detach(
+    db: Session,
+    actor: User,
+    target: User,
+    rows: list[SessionOperator],
+    correlation_id: str | None,
+) -> None:
+    deleted_session_ids = sorted(r.session_id for r in rows)
     for row in rows:
         db.delete(row)
     db.flush()
@@ -354,8 +402,6 @@ def remove_from_all_sessions(
         },
         correlation_id=correlation_id,
     )
-    db.commit()
-    return len(rows)
 
 
 def remove_user(
@@ -395,13 +441,13 @@ def remove_user(
                 "Promote another user to sys-admin before removing this one."
             ),
         )
-    owned = int(
-        db.execute(
-            select(func.count(SessionOperator.id)).where(
-                SessionOperator.user_id == target.id
-            )
-        ).scalar_one()
-    )
+    _guard_deletable(db, target)
+    _write_remove(db, actor, target, correlation_id)
+    db.commit()
+
+
+def _guard_deletable(db: Session, target: User) -> None:
+    owned = _owned_count(db, target)
     if owned > 0:
         raise UserOperationError(
             code="owns_sessions",
@@ -424,6 +470,10 @@ def remove_user(
             ),
         )
 
+
+def _write_remove(
+    db: Session, actor: User, target: User, correlation_id: str | None
+) -> None:
     snapshot = {
         "email": target.email,
         "is_operator": target.is_operator,
@@ -442,8 +492,218 @@ def remove_user(
         refs={"target_user_id": target_id},
         correlation_id=correlation_id,
     )
-    db.commit()
 
+
+
+#: The actions the Accounts row expander applies to a selection
+#: (admin_pages_refine Item 2), in the toolbar's order.
+BATCH_ACTIONS: tuple[str, ...] = (
+    "admit",
+    "revoke",
+    "remove_from_all_sessions",
+    "promote",
+    "demote",
+    "delete",
+)
+
+_SUPER_ADMIN_VERBS = {
+    "revoke": "revoked",
+    "remove_from_all_sessions": "removed from sessions",
+    "demote": "demoted",
+    "delete": "removed",
+}
+
+
+def apply_batch(
+    db: Session,
+    *,
+    actor: User,
+    action: str,
+    user_ids: list[int],
+    correlation_id: str | None = None,
+) -> int:
+    """Apply one Accounts action to several rows, all or nothing.
+
+    Each row takes the same guards its single-row action does, plus
+    ``not_operator`` refusing Promote on a row with no role. The guards
+    that count across rows judge the state **after** the batch, not one
+    row at a time: ``last_admin`` refuses a Demote or Delete that would
+    leave no sys-admin, however many admins it takes, and ``sole_owner``
+    refuses a Remove from all sessions that would leave a session with
+    no owner, however many of its co-owners are selected. What each
+    counts is locked first, in id order (the sys-admin rows; the owner
+    rows of every session the selection owns), so two batches can't
+    both pass the count and both commit.
+
+    The first refusal, in row-id order, refuses the batch and nothing
+    changes. Otherwise every row is changed and audited as its
+    single-row action would be, under one correlation id, and the
+    number of rows is returned.
+    """
+    if action not in BATCH_ACTIONS:
+        raise ValueError(f"unknown batch action {action!r}")
+    ids = sorted(set(user_ids))
+    if not ids:
+        raise UserOperationError(
+            code="empty_selection", message="Select at least one account."
+        )
+    if action in ("promote", "demote"):
+        _guard_actor_super_admin(actor)
+
+    # The admin count matters only to an action that can lower it, and
+    # then every admin row is locked with the selection, in one id-ordered
+    # statement so concurrent batches take the locks in the same order.
+    counts_admins = action in ("demote", "delete")
+    locked = list(
+        db.execute(
+            select(User)
+            .where(
+                or_(User.id.in_(ids), User.is_sys_admin.is_(True))
+                if counts_admins
+                else User.id.in_(ids)
+            )
+            .order_by(User.id)
+            .with_for_update()
+        ).scalars()
+    )
+    by_id = {user.id: user for user in locked}
+    missing = [user_id for user_id in ids if user_id not in by_id]
+    if missing:
+        raise UserOperationError(
+            code="not_found",
+            message=f"No account with id {missing[0]}.",
+        )
+    targets = [by_id[user_id] for user_id in ids]
+
+    for target in targets:
+        try:
+            _guard_row(db, actor, action, target)
+        except UserOperationError as exc:
+            exc.user_id = target.id
+            raise
+
+    if counts_admins:
+        _guard_admins_remain(action, locked, targets)
+
+    detached: dict[int, list[SessionOperator]] = {}
+    if action == "remove_from_all_sessions":
+        detached = _lock_and_check_owners(db, targets)
+
+    for target in targets:
+        if action == "admit":
+            _write_admit(db, actor, target, correlation_id)
+        elif action == "revoke":
+            _write_revoke(db, actor, target, correlation_id)
+        elif action == "promote":
+            _write_promote(db, actor, target, correlation_id)
+        elif action == "demote":
+            _write_demote(db, actor, target, correlation_id)
+        elif action == "remove_from_all_sessions":
+            # A row that owns nothing is a silent no-op, as on its own.
+            if detached.get(target.id):
+                _write_detach(db, actor, target, detached[target.id], correlation_id)
+        else:
+            _write_remove(db, actor, target, correlation_id)
+    db.commit()
+    return len(targets)
+
+
+def _guard_row(db: Session, actor: User, action: str, target: User) -> None:
+    """The guards one row takes in a batch: its single-row action's,
+    less the counts, which the batch judges as a whole."""
+    _guard_self(actor, target)
+    if action in _SUPER_ADMIN_VERBS:
+        _guard_target_not_super_admin(target, _SUPER_ADMIN_VERBS[action])
+    if action == "revoke":
+        _guard_not_owner(db, target)
+    elif action == "promote" and not (target.is_operator or target.is_sys_admin):
+        raise UserOperationError(
+            code="not_operator",
+            message=(
+                f"Refusing to promote {target.email}: they have no "
+                "role. Admit them as an operator first."
+            ),
+        )
+    elif action == "delete":
+        _guard_deletable(db, target)
+
+
+def _guard_admins_remain(
+    action: str, locked: list[User], targets: list[User]
+) -> None:
+    """``last_admin`` on the state after the batch."""
+    leaving = {target.id for target in targets if target.is_sys_admin}
+    if not leaving:
+        return
+    remaining = [
+        user for user in locked if user.is_sys_admin and user.id not in leaving
+    ]
+    if not remaining:
+        verb = "demote" if action == "demote" else "remove"
+        raise UserOperationError(
+            user_id=min(leaving),
+            code="last_admin",
+            message=(
+                f"Refusing to {verb} {len(leaving)} "
+                f"sys-admin{'s' if len(leaving) != 1 else ''}: that would "
+                "leave the workspace with none. Promote another user to "
+                "sys-admin first."
+            ),
+        )
+
+
+def _lock_and_check_owners(
+    db: Session, targets: list[User]
+) -> dict[int, list[SessionOperator]]:
+    """``sole_owner`` on the state after the batch: lock the owner rows of
+    every session a selected row owns, in id order, and refuse when a
+    session would be left with no owner. Returns each target's own rows,
+    for the write."""
+    target_ids = {target.id for target in targets}
+    session_ids = list(
+        db.execute(
+            select(SessionOperator.session_id)
+            .where(SessionOperator.user_id.in_(target_ids))
+            .distinct()
+        ).scalars()
+    )
+    if not session_ids:
+        return {}
+    owner_rows = list(
+        db.execute(
+            select(SessionOperator)
+            .where(SessionOperator.session_id.in_(session_ids))
+            .order_by(SessionOperator.id)
+            .with_for_update()
+        ).scalars()
+    )
+    staying: set[int] = set()
+    mine: dict[int, list[SessionOperator]] = {}
+    for row in owner_rows:
+        if row.user_id in target_ids:
+            mine.setdefault(row.user_id, []).append(row)
+        else:
+            staying.add(row.session_id)
+    orphaned = sorted(set(session_ids) - staying)
+    if orphaned:
+        by_id = {target.id: target for target in targets}
+        first = min(
+            row.user_id
+            for rows in mine.values()
+            for row in rows
+            if row.session_id == orphaned[0]
+        )
+        raise UserOperationError(
+            user_id=first,
+            code="sole_owner",
+            message=(
+                f"Refusing to detach {by_id[first].email}: removing the "
+                f"selected accounts would leave {len(orphaned)} "
+                f"session{'s' if len(orphaned) != 1 else ''} with no owner. "
+                "Add another owner to those sessions first."
+            ),
+        )
+    return mine
 
 def invite(
     db: Session,

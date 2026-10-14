@@ -134,3 +134,17 @@ Sys Admin → Accounts, with a few operators and an unused account.
 - [ ] **The toolbar.** It acts as before for one ticked row and greys out
   for two or more.
 
+## Accounts row expander live (admin pages Item 2, rung 2)
+
+Sys Admin → Accounts, with a few operators and an unused account.
+
+- [ ] **No toolbar.** Nothing sits above the table but the chips and the
+  filter strip; actions are only in the expander.
+- [ ] **One click, several rows.** Tick two operators, Revoke: both lose
+  the Operator pill and drop to Unused, and the chips and search stay.
+- [ ] **Delete's confirm.** Delete stays grey until "Yes, delete these"
+  is ticked.
+- [ ] **Refused whole.** Tick an unused account and a session owner,
+  confirm, Delete: a banner says "Nothing changed: … owns sessions",
+  naming the owner, and both rows are still there.
+

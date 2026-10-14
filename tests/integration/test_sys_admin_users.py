@@ -806,50 +806,26 @@ def test_remove_user_404s_on_missing_target(
 # --- Template render shape — post-15A button refinement ---------------------
 
 
-def test_workspace_users_page_renders_bulk_action_toolbar(
+def test_workspace_users_page_renders_the_row_expander_form(
     db: Session,
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The action surface is now a single bulk-action toolbar
-    above the table. Per-row buttons retired in favour of a
-    single-row checkbox-driven selection: one user picked at a
-    time drives whichever toolbar buttons are eligible.
-
-    Toolbar carries four action forms:
-    Operator: Admit / Revoke (one form) + Remove from all sessions,
-    Admin: Promote / Demote (one form), and Delete.
-
-    The Promote/Demote form is super-admin-only (Segment 18S), so the
-    actor here is a super-admin to see all four forms.
-    """
+    """admin_pages_refine Item 2 retired the single-row toolbar: the row
+    checkboxes join one bulk form, and the expander the page's script
+    builds posts it to a ``bulk-<action>`` route."""
     _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
-    _seed_target(db, email="bob@example.edu", is_operator=True)
+    bob = _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
-    # Toolbar exists.
-    assert 'id="user-actions"' in body
-    # Four action forms wired with the right markers.
-    assert 'data-action-form="operator-toggle"' in body
-    assert 'data-action-form="remove-sessions"' in body
-    assert 'data-action-form="sys-admin-toggle"' in body
-    assert 'data-action-form="delete"' in body
-    # Per-row checkbox replaces the inline button cluster.
-    assert 'class="user-row-select"' in body
-    # All toolbar buttons start ``disabled`` (no row selected yet).
-    assert 'data-action-btn="operator-toggle"' in body
-    assert 'data-action-btn="remove-sessions"' in body
-    assert 'data-action-btn="sys-admin-toggle"' in body
-    assert 'data-action-btn="delete"' in body
-    # No safety checkbox; no inline per-row Revoke/Promote/Delete buttons.
-    assert 'name="confirm"' not in body
-    assert 'type="submit">Revoke<' not in body
-    assert 'type="submit">Promote<' not in body
-    # Per-row data attributes for the JS gates.
-    assert 'data-is-operator="true"' in body
-    assert 'data-is-sys-admin="false"' in body
-    assert 'data-session-count="0"' in body
-    assert 'data-sole-owner-count="0"' in body
-    assert 'data-has-history="false"' in body
+    assert 'id="user-actions"' not in body
+    assert 'data-action-form=' not in body
+    assert 'id="users-bulk-form"' in body
+    row = body.split(f'data-user-id="{bob.id}"', 1)[1].split("</tr>", 1)[0]
+    assert f'name="user_ids" value="{bob.id}"' in row
+    assert 'form="users-bulk-form"' in row
+    # The expander reads these to choose its controls.
+    assert 'data-category="operators"' in row
+    assert 'data-is-super-admin="false"' in row
 
 
 def test_invite_card_renders_secondary_buttons_disabled_by_default(
@@ -1067,21 +1043,6 @@ def test_remove_user_redirects_without_selection(
     )
     assert response.status_code == 303
     assert response.headers["location"] == "/operator/sys-admin/users"
-
-
-def test_toolbar_left_aligned(
-    db: Session,
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Toolbar sits flush-left so the four buttons cluster next
-    to the row-selection checkboxes (which live in the leftmost
-    column)."""
-    _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    _seed_target(db, email="bob@example.edu", is_operator=True)
-    body = client.get("/operator/sys-admin/users").text
-    assert "justify-content:flex-start" in body
-    assert "justify-content:flex-end" not in body
 
 
 # --------------------------------------------------------------------------- #
@@ -1374,17 +1335,14 @@ def test_promote_demote_controls_hidden_for_plain_sys_admin_actor(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A plain sys-admin actor doesn't see the Promote/Demote form when
-    a super tier is configured (admin management is super-admin-only).
-    Operator + delete forms still render."""
+    """A plain sys-admin actor gets no Promote/Demote in the expander
+    when a super tier is configured (admin management is
+    super-admin-only): the table tells the expander's script so."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
     monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
-    assert 'data-action-form="sys-admin-toggle"' not in body
-    # But operator management + delete remain.
-    assert 'data-action-form="operator-toggle"' in body
-    assert 'data-action-form="delete"' in body
+    assert 'data-can-manage-admins="false"' in body
 
 
 def test_promote_demote_controls_visible_for_super_admin_actor(
@@ -1395,7 +1353,7 @@ def test_promote_demote_controls_visible_for_super_admin_actor(
     _bootstrap_super_admin(monkeypatch, email="alice@example.edu")
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
-    assert 'data-action-form="sys-admin-toggle"' in body
+    assert 'data-can-manage-admins="true"' in body
 
 
 def test_chrome_shows_super_admin_suffix(
@@ -1480,4 +1438,4 @@ def test_promote_demote_controls_visible_to_plain_admin_when_no_super_tier(
     monkeypatch.setattr(settings, "super_admin_emails", [])
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
-    assert 'data-action-form="sys-admin-toggle"' in body
+    assert 'data-can-manage-admins="true"' in body

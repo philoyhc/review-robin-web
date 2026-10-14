@@ -435,19 +435,7 @@ def test_an_offset_int_refuses_is_dropped_not_a_500(
     assert "offset" not in query
 
 
-def test_the_demote_gate_counts_admins_across_the_workspace(
-    workspace: dict[str, User], client: TestClient
-) -> None:
-    """A search showing one admin must not read as "the last admin": the
-    service's ``last_admin`` guard counts the workspace, so the page's
-    Demote gate gets the same count (Codex on #3030)."""
-    body = client.get(f"{ACCOUNTS}?q=carol").text
-    assert _emails(body) == {"carol@example.edu"}
-    toolbar = body.split('id="user-actions"', 1)[1].split(">", 1)[0]
-    assert 'data-sys-admin-count="2"' in toolbar
-
-
-# --- Row expander scaffold (Item 2 rung 1) ----------------------------------
+# --- Row expander (Item 2) --------------------------------------------------
 
 
 def test_each_row_carries_its_chip_for_the_expander(

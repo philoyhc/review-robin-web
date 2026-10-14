@@ -1,12 +1,13 @@
 """Sys Admin → Accounts: several rows can be ticked and the selection
-drives a row expander (guide/admin_pages_refine.md Item 2, rung 1, the
-scaffold). Its controls follow the selected rows' chips and are inert;
-the toolbar above stays live for one selected row.
+drives a row expander (guide/admin_pages_refine.md Item 2). Its controls
+follow the selected rows' chips and act on every selected row, all or
+nothing; the single-row toolbar is retired.
 """
 
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 
 import httpx
 from playwright.sync_api import Page, expect
@@ -54,7 +55,7 @@ def _setup(page: Page, api: httpx.Client) -> tuple[str, str, str]:
     return first, second, unused
 
 
-def test_two_operators_open_an_inert_expander_and_disable_the_toolbar(
+def test_two_operators_open_the_expander(
     page: Page, api: httpx.Client
 ) -> None:
     first, second, _ = _setup(page, api)
@@ -71,17 +72,20 @@ def test_two_operators_open_an_inert_expander_and_disable_the_toolbar(
     assert expander.locator(".row-expander-group > .muted").all_inner_texts() == [
         "Operator:", "Admin:", "|",
     ]
-    for button in expander.locator("[data-expander-action]").all():
-        expect(button).to_be_disabled()
-    expect(expander.locator(".exp-confirm-label input")).to_be_disabled()
+    for name in ("Revoke", "Remove from all sessions", "Promote"):
+        expect(expander.locator(f'[data-expander-action="{name}"]')).to_be_enabled()
+    # Delete waits for its confirm.
+    delete = expander.locator('[data-expander-action="Delete"]')
+    expect(delete).to_be_disabled()
+    expander.locator(".exp-confirm-label input").check()
+    expect(delete).to_be_enabled()
     # Anchored after the most recently ticked row.
     anchor = page.locator(f'tr[data-user-id]:has(code:text-is("{second}"))')
     expect(anchor.locator("xpath=following-sibling::tr[1]")).to_have_id(
         "users-row-expander"
     )
-    # The toolbar acts on one row only.
-    expect(page.locator('[data-action-btn="operator-toggle"]')).to_be_disabled()
-    expect(page.locator('[data-action-btn="delete"]')).to_be_disabled()
+    # The toolbar is gone.
+    expect(page.locator("#user-actions")).to_have_count(0)
 
 
 def test_a_mixed_selection_shows_only_what_applies_to_every_row(
@@ -97,14 +101,11 @@ def test_a_mixed_selection_shows_only_what_applies_to_every_row(
     ).all_inner_texts() == ["Operator:", "|"]
 
 
-def test_one_row_keeps_the_toolbar_live(page: Page, api: httpx.Client) -> None:
+def test_one_unused_row_offers_admit(page: Page, api: httpx.Client) -> None:
     _, _, unused = _setup(page, api)
     _tick(page, unused)
     expect(page.locator("#users-row-expander")).to_contain_text("1 of 3 selected")
     assert _expander_actions(page) == ["Admit", "Remove from all sessions", "Delete"]
-    toggle = page.locator('[data-action-btn="operator-toggle"]')
-    expect(toggle).to_be_enabled()
-    expect(toggle).to_have_text("Admit")
 
 
 def test_select_all_is_tri_state_and_clearing_removes_the_expander(
@@ -112,15 +113,10 @@ def test_select_all_is_tri_state_and_clearing_removes_the_expander(
 ) -> None:
     first, _, _ = _setup(page, api)
     select_all = page.locator("#users-select-all")
-    # From one row ticked, the toolbar is live; select-all must leave it
-    # disabled, which needs the toolbar to read the rows after the
-    # select-all has ticked them.
     _tick(page, first)
-    expect(page.locator('[data-action-btn="operator-toggle"]')).to_be_enabled()
     select_all.check()
     expect(page.locator(".user-row-select:checked")).to_have_count(3)
     expect(page.locator("#users-row-expander")).to_contain_text("3 of 3 selected")
-    expect(page.locator('[data-action-btn="operator-toggle"]')).to_be_disabled()
 
     page.locator(
         f'tr[data-user-id]:has(code:text-is("{first}")) .user-row-select'
@@ -192,4 +188,50 @@ def test_a_wrapping_confirm_keeps_its_tick_by_the_first_line(page: Page) -> None
     offset, height = top
     assert height > 40, height  # it wrapped
     assert offset < 10, offset  # the tick stays by the first line
+
+
+def _operator_cell(page: Page, email: str):
+    return page.locator(f'tr[data-user-id]:has(code:text-is("{email}")) td').nth(4)
+
+
+def test_revoking_two_operators_is_one_click(page: Page, api: httpx.Client) -> None:
+    first, second, _ = _setup(page, api)
+    _tick(page, first)
+    _tick(page, second)
+    with page.expect_navigation():
+        page.locator('#users-row-expander [data-expander-action="Revoke"]').click()
+    # Both lost the flag, so both now sit under Unused, which is on.
+    expect(_operator_cell(page, first)).to_have_text("no")
+    expect(_operator_cell(page, second)).to_have_text("no")
+    expect(page.locator('[role="alert"]')).to_have_count(0)
+    # The view came back: the chips and the search.
+    assert "show=unused" in page.url and "q=exp-" in page.url
+
+
+def test_a_mixed_delete_is_refused_whole_and_says_why(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """The DoD's refused mixed Delete: an unused account and an operator
+    who co-owns a session. The owner refuses the batch, so the unused
+    account stays too, and the banner names the owner."""
+    first, _, unused = _setup(page, api)
+    session_id = new_session()
+    response = api.post(
+        f"/operator/sessions/{session_id}/owners/add",
+        data={"target_email": first},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    page.reload()
+
+    _tick(page, first)
+    _tick(page, unused)
+    page.locator("#users-row-expander .exp-confirm-label input").check()
+    with page.expect_navigation():
+        page.locator('#users-row-expander [data-expander-action="Delete"]').click()
+    expect(page.locator('[role="alert"]')).to_contain_text(
+        f"Nothing changed: {first} owns sessions"
+    )
+    expect(page.locator(f'tr[data-user-id]:has(code:text-is("{unused}"))')).to_have_count(1)
+    expect(page.locator(f'tr[data-user-id]:has(code:text-is("{first}"))')).to_have_count(1)
 

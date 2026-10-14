@@ -21,6 +21,7 @@ __all__ = [
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
     "AccountView",
+    "account_refusal_message",
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
@@ -149,3 +150,31 @@ def build_account_chips(
         )
         for key, label, _ in ACCOUNT_CATEGORIES
     ]
+
+
+#: Why a batch was refused, by ``UserOperationError.code``: the reason
+#: the page names beside the row (admin_pages_refine Item 2). Written
+#: here rather than carried in the URL, so a link can't put other words
+#: on the page.
+_REFUSAL_REASONS: dict[str, str] = {
+    "still_owner": "{email} still owns sessions; remove them from all sessions first",
+    "not_operator": "{email} has no role; admit them before promoting",
+    "protected_super_admin": "{email} is a protected super-admin, set only in config",
+    "owns_sessions": "{email} owns sessions",
+    "has_history": (
+        "{email} has created a session or acted in the audit log; only "
+        "accounts with no activity can be deleted"
+    ),
+    "last_admin": "that would leave the workspace with no sys-admin",
+    "sole_owner": "a session {email} owns would be left with no owner",
+}
+
+
+def account_refusal_message(code: str, email: str | None) -> str:
+    """The banner for a refused action: nothing changed, and why, naming
+    the row when there is one."""
+    reason = _REFUSAL_REASONS.get(code)
+    if reason is None or ("{email}" in reason and not email):
+        return f"Couldn't apply that change ({code})."
+    return f"Nothing changed: {reason.format(email=email)}."
+
