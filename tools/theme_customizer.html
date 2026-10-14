@@ -1771,6 +1771,13 @@
         margin-right: auto;
         align-self: flex-start;
       }
+      /* A button pair on the row keeps the row's 12px spacing, and if a
+         narrow card ever splits the pair, its second button stays flush
+         right rather than falling to the left. */
+      body.ui-v2 .card-action-row > .btn-pair {
+        gap: 12px;
+        justify-content: flex-end;
+      }
       #danger-zone button.btn { width: 200px; }
       @media (max-width: 800px) {
         .page-grid { grid-template-columns: 1fr; }

@@ -69,6 +69,8 @@ def test_the_chip_sits_top_left_and_the_buttons_right(page: Page) -> None:
     assert chip["x"] + chip["width"] < cancel["x"] < invite["x"]
     # Flush right: Invite ends where the email box does.
     assert abs((invite["x"] + invite["width"]) - (email["x"] + email["width"])) < 1
+    # The row's own 12px between the buttons, not the pair's 16px.
+    assert abs(invite["x"] - (cancel["x"] + cancel["width"]) - 12) < 1
 
 
 def test_a_narrow_card_wraps_the_buttons_together(page: Page) -> None:
