@@ -314,9 +314,18 @@
       {# `.table-scroll` (base.html): a table wider than its card
          scrolls inside the card rather than pushing the page sideways. #}
       <div class="table-scroll">
-      <table id="users-table">
+      {# admin_pages_refine Item 2 rung 1 — several rows can be ticked,
+         and the selection drives a row expander (the roster pages' idiom,
+         `spec/setup_pages.md` § *The row expander*). The expander is a
+         scaffold: its controls are inert until rung 2, and the toolbar
+         above stays live for a single selected row. #}
+      <table id="users-table"
+             data-can-manage-admins="{{ 'true' if can_manage_admins else 'false' }}">
         <tr>
-          <th class="col-shrink"></th>
+          <th class="col-shrink">
+            <input type="checkbox" id="users-select-all"
+                   aria-label="Select every account on this page">
+          </th>
           <th>Email</th>
           <th>Name</th>
           <th>First sign-in</th>
@@ -333,7 +342,9 @@
               data-is-super-admin="{{ 'true' if row.is_super_admin else 'false' }}"
               data-session-count="{{ row.session_operator_count }}"
               data-sole-owner-count="{{ row.sole_owner_count }}"
-              data-has-history="{{ 'true' if row.has_history else 'false' }}">
+              data-has-history="{{ 'true' if row.has_history else 'false' }}"
+              data-category="{{ row.category }}"
+              id="user-row-{{ row.id }}">
             <td class="col-shrink">
               {% if is_self %}
                 <span class="muted" title="You can't act on your own row">(self)</span>
@@ -405,21 +416,19 @@
 
           var checkboxes = table.querySelectorAll(".user-row-select");
 
+          // The toolbar acts on exactly one row. Several can be ticked
+          // now (Item 2 rung 1), for the row expander; until its
+          // controls go live, a selection of two or more leaves the
+          // toolbar disabled rather than acting on one of them.
           function selectedRow() {
+            var picked = null;
             for (var i = 0; i < checkboxes.length; i++) {
               if (checkboxes[i].checked) {
-                return checkboxes[i].closest("tr[data-user-id]");
+                if (picked) return null;
+                picked = checkboxes[i].closest("tr[data-user-id]");
               }
             }
-            return null;
-          }
-
-          function setOtherCheckboxesDisabled(disabled) {
-            checkboxes.forEach(function (cb) {
-              if (!cb.checked) {
-                cb.disabled = disabled;
-              }
-            });
+            return picked;
           }
 
           function setupButton(name, action, label) {
@@ -447,7 +456,6 @@
 
           function refresh() {
             var row = selectedRow();
-            setOtherCheckboxesDisabled(row !== null);
 
             if (!row) {
               setupButton("operator-toggle", null, "Admit");
@@ -556,17 +564,142 @@
             );
           }
 
-          checkboxes.forEach(function (cb) {
-            cb.addEventListener("change", function () {
-              if (cb.checked) {
-                // Single-selection: uncheck any other row.
-                checkboxes.forEach(function (other) {
-                  if (other !== cb) other.checked = false;
-                });
-              }
-              refresh();
-            });
+          // Delegated, to see the select-all as well as the rows. The
+          // select-all ticks the rows in the expander script's handler,
+          // which runs after this one, so read the selection a tick later.
+          document.addEventListener("change", function (e) {
+            var t = e.target;
+            if (t && (t.id === "users-select-all" ||
+                      (t.classList && t.classList.contains("user-row-select")))) {
+              setTimeout(refresh, 0);
+            }
           });
+          refresh();
+        })();
+      </script>
+      <script>
+        (function () {
+          // admin_pages_refine Item 2 rung 1 — the row expander, inert.
+          // Built from the selection on every change, anchored after the
+          // most recently ticked row still selected (the roster pages'
+          // rule). It shows the count and only the controls that apply
+          // to every selected row, by the row's chip:
+          //   Operators       Revoke, Promote
+          //   Admins          Demote (never a super-admin)
+          //   No role, Unused Admit
+          // Promote and Demote need can_manage_admins. Remove from all
+          // sessions and Delete apply to any row but a super-admin, which
+          // config owns; their other gates are the server's, which judges
+          // the whole batch in rung 2.
+          var table = document.getElementById("users-table");
+          var selectAll = document.getElementById("users-select-all");
+          if (!table) return;
+          var canManageAdmins =
+            table.getAttribute("data-can-manage-admins") === "true";
+          var tickOrder = [];
+          var panel = null;
+
+          function boxes() {
+            return Array.prototype.slice.call(
+              table.querySelectorAll(".user-row-select"));
+          }
+          function selectedRows() {
+            return boxes().filter(function (box) { return box.checked; })
+              .map(function (box) { return box.closest("tr[data-user-id]"); });
+          }
+          function currentAnchor() {
+            for (var i = tickOrder.length - 1; i >= 0; i--) {
+              var row = document.getElementById(tickOrder[i]);
+              var box = row && row.querySelector(".user-row-select");
+              if (box && box.checked) return row;
+            }
+            return null;
+          }
+          function every(sel, test) {
+            return sel.length > 0 && sel.every(test);
+          }
+          function category(row) { return row.getAttribute("data-category"); }
+          function isSuper(row) {
+            return row.getAttribute("data-is-super-admin") === "true";
+          }
+          function controls(sel) {
+            var out = [];
+            if (every(sel, function (r) {
+              return category(r) === "no_role" || category(r) === "unused";
+            })) out.push(["Admit", "secondary"]);
+            if (every(sel, function (r) { return category(r) === "operators"; })) {
+              out.push(["Revoke", "secondary"]);
+              if (canManageAdmins) out.push(["Promote", "secondary"]);
+            }
+            if (canManageAdmins && every(sel, function (r) {
+              return category(r) === "admins" && !isSuper(r);
+            })) out.push(["Demote", "secondary"]);
+            if (!sel.some(isSuper)) {
+              out.push(["Remove from all sessions", "secondary"]);
+              out.push(["Delete", "destructive"]);
+            }
+            return out;
+          }
+          function buildPanel(sel) {
+            var tr = document.createElement("tr");
+            tr.className = "session-expander session-expander-bracketed";
+            tr.id = "users-row-expander";
+            var td = document.createElement("td");
+            td.colSpan = table.rows[0].cells.length;
+            var acts = controls(sel);
+            var html =
+              '<div class="row-expander-body">' +
+                '<span class="row-expander-count"><strong>' + sel.length +
+                "</strong> of " + boxes().length + " selected</span>";
+            if (acts.some(function (a) { return a[0] === "Delete"; })) {
+              html += '<label class="confirm-label exp-confirm-label">' +
+                '<input type="checkbox" disabled> Yes, delete these</label>';
+            }
+            html += '<span class="row-expander-actions">';
+            acts.forEach(function (a) {
+              html += '<button type="button" class="btn ' + a[1] + '"' +
+                ' data-expander-action="' + a[0] + '"' +
+                ' disabled aria-disabled="true">' + a[0] + "</button>";
+            });
+            html += "</span></div>";
+            td.innerHTML = html;
+            tr.appendChild(td);
+            return tr;
+          }
+          function refresh() {
+            if (panel) { panel.remove(); panel = null; }
+            boxes().forEach(function (box) {
+              box.closest("tr").classList.toggle("session-row-selected", box.checked);
+            });
+            var sel = selectedRows();
+            if (selectAll) {
+              selectAll.checked = sel.length > 0 && sel.length === boxes().length;
+              selectAll.indeterminate = sel.length > 0 && sel.length < boxes().length;
+            }
+            if (!sel.length) return;
+            panel = buildPanel(sel);
+            (currentAnchor() || sel[sel.length - 1])
+              .insertAdjacentElement("afterend", panel);
+          }
+
+          document.addEventListener("change", function (e) {
+            var t = e.target;
+            if (!t) return;
+            if (t === selectAll) {
+              boxes().forEach(function (box) { box.checked = selectAll.checked; });
+              tickOrder = selectAll.checked
+                ? selectedRows().map(function (row) { return row.id; }) : [];
+              refresh();
+            } else if (t.classList && t.classList.contains("user-row-select")) {
+              var row = t.closest("tr[data-user-id]");
+              tickOrder = tickOrder.filter(function (id) { return id !== row.id; });
+              if (t.checked) tickOrder.push(row.id);
+              refresh();
+            }
+          });
+          // A selection can arrive made: an action's redirect ticks its
+          // row (`?selected=`).
+          selectedRows().forEach(function (row) { tickOrder.push(row.id); });
           refresh();
         })();
       </script>
