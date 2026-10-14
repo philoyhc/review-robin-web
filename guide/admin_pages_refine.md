@@ -253,49 +253,44 @@ Taken 2026-10-14 at `871ba085`.
 
 ### Status
 
-- **Rung 1** (2026-10-14): the scaffold. The item's cumulative read diffs
-  from `4e770037`. Several rows tick, with a tri-state select-all; the
-  expander renders under the most recently ticked row with the count and
-  inert controls. The toolbar stays live for exactly one row and disables
-  for two or more. Each row carries its chip (`data-category`, from the
-  same SQL rule), which picks the controls. Decided at build: Remove from
-  all sessions and Delete render for any selection without a
-  super-admin, their other gates left to the server's batch refusal,
-  since the DoD's "refused mixed Delete" needs Delete to submit.
-- **Rung 1a** (2026-10-14, author): bare "Revoke" / "Promote" read
-  ambiguously, so the expander groups its buttons as the toolbar does —
-  "Operator:" (Admit / Revoke, Remove from all sessions), "Admin:"
-  (Promote / Demote), "|" Delete — each label only when its group has a
-  button. `.row-expander-actions.is-labelled` centers the labels.
-  The count and the "Yes, delete these" confirm sit on one line with the
-  buttons (author): `.confirm-label`'s top margin had pushed the confirm
-  8px down, on every page's expander, so the fix is in the shared
-  `.exp-confirm-label`.
-- **Rung 2** (2026-10-14): live. `users.apply_batch` takes an action
-  and the selected ids: it locks the rows (and, for Demote and Delete,
-  every sys-admin row) in id order, runs each row's
-  single-row guards plus `not_operator`, then `last_admin` and
-  `sole_owner` on the state after the batch (the owner rows of every
-  session the selection owns, locked in id order), and writes the same
-  events the single-row actions do under one correlation id. The
-  single-row functions now share its write helpers; their routes stay,
-  unused by the page. `POST …/users/bulk-<action>`; Delete needs
-  `confirm=true` (400). A refusal redirects with `toggle_error` and
-  `refused=<id>`, and the banner names the row from the view's own
-  reasons, never words from the URL. The toolbar, its script and the
-  `sys_admin_count` context are gone.
-- **Reads** (three, the first cumulative from `4e770037`; none found a
-  blocker). First: an unknown `toggle_error` was echoed into the banner,
-  now a fixed sentence; the user-row lock is `FOR NO KEY UPDATE` (the
-  mode `session_guard` takes) except for Delete, since a full lock could
-  deadlock a bulk Remove from all sessions against
-  `session_owners.remove_owner`; Revoke and Remove from all sessions
-  keep the toolbar's per-row gates; stale browser-check lines. Its
-  `.exp-confirm-label` centering flag was #3036's Codex fix already.
-  Second: Remove from all sessions also keeps the toolbar's sole-owner
-  gate (only Delete renders for a row it can't act on, for the DoD's
-  mixed Delete), and the lock gained a Postgres-compiled test. Third:
-  wording, a docstring, and every narrow-lock action pinned.
+Closed 2026-10-14: #3035 (rung 1), #3036 (rung 1a), #3037 (rung 2 and
+the close). Built as planned except where noted below: rung 1a's
+grouping, and Delete rendering for rows the server refuses, against the
+Decision's "only actionable controls render". The expander's controls
+and the batch service are specified in `spec/permissions.md` §4.1 and
+`spec/operator_button_audit.md` §19.
+
+- **Rung 1a** (author, unplanned): bare "Revoke" / "Promote" read
+  ambiguously, so the expander groups its buttons as the toolbar did,
+  under "Operator:", "Admin:" and "|", each in a `.row-expander-group`
+  that wraps whole. The confirm sits on the count's line on every page's
+  expander (`.confirm-label.exp-confirm-label`, margin only, so a
+  wrapped confirm keeps its tick by the first line; Codex on #3036).
+- **Decided at build.** Each row carries its chip (`data-category`, from
+  the same SQL rule). Every control but Delete renders only for rows it
+  can act on, keeping the toolbar's gates (Revoke: no sessions; Remove
+  from all sessions: some, and sole owner of none). Delete renders for
+  any selection without a super-admin and leaves sessions and history to
+  the server, since the DoD's refused mixed Delete has to submit. The
+  user-row lock is `FOR NO KEY UPDATE`, Delete alone `FOR UPDATE`: a
+  full lock could deadlock a bulk Remove from all sessions against
+  `session_owners.remove_owner`. A refusal's banner text comes from the
+  view's table by code; an unknown code gets a fixed sentence, never URL
+  text.
+- **Spec-writer at the close** found four places the code goes beyond
+  or beside the plan's words, all kept: Delete can render for a row the
+  server will refuse (above); a `last_admin` refusal names no email,
+  since no one row is to blame; a set-level refusal's `refused=` names
+  the first involved row in id order; the six single-row POST routes
+  stay, unused by the page.
+- **Reads**: five. One cumulative from `4e770037` at rung 2, then one on
+  each round of fixes. None found a blocker. The first found URL text
+  echoed in the fallback banner, the deadlock-prone full lock, and
+  controls the server always refuses; the second the missing sole-owner
+  gate and an untested lock (now compiled for Postgres in
+  `tests/unit/test_account_batch_lock.py`); the last three, wording.
+- **Moved scope.** The close pass touched five specs the plan didn't
+  name (bullets added below).
 
 ### PR ladder
 
@@ -327,12 +322,23 @@ Taken 2026-10-14 at `871ba085`.
 - The single-row `demote` and `remove_from_all_sessions` count without a
   lock today, so two concurrent single-row actions can race the same
   way. It predates this plan; fixing it is its own change.
+- An owner added while a revoke of that user commits (Codex on #3037,
+  after the merge): `session_owners.add_owner` reads `is_operator`
+  unlocked, and its insert's foreign-key `FOR KEY SHARE` passes any
+  user-row lock the revoke holds, so both commit. It predates this
+  plan; the fix is a `FOR SHARE` lock in the owner-add paths, put to
+  the author.
 
 ### Doc impact
 
 - `spec/permissions.md` — §4.1 states the bulk actions, their all-or-nothing guards and the locks (Item 2).
 - `spec/operator_button_audit.md` — the toolbar rows become expander rows (Item 2).
 - `docs/security_posture.md` — the Accounts row no longer says "a single selected row" (Item 2).
+- `spec/operator_ui_concept.md` — §6's Accounts entry gains *Selection and the row expander*; added at the close (Item 2).
+- `spec/rrw_functional_spec.md` — §9.14's Accounts line says rows act together, all or nothing; added at the close (Item 2).
+- `spec/settings_inventory.md` — `?selected=` is one-row, non-Delete only; `?toggle_error=` + `?refused=` added; added at the close (Item 2).
+- `spec/setup_pages.md` — "The row expander" notes Accounts uses it; added at the close (Item 2).
+- `spec/ui_elements.md` — the expander rows list `.is-labelled`, `.row-expander-group` and `.exp-confirm-label`, and the scoped-rule and funnel notes name Accounts; added at the close (Item 2).
 
 ---
 
