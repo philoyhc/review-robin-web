@@ -111,6 +111,14 @@ Taken 2026-10-14 at `871ba085`.
   "every chip off" distinct from the default; `Clear` keeps the chips;
   the count line shows only when one page holds everything, since the
   pager stays under a filter; a `?selected=` row lands on its own page.
+  The Demote gate takes the workspace admin count from the server, not
+  the rendered rows (Codex on #3030).
+- **Rung 3** (2026-10-14): timed on local Postgres 16 with
+  `tools/bench_roster_scale.py seed-accounts` / `bench-accounts` (20
+  audit rows for 60% of accounts), median of 5, at `a57ac950`: 1,000
+  accounts 25–40ms, 5,000 accounts 48–75ms, 8–9 queries for every view.
+  No fix needed: the one outlier, the Reviewer role filter at 478ms, was
+  unanalyzed tables, and `seed-accounts` now runs `ANALYZE`.
 
 ### PR ladder
 

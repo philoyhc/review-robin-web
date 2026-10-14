@@ -7,8 +7,10 @@ chips. The fake operator is an admin, so the page is reachable.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from urllib.parse import parse_qs, urlsplit
 
+import httpx
 from playwright.sync_api import Page, expect
 
 ACCOUNTS = "/operator/sys-admin/users"
@@ -66,3 +68,47 @@ def test_every_chip_off_survives_the_round_trip(page: Page) -> None:
     expect(page.get_by_text("No accounts match the chips above.")).to_be_visible()
     page.reload()
     expect(page.get_by_text("No accounts match the chips above.")).to_be_visible()
+
+
+def test_the_role_dropdown_and_the_pager(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """Session role narrows on Search; the pager pages a filtered list and
+    carries the filter (admin_pages_refine Item 1 rung 3)."""
+    new_session()  # the fake operator owns a session
+    token = uuid.uuid4().hex[:8]
+    # 201 accounts with no role, through the sign-in that creates them;
+    # Unused is off by default, so no other test sees them.
+    for n in range(201):
+        email = f"pager-{token}-{n:03d}@example.edu"
+        response = api.get(
+            "/me",
+            headers={
+                "X-MS-CLIENT-PRINCIPAL-NAME": email,
+                "X-MS-CLIENT-PRINCIPAL-ID": f"browser-{email}",
+            },
+        )
+        assert response.status_code == 200, response.text
+
+    page.goto(ACCOUNTS)
+    page.select_option('#accounts-filter select[name="role"]', "owner")
+    with page.expect_navigation():
+        page.click('#accounts-filter button[type="submit"]')
+    assert _query(page)["role"] == ["owner"]
+    expect(page.locator("#users-table")).to_contain_text("operator@example.edu")
+    expect(
+        page.locator('#accounts-filter select[name="role"]')
+    ).to_have_value("owner")
+
+    page.goto(f"{ACCOUNTS}?show=unused&q=pager-{token}")
+    rows = page.locator("#users-table tr[data-user-id]")
+    expect(rows).to_have_count(200)
+    pager = page.locator(".table-pager-cluster").first
+    expect(pager.locator("summary")).to_have_text("1–200")
+    with page.expect_navigation():
+        pager.get_by_label("Next rows").click()
+    expect(rows).to_have_count(1)
+    query = _query(page)
+    assert query["q"] == [f"pager-{token}"]
+    assert query["show"] == ["unused"]
+    assert query["offset"] == ["200"]

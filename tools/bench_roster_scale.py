@@ -47,7 +47,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from sqlalchemy import Engine, create_engine, event, insert, select  # noqa: E402
+from sqlalchemy import Engine, create_engine, event, insert, select, text  # noqa: E402
 from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
 
 LOOPBACK = ("@127.0.0.1", "@localhost", "@/", "host=/")
@@ -360,6 +360,133 @@ def seed_lobby(args: argparse.Namespace) -> None:
     )
 
 
+def seed_accounts(args: argparse.Namespace) -> None:
+    """A ``users`` row for every roster email in a seeded session — Sys
+    Admin → Accounts' own axis (``guide/admin_pages_refine.md`` Item 1).
+
+    Every sign-in creates a ``users`` row, so a review of N participants
+    puts N rows on Accounts. This writes one per reviewer and reviewee
+    email in ``--session``, gives ``--history-share`` of them
+    ``--audit-per-user`` audit rows (the saves and submits that make an
+    account "No role" rather than "Unused"), and makes a few operators
+    and admins, so every chip and every Session role has rows to find.
+    """
+    from app.db.models import AuditEvent, Reviewee, Reviewer, User
+
+    url = _database_url()
+    engine = create_engine(url, future=True)
+    started = time.perf_counter()
+    with Session(engine) as db:
+        emails = list(
+            db.execute(
+                select(Reviewer.email).where(Reviewer.session_id == args.session)
+            ).scalars()
+        ) + list(
+            db.execute(
+                select(Reviewee.email_or_identifier).where(
+                    Reviewee.session_id == args.session
+                )
+            ).scalars()
+        )
+        known = set(db.execute(select(User.email)).scalars())
+        fresh = sorted(set(emails) - known)
+        rows = [
+            {
+                "email": email,
+                "display_name": f"Participant {n:05d}",
+                "is_operator": n % 50 == 0,
+                "is_sys_admin": n % 500 == 1,
+            }
+            for n, email in enumerate(fresh)
+        ]
+        if rows:
+            db.execute(insert(User), rows)
+        ids = list(
+            db.execute(select(User.id).where(User.email.in_(fresh))).scalars()
+        )
+        actors = ids[: int(len(ids) * args.history_share)]
+        events = [
+            {
+                "event_type": "response.saved",
+                "summary": "Saved",
+                "actor_user_id": user_id,
+                "session_id": args.session,
+                "detail": {},
+            }
+            for user_id in actors
+            for _ in range(args.audit_per_user)
+        ]
+        for start in range(0, len(events), 5000):
+            db.execute(insert(AuditEvent), events[start : start + 5000])
+        db.commit()
+        total = db.execute(select(User.id)).all()
+    # Planner statistics, as autovacuum would have them on a live
+    # database: without them a bulk-loaded table is estimated at a handful
+    # of rows and Postgres picks nested loops that a real workspace never
+    # sees (Accounts' Session role filter: about 450ms of SQL at 1,000
+    # accounts unanalyzed, 16ms analyzed).
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        conn.execute(text("ANALYZE"))
+    print(
+        f"added {len(rows)} accounts ({len(actors)} with {args.audit_per_user} "
+        f"audit rows each); {len(total)} in all, "
+        f"in {time.perf_counter() - started:.1f}s"
+    )
+
+
+#: Accounts views worth timing: the default, every chip, a search, a
+#: Session role, the last page, and the redirect target an action lands on.
+ACCOUNTS_PAGES = (
+    ("Accounts", ""),
+    ("Accounts: all chips", "?show=operators&show=admins&show=no_role&show=unused"),
+    ("Accounts: last page", "?show=operators&show=admins&show=no_role&show=unused&offset=99999"),
+    ("Accounts: ?q=", "?show=operators&show=admins&show=no_role&show=unused&q=00500"),
+    ("Accounts: role=reviewer", "?show=operators&show=admins&show=no_role&show=unused&role=reviewer"),
+    ("Accounts: role=owner", "?show=operators&show=admins&show=no_role&show=unused&role=owner"),
+)
+
+
+def bench_accounts(args: argparse.Namespace) -> None:
+    """Time Sys Admin → Accounts under each filter, as an admin."""
+    from app.db.models import User
+
+    engine = create_engine(_database_url(), future=True)
+    # The admin flag is stamped when a ``users`` row is first created, and
+    # ``seed`` has usually created the bench operator's already, so set it.
+    with Session(engine) as db:
+        user = db.execute(
+            select(User).where(User.email == args.operator_email)
+        ).scalar_one()
+        user.is_sys_admin = True
+        db.commit()
+    meter = _SqlMeter(engine)
+    client = _client(engine, args.operator_email)
+
+    print(f"{'page':26s} {'total':>9s} {'sql':>9s} {'python':>9s} {'queries':>8s} {'html':>9s}")
+    for label, query in ACCOUNTS_PAGES:
+        url = f"/operator/sys-admin/users{query}"
+        first = client.get(url, follow_redirects=False)
+        if first.status_code != 200:
+            print(f"{label:26s} HTTP {first.status_code} {url}")
+            continue
+        totals: list[float] = []
+        sql_times: list[float] = []
+        queries = 0
+        for _ in range(args.runs):
+            meter.reset()
+            started = time.perf_counter()
+            client.get(url, follow_redirects=False)
+            totals.append((time.perf_counter() - started) * 1000)
+            sql_times.append(meter.seconds * 1000)
+            queries = meter.count
+        total = statistics.median(totals)
+        sql = statistics.median(sql_times)
+        print(
+            f"{label:26s} {total:8.0f}ms {sql:8.0f}ms {total - sql:8.0f}ms "
+            f"{queries:8d} {len(first.content) / 1024:8.0f}K"
+        )
+
+
 class _SqlMeter:
     """Per-request query count and cumulative SQL time."""
 
@@ -552,6 +679,21 @@ def main() -> None:
         "--only", default="", help="substring filter over the page labels"
     )
     bench_parser.set_defaults(func=bench)
+
+    accounts_parser = sub.add_parser(
+        "seed-accounts", parents=[common],
+        help="a users row per roster email of a seeded session",
+    )
+    accounts_parser.add_argument("--session", type=int, required=True)
+    accounts_parser.add_argument("--history-share", type=float, default=0.6)
+    accounts_parser.add_argument("--audit-per-user", type=int, default=20)
+    accounts_parser.set_defaults(func=seed_accounts)
+
+    bench_accounts_parser = sub.add_parser(
+        "bench-accounts", parents=[common], help="time Sys Admin → Accounts"
+    )
+    bench_accounts_parser.add_argument("--runs", type=int, default=3)
+    bench_accounts_parser.set_defaults(func=bench_accounts)
 
     pin_parser = sub.add_parser("pin-rule", parents=[common], help="pin a MATCH rule")
     pin_parser.add_argument("--session", type=int, required=True)
