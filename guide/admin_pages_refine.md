@@ -129,6 +129,11 @@ Taken 2026-10-14 at `871ba085`.
   fail. Left as open questions: the typeahead cap, and whether owning a
   session is history. A non-numeric `?offset=` or `?selected=` in the
   address bar answers 422, as on the roster pages (spec-writer); left.
+  The rung also corrected Blast radius: the role filter's `lower()`
+  can't use the email indexes, as first written. A second read, of
+  the fixes, found prose gaps only, acted on here; it left
+  `spec/assignments.md` and `spec/lifecycle.md`'s "seven preview
+  pages" alone, since those mean the session pages.
 
 ### PR ladder
 
