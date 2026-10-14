@@ -53,25 +53,55 @@ from app.services import (
 )
 from app.web import views
 from app.web.deps import request_correlation_id, require_sys_admin
-from app.web.return_to import resolve_return_to
+from app.web.return_to import ReturnTarget, resolve_return_to
 from app.web.routes_operator._shared import _templates
 
 
 router = APIRouter()
 
 
+# Where the Admin pages' back link returns to (author, 2026-10-14): the
+# page the chrome's Admin link was followed from, remembered for the
+# visit so both tabs, and every action's redirect, keep it. Validated on
+# the way in and again on the way out (``resolve_return_to``).
+_ADMIN_RETURN_COOKIE = "rrw-admin-return-to"
+_ADMIN_PATH = "/operator/sys-admin"
+
+
+def _admin_return_target(
+    request: Request, return_to: str | None, db: Session
+) -> ReturnTarget:
+    return resolve_return_to(
+        return_to or request.cookies.get(_ADMIN_RETURN_COOKIE), db
+    )
+
+
+def _remember_return_to(response: Response, target: ReturnTarget) -> None:
+    response.set_cookie(
+        _ADMIN_RETURN_COOKIE,
+        target.url,
+        path=_ADMIN_PATH,
+        httponly=True,
+        samesite="lax",
+    )
+
+
 @router.get("/sys-admin")
 def sys_admin_root(
+    request: Request,
     return_to: str | None = Query(default=None),
     user: User = Depends(require_sys_admin),
+    db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    """Redirect to the default Admin tab (Sessions Diagnostics).
-    Preserves ``?return_to=`` so the eventual landing page's back
-    link still resolves to the originating page."""
-    target = "/operator/sys-admin/sessions"
+    """Redirect to the default Admin tab (Sessions Diagnostics),
+    remembering ``?return_to=`` for both tabs' back link."""
+    target = f"{_ADMIN_PATH}/sessions"
     if return_to:
         target = f"{target}?return_to={quote(return_to, safe='/')}"
-    return RedirectResponse(url=target, status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(url=target, status_code=status.HTTP_303_SEE_OTHER)
+    if return_to:
+        _remember_return_to(response, resolve_return_to(return_to, db))
+    return response
 
 
 _DIAGNOSTICS_SORT_COOKIE = "rrw-sort-sys-admin-sessions"
@@ -84,7 +114,7 @@ def sys_admin_sessions(
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
-    target = resolve_return_to(return_to, db)
+    target = _admin_return_target(request, return_to, db)
     # The lobby's columns and sort (author, 2026-10-14): a cookie-backed
     # personal sort, seeded here so the first render is already sorted.
     sort_spec = views.decode_cookie_sort_spec(
@@ -96,7 +126,7 @@ def sys_admin_sessions(
         sessions.list_all(db), sort_spec, value_resolver=views.session_sort_value
     )
     owners = session_owners.owners_by_session(db, [s.id for s in rows])
-    return _templates.TemplateResponse(
+    response = _templates.TemplateResponse(
         request,
         "operator/sys_admin_sessions.html",
         {
@@ -120,6 +150,9 @@ def sys_admin_sessions(
             "return_to_label": target.label,
         },
     )
+    if return_to:
+        _remember_return_to(response, target)
+    return response
 
 
 @router.get(
@@ -280,11 +313,16 @@ def sys_admin_users(
     view = dataclasses.replace(view, offset=page.offset)
     pager = views.build_pager(total=page.total, offset=page.offset)
     refused_user = db.get(User, refused) if refused is not None else None
+    back = _admin_return_target(request, None, db)
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
         {
             "user": user,
+            # The back link returns where the Admin visit began, as on
+            # Sessions Diagnostics (author, 2026-10-14).
+            "return_to_url": back.url,
+            "return_to_label": back.label,
             "rows": page.rows,
             "account_view": view,
             # The whole workspace, for the empty-state wording: no
