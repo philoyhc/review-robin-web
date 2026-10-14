@@ -256,6 +256,12 @@ table's order it is the third, cycle. It wraps the same
 `invite_as_sys_admin` box, so the route and service don't change; it
 renders only where `can_manage_admins`; `Cancel` resets it.
 
+### Status
+
+- **Rung 1** (2026-10-14): Overview wears `.card.placeholder`, the
+  spec's scaffold treatment. The reads found `spec/ui_elements.md` and
+  `spec/session_home.md` owed bullets (below).
+
 ### PR ladder
 
 1. **Layout, chip and stub.** The grid, the chip with its label script
@@ -281,3 +287,5 @@ renders only where `can_manage_admins`; `Cancel` resets it.
 - `spec/operator_button_audit.md` — row 113's Cancel resets the chip, not a checkbox (Item 3).
 - `docs/security_posture.md` — the invite guard names the chip (Item 3).
 - `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card (Item 3).
+- `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling), §9's form-control chips list the invite chip, and §4's `.card.placeholder` note names Overview while it is a stub, one with no action button to disable (Item 3).
+- `spec/session_home.md` — "Placeholder cards" no longer says no live page uses the class (Item 3).

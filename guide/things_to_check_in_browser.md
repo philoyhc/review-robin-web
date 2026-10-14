@@ -80,3 +80,17 @@ Sys Admin → Accounts, signed in as an admin. Inert: nothing filters yet.
   and faint; the table doesn't change, and a reload restores the default.
 - [ ] **Narrow window.** Below about 860px the two panes stack, with the
   chips wrapping rather than overflowing.
+
+## Invite card half width, Overview stub (admin pages Item 3, rung 1)
+
+Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
+
+- [ ] **Side by side.** Invite by email on the left half, Overview on the
+  right in the muted placeholder look, the same height; below about
+  800px they stack. Workspace users still spans the page beneath.
+- [ ] **The role chip.** Under the email box, a solid chip reading
+  `Invite as operator`; a click turns it to `Invite as sys-admin` and
+  back, staying solid. Cancel (after typing an email) returns it to
+  `Invite as operator`.
+- [ ] **It still invites an admin.** Invite an address with the chip at
+  `Invite as sys-admin`: the new row shows the Admin pill.

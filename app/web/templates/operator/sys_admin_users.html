@@ -35,11 +35,14 @@
     </div>
   {% endif %}
 
+  {# admin_pages_refine Item 3 — Invite on the left half, Overview on
+     the right at the same height (`.page-grid` stretches its cells). #}
+  <div class="page-grid">
   {# Invite by email — pre-seeds a users row before the invitee
      signs in via Entra. ``get_or_create_user`` matches by email
      on first sign-in. #}
   <div class="card">
-    <h2 style="margin-top: 0;">Invite by email</h2>
+    <h2>Invite by email</h2>
     <p class="muted">
       Pre-seed a user row before the invitee first signs in. When
       they sign in via Entra (matched by email), they land on the
@@ -57,13 +60,19 @@
         </label>
       </p>
       {# Granting the admin flag follows the Promote rule
-         (``can_manage_admins``), so a plain admin never sees it. #}
+         (``can_manage_admins``), so a plain admin never sees it.
+         admin_pages_refine Item 3 — a cycle chip, always solid since
+         both states are a choice: the box's tick is what it means,
+         `Invite as sys-admin`, and the label names the state. #}
       {% if can_manage_admins %}
       <p>
-        <label>
-          <input type="checkbox" name="invite_as_sys_admin" value="true">
-          Also invite as sys-admin
-        </label>
+        <label class="pill pill-count tag-chip is-selected"
+               data-invite-role-chip
+               title="Click to switch between inviting an operator and a sys-admin">
+          <input type="checkbox" class="visually-hidden"
+                 name="invite_as_sys_admin" value="true"
+                 autocomplete="off" aria-label="Invite as sys-admin"><span
+                 data-invite-role-label>Invite as operator</span></label>
       </p>
       {% endif %}
       <div class="btn-pair">
@@ -82,12 +91,20 @@
         var email = document.getElementById("invite-email");
         var submit = form.querySelector("[data-invite-submit]");
         var cancel = form.querySelector("[data-invite-cancel]");
+        var roleBox = form.querySelector("[data-invite-role-chip] input");
+        var roleLabel = form.querySelector("[data-invite-role-label]");
         function refresh() {
           var hasText = (email.value || "").trim().length > 0;
           submit.disabled = !hasText;
           cancel.disabled = !hasText;
+          if (roleBox && roleLabel) {
+            roleLabel.textContent = roleBox.checked
+              ? "Invite as sys-admin"
+              : "Invite as operator";
+          }
         }
         email.addEventListener("input", refresh);
+        if (roleBox) roleBox.addEventListener("change", refresh);
         form.addEventListener("reset", function () {
           setTimeout(refresh, 0);
         });
@@ -96,8 +113,18 @@
     </script>
   </div>
 
+  {# admin_pages_refine Item 3 — a stub, in the canonical placeholder
+     treatment (`spec/ui_elements.md` §4): what Overview shows is the
+     author's to decide (rung 2). #}
+  <div class="card placeholder" id="accounts-overview">
+    <h2>Overview</h2>
+    <p class="muted">A summary of the workspace's accounts, such as how
+      many there are of each kind, will appear here.</p>
+  </div>
+  </div>{# .page-grid #}
+
   <div class="card table-pager-anchored" id="{{ pager_anchor }}">
-    <h2 style="margin-top: 0;">Workspace users</h2>
+    <h2>Workspace users</h2>
     {% if rows %}
       {# admin_pages_refine Item 1 rung 1 — SCAFFOLD, inert. The Setup
          pages' two-pane toolbar (`spec/setup_pages.md` "The table
