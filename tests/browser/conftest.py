@@ -121,6 +121,10 @@ def live_server(
         "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
         "FAKE_AUTH_OPERATOR": "true",
+        # Accounts' invite role chip renders only for an actor who can
+        # manage admins (tests/browser/test_invite_role_chip.py).
+        "FAKE_AUTH_SYS_ADMIN": "true",
+        "FAKE_AUTH_SUPER_ADMIN": "true",
         "FAKE_AUTH_EMAIL": FAKE_OPERATOR_EMAIL,
         "FAKE_AUTH_NAME": "Browser Operator",
         "OPERATOR_EMAILS": f"{COLLEAGUE_EMAIL},{SECOND_COLLEAGUE_EMAIL}",

@@ -1,6 +1,6 @@
 """Sys Admin → Accounts: the Invite card's role chip and its Overview
-neighbour (guide/admin_pages_refine.md Item 3 rung 1). A cycle chip,
-"Invite as operator" ↔ "Invite as sys-admin", always dark, around the
+neighbor (guide/admin_pages_refine.md Item 3 rung 1). A cycle chip,
+"Invite as operator" ↔ "Invite as sys-admin", always solid, around the
 ``invite_as_sys_admin`` box. The fake operator is a super-admin, so the
 chip renders.
 """
@@ -24,6 +24,9 @@ def test_the_cards_sit_side_by_side_at_one_height(page: Page) -> None:
     assert left["x"] < right["x"]
     assert left["y"] == right["y"]
     assert left["height"] == right["height"]
+    # The Workspace users card stays outside the grid, spanning both.
+    table = page.locator("#accounts-table-card").bounding_box()
+    assert table and table["width"] >= left["width"] + right["width"]
 
 
 def test_the_chip_cycles_resets_and_invites_an_admin(page: Page) -> None:

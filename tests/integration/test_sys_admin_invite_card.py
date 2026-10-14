@@ -23,10 +23,16 @@ def test_invite_and_overview_share_one_grid_row(
     body = _page(client)
     grid = body.split('<div class="page-grid">', 1)[1]
     assert grid.index("<h2>Invite by email</h2>") < grid.index("<h2>Overview</h2>")
-    # The grid closes before the Workspace users card, which stays full width.
-    assert body.index('id="accounts-overview"') < body.index("<h2>Workspace users</h2>")
+    assert '<div class="card placeholder" id="accounts-overview">' in body
     overview = body.split('id="accounts-overview"', 1)[1].split("</div>", 1)[0]
     assert "will appear here" in overview
+    # Overview's own close, then the grid's, before the Workspace users
+    # card: two cards in the grid, and the table card outside it. (The
+    # browser test measures that it spans the page.)
+    after = body.split('id="accounts-overview"', 1)[1]
+    between = after.split("<h2>Workspace users</h2>", 1)[0]
+    assert between.count("</div>") == 2
+    assert grid.count('<div class="card') >= 2
 
 
 def test_the_role_chip_replaces_the_checkbox(
