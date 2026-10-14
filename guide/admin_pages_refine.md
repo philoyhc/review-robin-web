@@ -84,8 +84,12 @@ Rejected alternatives:
   so a chip says what it would add.
 - **No chip on** shows the empty state, "No accounts match the chips
   above."
-- **The pager steps aside while a search is active**, as on the roster
-  pages, and the 500 cap applies. `?offset=` is clamped, never rejected.
+- **The pager stays while a search or role filter is active**, unlike
+  the roster pages, which drop it and cap a filtered view at 500. A role
+  filter can match all 1,000 accounts, and a cap would leave half of them
+  out of reach (Codex on #3025). It pages the filtered set, and the count
+  line says what the filter matched. `?offset=` is clamped, never
+  rejected.
 - **A toolbar redirect keeps the view.** It returns to the same chips,
   search and offset. A `?selected=<id>` whose row the chips would hide
   turns that row's chip on for that load only, so an action never makes
@@ -96,7 +100,6 @@ Rejected alternatives:
   `Observer.email`); `Owner` means a `session_operators` row. One account
   can match several roles. The dropdown narrows the chips; it doesn't
   replace them, and the chip counts ignore it as they ignore the search.
-  The pager steps aside for it, as it does for a search.
 - **Chip state lives in the URL,** with Operators and Admins as the
   default when no chip parameter is given. A reload or a shared link
   shows the same view.
@@ -142,10 +145,10 @@ Taken 2026-10-14 at `871ba085`.
 - A browser test drives the chips, the dropdown, the search and the pager.
 - The 1,000- and 5,000-user timings are recorded in this item's `Status`.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <id>` exits 0; any warning adjudicated <!-- not a segment_* file: checked by hand -->
+- Every `### Doc impact` bullet checked by hand against the diff (`tools/close_check.py` reads only `segment_*` ids)
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+- `guide/todo_master.md` entries deleted; the file stays in `guide/` (an item close does not archive it)
 
 ### Open questions
 
@@ -191,11 +194,19 @@ row passes its guards.
 
 ### Semantics
 
-- **All or nothing** (author, 2026-10-14). A bulk action checks every selected row's guards
-  first. One refusal (`still_owner`, `has_history`, `last_admin`, …)
-  refuses the batch, naming the row and the reason, and nothing
-  changes. This matches Quick Setup's "files uploaded together land
-  together".
+- **All or nothing** (author, 2026-10-14). One refusal refuses the
+  batch, naming the row and the reason, and nothing changes. This matches
+  Quick Setup's "files uploaded together land together".
+- **Guards judge the batch, not each row alone** (Codex on #3025).
+  Per-row guards (`still_owner`, `has_history`, `protected_super_admin`)
+  run on every row. Set-level invariants run against the state *after*
+  the whole batch, in one transaction:
+  - `last_admin`: demoting or deleting two admins can't leave none;
+  - `sole_owner`: removing two co-owners from all sessions can't
+    orphan a session they share.
+
+  A new service function applies the batch and checks it before commit.
+  The single-row functions stay as they are.
 - **One audit event per row,** under one correlation id, so the log
   still reads per account.
 - **Selection is page-local,** as on the roster pages, and changing the
@@ -229,10 +240,10 @@ Taken 2026-10-14 at `871ba085`.
   request, refused whole when any row's guard refuses.
 - A browser test drives a multi-row Revoke and a refused mixed Delete.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <id>` exits 0; any warning adjudicated <!-- not a segment_* file: checked by hand -->
+- Every `### Doc impact` bullet checked by hand against the diff (`tools/close_check.py` reads only `segment_*` ids)
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+- `guide/todo_master.md` entries deleted; with every item closed, plan moved to `guide/archive/` + index row
 
 ### Open questions
 
