@@ -154,8 +154,9 @@ def build_account_chips(
 
 #: Why a batch was refused, by ``UserOperationError.code``: the reason
 #: the page names beside the row (admin_pages_refine Item 2). Written
-#: here rather than carried in the URL, so a link can't put other words
-#: on the page.
+#: here rather than carried in the URL, and an unknown code gets a fixed
+#: sentence rather than its own text, so a link can't put other words on
+#: the page.
 _REFUSAL_REASONS: dict[str, str] = {
     "still_owner": "{email} still owns sessions; remove them from all sessions first",
     "not_operator": "{email} has no role; admit them before promoting",
@@ -172,9 +173,9 @@ _REFUSAL_REASONS: dict[str, str] = {
 
 def account_refusal_message(code: str, email: str | None) -> str:
     """The banner for a refused action: nothing changed, and why, naming
-    the row when there is one."""
+    the row when there is one. Never the code itself, which came from the
+    URL."""
     reason = _REFUSAL_REASONS.get(code)
     if reason is None or ("{email}" in reason and not email):
-        return f"Couldn't apply that change ({code})."
+        return "Couldn't apply that change."
     return f"Nothing changed: {reason.format(email=email)}."
-

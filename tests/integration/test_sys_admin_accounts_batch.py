@@ -266,10 +266,11 @@ def test_the_banner_reason_comes_from_the_view_not_the_url() -> None:
     assert views.account_refusal_message("last_admin", None) == (
         "Nothing changed: that would leave the workspace with no sys-admin."
     )
-    # An unknown code, or a row-naming reason with no row, falls back.
-    assert views.account_refusal_message("<b>hi</b>", None) == (
-        "Couldn't apply that change (<b>hi</b>)."
-    )
+    # An unknown code, or a row-naming reason with no row, gets a fixed
+    # sentence: the code is the URL's, so it never reaches the page.
+    assert views.account_refusal_message(
+        "Your account was suspended, re-verify at evil.example", None
+    ) == "Couldn't apply that change."
     assert views.account_refusal_message("has_history", None) == (
-        "Couldn't apply that change (has_history)."
+        "Couldn't apply that change."
     )

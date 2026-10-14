@@ -66,13 +66,13 @@ def test_two_operators_open_the_expander(
     expect(expander).to_have_count(1)
     expect(expander).to_contain_text("2 of 3 selected")
     # Grouped as the toolbar is, so each button says which role it changes.
-    assert _expander_actions(page) == [
-        "Revoke", "Remove from all sessions", "Promote", "Delete",
-    ]
+    # Neither owns a session, so Revoke shows and Remove from all
+    # sessions doesn't.
+    assert _expander_actions(page) == ["Revoke", "Promote", "Delete"]
     assert expander.locator(".row-expander-group > .muted").all_inner_texts() == [
         "Operator:", "Admin:", "|",
     ]
-    for name in ("Revoke", "Remove from all sessions", "Promote"):
+    for name in ("Revoke", "Promote"):
         expect(expander.locator(f'[data-expander-action="{name}"]')).to_be_enabled()
     # Delete waits for its confirm.
     delete = expander.locator('[data-expander-action="Delete"]')
@@ -94,18 +94,18 @@ def test_a_mixed_selection_shows_only_what_applies_to_every_row(
     first, _, unused = _setup(page, api)
     _tick(page, first)
     _tick(page, unused)
-    assert _expander_actions(page) == ["Remove from all sessions", "Delete"]
-    # No Admin control fits, so no "Admin:" label.
+    assert _expander_actions(page) == ["Delete"]
+    # No Operator or Admin control fits, so neither label renders.
     assert page.locator(
         "#users-row-expander .row-expander-group > .muted"
-    ).all_inner_texts() == ["Operator:", "|"]
+    ).all_inner_texts() == ["|"]
 
 
 def test_one_unused_row_offers_admit(page: Page, api: httpx.Client) -> None:
     _, _, unused = _setup(page, api)
     _tick(page, unused)
     expect(page.locator("#users-row-expander")).to_contain_text("1 of 3 selected")
-    assert _expander_actions(page) == ["Admit", "Remove from all sessions", "Delete"]
+    assert _expander_actions(page) == ["Admit", "Delete"]
 
 
 def test_select_all_is_tri_state_and_clearing_removes_the_expander(
@@ -234,4 +234,25 @@ def test_a_mixed_delete_is_refused_whole_and_says_why(
     )
     expect(page.locator(f'tr[data-user-id]:has(code:text-is("{unused}"))')).to_have_count(1)
     expect(page.locator(f'tr[data-user-id]:has(code:text-is("{first}"))')).to_have_count(1)
+
+
+def test_an_owner_offers_remove_from_all_sessions_not_revoke(
+    page: Page, api: httpx.Client, new_session: Callable[[], int]
+) -> None:
+    """The toolbar's gates, kept: Revoke needs no sessions (the server's
+    still_owner), Remove from all sessions needs some."""
+    first, second, _ = _setup(page, api)
+    session_id = new_session()
+    response = api.post(
+        f"/operator/sessions/{session_id}/owners/add",
+        data={"target_email": first},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    page.reload()
+    _tick(page, first)
+    assert _expander_actions(page) == ["Remove from all sessions", "Promote", "Delete"]
+    # With an operator who owns nothing, neither session control fits both.
+    _tick(page, second)
+    assert _expander_actions(page) == ["Promote", "Delete"]
 

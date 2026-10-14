@@ -494,7 +494,6 @@ def _write_remove(
     )
 
 
-
 #: The actions the Accounts row expander applies to a selection
 #: (admin_pages_refine Item 2), in the toolbar's order.
 BATCH_ACTIONS: tuple[str, ...] = (
@@ -553,6 +552,12 @@ def apply_batch(
     # The admin count matters only to an action that can lower it, and
     # then every admin row is locked with the selection, in one id-ordered
     # statement so concurrent batches take the locks in the same order.
+    # Only Delete removes rows, so only Delete takes the full lock; the
+    # rest take FOR NO KEY UPDATE, as ``session_guard`` does, which an
+    # audit row's foreign-key check (FOR KEY SHARE on its actor) doesn't
+    # wait on. With the full lock a bulk Remove from all sessions and a
+    # concurrent ``session_owners.remove_owner`` by a selected user could
+    # deadlock: owner rows then user row against user row then owners.
     counts_admins = action in ("demote", "delete")
     locked = list(
         db.execute(
@@ -563,7 +568,7 @@ def apply_batch(
                 else User.id.in_(ids)
             )
             .order_by(User.id)
-            .with_for_update()
+            .with_for_update(key_share=action != "delete")
         ).scalars()
     )
     by_id = {user.id: user for user in locked}
@@ -704,6 +709,7 @@ def _lock_and_check_owners(
             ),
         )
     return mine
+
 
 def invite(
     db: Session,
