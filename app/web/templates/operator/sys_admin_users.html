@@ -125,17 +125,18 @@
 
   <div class="card table-pager-anchored" id="{{ pager_anchor }}">
     <h2>Workspace users</h2>
-    {% if rows %}
-      {# admin_pages_refine Item 1 rung 1 — SCAFFOLD, inert. The Setup
-         pages' two-pane toolbar (`spec/setup_pages.md` "The table
-         toolbar"): category chips where they put column chips, then
-         the pager and the count line; the filter strip on the right.
-         The chips count the whole table and toggle only on screen, the
-         dropdown and the search box post nothing, and Search stays
-         disabled. The pager includes render nothing until the route
-         passes a pager. Rung 2 filters and pages on the server. `Clear`
-         renders only while a filter is active, so it has no state to
-         appear in yet. #}
+    {% if account_total %}
+      {# admin_pages_refine Item 1 — the Setup pages' two-pane toolbar
+         (`spec/setup_pages.md` "The table toolbar"): category chips where
+         they put column chips, then the pager and the count line; the
+         filter strip on the right. Everything filters on the server
+         (`app/services/account_listing.py`) and lives in the URL.
+
+         The chips sit outside the form, joined to it by `form=`, and a
+         chip change submits it at once: a chip says what the table
+         holds, where the role and the search wait for `Search`. The
+         blank `show` keeps "every chip off" distinct from "no `show`
+         at all", which means the default chips. #}
       <div class="table-card-toolbar is-split">
         <div class="toolbar-pane toolbar-left">
           <p class="col-chip-row" data-account-chips>
@@ -144,6 +145,7 @@
               <label class="pill pill-count tag-chip">
                 <input type="checkbox" class="visually-hidden"
                        name="show" value="{{ chip.key }}"
+                       form="accounts-filter" autocomplete="off"
                        {% if chip.selected %}checked{% endif %}>{{ chip.label }} ({{ chip.count }})</label>
             {% endfor %}
           </p>
@@ -153,14 +155,16 @@
 
         <div class="toolbar-pane toolbar-right">
           <form method="get"
-                action="/operator/sys-admin/users#{{ pager_anchor }}"
+                action="{{ accounts_base_url }}#{{ pager_anchor }}"
+                id="accounts-filter"
                 class="operator-actions-filter">
+            <input type="hidden" name="show" value="">
             <div class="filter-row">
               <label class="filter-status">
                 Session role:
                 <select name="role">
                   {% for value, label in account_role_options %}
-                    <option value="{{ value }}"{% if loop.first %} selected{% endif %}>{{ label }}</option>
+                    <option value="{{ value }}"{% if account_view.role == value %} selected{% endif %}>{{ label }}</option>
                   {% endfor %}
                 </select>
               </label>
@@ -168,17 +172,43 @@
                 Search:
                 <input type="text"
                        name="q"
+                       list="accounts-search-options"
+                       value="{{ account_view.search }}"
                        autocomplete="off"
                        placeholder="Email or name">
+                <datalist id="accounts-search-options">
+                  {% for label in account_search_options %}
+                    <option value="{{ label }}"></option>
+                  {% endfor %}
+                </datalist>
               </label>
             </div>
             <div class="filter-actions">
-              <button class="btn secondary" type="submit" disabled>Search</button>
+              {% if account_view.is_filtered %}
+                {# Clears the role and the search; the chips stay. #}
+                <a class="btn secondary"
+                   href="{{ accounts_base_url }}?{{ account_view_query_chips }}#{{ pager_anchor }}">Clear</a>
+              {% endif %}
+              <button class="btn secondary" type="submit">Search</button>
             </div>
           </form>
+          <script>
+            (function () {
+              var form = document.getElementById("accounts-filter");
+              if (!form) return;
+              document.querySelectorAll(
+                'input[name="show"][form="accounts-filter"]'
+              ).forEach(function (box) {
+                box.addEventListener("change", function () {
+                  form.requestSubmit ? form.requestSubmit() : form.submit();
+                });
+              });
+            })();
+          </script>
         </div>
       </div>{# .table-card-toolbar #}
 
+      {% if rows %}
       {# Bulk-action toolbar — single-row selection drives the
          button enablement. Each form holds a hidden ``user_id``
          input that the inline JS rewrites whenever the operator
@@ -187,11 +217,13 @@
          action URL based on the selected user's current state. #}
       <div id="user-actions"
            data-selected-user-id="{{ selected_user_id or '' }}"
+           data-sys-admin-count="{{ sys_admin_count }}"
            style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-start; margin-bottom:12px;">
         <span class="muted">Operator:</span>
         <form method="post" action="" data-action-form="operator-toggle"
               style="margin:0">
           <input type="hidden" name="user_id" value="">
+          <input type="hidden" name="view" value="{{ account_view_query }}">
           <button class="btn secondary" type="submit"
                   data-action-btn="operator-toggle"
                   data-label-admit="Admit"
@@ -201,6 +233,7 @@
         <form method="post" action="" data-action-form="remove-sessions"
               style="margin:0">
           <input type="hidden" name="user_id" value="">
+          <input type="hidden" name="view" value="{{ account_view_query }}">
           <button class="btn secondary" type="submit"
                   data-action-btn="remove-sessions"
                   disabled>Remove from all sessions</button>
@@ -215,6 +248,7 @@
           <form method="post" action="" data-action-form="sys-admin-toggle"
                 style="margin:0">
             <input type="hidden" name="user_id" value="">
+            <input type="hidden" name="view" value="{{ account_view_query }}">
             <button class="btn secondary" type="submit"
                     data-action-btn="sys-admin-toggle"
                     data-label-promote="Promote"
@@ -226,6 +260,7 @@
         <form method="post" action="" data-action-form="delete"
               style="margin:0">
           <input type="hidden" name="user_id" value="">
+          <input type="hidden" name="view" value="{{ account_view_query }}">
           <button class="btn destructive" type="submit"
                   data-action-btn="delete"
                   disabled>Delete</button>
@@ -302,12 +337,12 @@
           // Total sys-admin count drives the last-admin demote
           // guard on the client side. Service-level guard is the
           // structural safety net.
-          var sysAdminCount = 0;
-          table.querySelectorAll("tr[data-user-id]").forEach(function (tr) {
-            if (tr.getAttribute("data-is-sys-admin") === "true") {
-              sysAdminCount += 1;
-            }
-          });
+          // Workspace-wide, from the server: the table is filtered and
+          // paged, so counting its rendered rows would miss an admin a
+          // chip, search or page hides and refuse a Demote the service
+          // would accept (Codex on #3030).
+          var sysAdminCount = parseInt(
+            toolbar.getAttribute("data-sys-admin-count") || "0", 10);
 
           var actionUrls = {
             "operator-toggle": {
@@ -488,6 +523,11 @@
           refresh();
         })();
       </script>
+      {% elif not account_view.show %}
+        <p class="muted">No accounts match the chips above.</p>
+      {% else %}
+        <p class="muted">No accounts match the current filter.</p>
+      {% endif %}{# rows #}
     {% else %}
       <p class="muted">No users in this workspace yet.</p>
     {% endif %}

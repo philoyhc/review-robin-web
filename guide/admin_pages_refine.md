@@ -103,8 +103,14 @@ Taken 2026-10-14 at `871ba085`.
 - **Rung 1** (2026-10-14): the route passes the chips (a template can't
   count; the rung said "touches no route") but no new parameter, and no
   pager: over a list still rendered whole it showed a false range (Codex
-  on #3027). The chip rule is `app/web/views/_accounts.py`. The item's
-  cumulative read diffs from `adc01b08`.
+  on #3027). The item's cumulative read diffs from `adc01b08`.
+- **Rung 2** (2026-10-14): the category rule moved to SQL in
+  `app/services/account_listing.py`, which replaced
+  `list_workspace_users`. Decided at build: a chip submits on change,
+  while the role and search wait for `Search`; a blank `show` keeps
+  "every chip off" distinct from the default; `Clear` keeps the chips;
+  the count line shows only when one page holds everything, since the
+  pager stays under a filter; a `?selected=` row lands on its own page.
 
 ### PR ladder
 

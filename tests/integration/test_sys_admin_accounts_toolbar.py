@@ -1,108 +1,150 @@
-"""Sys Admin → Accounts: the Workspace users toolbar scaffold
-(``guide/admin_pages_refine.md`` Item 1 rung 1).
+"""Sys Admin → Accounts: the Workspace users toolbar
+(``guide/admin_pages_refine.md`` Item 1).
 
-Four category chips with real counts, the Session role dropdown, the
-search box and the pager, all inert: nothing filters until rung 2.
+Category chips, the Session role, the search and the pager, all filtered
+on the server (``app/services/account_listing.py``) with the view held in
+the URL.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import AuditEvent, User
-from app.services.users import WorkspaceUserRow
+from app.db.models import (
+    AuditEvent,
+    Observer,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+    SessionOperator,
+    User,
+)
+from app.services import account_listing
 from app.web import views
 
 ACCOUNTS = "/operator/sys-admin/users"
 
 
-def _row(
-    *,
-    is_operator: bool = False,
-    is_sys_admin: bool = False,
-    is_super_admin: bool = False,
-    has_history: bool = False,
-) -> WorkspaceUserRow:
-    return WorkspaceUserRow(
-        id=1,
-        email="x@example.edu",
-        display_name=None,
-        is_operator=is_operator,
-        is_sys_admin=is_sys_admin,
-        is_super_admin=is_super_admin,
-        created_at=datetime.now(timezone.utc),
-        session_operator_count=0,
-        sole_owner_count=0,
-        has_history=has_history,
-    )
-
-
-@pytest.mark.parametrize(
-    ("row", "category"),
-    [
-        (_row(is_operator=True), "operators"),
-        # Admins win: the Operator flag doesn't put an admin under both.
-        (_row(is_operator=True, is_sys_admin=True), "admins"),
-        (_row(is_sys_admin=True), "admins"),
-        (_row(is_super_admin=True), "admins"),
-        (_row(has_history=True), "no_role"),
-        (_row(), "unused"),
-        # History never moves a row with a role off its role's chip.
-        (_row(is_operator=True, has_history=True), "operators"),
-    ],
-)
-def test_every_row_sits_under_exactly_one_chip(
-    row: WorkspaceUserRow, category: str
-) -> None:
-    assert views.account_category(row) == category
-
-
-def _seed(db: Session, email: str, **flags: bool) -> User:
-    user = User(email=email, **flags)
+def _seed(db: Session, email: str, name: str | None = None, **flags: bool) -> User:
+    user = User(email=email, display_name=name, **flags)
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
 
 
+def _acted(db: Session, user: User) -> None:
+    db.add(
+        AuditEvent(
+            event_type="response.submitted", summary="Submitted",
+            actor_user_id=user.id, detail={},
+        )
+    )
+    db.commit()
+
+
+def _session(db: Session, creator: User, code: str) -> ReviewSession:
+    review_session = ReviewSession(
+        name=f"Session {code}", code=code, created_by_user_id=creator.id
+    )
+    db.add(review_session)
+    db.commit()
+    return review_session
+
+
 def _chip(body: str, key: str) -> str:
     """The markup of one chip's ``<label>``."""
-    head, _, tail = body.partition(f'value="{key}"')
+    head, _, tail = body.partition(f'name="show" value="{key}"')
     assert tail, f"no {key} chip"
     return head[head.rindex("<label") :] + tail.split("</label>", 1)[0]
 
 
+def _emails(body: str) -> set[str]:
+    return {
+        cell.split("</code>", 1)[0]
+        for cell in body.split('id="users-table"', 1)[-1].split("<td><code>")[1:]
+    }
+
+
 @pytest.fixture
-def seeded(
-    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> str:
-    """Alice (the signed-in admin), one operator, one more admin, one
-    no-role account with history and one without. Returns the page."""
+def admin(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    _seed(db, "bob@example.edu", is_operator=True)
-    _seed(db, "carol@example.edu", is_sys_admin=True)
-    dave = _seed(db, "dave@example.edu")
-    db.add(
-        AuditEvent(
-            event_type="response.submitted", summary="Submitted",
-            actor_user_id=dave.id, detail={},
-        )
-    )
-    db.commit()
-    _seed(db, "erin@example.edu")
-    response = client.get(ACCOUNTS)
-    assert response.status_code == 200
-    return response.text
 
 
-def test_chips_count_the_whole_table_with_operators_and_admins_on(
-    seeded: str,
+@pytest.fixture
+def workspace(db: Session, client: TestClient, admin: None) -> dict[str, User]:
+    """Alice (the signed-in admin, created on first request), plus one
+    account of each kind."""
+    client.get(ACCOUNTS)
+    people = {
+        "bob": _seed(db, "bob@example.edu", "Bob Operator", is_operator=True),
+        "carol": _seed(db, "carol@example.edu", "Carol Admin", is_sys_admin=True),
+        "dave": _seed(db, "dave@example.edu", "Dave Reviewer"),
+        "erin": _seed(db, "Erin@Example.edu", "Erin Unused"),
+    }
+    _acted(db, people["dave"])
+    return people
+
+
+# --- The category rule ------------------------------------------------------
+
+
+def test_every_account_sits_under_exactly_one_chip(
+    db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    body = seeded
+    monkeypatch.setattr(settings, "super_admin_emails", ["Super@Example.edu"])
+    operator = _seed(db, "op@example.edu", is_operator=True)
+    # Admins win: the Operator flag doesn't put an admin under both.
+    admin_operator = _seed(db, "ao@example.edu", is_operator=True, is_sys_admin=True)
+    admin = _seed(db, "ad@example.edu", is_sys_admin=True)
+    # A super-admin email whose row hasn't signed in since config named it.
+    super_admin = _seed(db, "super@example.edu")
+    actor = _seed(db, "actor@example.edu")
+    _acted(db, actor)
+    creator = _seed(db, "creator@example.edu")
+    _session(db, creator, "made-by-creator")
+    unused = _seed(db, "unused@example.edu")
+    # History never moves a row with a role off its role's chip.
+    busy_operator = _seed(db, "busy@example.edu", is_operator=True)
+    _acted(db, busy_operator)
+
+    expected = {
+        operator: "operators",
+        admin_operator: "admins",
+        admin: "admins",
+        super_admin: "admins",
+        actor: "no_role",
+        creator: "no_role",
+        unused: "unused",
+        busy_operator: "operators",
+    }
+    for user, category in expected.items():
+        assert account_listing.category_of(db, user.id) == category, user.email
+    assert account_listing.category_of(db, 999_999) is None
+
+
+def test_the_view_tables_line_up_with_the_service() -> None:
+    assert (
+        tuple(key for key, _, _ in views.ACCOUNT_CATEGORIES)
+        == account_listing.CATEGORIES
+    )
+    assert (
+        tuple(key for key, _ in views.ACCOUNT_ROLE_OPTIONS[1:])
+        == account_listing.SESSION_ROLES
+    )
+
+
+# --- Chips ------------------------------------------------------------------
+
+
+def test_chips_count_the_whole_table_and_default_to_operators_and_admins(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    body = client.get(ACCOUNTS).text
     expected = {
         "operators": ("Operators (1)", True),
         "admins": ("Admins (2)", True),
@@ -111,61 +153,227 @@ def test_chips_count_the_whole_table_with_operators_and_admins_on(
     }
     for key, (label, on) in expected.items():
         chip = _chip(body, key)
-        assert 'class="pill pill-count tag-chip"' in chip, key
         assert label in chip, key
         assert ("checked" in chip) is on, key
-    # In toolbar order, after the row's label.
-    positions = [body.index(f'value="{key}"') for key in expected]
-    assert positions == sorted(positions)
-    assert body.index("<span>Show:</span>") < positions[0]
+        assert 'form="accounts-filter"' in chip, key
+    assert _emails(body) == {
+        "alice@example.edu", "bob@example.edu", "carol@example.edu"
+    }
 
 
-def test_the_toolbar_is_the_setup_pages_two_panes(seeded: str) -> None:
-    body = seeded
-    assert 'class="card table-pager-anchored" id="accounts-table-card"' in body
-    toolbar = body.split('<div class="table-card-toolbar is-split">', 1)[1]
-    left, right = toolbar.split('<div class="toolbar-pane toolbar-right">', 1)
-    assert "data-account-chips" in left
-    right = right.split("{# .table-card-toolbar #}", 1)[0]
-    # Session role where the roster pages put Status, then search.
-    assert right.index("Session role:") < right.index("Search:")
-    options = [
-        option.split(">", 1)[1].split("<", 1)[0]
-        for option in right.split("<option ")[1:]
-    ]
-    assert options == ["Any", "Reviewer", "Reviewee", "Observer", "Owner"]
-    assert 'placeholder="Email or name"' in right
-    # Inert: Search can't submit, and with no filter active there is
-    # no Clear.
-    assert '<button class="btn secondary" type="submit" disabled>Search</button>' in right
-    assert ">Clear<" not in right
-    # Five accounts fit one page, so no pager renders.
-    assert '<div class="table-pager-cluster' not in body
-
-
-def test_the_scaffold_filters_nothing(
-    seeded: str, client: TestClient
+def test_a_chip_shows_only_its_rows(
+    workspace: dict[str, User], client: TestClient
 ) -> None:
-    """Rung 1 reads no chip, role or search parameter: every account
-    still renders, including the ones under chips that are off."""
-    body = client.get(
-        f"{ACCOUNTS}?show=unused&role=reviewer&q=bob&offset=200"
-    ).text
-    for name in ("alice", "bob", "carol", "dave", "erin"):
-        assert f"<code>{name}@example.edu</code>" in body, name
-    assert "checked" in _chip(body, "operators")
-    assert "checked" not in _chip(body, "unused")
+    body = client.get(f"{ACCOUNTS}?show=unused").text
+    assert _emails(body) == {"Erin@Example.edu"}
+    assert "checked" in _chip(body, "unused")
+    assert "checked" not in _chip(body, "operators")
+    body = client.get(f"{ACCOUNTS}?show=no_role&show=unused").text
+    assert _emails(body) == {"dave@example.edu", "Erin@Example.edu"}
 
 
-def test_no_pager_until_the_route_pages(
-    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+def test_every_chip_off_shows_none_and_says_so(
+    workspace: dict[str, User], client: TestClient
 ) -> None:
-    """Rung 1 renders every row, so a pager past 200 accounts would
-    show a false range and links that reload the same list (Codex on
-    #3027). Rung 2 pages on the server and turns this around."""
-    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    db.add_all(User(email=f"user{n}@example.edu") for n in range(200))
+    body = client.get(f"{ACCOUNTS}?show=").text
+    assert _emails(body) == set()
+    assert "No accounts match the chips above." in body
+    # The toolbar stays, so the chips can be turned back on.
+    assert 'id="accounts-filter"' in body
+
+
+def test_counts_ignore_the_role_and_the_search(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    body = client.get(f"{ACCOUNTS}?q=nobody-matches").text
+    assert "Operators (1)" in _chip(body, "operators")
+    assert "No accounts match the current filter." in body
+
+
+# --- Search and Session role ------------------------------------------------
+
+
+def test_search_matches_email_or_name_case_insensitively(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    assert _emails(client.get(f"{ACCOUNTS}?q=BOB").text) == {"bob@example.edu"}
+    assert _emails(client.get(f"{ACCOUNTS}?q=carol+adm").text) == {
+        "carol@example.edu"
+    }
+    # A wildcard is a literal, not a pattern.
+    assert _emails(client.get(f"{ACCOUNTS}?q=%25").text) == set()
+    # The search spans only the chips that are on.
+    assert _emails(client.get(f"{ACCOUNTS}?q=erin").text) == set()
+    assert _emails(client.get(f"{ACCOUNTS}?show=unused&q=erin").text) == {
+        "Erin@Example.edu"
+    }
+
+
+def test_session_role_matches_roster_emails_in_any_session(
+    db: Session, workspace: dict[str, User], client: TestClient
+) -> None:
+    session = _session(db, workspace["bob"], "roles")
+    db.add_all(
+        [
+            Reviewer(session_id=session.id, name="Bob", email="BOB@example.edu"),
+            Reviewee(
+                session_id=session.id, name="Carol",
+                email_or_identifier="carol@EXAMPLE.edu",
+            ),
+            Observer(session_id=session.id, email="bob@example.edu"),
+            SessionOperator(
+                session_id=session.id, user_id=workspace["carol"].id, role="owner"
+            ),
+        ]
+    )
     db.commit()
+    show_all = "show=operators&show=admins&show=no_role&show=unused"
+
+    def matching(role: str) -> set[str]:
+        return _emails(client.get(f"{ACCOUNTS}?{show_all}&role={role}").text)
+
+    assert matching("reviewer") == {"bob@example.edu"}
+    assert matching("reviewee") == {"carol@example.edu"}
+    assert matching("observer") == {"bob@example.edu"}
+    assert matching("owner") == {"carol@example.edu"}
+    assert len(matching("any")) == 5
+    body = client.get(f"{ACCOUNTS}?{show_all}&role=reviewer").text
+    assert '<option value="reviewer" selected>' in body
+
+
+def test_clear_drops_the_role_and_search_but_keeps_the_chips(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    assert ">Clear<" not in client.get(ACCOUNTS).text
+    body = client.get(f"{ACCOUNTS}?show=unused&role=owner&q=x").text
+    clear = body.split(">Clear<", 1)[0].rsplit("href=", 1)[1]
+    assert clear.startswith(f'"{ACCOUNTS}?show=unused#accounts-table-card"')
+
+
+def test_the_typeahead_offers_emails_and_names_under_the_chips(
+    workspace: dict[str, User], client: TestClient
+) -> None:
     body = client.get(ACCOUNTS).text
-    assert '<div class="table-pager-cluster' not in body
-    assert body.count("<code>user") == 200
+    options = body.split('<datalist id="accounts-search-options">', 1)[1]
+    options = options.split("</datalist>", 1)[0]
+    assert '<option value="bob@example.edu">' in options
+    assert '<option value="Bob Operator">' in options
+    assert "Erin" not in options
+
+
+def test_unknown_values_fall_back_rather_than_fail(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    response = client.get(f"{ACCOUNTS}?show=bogus&role=bogus&offset=-5")
+    assert response.status_code == 200
+    assert _emails(response.text) == set()
+    assert "No accounts match the chips above." in response.text
+
+
+# --- Pager ------------------------------------------------------------------
+
+
+def _many(db: Session, count: int, **flags: bool) -> None:
+    db.add_all(User(email=f"user{n:04d}@example.edu", **flags) for n in range(count))
+    db.commit()
+
+
+def test_two_hundred_rows_a_page_with_the_pager_above_and_below(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    _many(db, 250, is_operator=True)
+    body = client.get(ACCOUNTS).text
+    assert len(_emails(body)) == 200
+    assert body.count('<div class="table-pager-cluster') == 2
+    assert "<summary>1–200</summary>" in body
+    assert (
+        f'href="{ACCOUNTS}?show=operators&amp;show=admins&amp;offset=200'
+        '#accounts-table-card"'
+    ) in body
+    rest = client.get(f"{ACCOUNTS}?offset=200").text
+    assert len(_emails(rest)) == 51  # 250 and Alice
+    assert "<summary>201–251</summary>" in rest
+    # A stale offset clamps to the last page rather than failing.
+    assert "<summary>201–251</summary>" in client.get(f"{ACCOUNTS}?offset=9000").text
+
+
+def test_the_pager_stays_under_a_search_and_carries_it(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    _many(db, 250, is_operator=True)
+    body = client.get(f"{ACCOUNTS}?q=user").text
+    assert "<summary>1–200</summary>" in body
+    assert f"{ACCOUNTS}?show=operators&amp;show=admins&amp;q=user&amp;offset=200" in body
+
+
+def test_a_filtered_single_page_says_how_many(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    assert "Showing 1 account." in client.get(f"{ACCOUNTS}?q=bob").text
+    assert '<p class="muted table-showing-hint">' not in client.get(ACCOUNTS).text
+
+
+# --- Actions keep the view --------------------------------------------------
+
+
+def test_an_action_redirect_keeps_the_view(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    erin = workspace["erin"]
+    body = client.get(f"{ACCOUNTS}?show=unused&q=erin").text
+    view = body.split('name="view" value="', 1)[1].split('"', 1)[0]
+    assert view == "show=unused&amp;q=erin"
+    response = client.post(
+        f"{ACCOUNTS}/{erin.id}/admit",
+        data={"view": "show=unused&q=erin"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query == {"show": ["unused"], "q": ["erin"], "selected": [str(erin.id)]}
+
+
+def test_the_selected_rows_chip_turns_on_for_that_load(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    """Admitting Erin from the Unused chip makes her an operator, whose
+    chip may be off; the redirect turns it on so she stays in view."""
+    erin = workspace["erin"]
+    body = client.get(f"{ACCOUNTS}?show=no_role&selected={erin.id}").text
+    assert "checked" in _chip(body, "unused")
+    assert "Erin@Example.edu" in _emails(body)
+
+
+def test_the_selected_row_lands_on_its_page(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    client.get(ACCOUNTS)
+    oldest = _seed(db, "oldest@example.edu", is_operator=True)
+    _many(db, 250, is_operator=True)
+    body = client.get(f"{ACCOUNTS}?selected={oldest.id}").text
+    assert "<summary>201–252</summary>" in body
+    assert "oldest@example.edu" in _emails(body)
+
+
+def test_a_tampered_view_is_reencoded_not_echoed(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    response = client.post(
+        f"{ACCOUNTS}/{workspace['erin'].id}/admit",
+        data={"view": "show=unused&evil=1&role=bogus&offset=abc"},
+        follow_redirects=False,
+    )
+    query = parse_qs(urlsplit(response.headers["location"]).query)
+    assert query == {"show": ["unused"], "selected": [str(workspace["erin"].id)]}
+
+
+def test_the_demote_gate_counts_admins_across_the_workspace(
+    workspace: dict[str, User], client: TestClient
+) -> None:
+    """A search showing one admin must not read as "the last admin": the
+    service's ``last_admin`` guard counts the workspace, so the page's
+    Demote gate gets the same count (Codex on #3030)."""
+    body = client.get(f"{ACCOUNTS}?q=carol").text
+    assert _emails(body) == {"carol@example.edu"}
+    toolbar = body.split('id="user-actions"', 1)[1].split(">", 1)[0]
+    assert 'data-sys-admin-count="2"' in toolbar

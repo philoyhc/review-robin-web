@@ -56,8 +56,11 @@ from ._accounts import (
     ACCOUNT_CATEGORIES,
     ACCOUNT_ROLE_OPTIONS,
     AccountChip,
-    account_category,
+    AccountView,
+    account_view_from_query,
+    account_view_query,
     build_account_chips,
+    parse_account_view,
 )
 
 # Filter / search helpers shared by Invitations + Responses
@@ -254,8 +257,11 @@ __all__ = [
     "ACCOUNT_CATEGORIES",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
-    "account_category",
+    "AccountView",
+    "account_view_from_query",
+    "account_view_query",
     "build_account_chips",
+    "parse_account_view",
     "ProgressPill",
     "progress_pill",
     # Module-level constants.

@@ -21,6 +21,7 @@ by email" form. Backed by ``app.services.users``.
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
@@ -42,6 +43,7 @@ from app.auth.roles import effective_super_admin_emails
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import (
+    account_listing,
     audit,
     invitations,
     permissions,
@@ -223,26 +225,74 @@ def sys_admin_users(
     invite_error: str | None = Query(default=None),
     toggle_error: str | None = Query(default=None),
     selected: int | None = Query(default=None),
+    show: list[str] | None = Query(default=None),
+    role: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+    offset: int = 0,
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
-    rows = users_service.list_workspace_users(db)
+    # admin_pages_refine Item 1 — the chips, the Session role, the search
+    # and the page all filter in SQL (``account_listing``). A
+    # ``?selected=`` row an action just changed turns its chip on for
+    # this load and lands on its page, so the operator sees what they did.
+    view = views.parse_account_view(show=show, role=role, search=q, offset=offset)
+    if selected is not None:
+        selected_category = account_listing.category_of(db, selected)
+        if selected_category is not None:
+            view = view.with_category(selected_category)
+    page = account_listing.list_accounts_page(
+        db,
+        categories=view.show,
+        role=None if view.role == "any" else view.role,
+        search=view.search,
+        offset=view.offset,
+        selected_user_id=selected,
+    )
+    view = dataclasses.replace(view, offset=page.offset)
+    pager = views.build_pager(total=page.total, offset=page.offset)
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
         {
             "user": user,
-            "rows": rows,
-            # admin_pages_refine Item 1 rung 1 — the toolbar scaffold.
-            # The chips count the real table but filter nothing, and the
-            # dropdown and search post nothing. No pager yet: every row
-            # still renders, so a "1–200" range would be false and its
-            # links would reload the same list (Codex on #3027). Rung 2
-            # pages on the server and passes one.
-            "account_chips": views.build_account_chips(rows),
+            "rows": page.rows,
+            "account_view": view,
+            # The whole workspace, for the empty-state wording: no
+            # accounts at all reads differently from none matching.
+            "account_total": sum(page.counts.values()),
+            "account_chips": views.build_account_chips(page.counts, view),
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
-            "pager": None,
+            "account_search_options": account_listing.search_options(
+                db, categories=view.show
+            ),
+            # The query the action forms post back, so their redirect
+            # keeps the chips, role, search and page.
+            "account_view_query": views.account_view_query(view),
+            # Clear drops the role and the search; the chips stay.
+            "account_view_query_chips": views.account_view_query(
+                dataclasses.replace(view, role="any", search="", offset=0)
+            ),
+            "accounts_base_url": "/operator/sys-admin/users",
+            "pager": pager,
+            # Unlike the roster pages, the pager stays under a role or a
+            # search: a role can match every account (Codex on #3025). So
+            # the count line, which the roster pages show instead of a
+            # pager, shows only when everything fits one page.
+            "preview_count_line": None if pager else views.preview_count_line(
+                shown=len(page.rows),
+                pool=page.total,
+                noun="accounts",
+                is_filtered=view.is_filtered,
+            ),
+            "pager_url_base": (
+                "/operator/sys-admin/users?"
+                + views.account_view_query(view, offset=False)
+                + "&"
+            ),
             "pager_anchor": "accounts-table-card",
+            # The Demote gate's ``last_admin`` count, workspace-wide.
+            "sys_admin_count": users_service.sys_admin_count(db),
             "actor_is_super_admin": user.is_super_admin,
             # Segment 18S Item 2 — the Promote/Demote controls follow the
             # same rule as the service actor guard: a super-admin actor,
@@ -312,9 +362,18 @@ def _load_target(db: Session, user_id: int) -> User:
 def _users_redirect(
     error_code: str | None = None,
     selected_user_id: int | None = None,
+    view: str = "",
 ) -> RedirectResponse:
+    """Back to Accounts. ``view`` is the query the action form posted
+    (admin_pages_refine Item 1): parsed and re-encoded rather than
+    echoed, so the redirect keeps the chips, role, search and page and
+    nothing else."""
     url = "/operator/sys-admin/users"
     params: list[str] = []
+    if view:
+        params.append(
+            views.account_view_query(views.account_view_from_query(view))
+        )
     if error_code:
         params.append(f"toggle_error={quote(error_code, safe='')}")
     if selected_user_id is not None:
@@ -329,6 +388,7 @@ def _handle_toggle(
     /,
     *,
     selected_user_id: int | None = None,
+    view: str = "",
     **kwargs: Any,
 ) -> RedirectResponse:
     try:
@@ -356,12 +416,13 @@ def _handle_toggle(
                 status_code=status.HTTP_409_CONFLICT, detail=exc.message
             ) from exc
         raise
-    return _users_redirect(selected_user_id=selected_user_id)
+    return _users_redirect(selected_user_id=selected_user_id, view=view)
 
 
 @router.post("/sys-admin/users/{user_id}/admit")
 def admit_user(
     user_id: int,
+    view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -371,12 +432,14 @@ def admit_user(
         actor=actor,
         target=_load_target(db, user_id),
         selected_user_id=user_id,
+        view=view,
     )
 
 
 @router.post("/sys-admin/users/{user_id}/revoke")
 def revoke_user(
     user_id: int,
+    view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -386,12 +449,14 @@ def revoke_user(
         actor=actor,
         target=_load_target(db, user_id),
         selected_user_id=user_id,
+        view=view,
     )
 
 
 @router.post("/sys-admin/users/{user_id}/promote")
 def promote_user(
     user_id: int,
+    view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -401,12 +466,14 @@ def promote_user(
         actor=actor,
         target=_load_target(db, user_id),
         selected_user_id=user_id,
+        view=view,
     )
 
 
 @router.post("/sys-admin/users/{user_id}/demote")
 def demote_user(
     user_id: int,
+    view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -416,12 +483,14 @@ def demote_user(
         actor=actor,
         target=_load_target(db, user_id),
         selected_user_id=user_id,
+        view=view,
     )
 
 
 @router.post("/sys-admin/users/{user_id}/remove-from-all-sessions")
 def remove_from_all_sessions(
     user_id: int,
+    view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -431,12 +500,14 @@ def remove_from_all_sessions(
         actor=actor,
         target=_load_target(db, user_id),
         selected_user_id=user_id,
+        view=view,
     )
 
 
 @router.post("/sys-admin/users/{user_id}/delete")
 def remove_user(
     user_id: int,
+    view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -447,6 +518,7 @@ def remove_user(
         db=db,
         actor=actor,
         target=_load_target(db, user_id),
+        view=view,
     )
 
 

@@ -34,7 +34,6 @@ point without overriding the flags this module set.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -73,75 +72,6 @@ class UserOperationError(ValueError):
         self.message = message
 
 
-def list_workspace_users(db: Session) -> list[WorkspaceUserRow]:
-    """Every users row + per-user session-operator + sole-owner
-    counts. Ordered by ``id DESC`` so newly-admitted users surface
-    at the top.
-
-    ``session_operator_count`` is the total number of sessions
-    where the user appears as an operator (any role).
-    ``sole_owner_count`` is the number of those sessions that
-    list exactly one operator (i.e. the user is the only owner) —
-    drives the "Remove from all sessions" + "Delete user" gates
-    on the operator UI. ``has_history`` mirrors ``remove_user``'s
-    ``has_history`` guard so the Delete button can disable itself.
-    """
-    # One sweep over session_operators is enough to compute both
-    # per-user totals and per-session operator counts (which then
-    # back the sole-owner derivation). Operator workspaces stay
-    # small (tens of users × tens of sessions), so an in-Python
-    # aggregate is cheaper than a window-function query that
-    # SQLite has to fake.
-    op_rows = list(
-        db.execute(select(SessionOperator.session_id, SessionOperator.user_id))
-    )
-    session_total: dict[int, int] = defaultdict(int)
-    for session_id, _ in op_rows:
-        session_total[session_id] += 1
-    user_total: dict[int, int] = defaultdict(int)
-    user_sole: dict[int, int] = defaultdict(int)
-    for session_id, user_id in op_rows:
-        user_total[user_id] += 1
-        if session_total[session_id] == 1:
-            user_sole[user_id] += 1
-
-    users = (
-        db.execute(select(User).order_by(User.id.desc())).scalars().all()
-    )
-    with_history = _users_with_history(db)
-    return [
-        WorkspaceUserRow(
-            id=user.id,
-            email=user.email,
-            display_name=user.display_name,
-            is_operator=user.is_operator,
-            is_sys_admin=user.is_sys_admin,
-            is_super_admin=is_super_admin(user.email),
-            created_at=user.created_at,
-            session_operator_count=user_total.get(user.id, 0),
-            sole_owner_count=user_sole.get(user.id, 0),
-            has_history=user.id in with_history,
-        )
-        for user in users
-    ]
-
-
-def _users_with_history(db: Session) -> set[int]:
-    """Ids of users who created a session or acted in the audit log.
-
-    Those rows are referenced by the sessions they created and the
-    audit rows they acted in, which keep their attribution, so
-    ``remove_user`` refuses them (findings H1, 2026-10-07).
-    """
-    creators = db.execute(select(ReviewSession.created_by_user_id).distinct())
-    actors = db.execute(
-        select(AuditEvent.actor_user_id)
-        .where(AuditEvent.actor_user_id.is_not(None))
-        .distinct()
-    )
-    return {row[0] for row in creators} | {row[0] for row in actors}
-
-
 def _has_history(db: Session, user_id: int) -> bool:
     created = db.execute(
         select(ReviewSession.id)
@@ -167,7 +97,10 @@ def _guard_self(actor: User, target: User) -> None:
         )
 
 
-def _sys_admin_count(db: Session) -> int:
+def sys_admin_count(db: Session) -> int:
+    """Every ``is_sys_admin`` row in the workspace: what the
+    ``last_admin`` guard counts, so the page's Demote gate can ask the
+    same question rather than counting the rows it happens to show."""
     return int(
         db.execute(
             select(func.count(User.id)).where(User.is_sys_admin.is_(True))
@@ -320,7 +253,7 @@ def demote(
     _guard_self(actor, target)
     _guard_actor_super_admin(actor)
     _guard_target_not_super_admin(target, "demoted")
-    if _sys_admin_count(db) <= 1 and target.is_sys_admin:
+    if sys_admin_count(db) <= 1 and target.is_sys_admin:
         raise UserOperationError(
             code="last_admin",
             message=(
@@ -451,7 +384,7 @@ def remove_user(
     """
     _guard_self(actor, target)
     _guard_target_not_super_admin(target, "removed")
-    if target.is_sys_admin and _sys_admin_count(db) <= 1:
+    if target.is_sys_admin and sys_admin_count(db) <= 1:
         raise UserOperationError(
             code="last_admin",
             message=(
