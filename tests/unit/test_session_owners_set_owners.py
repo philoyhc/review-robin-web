@@ -158,3 +158,69 @@ def test_a_target_listed_twice_is_added_once(db: Session) -> None:
     )
     assert [u.id for u in added] == [b.id]
     assert _owner_emails(db, review_session) == ["a@example.edu", "b@example.edu"]
+
+
+# --- skip_refused (Create's; spec/permissions.md §4.2) ----------------------
+
+
+def test_a_refused_target_raises_without_skip_refused(db: Session) -> None:
+    alice = _user(db, "alice@example.edu")
+    review_session = _owned_session(db, alice, "skip-off")
+    gone = _user(db, "gone@example.edu", is_operator=False)
+    with pytest.raises(session_owners.OwnerOperationError) as refused:
+        session_owners.set_owners(
+            db, review_session=review_session, actor=alice, targets=[alice, gone]
+        )
+    assert refused.value.code == "not_in_workspace"
+
+
+def test_skip_refused_skips_both_codes_and_adds_the_rest(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    alice = _user(db, "alice@example.edu")
+    review_session = _owned_session(db, alice, "skip-on")
+    gone = _user(db, "gone@example.edu", is_operator=False)
+    taken = _user(db, "taken@example.edu")
+    carl = _user(db, "carl@example.edu")
+    real = session_owners.add_owner
+
+    def add(db, *, review_session, actor, target, correlation_id=None):
+        if target.id == taken.id:  # someone else added them meanwhile
+            raise session_owners.OwnerOperationError("already_owner", "already")
+        return real(
+            db, review_session=review_session, actor=actor, target=target,
+            correlation_id=correlation_id,
+        )
+
+    monkeypatch.setattr(session_owners, "add_owner", add)
+    added, removed = session_owners.set_owners(
+        db,
+        review_session=review_session,
+        actor=alice,
+        targets=[alice, gone, taken, carl],
+        skip_refused=True,
+    )
+    assert [u.email for u in added] == ["carl@example.edu"]
+    assert removed == []
+    assert _owner_emails(db, review_session) == [
+        "alice@example.edu", "carl@example.edu"
+    ]
+
+
+def test_skip_refused_still_raises_any_other_refusal(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    alice = _user(db, "alice@example.edu")
+    review_session = _owned_session(db, alice, "skip-other")
+    carl = _user(db, "carl@example.edu")
+
+    def add(db, **kwargs):
+        raise session_owners.OwnerOperationError("self_only", "no")
+
+    monkeypatch.setattr(session_owners, "add_owner", add)
+    with pytest.raises(session_owners.OwnerOperationError) as refused:
+        session_owners.set_owners(
+            db, review_session=review_session, actor=alice,
+            targets=[alice, carl], skip_refused=True,
+        )
+    assert refused.value.code == "self_only"

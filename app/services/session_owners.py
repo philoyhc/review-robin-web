@@ -350,6 +350,10 @@ def resolve_owners(db: Session, emails: list[str]) -> list[User]:
     return resolved
 
 
+# The refusals ``set_owners(skip_refused=True)`` skips; any other raises.
+_SKIPPABLE = frozenset({"not_in_workspace", "already_owner"})
+
+
 def set_owners(
     db: Session,
     *,
@@ -357,7 +361,7 @@ def set_owners(
     actor: User,
     targets: list[User],
     correlation_id: str | None = None,
-    skip_revoked: bool = False,
+    skip_refused: bool = False,
 ) -> tuple[list[User], list[User]]:
     """Replace a session's owner set with ``targets``; return (added, removed).
 
@@ -371,10 +375,13 @@ def set_owners(
     kept, emits nothing. Validate the list with ``resolve_owners`` (Create)
     first.
 
-    ``skip_revoked`` is Create's: its list was validated before the
-    session existed, so a ``not_in_workspace`` refusal here means that
-    target was revoked since. It is skipped and the rest are still
-    added, rather than one revoke stopping every owner staged after it.
+    ``skip_refused`` is Create's: its list was validated before the
+    session existed, so a refusal here means the target changed since —
+    revoked, demoted or deleted (``not_in_workspace``), or already made
+    an owner by someone else (``already_owner``, the state wanted). The
+    target is skipped and the rest are still added, rather than one
+    refusal stopping every owner staged after it; ``add_owner`` refuses
+    both before it writes, so nothing is left half done.
     """
     if not targets:
         raise OwnerOperationError(
@@ -402,7 +409,7 @@ def set_owners(
                     correlation_id=correlation_id,
                 )
             except OwnerOperationError as exc:
-                if not (skip_revoked and exc.code == "not_in_workspace"):
+                if not (skip_refused and exc.code in _SKIPPABLE):
                     raise
                 continue
             added.append(target)

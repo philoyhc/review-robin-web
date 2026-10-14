@@ -49,17 +49,20 @@ fields of its details card instead (19U Item 2).
 address that is not a workspace operator is a 422 and nothing is
 created. After `sessions.create_session` returns, `write_staged_owners`
 calls `session_owners.set_owners(targets=[creator, *owner_targets],
-skip_revoked=True)`, which adds the co-owners (the creator is already
-the first owner from `create_session` itself). A co-owner revoked
-between that check and the write is refused under the owner-add lock
-(`spec/permissions.md` §4.2) and skipped, silently; the others still
-land. Every event this produces — the session, each
+skip_refused=True)`, which adds the co-owners (the creator is already
+the first owner from `create_session` itself). A co-owner revoked,
+demoted or deleted between that check and the write is refused under
+the owner-add lock (`spec/permissions.md` §4.2) and skipped, silently;
+the others still land. Every event this produces — the session, each
 Quick Setup slot, the tag write, one `session.owner_added` per
 co-owner — shares one `correlation_id`.
 
-`already_owner` cannot occur here: a duplicate or the creator's own
-address collapses silently in `resolve_owners` / `set_owners` before
-`add_owner` would raise it.
+A duplicate or the creator's own address collapses silently in
+`resolve_owners` / `set_owners` before `add_owner` would raise
+`already_owner`. It can still arise if someone else adds a staged
+co-owner to the new session between its creation and the write (an
+Adopt, say); `skip_refused` skips that one too, since they are already
+an owner.
 
 ---
 
@@ -149,12 +152,13 @@ dropped.
   duplicates collapsed, every address a workspace operator or raises
   `not_in_workspace` naming it. Create's, over the whole staged list.
 - **`set_owners(db, *, review_session, actor, targets,
-  correlation_id=None) -> (added, removed)`** — replaces the
+  correlation_id=None, skip_refused=False) -> (added, removed)`** — replaces the
   whole owner set with `targets`; adds before it removes so the count
   never passes through zero; refuses an empty `targets`
   (`last_owner`); de-duplicates its own input. Create's only caller;
-  with `skip_revoked=True`, as Create passes it, a `not_in_workspace`
-  refusal skips that target and the rest are still added.
+  with `skip_refused=True`, as Create passes it, a `not_in_workspace`
+  or `already_owner` refusal skips that target and the rest are still
+  added; any other refusal raises.
 - **`add_owner` / `remove_owner`** — the single-target primitives
   behind `owners/add` and `owners/{user_id}/remove`, and so behind
   Session Home's card: each validates, writes one row and its audit

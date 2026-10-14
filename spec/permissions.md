@@ -257,9 +257,9 @@ Create's owners and Adopt; and the creator on Create, Duplicate and
 Rehydrate, who bounce to `/me` as `require_operator` would. A revoke,
 single-row or bulk, locks the user row `FOR NO KEY UPDATE` before it
 counts owned sessions, so either the add commits first and `still_owner` counts it,
-or it waits and sees the flag cleared. A Create owner revoked between
-the 422 check and the write is skipped, silently; the owners staged
-after them still land (`spec/session_owners.md` §1).
+or it waits and sees the flag cleared. A Create owner revoked, demoted
+or deleted between the 422 check and the write is skipped, silently;
+the owners staged after them still land (`spec/session_owners.md` §1).
 
 ---
 
@@ -345,7 +345,8 @@ a case when a gate changes.
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
 | every Accounts Management action and guard code | `tests/integration/test_sys_admin_users.py` |
 | the Accounts bulk actions: each action, every refusal, the two post-batch counts | `tests/integration/test_sys_admin_accounts_batch.py` |
-| an owner add and a revoke of the same user serialize (§4.2): every owner-row write re-reads under the lock, and on Postgres each side waits on the other | `tests/integration/test_owner_add_lock.py` |
+| an owner add and a revoke of the same user serialize (§4.2): every owner-row write re-reads under the lock, and on Postgres each side waits on the other | `tests/integration/test_owner_add_lock.py`; Rehydrate's in `tests/integration/test_rehydrate_commit_route.py` |
+| every route that makes a session takes the owner-add lock first, and only the known services write owner rows | `tests/unit/test_owner_lock_wiring.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |

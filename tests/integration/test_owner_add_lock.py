@@ -236,7 +236,7 @@ def test_an_owner_add_holds_off_a_revoke(
         assert session_owners.lock_owner_eligible(adding, adding.get(User, bob_id))
         _short_wait(revoking)
         actor = revoking.get(User, admin_id)
-        with pytest.raises(OperationalError, match="lock timeout"):
+        with pytest.raises(OperationalError, match="lock timeout") as waited:
             if path == "single":
                 users_service.revoke(
                     revoking, actor=actor, target=revoking.get(User, bob_id)
@@ -245,6 +245,9 @@ def test_an_owner_add_holds_off_a_revoke(
                 users_service.apply_batch(
                     revoking, actor=actor, action="revoke", user_ids=[bob_id]
                 )
+        # The revoke's own row lock is what waited, not its later UPDATE:
+        # counted before the lock, the count would miss the add.
+        assert "FOR NO KEY UPDATE" in str(waited.value.statement)
 
 
 def test_a_revoke_holds_off_an_owner_add(engine: Engine, pg_seed) -> None:

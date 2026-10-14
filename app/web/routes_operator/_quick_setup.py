@@ -300,9 +300,10 @@ async def create_session(
 
         The creator is always in the set, so they can never be staged
         out: a session keeps its first owner. Validated before the
-        session was created, so it refuses one only if they were revoked
-        since (``add_owner`` re-reads them under the owner-add lock);
-        ``skip_revoked`` leaves that one out and adds the rest, rather
+        session was created, so it refuses one only if they changed since:
+        revoked, demoted or deleted (``add_owner`` re-reads them under the
+        owner-add lock), or already added by someone else.
+        ``skip_refused`` leaves that one out and adds the rest, rather
         than answering 500 on a session already made. Runs on every path
         the Tags box does — a failed upload keeps what the operator
         staged, as it keeps what they typed.
@@ -315,7 +316,7 @@ async def create_session(
             actor=user,
             targets=[user, *owner_targets],
             correlation_id=correlation_id,
-            skip_revoked=True,
+            skip_refused=True,
         )
 
     def quick_setup_error_redirect(
