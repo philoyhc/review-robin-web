@@ -225,7 +225,9 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Every chip off.** Turn every chip off, leave and come back: still
   every chip off, with "No accounts match the chips above."
 - [ ] **Row actions.** With non-default chips on, act on a row: the page
-  comes back with the same chips.
+  comes back with the same chips, plus the chip the row moved to if it
+  was off (Revoke with Unused off turns Unused on), and leaving and
+  coming back keeps that chip on.
 - [ ] **Invite.** With only Unused on, invite someone: the page comes
-  back with Operators turned on and the new row in view; leave and come
-  back and Operators is still on.
+  back with Operators turned on and the new row ticked, its expander
+  open; leave and come back and Operators is still on.
