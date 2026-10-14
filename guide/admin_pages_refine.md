@@ -181,12 +181,13 @@ shows only when it applies to every selected row.
 | Chip | Role controls |
 |---|---|
 | Operators | Revoke, Promote |
-| Admins | Demote only; never Revoke, which flips a flag the admin flag already overrides |
+| Admins | Demote; never Revoke, which flips a flag the admin flag already overrides |
 | Admins (super-admin) | none: config sets the tier, and sign-in restores it |
-| No role, Unused | Admit |
+| No role, Unused | Admit; no Promote, so an admin is made in two steps (a change from today) |
 
 Promote and Demote still need `can_manage_admins`. Remove from all
-sessions and Delete keep today's gates (Delete: Unused only).
+sessions and Delete keep today's gates, admins included (Delete: Unused
+only; author, 2026-10-14).
 
 ### Semantics
 
@@ -194,7 +195,8 @@ sessions and Delete keep today's gates (Delete: Unused only).
   batch, naming the row and the reason, and nothing changes.
 - **Guards judge the batch, not each row alone** (Codex on #3025 and
   #3026). Per-row guards (`still_owner`, `has_history`,
-  `protected_super_admin`) run on every row. The set-level ones run
+  `protected_super_admin`, and a new `not_operator` refusing Promote on
+  a row with no role) run on every row. The set-level ones run
   against the state after the whole batch:
   - `last_admin`: two admins demoted or deleted together can't leave
     none;
@@ -249,10 +251,9 @@ Taken 2026-10-14 at `871ba085`.
 ### Open questions
 
 - ~~All or nothing?~~ All or nothing (author, 2026-10-14).
-- **Promote straight from No role / Unused?** Today's toolbar allows
-  it; the role-control table above doesn't. Author decides.
-- **Remove from all sessions on an admin?** Allowed today (not on a
-  super-admin); "Demote only" names role controls. Author decides.
+- ~~Promote straight from No role / Unused?~~ No (author, 2026-10-14).
+- ~~Remove from all sessions on an admin?~~ Yes, as today (author,
+  2026-10-14).
 
 ### Out of scope
 
