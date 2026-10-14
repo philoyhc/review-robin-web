@@ -267,3 +267,58 @@ Taken 2026-10-14 at `871ba085`.
 - `spec/permissions.md` — §4.1 states the bulk actions, their all-or-nothing guards and the locks (Item 2).
 - `spec/operator_button_audit.md` — the toolbar rows become expander rows (Item 2).
 - `docs/security_posture.md` — the Accounts row no longer says "a single selected row" (Item 2).
+
+---
+
+## Item 3 — Invite card half width, a cycle chip, an Overview stub
+
+### Opportunity
+
+The Invite by email card spans the page for one field and a checkbox,
+and nothing on Accounts summarizes the workspace (author, 2026-10-14).
+
+### Decision
+
+The Invite card takes the **left half**, and a new **Overview** card
+the right, the same height (`.page-grid`, `spec/ui_elements.md` §10,
+whose cells stretch; `.bottom-grid` keeps natural heights, which the
+author ruled out). Overview is a **stub**: its heading and one line
+saying what it will hold, until its content is decided.
+
+*Also invite as sys-admin* becomes a **cycle chip**, `Invite as
+operator` ↔ `Invite as sys-admin` (`spec/ui_elements.md` "Five chip
+types": every state a positive choice, so always solid). The author
+called it type 2; by that table's order it is the third type, cycle.
+It wraps the same `invite_as_sys_admin` box, so the route and service
+don't change; it renders only where `can_manage_admins`, as the box
+does. `Cancel` resets it to `Invite as operator`.
+
+### PR ladder
+
+1. **Layout, chip and stub.** The grid, the chip with its label script
+   (on `change` and on the form's `reset`), and the static Overview
+   card. No route change.
+2. **Overview content**, once decided.
+
+### Definition of done
+
+- The Invite and Overview cards sit side by side at equal height and
+  stack below 800px.
+- Ticking the chip posts `invite_as_sys_admin=true`, as the box did.
+- `## Doc impact` section present and current
+- Every `### Doc impact` bullet checked by hand against the diff (`tools/close_check.py` reads only `segment_*` ids)
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; the file stays in `guide/` unless every item has closed
+
+### Open questions
+
+- **What Overview shows**: counts per kind of account, at least
+  (author, 2026-10-14). Author decides before rung 2.
+
+### Doc impact
+
+- `spec/permissions.md` — rows naming *Also invite as sys-admin* name the chip (Item 3).
+- `spec/operator_button_audit.md` — row 113's Cancel resets the chip, not a checkbox (Item 3).
+- `docs/security_posture.md` — the invite guard names the chip (Item 3).
+- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card (Item 3).
