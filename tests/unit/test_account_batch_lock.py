@@ -5,9 +5,9 @@ SQLite drops ``FOR UPDATE`` altogether, so no integration test can see
 which lock ``users.apply_batch`` takes. Every action but Delete takes
 ``FOR NO KEY UPDATE``, the mode ``session_guard`` takes on its session
 row, which an audit row's foreign-key check (``FOR KEY SHARE`` on its
-actor) doesn't wait on, so a bulk Remove from all sessions can't deadlock against a concurrent owner
-removal by a selected user. Delete removes the rows and needs the full
-``FOR UPDATE``.
+actor) doesn't wait on, so a bulk Remove from all sessions can't
+deadlock against a concurrent owner removal by a selected user. Delete
+removes the rows and needs the full ``FOR UPDATE``.
 """
 
 from __future__ import annotations

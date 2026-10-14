@@ -553,9 +553,9 @@ def apply_batch(
     # then every admin row is locked with the selection, in one id-ordered
     # statement so concurrent batches take the locks in the same order.
     # Only Delete removes rows, so only Delete takes the full lock; the
-    # rest take FOR NO KEY UPDATE, as ``session_guard`` does, which an
-    # audit row's foreign-key check (FOR KEY SHARE on its actor) doesn't
-    # wait on. With the full lock a bulk Remove from all sessions and a
+    # rest take FOR NO KEY UPDATE (the mode ``session_guard`` takes on its
+    # session row), which an audit row's foreign-key check (FOR KEY SHARE
+    # on its actor) doesn't wait on. With the full lock a bulk Remove from all sessions and a
     # concurrent ``session_owners.remove_owner`` by a selected user could
     # deadlock: owner rows then user row against user row then owners.
     counts_admins = action in ("demote", "delete")
