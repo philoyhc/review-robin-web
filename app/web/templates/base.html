@@ -3251,6 +3251,11 @@
         gap: var(--space-2);
         margin-left: auto;
       }
+      /* A modifier for an action row whose buttons sit under muted group
+         labels ("Operator:", "Admin:", "|"), as Accounts' expander does
+         after its toolbar: the labels are text, so they need centering
+         against the buttons, which the roster rows (buttons only) don't. */
+      body.ui-v2 .row-expander-actions.is-labelled { align-items: center; }
       body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
       /* 19P.2 rung 5 — the two-column expander, Observers only so far.
          Since operator pages Item 4 it is the Observers row editor's bar:

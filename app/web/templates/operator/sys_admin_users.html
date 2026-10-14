@@ -622,23 +622,32 @@
           function isSuper(row) {
             return row.getAttribute("data-is-super-admin") === "true";
           }
+          // Grouped as the toolbar groups them, so a bare "Revoke" or
+          // "Promote" says which role it changes: "Operator:" then
+          // Admit / Revoke and Remove from all sessions, "Admin:" then
+          // Promote / Demote, a "|" and Delete. A group with no control
+          // for this selection renders no label.
           function controls(sel) {
-            var out = [];
+            var operator = [];
+            var admin = [];
+            var danger = [];
+            var allOperators = every(sel, function (r) {
+              return category(r) === "operators";
+            });
             if (every(sel, function (r) {
               return category(r) === "no_role" || category(r) === "unused";
-            })) out.push(["Admit", "secondary"]);
-            if (every(sel, function (r) { return category(r) === "operators"; })) {
-              out.push(["Revoke", "secondary"]);
-              if (canManageAdmins) out.push(["Promote", "secondary"]);
+            })) operator.push(["Admit", "secondary"]);
+            if (allOperators) operator.push(["Revoke", "secondary"]);
+            if (!sel.some(isSuper)) {
+              operator.push(["Remove from all sessions", "secondary"]);
+              danger.push(["Delete", "destructive"]);
             }
+            if (canManageAdmins && allOperators) admin.push(["Promote", "secondary"]);
             if (canManageAdmins && every(sel, function (r) {
               return category(r) === "admins" && !isSuper(r);
-            })) out.push(["Demote", "secondary"]);
-            if (!sel.some(isSuper)) {
-              out.push(["Remove from all sessions", "secondary"]);
-              out.push(["Delete", "destructive"]);
-            }
-            return out;
+            })) admin.push(["Demote", "secondary"]);
+            return [["Operator:", operator], ["Admin:", admin], ["|", danger]]
+              .filter(function (group) { return group[1].length; });
           }
           function buildPanel(sel) {
             var tr = document.createElement("tr");
@@ -646,20 +655,25 @@
             tr.id = "users-row-expander";
             var td = document.createElement("td");
             td.colSpan = table.rows[0].cells.length;
-            var acts = controls(sel);
+            var groups = controls(sel);
             var html =
               '<div class="row-expander-body">' +
                 '<span class="row-expander-count"><strong>' + sel.length +
                 "</strong> of " + boxes().length + " selected</span>";
-            if (acts.some(function (a) { return a[0] === "Delete"; })) {
+            if (groups.some(function (g) { return g[0] === "|"; })) {
               html += '<label class="confirm-label exp-confirm-label">' +
                 '<input type="checkbox" disabled> Yes, delete these</label>';
             }
-            html += '<span class="row-expander-actions">';
-            acts.forEach(function (a) {
-              html += '<button type="button" class="btn ' + a[1] + '"' +
-                ' data-expander-action="' + a[0] + '"' +
-                ' disabled aria-disabled="true">' + a[0] + "</button>";
+            html += '<span class="row-expander-actions is-labelled">';
+            groups.forEach(function (group) {
+              html += '<span class="muted"' +
+                (group[0] === "|" ? ' aria-hidden="true"' : "") + ">" +
+                group[0] + "</span>";
+              group[1].forEach(function (a) {
+                html += '<button type="button" class="btn ' + a[1] + '"' +
+                  ' data-expander-action="' + a[0] + '"' +
+                  ' disabled aria-disabled="true">' + a[0] + "</button>";
+              });
             });
             html += "</span></div>";
             td.innerHTML = html;

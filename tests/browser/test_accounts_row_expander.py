@@ -64,8 +64,12 @@ def test_two_operators_open_an_inert_expander_and_disable_the_toolbar(
     expander = page.locator("#users-row-expander")
     expect(expander).to_have_count(1)
     expect(expander).to_contain_text("2 of 3 selected")
+    # Grouped as the toolbar is, so each button says which role it changes.
     assert _expander_actions(page) == [
-        "Revoke", "Promote", "Remove from all sessions", "Delete",
+        "Revoke", "Remove from all sessions", "Promote", "Delete",
+    ]
+    assert expander.locator(".row-expander-actions > .muted").all_inner_texts() == [
+        "Operator:", "Admin:", "|",
     ]
     for button in expander.locator("[data-expander-action]").all():
         expect(button).to_be_disabled()
@@ -87,6 +91,10 @@ def test_a_mixed_selection_shows_only_what_applies_to_every_row(
     _tick(page, first)
     _tick(page, unused)
     assert _expander_actions(page) == ["Remove from all sessions", "Delete"]
+    # No Admin control fits, so no "Admin:" label.
+    assert page.locator(
+        "#users-row-expander .row-expander-actions > .muted"
+    ).all_inner_texts() == ["Operator:", "|"]
 
 
 def test_one_row_keeps_the_toolbar_live(page: Page, api: httpx.Client) -> None:
