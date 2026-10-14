@@ -728,7 +728,7 @@ takes the next free number.
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
 | 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). The three sit on one line in a `.btn-pair.is-one-line`, however narrow the cell. |
 | 275 | Sessions table toolbar (right) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner, with a typeahead of every name, code and owner label) and shows every row again. `Cancel` by the author's ask (2026-10-14), though the lobby's own filter says `Clear` (#194a). The filter hides rendered rows live and never queries. |
-| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from |
+| 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from. `/operator/sys-admin` remembers that origin for the visit (cookie `rrw-admin-return-to`), so this tab and Accounts (#111) keep it across the tab strip and every action's redirect |
 | 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all four Sys Admin pages (§§19–22). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
 | 249 | Sys Admin tab strip | Accounts Management | `<a>` | `nav-tab` (`.active` on §19's page) | Nav (page-internal) | As #248 |
 
@@ -763,7 +763,7 @@ on every selected row, all or nothing (`spec/permissions.md` §4.1).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 111 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
+| 111 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | As #247: where the Admin visit began, from the remembered origin (`rrw-admin-return-to`), else the Sessions lobby |
 | 112 | Invite by email | Invite | `<button type="submit">` | `btn secondary` | Secondary | Posts `/sys-admin/users/invite`. Starts `disabled`; inline JS enables when the email input has text. Sits right of Cancel (#113), the pair flush right on the `.card-action-row` beside the role chip (`Invite as operator` ↔ `Invite as sys-admin`, rendered only where the actor can manage admins; `spec/ui_elements.md` §10). |
 | 113 | Invite by email | Cancel | `<button type="reset">` | `btn secondary` | Secondary | Left of Invite. Resets the email and the role chip to `Invite as operator`. Starts `disabled`; same dirty-check as Invite. |
 | 114 | Workspace users — row expander | Admit / Revoke | `<button type="submit">` | `btn secondary` | Secondary | Two buttons, each under `Operator:`. `Admit` renders when every selected row is under the **No role** or **Unused** chip; `Revoke` when every one is under **Operators** and owns no session (an admin's Operator flag is overridden by the admin flag, so Revoke is never offered on an Admins row). Server guards `protected_super_admin` and `still_owner` (a row that owns a session) refuse the whole batch. |

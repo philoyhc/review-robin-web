@@ -202,3 +202,12 @@ Sys Admin → Sessions Diagnostics.
   empties the box and every row comes back.
 - [ ] **Actions.** Manage, Outbox and Audit log sit on one line in every
   row.
+
+## Admin back link returns where you came from (2026-10-14)
+
+- [ ] **From a session.** On any session page, follow the chrome's Admin
+  link: Sessions Diagnostics' back link names that session. Switch to
+  Accounts Management, change a chip, act on a row, then switch back:
+  both tabs still say "← Back to {that session}", and it opens it.
+- [ ] **From the lobby.** Follow Admin from the Sessions lobby: both tabs
+  say "← Back to Sessions".
