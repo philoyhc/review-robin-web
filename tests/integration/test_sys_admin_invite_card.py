@@ -1,5 +1,6 @@
-"""Sys Admin → Accounts: the Invite card beside an Overview stub, and its
-role chip (``guide/admin_pages_refine.md`` Item 3 rung 1)."""
+"""Sys Admin → Accounts: the Invite card beside the Overview card, and its
+role chip (``guide/admin_pages_refine.md`` Item 3). The Overview's own
+counts are in ``test_sys_admin_accounts_overview.py``."""
 from __future__ import annotations
 
 import pytest
@@ -23,9 +24,8 @@ def test_invite_and_overview_share_one_grid_row(
     body = _page(client)
     grid = body.split('<div class="page-grid">', 1)[1]
     assert grid.index("<h2>Invite by email</h2>") < grid.index("<h2>Overview</h2>")
-    assert '<div class="card placeholder" id="accounts-overview">' in body
-    overview = body.split('id="accounts-overview"', 1)[1].split("</div>", 1)[0]
-    assert "will appear here" in overview
+    # No longer the rung-1 stub: a live card, not a placeholder.
+    assert '<div class="card" id="accounts-overview">' in body
     # Overview's own close, then the grid's, before the Workspace users
     # card opens: the table card is outside the grid. (The browser test
     # measures that it spans the page.)

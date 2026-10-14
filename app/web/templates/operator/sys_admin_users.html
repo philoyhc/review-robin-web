@@ -116,13 +116,31 @@
     </script>
   </div>
 
-  {# admin_pages_refine Item 3 — a stub, in the canonical placeholder
-     treatment (`spec/ui_elements.md` §4): what Overview shows is the
-     author's to decide (rung 2). #}
-  <div class="card placeholder" id="accounts-overview">
+  {# admin_pages_refine Item 3 — four lines, the author's choice sized
+     to the card: the chips' counts, each opening the table on that chip
+     alone; new accounts; Unused ones old enough to clear out; and
+     sessions one person owns. #}
+  {% set ov = account_overview %}
+  <div class="card" id="accounts-overview">
     <h2>Overview</h2>
-    <p class="muted">A summary of the workspace's accounts, such as how
-      many there are of each kind, will appear here.</p>
+    <dl class="overview-list">
+      <dt>Accounts</dt>
+      <dd>
+        {%- for kind in account_overview_kinds -%}
+          <a href="{{ kind.url }}" data-overview-kind="{{ kind.key }}">{{ kind.label }} {{ kind.count }}</a>
+          {%- if kind.note %} {{ kind.note }}{% endif -%}
+          {%- if not loop.last %} · {% endif -%}
+        {%- endfor -%}
+      </dd>
+      <dt>New in the last {{ overview_days }} days</dt>
+      <dd data-overview="new">{{ ov.new_recently }}</dd>
+      <dt>Unused for over {{ overview_days }} days</dt>
+      <dd data-overview="stale">{{ ov.unused_stale }}
+        {%- if ov.unused_stale %} · <a href="{{ account_overview_unused_url }}">Show Unused</a>{% endif -%}
+      </dd>
+      <dt>Sessions with one owner</dt>
+      <dd data-overview="sole">{{ ov.single_owner_sessions }}</dd>
+    </dl>
   </div>
   </div>{# .page-grid #}
 

@@ -20,11 +20,14 @@ __all__ = [
     "ACCOUNT_CATEGORIES",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
+    "AccountOverviewKind",
     "AccountView",
+    "account_chip_url",
     "account_refusal_message",
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
+    "build_account_overview_kinds",
     "parse_account_view",
 ]
 
@@ -147,6 +150,44 @@ def build_account_chips(
     return [
         AccountChip(
             key=key, label=label, count=counts.get(key, 0), selected=key in view.show
+        )
+        for key, label, _ in ACCOUNT_CATEGORIES
+    ]
+
+
+@dataclass(frozen=True)
+class AccountOverviewKind:
+    """One of the Overview card's counts by kind, linking to the table
+    with only its chip on (admin_pages_refine Item 3)."""
+
+    key: str
+    label: str
+    count: int
+    url: str
+    #: After the link: Admins counts its super-admins, "(1 super-admin)".
+    note: str = ""
+
+
+def account_chip_url(base_url: str, key: str, *, anchor: str) -> str:
+    """The table with only ``key``'s chip on, scrolled to it."""
+    return f"{base_url}?{urlencode([('show', key)])}#{anchor}"
+
+
+def build_account_overview_kinds(
+    counts: Mapping[str, int], *, super_admins: int, base_url: str, anchor: str
+) -> list[AccountOverviewKind]:
+    plural = "" if super_admins == 1 else "s"
+    return [
+        AccountOverviewKind(
+            key=key,
+            label=label,
+            count=counts.get(key, 0),
+            url=account_chip_url(base_url, key, anchor=anchor),
+            note=(
+                f"({super_admins} super-admin{plural})"
+                if key == "admins" and super_admins
+                else ""
+            ),
         )
         for key, label, _ in ACCOUNT_CATEGORIES
     ]

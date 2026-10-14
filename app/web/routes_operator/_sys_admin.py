@@ -22,6 +22,7 @@ by email" form. Backed by ``app.services.users``.
 from __future__ import annotations
 
 import dataclasses
+from datetime import datetime, timezone
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
@@ -219,6 +220,9 @@ def sys_admin_session_audit_log(
 # ---- Accounts Management (PR 6) ------------------------------------------
 
 
+_ACCOUNTS_URL = "/operator/sys-admin/users"
+
+
 @router.get("/sys-admin/users", response_class=HTMLResponse)
 def sys_admin_users(
     request: Request,
@@ -254,6 +258,7 @@ def sys_admin_users(
     view = dataclasses.replace(view, offset=page.offset)
     pager = views.build_pager(total=page.total, offset=page.offset)
     refused_user = db.get(User, refused) if refused is not None else None
+    overview = account_listing.overview(db, now=datetime.now(timezone.utc))
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
@@ -265,6 +270,20 @@ def sys_admin_users(
             # accounts at all reads differently from none matching.
             "account_total": sum(page.counts.values()),
             "account_chips": views.build_account_chips(page.counts, view),
+            # admin_pages_refine Item 3 — the Overview card: the chips'
+            # own counts, each linking to the table with only that chip
+            # on, and what they don't count.
+            "account_overview_kinds": views.build_account_overview_kinds(
+                page.counts,
+                super_admins=overview.super_admins,
+                base_url=_ACCOUNTS_URL,
+                anchor="accounts-table-card",
+            ),
+            "account_overview": overview,
+            "account_overview_unused_url": views.account_chip_url(
+                _ACCOUNTS_URL, "unused", anchor="accounts-table-card"
+            ),
+            "overview_days": account_listing.OVERVIEW_DAYS,
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
             # The typeahead's first list, for what the box already holds;
             # the page's script asks ``search-options`` again as it changes.
@@ -278,7 +297,7 @@ def sys_admin_users(
             "account_view_query_chips": views.account_view_query(
                 dataclasses.replace(view, role="any", search="", offset=0)
             ),
-            "accounts_base_url": "/operator/sys-admin/users",
+            "accounts_base_url": _ACCOUNTS_URL,
             "pager": pager,
             # Unlike the roster pages, the pager stays under a role or a
             # search: a role can match every account (Codex on #3025). So
@@ -291,7 +310,7 @@ def sys_admin_users(
                 is_filtered=view.is_filtered,
             ),
             "pager_url_base": (
-                "/operator/sys-admin/users?"
+                f"{_ACCOUNTS_URL}?"
                 + views.account_view_query(view, offset=False)
                 + "&"
             ),
@@ -396,7 +415,7 @@ def _users_redirect(
     (admin_pages_refine Item 1): parsed and re-encoded rather than
     echoed, so the redirect keeps the chips, role, search and page and
     nothing else."""
-    url = "/operator/sys-admin/users"
+    url = _ACCOUNTS_URL
     params: list[str] = []
     if view:
         params.append(
@@ -634,6 +653,6 @@ def invite_user(
             is_sys_admin=invite_as_sys_admin == "true",
         )
     except users_service.UserOperationError as exc:
-        url = f"/operator/sys-admin/users?invite_error={quote(exc.code, safe='')}"
+        url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
     return _users_redirect()
