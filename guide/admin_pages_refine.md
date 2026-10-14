@@ -78,8 +78,8 @@ checkbox-and-pill filter (author, 2026-10-14).
 - **The pager stays under a filter**, unlike the roster pages' 500-row
   cap: a role can match all 1,000 (Codex on #3025). `?offset=` clamps.
 - **A toolbar redirect keeps the view** (chips, role, search, offset). A
-  `?selected=<id>` whose row the chips would hide turns its chip on for
-  that load only.
+  `?selected=<id>` whose row the chips would hide turns its chip on, as
+  if clicked: it stays on in every link the page renders.
 - **Session role matches on email**, case-insensitive, in any session:
   a roster row, or for `Owner` a `session_operators` row.
 - **Chip state lives in the URL**, defaulting to Operators and Admins.
@@ -91,8 +91,9 @@ Taken 2026-10-14 at `871ba085`.
 - `sys_admin_users.html`; `list_workspace_users` (`app/services/users.py:76`,
   all rows in Python); route `sys_admin_users` (`_sys_admin.py:220`).
   Reused: `build_pager`, `_pager_cluster.html`, `preview_count_line`.
-- Session role reads three indexed email columns (`grep -n "index=True"
-  app/db/models/{reviewer,reviewee,observer}.py`).
+- Session role compares `lower()` of three email columns, which their
+  btree indexes can't serve (`grep -n "index=True"
+  app/db/models/{reviewer,reviewee,observer}.py`); rung 3 timed it.
 - `tests/integration/test_sys_admin_users.py` (55, `grep -c "def test_"`);
   no browser test (`grep -rln "sys-admin/users" tests/browser`).
 - Scale unmeasured (`_users_with_history` reads every audit actor):
@@ -111,6 +112,32 @@ Taken 2026-10-14 at `871ba085`.
   "every chip off" distinct from the default; `Clear` keeps the chips;
   the count line shows only when one page holds everything, since the
   pager stays under a filter; a `?selected=` row lands on its own page.
+  The Demote gate takes the workspace admin count from the server, not
+  the rendered rows (Codex on #3030).
+- **Rung 3** (2026-10-14): timed on local Postgres 16 with
+  `tools/bench_roster_scale.py seed-accounts` / `bench-accounts` (20
+  audit rows for 60% of accounts), median of 5, re-taken at `5eb3a9e5`
+  once every Session role and the `?selected=` landing were in the list
+  (Codex on #3032): 1,200 accounts 44–65ms, 5,200 accounts 72–119ms,
+  8–9 queries a view and 12 for `?selected=`. The first run, at
+  `a57ac950` without those three views, measured 25–40ms and 48–75ms on
+  the same machine, so wall-clock drifts; compare query counts. No fix
+  needed: the one outlier, the Reviewer role filter at 478ms, was
+  unanalyzed tables, and `seed-accounts` now runs `ANALYZE`.
+- **Reads**: one cumulative, from `adc01b08`, at rung 3. It found no
+  blocker. Acted on in rung 3: a `?selected=` chip stays on, as if
+  clicked (the plan said "that load only"; plan and specs now say so);
+  a crafted `view` offset such as `²` answered 500 after the commit; the
+  service and the pager each set the page size; `spec/ui_elements.md`
+  §10 was missing from Doc impact; two browser assertions that couldn't
+  fail. Left as open questions: the typeahead cap, and whether owning a
+  session is history. A non-numeric `?offset=` or `?selected=` in the
+  address bar answers 422, as on the roster pages (spec-writer); left.
+  The rung also corrected Blast radius: the role filter's `lower()`
+  can't use the email indexes, as first written. A second read, of
+  the fixes, found prose gaps only, acted on here; it left
+  `spec/assignments.md` and `spec/lifecycle.md`'s "seven preview
+  pages" alone, since those mean the session pages.
 
 ### PR ladder
 
@@ -134,6 +161,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~Dropdown~~: session roles; ~~fourth chip~~: *Unused*, not *Invited*,
   since an invite always makes an operator or admin (author, 2026-10-14).
+- **Typeahead at scale** (author): it offers the alphabetically first 200
+  emails and names under the chips, so at 1,000 accounts mostly A–D; the
+  search still matches everything. Keep, lift the cap, or drop it?
 
 ### Out of scope
 
@@ -144,6 +174,7 @@ Taken 2026-10-14 at `871ba085`.
 
 - `spec/operator_ui_concept.md` — the Accounts entry describes the chips, search and pager (Item 1).
 - `spec/settings_inventory.md` — the URL parameters the Accounts table reads (Item 1).
+- `spec/ui_elements.md` — §10 `.table-card-toolbar` gains Accounts as an eighth carrier; `.table-pager-cluster` notes Accounts keeps its pager under a filter (Item 1).
 
 ---
 
@@ -225,6 +256,9 @@ Taken 2026-10-14 at `871ba085`.
 
 - ~~All or nothing?~~ Yes. ~~Promote from No role?~~ No. ~~Remove from
   all sessions on an admin?~~ Yes (author, 2026-10-14).
+- **Owning sessions isn't history** (author): a demoted co-owner who never
+  acted sits under Unused yet Delete refuses it (`owns_sessions`).
+  Should ownership count as history? (Item 1's read.)
 
 ### Out of scope
 

@@ -119,12 +119,15 @@ def account_view_from_query(query: str) -> AccountView:
     """Parse ``account_view_query``'s output back, for the actions'
     hidden ``view`` field."""
     values = parse_qs(query, keep_blank_values=True)
-    raw_offset = (values.get("offset") or ["0"])[0]
+    try:
+        offset = int((values.get("offset") or ["0"])[0])
+    except ValueError:  # "abc", "²" and a 5,000-digit string alike
+        offset = 0
     return parse_account_view(
         show=values.get("show"),
         role=(values.get("role") or [None])[0],
         search=(values.get("q") or [None])[0],
-        offset=int(raw_offset) if raw_offset.isdigit() else 0,
+        offset=offset,
     )
 
 

@@ -318,7 +318,7 @@ def test_demote_last_sys_admin_at_service_layer(
     actor is a super-admin. To exercise the count floor in isolation we
     give the super actor an unset ``is_sys_admin`` column (its
     pre-sign-in state; ``is_super_admin`` is derived from config, so the
-    actor guard still passes) — that keeps it out of ``_sys_admin_count``
+    actor guard still passes) — that keeps it out of ``sys_admin_count``
     so we can drive the count down to the sole column-True admin."""
     from app.services import users as users_service
 
