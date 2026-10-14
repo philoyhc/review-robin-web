@@ -220,6 +220,9 @@ def sys_admin_session_audit_log(
 # ---- Accounts Management (PR 6) ------------------------------------------
 
 
+_ACCOUNTS_URL = "/operator/sys-admin/users"
+
+
 @router.get("/sys-admin/users", response_class=HTMLResponse)
 def sys_admin_users(
     request: Request,
@@ -255,6 +258,7 @@ def sys_admin_users(
     view = dataclasses.replace(view, offset=page.offset)
     pager = views.build_pager(total=page.total, offset=page.offset)
     refused_user = db.get(User, refused) if refused is not None else None
+    overview = account_listing.overview(db, now=datetime.now(timezone.utc))
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
@@ -271,11 +275,13 @@ def sys_admin_users(
             # on, and what they don't count.
             "account_overview_kinds": views.build_account_overview_kinds(
                 page.counts,
-                base_url="/operator/sys-admin/users",
+                super_admins=overview.super_admins,
+                base_url=_ACCOUNTS_URL,
                 anchor="accounts-table-card",
             ),
-            "account_overview": account_listing.overview(
-                db, now=datetime.now(timezone.utc)
+            "account_overview": overview,
+            "account_overview_unused_url": views.account_chip_url(
+                _ACCOUNTS_URL, "unused", anchor="accounts-table-card"
             ),
             "overview_days": account_listing.OVERVIEW_DAYS,
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
@@ -291,7 +297,7 @@ def sys_admin_users(
             "account_view_query_chips": views.account_view_query(
                 dataclasses.replace(view, role="any", search="", offset=0)
             ),
-            "accounts_base_url": "/operator/sys-admin/users",
+            "accounts_base_url": _ACCOUNTS_URL,
             "pager": pager,
             # Unlike the roster pages, the pager stays under a role or a
             # search: a role can match every account (Codex on #3025). So

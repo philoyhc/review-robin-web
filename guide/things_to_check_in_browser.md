@@ -154,13 +154,15 @@ Sys Admin → Accounts, signed in as a super-admin.
 
 - [ ] **Four lines, same height as Invite.** Overview no longer looks
   muted; it lists Accounts (Operators, Admins, No role, Unused, each with
-  its count, Admins naming any super-admins), New in the last 30 days,
+  its count, Admins followed by "(N super-admins)" when any are
+  configured), New in the last 30 days,
   Unused for over 30 days, and Sessions with one owner. The two cards
   stay level; below about 800px they stack.
 - [ ] **The kind links.** Click *No role N*: the table below shows only
   the No role chip on, scrolled to it. The counts match the chips'.
 - [ ] **Show Unused.** With an Unused account older than 30 days, its
-  line reads the count then *Show Unused*, which opens the Unused chip;
+  line reads the count then *Show Unused*, which opens the Unused chip
+  (all Unused accounts, so the table can hold more than the count);
   with none, the line is just `0`.
 - [ ] **Sessions with one owner.** Add a co-owner to a session that had
   one: the count drops by one on reload.

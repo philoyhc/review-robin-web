@@ -43,8 +43,12 @@ def _session(db: Session, code: str, *owners: User, status: str = "draft") -> No
 def test_the_counts_split_on_age_kind_and_ownership(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # A super-admin is a config email, flag or not; a sys-admin flag
+    # alone isn't one.
     monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
-    _user(db, "boss@example.edu", OLD, is_operator=True, is_sys_admin=True)
+    _user(db, "boss@example.edu", OLD)
+    _user(db, "admin@example.edu", OLD, is_operator=True, is_sys_admin=True)
+    _user(db, "admin2@example.edu", OLD, is_operator=True, is_sys_admin=True)
     ann = _user(db, "ann@example.edu", NEW, is_operator=True)
     ben = _user(db, "ben@example.edu", OLD, is_operator=True)
     _user(db, "fresh@example.edu", NEW)  # unused, but too new to clear out
@@ -62,18 +66,34 @@ def test_the_counts_split_on_age_kind_and_ownership(
     )
 
 
+def _chip_count(body: str, key: str) -> str:
+    chip = body.split(f'value="{key}"', 1)[1].split("</label>", 1)[0]
+    return chip.rsplit("(", 1)[1].split(")", 1)[0]
+
+
 def test_the_card_renders_the_four_lines_and_their_links(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    for n in range(3):
+        _user(db, f"op{n}@example.edu", OLD, is_operator=True)
+    db.commit()
     body = client.get(ACCOUNTS).text
     card = body.split('id="accounts-overview"', 1)[1].split("</dl>", 1)[0]
-    for label in ("Operators", "Admins", "No role", "Unused"):
-        assert f">{label} " in card
-    assert (
-        f'href="{ACCOUNTS}?show=no_role#accounts-table-card" '
-        'data-overview-kind="no_role"'
-    ) in card
+    # Each kind links to the table with its chip alone, and counts as
+    # the chip does.
+    for key, label in (
+        ("operators", "Operators"), ("admins", "Admins"),
+        ("no_role", "No role"), ("unused", "Unused"),
+    ):
+        link = (
+            f'<a href="{ACCOUNTS}?show={key}#accounts-table-card" '
+            f'data-overview-kind="{key}">{label} {_chip_count(body, key)}</a>'
+        )
+        assert link in card
+    assert 'data-overview-kind="operators">Operators 3</a>' in card
+    # No super-admin configured, so Admins carries no note.
+    assert "super-admin" not in card
     assert "New in the last 30 days" in card
     assert "Unused for over 30 days" in card
     assert "Sessions with one owner" in card
@@ -91,3 +111,20 @@ def test_a_stale_unused_account_offers_the_unused_view(
     stale = card.split('data-overview="stale">', 1)[1].split("</dd>", 1)[0]
     assert stale.startswith("1")
     assert f'href="{ACCOUNTS}?show=unused#accounts-table-card">Show Unused</a>' in stale
+
+
+@pytest.mark.parametrize(
+    "supers, note",
+    [(["alice@example.edu"], "(1 super-admin)"),
+     (["alice@example.edu", "boss@example.edu"], "(2 super-admins)")],
+)
+def test_admins_counts_its_super_admins(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch,
+    supers: list[str], note: str,
+) -> None:
+    monkeypatch.setattr(settings, "super_admin_emails", supers)
+    _user(db, "boss@example.edu", OLD, is_operator=True, is_sys_admin=True)
+    db.commit()
+    card = client.get(ACCOUNTS).text.split('id="accounts-overview"', 1)[1]
+    admins = card.split('data-overview-kind="admins">', 1)[1].split(" · ", 1)[0]
+    assert admins.endswith(f"</a> {note}")

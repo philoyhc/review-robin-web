@@ -379,8 +379,14 @@ renders only where `can_manage_admins`; `Cancel` resets it.
   query; `account_listing.overview` adds one query over users and one
   over sessions. A super-admin is counted only once they have an
   account; archived sessions don't count toward one-owner sessions.
+  *Show Unused* opens the whole Unused chip, so the table can hold more
+  than the over-30-days count; the table has no age filter to narrow it.
   Item 3's code shipped in rungs 1 and 1a and this one; its read
   covers those, since main moved on with Items 1 and 2 between them.
+  The read found no defect; acted on: the super-admin rule and its note
+  untested, the note's plural and the Unused link worked out in the
+  template (now `views.build_account_overview_kinds` / `account_chip_url`),
+  one kind link of four checked.
 
 ### PR ladder
 
