@@ -52,3 +52,20 @@ def test_the_chip_cycles_resets_and_invites_an_admin(page: Page) -> None:
         page.click("[data-invite-submit]")
     row = page.locator("#users-table tr", has_text=email)
     expect(row.locator(".pill", has_text="Admin")).to_be_visible()
+
+
+def test_the_chip_sits_top_left_and_the_buttons_right(page: Page) -> None:
+    """One row: the chip at its top-left, Cancel then Invite flush right
+    (author, 2026-10-14)."""
+    page.set_viewport_size({"width": 1280, "height": 900})
+    page.goto(ACCOUNTS)
+    chip = page.locator("[data-invite-role-chip]").bounding_box()
+    cancel = page.locator("[data-invite-cancel]").bounding_box()
+    invite = page.locator("[data-invite-submit]").bounding_box()
+    email = page.locator("#invite-email").bounding_box()
+    assert chip and cancel and invite and email
+    assert chip["y"] == cancel["y"] == invite["y"]
+    assert chip["x"] == email["x"]
+    assert chip["x"] + chip["width"] < cancel["x"] < invite["x"]
+    # Flush right: Invite ends where the email box does.
+    assert abs((invite["x"] + invite["width"]) - (email["x"] + email["width"])) < 1
