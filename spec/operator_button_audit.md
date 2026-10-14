@@ -726,7 +726,9 @@ takes the next free number.
 |---|---|---|---|---|---|---|
 | 196 | Sessions table, per row (Actions) | Manage | `<button type="submit">` in a `<form>` | `btn secondary` | Secondary | POSTs `…/sessions/{id}/adopt` — self-adds the sys-admin as an owner (audited `session.owner_added`), then opens the session. **The only door**: no row may link straight into a session the sys-admin does not own. |
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
-| 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). |
+| 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). The three sit on one line in a `.btn-pair.is-one-line`, however narrow the cell. |
+| 275 | Sessions table toolbar (right) | Cancel | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner) and shows every row again. `Cancel` by the author's ask (2026-10-14), though the lobby's own filter says `Clear` (#194a). The filter hides rendered rows live and never queries. |
+| 276 | Sessions table header | ↕ (six) | `<button type="button">` | `rrw-sort-btn` | Sort | Session Name, Code, Created by, Created, Deadline, Timezone, as on the lobby; Status and Actions don't sort. Cookie `rrw-sort-sys-admin-sessions`, seeded by the route. |
 | 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from |
 | 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all four Sys Admin pages (§§19–22). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
 | 249 | Sys Admin tab strip | Accounts Management | `<a>` | `nav-tab` (`.active` on §19's page) | Nav (page-internal) | As #248 |

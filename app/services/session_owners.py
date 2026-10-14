@@ -61,6 +61,26 @@ class OwnerOperationError(ValueError):
         self.message = message
 
 
+def owners_by_session(
+    db: Session, session_ids: list[int]
+) -> dict[int, list[User]]:
+    """Each session's owners in one query, oldest first, for tables that
+    show many sessions (Sessions Diagnostics' filter). A session with no
+    owner row is absent from the map."""
+    if not session_ids:
+        return {}
+    rows = db.execute(
+        select(SessionOperator.session_id, User)
+        .join(User, User.id == SessionOperator.user_id)
+        .where(SessionOperator.session_id.in_(session_ids))
+        .order_by(SessionOperator.created_at.asc(), SessionOperator.id.asc())
+    ).all()
+    owners: dict[int, list[User]] = {}
+    for session_id, user in rows:
+        owners.setdefault(session_id, []).append(user)
+    return owners
+
+
 def list_owners(db: Session, review_session: ReviewSession) -> list[OwnerRow]:
     """All current owners of ``review_session``, ordered by
     ``created_at ASC`` (creator typically appears first)."""

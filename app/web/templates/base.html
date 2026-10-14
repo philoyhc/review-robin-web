@@ -1254,6 +1254,9 @@
         flex-wrap: wrap;
       }
       .btn-pair > form { margin: 0; }
+      /* A row's buttons on one line however narrow its cell (Sessions
+         Diagnostics' Manage / Outbox / Audit log, author 2026-10-14). */
+      .btn-pair.is-one-line { flex-wrap: nowrap; white-space: nowrap; }
       /* Filter strip (Manage Invitations + Responses, Segment 11C
          Part 1 follow-up). It was a `.filter-card` inside a
          half-width card, with a two-up `.filter-row` for the status

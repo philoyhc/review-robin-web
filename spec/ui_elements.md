@@ -829,7 +829,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.quick-setup-*` | The Quick Setup card's layout: `.quick-setup-top-grid` is two columns, one at 800px or narrower; `.quick-setup-slot`s are separated by a top rule; `.quick-setup-body.locked` grays the body to 0.55 opacity with a `not-allowed` cursor; `.quick-setup-card-footer` holds Submit outside that body, flush right. `spec/quick_setup_card_spec.md` owns the contract. |
 | `.card.setup-coverage` (+ `.setup-coverage-*`) | Validate's setup-coverage card: the H2 and its subtitle on one line, over a grid of four columns, two at 900px or narrower and one at 500px. |
 | `.card.severity-filter-card` + `.severity-filter-row` | Validate's severity filter: a tighter-padded card holding one wrapping row of `.severity-chip`s (§9). |
-| `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. |
+| `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. **`.is-one-line`** keeps a row's buttons on one line however narrow its cell (`flex-wrap: nowrap`): Sessions Diagnostics' Manage / Outbox / Audit log. |
 | `.fill-col` (flex column whose last child grows) | |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |
 | `.guide-figure` (+ `.guide-figure-narrow`) | The `/guide` screencap figure. Detailed below. |

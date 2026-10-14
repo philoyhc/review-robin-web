@@ -183,3 +183,19 @@ Sys Admin → Accounts, at a desktop width.
   heading, chips, then the filter.
 - [ ] **Accounts Overview.** The card's heading reads "Accounts
   Overview" (its pills are the section above).
+
+## Sessions Diagnostics: lobby columns, sort, filter (2026-10-14)
+
+Sys Admin → Sessions Diagnostics.
+
+- [ ] **Columns.** Session Name, Session Code, Created by, Created,
+  Deadline, Timezone, Status, Actions — the first six with ↕, as on the
+  lobby; no Last Modified.
+- [ ] **Sort.** Click a ↕: the rows reorder and the badge turns; reload
+  and the order holds (its own cookie, separate from the lobby's).
+- [ ] **Filter.** Top right of the table: type part of a session name,
+  a code, or an owner's name or email, and only matching rows stay;
+  type nonsense and "No sessions match the filter." shows. `Cancel`
+  empties the box and every row comes back.
+- [ ] **Actions.** Manage, Outbox and Audit log sit on one line in every
+  row.

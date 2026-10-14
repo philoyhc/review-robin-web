@@ -231,6 +231,16 @@ from ._previews import (
 # the Rule Builder page itself. No replacement; Band 1's inline
 # editor is the canonical authoring surface for new-model rules.
 
+# The session tables' shared sort columns and the Diagnostics filter.
+from ._sessions_table import (
+    ARCHIVED_SORT_KEYS,
+    DIAGNOSTICS_SORT_KEYS,
+    LOBBY_SORT_KEYS,
+    diagnostics_filter_options,
+    diagnostics_filter_text,
+    session_sort_value,
+)
+
 # Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
 from ._sort import (
     apply_cookie_sort,
@@ -399,6 +409,12 @@ __all__ = [
     "build_audit_log_rows",
     "filters_querystring",
     "format_audit_detail",
+    "ARCHIVED_SORT_KEYS",
+    "DIAGNOSTICS_SORT_KEYS",
+    "LOBBY_SORT_KEYS",
+    "diagnostics_filter_options",
+    "diagnostics_filter_text",
+    "session_sort_value",
     "apply_cookie_sort",
     "decode_cookie_sort_spec",
     "decode_cookie_sort_spec_for_reviewer_surface",
