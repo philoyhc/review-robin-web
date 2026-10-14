@@ -152,13 +152,12 @@ Sys Admin → Accounts, with a few operators and an unused account.
 
 Sys Admin → Accounts, signed in as a super-admin.
 
-- [ ] **Four lines, same height as Invite.** Overview no longer looks
-  muted; it lists Accounts (Operators, Admins, No role, Unused, each with
-  its count; Admins followed by "(1 super-admin)" or "(N super-admins)"
-  for configured super-admins who have an account), New in the last 30
-  days,
-  Unused for over 30 days, and Sessions with one owner. The two cards
-  stay level; below about 800px they stack.
+- [ ] **Same height as Invite.** Overview no longer looks muted; it
+  lists the four kinds with their counts (in two rows since rung 2a,
+  below; Admins followed by "(1 super-admin)" or "(N super-admins)" for
+  configured super-admins who have an account), New in the last 30
+  days, Unused for over 30 days, and Sessions with one owner. The two
+  cards stay level; below about 800px they stack.
 - [ ] **The kind links.** Click *No role N*: the table below shows only
   the No role chip on, scrolled to it. The counts match the chips'.
 - [ ] **Show Unused.** With an Unused account older than 30 days, its

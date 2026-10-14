@@ -128,7 +128,7 @@
       <dt>{{ row.label }}</dt>
       <dd>
         {%- for kind in row.kinds -%}
-          <a href="{{ kind.url }}" data-overview-kind="{{ kind.key }}">{{ kind.label }}<span class="pill pill-count">{{ kind.count }}</span></a>
+          <a href="{{ kind.url }}" data-overview-kind="{{ kind.key }}">{{ kind.label }}<span class="visually-hidden"> </span><span class="pill pill-count">{{ kind.count }}</span></a>
           {%- if kind.note %} {{ kind.note }}{% endif -%}
           {%- if not loop.last %} · {% endif -%}
         {%- endfor -%}

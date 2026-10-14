@@ -394,6 +394,11 @@ were not:
   note, its plural and the Unused link worked out in the template (now
   `views.build_account_overview_kinds` / `account_chip_url`), a URL
   literal repeated in the route, and kind links checked one of four.
+  Rung 2a: one read, of it and the close together. No defect; acted
+  on: the kind links' text had lost its space (now a visually hidden
+  one, for screen readers and copy-paste), stale "four lines" wording,
+  the spec crediting `account_listing.overview` with the chips' counts,
+  and no check that the two rows cover every category.
 
 ### PR ladder
 
@@ -428,6 +433,6 @@ were not:
 - `spec/permissions.md` — rows naming *Also invite as sys-admin* name the chip (Item 3).
 - `spec/operator_button_audit.md` — rows 112–113: Cancel before Invite, flush right beside the chip, and Cancel resets the chip, not a checkbox (Item 3).
 - `docs/security_posture.md` — the invite guard names the chip (Item 3).
-- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card and its four lines, with their links (Item 3).
+- `spec/operator_ui_concept.md` — the Accounts entry gains the Overview card and its lines, with their links (Item 3).
 - `spec/ui_elements.md` — §10's `.page-grid` row lists Accounts (equal height, the author's ruling) and its `.card-action-row` row lists the invite card, `.card-action-lead` and the `> .btn-pair` override, §9's form-control chips list the invite chip, and a row for `.overview-list`, the Overview card's label / value grid (Item 3; the §4 placeholder note dropped at rung 2, when Overview stopped being a stub).
 - `spec/session_home.md` — "Placeholder cards" no longer says no live page uses the class (Item 3). <!-- doc-impact-waived: rung 2 wired Overview, so again no live page uses the class and the sentence stands -->

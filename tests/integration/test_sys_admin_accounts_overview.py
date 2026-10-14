@@ -1,4 +1,4 @@
-"""Sys Admin → Accounts: the Overview card's four lines
+"""Sys Admin → Accounts: the Overview card
 (``guide/admin_pages_refine.md`` Item 3 rungs 2 and 2a): the counts by
 kind on two rows, with a role and without, each linking to its chip
 alone; accounts new in the last 30 days; Unused accounts older than
@@ -67,6 +67,11 @@ def test_the_counts_split_on_age_kind_and_ownership(
     )
 
 
+# The link's text keeps a space for screen readers and copy-paste; the
+# visible gap is the pill's margin, so the underline stops at the label.
+_SPACE = '<span class="visually-hidden"> </span>'
+
+
 def _pill(n: object) -> str:
     return f'<span class="pill pill-count">{n}</span>'
 
@@ -76,7 +81,7 @@ def _chip_count(body: str, key: str) -> str:
     return chip.rsplit("(", 1)[1].split(")", 1)[0]
 
 
-def test_the_card_renders_the_four_lines_and_their_links(
+def test_the_card_renders_its_lines_and_their_links(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
@@ -99,11 +104,11 @@ def test_the_card_renders_the_four_lines_and_their_links(
     ):
         link = (
             f'<a href="{ACCOUNTS}?show={key}#accounts-table-card" '
-            f'data-overview-kind="{key}">{label}{_pill(_chip_count(body, key))}</a>'
+            f'data-overview-kind="{key}">{label}{_SPACE}{_pill(_chip_count(body, key))}</a>'
         )
         assert link in card
     for label, n in (("Operators", 3), ("Admins", 1), ("No role", 2), ("Unused", 4)):
-        assert f">{label}{_pill(n)}</a>" in card
+        assert f">{label}{_SPACE}{_pill(n)}</a>" in card
     # Two rows: the kinds with a role, then the rest.
     with_role = card.split("<dt>With a role</dt>", 1)[1].split("</dd>", 1)[0]
     without = card.split("<dt>Without a role</dt>", 1)[1].split("</dd>", 1)[0]
