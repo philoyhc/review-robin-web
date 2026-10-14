@@ -966,10 +966,12 @@
       .status-row p { margin: 0; }
       .status-row p + p { margin-top: 4px; }
       /* Accounts' Overview card (admin_pages_refine Item 3): rows of
-         count pills, the pills flush either side of their separators. */
+         count pills, the pills flush either side of their separators.
+         Each pill holds a label as well as its number, so it keeps the
+         label's case rather than the pill's capitals. */
       .overview-pills { margin: 0; }
       .overview-pills + .overview-pills { margin-top: 8px; }
-      .overview-pills .pill.pill-count { margin: 0; }
+      .overview-pills .pill.pill-count { margin: 0; text-transform: none; }
       .page-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;

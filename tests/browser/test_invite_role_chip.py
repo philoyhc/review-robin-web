@@ -27,6 +27,11 @@ def test_the_cards_sit_side_by_side_at_one_height(page: Page) -> None:
     # The Workspace users card stays outside the grid, spanning both.
     table = page.locator("#accounts-table-card").bounding_box()
     assert table and table["width"] >= left["width"] + right["width"]
+    # Overview's pills hold labels, so they keep the labels' case rather
+    # than the capitals other pills take.
+    pill = overview.locator('[data-overview="super_admins"]')
+    expect(pill).to_have_text("1 super-admin")
+    assert pill.evaluate("el => getComputedStyle(el).textTransform") == "none"
 
 
 def test_the_chip_cycles_resets_and_invites_an_admin(page: Page) -> None:
