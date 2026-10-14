@@ -163,6 +163,15 @@ class AccountOverviewPill:
     label: str
 
 
+#: Singular labels for a count of one (author, 2026-10-14); a key missing
+#: here reads the same either way ("1 No role", "1 Unused").
+_OVERVIEW_SINGULAR: dict[str, str] = {
+    "operators": "Operator",
+    "admins": "Admin",
+    "super_admins": "super-admin",
+}
+
+
 #: The Overview card's two rows (author, 2026-10-14): the kinds with a
 #: role and the super-admins among them, then the kinds without.
 _OVERVIEW_ROWS: tuple[tuple[str, ...], ...] = (
@@ -174,17 +183,18 @@ _OVERVIEW_ROWS: tuple[tuple[str, ...], ...] = (
 def build_account_overview_rows(
     counts: Mapping[str, int], *, super_admins: int
 ) -> list[tuple[AccountOverviewPill, ...]]:
-    """The chips' own counts by kind, plus the super-admins."""
-    pills = {
-        key: AccountOverviewPill(key=key, count=counts.get(key, 0), label=label)
-        for key, label, _ in ACCOUNT_CATEGORIES
-    }
-    pills["super_admins"] = AccountOverviewPill(
-        key="super_admins",
-        count=super_admins,
-        label="super-admin" if super_admins == 1 else "super-admins",
-    )
-    return [tuple(pills[key] for key in row) for row in _OVERVIEW_ROWS]
+    """The chips' own counts by kind, plus the super-admins, each label
+    singular for a count of one."""
+    plurals = {key: (counts.get(key, 0), label) for key, label, _ in ACCOUNT_CATEGORIES}
+    plurals["super_admins"] = (super_admins, "super-admins")
+
+    def pill(key: str) -> AccountOverviewPill:
+        count, label = plurals[key]
+        if count == 1:
+            label = _OVERVIEW_SINGULAR.get(key, label)
+        return AccountOverviewPill(key=key, count=count, label=label)
+
+    return [tuple(pill(key) for key in row) for row in _OVERVIEW_ROWS]
 
 
 #: Why a batch was refused, by ``UserOperationError.code``: the reason

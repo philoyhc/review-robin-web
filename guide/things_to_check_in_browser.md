@@ -152,12 +152,13 @@ Sys Admin → Accounts, with a few operators and an unused account.
 
 - [ ] **Just pills.** Overview shows two rows and nothing else:
   "N Operators · N Admins · N super-admins", then "N No role · N
-  Unused", each number and label inside one blue pill, in the case
-  written here (not the capitals other pills use). No links, no
+  Unused", each number and label inside one blue pill, in capitals
+  like every other pill. A count of 1 reads singular: "1 OPERATOR",
+  "1 ADMIN", "1 SUPER-ADMIN". No links, no
   New / Unused-for-30-days / Sessions-with-one-owner lines.
 - [ ] **Counts match the chips.** Each kind's number matches its chip
   in the Workspace users toolbar; with one configured super-admin who
-  has an account the pill reads "1 super-admin".
+  has an account the pill reads "1 SUPER-ADMIN".
 - [ ] **Spacing.** The pills sit flush against the ` · ` on either
   side, and the two rows have a small gap between them; Invite and
   Overview stay level, stacking below about 800px.

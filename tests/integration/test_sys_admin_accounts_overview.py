@@ -68,7 +68,7 @@ def test_the_card_is_two_rows_of_pills(
     # The signed-in sys-admin is the one Admin; no super-admin configured.
     assert rows[0].split("</p>", 1)[0] == (
         _pill("operators", "3 Operators") + " · "
-        + _pill("admins", "1 Admins") + " · "
+        + _pill("admins", "1 Admin") + " · "
         + _pill("super_admins", "0 super-admins")
     )
     assert rows[1].split("</p>", 1)[0] == (

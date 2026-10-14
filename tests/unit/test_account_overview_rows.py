@@ -15,9 +15,18 @@ def test_the_rows_cover_every_category_once() -> None:
 
 
 def test_a_pill_counts_as_its_chip_does() -> None:
-    counts = {"operators": 3, "admins": 1, "no_role": 2, "unused": 4}
-    rows = _accounts.build_account_overview_rows(counts, super_admins=1)
+    counts = {"operators": 3, "admins": 2, "no_role": 5, "unused": 4}
+    rows = _accounts.build_account_overview_rows(counts, super_admins=0)
     assert [[(p.count, p.label) for p in row] for row in rows] == [
-        [(3, "Operators"), (1, "Admins"), (1, "super-admin")],
-        [(2, "No role"), (4, "Unused")],
+        [(3, "Operators"), (2, "Admins"), (0, "super-admins")],
+        [(5, "No role"), (4, "Unused")],
+    ]
+
+
+def test_a_count_of_one_reads_singular() -> None:
+    counts = {"operators": 1, "admins": 1, "no_role": 1, "unused": 1}
+    rows = _accounts.build_account_overview_rows(counts, super_admins=1)
+    assert [[p.label for p in row] for row in rows] == [
+        ["Operator", "Admin", "super-admin"],
+        ["No role", "Unused"],
     ]
