@@ -146,7 +146,28 @@ def test_deadline_and_timezone_sort_by_the_routes_values(
         return re.findall(r'<td[^>]*data-sort-value="([^"]*)"', row)
 
     assert cells("zz-open")[0] == ""  # empty sorts last, either direction
-    assert cells("zz-due") == ["2026-11-01T12:00:00+00:00", "Asia/Singapore"]
+    assert cells("zz-due") == ["2026-11-01T12:00:00.000000+00:00", "Asia/Singapore"]
+
+
+def test_the_deadline_key_is_utc_and_fixed_width() -> None:
+    """An aware value at another offset comes out as UTC, and every key
+    carries microseconds, so text order is time order: "12:00:00.5"
+    would otherwise collate before "12:00:00" in the browser."""
+    tokyo = timezone(timedelta(hours=9))
+    keys = [
+        views.deadline_sort_value(ReviewSession(deadline=value))
+        for value in (
+            datetime(2026, 11, 1, 21, 0, 0, tzinfo=tokyo),
+            datetime(2026, 11, 1, 12, 0, 0, 500000),
+            datetime(2026, 11, 1, 12, 0, 1),
+        )
+    ]
+    assert keys == [
+        "2026-11-01T12:00:00.000000+00:00",
+        "2026-11-01T12:00:00.500000+00:00",
+        "2026-11-01T12:00:01.000000+00:00",
+    ]
+    assert views.deadline_sort_value(ReviewSession(deadline=None)) == ""
 
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:
