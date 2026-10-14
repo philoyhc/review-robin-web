@@ -4,26 +4,21 @@
 grows past its operators · **Related:** `spec/operator_ui_concept.md`,
 `spec/permissions.md`, `spec/setup_pages.md` (the table this copies)
 
-A standalone plan at the author's naming, not a `segment_*.md`, in the
-shape of `guide/archive/participant_info.md`: items close independently,
-each with its own `### Doc impact` and `### Status`. `tools/close_check.py`
-reads only `segment_*` files, so an item's `Doc impact` is checked by
-hand at its close.
+A standalone plan at the author's naming, in the shape of
+`guide/archive/participant_info.md`: items close independently, each with
+its own `### Doc impact` and `### Status`, checked by hand at its close.
 
-**Why now.** Every person who signs in gets a `users` row
-(`get_or_create_user`, `app/web/deps.py`), and the reviewer, reviewee
-and observer pages sign people in. So Sys Admin → Accounts' Workspace
-users table lists every participant who ever opened a link. Today it
-renders every row in one table, with a one-row toolbar
-(`sys_admin_users.html`), and `list_workspace_users` says it assumes
-"tens of users". The author's target (2026-10-14) is **1,000 users
-signing in for one review**.
+**Why now.** Every sign-in creates a `users` row (`get_or_create_user`,
+`app/web/deps.py`), so Sys Admin → Accounts' Workspace users table lists
+every participant who ever opened a link. It renders every row with a
+one-row toolbar (`sys_admin_users.html`), and `list_workspace_users`
+assumes "tens of users". The author's target (2026-10-14) is **1,000
+users signing in for one review**.
 
-**The analogy** (author, 2026-10-14): the Setup pages' roster table,
-`spec/setup_pages.md` "Preview tables", "The table toolbar", "The row
-expander". The four category chips go where the column chips sit, with
-a filter strip, paging, and selection opening a row expander. There is
-no `Add new`: the Invite by email card covers it.
+**The analogy** (author, 2026-10-14): the Setup pages' roster table
+(`spec/setup_pages.md` "Preview tables", "The table toolbar", "The row
+expander"). Category chips sit where the column chips do. No `Add new`:
+the Invite by email card covers it.
 
 ---
 
@@ -31,8 +26,7 @@ no `Add new`: the Invite by email card covers it.
 
 ### Opportunity
 
-At 1,000 rows the table is unreadable and slow to render. An admin
-looking for one operator scrolls past every participant. It has no
+At 1,000 rows the table is unreadable and slow to render. It has no
 search, no paging, and nothing separating the accounts an admin manages
 from the ones sign-in created.
 
@@ -55,24 +49,21 @@ every row is under exactly one chip:
 
 **Right pane: the filter strip**, in the roster pages' order. First a
 **Session role** dropdown (where they put Status): `Any`, `Reviewer`,
-`Reviewee`, `Observer`, `Owner`. Then a search box with a `<datalist>`
-typeahead over email and name, then `Clear` (only when a filter is
-active) and `Search`. The dropdown answers what the chips can't: what an
-account does in sessions (author, 2026-10-14).
+`Reviewee`, `Observer`, `Owner`. It answers what the chips can't: what
+an account does in sessions (author, 2026-10-14). Then a search box with
+a `<datalist>` typeahead over email and name, then `Clear` (only when a
+filter is active) and `Search`.
 
-**Filtering and paging run on the server**, as the roster pages' do.
-At 1,000 rows, hiding rows in the browser would still render them all.
-The chips, search and offset are query parameters, and the pager reuses
-`build_pager` (`app/web/views/_pager.py`) and `_pager_cluster.html` at
-the roster pages' 200-row page size.
+**Filtering and paging run on the server**, as the roster pages' do. At
+1,000 rows, hiding rows in the browser would still render them all. The
+chips, role, search and offset are query parameters, and the pager
+reuses `build_pager` (`app/web/views/_pager.py`) and `_pager_cluster.html`
+at the roster pages' 200-row page size.
 
-Rejected alternatives:
-- **The author's first shape, *Operators · Admin · All users*:** *All
-  users* overlaps the other two and lumps two no-role kinds an admin
-  treats differently.
-- **Browser-side filtering** (this plan's first draft): it doesn't scale.
-- **The audit log's checkbox-and-pill filter:** the author chose type
-  1 chips instead (2026-10-14).
+Rejected: the author's first shape, *Operators · Admin · All users*,
+because *All users* overlaps the other two and lumps two no-role kinds
+together; browser-side filtering (the first draft), because it doesn't
+scale; and the audit log's checkbox-and-pill filter (author, 2026-10-14).
 
 ### Semantics
 
@@ -80,85 +71,76 @@ Rejected alternatives:
   flag says (`require_operator` passes either flag; `promote` sets only
   `is_sys_admin`), so it sits only under Admins. Your own row follows
   its chip like any other.
-- **Counts are per chip over the whole table** and ignore the search,
-  so a chip says what it would add.
-- **No chip on** shows the empty state, "No accounts match the chips
-  above."
-- **The pager steps aside while a search is active**, as on the roster
-  pages, and the 500 cap applies. `?offset=` is clamped, never rejected.
-- **A toolbar redirect keeps the view.** It returns to the same chips,
-  search and offset. A `?selected=<id>` whose row the chips would hide
-  turns that row's chip on for that load only, so an action never makes
-  its own result vanish.
+- **Counts are per chip over the whole table** and ignore the role and
+  the search, so a chip says what it would add.
+- **No chip on** shows "No accounts match the chips above."
+- **The pager stays under a search or role filter**, unlike the roster
+  pages' 500-row cap, since a role filter can match all 1,000 accounts
+  (Codex on #3025). `?offset=` is clamped, never rejected.
+- **A toolbar redirect keeps the view:** same chips, role, search and
+  offset. A `?selected=<id>` whose row the chips would hide turns that
+  row's chip on for that load only.
 - **Session role matches on email**, case-insensitive, in any session,
-  live or archived. `Reviewer`, `Reviewee` and `Observer` mean a row on
-  that roster (`Reviewer.email`, `Reviewee.email_or_identifier`,
-  `Observer.email`); `Owner` means a `session_operators` row. One account
-  can match several roles. The dropdown narrows the chips; it doesn't
-  replace them, and the chip counts ignore it as they ignore the search.
-  The pager steps aside for it, as it does for a search.
-- **Chip state lives in the URL,** with Operators and Admins as the
-  default when no chip parameter is given. A reload or a shared link
-  shows the same view.
+  live or archived: a roster row (`Reviewer.email`,
+  `Reviewee.email_or_identifier`, `Observer.email`), or for `Owner` a
+  `session_operators` row. One account can match several roles.
+- **Chip state lives in the URL,** defaulting to Operators and Admins,
+  so a reload or a shared link shows the same view.
 
 ### Blast radius (measured)
 
 Taken 2026-10-14 at `871ba085`.
 
-- **Template:** `app/web/templates/operator/sys_admin_users.html`, one
-  table.
+- **Template:** `app/web/templates/operator/sys_admin_users.html`.
 - **Service:** `list_workspace_users` (`app/services/users.py:76`),
-  which today reads every row and every `session_operators` row in
-  Python. **Route:** `sys_admin_users` (`app/web/routes_operator/_sys_admin.py:220`).
+  which reads every row and every `session_operators` row in Python.
+  **Route:** `sys_admin_users` (`app/web/routes_operator/_sys_admin.py:220`).
 - **Reused as-is:** `build_pager`, `_pager_cluster.html`,
   `preview_count_line`.
-- **Session role:** three roster tables, matched by email, each with an
-  indexed email column (`grep -n "index=True" app/db/models/{reviewer,reviewee,observer}.py`).
+- **Session role:** three roster tables, each with an indexed email
+  column (`grep -n "index=True" app/db/models/{reviewer,reviewee,observer}.py`).
 - **Tests:** `tests/integration/test_sys_admin_users.py` (55 tests,
-  `grep -c "def test_"`). No browser test touches the page
+  `grep -c "def test_"`); no browser test touches the page
   (`grep -rln "sys-admin/users" tests/browser` → none).
 - **Scale:** unmeasured. `_users_with_history` reads every distinct
-  audit actor, and the audit table grows with every save.
-  `tools/bench_roster_scale.py` measures the roster pages; this item
-  measures Accounts at 1,000 and 5,000 users before it closes.
+  audit actor, and the audit table grows with every save. This item
+  measures Accounts at 1,000 and 5,000 users before it closes, as
+  `tools/bench_roster_scale.py` does for the roster pages.
 
 ### PR ladder
 
 1. **Scaffold.** The toolbar's two panes with the four chips (real
-   labels and counts), the pager, the search box and `Clear` / `Search`,
-   all inert. The table still lists every row. Touches no route.
-2. **Server-side filter and pager.** Chip, search and offset
+   labels and counts), the dropdown, the pager, the search box and
+   `Clear` / `Search`, all inert. Touches no route.
+2. **Server-side filter and pager.** Chip, role, search and offset
    parameters; per-chip counts in SQL; the typeahead; the redirect
-   keeping the view. The current toolbar stays, still single-row.
+   keeping the view. The toolbar stays, still single-row.
 3. **Measure and close.** Accounts timed at 1,000 and 5,000 users with
-   their audit rows, fixing what the numbers show. Specs and a
-   browser-check section. Last build rung: takes the item's
-   `diff-reviewer` read.
+   their audit rows, fixing what the numbers show. Specs, a
+   browser-check section, and the item's `diff-reviewer` read.
 
 ### Definition of done
 
 - Accounts lists 200 rows a page, Operators and Admins by default, with
-  search over email and name and the Session role dropdown.
+  the Session role dropdown and search over email and name.
 - A browser test drives the chips, the dropdown, the search and the pager.
 - The 1,000- and 5,000-user timings are recorded in this item's `Status`.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <id>` exits 0; any warning adjudicated <!-- not a segment_* file: checked by hand -->
+- Every `### Doc impact` bullet checked by hand against the diff (`tools/close_check.py` reads only `segment_*` ids)
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+- `guide/todo_master.md` entries deleted; the file stays in `guide/` (an item close does not archive it)
 
 ### Open questions
 
-- ~~What the *Type of user* dropdown filters~~: session roles (any /
-  reviewer / reviewee / observer / owner), author, 2026-10-14.
-- ~~The fourth chip's label~~: *Unused*, author, 2026-10-14. *Invited*
-  didn't fit, since an invite always creates an operator or admin row.
+- ~~Type of user dropdown~~: session roles (author, 2026-10-14).
+- ~~Fourth chip's label~~: *Unused* (author, 2026-10-14); *Invited*
+  doesn't fit, since an invite always creates an operator or admin row.
 
 ### Out of scope
 
 - Selection and row actions: Item 2.
-- Deleting accounts with history stays refused (author, 2026-10-14:
-  leave Alice as is).
+- Deleting accounts with history stays refused (author, 2026-10-14).
 
 ### Doc impact
 
@@ -171,80 +153,92 @@ Taken 2026-10-14 at `871ba085`.
 
 ### Opportunity
 
-The toolbar acts on one row at a time and sits above a table that will
-hold a thousand. Clearing out unused accounts, or revoking a cohort of
+The toolbar acts on one row at a time above a table that will hold a
+thousand. Clearing out unused accounts, or revoking a cohort of
 operators, is one round trip per account.
 
 ### Decision
 
 Selection works as on the roster pages: a checkbox per row, multi-select,
 and the **row expander** injected beneath the selected row
-(`spec/setup_pages.md` "The row expander"). The expander carries the
-selected count and the actions the current toolbar has: Admit / Revoke,
-Promote / Demote (where `can_manage_admins`), Remove from all sessions,
-and Delete behind its confirm tick. The toolbar is retired.
-
-**Only actionable controls render**, as with the roster pages'
-Inactivate / Activate. For example, Revoke shows only when every
-selected row is an operator. Delete is live only when every selected
-row passes its guards.
+(`spec/setup_pages.md` "The row expander"). It carries the selected
+count and today's toolbar actions: Admit / Revoke, Promote / Demote
+(where `can_manage_admins`), Remove from all sessions, and Delete behind
+its confirm tick. The toolbar is retired. **Only actionable controls
+render**, as with the roster pages' Inactivate / Activate: Revoke shows
+only when every selected row is an operator.
 
 ### Semantics
 
-- **All or nothing** (author, 2026-10-14). A bulk action checks every selected row's guards
-  first. One refusal (`still_owner`, `has_history`, `last_admin`, …)
-  refuses the batch, naming the row and the reason, and nothing
-  changes. This matches Quick Setup's "files uploaded together land
-  together".
-- **One audit event per row,** under one correlation id, so the log
-  still reads per account.
-- **Selection is page-local,** as on the roster pages, and changing the
-  chips or the page clears it.
-- **Your own row can't be selected,** as today.
+- **All or nothing** (author, 2026-10-14). One refusal refuses the
+  batch, naming the row and the reason, and nothing changes.
+- **Guards judge the batch, not each row alone** (Codex on #3025 and
+  #3026). Per-row guards (`still_owner`, `has_history`,
+  `protected_super_admin`) run on every row. The set-level ones run
+  against the state after the whole batch:
+  - `last_admin`: two admins demoted or deleted together can't leave
+    none;
+  - `sole_owner`: two co-owners removed together can't orphan a session
+    they share.
+
+  Each check first **locks what it counts**: the affected sessions'
+  owner rows `FOR UPDATE` in id order (as `_lock_owner_rows` does for
+  Remove owner, `spec/permissions.md` §4.2), and the sys-admin rows for
+  `last_admin`. Without the lock, two concurrent batches each see the
+  other's target still present, and both commit. A new batch service
+  function does this; the single-row functions stay.
+- **One audit event per row,** under one correlation id.
+- **Selection is page-local,** and changing the chips or the page clears
+  it. Your own row can't be selected, as today.
 
 ### Blast radius (measured)
 
 Taken 2026-10-14 at `871ba085`.
 
-- Five single-row POST routes in `app/web/routes_operator/_sys_admin.py`
-  (admit, revoke, promote, demote, remove-from-sessions) plus delete.
-  Each takes one `user_id`.
-- `spec/permissions.md` §4.1 and `docs/security_posture.md` (its row
-  says "a single selected row and its own button").
-- `spec/operator_button_audit.md` lists the toolbar's buttons
+- Six single-row POST routes in `app/web/routes_operator/_sys_admin.py`
+  (admit, revoke, promote, demote, remove-from-sessions, delete), each
+  taking one `user_id`.
+- `spec/permissions.md` §4.1; `docs/security_posture.md` (its row says
+  "a single selected row and its own button"); `spec/operator_button_audit.md`
   (row 117 and its neighbours).
+- No lock today in `app/services/users.py` (`grep -n "for_update"` →
+  none); `app/services/session_owners.py` has `_lock_owner_rows`.
 
 ### PR ladder
 
-1. **Scaffold.** Checkboxes allow several rows, and the expander
-   renders beneath the selection with its count and controls, inert.
-   The toolbar stays live.
-2. **Bulk routes and the expander live.** The routes take a list of
-   ids with all-or-nothing guards, and the toolbar is retired. Specs,
-   a browser-check section, and the item's `diff-reviewer` read.
+1. **Scaffold.** Checkboxes allow several rows, and the expander renders
+   beneath the selection with its count and controls, inert. The toolbar
+   stays live.
+2. **Bulk routes and the expander live.** The routes take a list of ids;
+   the batch service locks, checks and applies all or nothing; the
+   toolbar is retired. Specs, a browser-check section, and the item's
+   `diff-reviewer` read.
 
 ### Definition of done
 
 - Selecting several rows and revoking, demoting or deleting them is one
-  request, refused whole when any row's guard refuses.
+  request, refused whole when any guard refuses.
+- A test shows two admins demoted in one batch refused by `last_admin`.
 - A browser test drives a multi-row Revoke and a refused mixed Delete.
 - `## Doc impact` section present and current
-- `python3 tools/close_check.py <id>` exits 0; any warning adjudicated <!-- not a segment_* file: checked by hand -->
+- Every `### Doc impact` bullet checked by hand against the diff (`tools/close_check.py` reads only `segment_*` ids)
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+- `guide/todo_master.md` entries deleted; with every item closed, plan moved to `guide/archive/` + index row
 
 ### Open questions
 
-- ~~All or nothing, or apply where allowed?~~ All or nothing, author,
-  2026-10-14.
+- ~~All or nothing?~~ All or nothing (author, 2026-10-14).
 
 ### Out of scope
 
 - `Add new`: the Invite by email card covers it (author, 2026-10-14).
+- The single-row `demote` and `remove_from_all_sessions` count without a
+  lock today, so two concurrent single-row actions can race the same
+  way. It predates this plan; fixing it is its own change.
 
 ### Doc impact
 
-- `spec/permissions.md` — §4.1 states the bulk actions and their all-or-nothing guards (Item 2).
+- `spec/permissions.md` — §4.1 states the bulk actions, their all-or-nothing guards and the locks (Item 2).
 - `spec/operator_button_audit.md` — the toolbar rows become expander rows (Item 2).
 - `docs/security_posture.md` — the Accounts row no longer says "a single selected row" (Item 2).
