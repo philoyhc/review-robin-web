@@ -194,7 +194,8 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Sort.** Click a ↕: the rows reorder and the badge turns; reload
   and the order holds (its own cookie, separate from the lobby's). Sort
   Deadline both ways: sessions with no deadline stay at the bottom, and
-  a reload doesn't move them.
+  a reload doesn't move them. Sort Timezone: rows group by zone name
+  (Asia/…, Europe/…), not by the GMT label, and a reload keeps it.
 - [ ] **Filter.** Top right of the table: type part of a session name,
   a code, or an owner's name or email, and only matching rows stay;
   type nonsense and "No sessions match the filter." shows. `Cancel`

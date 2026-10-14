@@ -138,7 +138,8 @@ def test_deadline_and_timezone_sort_by_the_routes_values(
         return re.findall(r'<td[^>]*data-sort-value="([^"]*)"', row)
 
     assert cells("zz-open")[0] == ""  # empty sorts last, either direction
-    assert cells("zz-due") == ["2026-11-01 12:00", "Asia/Singapore"]
+    # The stored UTC instant to the second, whatever zone renders the cell.
+    assert cells("zz-due") == ["2026-11-01T12:00:00", "Asia/Singapore"]
 
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:

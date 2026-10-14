@@ -82,11 +82,14 @@
             <td>
               <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
             </td>
-            {# Deadline and Timezone carry the value the route sorts by
-               (`views.session_sort_value`), so a header click orders them
-               as a reload does: no deadline is empty, hence last either
-               way, and the zone sorts by its IANA name, not its label. #}
-            <td data-sort-value="{{ s.deadline | format_datetime }}">
+            {# Deadline and Timezone carry what the route sorts by
+               (`views.session_sort_value`), not their labels: the stored
+               UTC deadline to the second (empty, hence last either way,
+               when there is none) and the zone's IANA name. The browser
+               compares names with `localeCompare`, the route with
+               Python's `<`, so a few unusual zone names (`Etc/GMT+10`,
+               `EST`) can still order differently after a reload. #}
+            <td data-sort-value="{{ s.deadline.strftime('%Y-%m-%dT%H:%M:%S') if s.deadline else '' }}">
               {% if s.deadline %}
                 <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
               {% else %}
