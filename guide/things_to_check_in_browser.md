@@ -176,3 +176,16 @@ Sys Admin → Accounts, signed in as a super-admin.
   the same as after it.
 - [ ] **Link text keeps its space.** Copy a kind link (or read it with a
   screen reader): it says "Operators 3", not "Operators3".
+
+## Accounts Overview cut to two rows of pills (2026-10-14)
+
+- [ ] **Just pills.** Overview shows two rows and nothing else:
+  "N Operators · N Admins · N super-admins", then "N No role · N
+  Unused", each number and label inside one blue pill. No links, no
+  New / Unused-for-30-days / Sessions-with-one-owner lines.
+- [ ] **Counts match the chips.** Each kind's number matches its chip
+  in the Workspace users toolbar; with one configured super-admin who
+  has an account the pill reads "1 super-admin".
+- [ ] **Spacing.** The pills sit flush against the ` · ` on either
+  side, and the two rows have a small gap between them; Invite and
+  Overview stay level, stacking below about 800px.

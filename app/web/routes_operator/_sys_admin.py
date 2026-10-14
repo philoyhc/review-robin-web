@@ -22,7 +22,6 @@ by email" form. Backed by ``app.services.users``.
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timezone
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
@@ -258,7 +257,6 @@ def sys_admin_users(
     view = dataclasses.replace(view, offset=page.offset)
     pager = views.build_pager(total=page.total, offset=page.offset)
     refused_user = db.get(User, refused) if refused is not None else None
-    overview = account_listing.overview(db, now=datetime.now(timezone.utc))
     return _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",
@@ -271,21 +269,10 @@ def sys_admin_users(
             "account_total": sum(page.counts.values()),
             "account_chips": views.build_account_chips(page.counts, view),
             # admin_pages_refine Item 3 — the Overview card: the chips'
-            # own counts, each linking to the table with only that chip
-            # on, and what they don't count.
+            # own counts on two rows, and the super-admins.
             "account_overview_rows": views.build_account_overview_rows(
-                views.build_account_overview_kinds(
-                    page.counts,
-                    super_admins=overview.super_admins,
-                    base_url=_ACCOUNTS_URL,
-                    anchor="accounts-table-card",
-                )
+                page.counts, super_admins=account_listing.count_super_admins(db)
             ),
-            "account_overview": overview,
-            "account_overview_unused_url": views.account_chip_url(
-                _ACCOUNTS_URL, "unused", anchor="accounts-table-card"
-            ),
-            "overview_days": account_listing.OVERVIEW_DAYS,
             "account_role_options": views.ACCOUNT_ROLE_OPTIONS,
             # The typeahead's first list, for what the box already holds;
             # the page's script asks ``search-options`` again as it changes.
