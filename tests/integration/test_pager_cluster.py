@@ -58,6 +58,9 @@ TEMPLATES = (
     "session_assignments.html",
     "session_invitations.html",
     "session_responses.html",
+    # Sys Admin → Accounts pages its users the same way
+    # (admin_pages_refine Item 1).
+    "sys_admin_users.html",
 )
 
 
@@ -353,7 +356,7 @@ def test_a_page_turn_from_the_menu_reaches_that_page(
 
 
 def test_every_paging_template_carries_the_cluster_in_both_places() -> None:
-    """The rename guard, across all seven pages.
+    """The rename guard, across every paging page.
 
     Two includes and one toolbar per template. Checked at source level
     rather than by seeding seven rosters: Relationships and Observers

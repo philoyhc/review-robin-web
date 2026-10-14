@@ -46,6 +46,8 @@ ROUTE_TEMPLATES = {
     "_setup_observers.py": "session_observers.html",
     "_assignments.py": "session_assignments.html",
     "_operations.py": None,  # two anchors; resolved per value below
+    # Not a roster page: Sys Admin → Accounts (admin_pages_refine Item 1).
+    "_sys_admin.py": "sys_admin_users.html",
 }
 
 ANCHOR_TEMPLATES = {
@@ -56,6 +58,7 @@ ANCHOR_TEMPLATES = {
     "assignments-table-card": "session_assignments.html",
     "invitations-table-card": "session_invitations.html",
     "responses-table-card": "session_responses.html",
+    "accounts-table-card": "sys_admin_users.html",
 }
 
 
@@ -157,7 +160,7 @@ def test_the_anchor_names_an_id_the_page_actually_has(
 
 
 def test_every_pager_route_supplies_an_anchor_that_exists() -> None:
-    """The rename guard, across all seven pages.
+    """The rename guard, across every paging page.
 
     The route passes the id rather than the macro deriving it — which is
     the safer choice only if something checks the two still agree. This
