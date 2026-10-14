@@ -132,3 +132,25 @@ def test_select_all_is_tri_state_and_clearing_removes_the_expander(
     select_all.uncheck()
     expect(page.locator(".user-row-select:checked")).to_have_count(0)
     expect(page.locator("#users-row-expander")).to_have_count(0)
+
+
+def test_the_count_the_confirm_and_the_buttons_share_one_line(
+    page: Page, api: httpx.Client
+) -> None:
+    """The author's note on the scaffold: the confirm hung below the
+    count, from `.confirm-label`'s top margin."""
+    _, _, unused = _setup(page, api)
+    _tick(page, unused)
+    expander = page.locator("#users-row-expander")
+
+    def middle(locator) -> float:
+        box = locator.bounding_box()
+        assert box is not None
+        return box["y"] + box["height"] / 2
+
+    count = middle(expander.locator(".row-expander-count"))
+    confirm = middle(expander.locator(".exp-confirm-label"))
+    button = middle(expander.locator('[data-expander-action="Delete"]'))
+    assert abs(count - confirm) <= 2, (count, confirm)
+    assert abs(count - button) <= 2, (count, button)
+

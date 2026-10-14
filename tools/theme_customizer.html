@@ -3239,7 +3239,20 @@
          after its toolbar: the labels are text, so they need centering
          against the buttons, which the roster rows (buttons only) don't. */
       body.ui-v2 .row-expander-actions.is-labelled { align-items: center; }
+      /* In the expander's row the confirm sits beside the count and the
+         buttons, so it drops `.confirm-label`'s top margin (which sets a
+         Danger Zone confirm apart from the control above it) and centers
+         its box: otherwise it hangs 16px below the count. Both classes
+         in the selector, because `.confirm-label` is declared later at
+         the same specificity and would win. */
       body.ui-v2 .exp-confirm-label { font-size: 0.9em; }
+      body.ui-v2 .confirm-label.exp-confirm-label {
+        margin: 0;
+        align-items: center;
+      }
+      body.ui-v2 .confirm-label.exp-confirm-label input[type="checkbox"] {
+        margin-top: 0;
+      }
       /* 19P.2 rung 5 — the two-column expander, Observers only so far.
          Since operator pages Item 4 it is the Observers row editor's bar:
          left, the cohort rule builder; right, the error, Save and Cancel.
