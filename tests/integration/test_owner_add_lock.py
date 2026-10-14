@@ -81,18 +81,26 @@ def test_add_owner_refuses_a_target_revoked_since_it_was_loaded(
 def test_single_row_revoke_takes_the_batch_lock_before_counting(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Order matters: counted before the lock, a revoke would wait on an
+    add's ``FOR SHARE`` and then commit anyway, the add uncounted."""
     actor = _seed(db, "admin@example.edu", is_operator=True, is_sys_admin=True)
     bob = _seed(db, "bob@example.edu", is_operator=True)
-    calls: list[tuple[str, list[int]]] = []
-    real = users_service._batch_lock
+    steps: list[str] = []
+    real_lock = users_service._batch_lock
+    real_count = users_service._guard_not_owner
 
-    def spy(action: str, ids: list[int]):
-        calls.append((action, ids))
-        return real(action, ids)
+    def lock(action: str, ids: list[int]):
+        steps.append(f"lock {action} {ids == [bob.id]}")
+        return real_lock(action, ids)
 
-    monkeypatch.setattr(users_service, "_batch_lock", spy)
+    def count(db: Session, target: User) -> None:
+        steps.append("count")
+        real_count(db, target)
+
+    monkeypatch.setattr(users_service, "_batch_lock", lock)
+    monkeypatch.setattr(users_service, "_guard_not_owner", count)
     users_service.revoke(db, actor=actor, target=bob)
-    assert calls == [("revoke", [bob.id])]
+    assert steps == ["lock revoke True", "count"]
     assert not bob.is_operator
 
 
@@ -166,10 +174,15 @@ def test_create_skips_a_staged_owner_revoked_since_the_check(
 
 
 # --- The conflict itself, on Postgres ----------------------------------------
+#
+# Each test holds one side's lock open in a transaction, as that side does
+# between its check and its commit, and drives the other side through its
+# real service function with a short ``lock_timeout``: the timeout is the
+# proof that it waited.
 
 
 @pytest.fixture
-def pg_users(engine: Engine):
+def pg_seed(engine: Engine):
     if engine.dialect.name != "postgresql":
         pytest.skip("row locks need Postgres (the ci-postgres job)")
     token = uuid.uuid4().hex[:8]
@@ -179,16 +192,33 @@ def pg_users(engine: Engine):
         )
         bob = User(email=f"lock-{token}-bob@example.edu", is_operator=True)
         setup.add_all([admin, bob])
+        setup.flush()
+        review_session = ReviewSession(
+            name="Lock", code=f"lock-{token}", created_by_user_id=admin.id
+        )
+        setup.add(review_session)
+        setup.flush()
+        setup.add(
+            SessionOperator(
+                session_id=review_session.id, user_id=admin.id, role="owner"
+            )
+        )
         setup.commit()
-        ids = (admin.id, bob.id)
+        ids = (admin.id, bob.id, review_session.id)
     yield ids
     with Session(engine) as cleanup:
+        user_ids = list(ids[:2])
         cleanup.execute(
             text("DELETE FROM audit_events WHERE actor_user_id = ANY(:ids)"),
-            {"ids": list(ids)},
+            {"ids": user_ids},
         )
         cleanup.execute(
-            text("DELETE FROM users WHERE id = ANY(:ids)"), {"ids": list(ids)}
+            text("DELETE FROM session_operators WHERE session_id = :sid"),
+            {"sid": ids[2]},
+        )
+        cleanup.execute(text("DELETE FROM sessions WHERE id = :sid"), {"sid": ids[2]})
+        cleanup.execute(
+            text("DELETE FROM users WHERE id = ANY(:ids)"), {"ids": user_ids}
         )
         cleanup.commit()
 
@@ -197,24 +227,35 @@ def _short_wait(session: Session) -> None:
     session.execute(text("SET LOCAL lock_timeout = '300ms'"))
 
 
-def test_an_owner_add_holds_off_a_revoke(engine: Engine, pg_users) -> None:
-    admin_id, bob_id = pg_users
+@pytest.mark.parametrize("path", ["single", "bulk"])
+def test_an_owner_add_holds_off_a_revoke(
+    engine: Engine, pg_seed, path: str
+) -> None:
+    admin_id, bob_id, _ = pg_seed
     with Session(engine) as adding, Session(engine) as revoking:
         assert session_owners.lock_owner_eligible(adding, adding.get(User, bob_id))
         _short_wait(revoking)
+        actor = revoking.get(User, admin_id)
         with pytest.raises(OperationalError, match="lock timeout"):
-            users_service.apply_batch(
-                revoking,
-                actor=revoking.get(User, admin_id),
-                action="revoke",
-                user_ids=[bob_id],
-            )
+            if path == "single":
+                users_service.revoke(
+                    revoking, actor=actor, target=revoking.get(User, bob_id)
+                )
+            else:
+                users_service.apply_batch(
+                    revoking, actor=actor, action="revoke", user_ids=[bob_id]
+                )
 
 
-def test_a_revoke_holds_off_an_owner_add(engine: Engine, pg_users) -> None:
-    _, bob_id = pg_users
+def test_a_revoke_holds_off_an_owner_add(engine: Engine, pg_seed) -> None:
+    admin_id, bob_id, session_id = pg_seed
     with Session(engine) as revoking, Session(engine) as adding:
         revoking.execute(users_service._batch_lock("revoke", [bob_id]))
         _short_wait(adding)
         with pytest.raises(OperationalError, match="lock timeout"):
-            session_owners.lock_owner_eligible(adding, adding.get(User, bob_id))
+            session_owners.add_owner(
+                adding,
+                review_session=adding.get(ReviewSession, session_id),
+                actor=adding.get(User, admin_id),
+                target=adding.get(User, bob_id),
+            )

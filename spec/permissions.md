@@ -204,8 +204,9 @@ taking the repeated `user_ids`, the page's `view` and, for Delete,
   rows, plus every sys-admin row for Demote and Delete, `FOR NO KEY
   UPDATE` (Delete alone `FOR UPDATE`, since it removes them), and for
   Remove from all sessions the owner rows of every session the selection
-  owns, `FOR UPDATE`. Otherwise two concurrent batches each pass the
-  count and both commit. `FOR NO KEY UPDATE` is the mode
+  owns, `FOR UPDATE`. The locked rows are re-read, so no guard judges
+  a copy loaded earlier in the request. Otherwise two concurrent batches
+  each pass the count and both commit. `FOR NO KEY UPDATE` is the mode
   `session_guard` takes on its session row: an audit row's foreign-key
   check doesn't wait on it, so a batch and a concurrent owner removal by
   a selected user can't deadlock.
@@ -344,6 +345,7 @@ a case when a gate changes.
 | owner add / remove invariants, last-owner 409, self-remove, sys-admin self-add via the relaxed gate | `tests/integration/test_session_owners.py` |
 | every Accounts Management action and guard code | `tests/integration/test_sys_admin_users.py` |
 | the Accounts bulk actions: each action, every refusal, the two post-batch counts | `tests/integration/test_sys_admin_accounts_batch.py` |
+| an owner add and a revoke of the same user serialize (§4.2): every owner-row write re-reads under the lock, and on Postgres each side waits on the other | `tests/integration/test_owner_add_lock.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |

@@ -45,3 +45,8 @@ def test_an_action_that_can_lower_the_admin_count_locks_every_admin(
 def test_others_lock_the_selection_only(action: str) -> None:
     assert "is_sys_admin IS true" not in _sql(action)
     assert "ORDER BY users.id" in _sql(action)
+
+
+def test_the_locked_rows_are_reread() -> None:
+    """A guard never judges a copy loaded earlier in the request."""
+    assert _batch_lock("revoke", [1]).get_execution_options()["populate_existing"]

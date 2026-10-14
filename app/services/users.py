@@ -611,7 +611,8 @@ def _batch_lock(action: str, ids: list[int]) -> Select[tuple[User]]:
     """The selected rows, plus every sys-admin row when the action can
     lower the admin count, in id order. ``FOR NO KEY UPDATE`` except for
     Delete, which needs ``FOR UPDATE`` (see ``apply_batch``). The rows are
-    re-read, so a guard never judges a copy loaded before the lock."""
+    re-read, so a guard never judges a copy loaded before the lock; that
+    also discards any unflushed edit to them, so lock before editing."""
     rows = (
         or_(User.id.in_(ids), User.is_sys_admin.is_(True))
         if action in ("demote", "delete")

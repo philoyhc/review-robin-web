@@ -174,7 +174,7 @@ dropped.
 
 | Route | Gate | Lifecycle | Body |
 |---|---|---|---|
-| `POST /operator/sessions` (Create) | router-level `require_operator` (no session to own yet) | n/a | `owners` (repeated) |
+| `POST /operator/sessions` (Create) | router-level `require_operator` (no session to own yet), re-read under the owner-add lock before the session is made (`spec/permissions.md` §4.2) | n/a | `owners` (repeated) |
 | `POST /operator/sessions/{id}/owners/add` | `require_sys_admin_or_session_operator` | any state | `target_email` |
 | `POST /operator/sessions/{id}/owners/{user_id}/remove` | `require_session_operator` | any state | — |
 
