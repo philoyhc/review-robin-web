@@ -86,12 +86,12 @@ kind (invite some; sign in once as a new address for an Unused one).
 - [ ] **Narrow window.** Below about 860px the two panes stack, with the
   chips wrapping rather than overflowing.
 
-## Invite card half width, Overview stub (admin pages Item 3, rung 1)
+## Invite card half width, beside Overview (admin pages Item 3, rung 1)
 
 Sys Admin → Accounts, signed in as a super-admin (the fake operator is one).
 
 - [ ] **Side by side.** Invite by email on the left half, Overview on the
-  right in the muted placeholder look, the same height; below about
+  right, the same height; below about
   800px they stack. Workspace users still spans the page beneath.
 - [ ] **The role chip.** Under the email box, one row: a solid chip
   reading `Invite as operator` at its top-left, `Cancel` then `Invite`
@@ -148,31 +148,17 @@ Sys Admin → Accounts, with a few operators and an unused account.
   confirm, Delete: a banner says "Nothing changed: … owns sessions",
   naming the owner, and both rows are still there.
 
-## Accounts Overview card (admin pages Item 3, rung 2)
+## Accounts Overview cut to two rows of pills (2026-10-14)
 
-Sys Admin → Accounts, signed in as a super-admin.
-
-- [ ] **Same height as Invite.** Overview no longer looks muted; it
-  lists the four kinds with their counts (in two rows since rung 2a,
-  below; Admins followed by "(1 super-admin)" or "(N super-admins)" for
-  configured super-admins who have an account), New in the last 30
-  days, Unused for over 30 days, and Sessions with one owner. The two
-  cards stay level; below about 800px they stack.
-- [ ] **The kind links.** Click *No role N*: the table below shows only
-  the No role chip on, scrolled to it. The counts match the chips'.
-- [ ] **Show Unused.** With an Unused account older than 30 days, its
-  line reads the count then *Show Unused*, which opens the Unused chip
-  (all Unused accounts, so the table can hold more than the count);
-  with none, the line is just `0`.
-- [ ] **Sessions with one owner.** Add a co-owner to a session that had
-  one: the count drops by one on reload.
-
-## Accounts Overview: two rows and count pills (admin pages Item 3, rung 2a)
-
-- [ ] **Two rows.** *With a role* holds Operators and Admins (with any
-  super-admin note); *Without a role* holds No role and Unused.
-- [ ] **Pills.** Every number on the card is a blue count pill. A kind
-  link's underline stops at its label, and the gap before each `·` is
-  the same as after it.
-- [ ] **Link text keeps its space.** Copy a kind link (or read it with a
-  screen reader): it says "Operators 3", not "Operators3".
+- [ ] **Just pills.** Overview shows two rows and nothing else:
+  "N Operators · N Admins · N super-admins", then "N No role · N
+  Unused", each number and label inside one blue pill, in capitals
+  like every other pill. A count of 1 reads singular: "1 OPERATOR",
+  "1 ADMIN", "1 SUPER-ADMIN". No links, no
+  New / Unused-for-30-days / Sessions-with-one-owner lines.
+- [ ] **Counts match the chips.** Each kind's number matches its chip
+  in the Workspace users toolbar; with one configured super-admin who
+  has an account the pill reads "1 SUPER-ADMIN".
+- [ ] **Spacing.** The pills sit flush against the ` · ` on either
+  side, and the two rows have a small gap between them; Invite and
+  Overview stay level, stacking below about 800px.

@@ -25,7 +25,6 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Collection
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 
 from sqlalchemy import case, exists, func, or_, select
 from sqlalchemy.orm import Session
@@ -47,12 +46,10 @@ from app.services.users import WorkspaceUserRow
 __all__ = [
     "CATEGORIES",
     "SESSION_ROLES",
-    "OVERVIEW_DAYS",
-    "AccountsOverview",
     "AccountsPage",
     "category_of",
+    "count_super_admins",
     "list_accounts_page",
-    "overview",
     "search_options",
 ]
 
@@ -291,57 +288,13 @@ def search_options(
     return sorted(set(emails) | set(names), key=str.casefold)[:cap]
 
 
-#: How far back the Overview's "new" reaches, and how old an Unused
-#: account is before it counts as one to clear out (admin_pages_refine
-#: Item 3).
-OVERVIEW_DAYS = 30
-
-
-@dataclass(frozen=True)
-class AccountsOverview:
-    """What the Accounts Overview card shows beyond the chips' counts,
-    which the page already has."""
-
-    super_admins: int
-    new_recently: int
-    unused_stale: int
-    single_owner_sessions: int
-
-
-def overview(db: Session, *, now: datetime) -> AccountsOverview:
-    """The Overview card's counts, over the whole workspace.
-
-    ``super_admins`` are accounts the config names (a super-admin with no
-    account yet isn't one); ``new_recently`` and ``unused_stale`` split
-    on ``created_at`` against ``OVERVIEW_DAYS``; ``single_owner_sessions``
-    leaves out archived sessions, which no one manages.
-    """
-    cutoff = now - timedelta(days=OVERVIEW_DAYS)
+def count_super_admins(db: Session) -> int:
+    """Accounts the config names as super-admins, for the Overview card
+    (admin_pages_refine Item 3): a super-admin with no account yet isn't
+    one."""
     supers = [normalize_email(email) for email in effective_super_admin_emails()]
-
-    def tally(condition: ColumnElement[bool]) -> ColumnElement[int]:
-        return func.coalesce(func.sum(case((condition, 1), else_=0)), 0)
-
-    super_admins, new_recently, unused_stale = db.execute(
-        select(
-            tally(func.lower(User.email).in_(supers)),
-            tally(User.created_at >= cutoff),
-            tally((_category() == "unused") & (User.created_at < cutoff)),
-        )
-    ).one()
-    sole_owned = (
-        select(SessionOperator.session_id)
-        .group_by(SessionOperator.session_id)
-        .having(func.count() == 1)
-    )
-    single_owner_sessions = db.execute(
-        select(func.count())
-        .select_from(ReviewSession)
-        .where(ReviewSession.id.in_(sole_owned), ReviewSession.status != "archived")
-    ).scalar_one()
-    return AccountsOverview(
-        super_admins=int(super_admins),
-        new_recently=int(new_recently),
-        unused_stale=int(unused_stale),
-        single_owner_sessions=int(single_owner_sessions),
+    return int(
+        db.execute(
+            select(func.count()).select_from(User).where(func.lower(User.email).in_(supers))
+        ).scalar_one()
     )

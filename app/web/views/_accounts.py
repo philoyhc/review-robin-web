@@ -20,15 +20,12 @@ __all__ = [
     "ACCOUNT_CATEGORIES",
     "ACCOUNT_ROLE_OPTIONS",
     "AccountChip",
-    "AccountOverviewKind",
-    "AccountOverviewRow",
+    "AccountOverviewPill",
     "AccountView",
-    "account_chip_url",
     "account_refusal_message",
     "account_view_from_query",
     "account_view_query",
     "build_account_chips",
-    "build_account_overview_kinds",
     "build_account_overview_rows",
     "parse_account_view",
 ]
@@ -158,66 +155,46 @@ def build_account_chips(
 
 
 @dataclass(frozen=True)
-class AccountOverviewKind:
-    """One of the Overview card's counts by kind, linking to the table
-    with only its chip on (admin_pages_refine Item 3)."""
+class AccountOverviewPill:
+    """One count on the Overview card, its label inside the pill."""
 
     key: str
-    label: str
     count: int
-    url: str
-    #: After the link: Admins counts its super-admins, "(1 super-admin)".
-    note: str = ""
-
-
-def account_chip_url(base_url: str, key: str, *, anchor: str) -> str:
-    """The table with only ``key``'s chip on, scrolled to it."""
-    return f"{base_url}?{urlencode([('show', key)])}#{anchor}"
-
-
-def build_account_overview_kinds(
-    counts: Mapping[str, int], *, super_admins: int, base_url: str, anchor: str
-) -> list[AccountOverviewKind]:
-    plural = "" if super_admins == 1 else "s"
-    return [
-        AccountOverviewKind(
-            key=key,
-            label=label,
-            count=counts.get(key, 0),
-            url=account_chip_url(base_url, key, anchor=anchor),
-            note=(
-                f"({super_admins} super-admin{plural})"
-                if key == "admins" and super_admins
-                else ""
-            ),
-        )
-        for key, label, _ in ACCOUNT_CATEGORIES
-    ]
-
-
-@dataclass(frozen=True)
-class AccountOverviewRow:
-    """One line of the Overview card's counts by kind (author,
-    2026-10-14): the kinds with a role on one, the rest on the next."""
-
     label: str
-    kinds: tuple[AccountOverviewKind, ...]
 
 
-_OVERVIEW_ROWS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("With a role", ("operators", "admins")),
-    ("Without a role", ("no_role", "unused")),
+#: Singular labels for a count of one (author, 2026-10-14); a key missing
+#: here reads the same either way ("1 No role", "1 Unused").
+_OVERVIEW_SINGULAR: dict[str, str] = {
+    "operators": "Operator",
+    "admins": "Admin",
+    "super_admins": "super-admin",
+}
+
+
+#: The Overview card's two rows (author, 2026-10-14): the kinds with a
+#: role and the super-admins among them, then the kinds without.
+_OVERVIEW_ROWS: tuple[tuple[str, ...], ...] = (
+    ("operators", "admins", "super_admins"),
+    ("no_role", "unused"),
 )
 
 
 def build_account_overview_rows(
-    kinds: Sequence[AccountOverviewKind],
-) -> list[AccountOverviewRow]:
-    by_key = {kind.key: kind for kind in kinds}
-    return [
-        AccountOverviewRow(label=label, kinds=tuple(by_key[key] for key in keys))
-        for label, keys in _OVERVIEW_ROWS
-    ]
+    counts: Mapping[str, int], *, super_admins: int
+) -> list[tuple[AccountOverviewPill, ...]]:
+    """The chips' own counts by kind, plus the super-admins, each label
+    singular for a count of one."""
+    plurals = {key: (counts.get(key, 0), label) for key, label, _ in ACCOUNT_CATEGORIES}
+    plurals["super_admins"] = (super_admins, "super-admins")
+
+    def pill(key: str) -> AccountOverviewPill:
+        count, label = plurals[key]
+        if count == 1:
+            label = _OVERVIEW_SINGULAR.get(key, label)
+        return AccountOverviewPill(key=key, count=count, label=label)
+
+    return [tuple(pill(key) for key in row) for row in _OVERVIEW_ROWS]
 
 
 #: Why a batch was refused, by ``UserOperationError.code``: the reason
