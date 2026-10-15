@@ -106,7 +106,8 @@ filter are labelled `(UTC)`.
   Settings page's live preview (the only surface that has one), the
   session timezone pickers' options on the Create page and the
   Session details card, that card's Timezone item, the review-surface
-  deadline labels — it renders as the **compact GMT-offset followed by the
+  deadline labels, the reviewer emails' `$deadline` / `$submitted_at`
+  (in parentheses after the time) — it renders as the **compact GMT-offset followed by the
   raw IANA id**, e.g. `GMT+8 Asia/Singapore`, via
   `date_formatting.gmt_offset_zone_label`. The offset gives
   at-a-glance orientation; the IANA id is the unambiguous

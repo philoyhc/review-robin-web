@@ -44,12 +44,9 @@ from app.services import audit as audit_service
 from app.services.date_formatting import format_datetime, gmt_offset_zone_label
 from app.services.sessions import resolve_session_timezone
 
-# Default templates — verbatim parameterisations of the strings the
-# original ``invitations._email_body`` / ``_reminder_body`` helpers
-# produced (with the new merge fields slotted in). A session whose
-# ``email_template_overrides`` is ``NULL`` (the post-migration default
-# for every existing row) renders byte-identically to the pre-Segment-
-# 11E behaviour modulo the new merge tags.
+# Default templates: what a session whose ``email_template_overrides``
+# is ``NULL`` renders, less any line whose tag resolves empty
+# (``_drop_empty_lines``).
 
 DEFAULT_INVITATION_SUBJECT = "Invitation to review: $session_name"
 DEFAULT_INVITATION_BODY = (
@@ -200,8 +197,9 @@ def _body(
 
 
 def _help_contact(review_session: ReviewSession) -> str:
-    """The contact as a merge value: spaces alone are no contact, so an
-    override body renders it empty rather than as whitespace."""
+    """The contact as a merge value: spaces alone are no contact, so it
+    resolves empty, and an overridden body gets ``HELP_CONTACT_FALLBACK``
+    (``_body``) rather than whitespace."""
     return (review_session.help_contact or "").strip()
 
 

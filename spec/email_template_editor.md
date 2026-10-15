@@ -200,7 +200,7 @@ never an error — so a typo in an override cannot fail a send.
 | `$reviewer_name` | ✓ | ✓ | ✓ | roster name; `""` in previews with no reviewer |
 | `$session_name` | ✓ | ✓ | ✓ | `session.name` |
 | `$deadline` | ✓ | ✓ | ✓ | `session.deadline` in the session's resolved zone (`sessions.resolve_session_timezone`, as `spec/timezone_display.md` requires): `YYYY-MM-DD HH:MM (GMT+8 Asia/Singapore)`, the zone named by `gmt_offset_zone_label`; `""` when unset |
-| `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` trimmed; when unset or blank, `""` in a default body (whose line is then dropped) and `the person running this review` in an overridden one |
+| `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` trimmed; when unset or blank, `""` in a default body (whose line is then dropped) and in a subject, and `the person running this review` in an overridden body |
 | `$invite_url` | ✓ | ✓ | — | the reviewer's `/me/invite/{token}` URL; a fixed placeholder in previews |
 | `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM (zone)` in the session's resolved zone, as `$deadline`; `"(not yet submitted)"` when none (previews only, in practice) |
 
@@ -317,10 +317,17 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   explicit-`False` on uncheck, key removed on re-check).
 - `tests/unit/test_email_templates.py` — resolver fall-through
   (`NULL` / blank / subject-only), all five tags substitute, unknown
-  tag passes through, unset help-contact and deadline render `""`,
-  dates in the session's zone (own zone, creator fallback, UTC), the
-  responses-received default variants and `$invite_url` drop, and
-  every branch of the `enabled` getter / setter.
+  tag passes through, an unset deadline renders `""`, an overridden
+  body reads the help-contact fallback, dates in the session's zone
+  with its label (own zone, creator fallback, UTC), default bodies
+  carry the greeting, deadline and contact and drop empty lines, an
+  invitation override without `$invite_url` still carries the link
+  (and one with it is left alone), `$invite_url` drops from the
+  responses-received body, and every branch of the `enabled` getter /
+  setter.
+- `tests/integration/test_invitation_link_reuse.py` — an invitation
+  sent from an override without `$invite_url` still lets the next
+  reminder reuse its link rather than send a fresh invitation.
 - `tests/integration/test_responses_received_queued.py` — the
   submit-time queue (§7): queued on submit, nothing when the toggle is
   off or the submit is blocked, one row refreshed on a second submit,
