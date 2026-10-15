@@ -1,4 +1,4 @@
-"""Breadcrumb factories for operator and reviewer pages.
+"""Breadcrumb factories for operator pages (participant pages carry none).
 
 Each factory returns a list of ``(label, url)`` tuples. The last tuple
 always has ``url=None`` and is rendered as a non-link label marking the

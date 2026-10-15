@@ -741,9 +741,11 @@ def test_rows_keep_their_order_when_a_session_is_edited(
     client: TestClient, db: Session
 ) -> None:
     """Rows sorted by ``updated_at``, so editing a session moved it to
-    the top. They now sort newest-created first."""
-    older = _observer_on(client, db, code="ord-older", status="ready")
+    the top. They now sort newest-created first. The newer session gets
+    the lower id, so the id tiebreak alone can't pass this."""
     newer = _observer_on(client, db, code="ord-newer", status="ready")
+    older = _observer_on(client, db, code="ord-older", status="ready")
+    assert newer.id < older.id
     older.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
     newer.created_at = datetime(2026, 2, 1, tzinfo=timezone.utc)
     db.commit()

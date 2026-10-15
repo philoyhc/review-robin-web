@@ -1127,8 +1127,8 @@ participant role** (reviewer / reviewee / observer), as a
 cross-role union. The query hits all three rosters
 (`reviewers`, `reviewees`, `observers`) with case-insensitive email
 matching; only `status == "active"` rows contribute; the result is
-deduplicated per session and sorted by `session.updated_at`
-descending.
+deduplicated per session and sorted newest-created first
+(`created_at`, then `id`), so an operator's edit never moves a row.
 
 **The `reviewee` role additionally requires a currently-resolving
 visibility grant.** An active, email-identified
@@ -1147,8 +1147,7 @@ reviewee-/observer-only rows show `—` in those cells.
 
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
-  session, newest-created first, so an operator's edit never moves a
-  row). **Six columns:**
+  session, in the order above). **Six columns:**
   - **Session** — session name, with per-role pills on a second
     line below it. The session name itself links to
     the highest-priority reachable role in order Reviewer →
