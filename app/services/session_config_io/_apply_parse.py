@@ -498,11 +498,12 @@ def _view_policy_cell_errors(plan: _ParsedConfig) -> list[ApplyError]:
     this plan. Until 19C Item 9 only the *vocabulary* was checked
     here — ``row`` / ``aggregated``, ``identified`` /
     ``deidentified`` — never the cell the values landed in, so a
-    Settings CSV could persist what the editor refuses. The one
-    that mattered is ``("reviewee", "while_ongoing")``, whose only
-    legal mode is ``None``: a reviewee may never read responses
-    while the review is running, and an imported row saying
-    otherwise was honoured by the resolver like any other.
+    Settings CSV could persist what the editor refuses. The database
+    now refuses such a row too (``ck_view_policy_cell``); this check
+    runs first so the operator gets a named error, not an
+    ``IntegrityError``. The cell that matters most is an observer
+    ``raw`` / ``anonymized`` grant on ``while_ongoing``, which would
+    show individual responses while the review is running.
 
     A cell is a **pair** of rows, so this cannot live in the row
     router — it runs here, once both rows are parsed, and before
