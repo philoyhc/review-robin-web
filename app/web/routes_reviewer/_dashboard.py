@@ -29,7 +29,7 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services import visibility_policies
-from app.web import breadcrumbs, views
+from app.web import views
 from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
 
@@ -75,7 +75,6 @@ def reviewer_dashboard(
             {
                 "user": user,
                 "items": [],
-                "breadcrumbs": breadcrumbs.reviewer_root(),
                 "notice": views.me_notice(request.query_params.get("notice")),
             },
         )
@@ -141,9 +140,11 @@ def reviewer_dashboard(
     for _observer, s in observer_rows:
         _add(s, "observer")
 
+    # Newest session first, by creation: ``updated_at`` moved a row
+    # every time an operator edited the session (participant audit L6).
     ordered = sorted(
         sessions_by_id.values(),
-        key=lambda s: s.updated_at,
+        key=lambda s: (s.created_at, s.id),
         reverse=True,
     )
 
@@ -273,7 +274,11 @@ def reviewer_dashboard(
                 "timezone_gmt_offset": date_formatting.gmt_offset_label(
                     session_zone, at=review_session.deadline
                 ),
-                "timezone_iana": session_zone,
+                # The hover: offset plus IANA id, one of them alone when
+                # they coincide (a bare "UTC", not "UTC UTC").
+                "timezone_label": date_formatting.gmt_offset_zone_label(
+                    session_zone, at=review_session.deadline
+                ),
             }
         )
     return _templates.TemplateResponse(
@@ -282,7 +287,6 @@ def reviewer_dashboard(
         {
             "user": user,
             "items": items,
-            "breadcrumbs": breadcrumbs.reviewer_root(),
             "notice": views.me_notice(request.query_params.get("notice")),
         },
     )

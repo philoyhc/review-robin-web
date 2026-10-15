@@ -78,21 +78,3 @@ def operator_sessions_child(label: str) -> list[Crumb]:
         ("Sessions", "/operator/sessions"),
         (label, None),
     ]
-
-
-def reviewer_root() -> list[Crumb]:
-    return [("Reviewer", None)]
-
-
-def reviewer_session(session: ReviewSession) -> list[Crumb]:
-    return [
-        ("Reviewer", "/me"),
-        (session.name, None),
-    ]
-
-
-def reviewer_invite_mismatch() -> list[Crumb]:
-    return [
-        ("Reviewer", "/me"),
-        ("Access denied", None),
-    ]

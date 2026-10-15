@@ -1038,11 +1038,13 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     assert data_body.count("R-") == 1
 
 
-def test_collation_csv_raw_filename_prefixes_observer_email(
+def test_collation_csv_raw_filename_prefixes_the_session_code(
     client: TestClient, db: Session
 ) -> None:
-    """Filename pattern: ``<observer_email>_<instrument_slug>.csv``
-    for Raw. No ``_anon`` suffix in the Raw case."""
+    """Filename pattern: ``<session_code>_<instrument_slug>.csv`` for
+    Raw, the operator extracts' shape; no ``_anon`` suffix. It started
+    with the observer's address and named no session (participant
+    audit L6)."""
     review_session = _make_session(
         client, db, code="col-csv-name-raw"
     )
@@ -1069,7 +1071,8 @@ def test_collation_csv_raw_filename_prefixes_observer_email(
     )
     assert response.status_code == 200
     disposition = response.headers["content-disposition"]
-    assert "alice@example.edu_" in disposition
+    assert "alice@example.edu" not in disposition
+    assert 'filename="col-csv-name-raw_' in disposition
     assert disposition.endswith('.csv"')
     assert "_anon" not in disposition
 
@@ -1108,7 +1111,8 @@ def test_collation_csv_anonymized_filename_carries_anon_suffix(
     )
     assert response.status_code == 200
     disposition = response.headers["content-disposition"]
-    assert "alice@example.edu_" in disposition
+    assert "alice@example.edu" not in disposition
+    assert 'filename="col-csv-name-anon_' in disposition
     assert disposition.endswith('_anon.csv"')
 
 
