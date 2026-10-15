@@ -7,6 +7,8 @@ context comes from :func:`_surface_context` in ``_context``.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,7 +16,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
-from app.schemas.responses import ResponseUpsert
 from app.services import date_formatting
 from app.services import invitations as invitations_service
 from app.services import responses as responses_service
@@ -36,9 +37,7 @@ from ._context import (
     _load_assignments_with_relations,
     _pages_for_session,
     _surface_context,
-    _unsaved_answers,
     _write_refusal,
-    _write_refused_notice,
 )
 
 
@@ -194,7 +193,7 @@ def _refused_write_response(
     *,
     action: str,
     page_n: int,
-    upserts: list[ResponseUpsert],
+    form: Mapping[str, str],
 ) -> HTMLResponse:
     """A refused Save / Submit / Clear (participant audit P3, author's
     ruling 2026-10-15). Rather than the standalone error page, which
@@ -204,11 +203,11 @@ def _refused_write_response(
     that is neither ``ready`` nor ``expired`` renders the pre-open
     page with the same notice. HTTP 403, as before."""
     extra = {
-        "write_refused": _write_refused_notice(
+        "write_refused": views.write_refused_notice(
             review_session, cause, action=action
         ),
-        "unsaved_answers": _unsaved_answers(
-            db, review_session, reviewer, upserts
+        "unsaved_answers": views.unsaved_answers(
+            db, review_session, reviewer, form
         ),
     }
     if not (
@@ -333,9 +332,8 @@ async def reviewer_save(
     """
     reviewer, review_session = reviewer_session
     form = await request.form()
-    upserts = responses_service.parse_form_payload(
-        {k: v for k, v in form.items() if isinstance(v, str)}
-    )
+    string_form = {k: v for k, v in form.items() if isinstance(v, str)}
+    upserts = responses_service.parse_form_payload(string_form)
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
     refusal = await run_in_threadpool(
@@ -352,7 +350,7 @@ async def reviewer_save(
             refusal,
             action="save",
             page_n=page_n,
-            upserts=upserts,
+            form=string_form,
         )
     pages = _pages_for_session(db, review_session.id)
     validate_page_n(page_n, pages)
@@ -442,7 +440,7 @@ async def reviewer_submit(
             refusal,
             action="submit",
             page_n=_submitted_from_page(request),
-            upserts=upserts,
+            form=string_form,
         )
     result = responses_service.submit(
         db,
@@ -592,7 +590,7 @@ async def reviewer_clear(
             refusal,
             action="clear",
             page_n=1,
-            upserts=[],
+            form={},
         )
     form = await request.form()
     if form.get("confirm") != "true":

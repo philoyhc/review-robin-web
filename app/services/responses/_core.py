@@ -38,12 +38,15 @@ from app.services.responses._group_reconciliation import (
 _FORM_FIELD_PATTERN = re.compile(r"^response\[(?P<aid>\d+)\]\[(?P<key>[^\]]+)\]$")
 
 
-def parse_form_payload(form: Mapping[str, str]) -> list[ResponseUpsert]:
+def parse_form_payload(
+    form: Mapping[str, str], *, strip: bool = True
+) -> list[ResponseUpsert]:
     """Extract ``response[aid][field_key]=value`` entries from a form mapping.
 
-    Non-matching keys are ignored. Whitespace-only values are normalised
-    to empty strings; the save layer interprets empty as "delete the row".
-    """
+    Non-matching keys are ignored. Values are stripped, so whitespace-only
+    ones become empty strings; the save layer interprets empty as "delete
+    the row". ``strip=False`` keeps them as typed, for showing a refused
+    write's answers back (participant audit P3)."""
     out: list[ResponseUpsert] = []
     for key, value in form.items():
         match = _FORM_FIELD_PATTERN.match(key)
@@ -53,7 +56,7 @@ def parse_form_payload(form: Mapping[str, str]) -> list[ResponseUpsert]:
             ResponseUpsert(
                 assignment_id=int(match["aid"]),
                 field_key=match["key"],
-                value=(value or "").strip(),
+                value=(value or "").strip() if strip else (value or ""),
             )
         )
     return out
