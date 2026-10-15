@@ -678,7 +678,7 @@ enumerated here.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 100 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Round-trips via `?return_to=<path>`. Not rendered on `/operator/settings` itself |
+| 100 | Chrome user menu | Settings | `<a>` | `chrome-link` | Chrome utility link | Operators and sys admins only (Settings sits behind `require_operator`). Round-trips via `?return_to=<path>`. Not rendered on `/operator/settings` itself |
 | 101 | Chrome user menu | About | `<a>` | `chrome-link` | Chrome utility link | Same `?return_to=<path>` pattern. Not rendered on `/about` itself |
 | 102 | Chrome user menu | Sign out | `<a>` | `signout` | Chrome utility link | Hits `/.auth/logout` (Easy Auth) |
 | 225 | Chrome user menu | Admin | `<a>` | `chrome-link` | Chrome utility link | Sys-admins only, and not on the `/operator/sys-admin` pages; same `?return_to=<path>` pattern |

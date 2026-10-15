@@ -5,7 +5,9 @@ Per `spec/visual_style_rrw.md` "Return-to-origin behavior", these pages
 render a "← Back to {context}" affordance whose target is captured via
 the ``?return_to=<path>`` query param. The path is validated against an
 allowlist (`spec/settings_inventory.md` § *URL state*); anything outside
-falls back to ``/operator/sessions`` (the operator's natural lobby).
+falls back to ``/operator/sessions`` (the operator's natural lobby), or
+to ``/me`` for a viewer who is not an operator (participant audit M8):
+a participant sent to the lobby is only bounced back to ``/me``.
 
 A session path is named only for a viewer who could see that session
 anyway (``permissions.may_name_session``). Anyone else gets the default target, so the
@@ -34,6 +36,7 @@ class ReturnTarget:
 
 
 DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Sessions")
+PARTICIPANT_DEFAULT = ReturnTarget(url="/me", label="your reviews")
 
 # ``\Z``, not ``$``: ``$`` also matches before a trailing newline. And
 # ``[0-9]``, not ``\d``: ``\d`` matches any Unicode digit, which ``int()``
@@ -68,11 +71,28 @@ def _is_get_page(path: str) -> bool:
 Viewer = User | None | Callable[[], User | None]
 
 
-def _may_name(db: Session, viewer: Viewer, session: ReviewSession) -> bool:
-    # A callable is resolved only here, so a caller whose viewer costs a
-    # query (``/auth/me/debug``) pays it only for a session path.
-    resolved = viewer() if callable(viewer) else viewer
-    return permissions.may_name_session(db, resolved, session)
+def _once(viewer: Viewer) -> Callable[[], User | None]:
+    """``viewer`` as a getter that resolves a callable at most once, and
+    only when first asked, so a caller whose viewer costs a query
+    (``/auth/me/debug``) pays it only when a label needs it."""
+    if not callable(viewer):
+        return lambda: viewer
+    cache: list[User | None] = []
+
+    def get() -> User | None:
+        if not cache:
+            cache.append(viewer())
+        return cache[0]
+
+    return get
+
+
+def _fallback(get_viewer: Callable[[], User | None]) -> ReturnTarget:
+    """The Sessions lobby for an operator, ``/me`` for anyone else."""
+    viewer = get_viewer()
+    if viewer is not None and (viewer.is_operator or viewer.is_sys_admin):
+        return DEFAULT_TARGET
+    return PARTICIPANT_DEFAULT
 
 
 def resolve_return_to(
@@ -85,19 +105,29 @@ def resolve_return_to(
     target. Session paths resolve their label from the session name
     when the row exists and ``viewer`` may see it; otherwise they fall
     back to the default, the same answer for a session that does not
-    exist. ``viewer`` may be a callable returning the user, called only
-    when a session path needs naming.
+    exist. The fallback is the Sessions lobby for an operator and
+    ``/me`` for anyone else. ``viewer`` may be a callable returning the
+    user, called at most once and only when an answer needs it.
     """
+    get_viewer = _once(viewer)
+    target = _resolve(raw, db, get_viewer)
+    return target if target is not None else _fallback(get_viewer)
+
+
+def _resolve(
+    raw: str | None, db: Session, get_viewer: Callable[[], User | None]
+) -> ReturnTarget | None:
+    """The allowlisted target for ``raw``, or ``None`` to fall back."""
     if not raw:
-        return DEFAULT_TARGET
+        return None
 
     # Reject anything that isn't a same-origin path.
     if not raw.startswith("/") or raw.startswith("//"):
-        return DEFAULT_TARGET
+        return None
 
     path = unquote(raw).split("?", 1)[0].split("#", 1)[0]
     if ".." in path.split("/"):
-        return DEFAULT_TARGET
+        return None
 
     if _OPERATOR_SESSIONS.match(path):
         return ReturnTarget(url=path, label="Sessions")
@@ -109,8 +139,8 @@ def resolve_return_to(
     m = _OPERATOR_SESSION.match(path)
     if m and _is_get_page(path):
         session = db.get(ReviewSession, int(m.group(1)))
-        if session is None or not _may_name(db, viewer, session):
-            return DEFAULT_TARGET
+        if session is None or not permissions.may_name_session(db, get_viewer(), session):
+            return None
         return ReturnTarget(url=path, label=session.name)
 
     if _REVIEWER_ROOT.match(path):
@@ -119,8 +149,8 @@ def resolve_return_to(
     m = _REVIEWER_SESSION.match(path)
     if m:
         session = db.get(ReviewSession, int(m.group(1)))
-        if session is None or not _may_name(db, viewer, session):
-            return DEFAULT_TARGET
+        if session is None or not permissions.may_name_session(db, get_viewer(), session):
+            return None
         return ReturnTarget(url=path, label=session.name)
 
-    return DEFAULT_TARGET
+    return None

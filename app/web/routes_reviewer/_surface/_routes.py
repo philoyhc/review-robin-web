@@ -396,8 +396,8 @@ def reviewer_recall(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
-                "Recall is only allowed while the session is ready; "
-                f"session status is {review_session.status!r}."
+                "This review isn't open, so your submission can't be "
+                "recalled."
             ),
         )
     responses_service.recall(
@@ -436,7 +436,7 @@ async def reviewer_clear(
     if form.get("confirm") != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="confirm checkbox required",
+            detail="Check the box to confirm before clearing your answers.",
         )
     responses_service.clear_all(
         db,

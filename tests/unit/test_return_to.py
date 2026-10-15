@@ -17,12 +17,17 @@ from app.db.models import (
     SessionOperator,
     User,
 )
-from app.web.return_to import DEFAULT_TARGET, ReturnTarget, resolve_return_to
+from app.web.return_to import (
+    DEFAULT_TARGET,
+    PARTICIPANT_DEFAULT,
+    ReturnTarget,
+    resolve_return_to,
+)
 
 
 def _seed_session(db: Session, *, name: str = "Spring 2026") -> ReviewSession:
     """A session owned by ``op@example.edu`` (see :func:`_owner`)."""
-    user = User(email="op@example.edu", display_name="Op")
+    user = User(email="op@example.edu", display_name="Op", is_operator=True)
     db.add(user)
     db.flush()
     session = ReviewSession(name=name, code="rrw-test", created_by_user_id=user.id)
@@ -45,11 +50,31 @@ def _user(db: Session, email: str, *, is_sys_admin: bool = False) -> User:
 
 
 def test_none_falls_back_to_default(db: Session) -> None:
-    assert resolve_return_to(None, db, viewer=None) == DEFAULT_TARGET
+    assert resolve_return_to(None, db, viewer=None) == PARTICIPANT_DEFAULT
 
 
 def test_empty_string_falls_back_to_default(db: Session) -> None:
-    assert resolve_return_to("", db, viewer=None) == DEFAULT_TARGET
+    assert resolve_return_to("", db, viewer=None) == PARTICIPANT_DEFAULT
+
+
+@pytest.mark.parametrize(
+    ("flags", "expected"),
+    [
+        ({"is_operator": True}, DEFAULT_TARGET),
+        ({"is_sys_admin": True}, DEFAULT_TARGET),
+        ({}, PARTICIPANT_DEFAULT),
+    ],
+)
+def test_the_fallback_is_the_lobby_for_operators_and_me_for_others(
+    db: Session, flags: dict[str, bool], expected: ReturnTarget
+) -> None:
+    """Participant audit M8: a participant sent to the Sessions lobby is
+    only bounced to ``/me``, so their fallback is ``/me`` itself."""
+    viewer = User(email="v@example.edu", display_name="V", **flags)
+    db.add(viewer)
+    db.flush()
+    assert resolve_return_to(None, db, viewer=viewer) == expected
+    assert resolve_return_to("https://evil.example.com", db, viewer=viewer) == expected
 
 
 def test_operator_sessions_root_resolves_to_sessions_label(db: Session) -> None:
@@ -79,7 +104,7 @@ def test_operator_session_tab_resolves_to_session_name(db: Session) -> None:
 
 
 def test_operator_session_with_unknown_id_falls_back(db: Session) -> None:
-    assert resolve_return_to("/operator/sessions/999999", db, viewer=None) == DEFAULT_TARGET
+    assert resolve_return_to("/operator/sessions/999999", db, viewer=None) == PARTICIPANT_DEFAULT
 
 
 def test_reviewer_root_resolves_to_your_reviews(db: Session) -> None:
@@ -123,7 +148,7 @@ def test_query_string_and_fragment_are_stripped(db: Session) -> None:
 def test_paths_outside_allowlist_fall_back_to_default(
     db: Session, raw: str
 ) -> None:
-    assert resolve_return_to(raw, db, viewer=None) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=None) == PARTICIPANT_DEFAULT
 
 
 def test_operator_session_page_at_any_depth_resolves_to_session_name(
@@ -188,8 +213,8 @@ def test_a_stranger_is_not_told_the_session_name(db: Session, shape: str) -> Non
     session = _seed_session(db, name="Secret Review")
     stranger = _user(db, "stranger@example.edu")
     raw = shape.format(id=session.id)
-    assert resolve_return_to(raw, db, viewer=stranger) == DEFAULT_TARGET
-    assert resolve_return_to(raw, db, viewer=None) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=stranger) == PARTICIPANT_DEFAULT
+    assert resolve_return_to(raw, db, viewer=None) == PARTICIPANT_DEFAULT
 
 
 def test_a_sys_admin_is_told_any_session_name(db: Session) -> None:
@@ -228,7 +253,7 @@ def test_an_inactive_reviewer_is_not_told_the_name(db: Session) -> None:
     )
     db.flush()
     raw = f"/me/sessions/{session.id}"
-    assert resolve_return_to(raw, db, viewer=viewer) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
 def test_a_role_on_another_session_does_not_name_this_one(db: Session) -> None:
@@ -242,7 +267,7 @@ def test_a_role_on_another_session_does_not_name_this_one(db: Session) -> None:
     db.add(Reviewer(session_id=other.id, name="Pat", email="pat@example.edu"))
     db.flush()
     raw = f"/me/sessions/{session.id}"
-    assert resolve_return_to(raw, db, viewer=viewer) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
 def test_a_reviewee_without_a_grant_is_not_told_the_name(db: Session) -> None:
@@ -257,7 +282,7 @@ def test_a_reviewee_without_a_grant_is_not_told_the_name(db: Session) -> None:
     )
     db.flush()
     raw = f"/me/sessions/{session.id}"
-    assert resolve_return_to(raw, db, viewer=viewer) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
 def _grant_reviewees(db: Session, session: ReviewSession) -> None:
@@ -304,7 +329,7 @@ def test_a_reviewee_is_told_the_name_while_a_grant_resolves(db: Session) -> None
 
     session.status = "draft"
     db.flush()
-    assert resolve_return_to(raw, db, viewer=viewer) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
 def test_a_grant_on_one_session_does_not_name_another(db: Session) -> None:
@@ -325,7 +350,7 @@ def test_a_grant_on_one_session_does_not_name_another(db: Session) -> None:
         == "Granted"
     )
     raw = f"/me/sessions/{ungranted.id}"
-    assert resolve_return_to(raw, db, viewer=viewer) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
 def test_an_observer_on_another_session_is_not_told_this_name(db: Session) -> None:
@@ -335,10 +360,12 @@ def test_an_observer_on_another_session_is_not_told_this_name(db: Session) -> No
     db.add(Observer(session_id=other.id, display_name="Pat", email="pat@example.edu"))
     db.flush()
     raw = f"/me/sessions/{session.id}"
-    assert resolve_return_to(raw, db, viewer=viewer) == DEFAULT_TARGET
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
-def test_a_callable_viewer_is_resolved_only_for_a_session_path(db: Session) -> None:
+def test_a_callable_viewer_is_resolved_at_most_once_and_only_when_needed(
+    db: Session,
+) -> None:
     session = _seed_session(db, name="Lazy")
     calls: list[int] = []
 
@@ -346,9 +373,30 @@ def test_a_callable_viewer_is_resolved_only_for_a_session_path(db: Session) -> N
         calls.append(1)
         return _owner(db, session)
 
-    assert resolve_return_to("/about", db, viewer=viewer) == DEFAULT_TARGET
+    # Allowlisted targets that name no session never ask.
     assert resolve_return_to("/me", db, viewer=viewer).label == "your reviews"
+    assert resolve_return_to("/operator/settings", db, viewer=viewer).label == "Settings"
     assert calls == []
+    # A session path asks once.
     raw = f"/me/sessions/{session.id}"
     assert resolve_return_to(raw, db, viewer=viewer).label == "Lazy"
+    assert calls == [1]
+    # A fallback asks once too: it decides between the lobby and /me.
+    assert resolve_return_to(None, db, viewer=viewer) == DEFAULT_TARGET
+    assert calls == [1, 1]
+
+
+def test_a_refused_name_and_its_fallback_share_one_lookup(db: Session) -> None:
+    """A session path the viewer may not name asks twice (may it name
+    the session? then which fallback?); the lookup runs once."""
+    session = _seed_session(db, name="Not Theirs")
+    stranger = _user(db, "stranger@example.edu")
+    calls: list[int] = []
+
+    def viewer() -> User:
+        calls.append(1)
+        return stranger
+
+    raw = f"/me/sessions/{session.id}"
+    assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
     assert calls == [1]

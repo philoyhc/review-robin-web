@@ -1160,6 +1160,8 @@ def test_clear_all_without_confirm_400s(
         follow_redirects=False,
     )
     assert response.status_code == 400
+    # A sentence, not the raw "confirm checkbox required" (audit L6).
+    assert "Check the box to confirm" in response.text
 
 
 def test_resubmit_after_edit_refreshes_submitted_at(

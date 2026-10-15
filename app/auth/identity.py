@@ -19,6 +19,14 @@ class AuthenticatedUser:
     provider: str | None = None
     is_fake: bool = False
 
+    @property
+    def display_label(self) -> str:
+        """The chrome's "Signed in as …" name, as ``User.display_label``
+        gives it for a persisted row, so a page rendered from the
+        header-derived identity (``/auth/me/debug``) names the viewer
+        too (participant audit M8)."""
+        return self.name or self.email or ""
+
 
 def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
     try:

@@ -39,19 +39,16 @@
   {% if collation.cohort_empty %}
     <div class="card">
       <p class="muted">
-        No cohort is configured for you yet. The session
-        operator assigns observers to cohorts on the Observers
-        Setup page — until that's done, this page has nothing
-        to show.
+        You haven't been given anyone to observe in this review
+        yet. Check back later.
       </p>
     </div>
   {% elif not collation.sections %}
     <div class="card">
       <p class="muted">
-        No instruments are visible to observers in the current
-        session window. Either the operator hasn't opened any
-        observer view on Band 3 yet, or the response-release
-        window is closed.
+        There are no results for you to see right now. They
+        appear here while the review's organizers have opened
+        them to observers.
       </p>
     </div>
   {% else %}

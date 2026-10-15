@@ -60,6 +60,15 @@ _ERROR_COPY: dict[int, tuple[str, str]] = {
         "The request couldn't be processed. Please check the link or "
         "form and try again.",
     ),
+    # 401 — no usable identity. Always this copy: the raised details
+    # ("Not authenticated", "Authenticated identity has no email claim")
+    # go to the log (``_http_exception_handler``), not the reader
+    # (``_COPY_ONLY``).
+    status.HTTP_401_UNAUTHORIZED: (
+        "Sign-in problem",
+        "We couldn't tell who you are from your sign-in. Sign out, then "
+        "sign in again with your institutional MS365 account.",
+    ),
     status.HTTP_403_FORBIDDEN: (
         "Access denied",
         "You don't have permission to view this page.",
@@ -77,6 +86,9 @@ _ERROR_COPY: dict[int, tuple[str, str]] = {
 }
 
 _GENERIC = ("Something went wrong", "An unexpected error occurred.")
+
+# Statuses whose raised ``detail`` never reaches the page.
+_COPY_ONLY: frozenset[int] = frozenset({status.HTTP_401_UNAUTHORIZED})
 
 
 def _standard_phrase(status_code: int) -> str:
@@ -97,7 +109,11 @@ def _render_error(
 ) -> Response:
     headline, body = _ERROR_COPY.get(status_code, _GENERIC)
     message = body
-    if detail and detail != _standard_phrase(status_code):
+    if (
+        detail
+        and detail != _standard_phrase(status_code)
+        and status_code not in _COPY_ONLY
+    ):
         message = detail
     return _templates.TemplateResponse(
         request,
@@ -124,6 +140,18 @@ async def _http_exception_handler(
             },
         )
     detail = exc.detail if isinstance(exc.detail, str) else None
+    if exc.status_code in _COPY_ONLY:
+        # The page hides the detail, so keep it here: it is the only
+        # record of *why* a sign-in was refused.
+        log.warning(
+            "http exception",
+            extra={
+                "status_code": exc.status_code,
+                "detail": detail,
+                "path": request.url.path,
+                "method": request.method,
+            },
+        )
     return _render_error(request, exc.status_code, detail)
 
 

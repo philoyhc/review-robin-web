@@ -322,7 +322,7 @@ The existing top bar pattern continues:
 - **Left:** "Review Robin Web App (version …)" — small, in `--text-subtle`. App identity and version, modest.
 - **Right:** A small **user menu** containing, in order:
   - "Signed in as [Operator Name]" (informational, not a link), with a " (super admin)" or " (sys admin)" suffix for a viewer holding that tier.
-  - Settings — opens Settings, with return-to-origin behavior (see below). Not rendered on Settings itself.
+  - Settings — opens Settings, with return-to-origin behavior (see below). Rendered for operators and sys admins only, since Settings sits behind the operator gate and anyone else is bounced to `/me`. Not rendered on Settings itself, nor on Sign-in details (`/auth/me/debug`), whose chrome is rendered from the sign-in identity rather than the user row, so it cannot tell an operator (Admin is absent there for the same reason).
   - Admin — opens the Sys Admin pages, with return-to-origin behavior. Rendered for sys admins only, and not on the Sys Admin pages.
   - Guide — opens the Guide, with return-to-origin behavior. Not rendered on `/guide` itself or for a viewer who resolves no Guide audience (the same fail-open flag as the reviewer top bar, below).
   - About — opens About, with return-to-origin behavior. Not rendered on About itself.
@@ -337,7 +337,7 @@ About and Settings are detour destinations: the operator opens them to consult o
 - When the operator opens About or Settings, the URL captures the origin via a query parameter (e.g., `?return_to=/sessions/abc123`) or session state.
 - The About/Settings page renders a clear "Back" affordance — a `.back-link` in `--text-link` near the top of the page body, labeled with context where possible: "← Back to Sessions" or "← Back to Student Associate Selection 2026 Peer Review".
 - Clicking the affordance returns the operator to the origin URL.
-- If no origin is recorded (e.g., the operator deep-linked to Settings), the affordance defaults to "← Back to Sessions" — the app's natural lobby.
+- If no origin is recorded (e.g., the operator deep-linked to Settings), the affordance defaults to "← Back to Sessions" — the app's natural lobby. For a viewer who is not an operator (a participant on About, the Guide or Sign-in details) it defaults to "← Back to your reviews" (`/me`) instead, since the lobby would only bounce them there.
 
 This is a small piece of plumbing but it changes the affordance from "trip down a rabbit hole" to "quick consultation." Operators learn to use About and Settings without losing their place.
 
@@ -525,7 +525,7 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Color palette.** Same neutrals, same accents. Lifecycle accent colors are operator-only (reviewers don't see lifecycle); other accents (blue for action, green for completion, amber for warnings) apply across all surfaces.
 - **Typography.** Same type scale and font stack on all surfaces.
 - **Spacing.** Same 4px grid throughout.
-- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Settings / Admin / Guide / About / Sign out, with Admin for sys admins only; reviewer's user menu hosts My Reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
+- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Settings / Admin / Guide / About / Sign out, with Settings for operators and sys admins only and Admin for sys admins only; reviewer's user menu hosts My Reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
 

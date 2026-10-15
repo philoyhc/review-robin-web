@@ -278,6 +278,10 @@ def test_recall_post_403s_when_session_is_expired(
         follow_redirects=False,
     )
     assert resp.status_code == 403
+    # Participant wording, not the raw lifecycle enum (participant
+    # audit M2).
+    assert "can&#39;t be recalled" in resp.text or "can't be recalled" in resp.text
+    assert "expired" not in resp.text
 
 
 def test_recall_then_resubmit_round_trips_the_submitted_at_stamp(

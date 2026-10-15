@@ -26,6 +26,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.web.deps import get_or_create_user
@@ -35,6 +36,9 @@ from app.web.views._guide import visible_audiences, visible_sections
 router = APIRouter()
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+# The chrome's "(version …)" reads it; every other environment that
+# renders base.html sets it too (participant audit M8).
+_templates.env.globals["app_version"] = settings.app_version
 
 
 @router.get("/guide", response_class=HTMLResponse)

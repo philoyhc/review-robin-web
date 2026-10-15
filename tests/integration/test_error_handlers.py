@@ -35,6 +35,14 @@ def _forbidden() -> dict[str, str]:
     )
 
 
+@_test_router.get("/__test/err/unauthorized")
+def _unauthorized() -> dict[str, str]:
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authenticated identity has no email claim",
+    )
+
+
 @_test_router.get("/__test/err/not-found-bare")
 def _not_found_bare() -> dict[str, str]:
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -142,6 +150,25 @@ def test_a_service_state_conflict_renders_the_409_page() -> None:
     assert resp.status_code == 409
     assert "text/html" in resp.headers["content-type"]
     assert "Session is ready; revert to draft to edit" in resp.text
+
+
+def test_a_401_shows_reader_copy_not_the_raised_detail(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Participant audit M14: the raised detail is developer text. The
+    page hides it, so the log keeps it."""
+    with caplog.at_level(logging.WARNING, logger="app.web.error_handlers"):
+        resp = TestClient(app).get("/__test/err/unauthorized")
+    assert any(
+        getattr(r, "detail", None) == "Authenticated identity has no email claim"
+        for r in caplog.records
+    )
+
+    assert resp.status_code == 401
+    assert "Sign-in problem" in resp.text
+    assert "sign in again" in resp.text
+    assert "email claim" not in resp.text
+    assert "Something went wrong" not in resp.text
 
 
 def test_bare_http_exception_falls_back_to_default_copy() -> None:

@@ -184,7 +184,39 @@ def test_collation_shows_empty_cohort_message_when_no_rule(
     body = client.get(
         f"/me/sessions/{review_session.id}/collation"
     ).text
-    assert "No cohort is configured" in body
+    assert "haven't been given anyone to observe" in body
+
+
+def test_collation_with_nothing_open_says_so_in_participant_words(
+    client: TestClient, db: Session
+) -> None:
+    """A draft session opens no observer window, so no section renders.
+    The message is the observer's, not the operator's: no "Band 3", no
+    "Setup page" (participant audit M5)."""
+    review_session = _make_session(client, db, code="col-body-none-open")
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "mathcohort",
+                }
+            ],
+        },
+    )
+
+    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    assert "no results for you to see right now" in body
+    # The old copy's phrases (bare "Band 3" and "Setup page" also appear
+    # in base.html's inline CSS comments).
+    assert "observer view on Band 3" not in body
+    assert "response-release" not in body
 
 
 def test_collation_renders_per_instrument_table_with_two_stats_rows(
