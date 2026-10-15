@@ -256,6 +256,37 @@ def test_collation_renders_per_instrument_table_with_two_stats_rows(
     assert "Download CSV" in body
 
 
+def test_an_empty_cohort_gets_no_download_link(
+    client: TestClient, db: Session
+) -> None:
+    """Participant audit M13: the CSV route answers 404 when the cohort
+    takes in no assignment, so the page must not offer the link. The
+    rule here matches nothing the seeded roster carries."""
+    review_session = _make_session(client, db, code="col-body-empty-cohort")
+    _seed_one_instrument(db, review_session)
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "no-such-cohort",
+                }
+            ],
+        },
+    )
+
+    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    assert "0 Reviewers in cohort" in body
+    assert "Download CSV" not in body
+    assert "data-collation-nothing-to-download" in body
+
+
 def test_collation_numbers_instruments_from_one(
     client: TestClient, db: Session
 ) -> None:
@@ -347,7 +378,7 @@ def test_collation_summarized_mode_omits_download_button(
     ).text
     assert "Reviewers in cohort" in body
     assert "Download CSV" not in body
-    assert "no row-level" in body
+    assert "Only the summary above is shown" in body
 
 
 def test_collation_anonymized_mode_marks_download_label(

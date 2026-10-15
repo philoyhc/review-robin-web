@@ -50,6 +50,22 @@ Recall is posted from the post-submit summary page (see "Per-session
 summary" below). Save is per page; there is no session-wide save
 route.
 
+A GET on any of the four POST addresses answers 303 to a page, as the
+table below sets out, so pressing Enter in the address bar after a refused
+POST, or signing in again on that URL, lands on a page rather than a
+405 or 422 (participant audit M10):
+
+| GET on | Lands on |
+|---|---|
+| `…/{page_n}/save` | `…/{page_n}` |
+| `…/submit?page=N` | `…/N` (page 1 when `page` is missing or not a number) |
+| `…/recall` | `…/summary` |
+| `…/clear` | the bare session URL |
+
+The destination gates as usual. The three session-action GETs are
+registered ahead of `/{page_n}` in the same module, which would
+otherwise read `submit` as a page number.
+
 `{page_n}` is the **1-indexed operator-defined page number** within the
 session. Pages are derived from `Instrument.starts_new_page`:
 instruments walk in `Instrument.order, Instrument.id` order and a new
@@ -846,7 +862,7 @@ field before the submit lands.
 
 The card carries a Cancel link back to the originating page so the reviewer can also dismiss the warning without scrolling
 through the form (URL bar leaves the POST-only `/submit` endpoint
-behind).
+behind). A GET on that address lands back on the page (§ *URL pattern*).
 
 ---
 
