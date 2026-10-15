@@ -46,7 +46,7 @@ A struck ID is done; its **Decides** cell names the PR.
 | ID | Finding | Where | Likely fix | Decides |
 |---|---|---|---|---|
 | ~~P1~~ | **Session names leak to any signed-in user.** `resolve_return_to` looks up `ReviewSession.name` for `/me/sessions/{n}` and `/operator/sessions/{n}/…` with no permission check. So `/about?return_to=/me/sessions/7` (or `/guide`, `/auth/me/debug`) reads "← Back to {session name}" for any id. This defeats 19F's "cannot infer anything" rule, and `tests/unit/test_return_to.py` asserts the name but not the authorization. | `app/web/return_to.py` | Resolve the name only when the viewer can see that session; otherwise fall back to the default label. | fix · **done** in #3061 |
-| P2 | **The error page is a dead end.** "Go back" is `history.back(); return false;`, so in a tab opened from an email it does nothing, and the `/` fallback never runs. There is no `/me` link, no sign-out and no help contact. Worst case: the invite 404 ("This invitation link is invalid or has expired.") and gate 404s reached from bookmarks. | `app/web/templates/error.html` | Make the link go to `/me` (or `/`) and use history only when there is some. | author |
+| ~~P2~~ | **The error page is a dead end.** "Go back" is `history.back(); return false;`, so in a tab opened from an email it does nothing, and the `/` fallback never runs. There is no `/me` link, no sign-out and no help contact. Worst case: the invite 404 ("This invitation link is invalid or has expired.") and gate 404s reached from bookmarks. | `app/web/templates/error.html` | Make the link go to `/me` (or `/`) and use history only when there is some. | author · **done** in #3064: links to `/me`, "Go back" only with history |
 | P3 | **A session that closes mid-edit throws away what the reviewer typed.** Save, Submit and Clear answer 403 "Access denied" / "No longer accepting responses" on the standalone error page. The same text also covers a reviewer with no assignments ("no longer", when they never could) and a session reverted to draft ("not yet"). | `app/web/routes_reviewer/_surface/_context.py` | Re-render the surface read-only with its closed banner; give each cause its own wording. | author |
 | P4 | **Reviewees and observers have no way in and no way back.** No email reaches them (§3). A reviewee's `/me` row appears only while the release window is open and silently vanishes after `responses_release_until`, leaving "You have no pending reviews". "My Reviews" counts reviewer rows only, so `/results` and `/collation` have no link back to `/me`. Neither does a single-session reviewer's closed surface. | `app/web/routes_reviewer/_shared.py`, `app/web/templates/reviewer/_top_bar.html` | Show a link back to `/me` on every participant page, whatever the count: widening the counter alone leaves a one-session reviewee or observer at 1, below the "more than 1" rule. Decide how reviewees learn the window opened (blocked on email, §3). | author |
 
@@ -79,6 +79,21 @@ A struck ID is done; its **Decides** cell names the PR.
 | L4 | **Guide participant cards.** The observer card says results come "once the operator releases responses", but Summarized can be granted while the review is ongoing. The reviewer card says "revisit until the session closes", but reviewers can revisit read-only afterwards. "anonymised/summarised" (UK) sits against the app's "Anonymized". | `app/web/templates/guide.html` |
 | L5 | **Email copy.** Invitation and reminder omit the deadline and help contact. Dates carry no zone label. Only responses-received greets by name. "sign in with your work email" differs from About's "MS365 account". A responses-received override that uses `$help_contact` with none set sends "Contact .". An invitation override without `$invite_url` turns every later reminder into a fresh invitation. | `app/services/email_templates.py`, `invitations.py` |
 | L6 | **Small defects.** The Timezone hover reads "UTC UTC". Dashboard rows reorder whenever an operator edits a session (`updated_at`). The observer CSV filename has no session and starts with an email address. ~~"confirm checkbox required" is raw text~~ (done in #3062). The template zips are reachable by participants (harmless). Two routes pass a `breadcrumbs` context nobody renders. | `dashboard.html`, `_collation.py`, `_surface/_routes.py`, `app/web/routes_templates.py` |
+
+## Rulings (author, 2026-10-15)
+
+- **`/me` is the fallback** for anyone signed in, with or without a
+  role. P2's error page, P3's refusals and P4's link back all lead there.
+- **The empty `/me` reads the same for everyone:** "There's nothing
+  here for you right now. You're signed in as {address}. If you expected
+  to see a review here, check that it was sent to this address, or
+  contact the person running it." plus an About link. It is true for a
+  reviewer with nothing assigned, an observer with no session, a
+  reviewee outside their window and a stranger, and implies nothing is
+  waiting.
+- **"Your reviews" is the dashboard's one name**: the error page's "Go to
+  your reviews", the back link's "Back to your reviews", and P4's
+  top-bar link (part of L1).
 
 ## 3. Context, not findings
 

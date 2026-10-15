@@ -104,6 +104,23 @@ def _standard_phrase(status_code: int) -> str:
         return ""
 
 
+def _home_link(request: Request, status_code: int) -> tuple[str, str]:
+    """Where the error page's own link goes, decided without the user
+    row, which the page may be rendering because of (participant audit
+    P2, author's ruling 2026-10-15: ``/me`` is the fallback).
+
+    A 401 means no usable identity, and ``/me`` would only answer 401
+    again, so the way out is Sign out. An operator page leads to the
+    Sessions lobby. Everything else leads to ``/me``, which renders for
+    anyone signed in.
+    """
+    if status_code == status.HTTP_401_UNAUTHORIZED:
+        return "/.auth/logout", "Sign out"
+    if request.url.path.startswith("/operator"):
+        return "/operator/sessions", "Go to Sessions"
+    return "/me", "Go to your reviews"
+
+
 def _render_error(
     request: Request, status_code: int, detail: str | None = None
 ) -> Response:
@@ -115,6 +132,7 @@ def _render_error(
         and status_code not in _COPY_ONLY
     ):
         message = detail
+    home_url, home_label = _home_link(request, status_code)
     return _templates.TemplateResponse(
         request,
         "error.html",
@@ -122,6 +140,8 @@ def _render_error(
             "status_code": status_code,
             "headline": headline,
             "message": message,
+            "home_url": home_url,
+            "home_label": home_label,
         },
         status_code=status_code,
     )

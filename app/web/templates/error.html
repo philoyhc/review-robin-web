@@ -77,14 +77,20 @@
       line-height: 1.5;
       margin: 0;
     }
+    .error-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 24px;
+    }
     .error-back {
       display: inline-block;
-      margin-top: 24px;
       font-size: 0.875rem;
       color: var(--e-link);
       text-decoration: none;
     }
     .error-back:hover { text-decoration: underline; }
+    .error-back[hidden] { display: none; }
   </style>
 </head>
 <body>
@@ -92,7 +98,24 @@
     <p class="error-code">Error {{ status_code }}</p>
     <h1 class="error-headline">{{ headline }}</h1>
     <p class="error-message">{{ message }}</p>
-    <a class="error-back" href="/" onclick="history.back(); return false;">Go back</a>
+    {# The page's own link always works, so a tab opened from an email or a
+       bookmark is never stranded (participant audit P2). "Go back" shows
+       only when the tab has somewhere to go back to. #}
+    <p class="error-links">
+      <a class="error-back" href="{{ home_url }}" data-error-home>{{ home_label }}</a>
+      <a class="error-back" href="{{ home_url }}" data-error-history hidden>Go back</a>
+    </p>
+    <script>
+      (function () {
+        var back = document.querySelector("[data-error-history]");
+        if (!back || window.history.length < 2) return;
+        back.hidden = false;
+        back.addEventListener("click", function (event) {
+          event.preventDefault();
+          window.history.back();
+        });
+      })();
+    </script>
   </main>
 </body>
 </html>

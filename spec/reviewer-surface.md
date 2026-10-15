@@ -1173,9 +1173,16 @@ reviewee-/observer-only rows show `—` in those cells.
     `submitted`) computed from the reviewer's `Response` rows;
     plus a paired `(N/M)` chip in the same colour. Renders `—`
     when the user is a reviewee / observer only.
-- **Empty state** — when the user has no active roster rows
-  in any session in any role: a single `.card` with `.muted`
-  text "You have no pending reviews ({user.email})."
+- **Empty state** — when the user has no row to show in any
+  role: a single `.card` (`data-me-empty`) reading "There's
+  nothing here for you right now.", then, muted, "You're signed
+  in as {user.email}. If you expected to see a review here, check
+  that it was sent to this address, or contact the person running
+  it.", then an "About Review Robin" link
+  (`/about?return_to=/me`). One wording for everyone it reaches —
+  a reviewer with nothing assigned, an observer with no session, a
+  reviewee outside their window, a stranger — so it never implies
+  something is waiting (author's ruling, 2026-10-15).
 
 ### Cross-role union and reachability
 

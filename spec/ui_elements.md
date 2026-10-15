@@ -15,7 +15,12 @@ context that `base.html` needs is broken (`app/web/error_handlers.py`),
 so it carries its own small light / dark palette in raw hex and sits
 outside this catalogue and the contrast audit. Its card still takes the
 card shape (`spec/visual_style_general.md`): a 2px edge in
-`--border-default`'s value, an 8px radius, no shadow.
+`--border-default`'s value, an 8px radius, no shadow. Its own link
+always goes somewhere real, chosen from the request alone
+(`_home_link`): Sign out for a 401, "Go to Sessions" on an
+`/operator` path, and "Go to your reviews" (`/me`) everywhere else.
+"Go back" shows beside it only when the tab has history to go back to
+(participant audit P2).
 
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
