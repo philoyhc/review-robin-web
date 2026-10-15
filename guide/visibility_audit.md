@@ -106,7 +106,8 @@ Build, 2026-10-15:
 
 - **Rungs 2 and 3 landed as one PR.** The card's tests seed the illegal
   rows it reports, which the constraint now refuses, so the constraint
-  cannot land with the card still standing.
+  cannot land with the card still standing. The author accepted the
+  single PR (2026-10-15).
 - **Tests that seeded an illegal row moved to a legal one.** The
   observer-collation tests (and those reusing their seed helper, in
   `test_reviewer_identity_level.py` and `test_profile_value_render.py`)
@@ -118,7 +119,7 @@ Build, 2026-10-15:
   exist.
 - The migration logs the rewritten rows' ids as well as their count, so
   `guide/post_azure_todo_checklist.md` item 1 can name whom to tell.
-- **Reads.** One `diff-reviewer` read of the build commit. It found one
+- **Reads.** Two `diff-reviewer` reads. The read of the build commit found one
   real defect: the observer CSV's archive-guard test had gone vacuous
   once its seed moved to `after_release`. That test now relaxes the
   release-window predicate. The read also asked for a test of the
@@ -126,7 +127,9 @@ Build, 2026-10-15:
   still called an illegal stored row reachable, now reworded.
   `spec-writer` found §4 claiming that a reviewer row with both windows
   off persists, which the constraint refuses; that line is now
-  scoped.
+  scoped. The second read, of those fixes, found the same claim in
+  `_reviewee_results.py` and `spec/role_landing_and_visibility.md`,
+  and that §3.1 had dropped what the card checked. Both are fixed.
 
 ### PR ladder
 
@@ -148,7 +151,7 @@ Build, 2026-10-15:
 - `alembic upgrade head` and the `downgrade base + upgrade head`
   round-trip pass on Postgres (`ci-postgres`).
 - The agreement test covers every audience × pair × pair combination.
-- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|_visibility_audit\|VisibilityAuditRow' app tests spec docs` finds nothing (the plan's own path, cited from the model and the test, is not the card).
+- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|visibility_audit\|VisibilityAuditRow' app tests spec docs | grep -v 'guide/visibility_audit\.md'` finds nothing. The filter drops citations of this plan, from the model and the test, which are not the card.
 - `spec/visibility_policy.md` names `ck_view_policy_cell` and carries
   what the card's paragraph said.
 - `### Doc impact` current; `spec-writer` flags adjudicated.

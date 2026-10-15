@@ -31,9 +31,9 @@ differences are intentional:
   mode resolves right now (``visibility_policies.resolve_mode``
   with the release window's state), and then always with its
   values. A reviewee's grant is after-release only, so the
-  while-ongoing window is passed as closed: a stored while-ongoing
-  mode for the reviewee audience — which only rows written before
-  the per-cell validation could carry — never opens a section.
+  while-ongoing window is passed as closed: a while-ongoing mode for
+  the reviewee audience, which ``ck_view_policy_cell`` refuses to
+  store, would never open a section.
   The route's gate (``visibility_policies.reviewee_has_current_grant``)
   reads the rule the same way, so a page that opens always has a
   section to show. The pre-release scaffolding this builder used to render —
@@ -300,7 +300,7 @@ def build_reviewee_results_context(
     # Per-instrument visibility resolution: the reviewee mode that
     # applies right now. A reviewee's grant is after-release only, so
     # the while-ongoing window is passed as closed (see the module
-    # docstring) — a legacy stored while-ongoing mode opens nothing.
+    # docstring); the database refuses a while-ongoing reviewee mode.
     #
     # ``anonymized`` (the operator-facing "Anonymized responses"
     # chip) renders the same per-reviewer table shape as Raw —

@@ -171,8 +171,12 @@ pair × pair combination and requires the database to accept exactly
 what `_PER_CELL_VALID_MODES` accepts, so the two statements of the rule
 cannot drift. The migration first re-applies `14db60023e88`'s
 normalization, logs the ids of the rows it rewrote, and stops on a row
-whose audience is none of the three. The readers' tolerance of a corrupt row (`decode_pair_to_mode` reads one as off)
-stays as cheap defense.
+whose audience is none of the three. Because nothing can store an
+illegal cell, nothing has to look for one after the fact. The cell
+that matters most is an observer `raw` / `anonymized` grant on
+`while_ongoing`, which would let an observer read individual responses
+while the review is running. The readers' tolerance of a corrupt row
+(`decode_pair_to_mode` reads one as off) stays as cheap defense.
 
 ### 3.2 Anchor-null inertness
 

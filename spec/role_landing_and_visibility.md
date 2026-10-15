@@ -154,9 +154,9 @@ The reviewee role does not follow the lifecycle; it follows the
 A grant resolves when at least one instrument in the session has a
 `reviewee` policy row whose after-release mode is live **inside an open
 response-release window** (`visibility_policies.reviewee_has_current_grant`).
-A reviewee's `while_ongoing` cell is off by construction, and a stored
-while-ongoing mode on a row older than the per-cell validation grants
-nothing. No grant resolves on an archived session — the archive
+A reviewee's `while_ongoing` cell is off by construction, and the
+database refuses to store any other value there (`ck_view_policy_cell`,
+`spec/visibility_policy.md` §3.1). No grant resolves on an archived session — the archive
 override closes every non-operator grant.
 
 **The grant needs two things, and lifecycle is one of them.** The
