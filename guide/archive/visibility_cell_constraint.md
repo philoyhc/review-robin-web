@@ -102,36 +102,34 @@ Taken 2026-10-15 at `3070350c`.
 
 ### Status
 
-Build, 2026-10-15:
+**Closed 2026-10-15.** Shipped in #3053, rungs 2 and 3 as one PR: the
+card's tests seed the illegal rows the constraint refuses, so the
+constraint could not land while the card stood (the author accepted the
+single PR). The author's browser check passed 2026-10-15, and its
+checklist section was deleted at close. Decisions
+confirmed at build:
 
-- **Rungs 2 and 3 landed as one PR.** The card's tests seed the illegal
-  rows it reports, which the constraint now refuses, so the constraint
-  cannot land with the card still standing. The author accepted the
-  single PR (2026-10-15).
-- **Tests that seeded an illegal row moved to a legal one.** The
-  observer-collation tests (and those reusing their seed helper, in
-  `test_reviewer_identity_level.py` and `test_profile_value_render.py`)
-  stored an observer `raw` / `anonymized` grant on `while_ongoing`. They
-  now put the per-row mode on `after_release` with the release window
-  open, the one way the product allows it. Two tests that pinned
-  behavior for such a row (a legacy reviewee ongoing grant, Replicate
-  skipping an illegal cell) were retired, since the row can no longer
-  exist.
+- Tests that stored an observer `raw` / `anonymized` grant on
+  `while_ongoing` now put it on `after_release` with the release window
+  open, the one way the product allows it. Two tests pinning behavior
+  for a row that can no longer exist were retired.
 - The migration logs the rewritten rows' ids as well as their count, so
-  `guide/post_azure_todo_checklist.md` item 1 can name whom to tell.
-- **Reads.** Two `diff-reviewer` reads. The read of the build commit found one
-  real defect: the observer CSV's archive-guard test had gone vacuous
-  once its seed moved to `after_release`. That test now relaxes the
-  release-window predicate. The read also asked for a test of the
-  migration's log line, which is now asserted, and for prose that
-  still called an illegal stored row reachable, now reworded.
-  `spec-writer` found §4 claiming that a reviewer row with both windows
-  off persists, which the constraint refuses; that line is now
-  scoped. The second read, of those fixes, found the same claim in
-  `_reviewee_results.py` and `spec/role_landing_and_visibility.md`,
-  and that §3.1 had dropped what the card checked. A third read found
-  the same idea in §3.1's import paragraph and in
-  `spec/settings_inventory.md` §4. All of these are fixed.
+  `guide/post_azure_todo_checklist.md` item 1 can name whom to tell; a
+  test asserts the line.
+- Archived as `visibility_cell_constraint.md`: an 18K-era
+  `guide/archive/visibility_audit.md` already held the name.
+
+**Reads.** Four `diff-reviewer` reads and three `spec-writer` verify
+passes. The first read found the one code defect: the observer CSV's
+archive-guard test had gone vacuous once its seed moved to
+`after_release`, and now relaxes the release-window predicate. Every
+other finding was prose that still called an illegal stored row
+reachable, or that named the reviewee ongoing grant as the dangerous
+cell, apart from the log-line test above. The observer ongoing
+per-row grant is that cell, in
+`spec/visibility_policy.md` §3.1 and §4, `spec/settings_inventory.md`,
+`spec/role_landing_and_visibility.md`, `spec/participant_model.md`,
+`spec/instruments.md` and five docstrings.
 
 ### PR ladder
 
@@ -153,7 +151,7 @@ Build, 2026-10-15:
 - `alembic upgrade head` and the `downgrade base + upgrade head`
   round-trip pass on Postgres (`ci-postgres`).
 - The agreement test covers every audience × pair × pair combination.
-- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|visibility_audit\|VisibilityAuditRow' app tests spec docs | grep -v 'guide/visibility_audit\.md'` finds nothing. The filter drops citations of this plan, from the model and the test, which are not the card.
+- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|visibility_audit\|VisibilityAuditRow' app tests spec docs | grep -v 'guide/archive/visibility_cell_constraint\.md'` finds nothing. The filter drops citations of this plan, from the model and the test, which are not the card.
 - `spec/visibility_policy.md` names `ck_view_policy_cell` and carries
   what the card's paragraph said.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
