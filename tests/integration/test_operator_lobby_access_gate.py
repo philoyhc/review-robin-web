@@ -128,7 +128,7 @@ def test_participant_only_user_redirected_from_operator_lobby(
     carol_client = _make_client(db, auth_carol)
     response = carol_client.get("/operator/sessions")
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=organizers"
 
 
 def test_participant_only_user_redirected_from_per_session_route(
@@ -152,7 +152,7 @@ def test_participant_only_user_redirected_from_per_session_route(
         f"/operator/sessions/{review_session.id}"
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=organizers"
 
 
 # ── Per-session gate: workspace operator on someone else's session ───

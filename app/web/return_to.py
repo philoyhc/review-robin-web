@@ -73,8 +73,9 @@ Viewer = User | None | Callable[[], User | None]
 
 def _once(viewer: Viewer) -> Callable[[], User | None]:
     """``viewer`` as a getter that resolves a callable at most once, and
-    only when first asked, so a caller whose viewer costs a query
-    (``/auth/me/debug``) pays it only when a label needs it."""
+    only when first asked, so a caller whose viewer costs a query pays
+    it only when a label needs it. (``/auth/me/debug`` now also asks for
+    its top bar, through its own per-request cache.)"""
     if not callable(viewer):
         return lambda: viewer
     cache: list[User | None] = []

@@ -163,3 +163,20 @@ with the last section it covers.
   open"; set a help contact and it shows on all three.
 - [ ] **Archived is off limits.** On an archived session, the summary,
   its CSV and an observer's collation page each show the error page.
+
+## Shared pages, the mismatch page and `/me` notices (M8, M9, M11, M12)
+
+- [ ] **Participant top bar on shared pages.** Signed in as a
+  participant, open About, Guide and Sign-in details (`/auth/me/debug`):
+  each shows "Review Robin" with "Your reviews", not the operator bar
+  with its version. As an operator, the operator bar stays.
+- [ ] **Mismatch page.** Follow someone else's invitation link: the
+  invited address shows as `r•••@example.edu`, there is no "Sign-in
+  details" button, the alias sentence reads sensibly, and a help contact
+  shows when the session has one.
+- [ ] **Notices on `/me`.** Open a summary before submitting everything:
+  `/me` says the summary is available once every review is submitted.
+  As a participant, open an operator URL: `/me` says that page is for the
+  people who run reviews.
+- [ ] **Old invitation link.** Send an invitation twice and open the
+  first email's link: the page says it has been replaced by a newer one.

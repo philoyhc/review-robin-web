@@ -156,6 +156,8 @@ def test_recall_button_renders_on_summary_when_session_is_ready(
     assert (
         f'action="/me/sessions/{review_session.id}/recall"' in body
     )
+    # One name for the dashboard (participant audit L1).
+    assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
 
 
 def test_recall_button_hidden_on_summary_when_session_is_expired(

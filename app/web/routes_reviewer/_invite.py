@@ -14,7 +14,7 @@ from app.db.models import User
 from app.db.session import get_db
 from app.services import invitations as invitations_service
 from app.services.email_identity import normalize_email
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_reviewer._shared import (
     _templates,
@@ -43,7 +43,16 @@ def reviewer_invite(
     if found is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="This invitation link is invalid or has expired.",
+            # Invitations don't expire: a fresh send or a Regenerate
+            # rotates the token and kills earlier emails' links (a
+            # reminder reuses the current one unless it has to fall back
+            # to a fresh invitation). Participant audit M12, author's
+            # ruling 2026-10-15.
+            detail=(
+                "This invitation link has been replaced by a newer one or "
+                "is no longer valid. Use the link in your most recent "
+                "email, or go to your reviews."
+            ),
         )
     invitation, review_session, reviewer = found
     if normalize_email(user.email) != normalize_email(reviewer.email):
@@ -53,7 +62,8 @@ def reviewer_invite(
             {
                 "user": user,
                 "session": review_session,
-                "reviewer_email": reviewer.email,
+                # Partly masked (participant audit M9).
+                "invited_address": views.masked_email(reviewer.email),
                 "breadcrumbs": breadcrumbs.reviewer_invite_mismatch(),
             },
             status_code=status.HTTP_403_FORBIDDEN,

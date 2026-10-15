@@ -282,7 +282,7 @@ def test_commit_bounces_an_operator_revoked_since_the_gate(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith("/me")
+    assert response.headers["location"].endswith("/me?notice=organizers")
     assert db.execute(
         select(ReviewSession).where(ReviewSession.name.like("%_REHYD%"))
     ).scalars().all() == []

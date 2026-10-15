@@ -143,7 +143,7 @@ def test_preview_route_redirects_non_operator_to_me(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=organizers"
 
 
 def test_preview_does_not_observe_deadline_side_effect(

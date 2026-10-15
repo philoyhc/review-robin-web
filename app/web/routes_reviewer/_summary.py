@@ -77,8 +77,9 @@ def reviewer_session_summary(
         db, reviewer=reviewer, session_id=review_session.id
     ):
         # Not all rows submitted — redirect to the dashboard.
+        # With a one-line notice saying why (participant audit M11).
         return RedirectResponse(
-            url="/me",
+            url="/me?notice=summary",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     summary = build_reviewer_summary_context(
@@ -141,8 +142,9 @@ def reviewer_session_summary_csv(
     if not _is_session_fully_submitted(
         db, reviewer=reviewer, session_id=review_session.id
     ):
+        # With a one-line notice saying why (participant audit M11).
         return RedirectResponse(
-            url="/me",
+            url="/me?notice=summary",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     download_name = filename(review_session, "my_responses")

@@ -100,8 +100,9 @@ def create_app() -> FastAPI:
         # bounced to their own home (18R Item 6). ``/me`` renders an empty
         # dashboard for a user with no participant roles; the "how do I get
         # access" messaging lives on ``/about`` (which retired
-        # ``/request-access``).
-        return RedirectResponse(url="/me", status_code=303)
+        # ``/request-access``). ``/me`` says in one line why they landed
+        # there (participant audit M11).
+        return RedirectResponse(url="/me?notice=organizers", status_code=303)
 
     @app.get("/", include_in_schema=False)
     def root(user: User = Depends(get_or_create_user)) -> RedirectResponse:

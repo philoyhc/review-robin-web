@@ -706,3 +706,29 @@ def test_observer_has_current_grant_follows_the_windows_and_archive(
     assert not has(db, review_session)  # no after-release mode, no window
     review_session.status = "archived"
     assert not has(db, review_session)  # archive closes it
+
+
+# ── Notices after a redirect (participant audit M11) ────────────────
+
+
+def test_me_shows_the_notice_it_was_sent_with(client: TestClient) -> None:
+    body = client.get("/me?notice=summary").text
+    assert "data-me-notice" in body
+    assert "Your summary is available once every review is submitted." in body
+
+
+def test_me_ignores_an_unknown_notice(client: TestClient) -> None:
+    body = client.get("/me?notice=%3Cb%3Ehi%3C%2Fb%3E").text
+    assert "data-me-notice" not in body
+    assert "<b>hi</b>" not in body
+
+
+def test_a_participant_sent_from_an_operator_page_is_told_why(make_client) -> None:
+    from app.auth.identity import AuthenticatedUser
+
+    pat = AuthenticatedUser(
+        principal_id="pat-oid", email="pat@example.edu", name="Pat", provider="aad"
+    )
+    resp = make_client(pat).get("/operator/sessions")
+    assert resp.status_code == 200  # followed to /me
+    assert "That page is for the people who run reviews." in resp.text

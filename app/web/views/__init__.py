@@ -39,6 +39,14 @@ from ._refused_write import (
     write_refused_notice,
 )
 
+# Participant chrome, masked invite address and /me notices (M8, M9,
+# M11).
+from ._participant_chrome import (
+    masked_email,
+    me_notice,
+    uses_participant_chrome,
+)
+
 # The /me row's status pill (participant audit M6).
 from ._participant_status import (
     ParticipantStatus,
@@ -294,6 +302,9 @@ __all__ = [
     "REFUSED_NOT_OPEN",
     "unsaved_answers",
     "write_refused_notice",
+    "masked_email",
+    "me_notice",
+    "uses_participant_chrome",
     "ParticipantStatus",
     "participant_session_status",
     "participant_start_at",

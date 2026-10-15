@@ -250,4 +250,7 @@ def test_invalid_invitation_token_renders_friendly_404(db: Session) -> None:
         app.dependency_overrides.clear()
 
     assert resp.status_code == 404
-    assert "This invitation link is invalid or has expired." in resp.text
+    # Invitations don't expire; a newer email replaces the link
+    # (participant audit M12).
+    assert "has been replaced by a newer one" in resp.text
+    assert "expired" not in resp.text

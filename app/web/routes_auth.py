@@ -16,6 +16,7 @@ from app.db.models import User
 from app.db.session import get_db
 from app.logging_config import get_logger
 from app.web.deps import find_user
+from app.web import views
 from app.web.return_to import resolve_return_to
 
 log = get_logger(__name__)
@@ -50,14 +51,19 @@ def me_debug(
     # that refuses connections does not take down the page where a
     # broken sign-in is diagnosed. A session-path ``return_to`` still
     # needs the database to look the session up.
+    looked_up: list[User | None] = []
+
     def viewer() -> User | None:
-        try:
-            return find_user(db, user)
-        except SQLAlchemyError:
-            # Logged: this page is where a broken sign-in is diagnosed.
-            log.warning("user lookup failed", exc_info=True)
-            db.rollback()
-            return None
+        # Once per request: the back link and the top bar both ask.
+        if not looked_up:
+            try:
+                looked_up.append(find_user(db, user))
+            except SQLAlchemyError:
+                # Logged: this page is where a broken sign-in is diagnosed.
+                log.warning("user lookup failed", exc_info=True)
+                db.rollback()
+                looked_up.append(None)
+        return looked_up[0]
 
     return_to = resolve_return_to(
         request.query_params.get("return_to"), db, viewer=viewer
@@ -70,6 +76,9 @@ def me_debug(
             "claims": extract_claims(request),
             "return_to_url": return_to.url,
             "return_to_label": return_to.label,
+            # Participant audit M8: a participant gets the participant
+            # top bar here, as on their own pages.
+            "participant_chrome": views.uses_participant_chrome(viewer()),
         },
     )
 

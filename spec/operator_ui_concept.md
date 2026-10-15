@@ -230,7 +230,7 @@ The app has no page of its own at the root or the bare operator prefix — both 
 
 - **`GET /`** — a **302** redirect by role: an **operator or sys-admin** lands on `/operator/sessions` (the lobby); **everyone else** (a participant, or a signed-in user with no roles yet) lands on `/me`, which renders its own empty state. Routes on `is_operator OR is_sys_admin`. Temporary (302), never 301 — the target follows the user's role, which can change. The root serves no JSON; liveness / metadata live only at `/health`.
 - **`GET /operator`** (and `/operator/`) — 302 to `/operator/sessions`. Defined app-level and **unguarded** so the lobby's router-level `require_operator` is the single place that decides operator access.
-- **Non-operator/non-sys-admin who reaches any `/operator/*` page** — bounced to `/me` by the `OperatorAllowlistDenied` handler. There is no `/request-access` page; the "signed in but no access / how to get in" messaging lives on **`/about`**, which carries the signed-in identity + the operator contact.
+- **Non-operator/non-sys-admin who reaches any `/operator/*` page** — bounced to `/me?notice=organizers` by the `OperatorAllowlistDenied` handler, where one line says that page is for the people who run reviews (participant audit M11). There is no `/request-access` page; the "signed in but no access / how to get in" messaging lives on **`/about`**, which carries the signed-in identity + the operator contact.
 
 ## Per-page contracts
 
@@ -434,8 +434,10 @@ actually decides. Failing closed would hide the Guide from operators on any
 page that missed the stamp — a worse error, and a silent one.
 
 **Two chromes carry the link, under the same condition.** `base.html` carries
-the operator chrome and `/about`; `reviewer/_top_bar.html` carries the
-participant surfaces (`/me`, the review surface, `/results`, `/collation`).
+the operator chrome, which `/about`, `/guide` and `/auth/me/debug` show
+an operator or system admin; `reviewer/_top_bar.html` carries the
+participant surfaces (`/me`, the review surface, `/results`,
+`/collation`) and those three shared pages for everyone else.
 **A change to the condition has to land in both files** — a reviewer or
 observer holding roster rows can reach `/guide`, so a chrome that omits the
 link leaves them no route to it from the pages they actually land on.

@@ -244,12 +244,23 @@ def test_invite_mismatch_renders_banner_warning(
     assert match is not None
     raw_token = match.group(1)
 
+    review_session.help_contact = "help@example.edu"
+    db.commit()
     response = operator.get(
         f"/me/invite/{raw_token}", follow_redirects=False
     )
     assert response.status_code == 403
     body = response.text
     assert 'class="banner banner-warning"' in body
+    # Participant audit M9: the invited address is partly masked, there
+    # is no link to the raw sign-in claims, the alias case is named and
+    # the help contact shows.
+    assert "rae@example.edu" not in body
+    assert "r•••@example.edu" in body
+    assert 'href="/auth/me/debug"' not in body
+    assert "such as an alias" in body
+    assert "Questions? Contact help@example.edu" in body
+    assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
     # The legacy inline `style="border-color: #b91c1c; background: #fee2e2;"`
     # block on the wrapper card is gone — the .banner.banner-warning
     # primitive carries the framing now.

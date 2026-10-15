@@ -114,7 +114,7 @@ def test_create_bounces_a_creator_revoked_since_the_gate(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith("/me")
+    assert response.headers["location"].endswith("/me?notice=organizers")
     assert db.execute(
         select(ReviewSession).where(ReviewSession.code == "lock-create")
     ).first() is None
@@ -134,7 +134,7 @@ def test_duplicate_bounces_a_creator_revoked_since_the_gate(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert response.headers["location"].endswith("/me")
+    assert response.headers["location"].endswith("/me?notice=organizers")
     assert db.execute(select(ReviewSession)).scalars().all() == [source]
 
 

@@ -131,7 +131,7 @@ def test_first_sign_in_outside_allowlist_creates_user_with_both_flags_false(
 
     response = client.get("/__test/operator-gated")
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=organizers"
 
     user = db.execute(
         select(User).where(User.email == "alice@example.edu")
@@ -336,7 +336,7 @@ def test_revoked_operator_is_redirected(
     client = _make_client(db, auth_bob)
     response = client.get("/__test/operator-gated")
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=organizers"
 
 
 # --- Fake-auth toggle (F3, sandbox) ----------------------------------------
@@ -425,7 +425,7 @@ def test_operator_lobby_redirects_unallowlisted_user(
     client = _make_client(db, intruder)
     response = client.get("/operator/sessions")
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=organizers"
 
 
 def test_operator_lobby_reachable_for_allowlisted_user(
