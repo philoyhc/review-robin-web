@@ -180,3 +180,16 @@ with the last section it covers.
   people who run reviews.
 - [ ] **Old invitation link.** Send an invitation twice and open the
   first email's link: the page says it has been replaced by a newer one.
+
+## Participant titles and wording (L2, L3, L4)
+
+- [ ] **Titles.** The tab title on the review surface, the mismatch page
+  and any error page ends "— Review Robin Web", like every other page.
+- [ ] **About.** Signed in as a participant, About describes the app
+  without "operator" and says someone who runs reviews lands on the
+  Sessions page.
+- [ ] **Guide.** As a participant, the Guide subtitle reads "What to
+  expect in the reviews you take part in." The reviewer card mentions
+  "Recall my submission" and reading answers after the review closes;
+  the observer card says results can show while the review is still
+  open. As an operator, the subtitle is unchanged.

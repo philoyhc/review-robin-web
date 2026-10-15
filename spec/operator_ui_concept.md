@@ -409,8 +409,8 @@ Takes `?return_to=` and renders a "← Back to {context}" affordance.
 **The Access card is where "how do I get in?" is answered**, not the Guide.
 It opens with how to reach the app and sign in — hosted, nothing to
 install, single sign-on with an institutional MS365 account, no separate
-password — and states that an address on the operator allowlist lands on the
-Sessions lobby. A reader of the Guide has already signed in; on `/about` the
+password — and states that someone who runs reviews lands on the Sessions
+lobby, in words a participant can read (no "operator allowlist"). A reader of the Guide has already signed in; on `/about` the
 same facts answer the question a stranger is actually asking. What an *empty*
 lobby means belongs to the lobby's own first-run card, not here.
 

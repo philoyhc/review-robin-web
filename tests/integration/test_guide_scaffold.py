@@ -119,7 +119,7 @@ def test_the_retired_content_landed_where_it_was_moved_to(
     about = client.get("/about").text
     assert "there is nothing to install" in about
     assert "single sign-on" in about
-    assert "operator allowlist" in about
+    assert "If you run reviews here, signing in takes you to the" in about
 
     tips = " ".join(client.get("/guide").text.split())
     assert (

@@ -13,9 +13,10 @@
 
   <div class="card">
     <p>
-      Review Robin Web is an internal tool for running peer-review sessions:
-      operators upload reviewers and reviewees, generate assignments, and
-      monitor reviewer progress through a deadline.
+      Review Robin Web is an internal tool for peer reviews. The people who run
+      a review decide who reviews whom and set a deadline; reviewers fill in
+      their reviews, and the results can be shared with the people reviewed
+      and with observers.
     </p>
 
     <p class="muted">version {{ app_version }}</p>
@@ -40,13 +41,13 @@
       <p>You're signed in as <strong>{{ user.email or "(no email on record)" }}</strong>.</p>
     {% endif %}
     <p>
-      If your address is on the operator allowlist you land on the
-      <strong>Sessions</strong> lobby.
+      If you run reviews here, signing in takes you to the
+      <strong>Sessions</strong> page.
     </p>
     <p>
       Reviews assigned to you appear on <a href="/me">Your reviews</a>. If you're
       expecting a review and don't see it — or you should be able to run reviews
-      as an operator but can't — access is managed by whoever administers this
+      but can't — access is managed by whoever administers this
       workspace{% if contact_email %}: contact
       <a href="mailto:{{ contact_email }}?subject=Review%20Robin%20Web%20access%20request">{{ contact_email }}</a>
       and ask to be admitted{% endif %}.
