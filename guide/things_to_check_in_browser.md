@@ -64,18 +64,3 @@ with the last section it covers.
 - [ ] **Rehydrate still takes it.** Give an instrument the short label
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
-
-## Sessions Diagnostics: Overview and Filter cards, as on the lobby (2026-10-15)
-
-- [ ] **Two cards.** Sys Admin → Sessions Diagnostics: above the table,
-  Sessions Overview on the left and Filter on the right, each half the
-  width, matching the lobby's Sessions and Filter cards.
-- [ ] **Counts.** Sessions Overview's pills read the workspace's totals
-  (sessions, draft, activated, archived). Archive a Draft session (the
-  lobby's Purge and archive) and reload: draft drops by one and archived
-  rises by one.
-- [ ] **Filter.** The box reads "Filter by name, code, or owner" and
-  there is no "Filter:" label. Typing hides rows live, Clear empties
-  it. An owner's name or email finds their sessions.
-- [ ] **Narrow window.** Below about 800px the two cards stack,
-  Overview first.
