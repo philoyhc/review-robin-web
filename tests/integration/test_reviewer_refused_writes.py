@@ -18,7 +18,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, Response, Reviewer, ReviewSession
+from app.db.models import (
+    Assignment,
+    InstrumentResponseField,
+    Response,
+    Reviewer,
+    ReviewSession,
+)
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -349,9 +355,39 @@ def test_a_value_matching_the_stored_answer_is_still_listed(
     assert "same answer" in _unsaved_list(resp.text)
 
 
-def test_an_out_of_range_page_falls_back_to_page_one(
+def test_a_hidden_field_comes_back_without_labels(
     client: TestClient, db: Session, make_client
 ) -> None:
+    """A field the operator un-pinned has no column on the page, so a
+    value posted against it names neither the field nor the row."""
+    review_session = _ready_session(client, db, code="refused-hidden")
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    assignment = _assignment_of(db, review_session, "rae@example.edu")
+    field = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id == assignment.instrument_id,
+            InstrumentResponseField.field_key == "comments",
+        )
+    ).scalar_one()
+    field.visible = False
+    db.commit()
+
+    resp, _ = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.id}/1/save",
+        {f"response[{assignment.id}][comments]": "hidden text"},
+    )
+
+    listed = _unsaved_list(resp.text)
+    assert "hidden text" in listed
+    assert "<code>" not in listed
+    assert "Carol" not in listed
+
+
+def test_a_refused_post_to_an_out_of_range_page_still_renders(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """Not a 404 or a 500: the refusal renders page 1."""
     review_session = _ready_session(client, db, code="refused-page")
     review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     db.commit()

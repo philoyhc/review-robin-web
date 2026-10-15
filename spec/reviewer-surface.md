@@ -907,7 +907,8 @@ An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
 would show that row now: an included assignment of this reviewer, on a
 visible field, in a `ready` or `expired` session. Any other value (an
 excluded row, a session that never opened, an id that isn't the
-reviewer's) is listed bare, so the card names nobody a page hasn't.
+reviewer's) is listed bare, so the card labels only the reviewer's
+own included rows on visible fields.
 Every typed value is listed, changed or not, whatever row it names:
 echoing only some would tell the reviewer which ids are theirs, or what
 is stored where the visibility setting hides it. Clear carries none.
