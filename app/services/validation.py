@@ -952,8 +952,8 @@ def _check_email_template_no_help_contact(
             severity=Severity.info,
             source="email_template",
             message=(
-                "No help contact set — the responses-received email "
-                "omits its 'Questions? Contact …' line"
+                "No help contact set — the default emails omit their "
+                "'Questions? Contact …' line"
             ),
         )
 
@@ -1272,12 +1272,13 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         source="email_template",
         severity=Severity.info,
         why=(
-            "The default responses-received email ends with a "
-            "'Questions? Contact …' line, and the reviewer surface "
-            "shows one under its title; both are dropped when help "
-            "contact is unset, and an overridden body that names "
-            "$help_contact gets it blank. Setting one improves the "
-            "reviewer experience but isn't required."
+            "The default invitation, reminder and responses-received "
+            "emails end with a 'Questions? Contact …' line, and the "
+            "reviewer surface shows one under its title; both are "
+            "dropped when help contact is unset, and an overridden "
+            "body that names $help_contact reads 'the person running "
+            "this review'. Setting one improves the reviewer "
+            "experience but isn't required."
         ),
         fix_url=_session_edit_url,
         fix_page_label="Edit session",

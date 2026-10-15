@@ -33,7 +33,7 @@ def _session(db: Session, *, code: str, own_zone: str | None) -> ReviewSession:
         created_by_user_id=user.id,
         deadline=_NINE_UTC,
         display_timezone=own_zone,
-        email_template_overrides={"invitation_body": "Due $deadline"},
+        email_template_overrides={"reminder_body": "Due $deadline"},
     )
     db.add(review_session)
     db.flush()
@@ -46,10 +46,10 @@ def test_the_sessions_own_zone_wins(db: Session) -> None:
     db.add(reviewer)
     db.flush()
 
-    _, body = email_templates.render_invitation(
+    _, body = email_templates.render_reminder(
         review_session, reviewer, invite_url="https://app/x"
     )
-    assert body == "Due 2026-06-30 17:00"
+    assert body == "Due 2026-06-30 17:00 (GMT+8 Asia/Singapore)"
 
 
 def test_without_one_the_creators_zone_applies(db: Session) -> None:
@@ -58,10 +58,10 @@ def test_without_one_the_creators_zone_applies(db: Session) -> None:
     db.add(reviewer)
     db.flush()
 
-    _, body = email_templates.render_invitation(
+    _, body = email_templates.render_reminder(
         review_session, reviewer, invite_url="https://app/x"
     )
-    assert body == "Due 2026-06-30 05:00"
+    assert body == "Due 2026-06-30 05:00 (GMT-4 America/New_York)"
 
 
 def test_submitted_at_reads_a_real_submission_in_the_session_zone(
@@ -104,4 +104,4 @@ def test_submitted_at_reads_a_real_submission_in_the_session_zone(
     db.flush()
 
     _, body = email_templates.render_responses_received(review_session, reviewer)
-    assert body == "Sent 2026-06-30 17:00"
+    assert body == "Sent 2026-06-30 17:00 (GMT+8 Asia/Singapore)"

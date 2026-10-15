@@ -64,7 +64,10 @@ unambiguous zone — localises to it:
 - **Reviewer surfaces** — the review surface and the per-session
   rows of the reviewer dashboard.
 - **Reviewer emails** — the `$deadline` / `$submitted_at` merge
-  fields.
+  fields, each followed by the zone in parentheses
+  (`gmt_offset_zone_label`, e.g. `2026-06-30 17:00 (GMT+8
+  Asia/Singapore)`): an email is read outside the app, where nothing
+  else says which zone the time is in.
 - **CSV extracts** — every per-session extract but the audit log.
   Timestamps are ISO 8601 carrying the session zone's UTC offset
   (e.g. `2026-06-02T08:00:00+08:00`) — a precise, round-trip-safe
