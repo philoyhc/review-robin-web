@@ -171,7 +171,7 @@ def test_a_save_on_a_session_reverted_to_draft_is_not_currently_open(
 
     assert resp.status_code == 403
     # The pre-open page, as a GET would show it now.
-    assert "opens later" in text
+    assert "data-pre-open" in text
     assert "This review is not currently open, so your last changes weren't saved." in text
     # The old error-page detail, which said "no longer" here.
     assert "No longer accepting responses" not in text
@@ -305,7 +305,7 @@ def test_a_session_that_never_opened_names_nobody(
     )
 
     assert resp.status_code == 403
-    assert "opens later" in text
+    assert "data-pre-open" in text
     listed = _unsaved_list(resp.text)
     assert "early" in listed
     assert "Carol" not in listed
@@ -325,7 +325,7 @@ def test_an_archived_session_shows_the_closed_page_with_the_notice(
     )
 
     assert resp.status_code == 403
-    assert "— closed" in text
+    assert "data-pre-open" in text
     assert "This review is not currently open, so your last changes weren't saved." in text
 
 

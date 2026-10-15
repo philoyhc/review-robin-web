@@ -154,8 +154,8 @@ def test_lobby_pre_ready_session_renders_not_opened_unlinked(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """A session the reviewer is rostered on but that hasn't been
-    activated yet renders ``not opened`` + unlinked session name +
-    blank Start cell."""
+    activated yet renders ``Not open yet`` + unlinked session name +
+    blank Start cell (participant audit M6 labels)."""
     operator = make_client(alice)
     review_session = _make_session_with_pair(operator, db, code="lobby-preopen")
     [instrument] = list(
@@ -166,7 +166,7 @@ def test_lobby_pre_ready_session_renders_not_opened_unlinked(
     )
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
-    assert ">not opened</span>" in body
+    assert ">Not open yet</span>" in body
     # The Session column should not link the session name when the
     # session isn't opened — the row carries the name as plain text.
     assert (
@@ -181,7 +181,7 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """A fully-activated session renders ``open`` + linked session
+    """A fully-activated session renders ``Open`` + linked session
     name + a Start stamp (sourced from ``activated_at``)."""
     operator = make_client(alice)
     review_session = _make_session_with_pair(operator, db, code="lobby-open")
@@ -201,7 +201,7 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
 
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
-    assert ">open</span>" in body
+    assert ">Open</span>" in body
     assert (
         f'<a href="/me/sessions/{review_session.id}/1">' in body
     )

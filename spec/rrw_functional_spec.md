@@ -1653,9 +1653,8 @@ After sign-in, the reviewer lands on:
   identity touches in any participant role** (reviewer / reviewee
   / observer). One table row per session carries the session name
   with per-role pills beneath it, Start / End / Timezone columns,
-  a Session-status pill, and a Reviewer-status pill. Between End
-  and Timezone sit **View responses** and **Until** columns, which
-  are placeholders: every row renders an em dash in both. The
+  a Session-status pill (Not open yet / Open / Available / Closed /
+  Finished, one rule for every role), and a Reviewer-status pill. The
   session-name link targets the first reachable role in priority
   order Reviewer → Reviewee → Observer; each role pill deep-links
   to its own surface.

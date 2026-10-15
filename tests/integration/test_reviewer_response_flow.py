@@ -672,7 +672,7 @@ def test_surface_filters_out_excluded_assignments(
 
     assert response.status_code == 200
     assert "Carol" not in response.text
-    assert "No assignments are visible" in response.text
+    assert "You have nothing to review in this session right now." in response.text
 
 
 def test_save_draft_persists_and_reload_shows_values(

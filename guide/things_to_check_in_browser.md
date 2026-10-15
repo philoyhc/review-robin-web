@@ -143,3 +143,23 @@ with the last section it covers.
 - [ ] **Recall is gone past the deadline.** Submit everything, open the
   summary: "Recall my submission" shows. Let the deadline pass (session
   still Activated) and reload: the button is gone.
+
+## `/me` status, the not-open page, archived sessions (M3, M4, M6, M7)
+
+- [ ] **Status labels.** On `/me`, rows read "Not open yet" (draft or
+  prepared), "Open" (Activated, before the deadline), "Closed" or
+  "Available" after it, and "Finished" (archived, gray). There are no
+  "View responses" or "Until" columns.
+- [ ] **Available.** As an observer on a closed session with a release
+  window open and Band 3 granting observers, the row reads "Available".
+  As a reviewer past the deadline who saved an answer, likewise.
+- [ ] **Nothing assigned.** A reviewer whose assignments are all
+  excluded reads "Nothing assigned to you", not "0/0".
+- [ ] **Start after a revert.** Revert an Activated session to draft:
+  its row's Start goes back to "—".
+- [ ] **Not open page.** Open a draft, a prepared and an archived
+  session's review link: each reads "This review is not currently
+  open." A prepared session with a scheduled start shows "Scheduled to
+  open"; set a help contact and it shows on all three.
+- [ ] **Archived is off limits.** On an archived session, the summary,
+  its CSV and an observer's collation page each show the error page.

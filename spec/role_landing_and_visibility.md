@@ -114,35 +114,25 @@ Recorded per state with an active roster row in each.
 
 | Session state | `/me` row | Linked? | Surface |
 |---|---|---|---|
-| `draft` | listed, "not opened" | no | — |
-| `validated` | listed, "not opened" | no | — |
-| `ready` | listed, "open" — or "closed" when the deadline has passed, no instrument the reviewer is assigned on is accepting responses, or they have no included assignment (`session_status_for_reviewer`) | **yes** | opens |
-| `expired` | listed, "closed" | **yes** | **opens** |
-| `archived` | listed, "not opened" **+ an `archived` companion pill** | no | — |
+| `draft` | listed, "Not open yet" | no | — |
+| `validated` | listed, "Not open yet" | no | — |
+| `ready` | listed, "Open" — past the deadline "Available" if they saved an answer they may read back, else "Closed" | **yes** | opens |
+| `expired` | listed, "Available" or "Closed", as past the deadline | **yes** | **opens** |
+| `archived` | listed, "Finished" | no | — |
 
 The surface route admits `is_ready` **or `is_expired`** — a **closed**
 session's review surface still opens. Draft, validated and archived
 render the not-open page instead.
 
-**Why `archived` carries a second pill.** `not opened` is true of a draft
-session and of an archived one, for opposite reasons: a draft is not open
-*yet*, an archived session is not open *any more* and will not be again.
-One label for both leaves the reader unable to tell whether waiting is
-worth anything, so archived rows render a muted `archived` pill beside
-the status. It is a **companion, not a fourth status value**: the
-`session_status` string is unchanged, because the **reviewer's**
-reachability is derived from it (`!= "not opened"`) and a new value
-would re-link the reviewer surface on an archived session. The
-observer's link is gated independently, on `is_archived` directly; the
-two agree here but by different routes.
-
-**The render condition is on the session, not the role.** The template
-tests `session.status == "archived"` once per row, so the tables below
-list the companion under both Reviewer and Observer for the reader's
-convenience, not because two rules exist. Only reviewer and observer
-rows can reach an archived session at all — a reviewee-only row cannot,
-since `reviewee_has_current_grant` is false there — so a row-level
-condition and a per-role one cannot be told apart from the outside.
+**One status rule for every role** (participant audit M6, author's
+ruling 2026-10-15; `spec/reviewer-surface.md` "Session-status pill
+vocabulary"). "Open" and "Closed" say whether the review accepts
+responses; "Available" is closed to responses but viewable by one of
+the row's roles now; "Finished" is archived, which the earlier "not
+opened" plus an `archived` companion pill could not say in one word.
+The label decides no link: the **reviewer's** reachability still
+follows `session_status_for_reviewer` (`!= "not opened"`), and the
+observer's tests `is_archived` directly.
 
 ### Reviewee
 
@@ -244,11 +234,11 @@ Nothing hides small cohorts, and nothing drops an observer's own rows.
 
 | Session state | `/me` row | Linked? | `/collation` |
 |---|---|---|---|
-| `draft` | listed, "not opened" | **yes** | **200** |
-| `validated` | listed, "not opened" | **yes** | **200** |
-| `ready` | listed, "open" | yes | 200 |
-| `expired` | listed, "closed" | yes | 200 |
-| `archived` | listed, "not opened" **+ an `archived` companion pill** | **no — unlinked** | 200, empty |
+| `draft` | listed, "Not open yet" | **yes** | **200** |
+| `validated` | listed, "Not open yet" | **yes** | **200** |
+| `ready` | listed, "Open" — past the deadline "Available" while an observer grant resolves, else "Closed" | yes | 200 |
+| `expired` | listed, "Available" or "Closed", as past the deadline | yes | 200 |
+| `archived` | listed, "Finished" | **no — unlinked** | **404** |
 
 **Observers are deliberately not grant-gated**: being appointed an observer is not a disclosure *about* the observer, so the
 privacy argument that gates reviewees does not transfer. They may see
@@ -258,19 +248,20 @@ link is live on `draft` and `validated` as well as `ready` and
 
 **Archived is the one exception.** Archive closes every
 non-operator grant, so `/collation` there is empty by construction and a
-live link to it is a dead end. The row keeps its "not opened" text and
-loses its link, matching the reviewer row beside it. The surface itself
-still answers **200** — observers are not route-gated the way reviewees
-are — it simply has nothing to render.
+live link to it is a dead end. The row reads "Finished" and loses its
+link, matching the reviewer row beside it. Since participant audit M4
+(author's ruling 2026-10-15: "once a session is archived, it should be
+off limits") the surface answers **404** there, as its CSV already did,
+and so does the reviewer's `/summary` and `/summary.csv`.
 
-**Access is not lifecycle-gated on this surface; content is.** The route
-gates only on an active roster row, so it returns 200 in every state
-including archived. What renders is decided per instrument by the
-visibility policy and the release window
+**Before archive, access is not lifecycle-gated on this surface;
+content is.** The route gates on an active roster row and on the
+session not being archived. What renders is decided per instrument by
+the visibility policy and the release window
 (`spec/visibility_policy.md`).
 
 **Archived sessions stay on `/me` for reviewers and observers**, reading
-"not opened" until the session is deleted; they are deliberately not
+"Finished" until the session is deleted; they are deliberately not
 filtered out. Only the *reviewee* role leaves an archived
 session, and it leaves via the archive override closing its grant rather
 than by a filter.

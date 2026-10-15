@@ -39,6 +39,9 @@ from ._refused_write import (
     write_refused_notice,
 )
 
+# The /me row's status pill (participant audit M6).
+from ._participant_status import ParticipantStatus, participant_session_status
+
 # Responses page rows (sliced in PR 1).
 from ._progress import ProgressPill, progress_pill
 from ._responses import ResponsesRow, build_responses_rows
@@ -287,6 +290,8 @@ __all__ = [
     "REFUSED_NOT_OPEN",
     "unsaved_answers",
     "write_refused_notice",
+    "ParticipantStatus",
+    "participant_session_status",
     "ACCOUNT_CATEGORIES",
     "ACCOUNT_CHIPS_COOKIE",
     "ACCOUNT_ROLE_OPTIONS",

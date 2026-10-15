@@ -359,6 +359,45 @@ def reviewee_has_current_grant(
     )
 
 
+def observer_has_current_grant(
+    db: Session, review_session: ReviewSession
+) -> bool:
+    """Does the ``observer`` audience have a grant that resolves **right
+    now** on any instrument in this session — the observer's collation
+    has something to show? Per session, like
+    :func:`reviewee_has_current_grant`, and cohort-blind: it answers
+    the ``/me`` status ("Available", participant audit M6), not what a
+    given observer's cohort holds. False once archived."""
+    if lifecycle.is_archived(review_session):
+        return False
+    while_ongoing_open = lifecycle.is_ready(review_session)
+    after_release_open = lifecycle.is_response_release_window_open(
+        review_session
+    )
+    if not (while_ongoing_open or after_release_open):
+        return False
+    rows = db.execute(
+        select(InstrumentViewPolicy)
+        .join(
+            Instrument,
+            Instrument.id == InstrumentViewPolicy.instrument_id,
+        )
+        .where(
+            Instrument.session_id == review_session.id,
+            InstrumentViewPolicy.audience == "observer",
+        )
+    ).scalars()
+    return any(
+        resolve_mode(
+            row,
+            while_ongoing_open=while_ongoing_open,
+            after_release_open=after_release_open,
+        )
+        is not None
+        for row in rows
+    )
+
+
 def peer_reviewer_policies(
     db: Session, instrument_ids: Iterable[int]
 ) -> dict[int, InstrumentViewPolicy]:

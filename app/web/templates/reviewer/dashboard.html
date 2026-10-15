@@ -18,8 +18,6 @@
           <th>Session</th>
           <th>Start</th>
           <th>End</th>
-          <th>View responses</th>
-          <th>Until</th>
           <th>Timezone</th>
           <th>Session status</th>
           <th>Reviewer status</th>
@@ -73,8 +71,8 @@
             </td>
             <td>
               {% if item.start_text %}
-                {# Start: neutral data — the session has been
-                   activated (or, post-18G, scheduled). #}
+                {# Start: neutral data — when the session opened, or
+                   its scheduled opening while prepared. #}
                 <span class="pill pill-count">{{ item.start_text }}</span>
               {% else %}
                 <span class="muted">—</span>
@@ -95,63 +93,18 @@
               {% endif %}
             </td>
             <td>
-              {# View responses — placeholder. Populates once the
-                 reviewee results surface (/me/sessions/{id}/results)
-                 + observer collation surface
-                 (/me/sessions/{id}/collation) wire up via W16 / W17. #}
-              <span class="muted">—</span>
-            </td>
-            <td>
-              {# Until — placeholder. Will show
-                 ``responses_release_until`` (the absolute close
-                 datetime; S12) once the view-responses access
-                 window wires up. #}
-              <span class="muted">—</span>
-            </td>
-            <td>
               <span class="pill pill-count">
                 <abbr class="tz-gmt" title="{{ item.timezone_gmt_offset }} {{ item.timezone_iana }}">{{ item.timezone_gmt_offset }}</abbr>
               </span>
             </td>
             <td>
-              {% if item.session_status == "open" %}
-                <span class="pill pill-success">open</span>
-              {% elif item.session_status == "closed" %}
-                {# Closed: red, matching the past-deadline pill in
-                   the End column above — both signal "the window
-                   has closed for this reviewer". Earlier renders
-                   used the muted ``pill-lifecycle-archived`` grey
-                   which read as plain text rather than a pill. #}
-                <span class="pill pill-error">closed</span>
-              {% else %}
-                <span class="pill pill-info">not opened</span>
-              {% endif %}
-              {# Archived sessions read ``not opened`` like a draft one,
-                 which is true and incomplete: a draft is not open *yet*,
-                 an archived session is not open *any more* and will not
-                 be again. One label for two reasons, and the reader
-                 cannot tell whether to keep waiting. The companion pill
-                 supplies the missing half (19G.9).
-
-                 Deliberately a second pill rather than a fourth status
-                 value: ``session_status`` is what ``_dashboard.py`` and
-                 ``_shared.py`` test for link enablement
-                 (``!= "not opened"``), so renaming it here would re-link
-                 the reviewer surface on an archived session. Leaving the
-                 string alone keeps that behaviour unchanged by
-                 construction.
-
-                 Reviewer and observer rows only — not by a role test but
-                 because a reviewee-only row cannot exist on an archived
-                 session: ``reviewee_has_current_grant`` is False there,
-                 and ``_dashboard.py`` filters the role on it (19F).
-
-                 ``.pill`` is ``inline-block`` with a right margin, so
-                 the two sit side by side and wrap to the next line on
-                 their own when the column narrows. #}
-              {% if item.session.status == "archived" %}
-                <span class="pill pill-lifecycle-archived">archived</span>
-              {% endif %}
+              {# One rule for every role (participant audit M6):
+                 Not open yet / Open / Available / Closed / Finished.
+                 Open and Closed say whether the review accepts
+                 responses; Available is closed to responses but
+                 viewable by one of this row's roles now. Links
+                 follow ``role_links``, not this label. #}
+              <span class="pill {{ item.status.css }}">{{ item.status.label }}</span>
             </td>
             <td>
               {# Pair the (N/M) counter's colour with the reviewer
@@ -160,7 +113,9 @@
                  green = done. Empty cell when the row's user is
                  a reviewee / observer only — the reviewer-status
                  column doesn't apply. #}
-              {% if item.pill %}
+              {% if item.pill and item.pill.total_assignments == 0 %}
+                <span class="muted">Nothing assigned to you</span>
+              {% elif item.pill %}
                 {% set p = progress_pill(item.pill.state) %}
                 <span class="pill {{ p.css }}">{{ p.label }}</span>
                 <span class="pill {{ p.css }}">{{ item.pill.completed_rows }}/{{ item.pill.total_assignments }}</span>

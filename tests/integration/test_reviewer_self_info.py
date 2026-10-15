@@ -525,7 +525,7 @@ def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
     validate_session(rs)
     db.commit()
     html = make_client(rae).get(f"/me/sessions/{rs.id}/1").text
-    assert "opens later" in html, html[:400]
+    assert "This review is not currently open." in html, html[:400]
     nav = _div_at(html, 'class="rs-role-nav"')
     assert re.search(
         r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>',
@@ -548,7 +548,7 @@ def test_the_closed_pre_open_page_has_no_line(
     rs.status = "archived"
     db.commit()
     html = make_client(rae).get(f"/me/sessions/{rs.id}/1").text
-    assert "This review has closed." in html, html[:400]
+    assert "This review is not currently open." in html, html[:400]
     assert "data-reviewer-self-info" not in html
     assert 'class="rs-role-nav"' not in html
 

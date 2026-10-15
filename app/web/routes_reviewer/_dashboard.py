@@ -29,7 +29,7 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services import visibility_policies
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
 
@@ -47,19 +47,6 @@ def _to_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value
-
-
-def _non_reviewer_session_status(review_session: ReviewSession) -> str:
-    """Session-status label for ``/me`` rows where the user is a
-    reviewee / observer only — no reviewer-specific assignment
-    check applies. Mirrors the reviewer flavour's
-    not-opened / open / closed vocabulary so the column reads
-    uniformly across role mixes."""
-    if lifecycle.is_expired(review_session):
-        return "closed"
-    if lifecycle.is_ready(review_session):
-        return "open"
-    return "not opened"
 
 
 @router.get("", response_class=HTMLResponse)
@@ -175,10 +162,10 @@ def reviewer_dashboard(
         else:
             # Reviewee / observer-only row — the reviewer surface
             # doesn't apply, so the per-reviewer pill state stays
-            # empty. The Session-status column still populates
-            # from session lifecycle.
+            # empty. The status pill comes from
+            # ``views.participant_session_status`` below.
             pill = None
-            session_status = _non_reviewer_session_status(review_session)
+            session_status = None
 
         # Per-role link map for both the per-pill anchor and the
         # session-name's prioritised target. The session name
@@ -247,6 +234,17 @@ def reviewer_dashboard(
                 link_enabled = True
                 break
 
+        # Start: when it opened, once it has. Before then, the scheduled
+        # opening if a prepared session has one; a draft's leftover
+        # ``activated_at`` from before a revert is not a start
+        # (participant audit M6).
+        if lifecycle.is_validated(review_session):
+            start_at = review_session.scheduled_activate_at
+        elif lifecycle.is_draft(review_session):
+            start_at = None
+        else:
+            start_at = review_session.activated_at
+
         items.append(
             {
                 "reviewer": reviewer,
@@ -254,14 +252,17 @@ def reviewer_dashboard(
                 "roles": roles,
                 "role_links": role_links,
                 "pill": pill,
-                "session_status": session_status,
+                "status": views.participant_session_status(
+                    db,
+                    review_session=review_session,
+                    roles=roles,
+                    reviewer=reviewer,
+                ),
                 "link_enabled": link_enabled,
                 "link_target": link_target,
                 "start_text": (
-                    date_formatting.format_datetime(
-                        review_session.activated_at, session_zone
-                    )
-                    if review_session.activated_at
+                    date_formatting.format_datetime(start_at, session_zone)
+                    if start_at
                     else None
                 ),
                 "deadline_text": (

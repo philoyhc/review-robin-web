@@ -4405,6 +4405,17 @@
       /* A refused Save / Submit / Clear (participant audit P3): the
          warning card's chrome, one column, and each typed answer kept
          as typed — line breaks included — so it can be copied out. */
+      /* The pre-open page (participant audit M3): the banner sits flush
+         in its card, each detail line spaced under the headline. */
+      body.ui-v2 .pre-open-banner {
+        margin: 0;
+      }
+      body.ui-v2 .pre-open-banner .pre-open-detail {
+        margin-top: var(--space-3);
+      }
+      body.ui-v2 .pre-open-actions {
+        margin-top: var(--space-4);
+      }
       body.ui-v2 .rs-unsaved-list {
         margin: var(--space-3) 0 0;
         padding-left: var(--space-6);
