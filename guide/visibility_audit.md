@@ -129,7 +129,9 @@ Build, 2026-10-15:
   off persists, which the constraint refuses; that line is now
   scoped. The second read, of those fixes, found the same claim in
   `_reviewee_results.py` and `spec/role_landing_and_visibility.md`,
-  and that §3.1 had dropped what the card checked. Both are fixed.
+  and that §3.1 had dropped what the card checked. A third read found
+  the same idea in §3.1's import paragraph and in
+  `spec/settings_inventory.md` §4. All of these are fixed.
 
 ### PR ladder
 

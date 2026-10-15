@@ -134,9 +134,9 @@ runs first: an older bundle may carry a reviewer `summarized`
 "Responses released" cell, and the import reads it as off (`_drop_retired_view_policy_modes`, §2.2). Checking the
 vocabulary is not enough on the import path: a value can be one of `row`
 / `aggregated` / `identified` / `deidentified` and still be illegal in
-the cell it lands in, so a hand-edited or hand-built bundle would
-otherwise persist a `reviewee` `while_ongoing` grant no editor can
-author — a disclosure the resolver would then honor like any other row.
+the cell it lands in. A hand-edited or hand-built bundle can carry such
+a cell; the import names it, where the database would only refuse the
+write as an `IntegrityError` (`ck_view_policy_cell`, below).
 Rehydrate applies its settings bundle through the same call and inherits
 the check, and so do Replicate and Duplicate session, which copy the
 grid through it (`spec/roundtrip_coverage.md`).
