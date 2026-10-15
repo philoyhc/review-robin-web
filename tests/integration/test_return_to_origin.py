@@ -78,15 +78,18 @@ def test_a_stranger_is_not_told_a_session_name_by_the_back_link(
     )
     body = stranger.get(f"{page}?return_to={shape.format(id=session.id)}").text
     assert session.name not in body
-    assert "Back to Sessions" in body
+    # A participant's fallback is their own dashboard (audit M8). The
+    # href and the label are asserted together: About carries a plain
+    # "/me" link of its own.
+    assert 'href="/me">&larr; Back to your reviews' in body
 
 
 def test_me_debug_creates_no_user_row(
     client: TestClient, db: Session, make_client
 ) -> None:
     """The debug page looks the viewer up to decide a label; it never
-    signs them in as a side effect. The session has to exist, or the
-    lookup never runs."""
+    signs them in as a side effect. A real session makes the lookup
+    decide a name as well as the fallback."""
     session = _create_session(client, db, code="rrw-norow")
     eve = make_client(
         AuthenticatedUser(
@@ -95,10 +98,34 @@ def test_me_debug_creates_no_user_row(
         )
     )
     body = eve.get(f"/auth/me/debug?return_to=/me/sessions/{session.id}").text
-    assert "Back to Sessions" in body
+    assert "Back to your reviews" in body
     assert db.execute(
         select(User).where(User.email == "eve@example.edu")
     ).first() is None
+
+
+def test_me_debug_renders_when_the_user_lookup_fails(
+    make_client, monkeypatch
+) -> None:
+    """Sign-in details is where a broken sign-in is diagnosed, so a
+    failed lookup reads as no row instead of a 500."""
+    from sqlalchemy.exc import OperationalError
+
+    import app.web.routes_auth as routes_auth
+
+    def broken(*_args: object) -> None:
+        raise OperationalError("SELECT 1", {}, Exception("database down"))
+
+    monkeypatch.setattr(routes_auth, "find_user", broken)
+    eve = make_client(
+        AuthenticatedUser(
+            principal_id="eve-oid", email="eve@example.edu",
+            name="Eve", provider="aad",
+        )
+    )
+    resp = eve.get("/auth/me/debug")
+    assert resp.status_code == 200
+    assert "Back to your reviews" in resp.text
 
 
 def test_settings_does_not_name_another_operators_session(

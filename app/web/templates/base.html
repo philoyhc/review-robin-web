@@ -5040,7 +5040,10 @@
         {% if user %}
           <div class="chrome-user">
             <div>Signed in as {{ user.display_label }}{% if user.is_super_admin %} (super admin){% elif user.is_sys_admin %} (sys admin){% endif %}</div>
-            {% if request.url.path != "/operator/settings" %}
+            {# Operators only: Settings sits behind `require_operator`,
+               which bounces anyone else to /me (participant audit M8). #}
+            {% if (user.is_operator or user.is_sys_admin)
+                  and request.url.path != "/operator/settings" %}
               <a class="chrome-link" href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>
             {% endif %}
             {% if user.is_sys_admin and not request.url.path.startswith("/operator/sys-admin") %}

@@ -315,8 +315,9 @@ grant again — `"raw"`, on a policy authored for the observer audience.
 So the view states the rule locally: an `is_archived` short-circuit
 returning `ObserverCollationContext(sections=[], cohort_empty=False)`,
 as **defense in depth**. `cohort_empty` must be `False` there —
-`True` renders "No cohort is configured for you yet", blaming the
-operator for something that is configured.
+`True` renders "You haven't been given anyone to observe in this review
+yet", telling the observer nothing is assigned when a cohort is
+configured.
 `tests/unit/test_observer_archive_short_circuit.py` pins the
 short-circuit by simulating that relaxation, which is the only
 condition under which it is observable at all. **It is not redundant

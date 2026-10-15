@@ -69,7 +69,21 @@ with the last section it covers.
 
 - [ ] **A stranger sees the default.** Signed in as someone with no role
   on a session, open `/about?return_to=/me/sessions/<id>` for that
-  session's id. The back link reads "← Back to Sessions", not the
-  session's name.
+  session's id. The back link reads "← Back to your reviews" (or "← Back
+  to Sessions" if you are an operator), never the session's name.
 - [ ] **An owner still sees the name.** As the session's owner, open
   About from inside that session. The back link names the session.
+
+## Participant chrome and copy (M2, M5, M8, M14)
+
+- [ ] **No Settings link for a participant.** Signed in as a reviewer who
+  is not an operator, open About. The top bar shows no Settings link,
+  and the back link reads "← Back to your reviews" and goes to `/me`.
+- [ ] **The Guide shows its version.** As the same reviewer, open the
+  Guide. The top bar reads "(version …)" with a number in it.
+- [ ] **Sign-in details names you.** From the invite mismatch page, follow
+  "Sign-in details". The top bar reads "Signed in as" with your name.
+- [ ] **Collation empty states read as a participant's.** As an observer
+  with no cohort rule, open the collation page: "You haven't been given
+  anyone to observe in this review yet." With a rule on a draft session:
+  "There are no results for you to see right now."

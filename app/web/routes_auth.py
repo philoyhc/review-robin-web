@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.auth.identity import (
@@ -11,9 +12,13 @@ from app.auth.identity import (
     get_current_user,
 )
 from app.config import settings
+from app.db.models import User
 from app.db.session import get_db
+from app.logging_config import get_logger
 from app.web.deps import find_user
 from app.web.return_to import resolve_return_to
+
+log = get_logger(__name__)
 
 router = APIRouter()
 
@@ -38,14 +43,24 @@ def me_debug(
     user: AuthenticatedUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    # Looked up, not created, and only when a session path needs naming:
-    # this page has to render for an identity ``get_or_create_user``
-    # would refuse (no email claim), and without touching the database
-    # otherwise, since it is where a broken sign-in is diagnosed.
+    # Looked up, never created: this page has to render for an identity
+    # ``get_or_create_user`` would refuse (no email claim). The back
+    # link needs the row to name a session or to pick its fallback (the
+    # lobby or /me), and a failed lookup reads as no row, so a database
+    # that refuses connections does not take down the page where a
+    # broken sign-in is diagnosed. A session-path ``return_to`` still
+    # needs the database to look the session up.
+    def viewer() -> User | None:
+        try:
+            return find_user(db, user)
+        except SQLAlchemyError:
+            # Logged: this page is where a broken sign-in is diagnosed.
+            log.warning("user lookup failed", exc_info=True)
+            db.rollback()
+            return None
+
     return_to = resolve_return_to(
-        request.query_params.get("return_to"),
-        db,
-        viewer=lambda: find_user(db, user),
+        request.query_params.get("return_to"), db, viewer=viewer
     )
     return _templates.TemplateResponse(
         request,
