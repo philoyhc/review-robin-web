@@ -902,8 +902,8 @@ cleared" (Clear). The first cause that applies, in this order, wins:
 | `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
 
 Under it, `data-rs-unsaved-answers` lists every value the POST carried
-that isn't blank, as plain text read from the raw form (indentation and
-line breaks kept, where a save strips them), so it can be copied out
+that isn't blank, as plain text read from the raw form (leading and
+trailing whitespace kept, which a save strips), so it can be copied out
 (`app/web/views/_refused_write.py`).
 An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
 would show that row now: an included assignment of this reviewer, on a

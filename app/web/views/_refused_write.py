@@ -65,7 +65,8 @@ def unsaved_answers(
 ) -> list[dict[str, str]]:
     """What a refused Save or Submit carried, as plain text the reviewer
     can copy. Read from the raw form, not the parsed upserts, whose
-    values are stripped: a multi-line answer keeps its indentation.
+    values are stripped: an answer keeps its leading and trailing
+    whitespace, such as a first line's indentation.
 
     Every typed value that isn't blank comes back, changed or not,
     whatever row it was posted against: echoing only some would make
@@ -86,6 +87,9 @@ def unsaved_answers(
     shown: dict[int, Assignment] = {}
     fields: dict[tuple[int, str], InstrumentResponseField] = {}
     if lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session):
+        # The rows a GET shows: the same filter as the surface's own
+        # loader, ``_load_assignments_with_relations`` in
+        # ``routes_reviewer/_surface/_context.py``. Keep them in step.
         shown = {
             a.id: a
             for a in db.execute(
