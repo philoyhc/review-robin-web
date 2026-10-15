@@ -117,3 +117,53 @@ def test_an_unknown_status_has_no_lifecycle_place() -> None:
     assert views.status_sort_value("archived") == 4
     assert views.status_sort_value("retired") is None
     assert views.status_sort_cell("retired") == ""
+
+
+def test_name_and_code_sort_as_a_click_does(
+    client: TestClient, db: Session
+) -> None:
+    """A reload sorts text as a click does (author, 2026-10-15): case
+    aside, and digit runs as numbers. Python's `<` alone put "Beta"
+    before "alpha", and "Session 10" before "session 2", where the
+    browser's `localeCompare(…, {numeric: true})` doesn't."""
+    for name, code in (
+        ("Session 10", "S-10"), ("beta", "b-two"), ("session 2", "s-2"), ("Alpha", "A-one"),
+    ):
+        client.post("/operator/sessions", data={"name": name, "code": code})
+    expected = ["A-one", "b-two", "s-2", "S-10"]
+
+    def order(key: str) -> list[str]:
+        client.cookies.set("rrw-sort-lobby", quote(json.dumps([{"key": key, "dir": "asc"}])))
+        body = client.get("/operator/sessions").text
+        client.cookies.clear()
+        return sorted(expected, key=lambda c: body.index(f"<code>{c}</code>"))
+
+    assert order("name") == expected
+    assert order("code") == expected
+
+
+def test_the_text_keys_fold_case_trim_and_read_numbers() -> None:
+    row = ReviewSession(name="  Session 10 ", code="ZZ-1")
+    row.created_by_user = User(email="ann@example.edu", display_name="Ann Lee")
+    assert views.session_sort_value(row, "name") == ("session 0", 10, "")
+    assert views.session_sort_value(row, "code") == ("zz-0", 1, "")
+    assert views.session_sort_value(row, "created_by") == ("ann lee",)
+    # Leading digits keep text at the even places, so keys always
+    # compare like with like; digits come before letters, as in the
+    # browser.
+    assert views.text_sort_value("2nd") == ("0", 2, "nd") < views.text_sort_value("abc")
+
+
+def test_text_keys_order_as_the_browser_does() -> None:
+    """Pairs a read checked against `localeCompare(…, {numeric: true})`:
+    a space or hyphen before a digit sorts before the digit itself."""
+    browser_order = [
+        "a-1", "a1", "alpha", "Beta", "CS 101", "CS-101", "CS101", "cs102",
+        "Session 2", "Session 10", "Session1", "Spring 2024", "Spring2024",
+        "x 10", "x9",
+    ]
+    # Reversed first: `sorted` is stable, so in-order input would let a
+    # key that ties two of these pass.
+    assert sorted(reversed(browser_order), key=views.text_sort_value) == browser_order
+    assert views.text_sort_value("") is None
+    assert views.text_sort_value("   ") is None

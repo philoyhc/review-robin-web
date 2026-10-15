@@ -245,6 +245,7 @@ from ._sessions_table import (
     session_sort_value,
     status_sort_cell,
     status_sort_value,
+    text_sort_value,
 )
 
 # Sort helpers (Segment 13B PR 1 + Part 2 PR 5 + PR 6).
@@ -427,6 +428,7 @@ __all__ = [
     "session_sort_value",
     "status_sort_cell",
     "status_sort_value",
+    "text_sort_value",
     "apply_cookie_sort",
     "decode_cookie_sort_spec",
     "decode_cookie_sort_spec_for_reviewer_surface",
