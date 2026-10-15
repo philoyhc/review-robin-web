@@ -117,7 +117,9 @@ def apply_cookie_sort(
     Each row's values are resolved once, before sorting, rather than
     at every comparison: a resolver may build a key (the session
     tables' `text_sort_value` splits text with a regex), and a sort
-    makes O(n log n) comparisons.
+    makes O(n log n) comparisons. So every spec key is resolved for
+    every row, even a key that only breaks ties; a resolver must not
+    raise on any row it is given.
 
     Returns a new list (input not mutated). Empty / missing
     ``spec`` short-circuits to ``list(rows)``.

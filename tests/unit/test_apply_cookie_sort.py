@@ -23,9 +23,9 @@ def test_each_row_is_resolved_once_per_key() -> None:
 def test_empty_and_none_sort_last_both_ways_ties_cascade_and_stay_stable() -> None:
     rows = [
         {"id": 1, "a": "x", "b": 2},
-        {"id": 2, "a": None, "b": 1},
+        {"id": 2, "a": None, "b": 3},
         {"id": 3, "a": "x", "b": 1},
-        {"id": 4, "a": "", "b": 3},
+        {"id": 4, "a": "", "b": 1},
         {"id": 5, "a": "w", "b": 9},
         {"id": 6, "a": "x", "b": 1},
     ]
@@ -34,6 +34,8 @@ def test_empty_and_none_sort_last_both_ways_ties_cascade_and_stay_stable() -> No
         out = views.apply_cookie_sort(rows, spec, value_resolver=lambda r, k: r[k])
         return [r["id"] for r in out]
 
-    assert ids([("a", "asc"), ("b", "asc")]) == [5, 3, 6, 1, 2, 4]
-    assert ids([("a", "desc"), ("b", "asc")]) == [3, 6, 1, 5, 2, 4]
+    # Rows 2 and 4 are both empty on `a`, input in the wrong `b` order,
+    # so they come out 4, 2 only if a both-empty tie falls through to `b`.
+    assert ids([("a", "asc"), ("b", "asc")]) == [5, 3, 6, 1, 4, 2]
+    assert ids([("a", "desc"), ("b", "asc")]) == [3, 6, 1, 5, 4, 2]
     assert ids([]) == [1, 2, 3, 4, 5, 6]
