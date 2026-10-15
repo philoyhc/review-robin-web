@@ -887,7 +887,7 @@ a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). The
 refusal renders the page again rather than the standalone error page,
 which used to throw away what the reviewer typed (participant audit P3):
 the page the reviewer was on, read-only as a GET would now show it, or
-the pre-open page when the session is no longer `ready` or `expired`.
+the pre-open page when the session is neither `ready` nor `expired`.
 A `.rs-missing-card` (`data-rs-write-refused`) names the cause in one
 sentence, ending "so your last changes weren't saved" (Save), "so your
 answers weren't submitted" (Submit) or "so your answers weren't
@@ -919,7 +919,8 @@ GET requests behave differently depending on which gate fails:
   reviewer's own line, § *Role-navigator chip strip*), an info banner
   explaining the review hasn't opened yet, the deadline + zone if one
   is set, and a link back to the reviewer dashboard. No response form
-  is rendered. Applies for `draft` and `validated`.
+  is rendered. Applies for `draft` and `validated`. A refused write on
+  such a session renders the same page with its refusal card (above).
 
 - **Session `archived`** (reached through an old invitation link or
   a bookmark; the dashboard lists it unlinked). The same template

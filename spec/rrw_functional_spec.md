@@ -271,7 +271,7 @@ form. Reviewers can:
 - **Continue editing** previously-submitted responses while the
   session remains open — submission is a status marker, not a
   lock — and **Recall** a submission back to draft while the
-  session is still `ready`.
+  review is still open (activated and before its deadline).
 - **Clear all** their responses with explicit confirmation (a
   per-reviewer destructive action).
 - **Download** a CSV of their own response history, and view a
@@ -1837,7 +1837,8 @@ instrument they responded on and may read now (each instrument's
 visibility policy decides; nothing once archived), a submitted-on
 timestamp, a
 **Recall my submission** control (rolls the submission back to
-draft while the session is still `ready`), and a **Download my
+draft while the review is still open: activated and before its
+deadline), and a **Download my
 responses (CSV)** button (when any section shows) emitting `{code}_my_responses.csv` (same
 21-column shape as the operator Responses extract, narrowed to
 this reviewer's rows).
