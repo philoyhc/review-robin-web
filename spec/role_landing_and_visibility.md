@@ -220,6 +220,20 @@ windows (`/collation`). Neither route opens anything before then:
   either mode, including the while-ongoing `Summarized` view, but that
   stays inside an observer window.
 
+**Making a reviewee an observer is the operator allowing this**
+(author, 2026-10-15). The operator who makes a reviewee an observer
+accepts three consequences, and none of them is a defect:
+
+- The observer's `Summarized` aggregates, while the session is still
+  running, can include what others wrote about them.
+- In the `Anonymized` CSV, an observer who is also a self-reviewer can
+  find their own token through the `SelfReview` column, and with it every
+  other row about them.
+- A cohort that matches only the observer's own rows shows them their own
+  results.
+
+Nothing hides small cohorts, and nothing drops an observer's own rows.
+
 ### Observer
 
 | Session state | `/me` row | Linked? | `/collation` |
