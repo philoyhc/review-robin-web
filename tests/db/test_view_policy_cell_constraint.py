@@ -1,5 +1,5 @@
 """``ck_view_policy_cell``: the database refuses a visibility cell the
-per-cell rule refuses (``guide/visibility_audit.md``, author 2026-10-15).
+per-cell rule refuses (``guide/archive/visibility_cell_constraint.md``, author 2026-10-15).
 
 The rule lives twice — ``visibility_policies._PER_CELL_VALID_MODES`` for
 the validators, the CHECK for the database — so these tests insert every

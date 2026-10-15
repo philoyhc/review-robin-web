@@ -6,7 +6,7 @@ three modes, and each ``(audience, window)`` cell allows only the modes
 ``spec/visibility_policy.md`` §3.1 lists. The Band 3 editor and the
 Settings import already refuse anything else; the constraint refuses it
 from any other path too, so the Visibility grid audit card, which looked
-for such rows after the fact, can retire (``guide/visibility_audit.md``).
+for such rows after the fact, can retire (``guide/archive/visibility_cell_constraint.md``).
 
 Before adding it, the upgrade re-applies ``14db60023e88``'s
 normalization under the same ruling (author, 2026-10-05: each illegal

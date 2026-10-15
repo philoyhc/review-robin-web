@@ -51,7 +51,7 @@ instrument_view_policies row(s) before adding the constraint`, with
 the row ids when N is not zero.
 
 **Why.** This replaces reading the retired Visibility grid audit card on
-real data (`guide/visibility_audit.md`). The card existed to find
+real data (`guide/archive/visibility_cell_constraint.md`). The card existed to find
 `instrument_view_policies` rows the per-cell rule refuses, above all an
 **observer** grant of `Raw` or `Anonymized` on **Session ongoing**, an
 observer reading individual responses while the review is still
@@ -67,7 +67,7 @@ listed row's session has been told that its visibility changed, since
 the rewrite narrows a grant without asking them.
 
 **Where this came from.** `guide/archive/segment_19C_refinements.md`
-Item 10 planned the card's first real run; `guide/visibility_audit.md`
+Item 10 planned the card's first real run; `guide/archive/visibility_cell_constraint.md`
 retired the card for the constraint.
 
 ---

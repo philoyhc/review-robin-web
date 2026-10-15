@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 # The per-cell rule (`spec/visibility_policy.md` §3.1) as the database
 # enforces it, so no write path can store a cell the Band 3 editor and
 # the Settings import refuse (author, 2026-10-15,
-# `guide/visibility_audit.md`). Each window's stored pair is off (both
+# `guide/archive/visibility_cell_constraint.md`). Each window's stored pair is off (both
 # NULL) or one of the three modes, and each `(audience, window)` cell
 # allows only some. `visibility_policies._PER_CELL_VALID_MODES` states
 # the same rule for the validators; a test inserts every combination
