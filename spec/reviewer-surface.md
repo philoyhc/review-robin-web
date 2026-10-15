@@ -1171,9 +1171,7 @@ reviewee-/observer-only rows show `—` in those cells.
     `Asia/Singapore`) on hover via `<abbr title="...">`.
   - **Session status** — one pill, one rule for every role:
     `Not open yet` / `Open` / `Available` / `Closed` / `Finished`
-    (`views.participant_session_status`; vocabulary below). The
-    View responses and Until columns that sat before Timezone were
-    always "—" and are gone (participant audit M7).
+    (`views.participant_session_status`; vocabulary below).
   - **Reviewer status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows;
     plus a paired `(N/M)` chip in the same colour. A reviewer with
@@ -1230,10 +1228,7 @@ role. The first row that applies wins:
 The label decides no link. The reviewer role's link still follows
 `lifecycle.session_status_for_reviewer` (`!= "not opened"`, so live
 on `ready` and `expired`), and the observer's tests
-`lifecycle.is_archived` (§ "Cross-role union and reachability"). It
-replaced a status string whose observer-only rows read `open` past the
-deadline beside a reviewer row's `closed`, and whose archived rows read
-`not opened` with an `archived` companion pill.
+`lifecycle.is_archived` (§ "Cross-role union and reachability").
 
 ### Reviewer-status pill vocabulary
 

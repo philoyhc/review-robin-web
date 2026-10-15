@@ -128,8 +128,7 @@ render the not-open page instead.
 ruling 2026-10-15; `spec/reviewer-surface.md` "Session-status pill
 vocabulary"). "Open" and "Closed" say whether the review accepts
 responses; "Available" is closed to responses but viewable by one of
-the row's roles now; "Finished" is archived, which the earlier "not
-opened" plus an `archived` companion pill could not say in one word.
+the row's roles now; "Finished" is archived.
 The label decides no link: the **reviewer's** reachability still
 follows `session_status_for_reviewer` (`!= "not opened"`), and the
 observer's tests `is_archived` directly.
@@ -249,10 +248,9 @@ link is live on `draft` and `validated` as well as `ready` and
 **Archived is the one exception.** Archive closes every
 non-operator grant, so `/collation` there is empty by construction and a
 live link to it is a dead end. The row reads "Finished" and loses its
-link, matching the reviewer row beside it. Since participant audit M4
-(author's ruling 2026-10-15: "once a session is archived, it should be
-off limits") the surface answers **404** there, as its CSV already did,
-and so does the reviewer's `/summary` and `/summary.csv`.
+link, matching the reviewer row beside it. Once archived a session is
+off limits (participant audit M4): the surface answers **404** there,
+as do its CSV and the reviewer's `/summary` and `/summary.csv`.
 
 **Before archive, access is not lifecycle-gated on this surface;
 content is.** The route gates on an active roster row and on the
