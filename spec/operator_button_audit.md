@@ -745,8 +745,6 @@ Notes:
   `spec/ui_elements.md` §6, gravity belongs to the surrounding context,
   not the button colour; amber in every row of a diagnostics table would
   spend the alarm on the normal case.
-- **The page also carries the read-only Visibility grid audit card** —
-  prose and a table, no buttons, so it contributes no rows here.
 
 ---
 

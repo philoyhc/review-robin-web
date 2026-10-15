@@ -1601,9 +1601,8 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
   in the same modes, as its source. Each row goes through
   `visibility_policies.upsert_policy`, so it is checked against the
   per-cell rule and emits its own `instrument.view_policy_set`
-  (`spec/visibility_policy.md` §5); a stored cell the rule rejects (a
-  row imported before the rule) falls back to off, or to the cell's one
-  permitted mode; the reviewer-identity level (`spec/visibility_policy.md` §4)
+  (`spec/visibility_policy.md` §5), and the database refuses a stored
+  cell the rule rejects (§3.1 there); the reviewer-identity level (`spec/visibility_policy.md` §4)
   travels with the row, unless it is invalid for the audience, when it is
   dropped. Duplicate session copies each instrument's grid the
   same way (`spec/roundtrip_coverage.md`).

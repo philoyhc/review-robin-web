@@ -140,10 +140,6 @@ def sys_admin_sessions(
                 for s in rows
             },
             "filter_options": views.diagnostics_filter_options(rows, owners),
-            # 19C Item 10 — the workspace-wide visibility-grid audit.
-            # Read-only, and sys-admin-only by construction: it spans
-            # every session, which no per-session operator may see.
-            "visibility_audit_rows": views.build_visibility_audit_rows(db),
             "return_to_raw": return_to,
             "return_to_url": target.url,
             "return_to_label": target.label,

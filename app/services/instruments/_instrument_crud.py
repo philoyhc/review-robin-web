@@ -518,10 +518,10 @@ def copy_view_policies(
     Through ``visibility_policies.upsert_policy``, the visibility
     editor's writer, so each copied row is checked against the per-cell rule
     and emits its own ``instrument.view_policy_set``
-    (``spec/visibility_policy.md`` §3.1, §5). A stored cell the rule
-    rejects — a row imported before the rule existed — is not carried
-    across: it falls back to off, or to the cell's one permitted mode
-    where off is not allowed."""
+    (``spec/visibility_policy.md`` §3.1, §5). The database refuses a
+    cell the rule rejects (``ck_view_policy_cell``), so none should
+    reach here; were one to, it would fall back to off, or to the
+    cell's one permitted mode where off is not allowed."""
     from app.services import visibility_policies as vp
 
     policies = db.execute(

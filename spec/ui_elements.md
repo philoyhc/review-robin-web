@@ -648,7 +648,7 @@ lands on the numbers without bolding the whole sentence.
 | `.pill-success` | `--status-success-bg` / `--status-success-fg` | The `-fg` slot, like every other pill: a pill's label is text, and `-accent` is the marker slot. |
 | `.pill-error` | `--status-error-bg` / `--status-error-fg` | Validation-summary error counts. |
 | `.pill-super` | `--status-super-bg` / `--status-super-fg` | The super-admin tier badge — violet, so the protected top tier is not read as an ordinary blue info pill. |
-| `.pill-role-reviewer`, `.pill-role-reviewee`, `.pill-role-observer` | `--role-<role>-bg` / `--role-<role>-fg` | A participant role, on its own token pair per role. Rendered by the `/me` dashboard's role column, the role-navigator chips on the `/me` surfaces (`app/web/templates/reviewer/_role_chips.html`) and the audience column of Sessions Diagnostics' Visibility grid audit card, which maps the stored `peer_reviewer` audience to the `reviewer` suffix (`app/web/views/_visibility_audit.py`). |
+| `.pill-role-reviewer`, `.pill-role-reviewee`, `.pill-role-observer` | `--role-<role>-bg` / `--role-<role>-fg` | A participant role, on its own token pair per role. Rendered by the `/me` dashboard's role column and the role-navigator chips on the `/me` surfaces (`app/web/templates/reviewer/_role_chips.html`). |
 
 ### Label or control
 

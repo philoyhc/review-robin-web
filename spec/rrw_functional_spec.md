@@ -1594,12 +1594,7 @@ Settings, Guide and About. It carries:
   session with summary state. Its **"Manage"** row action self-adds
   the sys-admin as an owner (audited) and opens the session — the
   explicit elevation door, since editing a non-owned session requires
-  ownership. Below it, a read-only **Visibility grid audit** lists
-  every stored visibility cell in the workspace that carries a mode
-  its audience and window do not allow — one the instrument card's
-  editor and the Settings import both refuse — and marks those a
-  participant can reach now. Clearing one is the owning operator's
-  job, in that instrument's visibility editor.
+  ownership.
 - **Per-session Outbox viewer** — the session's email outbox
   ([§11.3](#113-the-outbox)).
 - **Per-session Audit Log viewer** — filter strip + pretty-
