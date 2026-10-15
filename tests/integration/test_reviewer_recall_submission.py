@@ -12,6 +12,8 @@ from the summary, ``expired`` has no live form to return to).
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -317,3 +319,57 @@ def test_recall_then_resubmit_round_trips_the_submitted_at_stamp(
         ).scalars()
     )
     assert all(r.submitted_at is not None for r in rows)
+
+
+def _past_deadline(db: Session, review_session: ReviewSession) -> None:
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+
+
+def test_recall_button_hidden_once_the_deadline_passes(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """Past the deadline a ``ready`` session's form is read-only and
+    Submit is refused, so a recall would strand the reviewer at "Saved
+    but not submitted" (participant audit M1, author's ruling
+    2026-10-15)."""
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="recall-past-deadline", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+    _past_deadline(db, review_session)
+
+    resp = rae_client.get(f"/me/sessions/{review_session.id}/summary")
+    assert resp.status_code == 200
+    assert "Recall my submission" not in resp.text
+    assert f'action="/me/sessions/{review_session.id}/recall"' not in resp.text
+
+
+def test_recall_post_403s_once_the_deadline_passes(
+    client: TestClient,
+    db: Session,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    review_session = _seed_session_with_rae_and_one_reviewee(
+        client, db, code="recall-403-deadline", reviewer_email=rae.email
+    )
+    _activate(client, review_session)
+    rae_client = make_client(rae)
+    _submit(rae_client, review_session, db)
+    _past_deadline(db, review_session)
+
+    resp = rae_client.post(
+        f"/me/sessions/{review_session.id}/recall", follow_redirects=False
+    )
+    assert resp.status_code == 403
+    assert "This review has closed" in resp.text
+    still_submitted = db.execute(
+        select(Response).where(Response.submitted_at.is_(None))
+    ).scalars().first()
+    assert still_submitted is None

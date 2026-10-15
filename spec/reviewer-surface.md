@@ -882,8 +882,31 @@ three** of the following hold:
 3. `now() < ReviewSession.deadline` (deadline hasn't passed; null
    deadline counts as open).
 
-Failing any of those three returns **HTTP 403** on Save / Submit /
-Clear POSTs.
+Failing any of those three, or having no included assignment, refuses
+a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). The
+refusal renders the page again rather than the standalone error page,
+which used to throw away what the reviewer typed (participant audit P3):
+the page the reviewer was on, read-only as a GET would now show it, or
+the pre-open page when the session is no longer `ready` or `expired`.
+A `.rs-missing-card` (`data-rs-write-refused`) names the cause in one
+sentence, ending "so your last changes weren't saved" (Save), "so your
+answers weren't submitted" (Submit) or "so your answers weren't
+cleared" (Clear):
+
+| Cause | Opens with |
+|---|---|
+| `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
+| `expired` | "This review has closed" |
+| `draft`, `validated` or `archived` | "This review is not currently open" |
+| no included assignment | "You have nothing to review in this session right now" |
+
+Under it, `data-rs-unsaved-answers` lists every non-empty value the
+POST carried on the reviewer's own assignments (included or not) as
+plain text, `{instrument}: {reviewee} — {field}` then the value, line
+breaks kept, so it can be copied out. Values on anyone else's
+assignment are dropped. Every typed value is listed, changed or not:
+leaving out the ones matching the stored answer would disclose an
+answer the visibility setting hides. Clear carries none.
 
 GET requests behave differently depending on which gate fails:
 
@@ -1284,10 +1307,13 @@ dashboard's Session column once Reviewer Status is
   section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
   and a secondary "Your reviewer dashboard" link. Recall renders
-  only while the session is still `ready` (`can_recall =
-  lifecycle.is_ready`); it rolls the reviewer's submission back to
-  draft (nulls `submitted_at`) and 303s to the surface so they can
-  keep editing. Handled by `reviewer_recall` in
+  only while the session is still `ready` and its deadline has not
+  passed (`can_recall`): past either, the form it would land on is
+  read-only and Submit is refused, so a recall would strand the
+  reviewer at "Saved but not submitted" (participant audit M1). The
+  route refuses the same states with a 403. Recall rolls the
+  reviewer's submission back to draft (nulls `submitted_at`) and 303s
+  to the surface so they can keep editing. Handled by `reviewer_recall` in
   `routes_reviewer/_surface/_routes.py`.
 - **Sections** — one `.card` per instrument the reviewer
   responded on and may read now (§"Lifecycle gating"), in

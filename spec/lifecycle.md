@@ -423,7 +423,7 @@ What a reviewer reads back after close is the visibility policy's call
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
   on the reviewer surface — its GET (`review_surface` and
   `_surface_context`; the operator preview skips it), Recall, and the write gate
-  `_require_session_accepting` ahead of save / submit / clear — and by
+  `_write_refusal` ahead of save / submit / clear — and by
   the operator Instruments page GET (`instruments_index`). The
   predicate `session_accepts_responses` does not call it; it compares
   `now()` with the deadline itself (§4.1). The first request after the deadline

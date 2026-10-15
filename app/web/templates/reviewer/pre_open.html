@@ -24,6 +24,7 @@
 {% block content %}
   {% if is_archived %}
   <h1>{{ session.name }} — closed</h1>
+  {% include "reviewer/_write_refused.html" %}
 
   <div class="card">
     <div class="banner banner-info" style="margin: 0;">
@@ -36,6 +37,7 @@
   </div>
   {% else %}
   <h1>{{ session.name }} — opens later</h1>
+  {% include "reviewer/_write_refused.html" %}
   {# participant info Item 3 — a static `Reviewer` pill and the
      reviewer's own roster fields after it, as the operator preview
      renders them: this page has no role navigator of its own. #}

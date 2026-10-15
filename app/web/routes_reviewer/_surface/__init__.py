@@ -20,7 +20,7 @@ Layout:
 - ``_group_collapse.py`` — ``_collapse_group_rows`` +
   ``GROUP_MEMBER_NAME_LIMIT`` constant.
 - ``_context.py`` — ``_surface_context`` + the small loaders +
-  ``_require_session_accepting``.
+  the write gate ``_write_refusal`` and what a refused write shows.
 - ``_routes.py`` — GET + four POST handlers + the
   ``router`` instance + ``submit_redirect_url``.
 
@@ -51,7 +51,6 @@ from ._context import (
     _load_assignments_with_relations,  # noqa: F401
     _instruments_for_session,  # noqa: F401
     _pages_for_session,
-    _require_session_accepting,  # noqa: F401
     _reviewer_row_sort_key,  # noqa: F401
     _surface_context,
 )

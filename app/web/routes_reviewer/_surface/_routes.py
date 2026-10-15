@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
+from app.schemas.responses import ResponseUpsert
 from app.services import date_formatting
 from app.services import invitations as invitations_service
 from app.services import responses as responses_service
@@ -34,8 +35,10 @@ from app.web.routes_reviewer._shared import (
 from ._context import (
     _load_assignments_with_relations,
     _pages_for_session,
-    _require_session_accepting,
     _surface_context,
+    _unsaved_answers,
+    _write_refusal,
+    _write_refused_notice,
 )
 
 
@@ -134,6 +137,114 @@ def review_surface_clear_revisited(session_id: int) -> RedirectResponse:
     )
 
 
+def _pre_open_response(
+    request: Request,
+    user: User,
+    reviewer: Reviewer,
+    review_session: ReviewSession,
+    *,
+    extra: dict | None = None,
+    status_code: int = status.HTTP_200_OK,
+) -> HTMLResponse:
+    """The pre-open page, for a session that is neither ``ready`` nor
+    ``expired``. ``extra`` carries a refused write's notice (P3)."""
+    session_zone = sessions_service.resolve_session_timezone(review_session)
+    deadline_text = (
+        date_formatting.format_datetime(review_session.deadline, session_zone)
+        if review_session.deadline
+        else None
+    )
+    deadline_timezone_label = (
+        date_formatting.gmt_offset_zone_label(
+            session_zone, at=review_session.deadline
+        )
+        if review_session.deadline
+        else None
+    )
+    return _templates.TemplateResponse(
+        request,
+        "reviewer/pre_open.html",
+        {
+            "user": user,
+            "session": review_session,
+            "deadline_text": deadline_text,
+            "deadline_timezone_label": deadline_timezone_label,
+            "is_archived": lifecycle.is_archived(review_session),
+            # participant info Item 3 — the reviewer's own roster
+            # fields, so they can check them before the review
+            # opens. The closed (archived) variant shows none.
+            "reviewer_self_fields": (
+                []
+                if lifecycle.is_archived(review_session)
+                else views.reviewer_self_line_for(review_session, reviewer)
+            ),
+            **(extra or {}),
+        },
+        status_code=status_code,
+    )
+
+
+def _refused_write_response(
+    request: Request,
+    db: Session,
+    user: User,
+    reviewer: Reviewer,
+    review_session: ReviewSession,
+    cause: str,
+    *,
+    action: str,
+    page_n: int,
+    upserts: list[ResponseUpsert],
+) -> HTMLResponse:
+    """A refused Save / Submit / Clear (participant audit P3, author's
+    ruling 2026-10-15). Rather than the standalone error page, which
+    threw away what the reviewer typed, the page they were on renders
+    again, read-only as a GET would show it now, with a notice naming
+    the cause and the typed answers listed as text to copy. A session
+    that is neither ``ready`` nor ``expired`` renders the pre-open
+    page with the same notice. HTTP 403, as before."""
+    extra = {
+        "write_refused": _write_refused_notice(
+            review_session, cause, action=action
+        ),
+        "unsaved_answers": _unsaved_answers(db, reviewer, upserts),
+    }
+    if not (
+        lifecycle.is_ready(review_session)
+        or lifecycle.is_expired(review_session)
+    ):
+        return _pre_open_response(
+            request,
+            user,
+            reviewer,
+            review_session,
+            extra=extra,
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    pages = _pages_for_session(db, review_session.id)
+    if not 1 <= page_n <= len(pages):
+        page_n = 1
+    context = _surface_context(
+        db=db,
+        user=user,
+        reviewer=reviewer,
+        review_session=review_session,
+        page_n=page_n,
+        cookies=dict(request.cookies),
+    )
+    context.update(extra)
+    context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
+    context["role_chips"] = build_role_chips(
+        db, user=user, review_session=review_session, active_role="reviewer"
+    )
+    return _templates.TemplateResponse(
+        request,
+        "reviewer/review_surface.html",
+        context,
+        status_code=status.HTTP_403_FORBIDDEN,
+    )
+
+
 @router.get(
     "/sessions/{session_id}/{page_n}",
     response_class=HTMLResponse,
@@ -169,42 +280,7 @@ def review_surface(
         lifecycle.is_ready(review_session)
         or lifecycle.is_expired(review_session)
     ):
-        session_zone = sessions_service.resolve_session_timezone(
-            review_session
-        )
-        deadline_text = (
-            date_formatting.format_datetime(
-                review_session.deadline, session_zone
-            )
-            if review_session.deadline
-            else None
-        )
-        deadline_timezone_label = (
-            date_formatting.gmt_offset_zone_label(
-                session_zone, at=review_session.deadline
-            )
-            if review_session.deadline
-            else None
-        )
-        return _templates.TemplateResponse(
-            request,
-            "reviewer/pre_open.html",
-            {
-                "user": user,
-                "session": review_session,
-                "deadline_text": deadline_text,
-                "deadline_timezone_label": deadline_timezone_label,
-                "is_archived": lifecycle.is_archived(review_session),
-                # participant info Item 3 — the reviewer's own roster
-                # fields, so they can check them before the review
-                # opens. The closed (archived) variant shows none.
-                "reviewer_self_fields": (
-                    []
-                    if lifecycle.is_archived(review_session)
-                    else views.reviewer_self_line_for(review_session, reviewer)
-                ),
-            },
-        )
+        return _pre_open_response(request, user, reviewer, review_session)
     pages = _pages_for_session(db, review_session.id)
     validate_page_n(page_n, pages)
     context = _surface_context(
@@ -254,15 +330,28 @@ async def reviewer_save(
     batch save through.
     """
     reviewer, review_session = reviewer_session
-    # Off the event loop: the gate's deadline observer may wait on the
-    # session row lock (findings Bc4).
-    await run_in_threadpool(
-        _require_session_accepting, db, review_session, reviewer
-    )
     form = await request.form()
     upserts = responses_service.parse_form_payload(
         {k: v for k, v in form.items() if isinstance(v, str)}
     )
+    # Off the event loop: the gate's deadline observer may wait on the
+    # session row lock (findings Bc4).
+    refusal = await run_in_threadpool(
+        _write_refusal, db, review_session, reviewer
+    )
+    if refusal is not None:
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            refusal,
+            action="save",
+            page_n=page_n,
+            upserts=upserts,
+        )
     pages = _pages_for_session(db, review_session.id)
     validate_page_n(page_n, pages)
     target_instrument_ids = {inst.id for inst in pages[page_n - 1]}
@@ -332,14 +421,27 @@ async def reviewer_submit(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
-    # Off the event loop: the gate's deadline observer may wait on the
-    # session row lock (findings Bc4).
-    await run_in_threadpool(
-        _require_session_accepting, db, review_session, reviewer
-    )
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     upserts = responses_service.parse_form_payload(string_form)
+    # Off the event loop: the gate's deadline observer may wait on the
+    # session row lock (findings Bc4).
+    refusal = await run_in_threadpool(
+        _write_refusal, db, review_session, reviewer
+    )
+    if refusal is not None:
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            refusal,
+            action="submit",
+            page_n=_submitted_from_page(request),
+            upserts=upserts,
+        )
     result = responses_service.submit(
         db,
         review_session=review_session,
@@ -418,25 +520,36 @@ def reviewer_recall(
     on the form to edit it. The summary page's "Recall my
     submission" button posts here.
 
-    Gated on session status ``ready`` only — a session that's
-    been closed (``expired``) or archived has no live form to
-    return to, so recall is meaningless. ``accepting_responses``
-    is not consulted: it is session-wide, so a ready session past
-    its deadline is the only closed-but-ready case, and recall
-    there just returns the values to drafts the surface shows
-    read-only.
+    Gated on session status ``ready`` and the deadline not yet
+    passed. A closed (``expired``) or archived session has no live
+    form to return to, and past the deadline the form is read-only
+    and Submit is refused, so a recall there would strand the
+    reviewer at "Saved but not submitted" (participant audit M1,
+    author's ruling 2026-10-15). The summary page hides the button
+    in the same states; this refuses a stale or hand-made POST.
     """
     reviewer, review_session = reviewer_session
     lifecycle.observe_deadline(
         db, review_session, correlation_id=request_correlation_id()
     )
     db.refresh(review_session)
+    if lifecycle.is_expired(review_session) or (
+        lifecycle.is_ready(review_session)
+        and lifecycle.deadline_has_passed(review_session)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "This review has closed, so your submission can't be "
+                "recalled."
+            ),
+        )
     if not lifecycle.is_ready(review_session):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
-                "This review isn't open, so your submission can't be "
-                "recalled."
+                "This review is not currently open, so your submission "
+                "can't be recalled."
             ),
         )
     responses_service.recall(
@@ -464,13 +577,26 @@ async def reviewer_clear(
     ),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
-    await run_in_threadpool(
-        _require_session_accepting, db, review_session, reviewer
+    refusal = await run_in_threadpool(
+        _write_refusal, db, review_session, reviewer
     )
+    if refusal is not None:
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            refusal,
+            action="clear",
+            page_n=1,
+            upserts=[],
+        )
     form = await request.form()
     if form.get("confirm") != "true":
         raise HTTPException(

@@ -890,6 +890,17 @@ def _aware(value: datetime) -> datetime:
     return value
 
 
+def deadline_has_passed(
+    review_session: ReviewSession, *, now: datetime | None = None
+) -> bool:
+    """Whether the session's deadline is set and behind us. A null
+    deadline never passes."""
+    if review_session.deadline is None:
+        return False
+    current = now or datetime.now(timezone.utc)
+    return current >= _aware(review_session.deadline)
+
+
 def session_accepts_responses(
     review_session: ReviewSession,
     instrument: Instrument,
@@ -900,11 +911,7 @@ def session_accepts_responses(
         return False
     if not instrument.accepting_responses:
         return False
-    if review_session.deadline is not None:
-        current = now or datetime.now(timezone.utc)
-        if current >= _aware(review_session.deadline):
-            return False
-    return True
+    return not deadline_has_passed(review_session, now=now)
 
 
 def session_status_for_reviewer(
