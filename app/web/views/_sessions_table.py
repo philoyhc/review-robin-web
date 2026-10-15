@@ -7,6 +7,7 @@ and Diagnostics filters on name, code and owner.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from datetime import datetime
 
 from app.db.models import ReviewSession, User
 from app.services import date_formatting, sessions
@@ -15,9 +16,9 @@ __all__ = [
     "ARCHIVED_SORT_KEYS",
     "DIAGNOSTICS_SORT_KEYS",
     "LOBBY_SORT_KEYS",
-    "deadline_sort_value",
     "diagnostics_filter_options",
     "diagnostics_filter_text",
+    "instant_sort_value",
     "session_sort_value",
 ]
 
@@ -55,16 +56,16 @@ def session_sort_value(review_session: ReviewSession, key: str):
     return None
 
 
-def deadline_sort_value(review_session: ReviewSession) -> str:
-    """The Deadline cell's client sort key: the stored instant in UTC as
+def instant_sort_value(value: datetime | None) -> str:
+    """A stored instant's client sort key (the `sort_instant` filter, on
+    the session tables' Deadline, Created and Archived cells): UTC as
     ISO 8601, normalised as every other render is, so the browser orders
-    it as the route does whatever zone the cell is shown in; "" for no
-    deadline, which the sort primitive puts last either way. Always to
-    the microsecond: a variable width would collate "12:00:00.5" before
-    "12:00:00" in the browser."""
-    return date_formatting.iso_in_zone(
-        review_session.deadline, "UTC", timespec="microseconds"
-    )
+    it as the route does whatever zone the cell is shown in; "" for
+    none, which the sort primitive puts last either way. Always to the
+    microsecond: a variable width would collate "12:00:00.5" before
+    "12:00:00" in the browser, and the cell's own minutes would tie
+    rows the route tells apart."""
+    return date_formatting.iso_in_zone(value, "UTC", timespec="microseconds")
 
 
 def diagnostics_filter_text(review_session: ReviewSession, owners: Iterable[User]) -> str:

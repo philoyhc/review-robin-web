@@ -239,3 +239,7 @@ Sys Admin → Sessions Diagnostics.
   same order.
 - [ ] **Lobby and Archive Timezone.** Click Timezone: rows group by zone
   name (Asia/…, Europe/…), not by the GMT label, and a reload keeps it.
+- [ ] **Created and Archived.** On the lobby, the Archive page and
+  Sessions Diagnostics, click Created (and Archived on the Archive page)
+  both ways, then reload: the order doesn't change, even for sessions
+  created in the same minute.

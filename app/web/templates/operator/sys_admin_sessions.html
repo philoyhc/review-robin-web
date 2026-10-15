@@ -79,19 +79,19 @@
             <td>
               <span class="pill pill-count">{{ s.created_by_user.display_label }}</span>
             </td>
-            <td>
+            <td data-sort-value="{{ s.created_at | sort_instant }}">
               <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
             </td>
-            {# Deadline and Timezone carry what the route sorts by
-               (`views.session_sort_value`), not their labels: the stored
-               deadline as UTC ISO 8601 (`views.deadline_sort_value`;
-               empty, hence last either way, when there is none) and the
-               zone's IANA name. The browser compares names with
+            {# Created, Deadline and Timezone carry what the route sorts
+               by (`views.session_sort_value`), not their labels: the
+               stored instant as UTC ISO 8601 to the microsecond
+               (`sort_instant`; empty, hence last either way, when there
+               is none) and the zone's IANA name. The browser compares names with
                `localeCompare`, the route with Python's `<`, so some zone
                names still order differently after a reload — hyphen
                against underscore (`Port-au-Prince`, `Port_of_Spain`),
                and legacy names (`Etc/GMT+10`, `EST`). #}
-            <td data-sort-value="{{ deadline_sort_values[s.id] }}">
+            <td data-sort-value="{{ s.deadline | sort_instant }}">
               {% if s.deadline %}
                 <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
               {% else %}

@@ -85,11 +85,6 @@ def list_sessions(
             "filter_options": views.sessions_filter_options(
                 review_sessions, lobby_tags
             ),
-            # The Deadline cell's client sort key, so a header click
-            # orders rows as a reload does (as on Sessions Diagnostics).
-            "deadline_sort_values": {
-                s.id: views.deadline_sort_value(s) for s in review_sessions
-            },
             "breadcrumbs": breadcrumbs.operator_root(),
             "rehydrate_enabled": settings.rehydrate_enabled,
         },
