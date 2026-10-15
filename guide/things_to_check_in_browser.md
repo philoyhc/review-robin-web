@@ -232,7 +232,7 @@ Sys Admin → Sessions Diagnostics.
   back with Operators turned on and the new row ticked, its expander
   open; leave and come back and Operators is still on.
 
-## Lobby and Archive: a click sorts Deadline and Timezone as a reload does (2026-10-14)
+## Session tables: a click sorts as a reload does (2026-10-14, -15)
 
 - [ ] **Lobby Deadline.** With some sessions having no deadline, click
   Deadline both ways: those stay at the bottom, and a reload keeps the
@@ -242,4 +242,5 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Created and Archived.** On the lobby, the Archive page and
   Sessions Diagnostics, click Created (and Archived on the Archive page)
   both ways, then reload: the order doesn't change, even for sessions
-  created in the same minute.
+  created in the same minute. (Two created in the same second can still
+  swap on a local SQLite run, whose timestamps stop at the second.)

@@ -156,7 +156,7 @@ def test_created_deadline_and_timezone_sort_by_the_routes_values(
     ]
 
 
-def test_the_deadline_key_is_utc_and_fixed_width() -> None:
+def test_the_instant_key_is_utc_and_fixed_width() -> None:
     """An aware value at another offset comes out as UTC, and every key
     carries microseconds, so text order is time order: "12:00:00.5"
     would otherwise collate before "12:00:00" in the browser."""
