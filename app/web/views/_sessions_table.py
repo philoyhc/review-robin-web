@@ -135,6 +135,21 @@ def diagnostics_filter_text(review_session: ReviewSession, owners: Iterable[User
     return "\n".join(part for part in parts if part).lower()
 
 
+def session_status_counts(rows: Iterable[ReviewSession]) -> dict[str, int]:
+    """The count pills over a session table, shared by the lobby's
+    Sessions card and Sessions Diagnostics' Sessions Overview card:
+    every session, then draft (``validated`` counts as draft, as its
+    label does), activated (``ready``) and archived. Closed
+    (``expired``) sessions count only in the total."""
+    rows = list(rows)
+    return {
+        "total": len(rows),
+        "draft": sum(1 for s in rows if s.status in ("draft", "validated")),
+        "activated": sum(1 for s in rows if s.status == "ready"),
+        "archived": sum(1 for s in rows if s.status == "archived"),
+    }
+
+
 def owned_session_ids(
     owners_by_session: Mapping[int, list[User]], user: User
 ) -> set[int]:

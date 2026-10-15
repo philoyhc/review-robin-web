@@ -132,6 +132,7 @@ def sys_admin_sessions(
         {
             "user": user,
             "sessions": rows,
+            "session_counts": views.session_status_counts(rows),
             "sort_cookie": _DIAGNOSTICS_SORT_COOKIE,
             # The filter matches name, code and owner; the text it
             # matches rides each row.

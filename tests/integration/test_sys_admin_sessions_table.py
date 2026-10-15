@@ -219,3 +219,61 @@ def test_owned_session_ids_matches_the_user_by_id() -> None:
     assert views.owned_session_ids(owners, ann) == {10, 11}
     assert views.owned_session_ids(owners, User(id=3, email="cy@example.edu")) == set()
     assert views.owned_session_ids({}, ann) == set()
+
+
+def test_overview_and_filter_cards_sit_above_the_table(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    """Author, 2026-10-15: the lobby's two half-width cards. Sessions
+    Overview counts every session in the workspace with the lobby's
+    pills; Filter carries the box and Clear, with no inline label."""
+    ann = _user(db, "ann@example.edu")
+    _session(db, "One", "zz-one", ann)  # draft
+    _session(db, "Two", "zz-two", ann, status="validated")
+    _session(db, "Three", "zz-three", ann, status="ready")
+    _session(db, "Four", "zz-four", ann, status="archived")
+    _session(db, "Five", "zz-five", ann, status="expired")
+    db.commit()
+    body = client.get(PAGE).text
+
+    row = body.split('<div class="sessions-lobby-row">', 1)[1].split('<div class="card">', 1)[0]
+    overview = row.split("data-diagnostics-overview>", 1)[1].split("</div>\n    </div>", 1)[0]
+    assert "<h2>Sessions Overview</h2>" in overview
+    for pill in (
+        '<span class="pill pill-count">5 sessions</span>',
+        '<span class="pill pill-lifecycle-draft">2 draft</span>',
+        '<span class="pill pill-lifecycle-ready">1 activated</span>',
+        '<span class="pill pill-lifecycle-archived">1 archived</span>',
+    ):
+        assert pill in overview
+    filter_card = row.split('id="diagnostics-filter">', 1)[1]
+    assert "<h2>Filter</h2>" in filter_card
+    assert 'class="sessions-search-input"' in filter_card
+    assert 'placeholder="Filter by name, code, or owner"' in filter_card
+    assert "data-diagnostics-filter-clear>Clear</button>" in filter_card
+    # The old in-table toolbar and its "Filter:" label are gone.
+    assert "Filter:" not in body
+    assert '<div class="table-card-toolbar' not in body
+    # The cards come before the table.
+    assert body.index("sessions-lobby-row") < body.index('id="diagnostics-sessions"')
+
+
+def test_an_empty_workspace_keeps_the_cards_with_a_disabled_filter(
+    client: TestClient, admin: None
+) -> None:
+    body = client.get(PAGE).text
+    assert '<span class="pill pill-count">0 sessions</span>' in body
+    assert re.search(r'class="sessions-search-input"[^>]*\bdisabled\b', body, re.S)
+    assert '<span class="btn secondary disabled" aria-disabled="true">Clear</span>' in body
+    assert "No sessions in this workspace yet." in body
+
+
+def test_session_status_counts_matches_the_lobby_pills() -> None:
+    rows = [ReviewSession(status=s) for s in
+            ("draft", "validated", "ready", "ready", "expired", "archived")]
+    assert views.session_status_counts(rows) == {
+        "total": 6, "draft": 2, "activated": 2, "archived": 1,
+    }
+    assert views.session_status_counts([]) == {
+        "total": 0, "draft": 0, "activated": 0, "archived": 0,
+    }

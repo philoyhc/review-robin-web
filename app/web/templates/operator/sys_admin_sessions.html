@@ -12,43 +12,56 @@
     {% include "operator/partials/sys_admin_top_nav.html" %}
   {% endwith %}
 
+  {# The lobby's two half-width cards above its table (author,
+     2026-10-15): the same count pills, over every session in the
+     workspace, and a Filter card. The filter is the lobby's kind — it
+     hides rows already rendered, live on every keystroke, and never
+     queries — so `Clear` empties it rather than submitting. Its script
+     is its own rather than base.html's `rrwSessionFilterMatches`,
+     which matches name, code and tags per column; this one matches
+     owners too, so it tests one pre-joined string the route builds
+     (`data-filter-text`). #}
+  <div class="sessions-lobby-row">
+    <div class="card sessions-lobby-card" data-diagnostics-overview>
+      <h2>Sessions Overview</h2>
+      <div class="sessions-lobby-pills">
+        <span class="pill pill-count">{{ session_counts.total }} sessions</span>
+        <span class="pill pill-lifecycle-draft">{{ session_counts.draft }} draft</span>
+        <span class="pill pill-lifecycle-ready">{{ session_counts.activated }} activated</span>
+        <span class="pill pill-lifecycle-archived">{{ session_counts.archived }} archived</span>
+      </div>
+    </div>
+
+    <div class="card sessions-action-card" id="diagnostics-filter">
+      <h2>Filter</h2>
+      <input type="text" class="sessions-search-input"
+             list="diagnostics-filter-options"
+             placeholder="Filter by name, code, or owner"
+             aria-label="Filter sessions"
+             autocomplete="off"
+             {% if not sessions %}disabled{% endif %}
+             data-diagnostics-filter>
+      <datalist id="diagnostics-filter-options">
+        {% for value in filter_options %}
+          <option value="{{ value }}"></option>
+        {% endfor %}
+      </datalist>
+      <div class="sessions-action-buttons">
+        {% if sessions %}
+          <button type="button" class="btn secondary"
+                  data-diagnostics-filter-clear>Clear</button>
+        {% else %}
+          <span class="btn secondary disabled" aria-disabled="true">Clear</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   {% if sessions %}
     <div class="card">
       {# The lobby's columns, and its sort (author, 2026-10-14): the
          `rrw-sortable` primitive, its own cookie, seeded by the route.
-         Status and Actions don't sort. The filter is the lobby's kind —
-         it hides rows already rendered, live on every keystroke, and
-         never queries — so `Clear` empties it rather than submitting.
-         Its script is its own rather than base.html's
-         `rrwSessionFilterMatches`, which matches name, code and tags per
-         column; this one matches owners too, so it tests one
-         pre-joined string the route builds (`data-filter-text`). #}
-      <div class="table-card-toolbar is-split">
-        <div class="toolbar-pane toolbar-left"></div>
-        <div class="toolbar-pane toolbar-right">
-          <div class="operator-actions-filter" id="diagnostics-filter">
-            <div class="filter-row">
-              <label class="filter-search">
-                Filter:
-                <input type="text"
-                       list="diagnostics-filter-options"
-                       placeholder="Session name, code or owner"
-                       autocomplete="off"
-                       data-diagnostics-filter>
-                <datalist id="diagnostics-filter-options">
-                  {% for value in filter_options %}
-                    <option value="{{ value }}"></option>
-                  {% endfor %}
-                </datalist>
-              </label>
-            </div>
-            <div class="filter-actions">
-              <button type="button" class="btn secondary"
-                      data-diagnostics-filter-clear>Clear</button>
-            </div>
-          </div>
-        </div>
-      </div>
+         Status and Actions don't sort. #}
       {# `.table-scroll` (base.html): a table wider than its card
          scrolls inside the card rather than pushing the page sideways. #}
       <div class="table-scroll">
