@@ -527,3 +527,167 @@ def test_an_archived_row_is_not_linked_for_any_role(
     body = client.get("/me").text
     assert FINISHED in body
     assert f'href="/me/sessions/{review_session.id}' not in body
+
+
+# ── Status: the other routes to "Available", and the grant check ────
+
+
+def _policy(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    audience: str,
+    while_ongoing: str | None = None,
+    after_release: str | None = None,
+) -> Instrument:
+    instrument = Instrument(session_id=review_session.id, name="F", order=1)
+    db.add(instrument)
+    db.flush()
+    row = InstrumentViewPolicy(instrument_id=instrument.id, audience=audience)
+    if while_ongoing:
+        (
+            row.while_ongoing_granularity,
+            row.while_ongoing_identification,
+        ) = visibility_policies.MODE_LABELS[while_ongoing]
+    if after_release:
+        (
+            row.after_release_granularity,
+            row.after_release_identification,
+        ) = visibility_policies.MODE_LABELS[after_release]
+    db.add(row)
+    db.commit()
+    return instrument
+
+
+def _reviewer_answer(
+    db: Session,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    *,
+    visible: bool = True,
+) -> None:
+    reviewer = Reviewer(
+        session_id=review_session.id, name="Alice", email="alice@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Bob",
+        email_or_identifier="bob@example.edu",
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="comments",
+        label="Comments",
+        order=1,
+        visible=visible,
+    )
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+    )
+    db.add_all([field, assignment])
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="kept",
+        )
+    )
+    db.commit()
+
+
+def test_a_reviewee_with_a_grant_reads_available(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    review_session = _make_session(client, db, code="st-reviewee")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    assert AVAILABLE in client.get("/me").text
+
+
+def test_an_observer_past_the_deadline_with_a_summarized_grant_reads_available(
+    client: TestClient, db: Session
+) -> None:
+    """The while-ongoing window is the status column, not the deadline:
+    a ``ready`` session past its deadline still shows Summarized
+    collation."""
+    review_session = _observer_on(client, db, code="st-obs-past", status="ready")
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    _policy(db, review_session, audience="observer", while_ongoing="summarized")
+    assert AVAILABLE in client.get("/me").text
+
+
+def test_a_reviewer_reads_available_after_release_only_with_raw(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="st-rev-exp")
+    review_session.status = "expired"
+    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
+    instrument = _policy(
+        db,
+        review_session,
+        audience="peer_reviewer",
+        while_ongoing="raw",  # that cell is raw by rule
+        after_release="raw",
+    )
+    _reviewer_answer(db, review_session, instrument)
+    assert AVAILABLE in client.get("/me").text
+
+    review_session.responses_release_at = None
+    db.commit()
+    assert CLOSED in client.get("/me").text
+
+
+def test_an_answer_on_a_hidden_field_does_not_make_it_available(
+    client: TestClient, db: Session
+) -> None:
+    """The surface doesn't show it, so there is nothing to read back."""
+    review_session = _make_session(client, db, code="st-rev-hidden")
+    review_session.status = "ready"
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    instrument = Instrument(session_id=review_session.id, name="F", order=1)
+    db.add(instrument)
+    db.flush()
+    _reviewer_answer(db, review_session, instrument, visible=False)
+    assert CLOSED in client.get("/me").text
+
+
+def test_a_prepared_session_shows_its_scheduled_start(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _observer_on(client, db, code="st-sched", status="validated")
+    review_session.scheduled_activate_at = datetime(
+        2031, 3, 4, 9, 30, tzinfo=timezone.utc
+    )
+    db.commit()
+    assert "2031-03-04 09:30" in client.get("/me").text
+
+
+def test_observer_has_current_grant_follows_the_windows_and_archive(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="st-obs-grant")
+    _policy(db, review_session, audience="observer", while_ongoing="summarized")
+    has = visibility_policies.observer_has_current_grant
+
+    assert not has(db, review_session)  # draft: no window open
+    review_session.status = "ready"
+    assert has(db, review_session)  # the while-ongoing window
+    review_session.status = "expired"
+    assert not has(db, review_session)  # no after-release mode, no window
+    review_session.status = "archived"
+    assert not has(db, review_session)  # archive closes it

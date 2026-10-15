@@ -138,8 +138,8 @@ with the last section it covers.
   The card names the deadline and its zone. Press Submit instead of
   Save: it says "so your answers weren't submitted".
 - [ ] **Reverted to draft.** Same, but revert the session to draft. The
-  page you land on is "opens later", with the card at the top saying
-  "not currently open".
+  page you land on reads "This review is not currently open.", with the
+  refusal card at the top saying the same.
 - [ ] **Recall is gone past the deadline.** Submit everything, open the
   summary: "Recall my submission" shows. Let the deadline pass (session
   still Activated) and reload: the button is gone.

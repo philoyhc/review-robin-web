@@ -1174,7 +1174,7 @@ reviewee-/observer-only rows show `—` in those cells.
     (`views.participant_session_status`; vocabulary below).
   - **Reviewer status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows;
-    plus a paired `(N/M)` chip in the same colour. A reviewer with
+    plus a paired `(N/M)` chip in the same color. A reviewer with
     no included assignment reads "Nothing assigned to you" instead
     of a `0/0`. Renders `—` when the user is a reviewee / observer
     only.
@@ -1200,7 +1200,7 @@ per role the user holds:
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
 | `reviewee` | `/me/sessions/{id}/results` | `True` whenever the role is present — the role is itself conditional on a currently-resolving grant, so reaching this row means there is something to link to |
-| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` |
+| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, and the page answers 404 there, so the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
@@ -1222,7 +1222,7 @@ role. The first row that applies wins:
 | `Finished` | `pill-lifecycle-archived` | Session is `archived`. |
 | `Not open yet` | `pill-info` | Session is `draft` or `validated`. |
 | `Open` | `pill-success` | Session is `ready` and its deadline (if set) hasn't passed. |
-| `Available` | `pill-success` | Past that (`ready` past its deadline, or `expired`), and one of the row's roles can see something now: it carries `reviewee` (present only while a reviewee grant resolves), or `observer` with an observer grant resolving now (`visibility_policies.observer_has_current_grant`, session-wide, cohort-blind), or `reviewer` with a saved answer on an instrument whose `peer_reviewer` setting lets them read it back (`reviewer_sees_own_responses`). |
+| `Available` | `pill-success` | Past that (`ready` past its deadline, or `expired`), and one of the row's roles can see something now: it carries `reviewee` (present only while a reviewee grant resolves), or `observer` with an observer grant resolving now (`visibility_policies.observer_has_current_grant`, session-wide, cohort-blind), or `reviewer` with a saved answer, on a field the surface still shows, of an instrument whose `peer_reviewer` setting lets them read it back (`reviewer_sees_own_responses`). |
 | `Closed` | `pill-error` | Otherwise. Red matches the past-deadline pill in the End column. |
 
 The label decides no link. The reviewer role's link still follows
@@ -1271,9 +1271,11 @@ reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
 `submitted`.
 
-- **Gate** — `responses.reviewer_session_state.pill_state ==
-  "submitted"`. Otherwise redirects to `/me` with no
-  flash banner; the reviewer can re-submit from the surface.
+- **Gate** — a bare 404 once the session is archived, before anything
+  else (participant audit M4). Otherwise
+  `responses.reviewer_session_state.pill_state == "submitted"`, or a
+  redirect to `/me` with no flash banner; the reviewer can re-submit
+  from the surface.
 - **H1** — "Your responses — {session.name}".
 - **Role row** — under the H1: the role-navigator chips with the
   reviewer's own line after the last pill, as on the surface (§
@@ -1311,7 +1313,8 @@ dashboard's Session column once Reviewer Status is
   Group-scoped instruments collapse to one row per group with
   the composed group identity in the Reviewee column,
   mirroring the surface's existing collapse logic.
-- **CSV download** — `/me/sessions/{id}/summary.csv`
+- **CSV download** — `/me/sessions/{id}/summary.csv` (same gate:
+  404 once archived, else a redirect to `/me` until submitted)
   emits `{code}_my_responses.csv` (filename via
   `app.services.extracts.filename`). Same 21-column shape as
   the unified Responses CSV (see `spec/csv_contracts.md`
@@ -1414,8 +1417,9 @@ not learn that.
 
 Observers are **not** grant-gated the way reviewees are: being appointed
 an observer is not a disclosure *about* the observer, so the surface
-opens in every lifecycle state and simply renders nothing until their
-window does.
+opens in every lifecycle state but archived, where it answers 404
+(participant audit M4), and simply renders nothing until their window
+does.
 
 **What renders** — reviewer-surface chrome (`reviewer/collation.html`)
 plus the per-instrument 3-row collation table (reviewer-side

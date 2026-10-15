@@ -183,8 +183,9 @@ def reviewer_dashboard(
                     if pill is not None and pill.state == "submitted"
                     else f"/me/sessions/{review_session.id}/1"
                 ),
-                # Off while the session reads "not opened" (draft,
-                # validated or archived): there the reviewer surface
+                # Off while ``session_status_for_reviewer`` says "not
+                # opened" (draft, validated or archived; the row's pill
+                # reads "Not open yet" or "Finished"): there the surface
                 # renders only the ``reviewer/pre_open.html`` holding
                 # page, so the row carries no link to it.
                 "enabled": session_status != "not opened",
@@ -213,10 +214,10 @@ def reviewer_dashboard(
                 # observer is not a disclosure about the observer, so
                 # they may see that they are one before their window
                 # opens. But archive closes every non-operator grant, so
-                # on an archived session the page is empty by
-                # construction and a live link to it is a dead end. The
-                # row stays, reading "not opened", and loses its link —
-                # matching the reviewer row beside it.
+                # on an archived session the page answers 404 and a live
+                # link to it is a dead end. The row stays, reading
+                # "Finished", and loses its link — matching the reviewer
+                # row beside it.
                 #
                 # (A placeholder marker naming W17 stood here until 19F
                 # PR 5, the twin of W16's above. W17 shipped in
@@ -234,16 +235,7 @@ def reviewer_dashboard(
                 link_enabled = True
                 break
 
-        # Start: when it opened, once it has. Before then, the scheduled
-        # opening if a prepared session has one; a draft's leftover
-        # ``activated_at`` from before a revert is not a start
-        # (participant audit M6).
-        if lifecycle.is_validated(review_session):
-            start_at = review_session.scheduled_activate_at
-        elif lifecycle.is_draft(review_session):
-            start_at = None
-        else:
-            start_at = review_session.activated_at
+        start_at = views.participant_start_at(review_session)
 
         items.append(
             {

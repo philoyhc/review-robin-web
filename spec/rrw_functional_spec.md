@@ -1829,9 +1829,10 @@ reviewer. Confirmation checkbox required. Audit-logged as
 
 Once the session has fully submitted (every required cell
 populated and stamped), the reviewer sees a read-only
-**summary page** (`/me/sessions/{id}/summary`) — one section per
+**summary page** (`/me/sessions/{id}/summary`; 404 once archived, as
+is its CSV) — one section per
 instrument they responded on and may read now (each instrument's
-visibility policy decides; nothing once archived), a submitted-on
+visibility policy decides), a submitted-on
 timestamp, a
 **Recall my submission** control (rolls the submission back to
 draft while the review is still open: activated and before its
@@ -1886,7 +1887,8 @@ operator's Extract-data Token keys card). Each instrument renders
 only while its observer policy resolves a mode for the current
 window: its session-ongoing mode (Summarized, or nothing) while the
 session is `ready`, and its responses-released mode while it is
-`expired` and inside the release window; nothing once archived.
+`expired` and inside the release window. Once the session is archived
+the page and its downloads answer 404.
 
 ---
 
