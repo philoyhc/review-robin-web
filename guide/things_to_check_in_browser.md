@@ -244,3 +244,6 @@ Sys Admin → Sessions Diagnostics.
   both ways, then reload: the order doesn't change, even for sessions
   created in the same minute. (Two created in the same second can still
   swap on a local SQLite run, whose timestamps stop at the second.)
+- [ ] **Lobby Status.** With sessions in Draft, Validated, Activated and
+  Closed, click Status: they read Draft, Validated, Activated, Closed
+  (reversed on the second click), and a reload keeps it.

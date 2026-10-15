@@ -96,6 +96,8 @@ _templates.env.filters["format_date"] = format_date_filter
 # A stored instant as the session tables' client sort key, so a header
 # click orders Deadline / Created / Archived as a reload does.
 _templates.env.filters["sort_instant"] = views.instant_sort_value
+# A status's lifecycle position, the session tables' Status sort key.
+_templates.env.filters["sort_status"] = views.status_sort_cell
 # Mirrors the date_formatting.SHOW_ZONE_TOKEN switch into templates
 # so the two timezone-card live previews match the server render.
 _templates.env.globals["show_zone_token"] = date_formatting.SHOW_ZONE_TOKEN

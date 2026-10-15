@@ -11,6 +11,7 @@ from datetime import datetime
 
 from app.db.models import ReviewSession, User
 from app.services import date_formatting, sessions
+from app.services.session_lifecycle import SessionStatus
 
 __all__ = [
     "ARCHIVED_SORT_KEYS",
@@ -20,6 +21,8 @@ __all__ = [
     "diagnostics_filter_text",
     "instant_sort_value",
     "session_sort_value",
+    "status_sort_cell",
+    "status_sort_value",
 ]
 
 LOBBY_SORT_KEYS = frozenset(
@@ -52,8 +55,28 @@ def session_sort_value(review_session: ReviewSession, key: str):
     if key == "timezone":
         return sessions.resolve_session_timezone(review_session)
     if key == "status":
-        return review_session.status
+        return status_sort_value(review_session.status)
     return None
+
+
+# Lifecycle order (author, 2026-10-15), as `SessionStatus` declares it:
+# draft, validated, ready, expired, archived.
+_STATUS_ORDER = {status.value: index for index, status in enumerate(SessionStatus)}
+
+
+def status_sort_value(status: str) -> int | None:
+    """A status's place in the lifecycle, so Status sorts Draft →
+    Validated → Activated → Closed rather than by its enum string or its
+    label; None (last either way) for a status the enum doesn't know."""
+    return _STATUS_ORDER.get(status)
+
+
+def status_sort_cell(status: str) -> str:
+    """The Status cell's client sort key (the `sort_status` filter): the
+    same number as text, so a header click orders rows as a reload does,
+    or "" (last either way) where `status_sort_value` is None."""
+    value = status_sort_value(status)
+    return "" if value is None else str(value)
 
 
 def instant_sort_value(value: datetime | None) -> str:
