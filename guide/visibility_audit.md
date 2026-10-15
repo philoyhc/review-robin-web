@@ -139,7 +139,7 @@ Build, 2026-10-15:
 - `alembic upgrade head` and the `downgrade base + upgrade head`
   round-trip pass on Postgres (`ci-postgres`).
 - The agreement test covers every audience × pair × pair combination.
-- `grep -rn -i 'visibility grid audit\|visibility_audit' app tests spec docs` finds nothing.
+- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|_visibility_audit\|VisibilityAuditRow' app tests spec docs` finds nothing (the plan's own path, cited from the model and the test, is not the card).
 - `spec/visibility_policy.md` names `ck_view_policy_cell` and carries
   what the card's paragraph said.
 - `### Doc impact` current; `spec-writer` flags adjudicated.

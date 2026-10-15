@@ -170,14 +170,8 @@ that skipped the validator, and it fails loudly as an `IntegrityError`.
 pair × pair combination and requires the database to accept exactly
 what `_PER_CELL_VALID_MODES` accepts, so the two statements of the rule
 cannot drift. The migration first re-applies `14db60023e88`'s
-normalization, logs how many rows it rewrote, and stops on a row whose
-audience is none of the three. Before the constraint, Sessions
-Diagnostics carried a Visibility grid audit card that looked for such
-rows after the fact. With nothing left for it to find, it retired
-(`guide/visibility_audit.md`). The cell it watched hardest was an
-observer `raw` / `anonymized` grant on `while_ongoing`, an observer
-reading individual responses while the review is running. The readers'
-tolerance of a corrupt row (`decode_pair_to_mode` reads one as off)
+normalization, logs the ids of the rows it rewrote, and stops on a row
+whose audience is none of the three. The readers' tolerance of a corrupt row (`decode_pair_to_mode` reads one as off)
 stays as cheap defense.
 
 ### 3.2 Anchor-null inertness
@@ -215,7 +209,7 @@ instrument_view_policies
 
   -- Per-window mode pairs. NULL in both members ≡ "off in this
   -- window". (aggregated, identified) is the reserved-incoherent
-  -- combo and rejected by the service.
+  -- combo and rejected by the service and by ck_view_policy_cell.
   while_ongoing_granularity     String(16)  NULL  'row' | 'aggregated' | NULL
   while_ongoing_identification  String(16)  NULL  'identified' | 'deidentified' | NULL
   after_release_granularity     String(16)  NULL  'row' | 'aggregated' | NULL
@@ -227,10 +221,11 @@ instrument_view_policies
   created_at      DateTime(tz) NOT NULL
   updated_at      DateTime(tz) NOT NULL
   UNIQUE (instrument_id, audience)
+  CHECK ck_view_policy_cell  -- the per-cell rule, §3.1
 ```
 
 - One row per (instrument, audience). Upserts cover both the create and update cases.
-- Rows with both windows off (all four pair columns NULL) persist; the resolver reads them as off.
+- Reviewee and observer rows with both windows off (all four pair columns NULL) persist; the resolver reads them as off. A `peer_reviewer` row always carries Raw while ongoing (§3.1), so it is never off in both.
 - **Reviewer-identity level** (`after_release_reviewer_identity`; Alembic `b7e3d91a4c62`). How much of the reviewer a Raw released view names: `name`, `name_email` or `name_email_profile` (the reviewer's `ProfileLink`). `NULL` reads as `name_email`, which is Raw as it was before the level existed. Only the `reviewee` and `observer` rows carry it; a level on `peer_reviewer` is refused (`validate_reviewer_identity`, `invalid_reviewer_identity`), since a reviewer reading their own work is identified to no one. Only **Raw** reads it; `Anonymized` and `Summarized` never do. A stored level is kept when the cell's mode changes, so cycling back to Raw restores it. `upsert_policy` leaves the stored level alone unless a value is passed; the card's Save passes the level when its form carries one (absent input keeps, empty clears). The Settings CSV, Replicate and Duplicate carry it. What each reader shows per level: `spec/participant_model.md`; the control: `spec/instruments.md` § *Visibility card*.
 - There is no `observer_tag` column. An older settings CSV that still carries `…view_policies[observer].observer_tag` imports the row with that value dropped.
 
@@ -256,7 +251,7 @@ A no-op save (operator clicked Save with no changes) emits nothing.
 
 | Surface | What carries it |
 |---|---|
-| Persistence | `app/services/visibility_policies.py` — mode encoder / decoder, per-audience vocabulary, `upsert_policy`, `upsert_many`. |
+| Persistence | `app/services/visibility_policies.py` — mode encoder / decoder, per-audience vocabulary, `upsert_policy`, `upsert_many`. `app/db/models/instrument_view_policy.py` — the `ck_view_policy_cell` constraint (§3.1). |
 | Band 2's "Who can see what you wrote" card | One card, under the intro card in the left column of Band 2's intro, is both the preview and the editor (`spec/instruments.md` § *Visibility card*). Locked, it renders `band2_preview_visibility_rows_by_instrument` (`build_reviewer_visibility_rows`, same rows as the reviewer surface's `visibility_rows`) — two rows, Observers omitted, each mode a display-only `pill pill-count`, as on the reviewer surface, and after a Raw Reviewees cell a second one naming the reviewer-identity level (§4). Unlocked, the chip table renders hidden inputs that hitch on the card's main Save form (`form="dfsave-<id>"`), from `band3_visibility_by_instrument`; both the consolidated `POST /operator/sessions/{id}/instruments/{instrument_id}/save` and its no-JS `/fields/save` fallback read them and call `upsert_many`, so there is no standalone visibility submit to keep in step. A cycle chip (`newModelCycleVisibilityCell`) repaints the locked table's matching cell live on click, so an unsaved edit shows there before Save; Cancel's discard reload restores the saved state. |
 | Reviewer-surface transparency card | `views.build_reviewer_visibility_rows` (in `app/web/views/_instruments.py`) + a read-only "Who can see what you wrote" card under the heading card in the left column of each per-instrument intro (`.rs-intro-columns`; `spec/reviewer-surface.md`, "Intro and help cards") on `review_surface.html`. Two rows (You / Reviewees; Observers omitted) × two windows, with the persisted mode labels (Raw responses / Anonymized responses / Anonymized summaries / —), each a display-only `pill pill-count`; after a Raw Reviewees cell a second pill names the reviewer-identity level (§4). |
 | Resolver | `app/services/visibility_policies.py::resolve_mode` decodes one `(instrument, audience)` row to a mode for the two window flags its caller passes (`after_release` wins when both are open and it grants). It applies no scope: the callers work out which windows are open, short-circuit on archive (§3.3) and scope the rows — the reviewee to their own assignments, the observer to their cohort (`app/services/observer_cohort.py`). |
