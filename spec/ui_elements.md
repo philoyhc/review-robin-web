@@ -19,9 +19,10 @@ card shape (`spec/visual_style_general.md`): a 2px edge in
 always goes somewhere real, chosen from the request alone
 (`_home_link`): Sign out for a 401, "Go to Sessions" on an
 `/operator` path, and "Go to your reviews" (`/me`) everywhere else.
-"Go back" shows beside it only when the tab arrived from a page of the
-app (a same-origin `document.referrer`), not after a sign-in redirect
-(participant audit P2).
+"Go back" shows beside it only when the page was reached from a page of
+the app (a same-origin `document.referrer` outside `/.auth/`), and links
+to that page, so it never follows a sign-in redirect and works in a new
+tab (participant audit P2).
 
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`

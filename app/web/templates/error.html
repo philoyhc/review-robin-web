@@ -101,9 +101,9 @@
     <p class="error-message">{{ message }}</p>
     {# The page's own link always works, so a tab opened from an email or a
        bookmark is never stranded (participant audit P2). "Go back" shows
-       only when the tab arrived from a page of this app: history.length
-       also counts a sign-in redirect, and going back there lands on the
-       Microsoft login page. #}
+       only when the page was reached from a page of this app, and links
+       straight to it: history.length also counts a sign-in redirect, and
+       history.back() does nothing in a tab opened as a new tab. #}
     <p class="error-links">
       <a class="error-back" href="{{ home_url }}" data-error-home>{{ home_label }}</a>
       <a class="error-back" href="{{ home_url }}" data-error-history hidden>Go back</a>
@@ -111,16 +111,20 @@
     <script>
       (function () {
         var back = document.querySelector("[data-error-history]");
-        var cameFromApp = false;
+        if (!back) return;
+        var from;
         try {
-          cameFromApp = new URL(document.referrer).origin === window.location.origin;
-        } catch (e) { /* no referrer */ }
-        if (!back || !cameFromApp) return;
+          from = new URL(document.referrer);
+        } catch (e) {
+          return; /* no referrer */
+        }
+        // An app page, not the sign-in service's own (/.auth/...).
+        if (from.origin !== window.location.origin) return;
+        if (from.pathname.indexOf("/.auth/") === 0) return;
+        // A plain link to that page, so it works in a tab opened with
+        // "Open in new tab" too, where there is no history to go back.
+        back.href = from.href;
         back.hidden = false;
-        back.addEventListener("click", function (event) {
-          event.preventDefault();
-          window.history.back();
-        });
       })();
     </script>
   </main>
