@@ -719,7 +719,7 @@ The Operations-row page at
    page's `<h2>` belongs to the status table above.
 
    The card opens with the **two-pane toolbar**
-   (`.table-card-toolbar.is-split`) the other eight table pages carry;
+   (`.table-card-toolbar.is-split`) the other seven table pages carry;
    `spec/setup_pages.md` § *The table toolbar* states the shape once.
    The left pane holds the column chips, the pager cluster
    and the preview-count line; the right pane holds the filter strip,

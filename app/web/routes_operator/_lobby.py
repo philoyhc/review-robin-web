@@ -47,14 +47,7 @@ def list_sessions(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     all_sessions = sessions.list_for_user(db, user)
-    lobby_stats = {
-        "total": len(all_sessions),
-        "draft": sum(
-            1 for s in all_sessions if s.status in ("draft", "validated")
-        ),
-        "activated": sum(1 for s in all_sessions if s.status == "ready"),
-        "archived": sum(1 for s in all_sessions if s.status == "archived"),
-    }
+    lobby_stats = views.session_status_counts(all_sessions)
     # The main lobby table shows only non-archived sessions; archived
     # ones live on their own child page (Segment 18A Part 3). The
     # stats above still count them so the "archived" pill is accurate.

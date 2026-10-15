@@ -65,13 +65,17 @@ with the last section it covers.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## Sessions Diagnostics: Owned in place of Manage (2026-10-15)
+## Sessions Diagnostics: Overview and Filter cards, as on the lobby (2026-10-15)
 
-- [ ] **Owned.** Sign in as a sys-admin. On Sys Admin → Sessions
-  Diagnostics, a session you own (created, or added as an owner) shows a
-  grayed-out **Owned** where Manage was, and it can't be clicked.
-- [ ] **Manage still works.** A session you don't own shows **Manage**.
-  Click it: you land on that session's Home. Go back to Diagnostics, and
-  the row now reads **Owned**.
-- [ ] **Row layout.** Owned, Outbox and Audit log stay on one line, the
-  same width as the Manage rows.
+- [ ] **Two cards.** Sys Admin → Sessions Diagnostics: above the table,
+  Sessions Overview on the left and Filter on the right, each half the
+  width, matching the lobby's Sessions and Filter cards.
+- [ ] **Counts.** Sessions Overview's pills read the workspace's totals
+  (sessions, draft, activated, archived). Archive a Draft session (the
+  lobby's Purge and archive) and reload: draft drops by one and archived
+  rises by one.
+- [ ] **Filter.** The box reads "Filter by name, code, or owner" and
+  there is no "Filter:" label. Typing hides rows live, Clear empties
+  it. An owner's name or email finds their sessions.
+- [ ] **Narrow window.** Below about 800px the two cards stack,
+  Overview first.
