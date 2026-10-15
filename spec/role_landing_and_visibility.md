@@ -188,6 +188,38 @@ the segment rather than a side effect. If they also hold a reviewer or
 observer role on that session, the row survives on *that* role and only
 the Reviewee pill is missing.
 
+**Learning it through another role is accepted** (author, 2026-10-15).
+The rule above covers the reviewee role. Another role on the same session
+can show someone that they are a reviewee, and two such routes are
+deliberate exceptions. Each works only where that role is shown who the
+reviewee is:
+
+- **Self-review.** A reviewer assigned to review themselves, or a group
+  they belong to (`Assignment.is_self_review`, `spec/assignments.md`
+  § *Self-review policy*), knows they are a reviewee because the
+  assignment says so. The reviewer surface opens in `ready` and
+  `expired`. Draft, validated and archived sessions show only the
+  pre-open page.
+- **An observer in their own cohort.** An observer whose cohort rule
+  matches their own reviewee rows (the rule matches on tags) can find
+  themselves named in the per-instrument CSV under `Raw`. The
+  `/collation` page names no one in any mode.
+
+**What other people wrote about the person reaches them only inside one
+of their own windows.** For a reviewee, that is the response-release
+window (`/results`). For an observer, it is the observer's visibility
+windows (`/collation`). Neither route opens anything before then:
+
+- A reviewer's grant covers only responses they keyed in themselves
+  (`spec/visibility_policy.md` §1.1). A self-reviewer reads back their
+  own self-review and never what others wrote about them, in any state.
+- `Raw`, the only mode that names reviewees, is available to observers
+  only in the after-release window (`spec/visibility_policy.md` §3.1).
+  `Anonymized` replaces names with tokens, and `Summarized` shows counts
+  and aggregates. The observer's own rows can be part of the data in
+  either mode, including the while-ongoing `Summarized` view, but that
+  stays inside an observer window.
+
 ### Observer
 
 | Session state | `/me` row | Linked? | `/collation` |
