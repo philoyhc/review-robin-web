@@ -436,7 +436,15 @@ The lobby carries all three:
   on the Archive page) — not by its enum string or its label, on a
   reload (`views.status_sort_value`, the place in `SessionStatus`) and
   on a click alike (the cell's `data-sort-value`, the `sort_status`
-  filter); a status the enum doesn't know sorts last.
+  filter); a status the enum doesn't know sorts last. **Name, Code
+  and Created by** sort on a reload as a click sorts them
+  (`views.text_sort_value`, against the browser's
+  `localeCompare(…, {numeric: true})` over the trimmed cell text):
+  case aside, so `alpha` precedes `Beta`, and runs of digits as
+  numbers, so `Session 2` precedes `Session 10`. The two can still
+  differ on accents, punctuation and names that differ only in case,
+  since the browser collates in the viewer's locale. The same holds on
+  the Archive and on Sessions Diagnostics.
   A sort with rows selected drops the injected panel and re-anchors
   it from the shared `rrw:sorted` signal; the mechanism
   is in `spec/ui_elements.md` under `.session-row-selected`. Because
@@ -569,7 +577,7 @@ lobby's `Go to Archive`. Breadcrumb:
   place of Deadline. Every column but Tags and the checkbox sorts; the
   sort persists in the `rrw-sort-archived` cookie. Created and Archived
   carry the stored instant, and Timezone the zone's IANA name, as their
-  sort values, as on the lobby.
+  sort values, and Name, Code and Created by sort as on the lobby.
 - **Cards.** An `Archived` card with the `N archived` pill and, when
   any archived session is tagged, the tag-chip filter; and a `Filter`
   card with the lobby's per-column filter and typeahead and a `Clear`

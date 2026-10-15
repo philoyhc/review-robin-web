@@ -6,6 +6,7 @@ and Diagnostics filters on name, code and owner.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping
 from datetime import datetime
 
@@ -23,6 +24,7 @@ __all__ = [
     "session_sort_value",
     "status_sort_cell",
     "status_sort_value",
+    "text_sort_value",
 ]
 
 LOBBY_SORT_KEYS = frozenset(
@@ -40,12 +42,13 @@ DIAGNOSTICS_SORT_KEYS = LOBBY_SORT_KEYS - {"status"}
 
 def session_sort_value(review_session: ReviewSession, key: str):
     """The value a session table sorts ``key`` by, server side."""
+    # Text sorts as a header click does (author, 2026-10-15).
     if key == "name":
-        return review_session.name
+        return text_sort_value(review_session.name)
     if key == "code":
-        return review_session.code
+        return text_sort_value(review_session.code)
     if key == "created_by":
-        return review_session.created_by_user.display_label
+        return text_sort_value(review_session.created_by_user.display_label)
     if key == "created":
         return review_session.created_at
     if key == "deadline":
@@ -57,6 +60,26 @@ def session_sort_value(review_session: ReviewSession, key: str):
     if key == "status":
         return status_sort_value(review_session.status)
     return None
+
+
+_DIGIT_RUNS = re.compile(r"(\d+)")
+
+
+def text_sort_value(value: str | None) -> tuple | None:
+    """A text cell's server sort key, ordered as the browser orders the
+    cell on a header click (`localeCompare` with `numeric: true`, over
+    the trimmed text): case aside, so "alpha" precedes "Beta", and runs
+    of digits as numbers, so "Session 2" precedes "Session 10". Python's
+    `<` alone did neither. The key alternates text and number (text at
+    even places, int at odd), so any two keys compare like with like.
+    None for an empty value, which sorts last either way. Accents,
+    punctuation and names differing only in case can still order
+    differently in the browser, whose collation is the viewer's
+    locale's."""
+    if value is None or not value.strip():
+        return None
+    parts = _DIGIT_RUNS.split(value.strip().casefold())
+    return tuple(int(part) if index % 2 else part for index, part in enumerate(parts))
 
 
 # Lifecycle order (author, 2026-10-15), as `SessionStatus` declares it:

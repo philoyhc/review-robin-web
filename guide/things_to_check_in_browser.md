@@ -247,3 +247,8 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Lobby Status.** With sessions in Draft, Validated, Activated and
   Closed, click Status: they read Draft, Validated, Activated, Closed
   (reversed on the second click), and a reload keeps it.
+- [ ] **Names and codes.** With sessions named `alpha`, `Beta`,
+  `Session 2` and `Session 10`, sort Session Name ascending on the
+  lobby, then reload: they read `alpha`, `Beta`, `Session 2`,
+  `Session 10` both times. The same for Session Code, and on the Archive
+  and Sessions Diagnostics.
