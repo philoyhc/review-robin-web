@@ -105,7 +105,8 @@ Taken 2026-10-15 at `3070350c`.
 **Closed 2026-10-15.** Shipped in #3053, rungs 2 and 3 as one PR: the
 card's tests seed the illegal rows the constraint refuses, so the
 constraint could not land while the card stood (the author accepted the
-single PR). The author's browser check passed 2026-10-15. Decisions
+single PR). The author's browser check passed 2026-10-15, and its
+checklist section was deleted at close. Decisions
 confirmed at build:
 
 - Tests that stored an observer `raw` / `anonymized` grant on
@@ -124,7 +125,8 @@ archive-guard test had gone vacuous once its seed moved to
 `after_release`, and now relaxes the release-window predicate. Every
 other finding was prose that still called an illegal stored row
 reachable, or that named the reviewee ongoing grant as the dangerous
-cell. The observer ongoing per-row grant is that cell, in
+cell, apart from the log-line test above. The observer ongoing
+per-row grant is that cell, in
 `spec/visibility_policy.md` §3.1 and §4, `spec/settings_inventory.md`,
 `spec/role_landing_and_visibility.md`, `spec/participant_model.md`,
 `spec/instruments.md` and five docstrings.
@@ -149,7 +151,7 @@ cell. The observer ongoing per-row grant is that cell, in
 - `alembic upgrade head` and the `downgrade base + upgrade head`
   round-trip pass on Postgres (`ci-postgres`).
 - The agreement test covers every audience × pair × pair combination.
-- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|visibility_audit\|VisibilityAuditRow' app tests spec docs | grep -v 'guide/archive/visibility_cell_constraint\.md'` finds nothing. The filter drops citations of this plan, from the model, the migration and the test, which are not the card.
+- `grep -rn -i --exclude-dir=archive --include='*.py' --include='*.html' --include='*.md' 'visibility grid audit\|visibility_audit\|VisibilityAuditRow' app tests spec docs | grep -v 'guide/archive/visibility_cell_constraint\.md'` finds nothing. The filter drops citations of this plan, from the model and the test, which are not the card.
 - `spec/visibility_policy.md` names `ck_view_policy_cell` and carries
   what the card's paragraph said.
 - `### Doc impact` current; `spec-writer` flags adjudicated.
