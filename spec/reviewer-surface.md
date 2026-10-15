@@ -901,8 +901,10 @@ cleared" (Clear). The first cause that applies, in this order, wins:
 | no included assignment | "You have nothing to review in this session right now" |
 | `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
 
-Under it, `data-rs-unsaved-answers` lists every non-empty value the
-POST carried as plain text, line breaks kept, so it can be copied out.
+Under it, `data-rs-unsaved-answers` lists every value the POST carried
+that isn't blank, as plain text read from the raw form (leading and
+trailing whitespace kept, which a save strips), so it can be copied out
+(`app/web/views/_refused_write.py`).
 An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
 would show that row now: an included assignment of this reviewer, on a
 visible field, in a `ready` or `expired` session. Any other value (an

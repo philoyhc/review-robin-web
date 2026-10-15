@@ -384,6 +384,30 @@ def test_a_hidden_field_comes_back_without_labels(
     assert "Carol" not in listed
 
 
+def test_typed_text_comes_back_as_typed(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """Read from the raw form, not the stripped upserts: indentation
+    survives, and a blank value is not listed."""
+    review_session = _ready_session(client, db, code="refused-raw")
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+    aid = _assignment_of(db, review_session, "rae@example.edu").id
+
+    resp, _ = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.id}/1/save",
+        {
+            f"response[{aid}][comments]": "  indented\n    more  ",
+            f"response[{aid}][rating]": "   ",
+        },
+    )
+
+    listed = _unsaved_list(resp.text)
+    assert "  indented\n    more  " in listed
+    assert listed.count("<li>") == 1
+
+
 def test_a_refused_post_to_an_out_of_range_page_still_renders(
     client: TestClient, db: Session, make_client
 ) -> None:
