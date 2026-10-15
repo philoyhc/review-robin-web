@@ -158,6 +158,28 @@ while the session is `ready` regardless — but the reviewer surface's
 transparency table shows `Raw responses` there, as the editor does. So every stored row passes both writers, and an Instrument
 card's Save or a Settings re-import never meets one it refuses.
 
+**The database enforces it.** `instrument_view_policies` carries the
+CHECK constraint `ck_view_policy_cell` (migration `e5c1a9d3b7f2`,
+`app/db/models/instrument_view_policy.py`): a row is stored only if its
+audience is one of the three and each window's pair is off or a mode
+this table allows in that cell. Half-set and reserved-incoherent pairs
+fail it too. So a cell the two writers refuse cannot be stored by any
+other path either, present or future. Such a write is a bug in the path
+that skipped the validator, and it fails loudly as an `IntegrityError`.
+`tests/db/test_view_policy_cell_constraint.py` inserts every audience ×
+pair × pair combination and requires the database to accept exactly
+what `_PER_CELL_VALID_MODES` accepts, so the two statements of the rule
+cannot drift. The migration first re-applies `14db60023e88`'s
+normalization, logs how many rows it rewrote, and stops on a row whose
+audience is none of the three. Before the constraint, Sessions
+Diagnostics carried a Visibility grid audit card that looked for such
+rows after the fact. With nothing left for it to find, it retired
+(`guide/visibility_audit.md`). The cell it watched hardest was an
+observer `raw` / `anonymized` grant on `while_ongoing`, an observer
+reading individual responses while the review is running. The readers'
+tolerance of a corrupt row (`decode_pair_to_mode` reads one as off)
+stays as cheap defense.
+
 ### 3.2 Anchor-null inertness
 
 The `after_release` and `throughout` windows depend on `responses_release_at`. When the anchor is `NULL`, the §8.2.2 anchor-null rule applies — the after-release half is treated as "no scheduled fire". Per the view-time predicate:

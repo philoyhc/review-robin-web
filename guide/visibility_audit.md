@@ -79,6 +79,9 @@ prevents.
   refused write names the rule, and the downgrade drops one name.
 - `after_release_reviewer_identity` is not constrained here. The card
   never audited it; see Out of scope.
+- A row with an unknown audience stops the upgrade with its ids rather
+  than being deleted: nothing reads it, but deleting data is not the
+  migration's call (2026-10-15).
 
 ### Blast radius (measured)
 
@@ -87,7 +90,7 @@ Taken 2026-10-15 at `3070350c`.
 - Card code: 4 app files (`grep -rln 'visibility_audit\|VisibilityAuditRow' app`):
   `_sys_admin.py`, `views/__init__.py`, `views/_visibility_audit.py`
   (204 lines), `sys_admin_sessions.html`.
-- Tests: `tests/integration/test_sys_admin_visibility_audit_card.py`
+- Tests: `tests/integration/test_sys_admin_visibility_audit_card.py` <!-- path-ref-ok -->
   (301 lines), the only test that names the card.
 - Prose naming the card (`grep -rln -i 'visibility grid audit\|visibility_audit' spec docs guide/*.md`):
   `spec/operator_ui_concept.md`, `spec/rrw_functional_spec.md`,
@@ -96,6 +99,25 @@ Taken 2026-10-15 at `3070350c`.
 - Writers of the table: `visibility_policies.upsert_policy`; the
   Settings import and Duplicate / Replicate call it. No raw SQL writes
   it outside migrations.
+
+### Status
+
+Build, 2026-10-15:
+
+- **Rungs 2 and 3 landed as one PR.** The card's tests seed the illegal
+  rows it reports, which the constraint now refuses, so the constraint
+  cannot land with the card still standing.
+- **Tests that seeded an illegal row moved to a legal one.** The
+  observer-collation tests (and those reusing their seed helper, in
+  `test_reviewer_identity_level.py` and `test_profile_value_render.py`)
+  stored an observer `raw` / `anonymized` grant on `while_ongoing`. They
+  now put the per-row mode on `after_release` with the release window
+  open, the one way the product allows it. Two tests that pinned
+  behavior for such a row (a legacy reviewee ongoing grant, Replicate
+  skipping an illegal cell) were retired, since the row can no longer
+  exist.
+- The migration logs the rewritten rows' ids as well as their count, so
+  `guide/post_azure_todo_checklist.md` item 1 can name whom to tell.
 
 ### PR ladder
 
@@ -108,7 +130,7 @@ Taken 2026-10-15 at `3070350c`.
 3. **Retire the card.** Remove it from `sys_admin_sessions.html`, drop
    `views/_visibility_audit.py`, the route's `visibility_audit_rows` and
    the card's test file; move the card's reasoning into
-   `spec/visibility_policy.md` §5; update every spec that names the card;
+   `spec/visibility_policy.md` §3.1; update every spec that names the card;
    rewrite `guide/post_azure_todo_checklist.md` item 1 around the
    migration's log line; add the browser check.
 
@@ -137,7 +159,7 @@ None.
 
 ### Doc impact
 
-- `spec/visibility_policy.md` — §3.1: the database enforces the per-cell rule (`ck_view_policy_cell`); §5: what the retired card checked and why it is no longer needed (Item 1).
+- `spec/visibility_policy.md` — §3.1: the database enforces the per-cell rule (`ck_view_policy_cell`), and what the retired card checked and why it is no longer needed (Item 1).
 - `spec/operator_ui_concept.md` — Sessions Diagnostics drops the audit card (Item 1).
 - `spec/rrw_functional_spec.md` — the Sys Admin pages drop the audit card (Item 1).
 - `spec/operator_button_audit.md` — the card note under Sessions Diagnostics goes (Item 1).

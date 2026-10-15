@@ -254,55 +254,10 @@ def test_replicate_copies_the_visibility_policies(db: Session) -> None:
     ) == [replica.id] * 3
 
 
-def test_replicate_does_not_carry_an_illegal_cell(db: Session) -> None:
-    """A stored cell the per-cell rule rejects (an observer seeing Raw
-    while the session is ongoing, say, from an import that predates the
-    rule) is not copied: it falls back to off, and the legal cell in the
-    same row survives."""
-    review_session, source, op = _setup(db)
-    db.add(
-        InstrumentViewPolicy(
-            instrument_id=source.id,
-            audience="observer",
-            while_ongoing_granularity="row",
-            while_ongoing_identification="identified",
-            after_release_granularity="row",
-            after_release_identification="deidentified",
-        )
-    )
-    db.commit()
-
-    db.add_all(
-        [
-            # Off is not allowed here; the cell's one mode is Raw.
-            InstrumentViewPolicy(
-                instrument_id=source.id,
-                audience="peer_reviewer",
-                after_release_granularity="row",
-                after_release_identification="identified",
-            ),
-            # The reserved-incoherent pair decodes to nothing: off.
-            InstrumentViewPolicy(
-                instrument_id=source.id,
-                audience="reviewee",
-                after_release_granularity="aggregated",
-                after_release_identification="identified",
-            ),
-        ]
-    )
-    db.commit()
-
-    replica = instruments.replicate_instrument(
-        db, review_session=review_session, source=source, actor=op
-    )
-
-    assert _policy_rows(db, replica.id) == {
-        ("observer", None, None, "row", "deidentified"),
-        ("peer_reviewer", "row", "identified", "row", "identified"),
-        ("reviewee", None, None, None, None),
-    }
-
-
+# A stored illegal cell used to be pinned here as not copied by
+# Replicate. Such a cell can no longer be stored: `ck_view_policy_cell`
+# refuses it (`tests/db/test_view_policy_cell_constraint.py`).
+# Replicate's per-cell check stays as defense.
 def test_replicate_marks_a_long_label_within_its_column(db: Session) -> None:
     review_session, source, op = _setup(db)
     source.short_label = "x" * 32

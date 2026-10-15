@@ -41,45 +41,34 @@ cutover.
 
 ---
 
-## 1. Run the visibility-grid audit against real data, before any reviewee-facing window opens
+## 1. Read the visibility constraint's migration log on the deployed database, before any participant-facing window opens
 
 **Status:** open. Blocked on the deployment.
 
-**What.** Sign in as a sys admin and read the **Visibility grid audit**
-card on `/operator/sys-admin/sessions`.
+**What.** When the deployment runs `alembic upgrade head`, read the line
+migration `e5c1a9d3b7f2` logs: `ck_view_policy_cell: normalized N
+instrument_view_policies row(s) before adding the constraint`, with
+the row ids when N is not zero.
 
-**Why it cannot wait, and why it cannot be done now.** The card exists to
-find `instrument_view_policies` rows written *before* the Settings-CSV
-import learned to refuse an illegal cell (Segment 19C Item 9, PR #2188).
-Migration `14db60023e88` (#2833) has since normalized those rows, so
-the card should read empty; reading it on real data confirms the
-migration ran there. The cell that matters is an **observer** grant of
-`Raw` or `Anonymized` on **Session ongoing**: an observer reading
-individual responses while the review is still running. The reviewee
-readers treat that window as closed, so a reviewee row grants nothing.
+**Why.** This replaces reading the retired Visibility grid audit card on
+real data (`guide/visibility_audit.md`). The card existed to find
+`instrument_view_policies` rows the per-cell rule refuses, above all an
+**observer** grant of `Raw` or `Anonymized` on **Session ongoing**, an
+observer reading individual responses while the review is still
+running. The migration now rewrites any such row to the nearest legal
+cell (the 2026-10-05 ruling) before adding a constraint that stops one
+being stored again. It has only run against fixtures, and only real
+data says whether N is zero. A row whose audience is none of the three
+stops the upgrade with its ids instead.
 
-It has only ever run against fixtures. On a database with almost no rows
-a green card means *"no rows here"*, not *"no bad rows"*, so the check
-written specifically to find pre-existing bad data has so far produced no
-evidence about pre-existing bad data. Only real data settles it.
-
-**Before any participant-facing window opens**, because that is the
-moment a bad row stops being a latent defect and becomes a disclosure.
-
-**Done when.** The card has been read on the deployed workspace with
-real sessions present, and either it lists no findings — recorded with
-the date and roughly how many instruments were in scope, since a green
-card over three instruments proves little — or each finding has been
-resolved by the operator who owns that session, on that instrument's
-Band 3 editor. The card is read-only by design; clearing a cell is a
-judgment about a live review and does not belong to whoever runs the
-check.
+**Done when.** The line has been read on the deployed database and
+recorded with the date. If N is not zero, the operator who owns each
+listed row's session has been told that its visibility changed, since
+the rewrite narrows a grant without asking them.
 
 **Where this came from.** `guide/archive/segment_19C_refinements.md`
-Item 10 planned the first real run and recorded it in the item. The item
-then closed and was archived, and the 08sep assessment §5 carried the
-weakness while the instruction itself lived nowhere a deployer would
-look — which is the failure this file exists to stop repeating.
+Item 10 planned the card's first real run; `guide/visibility_audit.md`
+retired the card for the constraint.
 
 ---
 

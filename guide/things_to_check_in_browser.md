@@ -255,3 +255,11 @@ Sys Admin → Sessions Diagnostics.
   `s-10`, `s1`), and the same on the Archive and Sessions Diagnostics.
   Created by follows the same rule, but a local run with fake auth has
   one creator, so it can't be told apart there.
+
+## Sessions Diagnostics: the Visibility grid audit card is gone (2026-10-15)
+
+- [ ] **No card.** Sys Admin → Sessions Diagnostics ends with the
+  sessions table; the Visibility grid audit card is gone.
+- [ ] **Editor unchanged.** An instrument's "Who can see what you wrote"
+  card still saves each mode it offers, for every audience and window
+  (the database constraint sits behind it, unseen).

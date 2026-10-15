@@ -9,7 +9,7 @@ the Anonymized → tokens behaviour on the CSV.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -53,6 +53,17 @@ def _make_session(
     return review_session
 
 
+def _open_release_window(db: Session, review_session: ReviewSession) -> None:
+    """Close the session and backdate its release anchor, so the
+    Responses released cell — the one a per-row mode may sit on — is
+    the one the readers consult."""
+    review_session.status = "expired"
+    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
+    db.commit()
+
+
 def _seed_one_instrument(
     db: Session,
     review_session: ReviewSession,
@@ -63,7 +74,18 @@ def _seed_one_instrument(
     """One instrument + one Integer response field + one Band 3
     policy granting the observer audience access. Plus one
     reviewer, one reviewee, one assignment, one submitted
-    response."""
+    response.
+
+    The grant goes where the product allows it (`ck_view_policy_cell`):
+    Summarized on the Session ongoing cell, the session left Activated;
+    a per-row mode (Raw, Anonymized) on the Responses released cell,
+    with the session closed and its release window open. Before the
+    constraint these tests stored a per-row mode on the ongoing cell,
+    a row the editor and the import have always refused."""
+    pair = (while_ongoing_granularity, while_ongoing_identification)
+    released = pair != ("aggregated", "deidentified")
+    if released:
+        _open_release_window(db, review_session)
     inst = Instrument(
         session_id=review_session.id, name="Instrument 1", order=0
     )
@@ -82,8 +104,10 @@ def _seed_one_instrument(
         InstrumentViewPolicy(
             instrument_id=inst.id,
             audience="observer",
-            while_ongoing_granularity=while_ongoing_granularity,
-            while_ongoing_identification=while_ongoing_identification,
+            while_ongoing_granularity=None if released else pair[0],
+            while_ongoing_identification=None if released else pair[1],
+            after_release_granularity=pair[0] if released else None,
+            after_release_identification=pair[1] if released else None,
         )
     )
     r = Reviewer(
@@ -228,8 +252,8 @@ def test_collation_numbers_instruments_from_one(
         InstrumentViewPolicy(
             instrument_id=second.id,
             audience="observer",
-            while_ongoing_granularity="row",
-            while_ongoing_identification="identified",
+            after_release_granularity="row",
+            after_release_identification="identified",
         )
     )
     db.commit()
@@ -590,6 +614,7 @@ def test_collation_csv_or_rule_per_row_either_side(
     to ALL) or dropped both rules' valid cases (AND
     intersect)."""
     review_session = _make_session(client, db, code="col-csv-or")
+    _open_release_window(db, review_session)
     inst = Instrument(
         session_id=review_session.id, name="Instrument 1", order=0
     )
@@ -608,8 +633,8 @@ def test_collation_csv_or_rule_per_row_either_side(
         InstrumentViewPolicy(
             instrument_id=inst.id,
             audience="observer",
-            while_ongoing_granularity="row",
-            while_ongoing_identification="identified",
+            after_release_granularity="row",
+            after_release_identification="identified",
         )
     )
     r_math = Reviewer(
@@ -720,6 +745,7 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
     unconstrained-reviewee-side fallback includes every
     reviewee. Regression test for the OR → AND filter swap."""
     review_session = _make_session(client, db, code="col-csv-scope")
+    _open_release_window(db, review_session)
     inst = Instrument(
         session_id=review_session.id, name="Instrument 1", order=0
     )
@@ -738,8 +764,8 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
         InstrumentViewPolicy(
             instrument_id=inst.id,
             audience="observer",
-            while_ongoing_granularity="row",
-            while_ongoing_identification="identified",
+            after_release_granularity="row",
+            after_release_identification="identified",
         )
     )
     # Two reviewers — only one matches the cohort rule.
@@ -830,6 +856,7 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     the cohort gets dropped before tokens are computed; their
     token never appears in the CSV."""
     review_session = _make_session(client, db, code="col-csv-anon-scope")
+    _open_release_window(db, review_session)
     inst = Instrument(
         session_id=review_session.id, name="Instrument 1", order=0
     )
@@ -848,8 +875,8 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
         InstrumentViewPolicy(
             instrument_id=inst.id,
             audience="observer",
-            while_ongoing_granularity="row",
-            while_ongoing_identification="deidentified",
+            after_release_granularity="row",
+            after_release_identification="deidentified",
         )
     )
     in_cohort = Reviewer(

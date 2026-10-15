@@ -34,7 +34,6 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
-    InstrumentViewPolicy,
     Response,
     Reviewee,
     Reviewer,
@@ -283,44 +282,11 @@ def test_results_body_renders_raw_responses_for_reviewee(
     assert "Solid work." in body
 
 
-def test_a_legacy_while_ongoing_reviewee_row_grants_nothing_before_release(
-    db: Session,
-    alice: AuthenticatedUser,
-    carol: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """A13 (2026-10-02). A reviewee's grant is after-release only, but a
-    row written before the per-cell validation can still carry a
-    while-ongoing mode. On an Activated session it used to open the
-    route's gate and show its submitted values. The gate and the builder
-    both pass the while-ongoing window as closed now, so the page is a
-    bare 404 — no values, no names, and no sign the reviewee is being
-    reviewed."""
-    operator = make_client(alice)
-    review_session = _seed_and_activate(operator, db, code="vp-legacy")
-    _seed_submitted_responses(db, review_session)
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalar_one()
-    granularity, identification = visibility_policies.encode_mode("raw")
-    db.add(
-        InstrumentViewPolicy(
-            instrument_id=instrument.id,
-            audience="reviewee",
-            while_ongoing_granularity=granularity,
-            while_ongoing_identification=identification,
-        )
-    )
-    db.commit()
-    assert review_session.status == "ready"
-
-    response = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
-    )
-
-    assert response.status_code == 404
-    assert "Solid work." not in response.text
-    assert "rae@example.edu" not in response.text
+# A13 (2026-10-02) pinned that a legacy reviewee row carrying a
+# while-ongoing mode granted nothing on an Activated session. Such a row
+# can no longer be stored: `ck_view_policy_cell` refuses it
+# (`tests/db/test_view_policy_cell_constraint.py`). The gate and the
+# builder still pass that window as closed.
 
 
 def test_results_404_when_no_visibility_policy(

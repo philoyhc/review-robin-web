@@ -106,13 +106,18 @@ def test_policy_unique_per_instrument_audience(db: Session) -> None:
 
 def test_three_audiences_per_instrument_allowed(db: Session) -> None:
     instrument = _instrument(db)
+    # Each with a cell its audience allows (`ck_view_policy_cell`): only
+    # the reviewer reads Raw while the session is ongoing.
     for audience in ("reviewee", "peer_reviewer", "observer"):
+        ongoing = ("row", "identified") if audience == "peer_reviewer" else (None, None)
         db.add(
             InstrumentViewPolicy(
                 instrument_id=instrument.id,
                 audience=audience,
-                while_ongoing_granularity="row",
-                while_ongoing_identification="identified",
+                while_ongoing_granularity=ongoing[0],
+                while_ongoing_identification=ongoing[1],
+                after_release_granularity="row",
+                after_release_identification="identified",
             )
         )
     db.commit()
