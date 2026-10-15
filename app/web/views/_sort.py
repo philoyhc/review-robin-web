@@ -114,6 +114,11 @@ def apply_cookie_sort(
     well-defined. Multi-key cascade walks the keys in priority
     order; first decisive key wins.
 
+    Each row's values are resolved once, before sorting, rather than
+    at every comparison: a resolver may build a key (the session
+    tables' `text_sort_value` splits text with a regex), and a sort
+    makes O(n log n) comparisons.
+
     Returns a new list (input not mutated). Empty / missing
     ``spec`` short-circuits to ``list(rows)``.
     """
@@ -123,14 +128,14 @@ def apply_cookie_sort(
 
     from functools import cmp_to_key
 
+    def _resolve(row) -> list:
+        values = [value_resolver(row, key) for key, _ in spec]
+        return [None if value == "" else value for value in values]
+
+    decorated = [(_resolve(row), row) for row in materialised]
+
     def _compare(a, b) -> int:
-        for key, direction in spec:
-            av = value_resolver(a, key)
-            bv = value_resolver(b, key)
-            if av == "":
-                av = None
-            if bv == "":
-                bv = None
+        for (_, direction), av, bv in zip(spec, a[0], b[0]):
             if av is None and bv is None:
                 continue
             if av is None:
@@ -143,7 +148,7 @@ def apply_cookie_sort(
             return -base if direction == "desc" else base
         return 0
 
-    return sorted(materialised, key=cmp_to_key(_compare))
+    return [row for _, row in sorted(decorated, key=cmp_to_key(_compare))]
 
 
 # Segment 13B Part 2 PR 5 — cookie shape.
