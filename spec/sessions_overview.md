@@ -431,7 +431,12 @@ The lobby carries all three:
   shows the minute in the viewer's zone, and the zone's IANA name — so
   a click orders them as a reload does, except where the browser's
   collation and Python's differ on some zone names (hyphen against
-  underscore, legacy names such as `Etc/GMT+10`).
+  underscore, legacy names such as `Etc/GMT+10`). **Status** sorts in
+  lifecycle order — Draft, Validated, Activated, Closed (then Archived,
+  on the Archive page) — not by its enum string or its label, on a
+  reload (`views.status_sort_value`, the place in `SessionStatus`) and
+  on a click alike (the cell's `data-sort-value`, the `sort_status`
+  filter); a status the enum doesn't know sorts last.
   A sort with rows selected drops the injected panel and re-anchors
   it from the shared `rrw:sorted` signal; the mechanism
   is in `spec/ui_elements.md` under `.session-row-selected`. Because

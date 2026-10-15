@@ -204,7 +204,9 @@
                   <abbr class="tz-gmt" title="{{ gmt_offset_label(tz) }} {{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
                 </span>
               </td>
-              <td>
+              {# Status sorts in lifecycle order (`sort_status`), as the
+                 route does, not by its label. #}
+              <td data-sort-value="{{ s.status | sort_status }}">
                 <span class="pill pill-lifecycle-{{ s.status }}">{{ s.status | lifecycle_label }}</span>
               </td>
               <td>

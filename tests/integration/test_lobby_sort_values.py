@@ -7,8 +7,10 @@ route's value, as Sessions Diagnostics' do."""
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -16,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.services import operator_settings, sessions
+from app.web import views
 
 
 def _session(client: TestClient, db: Session, code: str, **fields: object) -> ReviewSession:
@@ -57,6 +60,7 @@ def test_the_lobby_dates_and_timezone_carry_the_routes_values(
         "2026-10-01T09:30:15.250000+00:00",
         "2026-11-01T12:00:00.000000+00:00",
         "Asia/Singapore",
+        "0",  # Status, a draft's lifecycle place
     ]
 
 
@@ -73,4 +77,43 @@ def test_the_archive_dates_and_timezone_carry_the_routes_values(
         "2026-09-01T08:00:00.000001+00:00",
         "2026-10-02T17:45:00.999999+00:00",
         "Europe/Paris",
+        "4",  # Status, archived
     ]
+
+
+def test_status_sorts_in_lifecycle_order_on_a_reload_and_a_click(
+    client: TestClient, db: Session
+) -> None:
+    """Status sorts Draft → Validated → Activated → Closed (author,
+    2026-10-15), on a reload by `session_sort_value` and on a click by
+    the cell's matching number, not by the enum string or the label."""
+    # Ages chosen so the default order (newest first) is neither the
+    # lifecycle order nor its reverse: closed, draft, active, valid.
+    for code, status, day in (
+        ("zz-closed", "expired", 4), ("zz-draft", "draft", 3),
+        ("zz-active", "ready", 2), ("zz-valid", "validated", 1),
+    ):
+        _session(
+            client, db, code, status=status,
+            created_at=datetime(2026, 10, day, tzinfo=timezone.utc),
+        )
+    lifecycle = ["zz-draft", "zz-valid", "zz-active", "zz-closed"]
+
+    def order(direction: str) -> list[str]:
+        client.cookies.set(
+            "rrw-sort-lobby", quote(json.dumps([{"key": "status", "dir": direction}]))
+        )
+        body = client.get("/operator/sessions").text
+        client.cookies.clear()
+        return sorted(lifecycle, key=lambda c: body.index(f"<code>{c}</code>"))
+
+    assert order("asc") == lifecycle
+    assert order("desc") == lifecycle[::-1]
+    body = client.get("/operator/sessions").text
+    assert [_sort_values(body, c)[-1] for c in lifecycle] == ["0", "1", "2", "3"]
+
+
+def test_an_unknown_status_has_no_lifecycle_place() -> None:
+    assert views.status_sort_value("archived") == 4
+    assert views.status_sort_value("retired") is None
+    assert views.status_sort_cell("retired") == ""
