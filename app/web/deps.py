@@ -111,6 +111,28 @@ def _stash_display_timezone(request: Request, user: User) -> None:
     )
 
 
+def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
+    """The persisted ``users`` row for this identity, or ``None``;
+    never creates one.
+
+    Case-insensitive lookup so a pre-seeded row (e.g. via the
+    sys-admin invite path at app/services/users.py:430) is reused
+    regardless of casing. Order by id and take the oldest match so
+    any historical case-variant duplicates (rows created before
+    this normalization landed) resolve deterministically to the
+    original row rather than raising MultipleResultsFound. The
+    storage-level guard against new duplicates is Slice D.
+    """
+    if not current_user.email:
+        return None
+    return db.execute(
+        select(User)
+        .where(func.lower(User.email) == normalize_email(current_user.email))
+        .order_by(User.id)
+        .limit(1)
+    ).scalar_one_or_none()
+
+
 def get_or_create_user(
     request: Request,
     current_user: AuthenticatedUser = Depends(get_current_user),
@@ -122,19 +144,7 @@ def get_or_create_user(
             detail="Authenticated identity has no email claim",
         )
 
-    # Case-insensitive lookup so a pre-seeded row (e.g. via the
-    # sys-admin invite path at app/services/users.py:430) is reused
-    # regardless of casing. Order by id and take the oldest match so
-    # any historical case-variant duplicates (rows created before
-    # this normalization landed) resolve deterministically to the
-    # original row rather than raising MultipleResultsFound. The
-    # storage-level guard against new duplicates is Slice D.
-    user = db.execute(
-        select(User)
-        .where(func.lower(User.email) == normalize_email(current_user.email))
-        .order_by(User.id)
-        .limit(1)
-    ).scalar_one_or_none()
+    user = find_user(db, current_user)
     if user is not None:
         _reassert_super_admin(db, user)
         _stash_display_timezone(request, user)

@@ -58,7 +58,7 @@ def operator_settings_form(
     db.refresh(user)
     has_password = user.smtp_password_encrypted is not None
     current_timezone = operator_settings.get_display_timezone(user)
-    target = resolve_return_to(return_to, db)
+    target = resolve_return_to(return_to, db, viewer=user)
 
     # Wave 5 PR 5.1 — the operator-library section retired alongside
     # the Rule Builder + RuleSet library tier. The 15C Slice 5

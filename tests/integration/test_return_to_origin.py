@@ -3,11 +3,13 @@ and the chrome user-menu About link that populates ``return_to`` (Segment 11D, P
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession
+from app.auth.identity import AuthenticatedUser
+from app.db.models import ReviewSession, User
 
 
 def _create_session(client: TestClient, db: Session, *, code: str = "rrw-rt") -> ReviewSession:
@@ -57,6 +59,59 @@ def test_me_debug_renders_back_link(client: TestClient, db: Session) -> None:
     ).text
     assert 'class="back-link"' in body
     assert f"Back to {session.name}" in body
+
+
+@pytest.mark.parametrize("page", ["/about", "/auth/me/debug"])
+@pytest.mark.parametrize("shape", ["/me/sessions/{id}", "/operator/sessions/{id}"])
+def test_a_stranger_is_not_told_a_session_name_by_the_back_link(
+    client: TestClient, db: Session, make_client, page: str, shape: str
+) -> None:
+    """Participant audit P1: any signed-in user could read any session's
+    name off a crafted ``return_to``. A viewer who cannot see the
+    session gets the default link, as for an id that does not exist."""
+    session = _create_session(client, db, code="rrw-secret")
+    stranger = make_client(
+        AuthenticatedUser(
+            principal_id="eve-oid", email="eve@example.edu",
+            name="Eve", provider="aad",
+        )
+    )
+    body = stranger.get(f"{page}?return_to={shape.format(id=session.id)}").text
+    assert session.name not in body
+    assert "Back to Sessions" in body
+
+
+def test_me_debug_creates_no_user_row(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """The debug page looks the viewer up to decide a label; it never
+    signs them in as a side effect. The session has to exist, or the
+    lookup never runs."""
+    session = _create_session(client, db, code="rrw-norow")
+    eve = make_client(
+        AuthenticatedUser(
+            principal_id="eve-oid", email="eve@example.edu",
+            name="Eve", provider="aad",
+        )
+    )
+    body = eve.get(f"/auth/me/debug?return_to=/me/sessions/{session.id}").text
+    assert "Back to Sessions" in body
+    assert db.execute(
+        select(User).where(User.email == "eve@example.edu")
+    ).first() is None
+
+
+def test_settings_does_not_name_another_operators_session(
+    client: TestClient, db: Session, make_client, bob
+) -> None:
+    """A workspace operator reaches Settings, but a session they do not
+    own stays unnamed in its back link."""
+    session = _create_session(client, db, code="rrw-alices")
+    body = make_client(bob).get(
+        f"/operator/settings?return_to=/operator/sessions/{session.id}"
+    ).text
+    assert session.name not in body
+    assert "Back to Sessions" in body
 
 
 def test_chrome_about_link_carries_current_path_as_return_to(

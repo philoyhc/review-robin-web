@@ -12,6 +12,7 @@ from app.auth.identity import (
 )
 from app.config import settings
 from app.db.session import get_db
+from app.web.deps import find_user
 from app.web.return_to import resolve_return_to
 
 router = APIRouter()
@@ -37,7 +38,15 @@ def me_debug(
     user: AuthenticatedUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    return_to = resolve_return_to(request.query_params.get("return_to"), db)
+    # Looked up, not created, and only when a session path needs naming:
+    # this page has to render for an identity ``get_or_create_user``
+    # would refuse (no email claim), and without touching the database
+    # otherwise, since it is where a broken sign-in is diagnosed.
+    return_to = resolve_return_to(
+        request.query_params.get("return_to"),
+        db,
+        viewer=lambda: find_user(db, user),
+    )
     return _templates.TemplateResponse(
         request,
         "me_debug.html",
