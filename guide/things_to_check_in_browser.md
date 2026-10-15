@@ -64,3 +64,12 @@ with the last section it covers.
 - [ ] **Rehydrate still takes it.** Give an instrument the short label
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
+
+## Back links name only sessions you can see (P1)
+
+- [ ] **A stranger sees the default.** Signed in as someone with no role
+  on a session, open `/about?return_to=/me/sessions/<id>` for that
+  session's id. The back link reads "← Back to Sessions", not the
+  session's name.
+- [ ] **An owner still sees the name.** As the session's owner, open
+  About from inside that session. The back link names the session.

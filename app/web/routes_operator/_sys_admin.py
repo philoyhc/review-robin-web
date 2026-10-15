@@ -69,10 +69,10 @@ _ADMIN_PATH = "/operator/sys-admin"
 
 
 def _admin_return_target(
-    request: Request, return_to: str | None, db: Session
+    request: Request, return_to: str | None, db: Session, user: User
 ) -> ReturnTarget:
     return resolve_return_to(
-        return_to or request.cookies.get(_ADMIN_RETURN_COOKIE), db
+        return_to or request.cookies.get(_ADMIN_RETURN_COOKIE), db, viewer=user
     )
 
 
@@ -100,7 +100,7 @@ def sys_admin_root(
         target = f"{target}?return_to={quote(return_to, safe='/')}"
     response = RedirectResponse(url=target, status_code=status.HTTP_303_SEE_OTHER)
     if return_to:
-        _remember_return_to(response, resolve_return_to(return_to, db))
+        _remember_return_to(response, resolve_return_to(return_to, db, viewer=user))
     return response
 
 
@@ -114,7 +114,7 @@ def sys_admin_sessions(
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
-    target = _admin_return_target(request, return_to, db)
+    target = _admin_return_target(request, return_to, db, user)
     # The lobby's columns and sort (author, 2026-10-14): a cookie-backed
     # personal sort, seeded here so the first render is already sorted.
     sort_spec = views.decode_cookie_sort_spec(
@@ -319,7 +319,7 @@ def sys_admin_users(
     view = dataclasses.replace(view, offset=page.offset)
     pager = views.build_pager(total=page.total, offset=page.offset)
     refused_user = db.get(User, refused) if refused is not None else None
-    back = _admin_return_target(request, None, db)
+    back = _admin_return_target(request, None, db, user)
     response = _templates.TemplateResponse(
         request,
         "operator/sys_admin_users.html",

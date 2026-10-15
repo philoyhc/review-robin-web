@@ -46,9 +46,12 @@ def is_email_identified(reviewee: Reviewee) -> bool:
     return looks_like_email(reviewee.email_or_identifier)
 
 
-def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
+def disclosable_roles(
+    db: Session, email: str | None, *, session_id: int | None = None
+) -> frozenset[str]:
     """Which participant roles may be *disclosed* to this viewer,
-    across every session.
+    across every session, or on one session when ``session_id`` is
+    given.
 
     **Renamed from ``roles_held_anywhere`` at Segment 19F PR 3**, and
     the rename is the point: the reviewee arm stopped answering "holds
@@ -56,9 +59,11 @@ def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
     that promised the weaker thing while doing the stronger one is the
     trap this segment keeps finding.
 
-    Used only to decide what documentation a viewer is shown on
-    ``/guide``. It is deliberately **not** a permission check and grants
-    nothing; the per-session gates in ``app/web/deps.py`` decide access.
+    Used to decide what documentation a viewer is shown on ``/guide``
+    and, per session, whether a back link may name a session
+    (``permissions.may_name_session``). It is deliberately **not** a permission
+    check and grants nothing; the per-session gates in
+    ``app/web/deps.py`` decide access.
 
     The three roles are treated asymmetrically, and the asymmetry is
     19F's decisions 2–4 rather than an inconsistency:
@@ -89,20 +94,24 @@ def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
 
     held: set[str] = set()
 
-    if db.execute(
+    reviewer_query = (
         select(Reviewer.id)
         .where(func.lower(func.trim(Reviewer.email)) == normalized)
         .where(Reviewer.status == "active")
-        .limit(1)
-    ).first():
-        held.add(REVIEWER)
-
-    if db.execute(
+    )
+    observer_query = (
         select(Observer.id)
         .where(func.lower(func.trim(Observer.email)) == normalized)
         .where(Observer.status == "active")
-        .limit(1)
-    ).first():
+    )
+    if session_id is not None:
+        reviewer_query = reviewer_query.where(Reviewer.session_id == session_id)
+        observer_query = observer_query.where(Observer.session_id == session_id)
+
+    if db.execute(reviewer_query.limit(1)).first():
+        held.add(REVIEWER)
+
+    if db.execute(observer_query.limit(1)).first():
         held.add(OBSERVER)
 
     # Reviewees are filtered in Python rather than SQL for two reasons:
@@ -112,12 +121,15 @@ def disclosable_roles(db: Session, email: str | None) -> frozenset[str]:
     # scan is over rows already narrowed to this exact address, so it is
     # a handful at most, and ``any`` short-circuits on the first session
     # that grants something.
-    reviewee_rows = db.execute(
+    reviewee_query = (
         select(Reviewee, ReviewSession)
         .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
         .where(func.lower(func.trim(Reviewee.email_or_identifier)) == normalized)
         .where(Reviewee.status == "active")
-    ).all()
+    )
+    if session_id is not None:
+        reviewee_query = reviewee_query.where(Reviewee.session_id == session_id)
+    reviewee_rows = db.execute(reviewee_query).all()
     if any(
         is_email_identified(reviewee)
         and visibility_policies.reviewee_has_current_grant(
