@@ -43,9 +43,11 @@ def reviewer_invite(
     if found is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            # Invitations don't expire: every send, reminder or
-            # Regenerate replaces the link in earlier emails (participant
-            # audit M12, author's ruling 2026-10-15).
+            # Invitations don't expire: a fresh send or a Regenerate
+            # rotates the token and kills earlier emails' links (a
+            # reminder reuses the current one unless it has to fall back
+            # to a fresh invitation). Participant audit M12, author's
+            # ruling 2026-10-15.
             detail=(
                 "This invitation link has been replaced by a newer one or "
                 "is no longer valid. Use the link in your most recent "

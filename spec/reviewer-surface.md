@@ -1603,8 +1603,11 @@ Behaviour:
    and an inactive reviewer's invitation is not found ("Identity
    matching" above), whoever follows it. The page says the link "has
    been replaced by a newer one or is no longer valid" and points to
-   the most recent email: invitations don't expire, but every send,
-   reminder or Regenerate replaces the links in earlier emails
+   the most recent email: invitations don't expire, but a fresh send or
+   a Regenerate rotates the token and kills the links in earlier
+   emails. An ordinary reminder reuses the current link; only one that
+   falls back to a fresh invitation (no current link on file, as after a
+   Regenerate) rotates it
    (participant audit M12).
 3. **Email match check** — case-insensitive comparison of the
    signed-in email against the invited reviewer's `Reviewer.email`,
