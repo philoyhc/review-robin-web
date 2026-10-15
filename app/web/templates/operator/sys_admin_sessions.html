@@ -110,14 +110,22 @@
             <td class="col-shrink">
               {# Segment 18S Item 3 — editing a session requires ownership,
                  so Manage self-adds the sys-admin as an owner (audited)
-                 and opens the session. All three are Secondary
-                 (`spec/ui_elements.md` §6), on one line (`.is-one-line`). #}
+                 and opens the session. On a session they already own it
+                 is a greyed-out Owned instead (author, 2026-10-15). All
+                 three are Secondary (`spec/ui_elements.md` §6), on one
+                 line (`.is-one-line`). #}
               <div class="btn-pair is-one-line">
+                {% if s.id in owned_session_ids %}
+                <button type="button" class="btn secondary" disabled aria-disabled="true"
+                        data-diagnostics-owned
+                        title="You already own this session">Owned</button>
+                {% else %}
                 <form method="post"
                       action="/operator/sys-admin/sessions/{{ s.id }}/adopt">
                   <button type="submit" class="btn secondary"
                           title="Adds you as an owner of this session, then opens it">Manage</button>
                 </form>
+                {% endif %}
                 <a class="btn secondary"
                    href="/operator/sys-admin/sessions/{{ s.id }}/outbox">Outbox</a>
                 <a class="btn secondary"

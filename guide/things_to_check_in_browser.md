@@ -263,3 +263,15 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Editor unchanged.** An instrument's "Who can see what you wrote"
   card still saves each mode it offers, for every audience and window
   (the database constraint sits behind it, unseen).
+
+## Sessions Diagnostics: Owned in place of Manage (2026-10-15)
+
+- [ ] **Owned.** Sign in as a sys-admin. On Sys Admin → Sessions
+  Diagnostics, a session you own (created, or added as an owner) shows a
+  greyed-out **Owned** where Manage was. It can't be clicked, and
+  hovering it reads "You already own this session".
+- [ ] **Manage still works.** A session you don't own shows **Manage**.
+  Click it: you land on that session's Home. Go back to Diagnostics, and
+  the row now reads **Owned**.
+- [ ] **Row layout.** Owned, Outbox and Audit log stay on one line, the
+  same width as the Manage rows.

@@ -397,6 +397,19 @@ def test_sys_admin_can_self_add_to_session_via_relaxed_gate(
 # --- Diagnostics: Details link replaces Operators placeholder --------------
 
 
+def _hand_to_another_owner(db: Session, review_session: ReviewSession) -> None:
+    """Re-own a session the signed-in admin created, so its Diagnostics
+    row offers Manage; an owned one reads Owned (author, 2026-10-15)."""
+    other = User(email="other-owner@example.edu", is_operator=True)
+    db.add(other)
+    db.flush()
+    for row in db.execute(
+        select(SessionOperator).where(SessionOperator.session_id == review_session.id)
+    ).scalars():
+        row.user_id = other.id
+    db.commit()
+
+
 def test_diagnostics_row_renders_manage_adopt_action(
     db: Session,
     client: TestClient,
@@ -407,6 +420,7 @@ def test_diagnostics_row_renders_manage_adopt_action(
     back-door GET link to /edit."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="diag-details")
+    _hand_to_another_owner(db, review_session)
 
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200

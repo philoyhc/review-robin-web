@@ -724,7 +724,7 @@ takes the next free number.
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
-| 196 | Sessions table, per row (Actions) | Manage | `<button type="submit">` in a `<form>` | `btn secondary` | Secondary | POSTs `…/sessions/{id}/adopt` — self-adds the sys-admin as an owner (audited `session.owner_added`), then opens the session. **The only door**: no row may link straight into a session the sys-admin does not own. |
+| 196 | Sessions table, per row (Actions) | Manage | `<button type="submit">` in a `<form>` | `btn secondary` | Secondary | POSTs `…/sessions/{id}/adopt` — self-adds the sys-admin as an owner (audited `session.owner_added`), then opens the session. **The only door**: no row may link straight into a session the sys-admin does not own. On a session the sys-admin already owns, a disabled `<button type="button">` labeled **Owned** replaces the form. |
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
 | 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). The three sit on one line in a `.btn-pair.is-one-line`, however narrow the cell. |
 | 275 | Sessions table toolbar (right) | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner, with a typeahead of every name, code and owner label) and shows every row again. `Clear`, as on the lobby's filter (#194a), by the author's ask (2026-10-14); it was `Cancel` at first. The filter hides rendered rows live and never queries. |
