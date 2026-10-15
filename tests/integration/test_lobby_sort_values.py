@@ -167,3 +167,26 @@ def test_text_keys_order_as_the_browser_does() -> None:
     assert sorted(reversed(browser_order), key=views.text_sort_value) == browser_order
     assert views.text_sort_value("") is None
     assert views.text_sort_value("   ") is None
+
+
+def test_the_lobby_count_pills_come_from_the_shared_helper(
+    client: TestClient, db: Session
+) -> None:
+    """The lobby's Sessions card and Sessions Diagnostics' Sessions
+    Overview read `views.session_status_counts` (2026-10-15). Validated
+    counts as draft; Closed counts only in the total; archived counts
+    though its row is not on the lobby table."""
+    for code, status in (
+        ("zz-a", "draft"), ("zz-b", "validated"), ("zz-c", "ready"),
+        ("zz-d", "expired"), ("zz-e", "archived"),
+    ):
+        _session(client, db, code, status=status)
+    body = client.get("/operator/sessions").text
+    pills = body.split('<div class="sessions-lobby-pills">', 1)[1].split("</div>", 1)[0]
+    for pill in (
+        '<span class="pill pill-count">5 sessions</span>',
+        '<span class="pill pill-lifecycle-draft">2 draft</span>',
+        '<span class="pill pill-lifecycle-ready">1 activated</span>',
+        '<span class="pill pill-lifecycle-archived">1 archived</span>',
+    ):
+        assert pill in pills

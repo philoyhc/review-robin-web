@@ -71,8 +71,8 @@ with the last section it covers.
   Sessions Overview on the left and Filter on the right, each half the
   width, matching the lobby's Sessions and Filter cards.
 - [ ] **Counts.** Sessions Overview's pills read the workspace's totals
-  (sessions, draft, activated, archived). Archive a session and reload:
-  draft or activated drops by one and archived rises by one.
+  (sessions, draft, activated, archived). Archive a Draft or Activated
+  session and reload: its count drops by one and archived rises by one.
 - [ ] **Filter.** The box reads "Filter by name, code, or owner" and
   there is no "Filter:" label. Typing hides rows live, Clear empties
   it. An owner's name or email finds their sessions.
