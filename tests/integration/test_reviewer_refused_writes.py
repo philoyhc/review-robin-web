@@ -216,30 +216,151 @@ def test_a_refused_clear_lists_nothing(
     assert "data-rs-unsaved-answers" not in resp.text
 
 
-def test_only_the_reviewers_own_assignments_are_listed(
+def _unsaved_list(page_html: str) -> str:
+    """The refusal card's list, so assertions don't match the surface."""
+    _, _, rest = page_html.partition("data-rs-unsaved-answers")
+    return rest.partition("</ul>")[0]
+
+
+def test_a_row_no_get_would_show_is_listed_without_labels(
     client: TestClient, db: Session, make_client
 ) -> None:
-    """A value posted against someone else's assignment, or one that
-    doesn't exist, is not echoed back with that row's labels."""
+    """Every typed value comes back, but only a row the reviewer can see
+    now carries its labels. A hand-made POST against someone else's
+    assignment, or an id that doesn't exist, echoes the value bare, so
+    the card names nobody and doesn't tell which ids are the
+    reviewer's."""
     review_session = _ready_session(client, db, code="refused-own")
     review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     db.commit()
+    raes = _assignment_of(db, review_session, "rae@example.edu").id
     sams = _assignment_of(db, review_session, "sam@example.edu").id
 
-    resp, text = _rae_posts(
+    resp, _ = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.id}/1/save",
         {
+            f"response[{raes}][comments]": "for rae",
             f"response[{sams}][comments]": "for sam",
             "response[999999][comments]": "for nobody",
         },
     )
 
     assert resp.status_code == 403
+    listed = html.unescape(_unsaved_list(resp.text))
+    items = listed.split("<li>")[1:]
+    assert len(items) == 3
+    by_value = {
+        value: item
+        for item in items
+        for value in ("for rae", "for sam", "for nobody")
+        if value in item
+    }
+    assert "<strong>Carol</strong>" in by_value["for rae"]
+    assert "<code>" in by_value["for rae"]
+    for value in ("for sam", "for nobody"):
+        assert "<strong>" not in by_value[value]
+        assert "<code>" not in by_value[value]
+
+
+def test_an_excluded_row_comes_back_without_labels(
+    client: TestClient, db: Session, make_client
+) -> None:
+    review_session = _ready_session(client, db, code="refused-excl")
+    assignment = _assignment_of(db, review_session, "rae@example.edu")
+    assignment.include = False
+    db.commit()
+
+    resp, _ = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.id}/1/save",
+        {f"response[{assignment.id}][comments]": "kept text"},
+    )
+
+    listed = _unsaved_list(resp.text)
+    assert "kept text" in listed
+    assert "Carol" not in listed
+
+
+def test_a_session_that_never_opened_names_nobody(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """On the pre-open page no GET shows a row, so neither does the
+    card."""
+    review_session = _ready_session(client, db, code="refused-unopened")
+    review_session.status = "validated"
+    db.commit()
+    aid = _assignment_of(db, review_session, "rae@example.edu").id
+
+    resp, text = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.id}/1/save",
+        {f"response[{aid}][comments]": "early"},
+    )
+
+    assert resp.status_code == 403
+    assert "opens later" in text
+    listed = _unsaved_list(resp.text)
+    assert "early" in listed
+    assert "Carol" not in listed
+
+
+def test_an_archived_session_shows_the_closed_page_with_the_notice(
+    client: TestClient, db: Session, make_client
+) -> None:
+    review_session = _ready_session(client, db, code="refused-archived")
+    review_session.status = "archived"
+    db.commit()
+
+    resp, text = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.id}/1/save",
+        {"response[1][comments]": "late"},
+    )
+
+    assert resp.status_code == 403
+    assert "— closed" in text
+    assert "This review is not currently open, so your last changes weren't saved." in text
+
+
+def test_a_value_matching_the_stored_answer_is_still_listed(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """Leaving out unchanged values would tell the reviewer what is
+    stored, which the visibility setting may hide."""
+    review_session = _ready_session(client, db, code="refused-same")
+    aid = _assignment_of(db, review_session, "rae@example.edu").id
+    rae_client = make_client(RAE)
+    saved = rae_client.post(
+        f"/me/sessions/{review_session.id}/1/save",
+        data={f"response[{aid}][comments]": "same answer"},
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+
+    resp = rae_client.post(
+        f"/me/sessions/{review_session.id}/1/save",
+        data={f"response[{aid}][comments]": "same answer"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 403
+    assert "same answer" in _unsaved_list(resp.text)
+
+
+def test_an_out_of_range_page_falls_back_to_page_one(
+    client: TestClient, db: Session, make_client
+) -> None:
+    review_session = _ready_session(client, db, code="refused-page")
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db.commit()
+
+    resp, _ = _rae_posts(
+        make_client, f"/me/sessions/{review_session.id}/99/save", {}
+    )
+    assert resp.status_code == 403
     assert "data-rs-write-refused" in resp.text
-    assert "data-rs-unsaved-answers" not in resp.text
-    assert "for sam" not in text
-    assert "for nobody" not in text
 
 
 def test_an_accepted_save_shows_no_notice(

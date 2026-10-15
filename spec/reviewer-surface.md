@@ -886,27 +886,31 @@ Failing any of those three, or having no included assignment, refuses
 a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). The
 refusal renders the page again rather than the standalone error page,
 which used to throw away what the reviewer typed (participant audit P3):
-the page the reviewer was on, read-only as a GET would now show it, or
-the pre-open page when the session is neither `ready` nor `expired`.
-A `.rs-missing-card` (`data-rs-write-refused`) names the cause in one
+the page the reviewer was on (page 1 for Clear, and for a page number
+out of range), read-only as a GET would now show it, or the pre-open
+page when the session is neither `ready` nor `expired`. A
+`.rs-missing-card` (`data-rs-write-refused`) names the cause in one
 sentence, ending "so your last changes weren't saved" (Save), "so your
 answers weren't submitted" (Submit) or "so your answers weren't
-cleared" (Clear):
+cleared" (Clear). The first cause that applies, in this order, wins:
 
 | Cause | Opens with |
 |---|---|
-| `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
 | `expired` | "This review has closed" |
 | `draft`, `validated` or `archived` | "This review is not currently open" |
 | no included assignment | "You have nothing to review in this session right now" |
+| `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
 
 Under it, `data-rs-unsaved-answers` lists every non-empty value the
-POST carried on the reviewer's own assignments (included or not) as
-plain text, `{instrument}: {reviewee} — {field}` then the value, line
-breaks kept, so it can be copied out. Values on anyone else's
-assignment are dropped. Every typed value is listed, changed or not:
-leaving out the ones matching the stored answer would disclose an
-answer the visibility setting hides. Clear carries none.
+POST carried as plain text, line breaks kept, so it can be copied out.
+An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
+would show that row now: an included assignment of this reviewer, on a
+visible field, in a `ready` or `expired` session. Any other value (an
+excluded row, a session that never opened, an id that isn't the
+reviewer's) is listed bare, so the card names nobody a page hasn't.
+Every typed value is listed, changed or not, whatever row it names:
+echoing only some would tell the reviewer which ids are theirs, or what
+is stored where the visibility setting hides it. Clear carries none.
 
 GET requests behave differently depending on which gate fails:
 

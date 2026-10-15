@@ -3,7 +3,7 @@
 The ~490-LOC ``_surface_context`` function — single biggest function
 in the package — plus the small loaders, the write gate
 (``_write_refusal``) and what a refused write shows. ``preview_mode``
-(operator-side full preview) is honoured here so the operator path
+(operator-side full preview) is honored here so the operator path
 renders against identical plumbing without mutating session state.
 """
 from __future__ import annotations
@@ -190,56 +190,64 @@ def _write_refused_notice(
 
 def _unsaved_answers(
     db: Session,
+    review_session: ReviewSession,
     reviewer: Reviewer,
     upserts: list[ResponseUpsert],
 ) -> list[dict[str, str]]:
     """What a refused Save or Submit carried, as plain text the reviewer
-    can copy (participant audit P3). Only non-empty values on the
-    reviewer's own assignments, whatever their ``include``, so an answer
-    typed before the operator excluded the row still comes back. Every
-    typed value is listed, changed or not: leaving out the ones that
-    match the stored answer would disclose an answer the visibility
-    setting hides."""
+    can copy (participant audit P3). Every non-empty typed value comes
+    back, changed or not, whatever row it was posted against: echoing
+    only some would make the card an oracle, for stored answers the
+    visibility setting hides and for which assignment ids are the
+    reviewer's. An entry is labeled ``{instrument}: {reviewee} —
+    {field}`` only when a GET would show that row now, i.e. an included
+    assignment of this reviewer on a visible field in a ``ready`` or
+    ``expired`` session; any other value is listed bare, so an excluded
+    row, a session that never opened and a hand-made id all name
+    nobody."""
     typed = [u for u in upserts if u.value]
     if not typed:
         return []
-    assignments = {
-        a.id: a
-        for a in db.execute(
-            select(Assignment)
-            .options(
-                joinedload(Assignment.reviewee),
-                joinedload(Assignment.instrument),
+    shown: dict[int, Assignment] = {}
+    fields: dict[tuple[int, str], InstrumentResponseField] = {}
+    if lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session):
+        shown = {
+            a.id: a
+            for a in _load_assignments_with_relations(
+                db, session_id=review_session.id, reviewer_id=reviewer.id
             )
-            .where(
-                Assignment.reviewer_id == reviewer.id,
-                Assignment.id.in_({u.assignment_id for u in typed}),
-            )
-        ).scalars()
-    }
-    fields = {
-        (f.instrument_id, f.field_key): f
-        for f in db.execute(
-            select(InstrumentResponseField).where(
-                InstrumentResponseField.instrument_id.in_(
-                    {a.instrument_id for a in assignments.values()}
-                )
-            )
-        ).scalars()
-    }
+        }
+        if shown:
+            fields = {
+                (f.instrument_id, f.field_key): f
+                for f in db.execute(
+                    select(InstrumentResponseField)
+                    .where(
+                        InstrumentResponseField.instrument_id.in_(
+                            {a.instrument_id for a in shown.values()}
+                        )
+                    )
+                    .where(InstrumentResponseField.visible.is_(True))
+                ).scalars()
+            }
     out: list[dict[str, str]] = []
     for upsert in typed:
-        assignment = assignments.get(upsert.assignment_id)
-        if assignment is None:
+        assignment = shown.get(upsert.assignment_id)
+        field = (
+            fields.get((assignment.instrument_id, upsert.field_key))
+            if assignment is not None
+            else None
+        )
+        if assignment is None or field is None:
+            out.append({"value": upsert.value})
             continue
-        field = fields.get((assignment.instrument_id, upsert.field_key))
         out.append(
             {
                 "instrument_label": instruments_service._instrument_label(
                     assignment.instrument
                 ),
                 "reviewee_name": assignment.reviewee.name,
-                "field_label": field.label if field else upsert.field_key,
+                "field_label": field.label,
                 "value": upsert.value,
             }
         )

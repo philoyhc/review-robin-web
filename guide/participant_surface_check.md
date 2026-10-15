@@ -102,7 +102,7 @@ Second pass, same day:
 - **M3 (b), (c):** show the scheduled start time and the help contact;
   draft, validated and archived all say the review is "not currently
   open" rather than splitting their copy.
-- **M6:** one role-aware status rule, labelled Not open yet / Open /
+- **M6:** one role-aware status rule, labeled Not open yet / Open /
   Available / Closed / Finished. "Available" is closed to responses but
   viewable by that role now; "Closed" is closed with nothing to view
   right now, and can become Available when a release window opens.

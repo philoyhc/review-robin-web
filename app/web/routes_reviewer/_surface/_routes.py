@@ -207,7 +207,9 @@ def _refused_write_response(
         "write_refused": _write_refused_notice(
             review_session, cause, action=action
         ),
-        "unsaved_answers": _unsaved_answers(db, reviewer, upserts),
+        "unsaved_answers": _unsaved_answers(
+            db, review_session, reviewer, upserts
+        ),
     }
     if not (
         lifecycle.is_ready(review_session)
@@ -533,23 +535,18 @@ def reviewer_recall(
         db, review_session, correlation_id=request_correlation_id()
     )
     db.refresh(review_session)
-    if lifecycle.is_expired(review_session) or (
-        lifecycle.is_ready(review_session)
-        and lifecycle.deadline_has_passed(review_session)
-    ):
+    if not lifecycle.recall_allowed(review_session):
+        closed = lifecycle.is_ready(review_session) or lifecycle.is_expired(
+            review_session
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
                 "This review has closed, so your submission can't be "
                 "recalled."
-            ),
-        )
-    if not lifecycle.is_ready(review_session):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "This review is not currently open, so your submission "
-                "can't be recalled."
+                if closed
+                else "This review is not currently open, so your "
+                "submission can't be recalled."
             ),
         )
     responses_service.recall(

@@ -45,7 +45,7 @@
     </a>
     {% endif %}
     {# "Recall my submission" — only while the session is still
-       ``ready``. Posts to /recall, which nulls submitted_at on
+       ``ready`` and before its deadline (``recall_allowed``). Posts to /recall, which nulls submitted_at on
        every Response row for this reviewer and 303s to /1 so
        they land on the editable form. Wrapped in a confirm() so
        a stray click doesn't silently un-submit. #}

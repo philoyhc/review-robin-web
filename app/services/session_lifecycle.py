@@ -901,6 +901,19 @@ def deadline_has_passed(
     return current >= _aware(review_session.deadline)
 
 
+def recall_allowed(
+    review_session: ReviewSession, *, now: datetime | None = None
+) -> bool:
+    """Whether a reviewer may recall their submission: the session is
+    ``ready`` and its deadline hasn't passed. Past either, the form a
+    recall lands on is read-only and Submit is refused (participant
+    audit M1). The summary's button and the Recall route both read
+    this."""
+    return is_ready(review_session) and not deadline_has_passed(
+        review_session, now=now
+    )
+
+
 def session_accepts_responses(
     review_session: ReviewSession,
     instrument: Instrument,

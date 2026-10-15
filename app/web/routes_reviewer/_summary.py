@@ -117,8 +117,7 @@ def reviewer_session_summary(
             # Submit is refused, so recalling would strand the
             # reviewer at "Saved but not submitted" (participant
             # audit M1, author's ruling 2026-10-15).
-            "can_recall": lifecycle.is_ready(review_session)
-            and not lifecycle.deadline_has_passed(review_session),
+            "can_recall": lifecycle.recall_allowed(review_session),
         },
     )
 
