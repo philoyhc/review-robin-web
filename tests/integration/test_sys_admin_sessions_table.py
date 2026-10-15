@@ -179,3 +179,43 @@ def test_the_instant_key_is_utc_and_fixed_width() -> None:
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:
     assert views.LOBBY_SORT_KEYS - views.DIAGNOSTICS_SORT_KEYS == {"status"}
+
+
+def test_a_session_the_admin_owns_shows_owned_not_manage(
+    db: Session, client: TestClient, admin: None
+) -> None:
+    """Author, 2026-10-15: Manage self-adds the admin as an owner, so on a
+    session they already own it is a grayed-out Owned instead."""
+    client.get(PAGE)  # signs the admin in, creating their user row
+    alice = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
+    ann = _user(db, "ann@example.edu")
+    mine = _session(db, "Mine", "zz-mine", alice)
+    shared = _session(db, "Shared", "zz-shared", ann, alice)
+    theirs = _session(db, "Theirs", "zz-theirs", ann)
+    db.commit()
+
+    body = client.get(PAGE).text
+    rows = {
+        code: body.split(f">{code}<", 1)[1].split("</tr>", 1)[0]
+        for code in ("zz-mine", "zz-shared", "zz-theirs")
+    }
+    owned = re.compile(
+        r'<button type="button" class="btn secondary" disabled aria-disabled="true"\s+'
+        r'data-diagnostics-owned>Owned</button>'
+    )
+    for code, review_session in (("zz-mine", mine), ("zz-shared", shared)):
+        assert owned.search(rows[code]), code
+        assert f"/sessions/{review_session.id}/adopt" not in rows[code]
+        assert ">Manage<" not in rows[code]
+    assert not owned.search(rows["zz-theirs"])
+    assert f'action="/operator/sys-admin/sessions/{theirs.id}/adopt"' in rows["zz-theirs"]
+    assert ">Manage</button>" in rows["zz-theirs"]
+
+
+def test_owned_session_ids_matches_the_user_by_id() -> None:
+    ann = User(id=1, email="ann@example.edu")
+    ben = User(id=2, email="ben@example.edu")
+    owners = {10: [ann], 11: [ben, ann], 12: [ben]}
+    assert views.owned_session_ids(owners, ann) == {10, 11}
+    assert views.owned_session_ids(owners, User(id=3, email="cy@example.edu")) == set()
+    assert views.owned_session_ids({}, ann) == set()

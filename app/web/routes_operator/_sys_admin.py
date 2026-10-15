@@ -140,6 +140,7 @@ def sys_admin_sessions(
                 for s in rows
             },
             "filter_options": views.diagnostics_filter_options(rows, owners),
+            "owned_session_ids": views.owned_session_ids(owners, user),
             "return_to_raw": return_to,
             "return_to_url": target.url,
             "return_to_label": target.label,

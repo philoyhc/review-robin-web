@@ -34,7 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.db.models import ReviewSession, User
+from app.db.models import ReviewSession, SessionOperator, User
 from app.web.deps import require_sys_admin
 
 
@@ -50,6 +50,19 @@ def _make_session(
     return db.execute(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
+
+
+def _hand_to_another_owner(db: Session, review_session: ReviewSession) -> None:
+    """Re-own a session the signed-in admin created, so its Diagnostics
+    row offers Manage; an owned one reads Owned (author, 2026-10-15)."""
+    other = User(email="other-owner@example.edu", is_operator=True)
+    db.add(other)
+    db.flush()
+    for row in db.execute(
+        select(SessionOperator).where(SessionOperator.session_id == review_session.id)
+    ).scalars():
+        row.user_id = other.id
+    db.commit()
 
 
 # --- /sys-admin redirect (PR 3) --------------------------------------------
@@ -100,6 +113,7 @@ def test_sessions_diagnostics_renders_for_sys_admin(
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="diag-1")
+    _hand_to_another_owner(db, review_session)
 
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200

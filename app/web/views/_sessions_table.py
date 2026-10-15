@@ -135,6 +135,18 @@ def diagnostics_filter_text(review_session: ReviewSession, owners: Iterable[User
     return "\n".join(part for part in parts if part).lower()
 
 
+def owned_session_ids(
+    owners_by_session: Mapping[int, list[User]], user: User
+) -> set[int]:
+    """The sessions ``user`` already owns, whose Diagnostics row shows a
+    grayed-out **Owned** in place of Manage (author, 2026-10-15)."""
+    return {
+        session_id
+        for session_id, owners in owners_by_session.items()
+        if any(owner.id == user.id for owner in owners)
+    }
+
+
 def diagnostics_filter_options(
     rows: Iterable[ReviewSession], owners_by_session: Mapping[int, list[User]]
 ) -> list[str]:
