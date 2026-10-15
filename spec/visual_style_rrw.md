@@ -387,6 +387,10 @@ What this means in practice:
 - Per-session operator customization is **content-only** — session name, optional welcome message, optional institution name. No visual customization (colors, layout, branding imagery). See `spec/audience_and_identity_model.md` for the rationale.
 - Operator chrome (two-row session navigation, status strips, lifecycle badges) does **not** appear on reviewer pages. Reviewers don't navigate the operator's structure; they have their own.
 
+Every participant page's `<title>` ends ` — Review Robin Web`, as does the
+standalone error page's; the lighter "Review Robin" is the on-page identity
+only.
+
 #### Top bar
 
 Reviewer-facing pages have a top bar, but lighter than the operator's:
