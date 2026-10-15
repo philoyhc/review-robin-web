@@ -118,16 +118,19 @@ def test_filter_text_lower_cases_as_the_browser_does() -> None:
     assert "johann strauß" in text.split("\n")
 
 
-def test_deadline_and_timezone_sort_by_the_routes_values(
+def test_created_deadline_and_timezone_sort_by_the_routes_values(
     db: Session, client: TestClient, admin: None
 ) -> None:
     """Codex on #3046: the browser sorted the cell text ("No deadline",
     "GMT+8"), the route the stored values (None last, the IANA name), so a
-    click and a reload disagreed. The cells now carry the route's value."""
+    click and a reload disagreed. The cells now carry the route's value.
+    Created too (author, 2026-10-15): its text is to the minute in the
+    viewer's zone, the route's key to the microsecond."""
     ann = _user(db, "ann@example.edu")
     _session(db, "Open", "zz-open", ann)
     _session(
         db, "Due", "zz-due", ann,
+        created_at=datetime(2026, 10, 1, 9, 30, 15, 250000, tzinfo=timezone.utc),
         deadline=datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc),
         display_timezone="Asia/Singapore",
     )
@@ -145,17 +148,21 @@ def test_deadline_and_timezone_sort_by_the_routes_values(
         row = body.split(f"<code>{code}</code>", 1)[1].split("</tr>", 1)[0]
         return re.findall(r'<td[^>]*data-sort-value="([^"]*)"', row)
 
-    assert cells("zz-open")[0] == ""  # empty sorts last, either direction
-    assert cells("zz-due") == ["2026-11-01T12:00:00.000000+00:00", "Asia/Singapore"]
+    assert cells("zz-open")[1] == ""  # empty sorts last, either direction
+    assert cells("zz-due") == [
+        "2026-10-01T09:30:15.250000+00:00",
+        "2026-11-01T12:00:00.000000+00:00",
+        "Asia/Singapore",
+    ]
 
 
-def test_the_deadline_key_is_utc_and_fixed_width() -> None:
+def test_the_instant_key_is_utc_and_fixed_width() -> None:
     """An aware value at another offset comes out as UTC, and every key
     carries microseconds, so text order is time order: "12:00:00.5"
     would otherwise collate before "12:00:00" in the browser."""
     tokyo = timezone(timedelta(hours=9))
     keys = [
-        views.deadline_sort_value(ReviewSession(deadline=value))
+        views.instant_sort_value(value)
         for value in (
             datetime(2026, 11, 1, 21, 0, 0, tzinfo=tokyo),
             datetime(2026, 11, 1, 12, 0, 0, 500000),
@@ -167,7 +174,7 @@ def test_the_deadline_key_is_utc_and_fixed_width() -> None:
         "2026-11-01T12:00:00.500000+00:00",
         "2026-11-01T12:00:01.000000+00:00",
     ]
-    assert views.deadline_sort_value(ReviewSession(deadline=None)) == ""
+    assert views.instant_sort_value(None) == ""
 
 
 def test_status_is_the_one_lobby_column_that_does_not_sort() -> None:

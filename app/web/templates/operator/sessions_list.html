@@ -180,10 +180,18 @@
               <td>
                 <span class="pill pill-count">{{ s.created_by_user.display_label }}</span>
               </td>
-              <td>
+              <td data-sort-value="{{ s.created_at | sort_instant }}">
                 <span class="pill pill-count">{{ s.created_at | format_datetime }}</span>
               </td>
-              <td>
+              {# Created, Deadline and Timezone carry what the route
+                 sorts by (`views.session_sort_value`), not their labels,
+                 so a header click orders rows as a reload does: the
+                 stored instant as UTC ISO 8601 to the microsecond
+                 (`sort_instant`; empty, hence last either way, when
+                 there is none) and the zone's IANA name. As on Sessions
+                 Diagnostics, a few zone names still collate differently
+                 in the browser (`localeCompare`) than in Python (`<`). #}
+              <td data-sort-value="{{ s.deadline | sort_instant }}">
                 {% if s.deadline %}
                   <span class="pill pill-info">{{ s.deadline | format_datetime }}</span>
                 {% else %}
@@ -191,7 +199,7 @@
                 {% endif %}
               </td>
               {% set tz = session_timezone(s) %}
-              <td class="col-shrink">
+              <td class="col-shrink" data-sort-value="{{ tz }}">
                 <span class="pill pill-count">
                   <abbr class="tz-gmt" title="{{ gmt_offset_label(tz) }} {{ tz }}">{{ gmt_offset_label(tz) }}</abbr>
                 </span>

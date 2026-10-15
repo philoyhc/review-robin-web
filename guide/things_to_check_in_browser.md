@@ -231,3 +231,16 @@ Sys Admin → Sessions Diagnostics.
 - [ ] **Invite.** With only Unused on, invite someone: the page comes
   back with Operators turned on and the new row ticked, its expander
   open; leave and come back and Operators is still on.
+
+## Session tables: a click sorts as a reload does (2026-10-14, -15)
+
+- [ ] **Lobby Deadline.** With some sessions having no deadline, click
+  Deadline both ways: those stay at the bottom, and a reload keeps the
+  same order.
+- [ ] **Lobby and Archive Timezone.** Click Timezone: rows group by zone
+  name (Asia/…, Europe/…), not by the GMT label, and a reload keeps it.
+- [ ] **Created and Archived.** On the lobby, the Archive page and
+  Sessions Diagnostics, click Created (and Archived on the Archive page)
+  both ways, then reload: the order doesn't change, even for sessions
+  created in the same minute. (Two created in the same second can still
+  swap on a local SQLite run, whose timestamps stop at the second.)

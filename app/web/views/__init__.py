@@ -239,9 +239,9 @@ from ._sessions_table import (
     ARCHIVED_SORT_KEYS,
     DIAGNOSTICS_SORT_KEYS,
     LOBBY_SORT_KEYS,
-    deadline_sort_value,
     diagnostics_filter_options,
     diagnostics_filter_text,
+    instant_sort_value,
     session_sort_value,
 )
 
@@ -419,9 +419,9 @@ __all__ = [
     "ARCHIVED_SORT_KEYS",
     "DIAGNOSTICS_SORT_KEYS",
     "LOBBY_SORT_KEYS",
-    "deadline_sort_value",
     "diagnostics_filter_options",
     "diagnostics_filter_text",
+    "instant_sort_value",
     "session_sort_value",
     "apply_cookie_sort",
     "decode_cookie_sort_spec",
