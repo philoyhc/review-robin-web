@@ -1,4 +1,4 @@
-"""Reviewer dashboard — the "My Reviews" landing page listing
+"""Reviewer dashboard — the "Your reviews" landing page listing
 every session the signed-in user is an active reviewer on.
 
 Segment 17B Phase 2 PR A widened the table to five columns —
@@ -88,7 +88,6 @@ def reviewer_dashboard(
             {
                 "user": user,
                 "items": [],
-                "reviewer_review_count": 0,
                 "breadcrumbs": breadcrumbs.reviewer_root(),
             },
         )
@@ -289,7 +288,6 @@ def reviewer_dashboard(
         {
             "user": user,
             "items": items,
-            "reviewer_review_count": len(items),
             "breadcrumbs": breadcrumbs.reviewer_root(),
         },
     )

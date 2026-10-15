@@ -112,15 +112,15 @@ def test_reviewer_dashboard_chrome_drops_about_link_and_version(
     assert 'class="chrome-app-identity">Review Robin</span>' in body
 
 
-def test_reviewer_chrome_suppresses_my_reviews_link_with_one_review(
+def test_reviewer_chrome_links_to_your_reviews_with_one_review(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """My Reviews link is only useful when the reviewer has more than
-    one review pending or completed (otherwise the dashboard would be
-    a single row). Test the count == 1 case → link suppressed."""
+    """Participant audit P4: the link back to ``/me`` shows whatever the
+    number of reviews. It used to need more than one, which stranded a
+    one-session reviewer (and every reviewee and observer)."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -132,38 +132,22 @@ def test_reviewer_chrome_suppresses_my_reviews_link_with_one_review(
 
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.id}").text
+    assert (
+        'class="chrome-link" href="/me" data-your-reviews>Your reviews</a>'
+        in body
+    )
     assert "My Reviews" not in body
 
 
-def test_reviewer_chrome_renders_my_reviews_link_with_multiple_reviews(
-    db: Session,
-    alice: AuthenticatedUser,
+def test_the_dashboard_does_not_link_to_itself(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When the reviewer has more than one review, the chrome carries
-    a "My Reviews" link back to the dashboard."""
-    operator = make_client(alice)
-    first = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-c-multi-1",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-    )
-    _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-c-multi-2",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="dan@example.edu",
-    )
-
-    rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{first.id}").text
-    assert (
-        'class="chrome-link" href="/me">My Reviews</a>' in body
-    )
+    response = make_client(rae).get("/me")
+    assert response.status_code == 200
+    # The top bar rendered (so the absence below means something).
+    assert "Signed in as" in response.text
+    assert "data-your-reviews" not in response.text
 
 
 # ── D5: status icons ────────────────────────────────────────────────────

@@ -33,7 +33,6 @@ from app.web.deps import get_or_create_user, require_reviewer_in_session
 from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
-    reviewer_review_count_for_user,
 )
 from app.web.views._reviewer_summary import build_reviewer_summary_context
 
@@ -101,9 +100,6 @@ def reviewer_session_summary(
                 else None
             ),
             "breadcrumbs": breadcrumbs.reviewer_session(review_session),
-            "reviewer_review_count": reviewer_review_count_for_user(
-                db, user
-            ),
             "role_chips": build_role_chips(
                 db,
                 user=user,

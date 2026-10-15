@@ -18,7 +18,6 @@ from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_reviewer._shared import (
     _templates,
-    reviewer_review_count_for_user,
 )
 
 router = APIRouter(prefix="/me")
@@ -55,9 +54,6 @@ def reviewer_invite(
                 "user": user,
                 "session": review_session,
                 "reviewer_email": reviewer.email,
-                "reviewer_review_count": reviewer_review_count_for_user(
-                    db, user
-                ),
                 "breadcrumbs": breadcrumbs.reviewer_invite_mismatch(),
             },
             status_code=status.HTTP_403_FORBIDDEN,
