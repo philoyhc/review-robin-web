@@ -1,7 +1,8 @@
 """Reviewer surface — route handlers.
 
 Owns the ``/me/sessions/{id}/{page_n}`` GET + the per-page Save +
-the session-wide Submit / Recall / Clear POSTs. Each handler stays thin — the template
+the session-wide Submit / Recall / Clear POSTs, plus the GET redirects
+that catch a revisit of any of those POST addresses. Each handler stays thin — the template
 context comes from :func:`_surface_context` in ``_context``.
 """
 from __future__ import annotations
@@ -84,6 +85,52 @@ def review_surface_default_position(session_id: int) -> RedirectResponse:
     """
     return RedirectResponse(
         url=f"/me/sessions/{session_id}/1",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+# GETs on the surface's POST-only addresses (participant audit M10).
+# After a refused Submit, or a Save that re-rendered with errors, the
+# address bar holds the POST's URL; pressing Enter on it, or signing in
+# again, asked for a page that only takes a POST and answered 405 or 422.
+# Each now 303s to a page (Save and Submit to the page they were sent
+# from, Recall to the summary, Clear to the session), gated there as usual.
+# The three session actions are registered ahead of ``/{page_n}``, which
+# would otherwise take ``submit`` / ``recall`` / ``clear`` as a page
+# number and 422.
+@router.get("/sessions/{session_id}/{page_n}/save", response_model=None)
+def review_surface_save_revisited(session_id: int, page_n: int) -> RedirectResponse:
+    return RedirectResponse(
+        url=f"/me/sessions/{session_id}/{page_n}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/sessions/{session_id}/submit", response_model=None)
+def review_surface_submit_revisited(
+    request: Request, session_id: int
+) -> RedirectResponse:
+    # ``?page=N`` is the page Submit was pressed on; parsed to an int,
+    # so nothing but a number reaches the Location.
+    return RedirectResponse(
+        url=f"/me/sessions/{session_id}/{_submitted_from_page(request)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/sessions/{session_id}/recall", response_model=None)
+def review_surface_recall_revisited(session_id: int) -> RedirectResponse:
+    # Recall is posted from the summary page.
+    return RedirectResponse(
+        url=f"/me/sessions/{session_id}/summary",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.get("/sessions/{session_id}/clear", response_model=None)
+def review_surface_clear_revisited(session_id: int) -> RedirectResponse:
+    return RedirectResponse(
+        url=f"/me/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

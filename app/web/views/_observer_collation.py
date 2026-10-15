@@ -78,8 +78,15 @@ class InstrumentCollationSection:
     the same in-cohort assignment pool."""
 
     download_url: str | None
-    """Row 3 — non-None for ``raw`` / ``anonymized`` modes;
-    ``None`` for ``summarized`` (no download offered)."""
+    """Row 3 — non-None for ``raw`` / ``anonymized`` modes with at
+    least one in-cohort assignment; ``None`` for ``summarized`` (no
+    download offered) and for an empty cohort, where the CSV route
+    answers 404 (participant audit M13)."""
+
+    cohort_has_rows: bool
+    """Whether the observer's cohort takes in any assignment on this
+    instrument. Row 3 says there is nothing to download when it does
+    not, rather than offering a link that 404s."""
 
 
 @dataclass(frozen=True)
@@ -167,9 +174,13 @@ def build_observer_collation_context(
             )
         )
 
+        # The same two refusals the CSV route makes, so the page never
+        # offers a link that 404s: Summarized has no row-level download,
+        # and an empty cohort has nothing to put in one.
+        cohort_has_rows = bool(cohort.assignment_ids)
         download_url: str | None = (
             None
-            if mode == "summarized"
+            if mode == "summarized" or not cohort_has_rows
             else (
                 f"/me/sessions/{review_session.id}/collation/"
                 f"instruments/{instrument.id}.csv"
@@ -192,6 +203,7 @@ def build_observer_collation_context(
                 reviewer_stats=reviewer_stats,
                 reviewee_stats=reviewee_stats,
                 download_url=download_url,
+                cohort_has_rows=cohort_has_rows,
             )
         )
 

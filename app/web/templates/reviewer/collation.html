@@ -98,11 +98,15 @@
                 {% if section.download_url %}
                   <a class="btn" href="{{ section.download_url }}"
                      download>Download CSV{% if section.mode == "anonymized" %} <span class="muted">(Anonymized)</span>{% endif %}</a>
-                {% else %}
+                {% elif section.mode == "summarized" %}
                   <span class="muted">
-                    Per the operator's visibility policy, only
-                    the summary above is shown — no row-level
-                    download.
+                    Only the summary above is shown for this
+                    instrument, so there is no download.
+                  </span>
+                {% elif not section.cohort_has_rows %}
+                  <span class="muted" data-collation-nothing-to-download>
+                    No one in your view takes part in this
+                    instrument, so there is nothing to download.
                   </span>
                 {% endif %}
               </td>

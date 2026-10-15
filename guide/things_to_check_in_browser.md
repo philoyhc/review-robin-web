@@ -87,3 +87,15 @@ with the last section it covers.
   with no cohort rule, open the collation page: "You haven't been given
   anyone to observe in this review yet." With a rule on a draft session:
   "There are no results for you to see right now."
+
+## Revisited POST addresses and the empty-cohort download (M10, M13)
+
+- [ ] **Enter on a refused Submit's address lands on the form.** As a
+  reviewer, press Submit with a required field empty. With the address
+  bar showing `…/submit?page=…`, click into it and press Enter. You land
+  back on the page you pressed Submit on, not an error page.
+- [ ] **No download for an empty cohort.** As an observer whose cohort
+  rule matches nobody, on an instrument released to observers as Raw,
+  open the collation page. Row 3 reads "No one in your view takes part
+  in this instrument, so there is nothing to download", with no
+  Download CSV button.
