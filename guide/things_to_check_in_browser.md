@@ -125,3 +125,21 @@ with the last section it covers.
 - [ ] **Reviewees and observers too.** On a reviewee's results page and
   an observer's collation page, the top bar shows "Your reviews".
 - [ ] **Not on the dashboard itself.** On `/me`, the link is absent.
+
+## A refused write keeps what was typed (P3) and Recall after the deadline (M1)
+
+- [ ] **Closed mid-edit.** As a reviewer, type into a few cells,
+  including a multi-line text answer, then (as the operator, in another
+  window) close the session. Press Save. The review page comes back
+  read-only with an amber card: "This review has closed, so your last
+  changes weren't saved." Under it, what you typed, line breaks kept,
+  and you can select and copy it.
+- [ ] **Past the deadline.** Same, but let the deadline pass instead.
+  The card names the deadline and its zone. Press Submit instead of
+  Save: it says "so your answers weren't submitted".
+- [ ] **Reverted to draft.** Same, but revert the session to draft. The
+  page you land on is "opens later", with the card at the top saying
+  "not currently open".
+- [ ] **Recall is gone past the deadline.** Submit everything, open the
+  summary: "Recall my submission" shows. Let the deadline pass (session
+  still Activated) and reload: the button is gone.

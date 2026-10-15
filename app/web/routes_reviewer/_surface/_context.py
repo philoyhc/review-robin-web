@@ -1,16 +1,15 @@
 """Reviewer-surface template-context builder.
 
 The ~490-LOC ``_surface_context`` function — single biggest function
-in the package — plus the small loaders + the per-instrument
-session-accepting guard it composes with. ``preview_mode`` (operator-
-side full preview) is honoured here so the operator path renders
-against identical plumbing without mutating session state.
+in the package — plus the small loaders, the write gate
+(``_write_refusal``) and what a refused write shows. ``preview_mode``
+(operator-side full preview) is honored here so the operator path
+renders against identical plumbing without mutating session state.
 """
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
@@ -24,6 +23,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from app.schemas.responses import ResponseUpsert
 from app.services import date_formatting
 from app.services import instruments as instruments_service
 from app.services import relationships as relationships_service
@@ -119,14 +119,29 @@ def _reviewer_row_sort_key(row: dict, display_field_id: int) -> object | None:
     return value
 
 
-def _require_session_accepting(
+# Why a reviewer write was refused (participant audit P3, author's
+# ruling 2026-10-15). Each cause has its own sentence: a reviewer with
+# nothing assigned was never "no longer" accepted, and a session
+# reverted to draft is not "closed".
+REFUSED_NOT_OPEN = "not_open"
+REFUSED_CLOSED = "closed"
+REFUSED_NO_ASSIGNMENTS = "no_assignments"
+
+
+def _write_refusal(
     db: Session, review_session: ReviewSession, reviewer: Reviewer
-) -> None:
-    """Raise 403 unless every instrument the reviewer would write to is accepting."""
+) -> str | None:
+    """Why the reviewer can't Save / Submit / Clear right now, as one of
+    the ``REFUSED_*`` causes, or ``None`` when every instrument they
+    would write to is accepting."""
     lifecycle.observe_deadline(
         db, review_session, correlation_id=request_correlation_id()
     )
     db.refresh(review_session)
+    if lifecycle.is_expired(review_session):
+        return REFUSED_CLOSED
+    if not lifecycle.is_ready(review_session):
+        return REFUSED_NOT_OPEN
     assignments = db.execute(
         select(Assignment).where(
             Assignment.session_id == review_session.id,
@@ -136,22 +151,107 @@ def _require_session_accepting(
     ).scalars()
     instrument_ids = {a.instrument_id for a in assignments}
     if not instrument_ids:
-        # No assignments — nothing to write. Treat as not accepting so the
-        # reviewer surface flow is consistent.
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No longer accepting responses",
-        )
+        return REFUSED_NO_ASSIGNMENTS
     instruments = _instruments_for_session(db, review_session.id)
     for instrument_id in instrument_ids:
         instrument = instruments.get(instrument_id)
         if instrument is None or not lifecycle.session_accepts_responses(
             review_session, instrument
         ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No longer accepting responses",
+            return REFUSED_CLOSED
+    return None
+
+
+def _write_refused_notice(
+    review_session: ReviewSession, cause: str, *, action: str
+) -> str:
+    """The sentence a refused write shows. ``action`` is ``"save"``,
+    ``"submit"`` or ``"clear"``."""
+    outcome = {
+        "save": "your last changes weren't saved",
+        "submit": "your answers weren't submitted",
+        "clear": "your answers weren't cleared",
+    }[action]
+    if cause == REFUSED_NO_ASSIGNMENTS:
+        return f"You have nothing to review in this session right now, so {outcome}."
+    if cause == REFUSED_NOT_OPEN:
+        return f"This review is not currently open, so {outcome}."
+    if lifecycle.is_ready(review_session) and lifecycle.deadline_has_passed(
+        review_session
+    ):
+        zone = sessions_service.resolve_session_timezone(review_session)
+        when = date_formatting.format_datetime(review_session.deadline, zone)
+        label = date_formatting.gmt_offset_zone_label(
+            zone, at=review_session.deadline
+        )
+        return f"This review closed at its deadline, {when} ({label}), so {outcome}."
+    return f"This review has closed, so {outcome}."
+
+
+def _unsaved_answers(
+    db: Session,
+    review_session: ReviewSession,
+    reviewer: Reviewer,
+    upserts: list[ResponseUpsert],
+) -> list[dict[str, str]]:
+    """What a refused Save or Submit carried, as plain text the reviewer
+    can copy (participant audit P3). Every non-empty typed value comes
+    back, changed or not, whatever row it was posted against: echoing
+    only some would make the card an oracle, for stored answers the
+    visibility setting hides and for which assignment ids are the
+    reviewer's. An entry is labeled ``{instrument}: {reviewee} —
+    {field}`` only when a GET would show that row now, i.e. an included
+    assignment of this reviewer on a visible field in a ``ready`` or
+    ``expired`` session; any other value is listed bare, so an excluded
+    row, a session that never opened and a hand-made id all name
+    nobody."""
+    typed = [u for u in upserts if u.value]
+    if not typed:
+        return []
+    shown: dict[int, Assignment] = {}
+    fields: dict[tuple[int, str], InstrumentResponseField] = {}
+    if lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session):
+        shown = {
+            a.id: a
+            for a in _load_assignments_with_relations(
+                db, session_id=review_session.id, reviewer_id=reviewer.id
             )
+        }
+        if shown:
+            fields = {
+                (f.instrument_id, f.field_key): f
+                for f in db.execute(
+                    select(InstrumentResponseField)
+                    .where(
+                        InstrumentResponseField.instrument_id.in_(
+                            {a.instrument_id for a in shown.values()}
+                        )
+                    )
+                    .where(InstrumentResponseField.visible.is_(True))
+                ).scalars()
+            }
+    out: list[dict[str, str]] = []
+    for upsert in typed:
+        assignment = shown.get(upsert.assignment_id)
+        field = (
+            fields.get((assignment.instrument_id, upsert.field_key))
+            if assignment is not None
+            else None
+        )
+        if assignment is None or field is None:
+            out.append({"value": upsert.value})
+            continue
+        out.append(
+            {
+                "instrument_label": instruments_service._instrument_label(
+                    assignment.instrument
+                ),
+                "reviewee_name": assignment.reviewee.name,
+                "field_label": field.label,
+                "value": upsert.value,
+            }
+        )
+    return out
 
 
 def _surface_context(

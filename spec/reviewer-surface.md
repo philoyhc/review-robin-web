@@ -882,8 +882,36 @@ three** of the following hold:
 3. `now() < ReviewSession.deadline` (deadline hasn't passed; null
    deadline counts as open).
 
-Failing any of those three returns **HTTP 403** on Save / Submit /
-Clear POSTs.
+Failing any of those three, or having no included assignment, refuses
+a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). The
+refusal renders the page again rather than the standalone error page,
+which used to throw away what the reviewer typed (participant audit P3):
+the page the reviewer was on (page 1 for Clear, and for a page number
+out of range), read-only as a GET would now show it, or the pre-open
+page when the session is neither `ready` nor `expired`. A
+`.rs-missing-card` (`data-rs-write-refused`) names the cause in one
+sentence, ending "so your last changes weren't saved" (Save), "so your
+answers weren't submitted" (Submit) or "so your answers weren't
+cleared" (Clear). The first cause that applies, in this order, wins:
+
+| Cause | Opens with |
+|---|---|
+| `expired` | "This review has closed" |
+| `draft`, `validated` or `archived` | "This review is not currently open" |
+| no included assignment | "You have nothing to review in this session right now" |
+| `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
+
+Under it, `data-rs-unsaved-answers` lists every non-empty value the
+POST carried as plain text, line breaks kept, so it can be copied out.
+An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
+would show that row now: an included assignment of this reviewer, on a
+visible field, in a `ready` or `expired` session. Any other value (an
+excluded row, a session that never opened, an id that isn't the
+reviewer's) is listed bare, so the card labels only the reviewer's
+own included rows on visible fields.
+Every typed value is listed, changed or not, whatever row it names:
+echoing only some would tell the reviewer which ids are theirs, or what
+is stored where the visibility setting hides it. Clear carries none.
 
 GET requests behave differently depending on which gate fails:
 
@@ -896,7 +924,8 @@ GET requests behave differently depending on which gate fails:
   reviewer's own line, § *Role-navigator chip strip*), an info banner
   explaining the review hasn't opened yet, the deadline + zone if one
   is set, and a link back to the reviewer dashboard. No response form
-  is rendered. Applies for `draft` and `validated`.
+  is rendered. Applies for `draft` and `validated`. A refused write on
+  such a session renders the same page with its refusal card (above).
 
 - **Session `archived`** (reached through an old invitation link or
   a bookmark; the dashboard lists it unlinked). The same template
@@ -1284,10 +1313,13 @@ dashboard's Session column once Reviewer Status is
   section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
   and a secondary "Your reviewer dashboard" link. Recall renders
-  only while the session is still `ready` (`can_recall =
-  lifecycle.is_ready`); it rolls the reviewer's submission back to
-  draft (nulls `submitted_at`) and 303s to the surface so they can
-  keep editing. Handled by `reviewer_recall` in
+  only while the session is still `ready` and its deadline has not
+  passed (`can_recall`): past either, the form it would land on is
+  read-only and Submit is refused, so a recall would strand the
+  reviewer at "Saved but not submitted" (participant audit M1). The
+  route refuses the same states with a 403. Recall rolls the
+  reviewer's submission back to draft (nulls `submitted_at`) and 303s
+  to the surface so they can keep editing. Handled by `reviewer_recall` in
   `routes_reviewer/_surface/_routes.py`.
 - **Sections** — one `.card` per instrument the reviewer
   responded on and may read now (§"Lifecycle gating"), in

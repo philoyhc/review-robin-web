@@ -47,14 +47,14 @@ A struck ID is done; its **Decides** cell names the PR.
 |---|---|---|---|---|
 | ~~P1~~ | **Session names leak to any signed-in user.** `resolve_return_to` looks up `ReviewSession.name` for `/me/sessions/{n}` and `/operator/sessions/{n}/…` with no permission check. So `/about?return_to=/me/sessions/7` (or `/guide`, `/auth/me/debug`) reads "← Back to {session name}" for any id. This defeats 19F's "cannot infer anything" rule, and `tests/unit/test_return_to.py` asserts the name but not the authorization. | `app/web/return_to.py` | Resolve the name only when the viewer can see that session; otherwise fall back to the default label. | fix · **done** in #3061 |
 | ~~P2~~ | **The error page is a dead end.** "Go back" is `history.back(); return false;`, so in a tab opened from an email it does nothing, and the `/` fallback never runs. There is no `/me` link, no sign-out and no help contact. Worst case: the invite 404 ("This invitation link is invalid or has expired.") and gate 404s reached from bookmarks. | `app/web/templates/error.html` | Make the link go to `/me` (or `/`) and use history only when there is some. | author · **done** in #3064: a real link (`/me`, Sessions on operator pages, Sign out on a 401); "Go back" only after an in-app page |
-| P3 | **A session that closes mid-edit throws away what the reviewer typed.** Save, Submit and Clear answer 403 "Access denied" / "No longer accepting responses" on the standalone error page. The same text also covers a reviewer with no assignments ("no longer", when they never could) and a session reverted to draft ("not yet"). | `app/web/routes_reviewer/_surface/_context.py` | Re-render the surface read-only with its closed banner; give each cause its own wording. | author |
+| ~~P3~~ | **A session that closes mid-edit throws away what the reviewer typed.** Save, Submit and Clear answer 403 "Access denied" / "No longer accepting responses" on the standalone error page. The same text also covers a reviewer with no assignments ("no longer", when they never could) and a session reverted to draft ("not yet"). | `app/web/routes_reviewer/_surface/_context.py` | Re-render the surface read-only with its closed banner; give each cause its own wording. | author · **done** in #3066 |
 | P4 | **Reviewees and observers have no way in and no way back.** No email reaches them (§3). A reviewee's `/me` row appears only while the release window is open and silently vanishes after `responses_release_until`, leaving "You have no pending reviews". "My Reviews" counts reviewer rows only, so `/results` and `/collation` have no link back to `/me`. Neither does a single-session reviewer's closed surface. | `app/web/routes_reviewer/_shared.py`, `app/web/templates/reviewer/_top_bar.html` | Show a link back to `/me` on every participant page, whatever the count: widening the counter alone leaves a one-session reviewee or observer at 1, below the "more than 1" rule. Decide how reviewees learn the window opened (blocked on email, §3). | author · link back **done** in #3065 ("Your reviews" on every participant page); telling reviewees their window opened waits on email |
 
 ### Medium
 
 | ID | Finding | Where | Likely fix | Decides |
 |---|---|---|---|---|
-| M1 | **Recall after the deadline strands the reviewer.** Recall is offered while `ready` even after the deadline. The confirm dialog promises "return to the form to edit", but the surface is read-only by then and Submit is refused, so the reviewer is left "Saved but not submitted". This is deliberate per the route docstring, but the participant is never told. | `app/web/routes_reviewer/_summary.py`, `_surface/_routes.py` | Hide Recall once the deadline passes, or warn that resubmitting won't be possible. | author |
+| ~~M1~~ | **Recall after the deadline strands the reviewer.** Recall is offered while `ready` even after the deadline. The confirm dialog promises "return to the form to edit", but the surface is read-only by then and Submit is refused, so the reviewer is left "Saved but not submitted". This is deliberate per the route docstring, but the participant is never told. | `app/web/routes_reviewer/_summary.py`, `_surface/_routes.py` | Hide Recall once the deadline passes, or warn that resubmitting won't be possible. | author · **done** in #3066: hidden, and the route refuses it |
 | ~~M2~~ | **The Recall refusal shows raw internals:** "Recall is only allowed while the session is ready; session status is 'expired'." That is a raw enum (operators see "Activated" / "Closed") in Python `repr` quotes, under "Access denied". | `_surface/_routes.py` | Write participant wording without the status value. | fix · **done** in #3062 |
 | M3 | **Pre-open copy is wrong or thin.** "The session operator has prepared the review…" also shows in `draft`, including after a revert from `ready`. The page omits the scheduled activation time that "Check back closer to the response window" implies, and omits the help contact. The archived variant says "has archived the review". | `app/web/templates/reviewer/pre_open.html` | Split draft from validated; show the activation time and help contact; reword "archived". | author |
 | M4 | **One archived session gets three different answers.** `/1` says "closed". `/summary` still renders, but its banner blames "the operator's visibility setting". `/collation` renders and blames Band 3 or the release window. The observer link is grayed on `/me`, but the URL still works. | `summary.html`, `collation.html`, `_collation.py` | Give archived sessions one wording everywhere, and refuse collation as its CSV already does. | author |
@@ -93,6 +93,27 @@ A struck ID is done; its **Decides** cell names the PR.
 - **"Your reviews" is the dashboard's one name**: the error page's "Go to
   your reviews", the back link's "Back to your reviews", and P4's
   top-bar link (part of L1).
+
+Second pass, same day:
+
+- **P3 (a):** a refused Save / Submit / Clear renders the page again,
+  read-only, naming its cause, with what was typed listed to copy.
+- **M1 (a):** Recall is hidden once the deadline passes.
+- **M3 (b), (c):** show the scheduled start time and the help contact;
+  draft, validated and archived all say the review is "not currently
+  open" rather than splitting their copy.
+- **M6:** one role-aware status rule, labeled Not open yet / Open /
+  Available / Closed / Finished. "Available" is closed to responses but
+  viewable by that role now; "Closed" is closed with nothing to view
+  right now, and can become Available when a release window opens.
+- **M4 (a):** once a session is archived it is off limits: `/summary`
+  and `/collation` are refused, as the observer CSV already is.
+- **M7 (b):** drop "View responses" and "Until".
+- **M8:** About, Guide and Sign-in details take the participant top
+  bar for a participant.
+- **M9:** all four fixes; the invited address partly masked.
+- **M11, M12:** as recommended — a one-line notice on `/me`; "this
+  link has been replaced" wording.
 
 ## 3. Context, not findings
 

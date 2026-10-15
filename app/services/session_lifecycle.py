@@ -890,6 +890,30 @@ def _aware(value: datetime) -> datetime:
     return value
 
 
+def deadline_has_passed(
+    review_session: ReviewSession, *, now: datetime | None = None
+) -> bool:
+    """Whether the session's deadline is set and behind us. A null
+    deadline never passes."""
+    if review_session.deadline is None:
+        return False
+    current = now or datetime.now(timezone.utc)
+    return current >= _aware(review_session.deadline)
+
+
+def recall_allowed(
+    review_session: ReviewSession, *, now: datetime | None = None
+) -> bool:
+    """Whether a reviewer may recall their submission: the session is
+    ``ready`` and its deadline hasn't passed. Past either, the form a
+    recall lands on is read-only and Submit is refused (participant
+    audit M1). The summary's button and the Recall route both read
+    this."""
+    return is_ready(review_session) and not deadline_has_passed(
+        review_session, now=now
+    )
+
+
 def session_accepts_responses(
     review_session: ReviewSession,
     instrument: Instrument,
@@ -900,11 +924,7 @@ def session_accepts_responses(
         return False
     if not instrument.accepting_responses:
         return False
-    if review_session.deadline is not None:
-        current = now or datetime.now(timezone.utc)
-        if current >= _aware(review_session.deadline):
-            return False
-    return True
+    return not deadline_has_passed(review_session, now=now)
 
 
 def session_status_for_reviewer(

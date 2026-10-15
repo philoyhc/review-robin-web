@@ -1,0 +1,26 @@
+{# A refused Save / Submit / Clear (participant audit P3, author's
+   ruling 2026-10-15), on the review surface or the pre-open page.
+
+   Required context (only when a write was refused):
+     - write_refused: str — the sentence naming why.
+     - unsaved_answers: list of {value} plus, when a GET would show
+       that row now, {instrument_label, reviewee_name, field_label} —
+       what the refused POST carried, as text to copy; empty on Clear
+       and when nothing was typed.
+#}
+{% if write_refused %}
+  <div class="card rs-missing-card" data-rs-write-refused>
+    <strong>{{ write_refused }}</strong>
+    {% if unsaved_answers %}
+      <p>What you entered is below, so you can keep a copy:</p>
+      <ul class="rs-unsaved-list" data-rs-unsaved-answers>
+        {% for u in unsaved_answers %}
+          <li>
+            {% if u.field_label %}<strong>{{ u.instrument_label }}:</strong> <strong>{{ u.reviewee_name }}</strong> — <code>{{ u.field_label }}</code>{% endif %}
+            <span class="rs-unsaved-value">{{ u.value }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+{% endif %}

@@ -423,7 +423,7 @@ What a reviewer reads back after close is the visibility policy's call
 - `observe_deadline(...)` — lazy deadline-close. Idempotent. Called
   on the reviewer surface — its GET (`review_surface` and
   `_surface_context`; the operator preview skips it), Recall, and the write gate
-  `_require_session_accepting` ahead of save / submit / clear — and by
+  `_write_refusal` ahead of save / submit / clear — and by
   the operator Instruments page GET (`instruments_index`). The
   predicate `session_accepts_responses` does not call it; it compares
   `now()` with the deadline itself (§4.1). The first request after the deadline
@@ -440,8 +440,11 @@ reviewer write (save / submit / clear). Returns `True` iff:
 2. `instrument.accepting_responses` is `True`,
 3. `now() < session.deadline` (or `session.deadline is None`).
 
-POST routes (save / submit / clear) call this directly and 403
-on failure. The reviewer-surface **GET** route branches
+POST routes (save / submit / clear) gate on it through
+`_write_refusal`, which also refuses a session that isn't `ready` or
+`expired` and a reviewer with no included assignment; a refusal is a
+403 that renders the page again with the cause and what was typed
+(`spec/reviewer-surface.md` "Lifecycle gating"). The reviewer-surface **GET** route branches
 upstream of this check:
 
 - If the session is neither `ready` nor `expired` (draft,

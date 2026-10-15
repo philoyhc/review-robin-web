@@ -148,6 +148,8 @@
     </div>
   {% endif %}
 
+  {% include "reviewer/_write_refused.html" %}
+
   {# Invalid-values warning card. Surfaces server-side rejections for
      out-of-range / wrong-shape numeric input. Same chrome as the
      missing-required card so the two read consistently when both fire

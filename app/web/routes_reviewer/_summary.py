@@ -112,10 +112,12 @@ def reviewer_session_summary(
                 review_session, reviewer
             ),
             # ``Recall my submission`` button is shown only while
-            # the session is ``ready`` — recall would have no live
-            # form to land on once the operator closes the session
-            # (``expired``) or reverts it (``draft``).
-            "can_recall": lifecycle.is_ready(review_session),
+            # the session is ``ready`` and before its deadline —
+            # past either, the form it lands on is read-only and
+            # Submit is refused, so recalling would strand the
+            # reviewer at "Saved but not submitted" (participant
+            # audit M1, author's ruling 2026-10-15).
+            "can_recall": lifecycle.recall_allowed(review_session),
         },
     )
 
