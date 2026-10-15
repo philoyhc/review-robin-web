@@ -190,6 +190,6 @@ with the last section it covers.
   Sessions page.
 - [ ] **Guide.** As a participant, the Guide subtitle reads "What to
   expect in the reviews you take part in." The reviewer card mentions
-  "Recall my submission" and says reading answers after close depends
-  on the people running the review; the observer card says a summary
+  "Recall my submission", reading answers until the review closes, and
+  after that only if the people running it allow it; the observer card says a summary
   can show while the review is still open. As an operator, the subtitle is unchanged.

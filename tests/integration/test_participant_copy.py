@@ -129,13 +129,15 @@ def test_the_observer_card_allows_results_while_the_review_is_open() -> None:
 def test_the_reviewer_card_says_when_answers_can_change_and_be_read(
     client: TestClient, db: Session, make_client
 ) -> None:
-    """The card said "revisit until the session closes". Editing ends
-    when the review closes or its deadline passes; reading answers back
-    after that depends on the visibility policy
-    (`reviewer_sees_own_responses`), so the card promises neither (L4)."""
+    """The card said "revisit until the session closes". Editing ends at
+    the deadline or an early close (`recall_allowed`,
+    `session_accepts_responses`); reading back holds while the session
+    is `ready` and after that depends on the visibility policy
+    (`reviewer_sees_own_responses`) (L4)."""
     _seed_reviewer(client, db)
     body = " ".join(_participant(make_client).get("/guide").text.split())
-    assert "Until the review closes or its deadline passes" in body
+    assert "Until the deadline passes (or the review closes early)" in body
     assert "Recall my submission" in body
-    assert "only if the people running the review allow it" in body
+    assert "You can still read your answers until the review closes" in body
+    assert "only if the people running it allow it" in body
     assert "revisit until the session closes" not in body
