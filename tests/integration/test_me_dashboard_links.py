@@ -647,6 +647,21 @@ def test_a_reviewer_reads_available_after_release_only_with_raw(
     _reviewer_answer(db, review_session, instrument)
     assert AVAILABLE in client.get("/me").text
 
+    # Window still open, but the after-release cell off: nothing to read.
+    policy = db.execute(
+        select(InstrumentViewPolicy).where(
+            InstrumentViewPolicy.instrument_id == instrument.id
+        )
+    ).scalar_one()
+    policy.after_release_granularity = None
+    policy.after_release_identification = None
+    db.commit()
+    assert CLOSED in client.get("/me").text
+
+    # Raw again, but the window closed.
+    policy.after_release_granularity, policy.after_release_identification = (
+        visibility_policies.MODE_LABELS["raw"]
+    )
     review_session.responses_release_at = None
     db.commit()
     assert CLOSED in client.get("/me").text
