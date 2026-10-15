@@ -1179,10 +1179,11 @@ reviewee-/observer-only rows show `—` in those cells.
   in as {user.email}. If you expected to see a review here, check
   that it was sent to this address, or contact the person running
   it.", then an "About Review Robin" link
-  (`/about?return_to=/me`). One wording for everyone it reaches —
-  a reviewer with nothing assigned, an observer with no session, a
-  reviewee outside their window, a stranger — so it never implies
-  something is waiting (author's ruling, 2026-10-15).
+  (`/about?return_to=/me`). One wording for everyone it reaches
+  (a stranger, a reviewee with no current grant, a deactivated
+  roster row, a reviewee under a non-email identifier), so it never
+  implies something is waiting (author's ruling, 2026-10-15). Active
+  reviewers and observers always have a row, so they never see it.
 
 ### Cross-role union and reachability
 

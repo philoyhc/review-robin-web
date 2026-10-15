@@ -80,6 +80,7 @@
     .error-links {
       display: flex;
       flex-wrap: wrap;
+      justify-content: center;
       gap: 16px;
       margin-top: 24px;
     }
@@ -100,7 +101,9 @@
     <p class="error-message">{{ message }}</p>
     {# The page's own link always works, so a tab opened from an email or a
        bookmark is never stranded (participant audit P2). "Go back" shows
-       only when the tab has somewhere to go back to. #}
+       only when the tab arrived from a page of this app: history.length
+       also counts a sign-in redirect, and going back there lands on the
+       Microsoft login page. #}
     <p class="error-links">
       <a class="error-back" href="{{ home_url }}" data-error-home>{{ home_label }}</a>
       <a class="error-back" href="{{ home_url }}" data-error-history hidden>Go back</a>
@@ -108,7 +111,11 @@
     <script>
       (function () {
         var back = document.querySelector("[data-error-history]");
-        if (!back || window.history.length < 2) return;
+        var cameFromApp = false;
+        try {
+          cameFromApp = new URL(document.referrer).origin === window.location.origin;
+        } catch (e) { /* no referrer */ }
+        if (!back || !cameFromApp) return;
         back.hidden = false;
         back.addEventListener("click", function (event) {
           event.preventDefault();

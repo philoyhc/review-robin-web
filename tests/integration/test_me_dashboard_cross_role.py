@@ -230,9 +230,7 @@ def test_reviewee_with_no_current_grant_gets_no_row_at_all(
     # base.html inlines the whole stylesheet into every page.
     assert f"/me/sessions/{review_session.id}/results" not in body
     # Indistinguishable from the empty dashboard a stranger sees.
-    assert "There&#39;s nothing here for you right now." in body or (
-        "There's nothing here for you right now." in body
-    )
+    assert "There's nothing here for you right now." in body
 
 
 def test_a_grant_that_exists_but_has_not_opened_does_not_count(
@@ -460,6 +458,6 @@ def test_the_empty_dashboard_reads_true_for_anyone(make_client) -> None:
     ).get("/me").text
     assert "data-me-empty" in body
     assert "<strong>nobody@example.edu</strong>" in body
-    assert "If you\n        expected to see a review here" in body
+    assert "expected to see a review here" in " ".join(body.split())
     assert 'href="/about?return_to=/me"' in body
     assert "pending reviews" not in body

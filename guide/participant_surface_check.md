@@ -46,7 +46,7 @@ A struck ID is done; its **Decides** cell names the PR.
 | ID | Finding | Where | Likely fix | Decides |
 |---|---|---|---|---|
 | ~~P1~~ | **Session names leak to any signed-in user.** `resolve_return_to` looks up `ReviewSession.name` for `/me/sessions/{n}` and `/operator/sessions/{n}/…` with no permission check. So `/about?return_to=/me/sessions/7` (or `/guide`, `/auth/me/debug`) reads "← Back to {session name}" for any id. This defeats 19F's "cannot infer anything" rule, and `tests/unit/test_return_to.py` asserts the name but not the authorization. | `app/web/return_to.py` | Resolve the name only when the viewer can see that session; otherwise fall back to the default label. | fix · **done** in #3061 |
-| ~~P2~~ | **The error page is a dead end.** "Go back" is `history.back(); return false;`, so in a tab opened from an email it does nothing, and the `/` fallback never runs. There is no `/me` link, no sign-out and no help contact. Worst case: the invite 404 ("This invitation link is invalid or has expired.") and gate 404s reached from bookmarks. | `app/web/templates/error.html` | Make the link go to `/me` (or `/`) and use history only when there is some. | author · **done** in #3064: links to `/me`, "Go back" only with history |
+| ~~P2~~ | **The error page is a dead end.** "Go back" is `history.back(); return false;`, so in a tab opened from an email it does nothing, and the `/` fallback never runs. There is no `/me` link, no sign-out and no help contact. Worst case: the invite 404 ("This invitation link is invalid or has expired.") and gate 404s reached from bookmarks. | `app/web/templates/error.html` | Make the link go to `/me` (or `/`) and use history only when there is some. | author · **done** in #3064: a real link (`/me`, Sessions on operator pages, Sign out on a 401); "Go back" only after an in-app page |
 | P3 | **A session that closes mid-edit throws away what the reviewer typed.** Save, Submit and Clear answer 403 "Access denied" / "No longer accepting responses" on the standalone error page. The same text also covers a reviewer with no assignments ("no longer", when they never could) and a session reverted to draft ("not yet"). | `app/web/routes_reviewer/_surface/_context.py` | Re-render the surface read-only with its closed banner; give each cause its own wording. | author |
 | P4 | **Reviewees and observers have no way in and no way back.** No email reaches them (§3). A reviewee's `/me` row appears only while the release window is open and silently vanishes after `responses_release_until`, leaving "You have no pending reviews". "My Reviews" counts reviewer rows only, so `/results` and `/collation` have no link back to `/me`. Neither does a single-session reviewer's closed surface. | `app/web/routes_reviewer/_shared.py`, `app/web/templates/reviewer/_top_bar.html` | Show a link back to `/me` on every participant page, whatever the count: widening the counter alone leaves a one-session reviewee or observer at 1, below the "more than 1" rule. Decide how reviewees learn the window opened (blocked on email, §3). | author |
 
@@ -73,7 +73,7 @@ A struck ID is done; its **Decides** cell names the PR.
 
 | ID | Finding | Where |
 |---|---|---|
-| L1 | **The dashboard has five names**: "Your reviews", "My Reviews", "My reviews", "your reviews" and "Your reviewer dashboard". The last goes to observers and reviewees too. Its empty state, "You have no pending reviews", is wrong for observers, lapsed reviewees and strangers, and offers no next step. | `dashboard.html`, `_top_bar.html`, `pre_open.html`, `summary.html`, `invite_mismatch.html` |
+| L1 | **The dashboard has five names**: "Your reviews", "My Reviews", "My reviews", "your reviews" and "Your reviewer dashboard". The last goes to observers and reviewees too. ~~Its empty state, "You have no pending reviews", is wrong for observers, lapsed reviewees and strangers, and offers no next step~~ (done in #3064). | `dashboard.html`, `_top_bar.html`, `pre_open.html`, `summary.html`, `invite_mismatch.html` |
 | L2 | **The brand varies**: "Review Robin" (reviewer chrome), "… — Review Robin Web" (titles), "· Review Robin" (error page). The mismatch title has no suffix at all. | `error.html`, `invite_mismatch.html` |
 | L3 | **Operator jargon on participant pages**: "session operator", "the operator", "operator allowlist" and "Sessions lobby" (About), and a Guide subtitle about running sessions. "Operator" is defined only in the operator-only terms table. | `about.html`, `guide.html`, `pre_open.html` |
 | L4 | **Guide participant cards.** The observer card says results come "once the operator releases responses", but Summarized can be granted while the review is ongoing. The reviewer card says "revisit until the session closes", but reviewers can revisit read-only afterwards. "anonymised/summarised" (UK) sits against the app's "Anonymized". | `app/web/templates/guide.html` |
@@ -87,10 +87,9 @@ A struck ID is done; its **Decides** cell names the PR.
 - **The empty `/me` reads the same for everyone:** "There's nothing
   here for you right now. You're signed in as {address}. If you expected
   to see a review here, check that it was sent to this address, or
-  contact the person running it." plus an About link. It is true for a
-  reviewer with nothing assigned, an observer with no session, a
-  reviewee outside their window and a stranger, and implies nothing is
-  waiting.
+  contact the person running it." plus an About link. It is true for
+  everyone who reaches it (a stranger, a reviewee with no current grant,
+  a deactivated roster row) and implies nothing is waiting.
 - **"Your reviews" is the dashboard's one name**: the error page's "Go to
   your reviews", the back link's "Back to your reviews", and P4's
   top-bar link (part of L1).

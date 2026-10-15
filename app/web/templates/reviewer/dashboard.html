@@ -175,10 +175,12 @@
     </div>
   {% else %}
     {# Worded to be true for everyone it reaches (author's ruling,
-       2026-10-15): a reviewer with nothing assigned, an observer with no
-       session, a reviewee outside their window, and a stranger. It must
-       read the same for the last two, so it never implies something is
-       waiting (spec/participant_model.md §5). #}
+       2026-10-15): a stranger, a reviewee with no current grant, someone
+       whose roster row was deactivated, a reviewee carried under a
+       non-email identifier. A reviewee must read exactly as a stranger
+       does, so it never implies something is waiting
+       (spec/participant_model.md §5). Active reviewers and observers
+       always have a row, so they never see it. #}
     <div class="card" data-me-empty>
       <p>There's nothing here for you right now.</p>
       <p class="muted">
