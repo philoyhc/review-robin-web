@@ -1175,9 +1175,9 @@ _ARCHIVE_COHORT_RULE = {
 
 
 def _archived_csv_url(client: TestClient, db: Session, *, code: str) -> str:
-    """A session whose observer CSV serves Raw rows while ``ready`` —
-    asserted here, so the 404s below cannot pass vacuously — and is then
-    archived."""
+    """A session whose observer CSV serves Raw rows in an open release
+    window — asserted here, so the 404s below cannot pass vacuously — and
+    is then archived."""
     review_session = _make_session(client, db, code=code)
     seeded = _seed_one_instrument(db, review_session)
     _add_observer(
@@ -1210,8 +1210,10 @@ def test_collation_csv_archive_guard_holds_if_a_window_predicate_relaxes(
 ) -> None:
     """The guard's own job, and the only way to see it fail: simulate a
     window predicate relaxed to admit an archived session. Without the
-    route's ``is_archived`` short-circuit the while-ongoing Raw grant
+    route's ``is_archived`` short-circuit the after-release Raw grant
     resolves again and the CSV streams."""
     url = _archived_csv_url(client, db, code="col-csv-archived-relaxed")
-    monkeypatch.setattr(_collation.lifecycle, "is_ready", lambda s: True)
+    monkeypatch.setattr(
+        _collation.lifecycle, "is_response_release_window_open", lambda s: True
+    )
     assert client.get(url).status_code == 404

@@ -321,9 +321,9 @@ def reviewee_has_current_grant(
     A reviewee grant is after-release only: their ``while_ongoing``
     cell is off by construction (see ``_PER_CELL_VALID_MODES`` —
     reviewees do not watch responses arrive), so the while-ongoing
-    window is passed as closed. A row written before the per-cell
-    validation can still store a while-ongoing reviewee mode; it grants
-    nothing here, as it renders nothing in
+    window is passed as closed. ``ck_view_policy_cell`` refuses a
+    stored while-ongoing reviewee mode; were one present, it would
+    grant nothing here, as it would render nothing in
     ``build_reviewee_results_context`` — the gate and the page read the
     rule the same way. This is ``True`` only inside an open
     response-release window.

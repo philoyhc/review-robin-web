@@ -119,9 +119,8 @@ files and this line.
 
 **Where this came from.** A review of `docs/` on 2026-09-08 that set out
 to list the Azure-deployment documents and found that nothing tracked
-what the cutover would do to them — the same shape as item 1: an
-obligation created by a plan, recorded nowhere the person executing that
-plan would look.
+what the cutover would do to them: an obligation created by a plan,
+recorded nowhere the person executing that plan would look.
 
 
 ---

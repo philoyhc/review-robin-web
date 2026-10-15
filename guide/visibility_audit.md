@@ -118,6 +118,15 @@ Build, 2026-10-15:
   exist.
 - The migration logs the rewritten rows' ids as well as their count, so
   `guide/post_azure_todo_checklist.md` item 1 can name whom to tell.
+- **Reads.** One `diff-reviewer` read of the build commit. It found one
+  real defect: the observer CSV's archive-guard test had gone vacuous
+  once its seed moved to `after_release`. That test now relaxes the
+  release-window predicate. The read also asked for a test of the
+  migration's log line, which is now asserted, and for prose that
+  still called an illegal stored row reachable, now reworded.
+  `spec-writer` found §4 claiming that a reviewer row with both windows
+  off persists, which the constraint refuses; that line is now
+  scoped.
 
 ### PR ladder
 

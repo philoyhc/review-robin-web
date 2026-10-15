@@ -12,6 +12,8 @@ migration both ways through ``ci-postgres``.
 from __future__ import annotations
 
 import itertools
+import logging
+import logging.config
 
 import pytest
 from alembic import command
@@ -114,7 +116,12 @@ def test_the_model_constraint_accepts_exactly_what_the_rule_allows() -> None:
         engine.dispose()
 
 
-def test_the_migration_normalizes_constrains_and_downgrades() -> None:
+def test_the_migration_normalizes_constrains_and_downgrades(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # env.py's fileConfig replaces the root logger's handlers, caplog's
+    # among them, so the log line below would go unseen.
+    monkeypatch.setattr(logging.config, "fileConfig", lambda *a, **k: None)
     engine = _memory_engine()
     try:
         with engine.connect() as connection:
@@ -130,8 +137,14 @@ def test_the_migration_normalizes_constrains_and_downgrades() -> None:
                 connection.execute(_INSERT, _params(row_id, audience, ongoing, released))
             connection.commit()
 
-            command.upgrade(cfg, REVISION)
+            with caplog.at_level("INFO", logger="alembic.runtime.migration"):
+                command.upgrade(cfg, REVISION)
             connection.commit()
+            # guide/post_azure_todo_checklist.md item 1 reads this line.
+            assert (
+                "ck_view_policy_cell: normalized 3 instrument_view_policies "
+                "row(s) before adding the constraint: ids [1, 2, 3]"
+            ) in caplog.text
             after = {
                 row.id: (
                     (row.while_ongoing_granularity, row.while_ongoing_identification),
