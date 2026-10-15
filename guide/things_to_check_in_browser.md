@@ -198,7 +198,7 @@ Sys Admin → Sessions Diagnostics.
   (Asia/…, Europe/…), not by the GMT label, and a reload keeps it.
 - [ ] **Filter.** Top right of the table: type part of a session name,
   a code, or an owner's name or email, and only matching rows stay;
-  type nonsense and "No sessions match the filter." shows. `Cancel`
+  type nonsense and "No sessions match the filter." shows. `Clear`
   empties the box and every row comes back.
 - [ ] **Actions.** Manage, Outbox and Audit log sit on one line in every
   row.

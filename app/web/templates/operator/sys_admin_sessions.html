@@ -18,7 +18,7 @@
          `rrw-sortable` primitive, its own cookie, seeded by the route.
          Status and Actions don't sort. The filter is the lobby's kind —
          it hides rows already rendered, live on every keystroke, and
-         never queries — so `Cancel` clears it rather than submitting.
+         never queries — so `Clear` empties it rather than submitting.
          Its script is its own rather than base.html's
          `rrwSessionFilterMatches`, which matches name, code and tags per
          column; this one matches owners too, so it tests one
@@ -44,7 +44,7 @@
             </div>
             <div class="filter-actions">
               <button type="button" class="btn secondary"
-                      data-diagnostics-filter-cancel>Cancel</button>
+                      data-diagnostics-filter-clear>Clear</button>
             </div>
           </div>
         </div>
@@ -133,7 +133,7 @@
       <script>
         (function () {
           var input = document.querySelector("[data-diagnostics-filter]");
-          var cancel = document.querySelector("[data-diagnostics-filter-cancel]");
+          var clear = document.querySelector("[data-diagnostics-filter-clear]");
           var table = document.getElementById("diagnostics-sessions");
           var none = document.querySelector("[data-diagnostics-no-match]");
           if (!input || !table) return;
@@ -148,8 +148,8 @@
             if (none) none.hidden = shown > 0;
           }
           input.addEventListener("input", apply);
-          if (cancel) {
-            cancel.addEventListener("click", function () {
+          if (clear) {
+            clear.addEventListener("click", function () {
               input.value = "";
               apply();
               input.focus();

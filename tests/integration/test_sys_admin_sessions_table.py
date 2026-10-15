@@ -74,9 +74,9 @@ def test_a_row_carries_its_name_code_and_owners_for_the_filter(
     options = body.split('id="diagnostics-filter-options"', 1)[1].split("</datalist>", 1)[0]
     for value in ("Spring Review", "Spring-26", "Ann Lee", "ben@example.edu"):
         assert f'<option value="{value}">' in options
-    # Cancel clears the filter; it is a button, not a submit.
+    # Clear empties the filter, as the lobby's does; a button, not a submit.
     assert re.search(
-        r'<button type="button" class="btn secondary"\s+data-diagnostics-filter-cancel>Cancel</button>',
+        r'<button type="button" class="btn secondary"\s+data-diagnostics-filter-clear>Clear</button>',
         body,
     )
 
