@@ -50,12 +50,12 @@ never a 301 — the target changes when a role changes.
 
 | Signed-in as | `GET /` | `GET /me` | `GET /operator/sessions` |
 |---|---|---|---|
-| No role at all | 302 → `/me` | 200, empty state | 303 → `/me` |
+| No role at all | 302 → `/me` | 200, empty state | 303 → `/me?notice=organizers` |
 | Operator | 302 → `/operator/sessions` | 200 | 200 |
 | Sys-admin | 302 → `/operator/sessions` | 200 | 200 |
-| Reviewer only | 302 → `/me` | 200, lists their sessions | 303 → `/me` |
-| Reviewee only | 302 → `/me` | 200, lists their sessions | 303 → `/me` |
-| Observer only | 302 → `/me` | 200, lists their sessions | 303 → `/me` |
+| Reviewer only | 302 → `/me` | 200, lists their sessions | 303 → `/me?notice=organizers` |
+| Reviewee only | 302 → `/me` | 200, lists their sessions | 303 → `/me?notice=organizers` |
+| Observer only | 302 → `/me` | 200, lists their sessions | 303 → `/me?notice=organizers` |
 
 The 303 on `/operator/sessions` is `OperatorAllowlistDenied`, handled in
 `app/main.py` — a bounce to the user's own home, not a 403 page.

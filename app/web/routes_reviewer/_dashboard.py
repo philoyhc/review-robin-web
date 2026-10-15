@@ -76,7 +76,7 @@ def reviewer_dashboard(
                 "user": user,
                 "items": [],
                 "breadcrumbs": breadcrumbs.reviewer_root(),
-            "notice": views.me_notice(request.query_params.get("notice")),
+                "notice": views.me_notice(request.query_params.get("notice")),
             },
         )
 

@@ -1,5 +1,5 @@
-"""The operator chrome as a participant sees it on the shared pages
-(About, Guide, Sign-in details): participant audit M8,
+"""The chrome a participant sees on the shared pages (About, Guide,
+Sign-in details): participant audit M8,
 `guide/participant_surface_check.md`."""
 
 from __future__ import annotations
@@ -79,10 +79,13 @@ def test_shared_pages_show_a_participant_their_own_top_bar(
     assert "data-your-reviews" in body
 
 
-@pytest.mark.parametrize("path", ["/about", "/guide"])
+@pytest.mark.parametrize("path", ["/about", "/guide", "/auth/me/debug"])
 def test_shared_pages_keep_the_operator_top_bar_for_an_operator(
     client: TestClient, path: str
 ) -> None:
+    """Sign-in details picks its bar from a looked-up row rather than
+    the gate's, so it needs the row to exist: any page creates it."""
+    client.get("/about")
     body = client.get(path).text
     assert "Review Robin Web App (version" in body
 
@@ -92,3 +95,10 @@ def test_sign_in_details_names_the_viewer(make_client) -> None:
     `display_label`, so the chrome read "Signed in as " and nothing."""
     body = _participant(make_client).get("/auth/me/debug").text
     assert "Signed in as Pat Participant" in body
+
+
+def test_about_names_the_dashboard_your_reviews(client: TestClient) -> None:
+    """One name for the dashboard (participant audit L1)."""
+    body = client.get("/about").text
+    assert '<a href="/me">Your reviews</a>' in body
+    assert "My reviews" not in body

@@ -260,6 +260,7 @@ def test_invite_mismatch_renders_banner_warning(
     assert 'href="/auth/me/debug"' not in body
     assert "such as an alias" in body
     assert "Questions? Contact help@example.edu" in body
+    assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
     # The legacy inline `style="border-color: #b91c1c; background: #fee2e2;"`
     # block on the wrapper card is gone — the .banner.banner-warning
     # primitive carries the framing now.
