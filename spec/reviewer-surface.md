@@ -116,7 +116,8 @@ Top-to-bottom, the page renders:
 1. **Top bar (reviewer chrome variant)** — per
    `spec/visual_style_rrw.md` "Reviewer-facing pages → Top bar". "Review
    Robin" identity (no version, no breadcrumb), user menu with "Signed
-   in as …" + optional "My Reviews" + optional **Guide** + **About** +
+   in as …" + "Your reviews" (to `/me`, on every page but `/me`) +
+   optional **Guide** + **About** +
    "Sign out". The About link (`/about?return_to=<path>`, skipped on
    `/about` itself) matches the operator chrome's, so `/me` reaches the
    About / access-help page the same way `/operator/sessions` does. The
@@ -1101,7 +1102,7 @@ In preview mode:
 ## Dashboard (`/me`)
 
 The participant lobby — where a signed-in user lands directly (no
-invitation token) or via "My Reviews" from any session-scoped
+invitation token) or via "Your reviews" from any session-scoped
 chrome. Lists **every session the signed-in user touches in any
 participant role** (reviewer / reviewee / observer), as a
 cross-role union. The query hits all three rosters
@@ -1617,7 +1618,8 @@ from the top bar.
 | Action row, review-level slot, after the divider | `Submit` |
 | Danger Zone | `Clear all` — copy explains "every response across every page" |
 
-The only other reviewer-side labels are `Sign out` and `My Reviews`.
+The top bar's links are `Your reviews`, `Guide`, `About` and
+`Sign out`.
 
 ### Friendly short label vs. long description
 
@@ -1688,7 +1690,7 @@ makes today + the small follow-on the deferred work needs.
   Every navigation is a server round-trip that drops unsaved typing
   on the current page: **Prev / Next**, **Cancel** (a GET reload),
   **browser-close**, **tab-close**, **address-bar change**, and
-  **the chrome's `My Reviews` link** all lose the current page's
+  **the chrome's `Your reviews` link** all lose the current page's
   unsaved edits with no prompt. The reviewer avoids loss by clicking
   Save before navigating.
 - **Design call.** The template already renders the hooks the

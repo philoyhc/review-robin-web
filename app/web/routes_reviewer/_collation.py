@@ -52,7 +52,6 @@ from app.web.deps import get_or_create_user, require_observer_in_session
 from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
-    reviewer_review_count_for_user,
 )
 
 router = APIRouter(prefix="/me")
@@ -80,9 +79,6 @@ def observer_collation(
         {
             "user": user,
             "session": review_session,
-            "reviewer_review_count": reviewer_review_count_for_user(
-                db, user
-            ),
             "role_chips": build_role_chips(
                 db,
                 user=user,

@@ -394,7 +394,7 @@ Reviewer-facing pages have a top bar, but lighter than the operator's:
 - **Left:** "Review Robin" — small, `--text-subtle`. App identity as a trust anchor. No version info (operators care about that; reviewers don't).
 - **Right:** A small **user menu** containing:
   - "Signed in as [Reviewer Name]" — informational, with the same tier suffix as the operator's. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
-  - "My Reviews" — link back to the reviewer's review list (only rendered when the reviewer has more than one review pending or completed; suppressed when there's just one).
+  - "Your reviews" — link back to `/me` on every participant page but `/me` itself, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back (participant audit P4; "Your reviews" is the dashboard's one name, author's ruling 2026-10-15).
   - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself), rendered only for a viewer who resolves at least one Guide audience. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, and **fails open**: an unset flag renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
   - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link.
   - "Sign out" — ends the reviewer's session.
@@ -427,7 +427,7 @@ The reviewer's "home" after sign-in. A simple list of pending and recent reviews
 
 **Body:**
 
-- **H1:** "My Reviews" or "Your Reviews".
+- **H1:** "Your reviews".
 - A list of review cards, each showing:
   - Session name (linked to that session's response surface for this reviewer).
   - Deadline.
@@ -525,7 +525,7 @@ Some patterns from `visual_style_general.md` and the operator session chrome abo
 - **Color palette.** Same neutrals, same accents. Lifecycle accent colors are operator-only (reviewers don't see lifecycle); other accents (blue for action, green for completion, amber for warnings) apply across all surfaces.
 - **Typography.** Same type scale and font stack on all surfaces.
 - **Spacing.** Same 4px grid throughout.
-- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Settings / Admin / Guide / About / Sign out, with Settings for operators and sys admins only and Admin for sys admins only; reviewer's user menu hosts My Reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
+- **Top bar pattern.** Both operator and reviewer surfaces have a top bar with app identity (left) and user menu (right). Operator's says "Review Robin Web App (version dev)" because operators care about the version; reviewer's says "Review Robin" because they don't. Operator's user menu hosts Settings / Admin / Guide / About / Sign out, with Settings for operators and sys admins only and Admin for sys admins only; reviewer's user menu hosts Your reviews / Guide / About / Sign out, with Guide suppressed for a viewer who resolves no Guide audience. Same shape, different contents.
 
 The discipline: components and visual language are uniform; chrome and navigation patterns are audience-specific. An operator and a reviewer should recognize the same app from the visual style; a quick glance at the chrome should tell each which surface they're on.
 

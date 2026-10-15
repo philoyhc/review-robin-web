@@ -116,3 +116,12 @@ with the last section it covers.
 - [ ] **The empty dashboard.** Signed in as someone with no role, `/me`
   reads "There's nothing here for you right now.", names your address,
   and links to About.
+
+## "Your reviews" on every participant page (P4)
+
+- [ ] **One session is enough.** As a reviewer on a single session, open
+  the review form. The top bar shows "Your reviews", and it goes to
+  `/me`.
+- [ ] **Reviewees and observers too.** On a reviewee's results page and
+  an observer's collation page, the top bar shows "Your reviews".
+- [ ] **Not on the dashboard itself.** On `/me`, the link is absent.

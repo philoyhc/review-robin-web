@@ -185,6 +185,8 @@ def test_collation_shows_empty_cohort_message_when_no_rule(
         f"/me/sessions/{review_session.id}/collation"
     ).text
     assert "haven't been given anyone to observe" in body
+    # Participant audit P4: an observer has a way back to /me.
+    assert 'href="/me" data-your-reviews>Your reviews</a>' in body
 
 
 def test_collation_with_nothing_open_says_so_in_participant_words(

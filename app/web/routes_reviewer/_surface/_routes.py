@@ -28,7 +28,6 @@ from app.web.deps import (
 from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
-    reviewer_review_count_for_user,
     validate_page_n,
 )
 
@@ -217,7 +216,6 @@ def review_surface(
         cookies=dict(request.cookies),
     )
     context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
-    context["reviewer_review_count"] = reviewer_review_count_for_user(db, user)
     context["role_chips"] = build_role_chips(
         db, user=user, review_session=review_session, active_role="reviewer"
     )
@@ -302,9 +300,6 @@ async def reviewer_save(
             cookies=dict(request.cookies),
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
-        context["reviewer_review_count"] = reviewer_review_count_for_user(
-            db, user
-        )
         context["role_chips"] = build_role_chips(
             db,
             user=user,
@@ -373,9 +368,6 @@ async def reviewer_submit(
             show_incomplete_marks=not result.errors,
         )
         context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
-        context["reviewer_review_count"] = reviewer_review_count_for_user(
-            db, user
-        )
         context["role_chips"] = build_role_chips(
             db,
             user=user,
