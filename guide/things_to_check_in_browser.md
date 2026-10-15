@@ -268,8 +268,7 @@ Sys Admin → Sessions Diagnostics.
 
 - [ ] **Owned.** Sign in as a sys-admin. On Sys Admin → Sessions
   Diagnostics, a session you own (created, or added as an owner) shows a
-  greyed-out **Owned** where Manage was. It can't be clicked, and
-  hovering it reads "You already own this session".
+  grayed-out **Owned** where Manage was, and it can't be clicked.
 - [ ] **Manage still works.** A session you don't own shows **Manage**.
   Click it: you land on that session's Home. Go back to Diagnostics, and
   the row now reads **Owned**.

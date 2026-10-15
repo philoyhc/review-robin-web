@@ -185,7 +185,7 @@ def test_a_session_the_admin_owns_shows_owned_not_manage(
     db: Session, client: TestClient, admin: None
 ) -> None:
     """Author, 2026-10-15: Manage self-adds the admin as an owner, so on a
-    session they already own it is a greyed-out Owned instead."""
+    session they already own it is a grayed-out Owned instead."""
     client.get(PAGE)  # signs the admin in, creating their user row
     alice = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
     ann = _user(db, "ann@example.edu")
@@ -201,7 +201,7 @@ def test_a_session_the_admin_owns_shows_owned_not_manage(
     }
     owned = re.compile(
         r'<button type="button" class="btn secondary" disabled aria-disabled="true"\s+'
-        r'data-diagnostics-owned\s+title="You already own this session">Owned</button>'
+        r'data-diagnostics-owned>Owned</button>'
     )
     for code, review_session in (("zz-mine", mine), ("zz-shared", shared)):
         assert owned.search(rows[code]), code
