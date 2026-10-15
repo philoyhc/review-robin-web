@@ -160,6 +160,14 @@ def _pre_open_response(
         if review_session.deadline
         else None
     )
+    # A prepared session's scheduled opening (participant audit M3). A
+    # draft can't open on a schedule until it is prepared again, so it
+    # shows none.
+    scheduled_open_at = (
+        review_session.scheduled_activate_at
+        if lifecycle.is_validated(review_session)
+        else None
+    )
     return _templates.TemplateResponse(
         request,
         "reviewer/pre_open.html",
@@ -168,6 +176,18 @@ def _pre_open_response(
             "session": review_session,
             "deadline_text": deadline_text,
             "deadline_timezone_label": deadline_timezone_label,
+            "scheduled_open_text": (
+                date_formatting.format_datetime(scheduled_open_at, session_zone)
+                if scheduled_open_at
+                else None
+            ),
+            "scheduled_open_timezone_label": (
+                date_formatting.gmt_offset_zone_label(
+                    session_zone, at=scheduled_open_at
+                )
+                if scheduled_open_at
+                else None
+            ),
             "is_archived": lifecycle.is_archived(review_session),
             # participant info Item 3 — the reviewer's own roster
             # fields, so they can check them before the review

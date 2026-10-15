@@ -759,9 +759,8 @@ treats the session in lobby and extract surfaces.
 The reviewer surface is open for writes **only in `ready`**, before
 the deadline. Past the deadline, and in `expired`, it still loads
 read-only: inputs render disabled and the Save / Submit / Clear
-affordances are hidden. In `draft` and
-`validated` the reviewer gets the pre-open page instead, and in
-`archived` the same page with closed copy
+affordances are hidden. In `draft`,
+`validated` and `archived` the reviewer gets the not-open page instead
 ([§10.2](#102-pre-open-and-post-close-behaviour)).
 
 ### 6.2 Editable vs locked semantics
@@ -1653,9 +1652,8 @@ After sign-in, the reviewer lands on:
   identity touches in any participant role** (reviewer / reviewee
   / observer). One table row per session carries the session name
   with per-role pills beneath it, Start / End / Timezone columns,
-  a Session-status pill, and a Reviewer-status pill. Between End
-  and Timezone sit **View responses** and **Until** columns, which
-  are placeholders: every row renders an em dash in both. The
+  a Session-status pill (Not open yet / Open / Available / Closed /
+  Finished, one rule for every role), and a Reviewer-status pill. The
   session-name link targets the first reachable role in priority
   order Reviewer → Reviewee → Observer; each role pill deep-links
   to its own surface.
@@ -1669,12 +1667,11 @@ session without bouncing through `/me`.
 
 ### 10.2 Pre-open and post-close behaviour
 
-If the session is in `draft` or `validated` — not yet accepting
-responses, or reverted to draft — the reviewer sees a
-**pre-open landing card** explaining the session is not open, naming
-the deadline, and offering a return link to the dashboard. In
-`archived` the same card says the review has closed, with no
-deadline. No review form renders.
+If the session is in `draft`, `validated` or `archived`, the reviewer
+sees a **not-open landing card**: "This review is not currently open.",
+then the scheduled opening (a `validated` session only), the deadline
+(unless archived) and the help contact, each when it applies, and a
+return link to the dashboard. No review form renders.
 
 If the session is `ready` but past its deadline, or `expired`, the
 reviewer's **review surface still loads** but renders read-only:
@@ -1832,9 +1829,10 @@ reviewer. Confirmation checkbox required. Audit-logged as
 
 Once the session has fully submitted (every required cell
 populated and stamped), the reviewer sees a read-only
-**summary page** (`/me/sessions/{id}/summary`) — one section per
+**summary page** (`/me/sessions/{id}/summary`; 404 once archived, as
+is its CSV) — one section per
 instrument they responded on and may read now (each instrument's
-visibility policy decides; nothing once archived), a submitted-on
+visibility policy decides), a submitted-on
 timestamp, a
 **Recall my submission** control (rolls the submission back to
 draft while the review is still open: activated and before its
@@ -1889,7 +1887,8 @@ operator's Extract-data Token keys card). Each instrument renders
 only while its observer policy resolves a mode for the current
 window: its session-ongoing mode (Summarized, or nothing) while the
 session is `ready`, and its responses-released mode while it is
-`expired` and inside the release window; nothing once archived.
+`expired` and inside the release window. Once the session is archived
+the page and its downloads answer 404.
 
 ---
 

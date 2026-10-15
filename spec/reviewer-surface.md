@@ -917,23 +917,11 @@ is stored where the visibility setting hides it. Clear carries none.
 
 GET requests behave differently depending on which gate fails:
 
-- **Session not yet `ready`** (the operator has prepared the
-  session and may have already sent out invitations, but hasn't
-  activated yet). The route
-  short-circuits to the **pre-open page**
-  (`reviewer/pre_open.html`): session name in the h1 with an
-  "opens later" suffix, a role row (a static `Reviewer` pill and the
-  reviewer's own line, § *Role-navigator chip strip*), an info banner
-  explaining the review hasn't opened yet, the deadline + zone if one
-  is set, and a link back to the reviewer dashboard. No response form
-  is rendered. Applies for `draft` and `validated`. A refused write on
-  such a session renders the same page with its refusal card (above).
-
-- **Session `archived`** (reached through an old invitation link or
-  a bookmark; the dashboard lists it unlinked). The same template
-  renders closed copy instead: "{session name} — closed" in the h1,
-  a banner saying the review has closed and responses are no longer
-  accepted or shown, no deadline line, and the dashboard link.
+- **Session `draft`, `validated` or `archived`.** The route
+  short-circuits to the **pre-open page** (`reviewer/pre_open.html`,
+  § "Pre-open page" below): "This review is not currently open." for
+  all three. No response form is rendered. A refused write on such a
+  session renders the same page with its refusal card (above).
 
 - **Session `expired`** (the operator closed it). The surface
   renders as for a `ready` session whose window has closed, below:
@@ -1159,7 +1147,7 @@ reviewee-/observer-only rows show `—` in those cells.
 
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
-  session). **Eight columns:**
+  session). **Six columns:**
   - **Session** — session name, with per-role pills on a second
     line below it. The session name itself links to
     the highest-priority reachable role in order Reviewer →
@@ -1167,44 +1155,29 @@ reviewee-/observer-only rows show `—` in those cells.
     plain text when no role is reachable. Each role pill is an
     `<a class="pill pill-role-{role}">` anchor when reachable,
     a plain `<span>` otherwise.
-  - **Start** — `sessions.activated_at` formatted in the
-    session's resolved zone, rendered as a `pill-count` chip
-    (neutral data); `<span class="muted">—</span>` when null.
+  - **Start** — when the session opened (`sessions.activated_at`)
+    once it is `ready`, `expired` or `archived`; while `validated`,
+    its scheduled opening (`scheduled_activate_at`); for a `draft`,
+    nothing, since an `activated_at` left from before a revert is not
+    a start (participant audit M6). Formatted in the session's
+    resolved zone as a `pill-count` chip (neutral data);
+    `<span class="muted">—</span>` when there is none.
   - **End** — `session.deadline` formatted in the session zone,
     rendered as a `pill-error` chip (red) once `now() >=
     deadline` and `pill-count` (neutral) otherwise;
     `<span class="muted">—</span>` when null.
-  - **View responses** — placeholder; renders `<span
-    class="muted">—</span>`, and **stays one**: the access-window
-    question it would answer is already answered by the row. A reviewee
-    row exists only while a grant currently resolves, so a dedicated
-    window column would restate what the row's presence says.
-  - **Until** — placeholder; renders `<span
-    class="muted">—</span>` today. Will show the computed
-    close time of the results-viewing window once wired.
   - **Timezone** — `pill-count` chip carrying the compact
     GMT-offset (e.g. `GMT+8`) with the raw IANA id (e.g.
     `Asia/Singapore`) on hover via `<abbr title="...">`.
-  - **Session status** — pill (`not opened` / `open` /
-    `closed`) — see vocabulary below. An **archived** session
-    additionally renders a muted `archived` pill beside the
-    status: `not opened` is true of a draft session and of an
-    archived one for opposite reasons, and the companion says
-    which. A companion, **not a fourth value** — the
-    `session_status` string is what link enablement tests
-    (`!= "not opened"`), so a new value would re-link the
-    reviewer surface on an archived session. It sits inline and
-    wraps below the status on its own when the column narrows. No CSS
-    is added for this — `.pill` is
-    `inline-block` with a right margin, so the wrap is the
-    browser's, not a breakpoint the app defines. For reviewer rows:
-    computed via `lifecycle.session_status_for_reviewer`.
-    For reviewee / observer-only rows: computed from session
-    lifecycle alone (no reviewer-assignment check).
+  - **Session status** — one pill, one rule for every role:
+    `Not open yet` / `Open` / `Available` / `Closed` / `Finished`
+    (`views.participant_session_status`; vocabulary below).
   - **Reviewer status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows;
-    plus a paired `(N/M)` chip in the same colour. Renders `—`
-    when the user is a reviewee / observer only.
+    plus a paired `(N/M)` chip in the same color. A reviewer with
+    no included assignment reads "Nothing assigned to you" instead
+    of a `0/0`. Renders `—` when the user is a reviewee / observer
+    only.
 - **Empty state** — when the user has no row to show in any
   role: a single `.card` (`data-me-empty`) reading "There's
   nothing here for you right now.", then, muted, "You're signed
@@ -1227,7 +1200,7 @@ per role the user holds:
 |---|---|---|
 | `reviewer` | `/me/sessions/{id}/summary` (when submitted) or `/me/sessions/{id}/1` | `session_status != "not opened"` |
 | `reviewee` | `/me/sessions/{id}/results` | `True` whenever the role is present — the role is itself conditional on a currently-resolving grant, so reaching this row means there is something to link to |
-| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, so the page is empty by construction there and the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` |
+| `observer` | `/me/sessions/{id}/collation` | `True` in every lifecycle state **except `archived`**: archive closes every non-operator grant, and the page answers 404 there, so the row renders unlinked. Per-instrument render gated on Band 3 + the session window inside `build_observer_collation_context` |
 
 The session-name link uses the first reachable role in priority
 order (Reviewer → Reviewee → Observer). Unreachable roles render
@@ -1237,24 +1210,25 @@ The cross-role union is built inline in `_dashboard.py` rather than behind a sha
 
 ### Session-status pill vocabulary
 
-Computed by
-`app/services/session_lifecycle.py::session_status_for_reviewer`
-— non-mutating; the deadline check flows through
-`session_accepts_responses` directly so a past deadline reads
-as `closed` even on instruments whose `accepting_responses`
-flag hasn't been flipped yet by `observe_deadline`.
+One rule for every role (participant audit M6, author's ruling
+2026-10-15), computed by `app/web/views/_participant_status.py`
+`participant_session_status`. `Open` and `Closed` say whether the
+review is accepting responses; `Available` is the period after that
+when one of the row's roles can still see something, which differs by
+role. The first row that applies wins:
 
 | Pill | Style | Condition |
 |---|---|---|
-| `not opened` | `pill-info` (blue, pending) | Session is `draft` or `validated` — not yet activated. Session column renders plain text (no link). |
-| `open` | `pill-success` (green) | Session is `ready` AND at least one assigned instrument is `accepting_responses` AND deadline (if set) hasn't passed. Session column links to the surface. |
-| `closed` | `pill-error` (red) | Session is `ready` AND either no assigned instrument is accepting (the deadline passed) or the reviewer has no active assignment. Red matches the past-deadline pill in the End column — both say *the window has closed for this reviewer* — and the muted `pill-lifecycle-archived` grey it replaced read as plain text rather than a pill. Session column **still links** so the reviewer can read their saved responses on the read-only surface. |
+| `Finished` | `pill-lifecycle-archived` | Session is `archived`. |
+| `Not open yet` | `pill-info` | Session is `draft` or `validated`. |
+| `Open` | `pill-success` | Session is `ready` and its deadline (if set) hasn't passed. |
+| `Available` | `pill-success` | Past that (`ready` past its deadline, or `expired`), and one of the row's roles can see something now: it carries `reviewee` (present only while a reviewee grant resolves), or `observer` with an observer grant resolving now (`visibility_policies.observer_has_current_grant`, session-wide, cohort-blind), or `reviewer` with a saved answer, on a field the surface still shows, of an instrument whose `peer_reviewer` setting lets them read it back (`reviewer_sees_own_responses`). |
+| `Closed` | `pill-error` | Otherwise. Red matches the past-deadline pill in the End column. |
 
-`closed` also resolves from `session.status == "expired"`, and must:
-an expired session reports `closed` rather than `not opened` precisely
-so the dashboard keeps its link live, which is what lets the reviewer
-still reach `/summary` and the read-only surface after the operator has
-closed the session.
+The label decides no link. The reviewer role's link still follows
+`lifecycle.session_status_for_reviewer` (`!= "not opened"`, so live
+on `ready` and `expired`), and the observer's tests
+`lifecycle.is_archived` (§ "Cross-role union and reachability").
 
 ### Reviewer-status pill vocabulary
 
@@ -1267,7 +1241,7 @@ Computed by `app/services/responses::session_pill_for_reviewer`:
 | `not started` | `pill-info` | No `Response` rows exist for this reviewer in this session. Counter chip is `pill-info`. |
 
 Reviewer Status renders independently of Session Status — even
-on a `not opened` session the reviewer sees "Reviewer Status:
+on a `Not open yet` session the reviewer sees "Reviewer Status:
 not started", which reads naturally alongside the session's
 pre-open state. The "Edit / Re-submit" affordance lives on the
 surface itself — hitting Submit once doesn't lock the form.
@@ -1297,9 +1271,11 @@ reviewer to the page they were on. The page also stays reachable later from the
 dashboard's Session column once Reviewer Status is
 `submitted`.
 
-- **Gate** — `responses.reviewer_session_state.pill_state ==
-  "submitted"`. Otherwise redirects to `/me` with no
-  flash banner; the reviewer can re-submit from the surface.
+- **Gate** — a bare 404 once the session is archived, before anything
+  else (participant audit M4). Otherwise
+  `responses.reviewer_session_state.pill_state == "submitted"`, or a
+  redirect to `/me` with no flash banner; the reviewer can re-submit
+  from the surface.
 - **H1** — "Your responses — {session.name}".
 - **Role row** — under the H1: the role-navigator chips with the
   reviewer's own line after the last pill, as on the surface (§
@@ -1337,7 +1313,8 @@ dashboard's Session column once Reviewer Status is
   Group-scoped instruments collapse to one row per group with
   the composed group identity in the Reviewee column,
   mirroring the surface's existing collapse logic.
-- **CSV download** — `/me/sessions/{id}/summary.csv`
+- **CSV download** — `/me/sessions/{id}/summary.csv` (same gate:
+  404 once archived, else a redirect to `/me` until submitted)
   emits `{code}_my_responses.csv` (filename via
   `app.services.extracts.filename`). Same 21-column shape as
   the unified Responses CSV (see `spec/csv_contracts.md`
@@ -1351,19 +1328,26 @@ dashboard's Session column once Reviewer Status is
 
 ### Pre-open page (`/me/sessions/{id}/{page_n}` on a not-yet-ready or archived session)
 
-A dedicated **pre-open** rendering serves a reviewer who follows an
-invitation token (or a dashboard link) to a session that's been
-Prepared (`validated`) but not yet Activated. Instead of 403-ing or
-dropping the reviewer into a silently-disabled form, the
-route returns `reviewer/pre_open.html` — h1 with "{session
-name} — opens later", an info banner explaining the review
-hasn't opened yet, the deadline + zone when one is set, and a
-link back to the reviewer dashboard. Under the h1, a role row holds a
-static `Reviewer` pill (this page has no role navigator) and the
-reviewer's own line, so they can check their details before the review
-opens (§ *Role-navigator chip strip*). An `archived` session renders
-the same template with closed copy (see the gate list above), and
-neither the role row nor the line: the review is over. See
+A dedicated **pre-open** rendering serves a reviewer who reaches a
+session that is `draft`, `validated` or `archived` — through an
+invitation, a bookmark or an old link — instead of a 403 or a
+silently-disabled form. One wording for all three (participant audit
+M3, author's ruling 2026-10-15): the h1 is the session name and the
+banner reads "This review is not currently open.", whether the review
+has yet to open, was reverted to draft, or is over. Under the headline,
+each when it applies:
+
+- **Scheduled to open** — `scheduled_activate_at` in the session zone,
+  on a `validated` session only (a draft can't open on its schedule
+  until it is prepared again).
+- **Deadline** — with its zone, unless the session is archived.
+- **"Questions? Contact {help_contact}"** — when the session has one.
+
+Then a link back to the reviewer dashboard. Under the h1, unless the
+session is archived, a role row holds a static `Reviewer` pill (this
+page has no role navigator) and the reviewer's own line, so they can
+check their details before the review opens (§ *Role-navigator chip
+strip*). See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
 for the gate semantics.
 
@@ -1433,8 +1417,9 @@ not learn that.
 
 Observers are **not** grant-gated the way reviewees are: being appointed
 an observer is not a disclosure *about* the observer, so the surface
-opens in every lifecycle state and simply renders nothing until their
-window does.
+opens in every lifecycle state but archived, where it answers 404
+(participant audit M4), and simply renders nothing until their window
+does.
 
 **What renders** — reviewer-surface chrome (`reviewer/collation.html`)
 plus the per-instrument 3-row collation table (reviewer-side
@@ -1465,8 +1450,8 @@ The reviewer surface includes it in every mode. The operator preview
 (§ *Operator preview mode*) has no navigator, because its links would
 lead to the inspected reviewer's other surfaces: it gets one static
 `Reviewer` pill (active, not a link) in its place, so the reviewer's own
-line below has the row it reads on for the reviewer. The pre-open page's
-"opens later" variant does the same.
+line below has the row it reads on for the reviewer. The pre-open page
+does the same, unless the session is archived.
 
 **Builder** — `build_role_chips(db, *, user, review_session,
 active_role)` in `app/web/routes_reviewer/_shared.py`. It returns one
@@ -1518,8 +1503,7 @@ is a `pill pill-role-<role>` labeled with the capitalized role name:
 - not active, not enabled → `<span>` with `rs-role-nav-muted`.
 
 **The reviewer's own line.** On the reviewer surface, the per-session
-summary and the pre-open page's "opens later" variant (not the pre-open
-page's closed variant; `/results` and `/collation` have the reviewee's
+summary and the pre-open page (not once the session is archived; `/results` and `/collation` have the reviewee's
 and the observer's lines, below), the partial
 takes an optional
 `reviewer_self_fields` and renders it in a muted `.rs-self-info` span

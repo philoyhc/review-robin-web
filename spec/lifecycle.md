@@ -450,11 +450,10 @@ upstream of this check:
 - If the session is neither `ready` nor `expired` (draft,
   validated or archived), the route renders the dedicated
   **pre-open page**
-  (`reviewer/pre_open.html`) — "this review hasn't opened yet,
-  check back later". The reviewer reached here via roster + an
-  invitation token that was sent ahead of activation. An `archived`
-  session renders the same page with closed copy ("this review has
-  closed"), no deadline line.
+  (`reviewer/pre_open.html`) — "This review is not currently open."
+  for all three (participant audit M3), with the scheduled opening on
+  a `validated` session, the deadline unless archived, and the help
+  contact (`spec/reviewer-surface.md` "Pre-open page").
 - If the session is `ready` but the predicate returns `False`
   (the deadline passed),
   the existing surface template renders read-only with the "no

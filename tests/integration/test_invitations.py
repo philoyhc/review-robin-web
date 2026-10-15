@@ -203,8 +203,8 @@ def test_reviewer_pre_open_page_renders_for_validated_session(
 ) -> None:
     """18F Part 2 — a reviewer with a roster row who lands on the
     response surface URL of a not-yet-activated session sees the
-    "this review hasn't opened yet" page instead of the form or
-    a 403."""
+    "not currently open" page instead of the form or a 403
+    (participant audit M3 wording)."""
     session = _validated_session(client, db, "val-preopen")
     rae = AuthenticatedUser(
         principal_id="rae-oid",
@@ -216,8 +216,8 @@ def test_reviewer_pre_open_page_renders_for_validated_session(
     page = rae_client.get(f"/me/sessions/{session.id}/1")
     assert page.status_code == 200
     body = page.text
-    assert "<title>Review opens later" in body
-    assert "hasn't opened yet" in body
+    assert "<title>Review not open" in body
+    assert "This review is not currently open." in body
 
 
 def test_send_writes_outbox_and_flips_to_sent(
@@ -2531,8 +2531,8 @@ def test_reviewer_pre_open_page_says_closed_for_an_archived_session(
     make_client,
 ) -> None:
     """Findings A25 (2026-10-03): an archived session reaches the same
-    page through an old link, and says it has closed rather than that
-    it opens later."""
+    page through an old link. Since participant audit M3 every variant
+    says "not currently open"; an archived one shows no deadline."""
     import datetime as _dt
 
     session = _validated_session(client, db, "arch-preopen")
@@ -2547,9 +2547,7 @@ def test_reviewer_pre_open_page_says_closed_for_an_archived_session(
         provider="aad",
     )
     body = make_client(rae).get(f"/me/sessions/{session.id}/1").text
-    assert "<title>Review closed" in body
-    assert "— closed</h1>" in body
-    assert "This review has closed." in body
+    assert "This review is not currently open." in body
     assert "Deadline:" not in body
     assert "opens later" not in body
-    assert "hasn't opened yet" not in body
+    assert "has archived" not in body

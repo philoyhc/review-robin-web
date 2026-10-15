@@ -228,8 +228,8 @@ def build_role_chips(
     if observer is not None:
         role_targets["observer"] = {
             "target": f"/me/sessions/{review_session.id}/collation",
-            # Archive closes every non-operator grant, so the page is
-            # empty by construction and the link is a dead end. Greyed,
+            # Archive closes every non-operator grant and the page
+            # answers 404 there, so the link is a dead end. Grayed,
             # not dropped: being an observer is not a disclosure about
             # the observer (19F decision 4), so the chip stays visible
             # exactly as the dashboard row does.

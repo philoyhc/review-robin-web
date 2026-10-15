@@ -70,6 +70,11 @@ def observer_collation(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     observer, review_session = observer_session
+    # Once archived, off limits (participant audit M4, author's ruling
+    # 2026-10-15), as the CSV below already was: archive closes every
+    # observer grant, so the page could only say there is nothing here.
+    if lifecycle.is_archived(review_session):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     context = views.build_observer_collation_context(
         db, observer=observer, review_session=review_session
     )

@@ -10,18 +10,33 @@ Contract:
   on their role's surface either way; multi-role users land on
   the reviewer surface (the only role with active work) and use
   the pills to reach the read-only views.
-- ``session_status == "not opened"`` (draft / validated session)
-  disables the reviewer link; the session-name link falls
+- ``session_status == "not opened"`` (draft / validated / archived
+  session) disables the reviewer link; the session-name link falls
   through to the next role.
+- The status pill reads Not open yet / Open / Available / Closed /
+  Finished, one rule for every role (participant audit M6).
 """
 
 from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
+from app.db.models import (
+    Assignment,
+    Instrument,
+    InstrumentResponseField,
+    InstrumentViewPolicy,
+    Observer,
+    Response,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+)
+from app.services import visibility_policies
 
 
 def _make_session(
@@ -242,70 +257,172 @@ def test_session_name_is_plain_text_when_no_role_reachable(
     assert f'href="/me/sessions/{review_session.id}' not in body
 
 
-# ── Session status pill styling ──────────────────────────────────────
+# ── Session status pill (participant audit M6) ──────────────────────
 
 
-def test_session_status_pills_are_visibly_styled(
-    client: TestClient, db: Session
-) -> None:
-    """Each of the three Session-status states renders as a clearly
-    pill-styled span — ``open`` green, ``not opened`` light-blue,
-    ``closed`` red (matching the past-deadline pill in the End
-    column). Earlier renders used the muted
-    ``pill-lifecycle-archived`` grey for ``closed``, which read
-    as plain text on a glance.
+def _pill(css: str, label: str) -> str:
+    return f'<span class="pill {css}">{label}</span>'
 
-    Uses **observer**-only rows so the non-reviewer status path fires
-    (``_non_reviewer_session_status`` — pure ``is_ready`` /
-    ``is_expired`` peek; no assignment fan-out needed).
 
-    Reviewee rows were the original vehicle and no longer work here:
-    since 19F PR 2a a reviewee row exists only on an ``expired``
-    session, so the ``draft`` and ``ready`` cases could not be built at
-    all. Observers are deliberately not grant-gated (decision 4), so
-    they still exercise all three states through the same helper."""
-    # "not opened" — fresh session, no activation (draft).
-    s_draft = _make_session(client, db, code="status-draft")
+NOT_OPEN_YET = _pill("pill-info", "Not open yet")
+OPEN = _pill("pill-success", "Open")
+AVAILABLE = _pill("pill-success", "Available")
+CLOSED = _pill("pill-error", "Closed")
+FINISHED = _pill("pill-lifecycle-archived", "Finished")
+
+
+def _observer_on(
+    client: TestClient, db: Session, *, code: str, status: str
+) -> ReviewSession:
+    review_session = _make_session(client, db, code=code)
+    review_session.status = status
     db.add(
         Observer(
-            session_id=s_draft.id,
-            email="alice@example.edu",
-            display_name="Alice",
-        )
-    )
-    # "open" — second session, lifecycle flipped to ``ready``.
-    s_open = _make_session(client, db, code="status-open")
-    s_open.status = "ready"
-    db.add(
-        Observer(
-            session_id=s_open.id,
-            email="alice@example.edu",
-            display_name="Alice",
-        )
-    )
-    # "closed" — third session, lifecycle ``expired``.
-    s_closed = _make_session(client, db, code="status-closed")
-    s_closed.status = "expired"
-    db.add(
-        Observer(
-            session_id=s_closed.id,
+            session_id=review_session.id,
             email="alice@example.edu",
             display_name="Alice",
         )
     )
     db.commit()
+    return review_session
 
+
+def test_one_status_rule_reads_the_lifecycle(
+    client: TestClient, db: Session
+) -> None:
+    """Not open yet / Open / Closed / Finished from the lifecycle, one
+    rule for every role (author's ruling 2026-10-15). Observer-only rows,
+    with no observer grant, so "Closed" is not lifted to "Available"."""
+    for code, status, pill in (
+        ("st-draft", "draft", NOT_OPEN_YET),
+        ("st-validated", "validated", NOT_OPEN_YET),
+        ("st-ready", "ready", OPEN),
+        ("st-expired", "expired", CLOSED),
+        ("st-archived", "archived", FINISHED),
+    ):
+        _observer_on(client, db, code=code, status=status)
+        body = client.get("/me").text
+        assert pill in body, status
+        db.execute(
+            Observer.__table__.delete().where(
+                Observer.email == "alice@example.edu"
+            )
+        )
+        db.commit()
+
+
+def test_an_observer_with_a_grant_after_the_close_reads_available(
+    client: TestClient, db: Session
+) -> None:
+    """Closed to responses, but the observer's collation still shows
+    something: "Available", not "Closed"."""
+    review_session = _observer_on(client, db, code="st-avail", status="expired")
+    instrument = Instrument(session_id=review_session.id, name="F", order=1)
+    db.add(instrument)
+    db.flush()
+    granularity, identification = visibility_policies.MODE_LABELS["raw"]
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=instrument.id,
+            audience="observer",
+            after_release_granularity=granularity,
+            after_release_identification=identification,
+        )
+    )
+    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
+    db.commit()
     body = client.get("/me").text
-    assert '<span class="pill pill-info">not opened</span>' in body
-    assert '<span class="pill pill-success">open</span>' in body
-    assert '<span class="pill pill-error">closed</span>' in body
-    # The earlier muted-grey treatment retired — the regression
-    # guard pins the new prominent treatment. The CSS rule for
-    # ``.pill-lifecycle-archived`` still ships in base.html for
-    # other surfaces (e.g. the operator archive lobby), so the
-    # check looks for the class on a rendered element rather
-    # than its mere presence in the stylesheet.
-    assert 'class="pill pill-lifecycle-archived"' not in body
+    assert AVAILABLE in body
+    assert CLOSED not in body
+
+
+def test_a_reviewer_past_the_deadline_with_answers_reads_available(
+    client: TestClient, db: Session
+) -> None:
+    """Past the deadline a ``ready`` session no longer accepts, but the
+    reviewer can still read back what they saved; with nothing saved
+    there is nothing to see, so the row reads "Closed"."""
+    review_session = _make_session(client, db, code="st-rev-past")
+    review_session.status = "ready"
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    reviewer = Reviewer(
+        session_id=review_session.id, name="Alice", email="alice@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Bob",
+        email_or_identifier="bob@example.edu",
+    )
+    instrument = Instrument(session_id=review_session.id, name="F", order=1)
+    db.add_all([reviewer, reviewee, instrument])
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="comments",
+        label="Comments",
+        order=1,
+    )
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+    )
+    db.add_all([field, assignment])
+    db.commit()
+    assert CLOSED in client.get("/me").text
+
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="kept",
+        )
+    )
+    db.commit()
+    body = client.get("/me").text
+    assert AVAILABLE in body
+
+
+def test_a_reviewer_with_nothing_assigned_is_told_so(
+    client: TestClient, db: Session
+) -> None:
+    """Not a "0/0" progress pill."""
+    review_session = _make_session(client, db, code="st-rev-none")
+    review_session.status = "ready"
+    db.add(
+        Reviewer(
+            session_id=review_session.id, name="Alice", email="alice@example.edu"
+        )
+    )
+    db.commit()
+    body = client.get("/me").text
+    assert "Nothing assigned to you" in body
+    assert ">0/0<" not in body
+
+
+def test_no_view_responses_or_until_columns(
+    client: TestClient, db: Session
+) -> None:
+    """Both were always "—" (participant audit M7)."""
+    _observer_on(client, db, code="st-cols", status="ready")
+    body = client.get("/me").text
+    assert "<th>View responses</th>" not in body
+    assert "<th>Until</th>" not in body
+
+
+def test_a_draft_does_not_show_a_start_from_before_its_revert(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _observer_on(client, db, code="st-start", status="expired")
+    review_session.activated_at = datetime(2026, 1, 2, 9, 0, tzinfo=timezone.utc)
+    db.commit()
+    assert "2026-01-02 09:00" in client.get("/me").text
+    review_session.status = "draft"
+    db.commit()
+    assert "2026-01-02 09:00" not in client.get("/me").text
 
 
 # ── 19F PR 5 — the archived observer row is present but unlinked ──────
@@ -344,8 +461,8 @@ def test_an_archived_session_keeps_the_observer_row_but_drops_its_link(
     client: TestClient, db: Session
 ) -> None:
     """The row stays — the author declined to filter archived sessions
-    off `/me` for reviewers and observers, so they read "not opened"
-    until the session is deleted. Only the link goes."""
+    off `/me` for reviewers and observers, so they read "Finished" until
+    the session is deleted. Only the link goes."""
     review_session = _make_session(client, db, code="obs-link-arch")
     db.add(
         Observer(
@@ -365,102 +482,32 @@ def test_an_archived_session_keeps_the_observer_row_but_drops_its_link(
     body = client.get("/me").text
     # Row survives...
     assert 'class="pill pill-role-observer"' in body
-    assert "not opened" in body
+    assert FINISHED in body
     # ...without its link.
     assert f'href="/me/sessions/{review_session.id}/collation"' not in body
 
 
-
-# ── The archived companion pill (19G.9) ──────────────────────────────
-
-ARCHIVED_PILL = '<span class="pill pill-lifecycle-archived">archived</span>'
-
-
-def test_an_archived_row_carries_the_companion_pill_for_a_reviewer(
+def test_only_an_archived_session_reads_finished(
     client: TestClient, db: Session
 ) -> None:
-    """``not opened`` is true of an archived session and of a draft
-    one, for opposite reasons: a draft is not open *yet*, an archived
-    session is not open *any more*. One label for both leaves the
-    reader unable to tell whether waiting is worth anything, so the
-    archived case carries a second pill naming the reason.
-    """
-    review_session = _make_session(client, db, code="arch-pill-rev")
-    db.add(
-        Reviewer(
-            session_id=review_session.id,
-            name="Alice",
-            email="alice@example.edu",
-        )
-    )
-    review_session.status = "archived"
-    db.commit()
-    body = client.get("/me").text
-    assert "not opened" in body
-    assert ARCHIVED_PILL in body
-
-
-def test_an_archived_row_carries_the_companion_pill_for_an_observer(
-    client: TestClient, db: Session
-) -> None:
-    """The observer path reaches the cell through
-    ``_non_reviewer_session_status`` rather than
-    ``session_status_for_reviewer``. Both must render it, and neither
-    is asked which role it is serving — the template branches on the
-    session, not on the viewer."""
-    review_session = _make_session(client, db, code="arch-pill-obs")
-    db.add(
-        Observer(
-            session_id=review_session.id,
-            email="alice@example.edu",
-            display_name="Alice",
-        )
-    )
-    review_session.status = "archived"
-    db.commit()
-    body = client.get("/me").text
-    assert "not opened" in body
-    assert ARCHIVED_PILL in body
-
-
-def test_no_other_lifecycle_state_carries_the_companion_pill(
-    client: TestClient, db: Session
-) -> None:
-    """The half that would fail silently. A pill rendered on every row
-    tells a reader nothing, and the suite would stay green — the two
-    tests above pass either way. ``draft`` is the case that matters
-    most: it is the other state reading ``not opened``, and the whole
-    point is that the two are now distinguishable."""
-    for code, state in (
-        ("arch-none-draft", "draft"),
-        ("arch-none-validated", "validated"),
-        ("arch-none-ready", "ready"),
-        ("arch-none-expired", "expired"),
-    ):
-        review_session = _make_session(client, db, code=code)
-        db.add(
-            Observer(
-                session_id=review_session.id,
-                email="alice@example.edu",
-                display_name="Alice",
+    """"Finished" replaced 19G.9's "not opened" plus an "archived"
+    companion pill: a draft is not open *yet*, an archived session is
+    done, and the one label now says which."""
+    for state in ("draft", "validated", "ready", "expired"):
+        _observer_on(client, db, code=f"fin-none-{state}", status=state)
+        assert FINISHED not in client.get("/me").text, state
+        db.execute(
+            Observer.__table__.delete().where(
+                Observer.email == "alice@example.edu"
             )
         )
-        review_session.status = state
         db.commit()
-        assert ARCHIVED_PILL not in client.get("/me").text, state
 
 
-def test_the_companion_pill_does_not_relink_an_archived_row(
+def test_an_archived_row_is_not_linked_for_any_role(
     client: TestClient, db: Session
 ) -> None:
-    """The reason the status string was left alone. Reachability is
-    derived from it — ``session_status != "not opened"`` in
-    ``_dashboard.py`` and ``_shared.py`` — so a fourth status value
-    would have re-enabled the reviewer link on an archived session.
-    Asserted directly rather than inferred from the string being
-    unchanged: this is the property the design protects, and it should
-    fail loudly if a later change reaches for the label again."""
-    review_session = _make_session(client, db, code="arch-pill-nolink")
+    review_session = _make_session(client, db, code="arch-nolink")
     db.add_all(
         [
             Reviewer(
@@ -478,5 +525,184 @@ def test_the_companion_pill_does_not_relink_an_archived_row(
     review_session.status = "archived"
     db.commit()
     body = client.get("/me").text
-    assert ARCHIVED_PILL in body
+    assert FINISHED in body
     assert f'href="/me/sessions/{review_session.id}' not in body
+
+
+# ── Status: the other routes to "Available", and the grant check ────
+
+
+def _policy(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    audience: str,
+    while_ongoing: str | None = None,
+    after_release: str | None = None,
+) -> Instrument:
+    instrument = Instrument(session_id=review_session.id, name="F", order=1)
+    db.add(instrument)
+    db.flush()
+    row = InstrumentViewPolicy(instrument_id=instrument.id, audience=audience)
+    if while_ongoing:
+        (
+            row.while_ongoing_granularity,
+            row.while_ongoing_identification,
+        ) = visibility_policies.MODE_LABELS[while_ongoing]
+    if after_release:
+        (
+            row.after_release_granularity,
+            row.after_release_identification,
+        ) = visibility_policies.MODE_LABELS[after_release]
+    db.add(row)
+    db.commit()
+    return instrument
+
+
+def _reviewer_answer(
+    db: Session,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    *,
+    visible: bool = True,
+) -> None:
+    reviewer = Reviewer(
+        session_id=review_session.id, name="Alice", email="alice@example.edu"
+    )
+    reviewee = Reviewee(
+        session_id=review_session.id,
+        name="Bob",
+        email_or_identifier="bob@example.edu",
+    )
+    db.add_all([reviewer, reviewee])
+    db.flush()
+    field = InstrumentResponseField(
+        instrument_id=instrument.id,
+        field_key="comments",
+        label="Comments",
+        order=1,
+        visible=visible,
+    )
+    assignment = Assignment(
+        session_id=review_session.id,
+        reviewer_id=reviewer.id,
+        reviewee_id=reviewee.id,
+        instrument_id=instrument.id,
+    )
+    db.add_all([field, assignment])
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=field.id,
+            value="kept",
+        )
+    )
+    db.commit()
+
+
+def test_a_reviewee_with_a_grant_reads_available(
+    client: TestClient, db: Session, grant_reviewee_visibility
+) -> None:
+    review_session = _make_session(client, db, code="st-reviewee")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier="alice@example.edu",
+        )
+    )
+    db.commit()
+    grant_reviewee_visibility(review_session)
+    assert AVAILABLE in client.get("/me").text
+
+
+def test_an_observer_past_the_deadline_with_a_summarized_grant_reads_available(
+    client: TestClient, db: Session
+) -> None:
+    """The while-ongoing window is the status column, not the deadline:
+    a ``ready`` session past its deadline still shows Summarized
+    collation."""
+    review_session = _observer_on(client, db, code="st-obs-past", status="ready")
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    _policy(db, review_session, audience="observer", while_ongoing="summarized")
+    assert AVAILABLE in client.get("/me").text
+
+
+def test_a_reviewer_reads_available_after_release_only_with_raw(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="st-rev-exp")
+    review_session.status = "expired"
+    review_session.responses_release_at = datetime.now(timezone.utc) - timedelta(
+        hours=1
+    )
+    instrument = _policy(
+        db,
+        review_session,
+        audience="peer_reviewer",
+        while_ongoing="raw",  # that cell is raw by rule
+        after_release="raw",
+    )
+    _reviewer_answer(db, review_session, instrument)
+    assert AVAILABLE in client.get("/me").text
+
+    # Window still open, but the after-release cell off: nothing to read.
+    policy = db.execute(
+        select(InstrumentViewPolicy).where(
+            InstrumentViewPolicy.instrument_id == instrument.id
+        )
+    ).scalar_one()
+    policy.after_release_granularity = None
+    policy.after_release_identification = None
+    db.commit()
+    assert CLOSED in client.get("/me").text
+
+    # Raw again, but the window closed.
+    policy.after_release_granularity, policy.after_release_identification = (
+        visibility_policies.MODE_LABELS["raw"]
+    )
+    review_session.responses_release_at = None
+    db.commit()
+    assert CLOSED in client.get("/me").text
+
+
+def test_an_answer_on_a_hidden_field_does_not_make_it_available(
+    client: TestClient, db: Session
+) -> None:
+    """The surface doesn't show it, so there is nothing to read back."""
+    review_session = _make_session(client, db, code="st-rev-hidden")
+    review_session.status = "ready"
+    review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
+    instrument = Instrument(session_id=review_session.id, name="F", order=1)
+    db.add(instrument)
+    db.flush()
+    _reviewer_answer(db, review_session, instrument, visible=False)
+    assert CLOSED in client.get("/me").text
+
+
+def test_a_prepared_session_shows_its_scheduled_start(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _observer_on(client, db, code="st-sched", status="validated")
+    review_session.scheduled_activate_at = datetime(
+        2031, 3, 4, 9, 30, tzinfo=timezone.utc
+    )
+    db.commit()
+    assert "2031-03-04 09:30" in client.get("/me").text
+
+
+def test_observer_has_current_grant_follows_the_windows_and_archive(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="st-obs-grant")
+    _policy(db, review_session, audience="observer", while_ongoing="summarized")
+    has = visibility_policies.observer_has_current_grant
+
+    assert not has(db, review_session)  # draft: no window open
+    review_session.status = "ready"
+    assert has(db, review_session)  # the while-ongoing window
+    review_session.status = "expired"
+    assert not has(db, review_session)  # no after-release mode, no window
+    review_session.status = "archived"
+    assert not has(db, review_session)  # archive closes it

@@ -29,7 +29,7 @@ from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services import visibility_policies
-from app.web import breadcrumbs
+from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user
 from app.web.routes_reviewer._shared import _templates
 
@@ -47,19 +47,6 @@ def _to_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value
-
-
-def _non_reviewer_session_status(review_session: ReviewSession) -> str:
-    """Session-status label for ``/me`` rows where the user is a
-    reviewee / observer only — no reviewer-specific assignment
-    check applies. Mirrors the reviewer flavour's
-    not-opened / open / closed vocabulary so the column reads
-    uniformly across role mixes."""
-    if lifecycle.is_expired(review_session):
-        return "closed"
-    if lifecycle.is_ready(review_session):
-        return "open"
-    return "not opened"
 
 
 @router.get("", response_class=HTMLResponse)
@@ -175,10 +162,10 @@ def reviewer_dashboard(
         else:
             # Reviewee / observer-only row — the reviewer surface
             # doesn't apply, so the per-reviewer pill state stays
-            # empty. The Session-status column still populates
-            # from session lifecycle.
+            # empty. The status pill comes from
+            # ``views.participant_session_status`` below.
             pill = None
-            session_status = _non_reviewer_session_status(review_session)
+            session_status = None
 
         # Per-role link map for both the per-pill anchor and the
         # session-name's prioritised target. The session name
@@ -196,8 +183,9 @@ def reviewer_dashboard(
                     if pill is not None and pill.state == "submitted"
                     else f"/me/sessions/{review_session.id}/1"
                 ),
-                # Off while the session reads "not opened" (draft,
-                # validated or archived): there the reviewer surface
+                # Off while ``session_status_for_reviewer`` says "not
+                # opened" (draft, validated or archived; the row's pill
+                # reads "Not open yet" or "Finished"): there the surface
                 # renders only the ``reviewer/pre_open.html`` holding
                 # page, so the row carries no link to it.
                 "enabled": session_status != "not opened",
@@ -226,10 +214,10 @@ def reviewer_dashboard(
                 # observer is not a disclosure about the observer, so
                 # they may see that they are one before their window
                 # opens. But archive closes every non-operator grant, so
-                # on an archived session the page is empty by
-                # construction and a live link to it is a dead end. The
-                # row stays, reading "not opened", and loses its link —
-                # matching the reviewer row beside it.
+                # on an archived session the page answers 404 and a live
+                # link to it is a dead end. The row stays, reading
+                # "Finished", and loses its link — matching the reviewer
+                # row beside it.
                 #
                 # (A placeholder marker naming W17 stood here until 19F
                 # PR 5, the twin of W16's above. W17 shipped in
@@ -247,6 +235,8 @@ def reviewer_dashboard(
                 link_enabled = True
                 break
 
+        start_at = views.participant_start_at(review_session)
+
         items.append(
             {
                 "reviewer": reviewer,
@@ -254,14 +244,17 @@ def reviewer_dashboard(
                 "roles": roles,
                 "role_links": role_links,
                 "pill": pill,
-                "session_status": session_status,
+                "status": views.participant_session_status(
+                    db,
+                    review_session=review_session,
+                    roles=roles,
+                    reviewer=reviewer,
+                ),
                 "link_enabled": link_enabled,
                 "link_target": link_target,
                 "start_text": (
-                    date_formatting.format_datetime(
-                        review_session.activated_at, session_zone
-                    )
-                    if review_session.activated_at
+                    date_formatting.format_datetime(start_at, session_zone)
+                    if start_at
                     else None
                 ),
                 "deadline_text": (

@@ -934,9 +934,11 @@ def session_status_for_reviewer(
     review_session: ReviewSession,
     now: datetime | None = None,
 ) -> str:
-    """The reviewer-lobby **Session Status** label for one
-    reviewer's view of one session — ``"not opened"`` /
-    ``"open"`` / ``"closed"`` (Segment 17B Phase 2 PR A).
+    """One reviewer's view of one session — ``"not opened"`` /
+    ``"open"`` / ``"closed"`` (Segment 17B Phase 2 PR A). No longer a
+    displayed label: ``/me`` shows ``views.participant_session_status``
+    (participant audit M6). This decides whether the reviewer's link
+    is live (``!= "not opened"``).
 
     A non-mutating peek at the session's state. Does not call
     :func:`observe_deadline`; the deadline check flows through

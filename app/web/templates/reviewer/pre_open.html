@@ -1,68 +1,61 @@
 {# Reviewer pre-open page — Segment 18F Part 2. Rendered when a
-   reviewer follows an invitation to a session that has been
-   Prepared (validated) but not yet activated for responses.
+   reviewer reaches a session that isn't accepting responses and has
+   no read-only form to show: ``draft``, ``validated`` or
+   ``archived``.
 
-   The headline scenario is: an operator sends out invitations
-   from the Prepared state to give reviewers a heads-up that the
-   review will open; the reviewer clicks the link and lands here
-   instead of the response form.
-
-   An ``archived`` session reaches the same route (an old invitation
-   link or a bookmark) and gets closed copy instead: "opens later"
-   would be false (findings A25, 2026-10-03).
+   One wording for all three (participant audit M3, author's ruling
+   2026-10-15): "This review is not currently open." The earlier
+   variants said the operator "has prepared the review" (also shown
+   for a draft, including one reverted from Activated) or "has
+   archived the review". A prepared session shows when it is
+   scheduled to open, every variant shows the help contact, and the
+   deadline shows unless the session is archived.
 
    ``reviewer_self_fields`` (participant info Item 3): the reviewer's
-   own line, rendered on the "opens later" variant only.
+   own line, not rendered once archived.
 #}
 {% extends "base.html" %}
 
-{% block title %}{% if is_archived %}Review closed{% else %}Review opens later{% endif %} — Review Robin Web{% endblock %}
+{% block title %}Review not open — Review Robin Web{% endblock %}
 
 {% block body_class %}ui-v2 reviewer{% endblock %}
 {% block top_bar %}{% include "reviewer/_top_bar.html" %}{% endblock %}
 
 {% block content %}
-  {% if is_archived %}
-  <h1>{{ session.name }} — closed</h1>
+  <h1>{{ session.name }}</h1>
   {% include "reviewer/_write_refused.html" %}
+  {% if not is_archived %}
+    {# participant info Item 3 — a static `Reviewer` pill and the
+       reviewer's own roster fields after it, as the operator preview
+       renders them: this page has no role navigator of its own. #}
+    {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
+    {% include "reviewer/_role_chips.html" %}
+  {% endif %}
 
-  <div class="card">
-    <div class="banner banner-info" style="margin: 0;">
-      <p class="banner-headline">This review has closed.</p>
-      <p>
-        The session operator has archived the review, so responses
-        are no longer accepted or shown here.
-      </p>
-    </div>
-  </div>
-  {% else %}
-  <h1>{{ session.name }} — opens later</h1>
-  {% include "reviewer/_write_refused.html" %}
-  {# participant info Item 3 — a static `Reviewer` pill and the
-     reviewer's own roster fields after it, as the operator preview
-     renders them: this page has no role navigator of its own. #}
-  {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
-  {% include "reviewer/_role_chips.html" %}
-
-  <div class="card">
-    <div class="banner banner-info" style="margin: 0;">
-      <p class="banner-headline">This review hasn't opened yet.</p>
-      <p>
-        The session operator has prepared the review and you're
-        on the roster, but responses aren't being accepted yet.
-        Check back closer to the response window.
-      </p>
-      {% if session.deadline %}
-        <p style="margin-top: var(--space-3);">
+  <div class="card" data-pre-open>
+    <div class="banner banner-info pre-open-banner">
+      <p class="banner-headline">This review is not currently open.</p>
+      {% if scheduled_open_text %}
+        <p class="pre-open-detail" data-pre-open-scheduled>
+          <strong>Scheduled to open:</strong>
+          {{ scheduled_open_text }} ({{ scheduled_open_timezone_label }})
+        </p>
+      {% endif %}
+      {% if deadline_text and not is_archived %}
+        <p class="pre-open-detail">
           <strong>Deadline:</strong>
           {{ deadline_text }} ({{ deadline_timezone_label }})
         </p>
       {% endif %}
+      {% if session.help_contact and session.help_contact.strip() %}
+        <p class="pre-open-detail" data-pre-open-help>
+          Questions? Contact {{ session.help_contact }}
+        </p>
+      {% endif %}
     </div>
   </div>
-  {% endif %}
 
-  <div class="btn-pair" style="margin-top: var(--space-4);">
+  <div class="btn-pair pre-open-actions">
     <a class="btn secondary" href="/me">Your reviewer dashboard</a>
   </div>
 {% endblock %}

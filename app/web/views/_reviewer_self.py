@@ -2,7 +2,7 @@
 
 `guide/participant_info.md` Items 1, 3, 4 and 5. The reviewer's
 functions (Item 1: the reviewer surface and its preview, ``/summary`` and
-the pre-open "opens later" page; the Reviewers page's card and readout),
+the not-open page, unless archived; the Reviewers page's card and readout),
 the reviewee's (Item 4: ``/results``; the Reviewees page's card and
 readout) and the observer's (Item 5: ``/collation``; the Observers
 page's), each a thin wrapper over ``_participant_self``'s one core.
