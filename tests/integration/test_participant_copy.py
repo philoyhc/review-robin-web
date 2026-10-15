@@ -51,11 +51,13 @@ def _seed_reviewer(client: TestClient, db: Session) -> None:
         str(p.relative_to(_TEMPLATES))
         for p in (_TEMPLATES / "reviewer").glob("*.html")
         if "{% block title %}" in p.read_text()
-    ),
+    )
+    # The shared pages a participant reaches (participant audit M8).
+    + ["about.html", "guide.html", "me_debug.html"],
 )
 def test_every_participant_page_title_ends_with_the_brand(template: str) -> None:
-    """The mismatch page had no suffix and the surface read
-    "… — Review" (L2)."""
+    """The mismatch page had no suffix, the surface read "… — Review"
+    and Sign-in details put the brand first (L2)."""
     text = (_TEMPLATES / template).read_text()
     title = re.search(r"{% block title %}(.*?){% endblock %}", text).group(1)
     assert title.endswith(f" — {_BRAND}"), title
@@ -120,16 +122,20 @@ def test_the_observer_card_allows_results_while_the_review_is_open() -> None:
     """Summarized can be granted to observers while ongoing
     (`_PER_CELL_VALID_MODES`), so "once the operator releases responses"
     was wrong (L4)."""
-    assert "while the review is still open" in _card("for_observers")
+    card = _card("for_observers")
+    assert "a summary can appear while the review is still open" in card
 
 
-def test_the_reviewer_card_says_answers_stay_readable_after_close(
+def test_the_reviewer_card_says_when_answers_can_change_and_be_read(
     client: TestClient, db: Session, make_client
 ) -> None:
-    """The card said "revisit until the session closes"; reviewers can
-    read their answers after it closes (L4)."""
+    """The card said "revisit until the session closes". Editing ends
+    when the review closes or its deadline passes; reading answers back
+    after that depends on the visibility policy
+    (`reviewer_sees_own_responses`), so the card promises neither (L4)."""
     _seed_reviewer(client, db)
     body = " ".join(_participant(make_client).get("/guide").text.split())
+    assert "Until the review closes or its deadline passes" in body
     assert "Recall my submission" in body
-    assert "After the review closes you can still open it to read your answers" in body
+    assert "only if the people running the review allow it" in body
     assert "revisit until the session closes" not in body
