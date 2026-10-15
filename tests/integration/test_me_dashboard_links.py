@@ -741,17 +741,20 @@ def test_rows_keep_their_order_when_a_session_is_edited(
     client: TestClient, db: Session
 ) -> None:
     """Rows sorted by ``updated_at``, so editing a session moved it to
-    the top. They now sort newest-created first. The newer session gets
-    the lower id, so the id tiebreak alone can't pass this."""
+    the top. They now sort newest-created first. The timestamps are set
+    by hand (``func.now()`` ties within a second on SQLite and within a
+    transaction on Postgres), with the older session edited last; and
+    the newer one gets the lower id. So neither the old ``updated_at``
+    key nor the ``id`` tiebreak alone can pass this."""
     newer = _observer_on(client, db, code="ord-newer", status="ready")
     older = _observer_on(client, db, code="ord-older", status="ready")
     assert newer.id < older.id
     older.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
     newer.created_at = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    newer.updated_at = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    older.updated_at = datetime(2026, 3, 1, tzinfo=timezone.utc)
     db.commit()
-    older.description = "edited after the newer one was created"
-    db.commit()
-    assert older.updated_at >= newer.updated_at
+    assert older.updated_at > newer.updated_at
 
     body = client.get("/me").text
     assert body.index(f"/me/sessions/{newer.id}/") < body.index(
