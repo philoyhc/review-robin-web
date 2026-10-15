@@ -8,6 +8,13 @@
 {% block content %}
   <h1>Your reviews</h1>
 
+  {# Why the viewer was sent here, from a fixed set of sentences keyed by
+     ``?notice=`` (participant audit M11): a summary before everything is
+     submitted, or an organizer-only page. #}
+  {% if notice %}
+    <div class="banner banner-info" data-me-notice>{{ notice }}</div>
+  {% endif %}
+
   {% if items %}
     <div class="card">
       {# `.table-scroll` (base.html): a table wider than its card

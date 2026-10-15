@@ -103,7 +103,7 @@ def test_summary_gate_redirects_when_session_not_fully_submitted(
     )
     # Not submitted yet → redirect to the reviewer dashboard.
     assert response.status_code == 303
-    assert response.headers["location"] == "/me"
+    assert response.headers["location"] == "/me?notice=summary"
 
 
 def test_summary_renders_after_full_submission(

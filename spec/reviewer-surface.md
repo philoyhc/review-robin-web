@@ -1178,6 +1178,13 @@ reviewee-/observer-only rows show `—` in those cells.
     no included assignment reads "Nothing assigned to you" instead
     of a `0/0`. Renders `—` when the user is a reviewee / observer
     only.
+- **Notice** — `?notice=` picks one line from a fixed set
+  (`views.me_notice`; participant audit M11), shown as a
+  `.banner.banner-info` (`data-me-notice`) under the H1: `summary`
+  ("Your summary is available once every review is submitted.") from a
+  summary that isn't ready yet, and `organizers` ("That page is for the
+  people who run reviews.") from an operator page. Any other value shows
+  nothing, so the query string never puts its own text on the page.
 - **Empty state** — when the user has no row to show in any
   role: a single `.card` (`data-me-empty`) reading "There's
   nothing here for you right now.", then, muted, "You're signed
@@ -1274,8 +1281,8 @@ dashboard's Session column once Reviewer Status is
 - **Gate** — a bare 404 once the session is archived, before anything
   else (participant audit M4). Otherwise
   `responses.reviewer_session_state.pill_state == "submitted"`, or a
-  redirect to `/me` with no flash banner; the reviewer can re-submit
-  from the surface.
+  redirect to `/me?notice=summary`, where one line says the summary is
+  available once every review is submitted (participant audit M11).
 - **H1** — "Your responses — {session.name}".
 - **Role row** — under the H1: the role-navigator chips with the
   reviewer's own line after the last pill, as on the surface (§
@@ -1290,7 +1297,7 @@ dashboard's Session column once Reviewer Status is
   button linking to `/me/sessions/{id}/summary.csv` (dropped when no
   section is shown), a
   "Recall my submission" control (`POST /me/sessions/{id}/recall`),
-  and a secondary "Your reviewer dashboard" link. Recall renders
+  and a secondary "Your reviews" link. Recall renders
   only while the session is still `ready` and its deadline has not
   passed (`can_recall`): past either, the form it would land on is
   read-only and Submit is refused, so a recall would strand the
@@ -1593,7 +1600,11 @@ Behaviour:
    sign-in and back).
 2. Look up the invitation by `sha256(token)`. Not found → **404**,
    and an inactive reviewer's invitation is not found ("Identity
-   matching" above), whoever follows it.
+   matching" above), whoever follows it. The page says the link "has
+   been replaced by a newer one or is no longer valid" and points to
+   the most recent email: invitations don't expire, but every send,
+   reminder or Regenerate replaces the links in earlier emails
+   (participant audit M12).
 3. **Email match check** — case-insensitive comparison of the
    signed-in email against the invited reviewer's `Reviewer.email`,
    both sides through `normalize_email` (strip + `str.lower`).
@@ -1606,15 +1617,20 @@ Behaviour:
 
 ### Invitation-mismatch page
 
-A single `.banner.banner-warning` explaining the email mismatch,
-followed by a `.btn-pair` with two Secondary anchors:
+A single `.banner.banner-warning` (participant audit M9) that:
 
-- **Sign-in details** → `/auth/me/debug` (so the reviewer can confirm
-  which account they're signed in as).
-- **Your reviewer dashboard** → `/me`.
+- names the signed-in address and the invited one, **partly masked**
+  (`views.masked_email`: the first character of the local part, `•••`,
+  then the domain), because whoever holds a forwarded link sees this
+  page;
+- says to sign out and back in with the invited account if there is
+  one, and, since that usually picks the same work account, that an
+  address under another name (an alias) needs the person running the
+  review to invite the address the viewer signs in with;
+- shows "Questions? Contact {help_contact}" when the session has one.
 
-The remedy is to sign out and sign back in with the invited
-account. This is the only reviewer-side page that returns a non-200
+Then one Secondary anchor, **Your reviews** → `/me`. There is no link
+to `/auth/me/debug`'s raw sign-in claims. This is the only reviewer-side page that returns a non-200
 status under normal flow **for a caller who is in the right place** —
 a 403, and unrelated to the session-scoped gates. Those answer 404 to
 anyone they refuse, but that is a caller in the wrong place rather than

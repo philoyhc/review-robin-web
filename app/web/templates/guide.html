@@ -2,7 +2,9 @@
 
 {% block title %}Guide — Review Robin Web{% endblock %}
 
-{% block body_class %}ui-v2{% endblock %}
+{% block body_class %}ui-v2{% if participant_chrome %} reviewer{% endif %}{% endblock %}
+{# Participant audit M8: participants get their own top bar here. #}
+{% block top_bar %}{% if participant_chrome %}{% include "reviewer/_top_bar.html" %}{% else %}{{ super() }}{% endif %}{% endblock %}
 
 {% block content %}
   {# Segment 19E rung 2. This page is the canonical operator documentation —

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -58,11 +59,32 @@ def test_the_guide_shows_the_app_version(
     client: TestClient, db: Session, make_client
 ) -> None:
     """The Guide's template environment never set `app_version`, so the
-    chrome read "(version )"."""
-    _seed_reviewer_session(client, db)
-    body = _participant(make_client).get("/guide").text
+    operator chrome read "(version )". Participants see their own top
+    bar there, without a version (M8)."""
+    body = client.get("/guide").text
     assert f"(version {settings.app_version})" in body
     assert "(version )" not in body
+
+
+@pytest.mark.parametrize("path", ["/about", "/guide", "/auth/me/debug"])
+def test_shared_pages_show_a_participant_their_own_top_bar(
+    client: TestClient, db: Session, make_client, path: str
+) -> None:
+    """About, Guide and Sign-in details took the operator top bar for
+    everyone (participant audit M8)."""
+    _seed_reviewer_session(client, db)
+    body = _participant(make_client).get(path).text
+    assert "Review Robin Web App (version" not in body
+    assert 'class="chrome-app-identity">Review Robin</span>' in body
+    assert "data-your-reviews" in body
+
+
+@pytest.mark.parametrize("path", ["/about", "/guide"])
+def test_shared_pages_keep_the_operator_top_bar_for_an_operator(
+    client: TestClient, path: str
+) -> None:
+    body = client.get(path).text
+    assert "Review Robin Web App (version" in body
 
 
 def test_sign_in_details_names_the_viewer(make_client) -> None:

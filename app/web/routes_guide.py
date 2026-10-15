@@ -30,6 +30,7 @@ from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.web.deps import get_or_create_user
+from app.web import views
 from app.web.return_to import resolve_return_to
 from app.web.views._guide import visible_audiences, visible_sections
 
@@ -92,5 +93,7 @@ def guide(
             "return_to_url": return_to.url,
             "return_to_label": return_to.label,
             "visible_sections": visible_sections(db, user),
+            # Participant audit M8.
+            "participant_chrome": views.uses_participant_chrome(user),
         },
     )

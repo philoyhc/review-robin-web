@@ -399,7 +399,7 @@ Reviewer-facing pages have a top bar, but lighter than the operator's:
   - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself), same as the operator chrome's About link.
   - "Sign out" — ends the reviewer's session.
 
-The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions.
+The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions. About, Guide and Sign-in details (`/auth/me/debug`) are shared with operators and show it to everyone but an operator or system admin, who keep the operator chrome there (`views.uses_participant_chrome`; participant audit M8).
 
 #### Sign-in surface
 

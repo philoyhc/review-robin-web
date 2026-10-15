@@ -11,6 +11,7 @@ from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.web.deps import get_or_create_user
+from app.web import views
 from app.web.return_to import resolve_return_to
 
 router = APIRouter()
@@ -56,5 +57,8 @@ def about(
             "return_to_url": return_to.url,
             "return_to_label": return_to.label,
             "contact_email": settings.operator_contact_email,
+            # Participant audit M8: the participant top bar for anyone
+            # but an operator or system admin.
+            "participant_chrome": views.uses_participant_chrome(user),
         },
     )
