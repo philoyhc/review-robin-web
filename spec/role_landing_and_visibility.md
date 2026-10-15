@@ -226,9 +226,12 @@ accepts three consequences, and none of them is a defect:
 
 - The observer's `Summarized` aggregates, while the session is still
   running, can include what others wrote about them.
-- In the `Anonymized` CSV, an observer who is also a self-reviewer can
-  find their own token through the `SelfReview` column, and with it every
-  other row about them.
+- In the `Anonymized` CSV, an observer who is also a self-reviewer on an
+  individual-scoped instrument can find their own reviewee token through
+  the `SelfReview` column, and with it every other row about them. A
+  group-scoped instrument offers no such route: a group's row blanks the
+  reviewee instead of tokenizing it
+  (`app/services/extracts/by_instrument_extract.py`).
 - A cohort that matches only the observer's own rows shows them their own
   results.
 
