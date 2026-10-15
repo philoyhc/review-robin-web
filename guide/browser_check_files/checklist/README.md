@@ -69,7 +69,7 @@ Step 34a came later and was traced through the code, not driven.
 | 5 | Session Home → **Prepare**, then Manage Invitations → send all. | Validated. The outbox holds three invitation rows: Prepare only creates the invitations, and sending writes the rows with their links. | — |
 | 6 | Assignments: note Team review's "Include N self reviews" (3). On Relationships, inactivate the row Local Operator → Dev Patel. Back on Assignments, without generating: 2. Reactivate the row: 3 again. | As stated | B33 |
 | 7 | Open `/operator/sessions/{id}/assignments?needs_confirm=1`. | Red banner: "Replace not confirmed. The existing assignments were kept.", with Cancel at its bottom right. Cancel returns to the page without the banner. | #2809, #2810: banner |
-| 8 | Admin → Sessions → BC main's outbox: copy Alice Chan's invitation link. Reviewers: set Alice inactive. Open the link. | A plain 404. Manage Invitations has no Alice row, and Pending reminders leaves her out. | #2740: 404, no reminder |
+| 8 | Admin → Sessions → BC main's outbox: copy Alice Chan's invitation link. Reviewers: set Alice inactive. Open the link. | A 404 saying the link "has been replaced by a newer one or is no longer valid". Manage Invitations has no Alice row, and Pending reminders leaves her out. | #2740: 404, no reminder |
 | 9 | Set Alice active again; open the same link. | The "this invitation belongs to someone else" page, the address masked as "a•••@example.edu", since you are signed in as the operator. Not a 404. | #2740: 404 (the second half) |
 | 10 | **Prepare** again (step 6 put the session back to Draft), then **Activate**. | Activated. | — |
 
