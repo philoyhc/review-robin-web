@@ -855,7 +855,8 @@ Two entry paths exist:
   on first visit (idempotent), emits `invitation.opened`, and
   forwards to the session. **On mismatch this path — and only this
   path — renders the friendly account-mismatch page**, with a
-  `403`, pointing the user at their account-debug page.
+  `403`: the invited address partly masked, what to do when it is
+  an alias, and the session's help contact.
 
 Reviewers can access only the sessions they are listed in.
 
@@ -866,7 +867,9 @@ identity and operator capability. A user is one of (three-tier
 model, [§4.1](#41-system-administrator-three-tier-model)):
 
 - **Not allowlisted** — authenticated but cannot reach operator
-  routes; a request for one is redirected (303) to `/me`.
+  routes; a request for one is redirected (303) to
+  `/me?notice=organizers`, which says the page is for the people who
+  run reviews.
 - **Operator** — can create sessions and is
   automatically the owner of sessions they create; can be added
   as co-owner to other operators' sessions.

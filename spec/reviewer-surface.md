@@ -1321,7 +1321,8 @@ dashboard's Session column once Reviewer Status is
   the composed group identity in the Reviewee column,
   mirroring the surface's existing collapse logic.
 - **CSV download** — `/me/sessions/{id}/summary.csv` (same gate:
-  404 once archived, else a redirect to `/me` until submitted)
+  404 once archived, else a redirect to `/me?notice=summary` until
+  submitted)
   emits `{code}_my_responses.csv` (filename via
   `app.services.extracts.filename`). Same 21-column shape as
   the unified Responses CSV (see `spec/csv_contracts.md`
@@ -1619,7 +1620,8 @@ Behaviour:
 
 A single `.banner.banner-warning` (participant audit M9) that:
 
-- names the signed-in address and the invited one, **partly masked**
+- names the signed-in address in full and the invited one **partly
+  masked**
   (`views.masked_email`: the first character of the local part, `•••`,
   then the domain), because whoever holds a forwarded link sees this
   page;

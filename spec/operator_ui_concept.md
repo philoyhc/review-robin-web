@@ -434,8 +434,10 @@ actually decides. Failing closed would hide the Guide from operators on any
 page that missed the stamp — a worse error, and a silent one.
 
 **Two chromes carry the link, under the same condition.** `base.html` carries
-the operator chrome and `/about`; `reviewer/_top_bar.html` carries the
-participant surfaces (`/me`, the review surface, `/results`, `/collation`).
+the operator chrome, which `/about`, `/guide` and `/auth/me/debug` show
+an operator or system admin; `reviewer/_top_bar.html` carries the
+participant surfaces (`/me`, the review surface, `/results`,
+`/collation`) and those three shared pages for everyone else.
 **A change to the condition has to land in both files** — a reviewer or
 observer holding roster rows can reach `/guide`, so a chrome that omits the
 link leaves them no route to it from the pages they actually land on.

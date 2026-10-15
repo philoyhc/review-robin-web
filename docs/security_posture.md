@@ -12,7 +12,7 @@ Every gate is a dependency in `app/web/deps.py`:
   router-level dependency on the whole `routes_operator` package
   (`routes_operator/__init__.py`), so *every* `/operator/*` route is
   behind it. A signed-in user not on the operator/sys-admin
-  allowlist is redirected to `/me`.
+  allowlist is redirected to `/me?notice=organizers`.
 - **`require_session_operator`** — per-session membership gate.
   Resolves `{session_id}` and **404s, bare,** unless the caller is an
   operator of *that* session — see *Session-id enumeration — found and

@@ -27,7 +27,8 @@ archived-sessions child page.
 - **Body class.** `ui-v2` (no reviewer modifier — this is an
   operator-only surface).
 - **Audience.** Operators and sys-admins only: the operator router's
-  `require_operator` gate redirects any other signed-in user to `/me`,
+  `require_operator` gate redirects any other signed-in user to
+  `/me?notice=organizers`,
   where participants reach their sessions on `/me/...` URLs.
 - **Breadcrumb.** `operator_root()` → `[Sessions]` (single non-link
   crumb; this is the top of the operator chrome).

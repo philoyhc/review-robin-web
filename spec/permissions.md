@@ -80,7 +80,7 @@ signed-in user.
 | Gate | Predicate | Returns | On miss |
 |---|---|---|---|
 | `get_or_create_user` | signed in with an email claim | `User` (created on first sight; case-insensitive lookup, oldest match wins) | **401** if the principal carries no email, or if there are no identity headers and fake auth is off |
-| `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
+| `require_operator` | `is_operator OR is_sys_admin` | `User` | raises `OperatorAllowlistDenied` → the handler in `app/main.py` **303s to `/me?notice=organizers`** (deliberately not a 403 — the arrival is more often a misrouted legitimate user than an attacker; the "how do I get access" copy lives on `/about`) |
 | `require_sys_admin` | `is_sys_admin` | `User` | **403** `sys_admin required` |
 | `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable and session ids cannot be enumerated. **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
 | `require_sys_admin_or_session_operator` | `is_sys_admin`, else falls through to `require_session_operator` | `ReviewSession` | as above; a sys-admin gets **404** on an unknown id |
@@ -270,7 +270,7 @@ the operation-level mappings.
 
 | Cause | Status | Where mapped |
 |---|---|---|
-| Not on the operator allowlist | **303 → `/me`** | `OperatorAllowlistDenied` handler, `app/main.py` |
+| Not on the operator allowlist | **303 → `/me?notice=organizers`** | `OperatorAllowlistDenied` handler, `app/main.py` |
 | Not a sys-admin | **403** `sys_admin required` | `require_sys_admin` |
 | Not a session member; not an active participant | **404**, bare | `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` |
 | Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
