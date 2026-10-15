@@ -72,14 +72,23 @@ def text_sort_value(value: str | None) -> tuple | None:
     of digits as numbers, so "Session 2" precedes "Session 10". Python's
     `<` alone did neither. The key alternates text and number (text at
     even places, int at odd), so any two keys compare like with like.
-    None for an empty value, which sorts last either way. Accents,
-    punctuation and names differing only in case can still order
-    differently in the browser, whose collation is the viewer's
-    locale's."""
+    A text part that a number follows ends in "0", standing in for the
+    digit (text parts hold none of their own), so a space or a mark
+    below "0" (`-`, `.`, `#`, `/`) there still sorts before it, as in the
+    browser: "Session 2" before "Session1", "a-1" before "a1". None for
+    an empty value, which sorts last either way. Accents, punctuation
+    (how "_", ":" and other symbols rank against digits and letters, and
+    two marks against each other) and names differing only in case can
+    still order differently in the browser, whose collation is the
+    viewer's locale's."""
     if value is None or not value.strip():
         return None
     parts = _DIGIT_RUNS.split(value.strip().casefold())
-    return tuple(int(part) if index % 2 else part for index, part in enumerate(parts))
+    last = len(parts) - 1
+    return tuple(
+        int(part) if index % 2 else part + "0" if index < last else part
+        for index, part in enumerate(parts)
+    )
 
 
 # Lifecycle order (author, 2026-10-15), as `SessionStatus` declares it:

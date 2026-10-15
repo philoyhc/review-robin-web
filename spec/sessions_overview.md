@@ -440,10 +440,14 @@ The lobby carries all three:
   and Created by** sort on a reload as a click sorts them
   (`views.text_sort_value`, against the browser's
   `localeCompare(…, {numeric: true})` over the trimmed cell text):
-  case aside, so `alpha` precedes `Beta`, and runs of digits as
-  numbers, so `Session 2` precedes `Session 10`. The two can still
-  differ on accents, punctuation and names that differ only in case,
-  since the browser collates in the viewer's locale. The same holds on
+  case aside, so `alpha` precedes `Beta`; runs of digits as numbers,
+  so `Session 2` precedes `Session 10`; and a space or a mark such as
+  `-`, `.`, `#` or `/` before a digit ahead of the digit itself, so
+  `Session 2` precedes `Session1`. The two can still differ on accents,
+  on punctuation — how `_`, `:` and other symbols rank against digits
+  and letters, and how two marks rank against each other (`CS#1` /
+  `CS-1`) — and on names that differ only in case, since the browser
+  collates in the viewer's locale. The same holds on
   the Archive and on Sessions Diagnostics.
   A sort with rows selected drops the injected panel and re-anchors
   it from the shared `rrw:sorted` signal; the mechanism

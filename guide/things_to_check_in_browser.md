@@ -248,7 +248,10 @@ Sys Admin → Sessions Diagnostics.
   Closed, click Status: they read Draft, Validated, Activated, Closed
   (reversed on the second click), and a reload keeps it.
 - [ ] **Names and codes.** With sessions named `alpha`, `Beta`,
-  `Session 2` and `Session 10`, sort Session Name ascending on the
-  lobby, then reload: they read `alpha`, `Beta`, `Session 2`,
-  `Session 10` both times. The same for Session Code, and on the Archive
-  and Sessions Diagnostics.
+  `Session 2`, `Session 10` and `Session1` (codes `a-1`, `B-2`,
+  `s-2`, `s-10`, `s1`), sort Session Name ascending on the lobby, then
+  reload: they read `alpha`, `Beta`, `Session 2`, `Session 10`,
+  `Session1` both times. Session Code likewise (`a-1`, `B-2`, `s-2`,
+  `s-10`, `s1`), and the same on the Archive and Sessions Diagnostics.
+  Created by follows the same rule, but a local run with fake auth has
+  one creator, so it can't be told apart there.
