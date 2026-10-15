@@ -174,11 +174,21 @@
       </div>
     </div>
   {% else %}
-    <div class="card">
+    {# Worded to be true for everyone it reaches (author's ruling,
+       2026-10-15): a stranger, a reviewee with no current grant, someone
+       whose roster row was deactivated, a reviewee carried under a
+       non-email identifier. A reviewee must read exactly as a stranger
+       does, so it never implies something is waiting
+       (spec/participant_model.md §5). Active reviewers and observers
+       always have a row, so they never see it. #}
+    <div class="card" data-me-empty>
+      <p>There's nothing here for you right now.</p>
       <p class="muted">
-        You have no pending reviews
-        ({{ user.email }}).
+        You're signed in as <strong>{{ user.email }}</strong>. If you
+        expected to see a review here, check that it was sent to this
+        address, or contact the person running it.
       </p>
+      <p><a href="/about?return_to=/me">About Review Robin</a></p>
     </div>
   {% endif %}
 {% endblock %}

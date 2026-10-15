@@ -99,3 +99,20 @@ with the last section it covers.
   open the collation page. Row 3 reads "No one in your view takes part
   in this instrument, so there is nothing to download", with no
   Download CSV button.
+
+## The /me fallback: error page link and empty dashboard (P2)
+
+- [ ] **The error page always has a way out.** Open a bookmark-style URL
+  for a session you're not on, e.g. `/me/sessions/999999/results`, in a
+  new tab. The page shows "Go to your reviews" and no "Go back"; the
+  link lands on `/me`.
+- [ ] **"Go back" appears after an in-app page.** Click through to the
+  same URL from another page of the app in the same tab. "Go back" shows
+  beside "Go to your reviews" and returns to that page. Both links sit
+  centered under the message. Ctrl-click (open in new tab) the same link
+  instead: the new tab shows "Go back" too, and it works. On a
+  deployment, open the URL signed out in a fresh tab: after the sign-in
+  redirect, no "Go back" shows.
+- [ ] **The empty dashboard.** Signed in as someone with no role, `/me`
+  reads "There's nothing here for you right now.", names your address,
+  and links to About.

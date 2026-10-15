@@ -317,3 +317,11 @@ def test_the_previews_profile_cell_matches_the_surfaces() -> None:
         else:
             assert "href" not in cell, value
             assert "data-profile-masked" in cell and "•••" in cell, value
+
+
+def test_the_error_pages_scripts_parse(client: TestClient) -> None:
+    """``error.html`` is standalone and carries its own scripts (the theme
+    read and P2's "Go back" reveal); a 404 renders it."""
+    response = client.get("/operator/no/such/page")
+    assert response.status_code == 404
+    _assert_parses("error.html", response.text)

@@ -171,6 +171,29 @@ def test_a_401_shows_reader_copy_not_the_raised_detail(
     assert "Something went wrong" not in resp.text
 
 
+def test_a_participant_error_page_links_to_your_reviews() -> None:
+    """Participant audit P2: "Go back" was ``history.back()`` only, a dead
+    link in a tab opened from an email. The page now always carries a
+    real link, to ``/me`` (author's ruling: ``/me`` is the fallback), and
+    "Go back" stays hidden unless the page was reached from an app page
+    (tests/browser/test_error_page_links.py drives that)."""
+    body = TestClient(app).get("/__test/err/not-found-bare").text
+    assert 'href="/me" data-error-home>Go to your reviews</a>' in body
+    assert "data-error-history hidden>Go back</a>" in body
+    assert "history.back(); return false;" not in body
+
+
+def test_an_operator_error_page_links_to_the_lobby() -> None:
+    body = TestClient(app).get("/operator/no/such/page").text
+    assert 'href="/operator/sessions" data-error-home>Go to Sessions</a>' in body
+
+
+def test_a_401_error_page_offers_sign_out() -> None:
+    """``/me`` would only answer 401 again."""
+    body = TestClient(app).get("/__test/err/unauthorized").text
+    assert 'href="/.auth/logout" data-error-home>Sign out</a>' in body
+
+
 def test_bare_http_exception_falls_back_to_default_copy() -> None:
     resp = TestClient(app).get("/__test/err/not-found-bare")
 

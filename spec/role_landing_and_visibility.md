@@ -32,7 +32,10 @@ do not gate whether the row is created.
 So in a deployment fronted by institutional MS365, **every account in
 the tenant can sign in.** Someone with no role lands on `/me` and reads:
 
-> **Your reviews** — You have no pending reviews (their@address).
+> **Your reviews** — There's nothing here for you right now. You're
+> signed in as their@address. If you expected to see a review here,
+> check that it was sent to this address, or contact the person running
+> it. [About Review Robin]
 
 This is the current posture, not an oversight in the gates: the gates
 work, and they run *after* sign-in. Restricting sign-in itself would be
