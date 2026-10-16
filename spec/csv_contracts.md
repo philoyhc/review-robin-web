@@ -227,7 +227,7 @@ in a zone other than UTC.
 | 3 | `Summary` | `summary` | Human-readable one-liner. |
 | 4 | `ActorEmail` | LEFT JOIN through `actor_user_id` → `users.email`. Empty cell ⇒ system-emitted event with no actor. |
 | 5 | `CorrelationId` | `correlation_id` | Request-scoped UUID. |
-| 6 | `CreatedAt` | `created_at` | ISO 8601 in **UTC** (`...+00:00`); naive readbacks (SQLite) normalised to UTC for dialect-stable output. Unlike the other per-session extracts, this column is *not* localised to the session zone, whichever zone the audit-log viewer shows (`spec/timezone_display.md`). |
+| 6 | `CreatedAt` | `created_at` | ISO 8601 in **UTC** (`...+00:00`); naive readbacks (SQLite) normalized to UTC for dialect-stable output. Unlike the other per-session extracts, this column is *not* localized to the session zone, whichever zone the audit-log viewer shows (`spec/timezone_display.md`). |
 | 7 | `DetailJson` | `json.dumps(detail, separators=(",", ":"), sort_keys=True)` | Compact, key-sorted JSON. Empty cell when `detail is None`. |
 
 **Row order:** `(created_at ASC, id ASC)`. **Streaming:**

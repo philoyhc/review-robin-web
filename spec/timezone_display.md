@@ -51,7 +51,7 @@ operator default resolves the same way:
 
 **Session-scoped surfaces render in the session's resolved zone.**
 Every surface that belongs to a single session — and so has one
-unambiguous zone — localises to it, except the Sys Admin per-session
+unambiguous zone — localizes to it, except the Sys Admin per-session
 audit-log viewer (below):
 
 - **Operator session pages** — Session Home / Detail (the old
