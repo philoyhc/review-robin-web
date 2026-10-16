@@ -905,6 +905,10 @@ class AuditFilters:
     actor_email: str | None = None
     created_from: date | None = None
     created_to: date | None = None
+    date_zone: str = "UTC"
+    """The IANA zone whose midnights bound ``created_from`` /
+    ``created_to``: the zone the viewer shows times in. Not a filter of
+    its own, so it does not make ``is_active``."""
 
     @property
     def is_active(self) -> bool:
@@ -940,6 +944,8 @@ class AuditFilters:
             out["created_from"] = self.created_from.isoformat()
         if self.created_to:
             out["created_to"] = self.created_to.isoformat()
+        if (self.created_from or self.created_to) and self.date_zone != "UTC":
+            out["date_zone"] = self.date_zone
         return out
 
 
@@ -965,19 +971,24 @@ def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> 
         stmt = stmt.where(
             _func.lower(user_table.email) == filters.actor_email.lower()
         )
-    if filters.created_from:
-        from datetime import datetime as _dt, time as _time, timezone as _tz
-
-        start = _dt.combine(filters.created_from, _time.min, tzinfo=_tz.utc)
-        stmt = stmt.where(AuditEvent.created_at >= start)
-    if filters.created_to:
-        # Inclusive upper bound: include the whole "to" day.
+    if filters.created_from or filters.created_to:
         from datetime import datetime as _dt, time as _time, timedelta as _td, timezone as _tz
 
-        end = _dt.combine(
-            filters.created_to, _time.min, tzinfo=_tz.utc
-        ) + _td(days=1)
-        stmt = stmt.where(AuditEvent.created_at < end)
+        from app.services.date_formatting import resolve_zone
+
+        zone = resolve_zone(filters.date_zone)
+
+        def _midnight(day: date) -> _dt:
+            # The day's midnight in the viewer's zone, as a UTC instant.
+            return _dt.combine(day, _time.min, tzinfo=zone).astimezone(_tz.utc)
+
+        if filters.created_from:
+            stmt = stmt.where(AuditEvent.created_at >= _midnight(filters.created_from))
+        if filters.created_to:
+            # Inclusive upper bound: include the whole "to" day.
+            stmt = stmt.where(
+                AuditEvent.created_at < _midnight(filters.created_to + _td(days=1))
+            )
     return stmt
 
 

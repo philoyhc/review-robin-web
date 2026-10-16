@@ -25,18 +25,31 @@ Filter strip semantics (PR 2):
   (`?event_type=A&event_type=B`) — the natural HTML form
   shape for `<select multiple>` and checkbox lists.
 - ``actor`` is a single email string (typeahead-picked).
-- ``from`` / ``to`` are ISO date strings (``YYYY-MM-DD``).
+- ``from`` / ``to`` are ISO date strings (``YYYY-MM-DD``), read as
+  days in the page's zone (below).
 - Empty / missing slots are no-ops; multiple slots AND.
+
+Zone: the page reads in the viewing operator's Settings timezone, or in
+UTC under ``?tz=utc`` — a cycle chip switches between the two. The zone
+sets the "When" column and the From / To day boundaries; every URL the
+page builds (Apply, Clear, Older events, Download CSV) carries the
+choice, so the CSV holds the rows on screen. The CSV's own timestamps
+stay UTC.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
+from dataclasses import dataclass, replace
+from datetime import date, datetime, timezone
 from urllib.parse import urlencode
 
 from app.services.audit import AuditFilters, AuditLogRow
-from app.services.date_formatting import format_datetime
+from app.services.date_formatting import (
+    DEFAULT_TIMEZONE,
+    format_datetime,
+    gmt_offset_label,
+    gmt_offset_zone_label,
+)
 
 __all__ = [
     "AuditDetailChangeRow",
@@ -47,15 +60,90 @@ __all__ = [
     "AuditLogFilterFormContext",
     "AuditLogRowsContext",
     "AuditLogTableRow",
+    "AuditLogZone",
     "build_audit_log_filter_form",
     "build_audit_log_rows",
     "filters_querystring",
     "format_audit_detail",
     "parse_audit_log_filters",
+    "resolve_audit_log_zone",
 ]
 
 
 _VALID_SEVERITIES: tuple[str, ...] = ("info", "warning", "error")
+_UTC_CHOICE = "utc"
+
+
+@dataclass(frozen=True)
+class AuditLogZone:
+    """Which zone the audit log reads in, and the chip that switches it.
+
+    ``utc_chosen`` is the operator's ``?tz=utc``; without it the page
+    reads in their Settings timezone. ``switchable`` is False when the
+    Settings timezone is zero-offset all year, where the two choices are
+    the same and the page shows a plain pill rather than a chip.
+    """
+
+    tz_name: str
+    utc_chosen: bool
+    switchable: bool
+    label: str
+    """The chip's label: ``UTC``, or e.g. ``GMT+8 Asia/Singapore``."""
+    short_label: str
+    """For the column header and the date labels: ``UTC`` / ``GMT+8``,
+    or the zone id for a zone whose offset moves during the year
+    (daylight saving, Casablanca's Ramadan shift), whose rows don't share
+    one offset (``America/New_York``)."""
+    other_label: str
+    """The label the chip moves to on a click."""
+
+    @property
+    def query_pairs(self) -> list[tuple[str, str]]:
+        return [("tz", _UTC_CHOICE)] if self.utc_chosen else []
+
+
+def resolve_audit_log_zone(choice: str | None, settings_zone: str) -> AuditLogZone:
+    """``choice`` is the raw ``?tz=`` value; anything but ``utc`` means
+    the Settings zone, as an unknown filter token drops silently.
+
+    A Settings zone whose offset is zero all year (``UTC``, ``Etc/UTC``,
+    ``Africa/Abidjan``) reads the same as UTC, so there is nothing to
+    switch to; ``Europe/London`` is GMT+1 in summer and stays
+    switchable."""
+    offsets = _year_offsets(settings_zone)
+    settings_label = gmt_offset_zone_label(settings_zone)
+    switchable = offsets != {"UTC"}
+    utc_chosen = switchable and (choice or "").strip().lower() == _UTC_CHOICE
+    if utc_chosen or not switchable:
+        return AuditLogZone(
+            tz_name=DEFAULT_TIMEZONE,
+            utc_chosen=utc_chosen,
+            switchable=switchable,
+            label=DEFAULT_TIMEZONE,
+            short_label=DEFAULT_TIMEZONE,
+            other_label=settings_label,
+        )
+    return AuditLogZone(
+        tz_name=settings_zone,
+        utc_chosen=False,
+        switchable=True,
+        label=settings_label,
+        short_label=offsets.pop() if len(offsets) == 1 else settings_zone,
+        other_label=DEFAULT_TIMEZONE,
+    )
+
+
+def _year_offsets(tz_name: str) -> set[str]:
+    """The zone's GMT-offset labels on the 1st and 15th of each month
+    this year: one label for a fixed-offset zone, more for one whose
+    offset moves (daylight saving in either hemisphere, or a mid-year
+    shift such as Casablanca's in Ramadan)."""
+    year = datetime.now(timezone.utc).year
+    return {
+        gmt_offset_label(tz_name, datetime(year, month, day, tzinfo=timezone.utc))
+        for month in range(1, 13)
+        for day in (1, 15)
+    }
 
 
 @dataclass(frozen=True)
@@ -63,7 +151,7 @@ class AuditLogTableRow:
     """One audit-log row as the template renders it.
 
     Mirrors the CSV exporter's 8-column projection. Strings are
-    pre-formatted (datetime → ISO 8601 UTC, missing actor → "")
+    pre-formatted (datetime → the page's zone, missing actor → "")
     so the template stays markup-only. ``detail`` is the
     structured pretty-printer render (Segment 16C PR 3);
     ``detail_json`` stays available as the always-on raw payload
@@ -93,6 +181,7 @@ def build_audit_log_rows(
     rows: list[AuditLogRow],
     *,
     limit: int,
+    tz_name: str = DEFAULT_TIMEZONE,
 ) -> AuditLogRowsContext:
     table_rows = [
         AuditLogTableRow(
@@ -102,10 +191,9 @@ def build_audit_log_rows(
             summary=row.summary,
             actor_email=row.actor_email or "",
             correlation_id=row.correlation_id or "",
-            # Intentionally UTC (no display zone): the audit log is a
-            # UTC-based forensic surface — its date filter and the
-            # "When (UTC)" column header say so. Don't localise.
-            created_at_display=format_datetime(row.created_at),
+            # The page's zone (``AuditLogZone``): the Settings timezone,
+            # or UTC by choice. The column header names it.
+            created_at_display=format_datetime(row.created_at, tz_name),
             detail_json=_json_or_empty(row.detail),
             detail=format_audit_detail(row.event_type, row.detail),
         )
@@ -141,6 +229,10 @@ class AuditLogFilterFormContext:
     cleared_url: str
     download_csv_url: str
     is_active: bool
+    zone: AuditLogZone
+    zone_toggle_url: str
+    """The page as it stands, filters kept, in the other zone (newest
+    events first: a cursor is a page position, not a filter)."""
 
 
 def parse_audit_log_filters(
@@ -150,6 +242,7 @@ def parse_audit_log_filters(
     actor: str | None,
     from_: str | None,
     to: str | None,
+    date_zone: str = DEFAULT_TIMEZONE,
 ) -> AuditFilters:
     """Build an ``AuditFilters`` from raw query-string inputs.
 
@@ -178,6 +271,7 @@ def parse_audit_log_filters(
         actor_email=actor_email,
         created_from=created_from,
         created_to=created_to,
+        date_zone=date_zone,
     )
 
 
@@ -193,6 +287,7 @@ def build_audit_log_filter_form(
     distinct_actor_emails: list[str],
     base_url: str,
     csv_base_url: str,
+    zone: AuditLogZone,
 ) -> AuditLogFilterFormContext:
     """Translate the active filter set + the per-session actor pool
     into the dataclass the template iterates over.
@@ -213,10 +308,13 @@ def build_audit_log_filter_form(
         (sev, sev in filters.severities) for sev in _VALID_SEVERITIES
     ]
 
-    filter_qs = _filters_querystring(filters)
+    filter_qs = _filters_querystring(filters, zone)
     csv_url = (
         f"{csv_base_url}?{filter_qs}" if filter_qs else csv_base_url
     )
+    zone_qs = urlencode(zone.query_pairs)
+    flipped = replace(zone, utc_chosen=not zone.utc_chosen)
+    toggle_qs = _filters_querystring(filters, flipped)
     return AuditLogFilterFormContext(
         event_type_options=event_type_options,
         severity_options=severity_options,
@@ -228,13 +326,17 @@ def build_audit_log_filter_form(
         created_to_value=(
             filters.created_to.isoformat() if filters.created_to else ""
         ),
-        cleared_url=base_url,
+        cleared_url=f"{base_url}?{zone_qs}" if zone_qs else base_url,
         download_csv_url=csv_url,
         is_active=filters.is_active,
+        zone=zone,
+        zone_toggle_url=f"{base_url}?{toggle_qs}" if toggle_qs else base_url,
     )
 
 
-def _filters_querystring(filters: AuditFilters) -> str:
+def _filters_querystring(
+    filters: AuditFilters, zone: AuditLogZone | None = None
+) -> str:
     """Encode an ``AuditFilters`` into a stable URL query string.
 
     Uses ``urlencode(doseq=True)`` so multi-value slots
@@ -252,13 +354,17 @@ def _filters_querystring(filters: AuditFilters) -> str:
         pairs.append(("from", filters.created_from.isoformat()))
     if filters.created_to:
         pairs.append(("to", filters.created_to.isoformat()))
+    if zone is not None:
+        pairs.extend(zone.query_pairs)
     return urlencode(pairs)
 
 
-def filters_querystring(filters: AuditFilters) -> str:
+def filters_querystring(
+    filters: AuditFilters, zone: AuditLogZone | None = None
+) -> str:
     """Public alias so route layers can build pagination URLs that
-    carry the filter state forward."""
-    return _filters_querystring(filters)
+    carry the filter state, and the zone choice, forward."""
+    return _filters_querystring(filters, zone)
 
 
 # ---------------------------------------------------------------------------

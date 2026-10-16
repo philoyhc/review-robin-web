@@ -13,20 +13,53 @@
   {% endwith %}
 
   <div class="card">
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-      <h2 style="margin-top: 0;">Audit log — {{ audit_session.name }}</h2>
-      <a class="btn secondary" href="{{ filter_form.download_csv_url }}" download>Download CSV</a>
+    {# The zone chip is a cycle chip (spec/ui_elements.md §9): both
+       labels are real choices, so it is always solid. It is a link to
+       this page in the other zone, filters kept; with a Settings zone that
+       is zero-offset all year there is nothing to switch to, so it is a
+       plain pill. #}
+    {% set zone = filter_form.zone %}
+    <div class="audit-log-head">
+      <h2>Audit log — {{ audit_session.name }}</h2>
+      <div class="audit-log-head-actions">
+        <span class="audit-zone" data-audit-zone>
+          Times in
+          {% if zone.switchable %}
+            <a class="pill pill-count tag-chip is-selected"
+               href="{{ filter_form.zone_toggle_url }}"
+               title="Show times in {{ zone.other_label }}">{{ zone.label }}</a>
+          {% else %}
+            <span class="pill pill-count">{{ zone.label }}</span>
+          {% endif %}
+        </span>
+        <a class="btn secondary" href="{{ filter_form.download_csv_url }}" download>Download CSV</a>
+      </div>
     </div>
     <p class="muted">
       Append-only record of every mutating action on this
       session. Newer events first. Open a row's "Show detail" to
-      read it.
+      read it. The CSV's times are always UTC.
     </p>
 
     <form method="get" action="{{ viewer_base_url }}" style="margin-top: 16px;">
+      {% if zone.utc_chosen %}<input type="hidden" name="tz" value="utc">{% endif %}
       <div class="page-grid">
         <div>
-          <label for="filter-event-type">Event type</label>
+          {# Event type | Severity and its checkboxes, on one line above
+             the event-type list. #}
+          <div class="audit-filter-head">
+            <label for="filter-event-type">Event type</label>
+            <span class="audit-filter-sep" aria-hidden="true">|</span>
+            <span class="audit-filter-head-label" id="filter-severity-label">Severity</span>
+            <span class="audit-severity-options" role="group" aria-labelledby="filter-severity-label">
+              {% for value, selected in filter_form.severity_options %}
+                <label>
+                  <input type="checkbox" name="severity" value="{{ value }}"{% if selected %} checked{% endif %}>
+                  <span class="pill pill-{{ value }}">{{ value }}</span>
+                </label>
+              {% endfor %}
+            </span>
+          </div>
           <select id="filter-event-type" name="event_type" multiple size="6"
                   style="width: 100%; min-height: 140px;">
             {% for value, selected in filter_form.event_type_options %}
@@ -37,11 +70,11 @@
         </div>
         <div>
           {# Right-column filters, post-15A refinement: actor email
-             at the top, the two date selectors side-by-side
-             (each half-width), then severity as a single inline
-             row. Date inputs use the same shape as the create-
-             session deadline picker — no inline margins, natural
-             label / input spacing. #}
+             at the top, then the two date selectors side-by-side
+             (each half-width), read as days in the page's zone.
+             Date inputs use the same shape as the create-session
+             deadline picker — no inline margins, natural label /
+             input spacing. #}
           <label for="filter-actor">Actor email</label>
           <input type="text"
                  id="filter-actor"
@@ -59,27 +92,17 @@
 
           <div style="display: flex; gap: 12px; margin-top: 12px;">
             <div style="flex: 1; min-width: 0;">
-              <label for="filter-from">From (UTC)</label>
+              <label for="filter-from">From ({{ zone.short_label }})</label>
               <input type="date" id="filter-from" name="from"
                      value="{{ filter_form.created_from_value }}"
                      style="width: 100%;">
             </div>
             <div style="flex: 1; min-width: 0;">
-              <label for="filter-to">To (UTC)</label>
+              <label for="filter-to">To ({{ zone.short_label }})</label>
               <input type="date" id="filter-to" name="to"
                      value="{{ filter_form.created_to_value }}"
                      style="width: 100%;">
             </div>
-          </div>
-
-          <label style="margin-top: 12px; display: block;">Severity</label>
-          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-            {% for value, selected in filter_form.severity_options %}
-              <label style="margin: 0;">
-                <input type="checkbox" name="severity" value="{{ value }}"{% if selected %} checked{% endif %}>
-                <span class="pill pill-{{ value }}">{{ value }}</span>
-              </label>
-            {% endfor %}
           </div>
         </div>
       </div>
@@ -103,7 +126,7 @@
           <th class="col-summary">Summary</th>
           <th class="col-actor">Actor</th>
           <th class="col-correlation">Correlation</th>
-          <th class="col-when">When (UTC)</th>
+          <th class="col-when">When ({{ zone.short_label }})</th>
           <th class="col-detail">Detail</th>
         </tr>
         {% for row in audit_log.rows %}

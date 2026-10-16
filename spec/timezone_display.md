@@ -51,7 +51,8 @@ operator default resolves the same way:
 
 **Session-scoped surfaces render in the session's resolved zone.**
 Every surface that belongs to a single session — and so has one
-unambiguous zone — localises to it:
+unambiguous zone — localizes to it, except the Sys Admin per-session
+audit-log viewer (below):
 
 - **Operator session pages** — Session Home / Detail (the old
   `/edit` URL is only a redirect to its details card), the
@@ -75,8 +76,8 @@ unambiguous zone — localises to it:
   audit-events extract (`app/services/extracts/audit_events_extract.py`)
   is the exception: its `CreatedAt` is ISO 8601 with the stored
   value's own offset, never converted to the session zone (a naive
-  SQLite readback is stamped UTC), matching the UTC audit-log viewer
-  below.
+  SQLite readback is stamped UTC), whatever zone the audit-log viewer
+  below is showing.
 
 **The sessions lobby** (`/operator/sessions`) and the
 **archived-sessions page** (`/operator/sessions/archived`) each
@@ -86,13 +87,25 @@ for their timestamp columns. The per-row timestamp columns
 dedicated **Timezone** column names each row's own session zone
 (see Rendering format below for its compact form).
 
-**The Sys Admin audit-log viewer is the deliberate
-exception — UTC end-to-end**. The audit-events extract does not
-convert to the session zone either, but it keeps the stored value's
-own offset rather than normalizing to UTC (above). A forensic surface correlating
-events across sessions and operators reads most clearly in one
-fixed zone; its "When" column header and its From / To date
-filter are labelled `(UTC)`.
+**The Sys Admin audit-log viewer reads in the viewing operator's zone
+or in UTC, the operator's choice.** It is not a session page, so it
+never uses the session zone. A cycle chip at the card's head names the
+zone in use — the Settings zone (`GMT+8 Asia/Singapore`) by default, or
+`UTC` under `?tz=utc` — and a click reloads the page in the other, its
+filters kept. UTC stays one click away because a forensic surface
+correlating events across sessions and operators can read most clearly
+in one fixed zone. The zone sets the "When" column, whose header names
+its offset (`When (GMT+8)`, `When (UTC)`), and the From / To date
+filter, whose days begin at that zone's midnight and whose labels name
+it the same way. A zone whose offset moves during the year (daylight
+saving, or Casablanca's Ramadan shift) has no one offset for its rows,
+so those labels name the zone id instead (`When (America/New_York)`).
+A Settings zone whose offset is zero all year (`UTC`, `Etc/UTC`) reads
+the same as UTC, so there is nothing to switch to and the chip is a
+plain `UTC` pill; `Europe/London`, GMT+1 in summer, keeps its chip. The
+audit-events extract keeps its stored offsets whichever zone the page shows
+(above); the Download CSV link carries `tz` only so the file's From /
+To days match the page's.
 
 ## Rendering format
 
