@@ -35,9 +35,10 @@ Two sibling registers hold the open work that is not queued here:
   than its own hostname. Nothing under it starts, and nothing else
   waits on it, until the author lifts the hold. That covers the outline
   `guide/segment_21_domain_retrofit.md`, its sub-segments 21A–21D, and
-  the two documents it rests on,
-  `docs/nus_azure_status_cordware_addendum.md` and
-  `docs/cordware_rrw_integration_spec.md`.
+  the Cordware documents in `docs/` (replaced 2026-10-16 by
+  `docs/cordware_nus_azure_status_2026-10-16_v8.md`,
+  `docs/cordware_repository_strategy_v0.4.md` and
+  `docs/cordware_rrw_integration_spec_v0.2.md`).
 
 ### Queued segments
 
