@@ -4951,13 +4951,19 @@
       body.ui-v2 .audit-zone a.tag-chip { text-decoration: none; }
       body.ui-v2 .audit-zone a.tag-chip:hover { text-decoration: underline; }
       /* "Event type | Severity [info] [warning] [error]" on one line
-         above the event-type list. */
+         above the event-type list. The pills make the line ~3px taller
+         than a plain label, with the label text centered in it, so 2px
+         below the line puts ~4px under the text: the same gap
+         ``body.ui-v2 label`` leaves under "Actor email", and the two
+         boxes start within a pixel of each other (measured in Chromium,
+         2026-10-16). No spacing token is that small. */
       body.ui-v2 .audit-filter-head {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: var(--space-2);
         margin-top: 12px;
+        margin-bottom: 2px;
       }
       /* Both heads read as the page's other field labels (``body.ui-v2
          label``): the span takes the size and weight a label would. */

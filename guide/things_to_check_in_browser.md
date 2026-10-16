@@ -239,7 +239,7 @@ with the last section it covers.
 
 - [ ] **Settings zone by default.** With a non-UTC timezone in
   Settings (e.g. Asia/Singapore), open Admin → Sessions Diagnostics →
-  a session's Audit log: "Times in" shows a solid `GMT+8
+  a session's Audit log: "Display times in" shows a solid `GMT+8
   Asia/Singapore` chip before Download CSV; the When column and the
   From / To labels read `(GMT+8)`, and the times are local.
 - [ ] **UTC by click.** Click the chip: it reads `UTC`, the times shift
@@ -260,5 +260,6 @@ with the last section it covers.
 - [ ] **Severity row.** Above the event-type list, one line reads `Event
   type | Severity` followed by the info / warning / error checkboxes;
   the right column no longer has a Severity block. "Event type" and
-  "Severity" read the same size as "Actor email". Narrow the window: the
+  "Severity" read the same size as "Actor email", and sit about as far
+  above the event-type list as "Actor email" does above its box. Narrow the window: the
   line wraps cleanly.
