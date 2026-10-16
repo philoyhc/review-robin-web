@@ -323,7 +323,7 @@ def test_a_mistyped_severity_link_shows_everything(
     )
     assert _chips_on(resp.text) == ["error", "warning", "info"]
     assert "No issues shown." not in resp.text
-    assert resp.cookies.get("rrw-validate-severity") != "none"
+    assert resp.cookies.get("rrw-validate-severity") == '"error\\054warning\\054info"'
 
 
 def test_a_quoted_multi_key_cookie_reads_back(
@@ -344,7 +344,8 @@ def test_a_session_with_no_issues_ignores_a_remembered_off(
 
     review_session = _make_session(client, db, code="chips-clean")
     url = f"/operator/sessions/{review_session.id}/validate"
-    client.get(f"{url}?severity=")  # remembers every chip off
+    first = client.get(f"{url}?severity=")
+    assert first.cookies.get("rrw-validate-severity") == "none"
     monkeypatch.setattr(validation, "validate_session_setup", lambda db, s: [])
     body = client.get(url).text
     assert "data-severity-chips" not in body
@@ -580,3 +581,10 @@ def test_validate_activate_param_no_warnings_redirects(
     assert response.headers["location"].endswith(
         f"/operator/sessions/{review_session.id}/validate"
     )
+    # The same branch keeps a chip change made from the banner.
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+        "?severity=&severity=info&activate=1",
+        follow_redirects=False,
+    )
+    assert response.headers["location"].endswith("/validate?severity=&severity=info")

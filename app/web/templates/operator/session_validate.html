@@ -101,8 +101,7 @@
        `severity` at all, which takes the chips last asked for. #}
     <div class="card severity-filter-card" id="severity-filter">
       <form method="get" action="/operator/sessions/{{ session.id }}/validate#severity-filter"
-            class="severity-filter-row" data-severity-chips
-            role="group" aria-labelledby="severity-filter-label">
+            class="severity-filter-row" data-severity-chips>
         <input type="hidden" name="severity" value="">
         {% if activate_banner %}
           <input type="hidden" name="activate" value="1">
@@ -111,12 +110,14 @@
           {% endif %}
         {% endif %}
         <span id="severity-filter-label">Show:</span>
-        {% for chip in validate.severity_chips %}
-          <label class="pill tag-chip status-chip-{{ chip.key }}">
-            <input type="checkbox" class="visually-hidden"
-                   name="severity" value="{{ chip.key }}"
-                   autocomplete="off"{% if chip.selected %} checked{% endif %}>{{ chip.label }} ({{ chip.count }})</label>
-        {% endfor %}
+        <span class="severity-filter-row" role="group" aria-labelledby="severity-filter-label">
+          {% for chip in validate.severity_chips %}
+            <label class="pill tag-chip status-chip-{{ chip.key }}">
+              <input type="checkbox" class="visually-hidden"
+                     name="severity" value="{{ chip.key }}"
+                     autocomplete="off"{% if chip.selected %} checked{% endif %}>{{ chip.label }} ({{ chip.count }})</label>
+          {% endfor %}
+        </span>
         <noscript><button class="btn secondary" type="submit">Apply</button></noscript>
       </form>
       <script>

@@ -63,7 +63,7 @@ GET commits the same cache the same way.
   renders an inline "Acknowledge and activate" banner instead
   of the bare issue list. On ineligible states (not `validated`)
   or when there is nothing to acknowledge, the route drops the
-  param and 303s to the clean URL.
+  param and 303s to the clean URL, keeping any `severity` values.
 - `?return_to=<slug>` — carried with `?activate=1` from the host
   page whose Activate button sent the operator here; the banner's
   "Acknowledge and activate" form posts it back so `/activate`
@@ -171,12 +171,14 @@ count in parentheses, whichever chips are on:
 
 The three are exhaustive, so all three on is every issue, and that
 is the default. Each chip is a checkbox in one GET form
-(`?severity=`, §1) labelled by *Show:* as a group, and a change
-submits it at once, landing back on the strip (`#severity-filter`);
-without script an *Apply* button does. The form carries `activate`
-and `return_to` while the Activate banner shows, so a chip change
-keeps it; if the banner no longer applies, the redirect to the clean
-URL keeps the `severity` values. The choice is remembered in the browser across sessions
+(`?severity=`, §1), and the chips form a group labelled by *Show:*.
+A change submits the form at once, landing back on the strip
+(`#severity-filter`), or on the Activate banner while it shows (its
+own scroll target wins); without script an *Apply* button submits
+it. The form carries `activate` and `return_to` while the Activate
+banner shows, so a chip change keeps it; if the banner no longer
+applies, the redirect to the clean URL keeps the `severity` values.
+The choice is remembered in the browser across sessions
 (`rrw-validate-severity`, `spec/settings_inventory.md`).
 
 ### 2.4 Issues card

@@ -201,7 +201,8 @@ def validate_session(
     # ineligible states (draft / ready / expired / archived) or
     # when there's
     # nothing to acknowledge, drop the param and 303 to the clean
-    # URL — operator can activate (or not) from the Workflow card.
+    # URL (keeping any ``severity``) — operator can activate (or not)
+    # from the Workflow card.
     activate_banner: dict[str, object] | None = None
     # A chip change made from the banner keeps its chips through the
     # redirect, so the page it lands on remembers them.
@@ -228,7 +229,7 @@ def validate_session(
                 url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
     # The severity chips: no ``severity`` in the URL (a nav link, a
-    # bookmark, the Activate detour's redirect) takes the chips last
+    # bookmark, the Workflow card's Activate detour) takes the chips last
     # asked for (author, 2026-10-16); an explicit one, even every chip
     # off, is remembered for next time.
     severities = views.parse_validate_severities(
