@@ -36,6 +36,7 @@ from typing import Any
 from sqlalchemy.orm import Session, object_session
 
 from app.db.models import Instrument, SessionRuleSet, User
+from app.schemas.rules import rules_payload_error
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments._state import _instrument_label
@@ -97,6 +98,12 @@ def set_band1_assignment_rules(
         link2_combinator=link2_combinator,
         link2_rules=link2_rules,
     )
+    # Refuse a rule the engine would reject on read rather than store
+    # it: the card offered one (findings E1, 2026-10-16), and every
+    # page reading the rule set answered 500 until it was replaced.
+    rules_error = rules_payload_error(rules_json)
+    if rules_error is not None:
+        raise Band1ParseError(f"This assignment rule can't be used: {rules_error}")
 
     _mark_touched_links(instrument, touched_links, {"link1", "link2"})
 

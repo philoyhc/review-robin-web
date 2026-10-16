@@ -532,9 +532,15 @@ async def instrument_bulk_save_fields(
             # Read before the Link 3 write: the self-review flag clears on an
             # individual → group move (19O Item 2 follow-up).
             previous_group_kind = instrument.group_kind
-            instruments_service.set_band1_assignment_rules(
-                db, instrument=instrument, actor=user, **band1
-            )
+            try:
+                instruments_service.set_band1_assignment_rules(
+                    db, instrument=instrument, actor=user, **band1
+                )
+            except instruments_service.Band1ParseError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(exc),
+                ) from exc
             instruments_service.set_unit_of_review(
                 db,
                 instrument=instrument,
@@ -799,9 +805,12 @@ async def instrument_consolidated_save(
             # Read before the Link 3 write: the self-review flag clears on an
             # individual → group move (19O Item 2 follow-up).
             previous_group_kind = instrument.group_kind
-            instruments_service.set_band1_assignment_rules(
-                db, instrument=instrument, actor=user, **band1
-            )
+            try:
+                instruments_service.set_band1_assignment_rules(
+                    db, instrument=instrument, actor=user, **band1
+                )
+            except instruments_service.Band1ParseError as exc:
+                return _fail(str(exc))
             instruments_service.set_unit_of_review(
                 db,
                 instrument=instrument,

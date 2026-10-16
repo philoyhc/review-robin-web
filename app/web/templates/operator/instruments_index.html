@@ -716,7 +716,11 @@
          inactive state. #}
       {% set _link1_tags = new_model_tags.reviewer + new_model_tags.pair_context %}
       {% set _link2_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
-      {% set _link2_operand = new_model_tags.reviewer + new_model_tags.pair_context %}
+      {# The cross-side operators take a reviewer-side tag as operand
+         (``spec/assignments.md`` operators table). A pair-context
+         operand could pair with a pair-context field, which the engine
+         rejects as one population compared with itself (findings E1). #}
+      {% set _link2_operand = new_model_tags.reviewer %}
       {% set _link3_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
       {% set _band1_state = new_model_band1_state.get(instrument.id, {"link1": {"mode": "all", "combinator": "AND", "rules": []}, "link2": {"mode": "all", "combinator": "AND", "rules": []}}) %}
       {% set _link3_state = new_model_link3_state.get(instrument.id, {"mode": "individual", "boundary_pairs": []}) %}

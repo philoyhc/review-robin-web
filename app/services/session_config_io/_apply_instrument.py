@@ -267,7 +267,12 @@ def _apply_instrument_kv(
     elif attr == "starts_new_page":
         instrument.starts_new_page = _parse_bool(value)
     elif attr == "band2_state":
-        instrument.band2_state = _parse_json(value, default={}) or None
+        state = _parse_json(value, default={})
+        # The Instruments page reads this as an object; anything else
+        # stored made the page answer 500 (findings S2, 2026-10-16).
+        if not isinstance(state, dict):
+            raise _ParseError("band2_state must be a JSON object")
+        instrument.band2_state = state or None
     elif attr == "band1_touched_links":
         # Segment 18P PR D2 — the Band 1 "set"-pill link list.
         instrument.band1_touched_links = (

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionRuleSet
+from app.schemas.rules import rules_payload_error
 
 from ._apply_shared import (
     _RX_RULE_SET,
@@ -49,7 +50,14 @@ def _apply_rule_set_kv(
     elif attr == "seed":
         spec.seed = _parse_int(value)
     elif attr == "rules_json":
-        spec.rules_json = _parse_json(value, default=[])
+        rules = _parse_json(value, default=[])
+        # Phase 1 holds the rules to the shape the engine reads, so a
+        # bad cell refuses the file rather than storing rules every
+        # reconcile reader then rejects (findings S2, 2026-10-16).
+        rules_error = rules_payload_error(rules)
+        if rules_error is not None:
+            raise _ParseError(f"rules_json is not a valid rule list: {rules_error}")
+        spec.rules_json = rules
     else:
         raise _ParseError(f"unknown session_rule_sets[] attribute {attr!r}")
     del data_type  # unused

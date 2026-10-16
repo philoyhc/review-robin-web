@@ -1370,7 +1370,21 @@ def test_stale_field_label_rows_silently_ignored(db: Session) -> None:
 
 def test_json_rules_apply_writes_through(db: Session) -> None:
     review_session = _bare_session(db, code="jsw")
-    rules_payload = [{"kind": "match", "field": "tag_1"}]
+    # A rule the engine loads: phase 1 now refuses one it would reject
+    # (findings S2; ``tests/integration/test_rule_writes_checked.py``).
+    rules_payload = [
+        {
+            "id": "r1",
+            "enabled": True,
+            "kind": "MATCH",
+            "predicate": {
+                "field": "reviewee.tag1",
+                "operator": "same_as",
+                "operand": "reviewer.tag1",
+                "case_sensitive": False,
+            },
+        }
+    ]
     rows = [
         Row(
             "session_rule_sets[1].name",
