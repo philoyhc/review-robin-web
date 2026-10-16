@@ -175,13 +175,19 @@ roster row appear in its dropdowns
 |---|---|---|
 | `IS` | `equals` | Free-text string |
 | `IS NOT` | `not_equals` | Free-text string |
-| `IS THE SAME AS` | `same_as` | A reviewer-side tag namespace (e.g. `reviewer.tag1`) |
-| `IS DIFFERENT FROM` | `different_from` | A reviewer-side tag namespace |
+| `IS THE SAME AS` | `same_as` | A reviewer or pair-context tag (e.g. `reviewer.tag1`, `pair_context.tag1`) |
+| `IS DIFFERENT FROM` | `different_from` | A reviewer or pair-context tag |
+
+The operand must address a different population from the field: the
+engine refuses the same population on both sides, and Band 1's Save
+refuses it before storing (`spec/instruments.md`, Link 1 / Link 2). So
+a pair-context field cannot take a pair-context operand; of what the
+card offers, it takes a reviewer operand.
 
 The cross-side operators (`same_as` / `different_from`) read
 the operand as another field reference rather than a literal —
 they let Link 2 express "reviewee shares the reviewer's role
-tag" without listing every value in the world.
+tag" (or the pair's tag) without listing every value in the world.
 
 `case_sensitive=False` is the default; the engine lowercases
 both sides before comparison.

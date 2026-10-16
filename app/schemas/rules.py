@@ -18,12 +18,13 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -361,3 +362,23 @@ class RuleSetSchema(BaseModel):
             if isinstance(rule, CompositeRule):
                 stack.extend(rule.rules)
         return self
+
+
+def rules_payload_error(payload: Any) -> str | None:
+    """Why a stored ``rules_json`` payload would fail the engine's read,
+    or ``None`` when it would load.
+
+    The reader (``assignments._generate``) builds a
+    :class:`RuleSetSchema` from the stored payload, so a writer that
+    stores one it refuses leaves every page reading the rule set
+    answering 500 until the rules are replaced (findings S2 and E1,
+    2026-10-16). Writers check here first and refuse instead.
+    """
+    if not isinstance(payload, list):
+        return "rules must be a list"
+    try:
+        RuleSetSchema(name="check", combinator=Combinator.ALL_OF, rules=payload)
+    except ValidationError as exc:
+        message = str(exc.errors()[0]["msg"])
+        return message.removeprefix("Value error, ")
+    return None

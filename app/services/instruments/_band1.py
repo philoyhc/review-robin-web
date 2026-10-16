@@ -7,7 +7,8 @@ The new-model instrument card surfaces three Links in Band 1:
 - **Link 2 — Pool of those reviewed.** A list of rules over
   ``reviewee.*`` / ``pair_context.*`` tag predicates, including
   cross-side ``same_as`` / ``different_from`` operators that take a
-  reviewer-side tag as operand.
+  reviewer or pair-context tag as operand (never the field's own
+  population, which :func:`set_band1_assignment_rules` refuses).
 - **Link 3 — Unit of review.** Individual vs Grouped + boundary
   tags. Link 3 is wired separately in
   :func:`app.services.instruments.set_unit_of_review` (it writes
@@ -36,6 +37,7 @@ from typing import Any
 from sqlalchemy.orm import Session, object_session
 
 from app.db.models import Instrument, SessionRuleSet, User
+from app.schemas.rules import rules_payload_error
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.instruments._state import _instrument_label
@@ -97,6 +99,12 @@ def set_band1_assignment_rules(
         link2_combinator=link2_combinator,
         link2_rules=link2_rules,
     )
+    # Refuse a rule the engine would reject on read rather than store
+    # it: the card offered one (findings E1, 2026-10-16), and every
+    # page reading the rule set answered 500 until it was replaced.
+    rules_error = rules_payload_error(rules_json)
+    if rules_error is not None:
+        raise Band1ParseError(f"This assignment rule can't be used: {rules_error}")
 
     _mark_touched_links(instrument, touched_links, {"link1", "link2"})
 

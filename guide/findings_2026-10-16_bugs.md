@@ -54,13 +54,13 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   returns early, the sync at `:289` writes). An empty field list is accepted,
   so a validated session then fails Activate. `spec/instruments.md:1654` and
   `spec/lifecycle.md` §2.3 require both. *Reproduced.* Code.
-- **S2** — **A Settings CSV import stores `rules_json` and `band2_state`
+- ~~**S2**~~ — **Done in #3085** (phase 1 refuses a `rules_json` the engine rejects and a `band2_state` that is not an object). **A Settings CSV import stores `rules_json` and `band2_state`
   without checking their shape** (`_apply_rule_set.py:52` runs only
   `json.loads`; `_apply_instrument.py:270`), and `/instruments`, `/assignments`
   and `/validate` then answer 500 until a Band 1 re-save replaces it.
   `spec/csv_contracts.md:469` puts shape checks in phase 1. *Reproduced* by
   two reads. Code: `TypeAdapter(Rule)` per entry, raising `_ParseError`.
-- **E1** — **The Band 1 card offers a rule the engine rejects.** With a
+- ~~**E1**~~ — **Done in #3085** by refusing the rule on Save. Ruled 2026-10-16: Link 2 takes reviewer and pair-context operands, as the card offers, and the specs say so. While the field is a pair-context tag the card's script hides the pair-context operands. The rendered list stays complete, because narrowing it would drop a stored `reviewee.tagN IS THE SAME AS pair_context.tagM` on the next Save. **The Band 1 card offers a rule the engine rejects.** With a
   pair-context tag as Link 2's field, the operand list still offers
   pair-context tags (`instruments_index.html:718-719`);
   `set_band1_assignment_rules` stores the rule unvalidated

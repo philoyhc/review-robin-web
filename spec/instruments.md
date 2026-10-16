@@ -662,13 +662,28 @@ stacked list of MATCH-rule cells. Each cell has:
   session appear — the dropdown's options come from
   `views._instruments.new_model_usable_tags`.
 - An operator-cycle button. Link 1 cycles through `IS | IS NOT`;
-  Link 2 cycles through `IS | IS NOT | IS THE SAME AS | IS DIFFERENT FROM`
-  (the cross-side operators take a reviewer-side tag as operand
-  for "same as the reviewer's role" semantics).
+  Link 2 cycles through `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT`,
+  starting on `IS THE SAME AS`, the most common (author, 2026-10-16), so a
+  new Link 2 cell opens on it
+  (the cross-side operators take a reviewer or pair-context tag as
+  operand, for "same as the reviewer's role" or "same as the pair's
+  tag" semantics; author, 2026-10-16).
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
   or a tag dropdown (for the cross-side operators). The JS
   toggles which is visible based on the current operator.
 - An X (remove) button. Disabled on the first cell.
+
+While a Link 2 cell's field is a pair-context tag, its operand list
+hides the pair-context tags (author, 2026-10-16). Changing the field to
+one clears an operand that is now hidden. On load a stored operand
+keeps its option, so a stored rule always renders as stored.
+
+Save refuses a rule the engine would refuse to load: a cross-side
+operator whose field and operand address the same population (a
+pair-context field compared with a pair-context operand). The card
+answers 422 with its banner, the `/fields/save` fallback 400, and
+nothing is stored (`set_band1_assignment_rules`, via
+`rules_payload_error`).
 
 Above the cells, a `+` button adds another cell and a combinator
 toggle (`AND` / `OR`) sets how the cells combine within the Link.

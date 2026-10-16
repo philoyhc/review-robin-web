@@ -496,6 +496,10 @@ the round-trip notes below.
    A schedule out of order (Start ≤ End ≤ Release-from <
    Release-until) is an error naming the field, on the values the
    session would hold after the apply (`spec/lifecycle.md` §8.2.7).
+   A `session_rule_sets[N].rules_json` the rule engine would refuse
+   to load is an error naming the field (`rules_payload_error` in
+   `app/schemas/rules.py`, the check the reader makes), and so is an
+   `instruments[N].band2_state` that is not a JSON object.
    Only values phase 2 writes are checked: a *fill-blanks* `session.*`
    key (below) only where the destination is blank, and a data shape
    only when it is written, as for the duplicate-name rule.
