@@ -28,24 +28,23 @@ Two sibling registers hold the open work that is not queued here:
 
 - None.
 
-### Queued segments
+### On hold
 
-1. **21 — Domain retrofit.** RRW served at
-   `cordware.nus.edu.sg/reviewrobin` instead of its own hostname
-   (`docs/nus_azure_status_cordware_addendum.md`): stop assuming the
-   public root is `/`. Four sub-segments — **21A** base-path
-   foundation and **21B** the sweep need nothing outside the repo and
-   can start now; **21C** (Easy Auth under the mount) waits on NUS IT
-   decisions, **21D** (runbook + cutover) on the gateway. The
-   deployment now depends on 21, so it precedes 14B and 20 below.
-   **Plan:** `guide/segment_21_domain_retrofit.md` (outline; each
-   sub-segment gets its own `segment_21X_*.md`).
-   **Behavior spec:** `docs/cordware_rrw_integration_spec.md`.
+- **21 — Domain retrofit: speculative, on hold** (author,
+  2026-10-16). RRW served at `cordware.nus.edu.sg/reviewrobin` rather
+  than its own hostname. Nothing under it starts, and nothing else
+  waits on it, until the author lifts the hold. That covers the outline
+  `guide/segment_21_domain_retrofit.md`, its sub-segments 21A–21D, and
+  the two documents it rests on,
+  `docs/nus_azure_status_cordware_addendum.md` and
+  `docs/cordware_rrw_integration_spec.md`.
+
+### Queued segments
 
 14B and 20 are **gated on the institutional Azure deployment
 concluding** (decision 2026-09-05) and independent of each other.
 
-2. **14B — Email infrastructure (send activation + backends).** All
+1. **14B — Email infrastructure (send activation + backends).** All
    email *wiring*. Parts A → E are sequential: SMTP send activation →
    `correlation_id` strategy → bulk-send queue + worker →
    per-deployment from-identity defaults → generalised Outbox
@@ -58,7 +57,7 @@ concluding** (decision 2026-09-05) and independent of each other.
    **Plan:** `guide/segment_14B_email_infrastructure.md`.
    **Functional spec:** `spec/email_infra_options.md`.
 
-3. **20 — Operator polish + documentation.** Documentation *of a real
+2. **20 — Operator polish + documentation.** Documentation *of a real
    deployment*, so it waits for one: the **administrator guide** for
    the institutional host, the institutional half of
    **troubleshooting**, a **currency pass** over the in-app Guide and
@@ -134,7 +133,3 @@ the PR body unless it says otherwise.
   fire into the dev outbox and go out once Part A lights the transport.
 - **20** is independent of the email pipeline but gated on the
   deployment, so it does not interleave with other work.
-- **21A → 21B** are sequential (the sweep needs the helper and the
-  ratchet); **21C** can open in parallel once NUS IT answers how the
-  gateway forwards the prefix and the host; **21D** closes the chain
-  and gates the cutover, after which 14B and 20 can begin.

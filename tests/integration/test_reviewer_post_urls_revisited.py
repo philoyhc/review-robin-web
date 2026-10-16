@@ -1,5 +1,5 @@
 """Revisiting a reviewer POST address with a GET lands on its page
-(participant audit M10, `guide/participant_surface_check.md`).
+(participant audit M10, `guide/archive/participant_surface_check.md`).
 
 After a refused Submit, or a Save that re-rendered with errors, the
 address bar holds the POST's URL. Pressing Enter there, or signing in

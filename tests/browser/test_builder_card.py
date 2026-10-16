@@ -1,7 +1,7 @@
 """The instrument card around the rows: Cancel, Lock, Delete, display
 fields and visibility, driven as an operator drives them.
 
-Each test names the row of ``guide/post_azure_todo_checklist.md`` item 6
+Each test names the row of the appendix's item 6
 it repeats (``guide/archive/browser_test.md`` rung 3).
 """
 

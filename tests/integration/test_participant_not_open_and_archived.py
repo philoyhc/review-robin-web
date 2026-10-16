@@ -1,6 +1,6 @@
 """The pre-open page's copy (participant audit M3) and archived
 sessions being off limits to participants (M4, author's rulings of
-2026-10-15 and 2026-10-16 in `guide/participant_surface_check.md`)."""
+2026-10-15 and 2026-10-16 in `guide/archive/participant_surface_check.md`)."""
 
 from __future__ import annotations
 
