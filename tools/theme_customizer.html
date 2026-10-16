@@ -4934,13 +4934,15 @@
       body.ui-v2 .audit-zone a.tag-chip { text-decoration: none; }
       body.ui-v2 .audit-zone a.tag-chip:hover { text-decoration: underline; }
       /* "Event type | Severity [info] [warning] [error]" on one line
-         above the event-type list. */
+         above the event-type list, with a little air before the list
+         (the pills make the line taller than a plain label's). */
       body.ui-v2 .audit-filter-head {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: var(--space-2);
         margin-top: 12px;
+        margin-bottom: var(--space-2);
       }
       /* Both heads read as the page's other field labels (``body.ui-v2
          label``): the span takes the size and weight a label would. */

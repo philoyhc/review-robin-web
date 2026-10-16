@@ -260,5 +260,6 @@ with the last section it covers.
 - [ ] **Severity row.** Above the event-type list, one line reads `Event
   type | Severity` followed by the info / warning / error checkboxes;
   the right column no longer has a Severity block. "Event type" and
-  "Severity" read the same size as "Actor email". Narrow the window: the
+  "Severity" read the same size as "Actor email", and a small gap
+  separates the line from the event-type list. Narrow the window: the
   line wraps cleanly.
