@@ -83,9 +83,11 @@ Taken 2026-10-16 at `c863dfa8`.
   `evaluate()` caller binds `pair_context_lookup` (12 lines in
   `app/services/assignments/_generate.py`).
   Command: `grep -n pair_context_lookup app/services/assignments/_generate.py`.
-- `pair_context` appears in 62 files under `app/` and 83 under `tests/`
-  (`grep -rln pair_context app/ | wc -l`, and the same for `tests/`).
-- Live specs naming pair context: 15 (`grep -rln "pair_context\|pair-context" spec/*.md`).
+- `pair_context` appears in 34 tracked files under `app/` and 40 under
+  `tests/` (`git grep -l pair_context -- app/ | wc -l`, and the same for
+  `tests/`).
+- Live specs naming pair context: 15 (`git grep -l -e pair_context -e
+  pair-context -- 'spec/*.md' ':!spec/archive' | wc -l`).
 
 ### PR ladder
 
