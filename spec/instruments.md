@@ -670,6 +670,13 @@ stacked list of MATCH-rule cells. Each cell has:
   toggles which is visible based on the current operator.
 - An X (remove) button. Disabled on the first cell.
 
+Save refuses a rule the engine would refuse to load: a cross-side
+operator whose field and operand address the same population (a
+pair-context field compared with a pair-context operand). The card
+answers 422 with its banner, the `/fields/save` fallback 400, and
+nothing is stored (`set_band1_assignment_rules`, via
+`rules_payload_error`).
+
 Above the cells, a `+` button adds another cell and a combinator
 toggle (`AND` / `OR`) sets how the cells combine within the Link.
 Each Link contributes its own Composite to the materialised

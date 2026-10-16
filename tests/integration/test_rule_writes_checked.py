@@ -8,8 +8,6 @@ it was replaced. The writers now refuse the value instead.
 """
 from __future__ import annotations
 
-import re
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -171,19 +169,29 @@ def test_band1_card_save_keeps_a_cross_side_rule(db: Session, client: TestClient
     assert stored and stored[0]["rules"][0]["predicate"]["operand"] == "reviewer.tag1"
 
 
-def test_link2_operand_offers_reviewer_tags_only(db: Session, client: TestClient) -> None:
-    session, _instrument = _session_with_tags(db, client, "e1-page")
+def test_band1_refusal_leaves_a_stored_rule_and_its_links_alone(
+    db: Session, client: TestClient
+) -> None:
+    """The update-in-place path: a rule set already exists, and the
+    refusal comes before the first write (``band1_touched_links``)."""
+    session, instrument = _session_with_tags(db, client, "e1-update")
+    saved = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        data=_link2_form("reviewee.tag1", "reviewer.tag1"),
+    )
+    assert saved.status_code == 200, saved.text
+    before_rules = _stored_rules(db, instrument.id)
+    before_links = db.get(Instrument, instrument.id).band1_touched_links
 
-    page = client.get(f"/operator/sessions/{session.id}/instruments").text
-    selects = re.findall(
-        r'<select[^>]*name="link2_operand_tag"[^>]*>(.*?)</select>', page, flags=re.S
+    refused = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        data={**_link2_form("pair_context.tag1", "pair_context.tag2"), "link1_touched": ""},
+        follow_redirects=False,
     )
 
-    assert selects
-    for options in selects:
-        values = re.findall(r'<option value="([^"]*)"', options)
-        assert "reviewer.tag1" in values
-        assert not [value for value in values if value.startswith("pair_context.")]
+    assert refused.status_code == 400
+    assert _stored_rules(db, instrument.id) == before_rules
+    assert db.get(Instrument, instrument.id).band1_touched_links == before_links
 
 
 # --- Settings import -------------------------------------------------------
@@ -260,4 +268,7 @@ def test_settings_import_refuses_a_band2_state_that_is_not_an_object(
 
     result = apply_session_config(db, session, rows, user=operator)
 
-    assert any("band2_state" in error.message for error in result.errors)
+    assert any(
+        error.field.endswith(".band2_state") and "JSON object" in error.message
+        for error in result.errors
+    )

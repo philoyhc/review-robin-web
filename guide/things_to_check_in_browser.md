@@ -246,16 +246,15 @@ with the last section it covers.
 
 ## Band 1 rules and the Settings import refuse what the engine rejects (S2, E1)
 
-- [ ] **Link 2's operand list holds reviewer tags only.** On a session
+- [ ] **A refused rule says why and changes nothing.** On a session
   whose reviewers, reviewees and relationships all carry a tag, open an
   instrument card. In Link 2, pick a pair-context tag as the field, set
-  the operator to IS THE SAME AS, and open the operand list: it lists
-  reviewer tags only, with no pair-context ones.
-- [ ] **A refused rule says why and changes nothing.** If a rule that
-  compares a population with itself still reaches Save (for example, from
-  a card loaded before this change), the card shows a banner beginning
-  "This assignment rule can't be used". Its edits stay on screen, and
-  Assignments and Validate still open.
+  the operator to IS THE SAME AS, pick a pair-context tag as the operand
+  and Save. The card shows a banner beginning "This assignment rule
+  can't be used", its edits stay on screen, and Assignments and Validate
+  still open.
+- [ ] **A cross-side rule still saves.** Change the operand to a
+  reviewer tag and Save: it saves, and a reload shows the rule.
 - [ ] **A bad Settings file is refused by name.** Export the session's
   Settings CSV, change one `session_rule_sets[1].rules_json` cell to
   `[{"kind": "NOPE"}]`, and import it. The import is refused, the error
