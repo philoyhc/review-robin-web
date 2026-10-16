@@ -663,8 +663,9 @@ stacked list of MATCH-rule cells. Each cell has:
   `views._instruments.new_model_usable_tags`.
 - An operator-cycle button. Link 1 cycles through `IS | IS NOT`;
   Link 2 cycles through `IS | IS NOT | IS THE SAME AS | IS DIFFERENT FROM`
-  (the cross-side operators take a reviewer-side tag as operand
-  for "same as the reviewer's role" semantics).
+  (the cross-side operators take a reviewer or pair-context tag as
+  operand, for "same as the reviewer's role" or "same as the pair's
+  tag" semantics; author, 2026-10-16).
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
   or a tag dropdown (for the cross-side operators). The JS
   toggles which is visible based on the current operator.
