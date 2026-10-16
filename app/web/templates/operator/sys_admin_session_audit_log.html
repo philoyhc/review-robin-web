@@ -49,18 +49,21 @@
       {% if zone.utc_chosen %}<input type="hidden" name="tz" value="utc">{% endif %}
       <div class="page-grid">
         <div>
-          {# Event type | Severity and its checkboxes, on one line above
-             the event-type list. #}
+          {# Event type | Severity and its chips, on one line above the
+             event-type list. Each severity is an on/off chip in its own
+             status color (spec/ui_elements.md §9) around a hidden
+             checkbox, so the form posts it as before; none on is no
+             severity filter. #}
           <div class="audit-filter-head">
             <label for="filter-event-type">Event type</label>
             <span class="audit-filter-sep" aria-hidden="true">|</span>
             <span class="audit-filter-head-label" id="filter-severity-label">Severity</span>
             <span class="audit-severity-options" role="group" aria-labelledby="filter-severity-label">
               {% for value, selected in filter_form.severity_options %}
-                <label>
-                  <input type="checkbox" name="severity" value="{{ value }}"{% if selected %} checked{% endif %}>
-                  <span class="pill pill-{{ value }}">{{ value }}</span>
-                </label>
+                <label class="pill tag-chip status-chip-{{ value }}"
+                       title="Show {{ value }} events"><input type="checkbox" class="visually-hidden"
+                       name="severity" value="{{ value }}"{% if selected %} checked{% endif %}
+                       autocomplete="off">{{ value }}</label>
               {% endfor %}
             </span>
           </div>

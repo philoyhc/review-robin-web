@@ -717,6 +717,7 @@ and the form or row script reads it. The ones that are:
   (`spec/setup_pages.md` § *Reviewers page*, § *Reviewees page*,
   § *Observers page*);
 - Accounts' invite role chip, a cycle chip `Invite as operator` ↔ `Invite as sys-admin` around the `invite_as_sys_admin` box (`spec/operator_ui_concept.md` §6). Its label is rewritten by script on the box's `change` and on the form's `reset`.
+- the Sys Admin audit log's three Severity chips (`info`, `warning`, `error`), on/off chips in a status color around the `severity` boxes; none on is no severity filter (`spec/operator_button_audit.md` §20).
 
 `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill, read off the box itself, so a form reset repaints
@@ -744,7 +745,7 @@ exception): a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
 
-**Five chip types, one look each.** What a chip's states mean decides
+**Six chip types, one look each.** What a chip's states mean decides
 its fill; a fixed switch keeps the fill of the state it is held at. **Solid** is the
 `.is-selected` fill (`--selected-bg`, a solid blue in both themes);
 **faint** is the plain `pill-count` fill (`--status-info-bg`, pale blue in
@@ -756,6 +757,7 @@ new type adds a row there too:
 | Type | States | Fill | Standard |
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | solid when on, faint when off | the Setup pages' column chips |
+| **On/off with a status color** | selected, not selected, where each chip stands for a status; the label doesn't change | the status's pale tint when off (`--status-*-bg` / `-fg`, as the matching pill); solid when on: `--status-warning-solid-*` and `--status-error-solid-*`, info taking the blue chip's own `--selected-*` (`.tag-chip.status-chip-info` / `-warning` / `-error`) | the audit log's Severity filter |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | solid when all, faint when none, amber (`pill-empty`) when some; a click on faint or amber turns all on | the Assignments page's "Include N self reviews" |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always solid (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation"; Accounts' "Invite as operator ↔ Invite as sys-admin"; the audit log's Settings zone ↔ "UTC", a link rather than a box |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, solid otherwise (on a locked Instruments card, the plain pill when set; amber stays) | the Instruments page's Band 1 link chips |

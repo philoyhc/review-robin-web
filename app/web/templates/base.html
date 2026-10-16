@@ -190,6 +190,13 @@
         --status-error-fg: var(--red-deep);
         --status-error-border: var(--red-strong);
         --status-error-accent: var(--red-strong);
+        /* The "on" fill of a status-colored on/off chip (spec/ui_elements.md
+           §9): the strong status color with light text, as --selected-*
+           is for the blue chip. Info's "on" is --selected-* itself. */
+        --status-warning-solid-bg: var(--amber-deep);
+        --status-warning-solid-fg: var(--white);
+        --status-error-solid-bg: var(--red-strong);
+        --status-error-solid-fg: var(--white);
         --toast-error-bg: var(--red-firm);
         --status-error-soft-bg: var(--red-warm-pale);
         --status-error-soft-border: var(--red-warm-soft);
@@ -342,6 +349,11 @@
         --status-error-fg: var(--red-soft);
         --status-error-border: var(--red-bright);
         --status-error-accent: var(--red-bright);
+        /* Dark flips to a light fill with dark text, as --selected-* does. */
+        --status-warning-solid-bg: var(--amber-bright);
+        --status-warning-solid-fg: var(--ink);
+        --status-error-solid-bg: var(--red-bright);
+        --status-error-solid-fg: var(--ink);
         --toast-error-bg: var(--red-bright);
         --status-error-soft-bg: var(--red-abyss);
         --status-error-soft-border: var(--red-warm-border);
@@ -2716,6 +2728,35 @@
         background: var(--selected-bg);
         color: var(--selected-fg);
       }
+      /* On/off with a status color (spec/ui_elements.md §9): the blue
+         on/off chip's pattern in a status's own color. Off is the pale
+         status tint the matching pill wears; on is the solid status fill
+         with contrasting text. Info's solid is the blue chip's own. The
+         edge stays the reserved blue, as on every chip. */
+      body.ui-v2 .tag-chip.status-chip-info {
+        background: var(--status-info-bg);
+        color: var(--status-info-fg);
+      }
+      body.ui-v2 .tag-chip.status-chip-warning {
+        background: var(--status-warning-bg);
+        color: var(--status-warning-fg);
+      }
+      body.ui-v2 .tag-chip.status-chip-error {
+        background: var(--status-error-bg);
+        color: var(--status-error-fg);
+      }
+      body.ui-v2 .tag-chip.status-chip-info:has(> input:checked) {
+        background: var(--selected-bg);
+        color: var(--selected-fg);
+      }
+      body.ui-v2 .tag-chip.status-chip-warning:has(> input:checked) {
+        background: var(--status-warning-solid-bg);
+        color: var(--status-warning-solid-fg);
+      }
+      body.ui-v2 .tag-chip.status-chip-error:has(> input:checked) {
+        background: var(--status-error-solid-bg);
+        color: var(--status-error-solid-fg);
+      }
       /* Column-visibility chips (Segment 18E Part 1) — each chip
          toggles whether its column shows in the preview table.
          Rendered as pills reusing the Sessions-lobby tag-filter chip
@@ -4986,7 +5027,7 @@
       }
       /* Both heads read as the page's other field labels (``body.ui-v2
          label``): the span takes the size and weight a label would. */
-      body.ui-v2 .audit-filter-head label,
+      body.ui-v2 .audit-filter-head > label,
       body.ui-v2 .audit-filter-head-label {
         margin: 0;
         font-weight: 500;
@@ -4994,16 +5035,11 @@
         color: var(--text-body);
       }
       body.ui-v2 .audit-filter-sep { color: var(--text-subtle); }
+      /* The three severity chips (status-colored on/off chips). */
       body.ui-v2 .audit-severity-options {
         display: inline-flex;
         flex-wrap: wrap;
-        gap: var(--space-3);
-      }
-      body.ui-v2 .audit-severity-options label {
-        display: inline-flex;
-        align-items: center;
         gap: var(--space-1);
-        font-weight: normal;
       }
       /* Audit-log table — constrain column widths so the detail
          cell (the per-row expander below) wraps rather than

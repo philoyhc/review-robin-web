@@ -23,7 +23,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 100 semantic tokens · 14 non-colour scale tokens.**
+**80 primitives · 104 semantic tokens · 14 non-colour scale tokens.**
 
 ---
 
@@ -347,6 +347,10 @@ to 4.14:1 light / 3.55:1 dark, both under AA. See "Card accents" below and
 | `--status-error-fg` | `--red-deep` | `--red-soft` | `#991b1b` | `#fca5a5` |
 | `--status-error-border` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
 | `--status-error-accent` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--status-warning-solid-bg` | `--amber-deep` | `--amber-bright` | `#92400e` | `#fbbf24` |
+| `--status-warning-solid-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
+| `--status-error-solid-bg` | `--red-strong` | `--red-bright` | `#dc2626` | `#f87171` |
+| `--status-error-solid-fg` | `--white` | `--ink` | `#ffffff` | `#111827` |
 | `--toast-error-bg` | `--red-firm` | `--red-bright` | `#b91c1c` | `#f87171` |
 | `--status-error-soft-bg` | `--red-warm-pale` | `--red-abyss` | `#fdecea` | `#3d1a1a` |
 | `--status-error-soft-border` | `--red-warm-soft` | `--red-warm-border` | `#f2b8b5` | `#7f2a2a` |

@@ -54,7 +54,7 @@
 
   {% if "controls" in visible_sections %}
   {# UX refinements Item 10. One sample of every button role
-     (spec/ui_elements.md §6), every chip type (§9 "Five chip types") and
+     (spec/ui_elements.md §6), every chip type (§9 "Six chip types") and
      the delete-confirm guard (§4), on the classes the app itself uses, so
      a change to a role's look reaches this card with no edit here. Every
      chip sample works (rung 2; rung 1 landed them inert): a chip's blue
@@ -132,6 +132,9 @@
               <tr><td><label class="pill pill-count tag-chip" title="On/off chip: click to show or hide Email"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Email</label>
                       <label class="pill pill-count tag-chip" title="On/off chip: click to show or hide Tag1"><input type="checkbox" class="visually-hidden" autocomplete="off">Tag1</label></td>
                   <td><strong>On or off.</strong> Solid blue is on, a faint tint is off.</td></tr>
+              <tr><td><label class="pill tag-chip status-chip-warning" title="On/off chip in a status color: click to filter on warnings"><input type="checkbox" class="visually-hidden" checked autocomplete="off">Warning</label>
+                      <label class="pill tag-chip status-chip-error" title="On/off chip in a status color: click to filter on errors"><input type="checkbox" class="visually-hidden" autocomplete="off">Error</label></td>
+                  <td><strong>On or off, in a status color.</strong> Solid in its color is on, its pale tint is off, as on the audit log's severity filter.</td></tr>
               <tr><td><label class="pill pill-count tag-chip pill-empty" data-guide-partial-chip data-total="2" data-on="1" title="Some-of-a-set chip: click to include all, click again for none"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Include 1 self review, some"><span data-guide-chip-label>Include 1 self review</span></label></td>
                   <td><strong>Some of a set.</strong> Solid blue when all are on, faint when none, amber when some.</td></tr>
               <tr><td><label class="pill pill-count tag-chip is-selected" data-guide-cycle-chip title="Cycle chip: click to switch between Include and Exclude"><input type="checkbox" class="visually-hidden" autocomplete="off" aria-label="Exclude self reviews"><span data-guide-chip-label>Include self reviews</span></label></td>

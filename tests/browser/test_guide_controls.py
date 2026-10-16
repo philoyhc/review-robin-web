@@ -105,7 +105,7 @@ def test_every_sample_has_a_tooltip(page: Page) -> None:
         " #guide-controls .guide-controls-demo button"
     )
     count = samples.count()
-    assert count == 16
+    assert count == 18
     for i in range(count):
         title = samples.nth(i).get_attribute("title")
         assert title and title.strip(), samples.nth(i).inner_text()

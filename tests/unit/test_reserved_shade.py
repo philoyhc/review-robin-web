@@ -94,6 +94,9 @@ CONTROL_SELECTORS = {
         "body.ui-v2 .tag-chip:has(> input:checked)"
     ),
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
+    # The status-colored on/off chip (audit log Severity, 2026-10-16):
+    # info's "on" is the blue chip's own solid fill.
+    "body.ui-v2 .tag-chip.status-chip-info:has(> input:checked)",
     "body.ui-v2 .severity-chip.active",
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
     "body.ui-v2 span.tag-chip.is-fixed, body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
