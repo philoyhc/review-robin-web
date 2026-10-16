@@ -120,8 +120,9 @@ The system must:
     Purge and archive with the audit log ticked (§16.4, §16.5).
 13. Honour a **single canonical timezone per session** for every
     display surface (operator and reviewer) and every per-session
-    CSV extract, with the sys-admin audit-log viewer as the
-    deliberate UTC exception.
+    CSV extract. The sys-admin audit-log viewer is not a session
+    surface: it reads in the viewing operator's zone or in UTC, at
+    their choice, and its CSV keeps UTC.
 14. Provide **system-administrator surfaces** for workspace
     governance (operator / admin / super-admin roles), cross-session
     diagnostics, and per-session audit-log inspection.
