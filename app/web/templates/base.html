@@ -3394,6 +3394,14 @@
         padding: 4px 8px;
         flex-shrink: 0;
       }
+      /* A Band 1 rule's value box while its operator takes no value
+         (IS FILLED / IS EMPTY): read-only rather than disabled, since a
+         disabled input drops out of the submission and the per-rule
+         arrays must stay aligned, so the dimming says it is inactive. */
+      body.ui-v2 input[data-new-model-operand-value][readonly] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
       /* The save error, in the edit row's own bar. It used to be a
          `.banner.banner-error` in the editor card; that card went, and
          the message came down to the row it is about. A banner's box

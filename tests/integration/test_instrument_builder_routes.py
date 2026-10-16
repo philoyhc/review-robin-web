@@ -7511,9 +7511,10 @@ def test_band2_preview_ships_textarea_rows_for_helper(
 def test_link2_operator_cycle_leads_with_same_as(client: TestClient, db: Session):
     """Link 2 (Who is being reviewed) cycles the cross-side tag
     operators FIRST: IS THE SAME AS → IS DIFFERENT FROM → IS →
-    IS NOT. This makes the tag-operand relationship the default
-    for a fresh Link 2 rule (the common reviewee-matches-reviewer
-    case). Guards the order string on the operator-cycle button."""
+    IS NOT → IS FILLED → IS EMPTY. This makes the tag-operand
+    relationship the default for a fresh Link 2 rule (the common
+    reviewee-matches-reviewer case). Guards the order string on the
+    operator-cycle button."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="link2-cycle-order"
     )
@@ -7522,7 +7523,8 @@ def test_link2_operator_cycle_leads_with_same_as(client: TestClient, db: Session
     ).text
     # The link2 cell carries the reordered cycle on its toggle button.
     assert (
-        'data-new-model-operator-cycle="IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT"'
+        'data-new-model-operator-cycle='
+        '"IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"'
         in body
     )
     # And the old order is gone.
@@ -10215,7 +10217,9 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
     ``pair_context.tag1``; the parser keyed it ``("pair_context",
     "tag_1")``, which ``encode_group_kind`` does not know, so the save
     stored the no-boundary sentinel; and the template rendered the stored
-    ``("pair_context", "1")`` as ``pair_context.1``, matching no option."""
+    ``("pair_context", "1")`` as ``pair_context.1``, matching no option.
+    Since 2026-10-16 the card no longer offers pair-context tags, so the
+    stored one comes back as its select's stored-only option."""
     review_session, new_model = _group_band2_session(
         client, db, code="p1-round-trip"
     )
@@ -10260,7 +10264,8 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
     page = client.get(
         f"/operator/sessions/{review_session.id}/instruments"
     ).text
-    for key in ("reviewee.tag2", "pair_context.tag1"):
-        assert re.search(
-            rf'<option value="{re.escape(key)}"\s+selected>', page
-        ), key
+    assert re.search(r'<option value="reviewee\.tag2"\s+selected>', page)
+    assert re.search(
+        r'<option value="pair_context\.tag1"\s+selected\s+data-new-model-stored-only>',
+        page,
+    )

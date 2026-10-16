@@ -3,12 +3,17 @@
 The new-model instrument card surfaces three Links in Band 1:
 
 - **Link 1 — Pool of reviewers.** A list of rules over ``reviewer.*``
-  / ``pair_context.*`` tag predicates.
+  tag predicates.
 - **Link 2 — Pool of those reviewed.** A list of rules over
-  ``reviewee.*`` / ``pair_context.*`` tag predicates, including
-  cross-side ``same_as`` / ``different_from`` operators that take a
-  reviewer or pair-context tag as operand (never the field's own
-  population, which :func:`set_band1_assignment_rules` refuses).
+  ``reviewee.*`` tag predicates, including cross-side ``same_as`` /
+  ``different_from`` operators that take a reviewer tag as operand.
+- Both Links also offer ``is_not_empty`` / ``is_empty`` (``IS FILLED``
+  / ``IS EMPTY``), which take no operand. The card stopped offering
+  ``pair_context.*`` tags on 2026-10-16 while their meaning is
+  reworked (``guide/assignment_rule_clarify.md``); a rule stored with
+  one still decodes and saves, and one the engine rejects (pair
+  context against pair context) is refused by
+  :func:`set_band1_assignment_rules`.
 - **Link 3 — Unit of review.** Individual vs Grouped + boundary
   tags. Link 3 is wired separately in
   :func:`app.services.instruments.set_unit_of_review` (it writes
@@ -49,9 +54,14 @@ _UI_TO_ENGINE_OP: dict[str, str] = {
     "IS NOT": "not_equals",
     "IS THE SAME AS": "same_as",
     "IS DIFFERENT FROM": "different_from",
+    "IS FILLED": "is_not_empty",
+    "IS EMPTY": "is_empty",
 }
 _ENGINE_TO_UI_OP: dict[str, str] = {v: k for k, v in _UI_TO_ENGINE_OP.items()}
 _TAG_OPERAND_OPS: frozenset[str] = frozenset({"same_as", "different_from"})
+# IS FILLED / IS EMPTY test the field alone; the card's value box is
+# inactive for them, and whatever it holds is not stored.
+_NO_OPERAND_OPS: frozenset[str] = frozenset({"is_not_empty", "is_empty"})
 
 
 class Band1ParseError(ValueError):
@@ -85,9 +95,10 @@ def set_band1_assignment_rules(
 
         {
             "field": "reviewer.tag1",
-            "op": "IS" | "IS NOT" | "IS THE SAME AS" | "IS DIFFERENT FROM",
+            "op": "IS" | "IS NOT" | "IS THE SAME AS" | "IS DIFFERENT FROM"
+                  | "IS FILLED" | "IS EMPTY",
             "operand_value": "Lead",      # used when op is IS / IS NOT
-            "operand_tag": "reviewee.tag1",  # used when op is IS THE SAME AS / IS DIFFERENT FROM
+            "operand_tag": "reviewer.tag1",  # used when op is IS THE SAME AS / IS DIFFERENT FROM
         }
     """
     lifecycle.require_editable(db, instrument.session)
@@ -626,7 +637,10 @@ def _build_match_rule(
     field = rule_dict.get("field", "").strip()
     if not field:
         return None
-    if engine_op in _TAG_OPERAND_OPS:
+    operand: str | None
+    if engine_op in _NO_OPERAND_OPS:
+        operand = None
+    elif engine_op in _TAG_OPERAND_OPS:
         operand = rule_dict.get("operand_tag", "").strip()
         if not operand:
             return None

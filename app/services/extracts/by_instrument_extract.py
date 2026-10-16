@@ -304,6 +304,8 @@ def _render_rule(rule: dict[str, str], session: ReviewSession) -> str:
     operand_value = rule.get("operand_value") or ""
     operand_tag = rule.get("operand_tag") or ""
     field_label = _prefixed_field_label(field, session)
+    if op in ("IS FILLED", "IS EMPTY"):
+        return f"{field_label} {op}"
     if operand_tag:
         operand_label = _prefixed_field_label(operand_tag, session)
         return f"{field_label} {op} {operand_label}"

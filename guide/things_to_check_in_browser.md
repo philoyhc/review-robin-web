@@ -244,15 +244,27 @@ with the last section it covers.
   `guide/post_azure_todo_checklist.md` item 3 on 2026-10-16: the only
   row there with no recorded pass, and a local browser settles it.
 
+## Band 1 offers IS FILLED / IS EMPTY and no pair-context tags
+
+- [ ] **No pair-context tags in the dropdowns.** On a session whose
+  relationships carry a tag, open an instrument card. Link 1's field
+  list holds reviewer tags only; Link 2's field list reviewee tags only
+  and its "Reviewer tag" list reviewer tags only; Link 3's boundary list
+  reviewee tags only.
+- [ ] **IS FILLED / IS EMPTY dim the value box.** Cycle a Link 1 rule
+  through `IS`, `IS NOT`, `IS FILLED`, `IS EMPTY`: on the last two the
+  value box is dimmed and can't be typed in, and back on `IS` it is live
+  with what was typed. In Link 2, `IS FILLED` shows the dimmed value box
+  in place of the reviewer-tag list. Save and reload: the rule comes
+  back on the operator saved.
+- [ ] **A stored pair-context rule is kept.** A rule saved earlier with
+  a pair-context tag (only possible before this change) shows that tag
+  selected, and Save keeps it. `+` adds a cell without it. On a session
+  whose rosters carry no tags (only its relationships do), that Link's
+  pill still cycles; a Link with nothing stored reads "No usable tags".
+
 ## Band 1 rules and the Settings import refuse what the engine rejects (S2, E1)
 
-- [ ] **A pair-context field hides pair-context operands.** On a
-  session whose reviewers, reviewees and relationships all carry a tag,
-  open an instrument card. In Link 2, set the operator to IS THE SAME AS
-  and pick a pair-context tag as the field. The operand list shows
-  reviewer tags only. Switch the field to a reviewee tag and the
-  pair-context tags come back. (`tests/browser/test_band1_operand_narrowing.py`
-  drives this; the row is for how it looks.)
 - [ ] **A refused rule stored earlier shows the banner.** Only a rule
   stored before this change can still pair two pair-context tags (none
   should exist outside a test). If one does, its card loads with the rule

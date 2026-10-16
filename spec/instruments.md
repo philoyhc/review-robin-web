@@ -501,9 +501,17 @@ spills either.
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
-| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` |
-| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` (with cross-side operands) |
-| Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee + pair-context boundary tags |
+| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` |
+| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` (with reviewer-tag operands) |
+| Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee boundary tags |
+
+The card offers no pair-context tag in any of the three columns
+(author, 2026-10-16) while their meaning is reworked
+(`guide/assignment_rule_clarify.md`). A rule or boundary stored with a
+tag the card does not offer, a pair-context tag or a roster slot since
+emptied, keeps it: its select renders that one tag as an extra option,
+so the card shows it and a Save keeps it, and a new cell does not offer
+it.
 
 #### Self-review exclusion (Link 3 column, below the rule)
 
@@ -615,9 +623,12 @@ pointer, and `Not set` stays amber. The pill is a
 `role="button"` span, so Enter and Space advance it as a click does.
 
 **Disabled state.** When the session has no usable tags for a
-Link's namespace, the pill is permanently stuck on `Not set`
+Link's namespace and the Link has no stored rule (for Link 3, no
+stored boundary), the pill is permanently stuck on `Not set`
 with `aria-disabled="true"` and the title "No usable tags for
-this link". Saving the instrument in that state is fine — the
+this link". A Link with stored rules keeps a live pill, so they can
+still be edited. Pair-context tags do not count as usable, so a session
+whose only tags are pair-context ones is in this state. Saving the instrument in that state is fine — the
 service treats an empty filter as "no constraint on this Link"
 and the workflow card still surfaces it as unconfigured until
 the operator clicks the pill (which on a disabled pill is a
@@ -657,35 +668,39 @@ When the pill is in `filter`, the column renders a vertically
 stacked list of MATCH-rule cells. Each cell has:
 
 - A field dropdown — the column's tag namespace (e.g.
-  Link 1: `reviewer.tag1 / tag2 / tag3 + pair_context.tag1 / tag2 / tag3`).
+  Link 1: `reviewer.tag1 / tag2 / tag3`).
   Only namespaces with at least one populated row in the
   session appear — the dropdown's options come from
   `views._instruments.new_model_usable_tags`.
-- An operator-cycle button. Link 1 cycles through `IS | IS NOT`;
-  Link 2 cycles through `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT`,
+- An operator-cycle button. Link 1 cycles through
+  `IS | IS NOT | IS FILLED | IS EMPTY`; Link 2 cycles through
+  `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT | IS FILLED | IS EMPTY`,
   starting on `IS THE SAME AS`, the most common (author, 2026-10-16), so a
-  new Link 2 cell opens on it
-  (the cross-side operators take a reviewer or pair-context tag as
-  operand, for "same as the reviewer's role" or "same as the pair's
-  tag" semantics; author, 2026-10-16).
+  new Link 2 cell opens on it (the cross-side operators take a reviewer
+  tag as operand, for "same as the reviewer's role" semantics). With no
+  usable reviewer tag, Link 2's cycle drops the two cross-side operators
+  and opens on `IS`, except in a cell holding a stored operand the card
+  no longer offers, which keeps the full cycle and its operand.
+  `IS FILLED` / `IS EMPTY` (author, 2026-10-16) store as `is_not_empty` /
+  `is_empty` and test the field alone.
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
   or a tag dropdown (for the cross-side operators). The JS
-  toggles which is visible based on the current operator.
+  toggles which is visible based on the current operator. For
+  `IS FILLED` / `IS EMPTY` the value box shows but is inactive:
+  read-only and dimmed, still submitted so the per-rule arrays stay
+  aligned, and not stored.
 - An X (remove) button. Disabled on the first cell.
 
-While a Link 2 cell's field is a pair-context tag, its operand list
-hides the pair-context tags (author, 2026-10-16). Changing the field to
-one clears an operand that is now hidden. On load a stored operand
-keeps its option, so a stored rule always renders as stored.
-
 Save refuses a rule the engine would refuse to load: a cross-side
-operator whose field and operand address the same population (a
-pair-context field compared with a pair-context operand). The card
+operator whose field and operand address the same population (only a
+stored rule can hold one now, a pair-context field compared with a
+pair-context operand). The card
 answers 422 with its banner, the `/fields/save` fallback 400, and
 nothing is stored (`set_band1_assignment_rules`, via
 `rules_payload_error`).
 
-Above the cells, a `+` button adds another cell and a combinator
+Above the cells, a `+` button adds another cell (none when the Link
+offers no tag, as when only a stored rule keeps it live) and a combinator
 toggle (`AND` / `OR`) sets how the cells combine within the Link.
 Each Link contributes its own Composite to the materialised
 `SessionRuleSet`; the outer `ALL_OF` combinator wraps both Links
@@ -696,7 +711,8 @@ so they intersect (Link 1 ∩ Link 2).
 When the pill is in `group`, the column renders the same
 vertical builder shape — `+` button + boundary-tag cells. Each
 cell is a single dropdown picking one of the session's usable
-reviewee or pair-context tags. The cells additively define the
+reviewee tags (a stored pair-context boundary keeps its option, as
+above). The cells additively define the
 **group boundary**: reviewees sharing the same values across
 every picked tag form one group.
 

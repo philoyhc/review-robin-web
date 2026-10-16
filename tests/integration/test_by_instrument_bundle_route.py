@@ -379,3 +379,42 @@ def test_all_rows_query_param_off_drops_empty_assignment_rows(
     # responses + ``all_rows=0``, only the header survives.
     assert len(lines) == 1
     assert lines[0].startswith("ReviewerName,")
+
+
+def test_pool_rule_rows_render_filled_and_empty_without_an_operand(
+    client: TestClient, db: Session
+) -> None:
+    """IS FILLED / IS EMPTY take no value (``guide/assignment_rule_clarify.md``
+    stage 1), so the Pool rows name the field and operator only, not an
+    empty quoted operand."""
+    review_session = _make_session(client, db, code="bi-filled")
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    instrument = _default_instrument(db, review_session.id)
+    actor = db.execute(select(User)).scalars().first()
+    assert actor is not None
+
+    set_band1_assignment_rules(
+        db=db,
+        instrument=instrument,
+        link1_mode="filter",
+        link1_combinator="AND",
+        link1_rules=[
+            {"field": "reviewer.tag1", "op": "IS FILLED", "operand_value": "", "operand_tag": ""}
+        ],
+        link2_mode="filter",
+        link2_combinator="AND",
+        link2_rules=[
+            {"field": "reviewee.tag2", "op": "IS EMPTY", "operand_value": "", "operand_tag": ""}
+        ],
+        actor=actor,
+    )
+    db.commit()
+
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/export/by_instrument_bundle.zip"
+    )
+    archive = zipfile.ZipFile(io.BytesIO(response.content))
+    payload = archive.read(archive.namelist()[0]).decode("utf-8")
+
+    assert "Pool of reviewers,AND(reviewer.Tag 1 IS FILLED)" in payload
+    assert "Pool of reviewees,AND(reviewee.Tag 2 IS EMPTY)" in payload

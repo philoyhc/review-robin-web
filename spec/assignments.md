@@ -164,10 +164,12 @@ A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensiti
 | `reviewee.email` | `Reviewee.email_or_identifier` | — |
 
 The engine accepts every field above (`ALLOWED_PREDICATE_FIELDS` in
-`app/schemas/rules.py`); Band 1 offers only the tag slots, and of
-those only namespace + slot combinations with at least one populated
-roster row appear in its dropdowns
-(`views._instruments.new_model_usable_tags`).
+`app/schemas/rules.py`); Band 1 offers only the reviewer and reviewee
+tag slots, and of those only namespace + slot combinations with at
+least one populated roster row appear in its dropdowns
+(`views._instruments.new_model_usable_tags`). It does not offer
+`pair_context.tagN` (`spec/instruments.md`, Band 1); the engine still
+evaluates a stored rule that holds one.
 
 **Operators** (UI → engine internal):
 
@@ -175,19 +177,20 @@ roster row appear in its dropdowns
 |---|---|---|
 | `IS` | `equals` | Free-text string |
 | `IS NOT` | `not_equals` | Free-text string |
-| `IS THE SAME AS` | `same_as` | A reviewer or pair-context tag (e.g. `reviewer.tag1`, `pair_context.tag1`) |
-| `IS DIFFERENT FROM` | `different_from` | A reviewer or pair-context tag |
+| `IS THE SAME AS` | `same_as` | A reviewer tag (e.g. `reviewer.tag1`) |
+| `IS DIFFERENT FROM` | `different_from` | A reviewer tag |
+| `IS FILLED` | `is_not_empty` | None |
+| `IS EMPTY` | `is_empty` | None |
 
 The operand must address a different population from the field: the
 engine refuses the same population on both sides, and Band 1's Save
-refuses it before storing (`spec/instruments.md`, Link 1 / Link 2). So
-a pair-context field cannot take a pair-context operand; of what the
-card offers, it takes a reviewer operand.
+refuses it before storing (`spec/instruments.md`, Link 1 / Link 2). Of
+what the card offers, a reviewee field takes a reviewer operand.
 
 The cross-side operators (`same_as` / `different_from`) read
 the operand as another field reference rather than a literal —
 they let Link 2 express "reviewee shares the reviewer's role
-tag" (or the pair's tag) without listing every value in the world.
+tag" without listing every value in the world.
 
 `case_sensitive=False` is the default; the engine lowercases
 both sides before comparison.
