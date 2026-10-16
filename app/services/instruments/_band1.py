@@ -7,7 +7,8 @@ The new-model instrument card surfaces three Links in Band 1:
 - **Link 2 — Pool of those reviewed.** A list of rules over
   ``reviewee.*`` / ``pair_context.*`` tag predicates, including
   cross-side ``same_as`` / ``different_from`` operators that take a
-  reviewer-side tag as operand.
+  reviewer or pair-context tag as operand (never the field's own
+  population, which :func:`set_band1_assignment_rules` refuses).
 - **Link 3 — Unit of review.** Individual vs Grouped + boundary
   tags. Link 3 is wired separately in
   :func:`app.services.instruments.set_unit_of_review` (it writes

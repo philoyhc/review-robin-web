@@ -178,10 +178,11 @@ roster row appear in its dropdowns
 | `IS THE SAME AS` | `same_as` | A reviewer or pair-context tag (e.g. `reviewer.tag1`, `pair_context.tag1`) |
 | `IS DIFFERENT FROM` | `different_from` | A reviewer or pair-context tag |
 
-The operand must address a different population from the field, so a
-pair-context field takes a reviewer operand only. The engine refuses
-the same population on both sides, and Band 1's Save refuses it before
-storing (`spec/instruments.md`, Link 1 / Link 2).
+The operand must address a different population from the field: the
+engine refuses the same population on both sides, and Band 1's Save
+refuses it before storing (`spec/instruments.md`, Link 1 / Link 2). So
+a pair-context field cannot take a pair-context operand; of what the
+card offers, it takes a reviewer operand.
 
 The cross-side operators (`same_as` / `different_from`) read
 the operand as another field reference rather than a literal —
