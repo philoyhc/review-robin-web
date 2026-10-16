@@ -312,7 +312,7 @@ out whenever an operator next looks.
 **Why it waits here.** The real fix is a trigger that runs on a clock,
 such as a scheduled job, a timer, or an always-on worker. Which one
 depends on what the NUS App Service plan and network allow
-(`docs/nus_azure_status.md`). Widening the page-view trigger to the
+(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). Widening the page-view trigger to the
 Operations pages and the lobby would still leave the gap, so the author
 held it rather than ship a half-step.
 

@@ -1093,7 +1093,7 @@ with the simplest acceptable infrastructure choices.
   The personal dev slot still uses public access with firewall rules.
   The NUS environment already has VNet integration, private endpoints
   for the Web App and Key Vault and a privately provisioned Postgres
-  (`docs/nus_azure_status.md`), so this closes when the dev slot retires
+  (`docs/cordware_nus_azure_status_2026-10-16_v8.md`), so this closes when the dev slot retires
   (`guide/post_azure_todo_checklist.md` item 2).
 
 Wiring the NUS Key Vault references and the Insights connection string

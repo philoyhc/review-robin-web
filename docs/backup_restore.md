@@ -6,7 +6,7 @@ institutional deployment would need to align them with
 institutional policy.
 
 The **NUS environment** is provisioned but not yet serving
-(`docs/nus_azure_status.md`). Its PostgreSQL server is private, so
+(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). Its PostgreSQL server is private, so
 a restored server is reachable only from inside the network (see
 `docs/deployment_nus.md` §5), and its backup settings are not recorded
 here yet.

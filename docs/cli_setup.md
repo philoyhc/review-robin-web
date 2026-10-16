@@ -7,7 +7,7 @@ Covers the CLIs you need on your workstation to execute the
 runbook, the one-time auth steps, and a set of tests that
 prove you can reach the RRW GitHub repo and Azure before you
 start. NUS Postgres is private
-([`nus_azure_status.md`](nus_azure_status.md)), so `psql`
+([`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus_azure_status_2026-10-16_v8.md)), so `psql`
 against it runs on the self-hosted runner inside the VNet, not on a
 workstation; B.9's dev slot retires at cutover.
 
