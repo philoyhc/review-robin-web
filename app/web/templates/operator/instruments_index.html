@@ -562,8 +562,11 @@
         {% set _is_active = tag_options | length > 0 or _stored_rules | length > 0 %}
         {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
            when there are no operand-side tags to compare against,
-           so the operator can't land on an empty operand picker. #}
-        {% if operand_tag_options is not none and not _has_operand_select %}
+           so the operator can't land on an empty operand picker.
+           Per cell: only a cell holding a stored operand the card no
+           longer offers keeps the full cycle (``_cell_ops`` below). #}
+        {% set _ops_full = _ops %}
+        {% if operand_tag_options is not none and operand_tag_options | length == 0 %}
           {% set _ops = _ops | reject('in', ['IS THE SAME AS', 'IS DIFFERENT FROM']) | list %}
         {% endif %}
         {% set _touched = state.touched if state is mapping and state.touched else False %}
@@ -586,7 +589,7 @@
                only considers the instrument configured when all
                three Band 1 link pills are out of "Not set".
                Disabled (and stuck on "Not set") when no usable
-               tags exist for this link. #}
+               tags exist for this link and it has no stored rules. #}
             <span class="pill {% if _is_active %}{% if _pill_state == 'not_set' %}pill-empty tag-chip is-unset{% else %}pill-count tag-chip is-selected{% endif %}{% else %}pill-empty tag-chip is-disabled{% endif %}"
                   data-new-model-rule-mode="{{ _pill_state }}"
                   data-new-model-mode-on-label="{{ on_label }}"
@@ -634,6 +637,7 @@
                  style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
               {% for _rule in _cells %}
                 {% set _r = _rule or {"field": "", "op": _ops[0], "operand_value": "", "operand_tag": ""} %}
+                {% set _cell_ops = _ops_full if (_r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") and _r.operand_tag in _stored_operands.keys) else _ops %}
                 {% set _use_tag_operand = _r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
                 {% set _no_operand = _r.op in ("IS FILLED", "IS EMPTY") %}
                 {% set _is_first = loop.first %}
@@ -671,13 +675,13 @@
                       {% endif %}
                     </select>
                     <button type="button" class="btn secondary cohort-cell-btn"
-                            data-new-model-operator-cycle="{{ _ops | join('|') }}"
+                            data-new-model-operator-cycle="{{ _cell_ops | join('|') }}"
                             onclick="newModelCycleOperator(this)"
-                            title="Toggle operator">{{ _r.op if _r.op in _ops else _ops[0] }}</button>
+                            title="Toggle operator">{{ _r.op if _r.op in _cell_ops else _cell_ops[0] }}</button>
                     <input form="dfsave-{{ instrument_id }}" type="hidden"
                            name="{{ link_id }}_op"
                            data-new-model-op-input
-                           value="{{ _r.op if _r.op in _ops else _ops[0] }}">
+                           value="{{ _r.op if _r.op in _cell_ops else _cell_ops[0] }}">
                   </div>
                   {# Optional caption above the operand-tag
                      dropdown (Link 2 only — Link 1 compares with
@@ -1035,6 +1039,21 @@
           // A stored-only option (a tag the card no longer offers) is
           // the first cell's own; a new cell starts from the offered list.
           clone.querySelectorAll('option[data-new-model-stored-only]').forEach(function (o) { o.remove(); });
+          // With no offered tag left there is nothing to pick, so no cell.
+          var cloneFieldSel = clone.querySelector('[data-new-model-rule-field]');
+          if (cloneFieldSel && cloneFieldSel.options.length === 0) { return; }
+          // A cell cloned from one holding a stored operand carries the
+          // full cycle; with no offered operand left, trim it as the
+          // page does, so the new cell never opens on an empty picker.
+          var cloneTagSel = clone.querySelector('[data-new-model-operand-tag]');
+          if (cloneTagSel && !Array.prototype.some.call(cloneTagSel.options, function (o) { return o.value; })) {
+            clone.querySelectorAll('button[data-new-model-operator-cycle]').forEach(function (b) {
+              var trimmed = b.getAttribute('data-new-model-operator-cycle').split('|').filter(function (op) {
+                return op !== 'IS THE SAME AS' && op !== 'IS DIFFERENT FROM';
+              });
+              b.setAttribute('data-new-model-operator-cycle', trimmed.join('|'));
+            });
+          }
           clone.querySelectorAll('input[type="text"], [data-new-model-operand-value]').forEach(function (i) { i.value = ''; });
           clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
           // Reset each operator-toggle button + its hidden op input

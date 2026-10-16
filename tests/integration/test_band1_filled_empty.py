@@ -185,9 +185,18 @@ def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
     operators; a stored one must still render with its operand, or the
     cell falls back to IS with no value and the next Save drops it."""
     session, instrument = _session(db, client, "b1-stored-operand")
+    form = _form(link2=("reviewee.tag1", "IS THE SAME AS", "pair_context.tag1"))
+    # A second Link 2 rule, comparing with a value.
+    form.update(
+        {
+            "link2_field": ["reviewee.tag1", "reviewee.tag1"],
+            "link2_op": ["IS THE SAME AS", "IS"],
+            "link2_operand_value": ["", "A"],
+            "link2_operand_tag": ["pair_context.tag1", ""],
+        }
+    )
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_form(link2=("reviewee.tag1", "IS THE SAME AS", "pair_context.tag1")),
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
     )
     assert saved.status_code == 200, saved.text
     reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalar_one()
@@ -196,14 +205,30 @@ def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
 
     page = _page(client, session.id, instrument.id)
 
-    assert (
-        'data-new-model-operator-cycle='
-        '"IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"'
-    ) in page
-    assert ">IS THE SAME AS</button>" in page
+    cycles = re.findall(r'data-new-model-operator-cycle="([^"]*)"', page)
+    # Link 1's default cell, then Link 2's two: only the stored-operand
+    # cell keeps the cross-side operators.
+    assert cycles[1:3] == [
+        "IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY",
+        "IS|IS NOT|IS FILLED|IS EMPTY",
+    ]
+    assert re.findall(r'name="link2_op"\s+data-new-model-op-input\s+value="([^"]*)"', page) == [
+        "IS THE SAME AS",
+        "IS",
+    ]
     assert re.search(
         r'<option value="pair_context\.tag1" selected data-new-model-stored-only>', page
     )
+
+    # The rendered values posted back keep both rules.
+    again = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+    )
+    assert again.status_code == 200, again.text
+    assert [(p["operator"], p.get("operand")) for p in _predicates(db, instrument.id)] == [
+        ("same_as", "pair_context.tag1"),
+        ("equals", "A"),
+    ]
 
 
 def test_stored_rules_keep_their_pills_live_with_only_pair_tags(

@@ -180,3 +180,89 @@ def test_a_new_cell_does_not_offer_a_stored_only_tag(
     card.locator("[data-new-model-unit-add]").click()
     expect(boundary).to_have_count(2)
     assert _offered(boundary.nth(1)) == ["reviewee.tag1"]
+
+
+UNTAGGED_REVIEWERS_CSV = b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"
+
+
+def test_a_new_cell_beside_a_stored_operand_opens_on_is_with_no_reviewer_tags(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """With no usable reviewer tag, only the cell holding a stored operand
+    keeps IS THE SAME AS; a cell cloned from it by ``+`` gets the trimmed
+    cycle rather than an empty reviewer-tag picker."""
+    session_id = new_session()
+    for kind, body in (("reviewers", UNTAGGED_REVIEWERS_CSV), ("reviewees", REVIEWEES_CSV)):
+        response = api.post(
+            f"/operator/sessions/{session_id}/{kind}/import",
+            files={"file": (f"{kind}.csv", body, "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code in (200, 303), response.text
+    _store_link2_operand(live_server, session_id)
+    card = open_unlocked(page, session_id)
+    operators = card.locator('select[name="link2_field"]').locator(
+        "xpath=ancestor::*[@data-new-model-rule-cell]"
+    ).locator("[data-new-model-operator-cycle]")
+    expect(operators.first).to_have_text("IS THE SAME AS")
+
+    card.locator("[data-new-model-rule-builder]").nth(1).locator(
+        "[data-new-model-rule-add]"
+    ).click()
+
+    expect(operators).to_have_count(2)
+    expect(operators.nth(1)).to_have_text("IS")
+    assert operators.nth(1).get_attribute("data-new-model-operator-cycle") == (
+        "IS|IS NOT|IS FILLED|IS EMPTY"
+    )
+
+
+def _store_link2_operand(live_server: LiveServer, session_id: int) -> None:
+    """``reviewee.tag1 IS THE SAME AS pair_context.tag1`` in Link 2."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, SessionRuleSet
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(Instrument.session_id == session_id)
+            ).scalars().first()
+            rule_set = SessionRuleSet(
+                session_id=session_id,
+                name=f"Band1 {instrument.id}",
+                description="",
+                combinator="ALL_OF",
+                exclude_self_reviews=False,
+                seed=None,
+                rules_json=[
+                    {
+                        "id": "link2",
+                        "enabled": True,
+                        "kind": "COMPOSITE",
+                        "op": "AND",
+                        "rules": [
+                            {
+                                "id": "link2-r0",
+                                "enabled": True,
+                                "kind": "MATCH",
+                                "predicate": {
+                                    "field": "reviewee.tag1",
+                                    "operator": "same_as",
+                                    "operand": "pair_context.tag1",
+                                    "case_sensitive": False,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+            db.add(rule_set)
+            db.flush()
+            instrument.rule_set_id = rule_set.id
+            instrument.band1_touched_links = ["link1", "link2", "link3"]
+            db.commit()
+    finally:
+        engine.dispose()

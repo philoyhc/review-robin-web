@@ -679,7 +679,8 @@ stacked list of MATCH-rule cells. Each cell has:
   new Link 2 cell opens on it (the cross-side operators take a reviewer
   tag as operand, for "same as the reviewer's role" semantics). With no
   usable reviewer tag, Link 2's cycle drops the two cross-side operators
-  and opens on `IS`.
+  and opens on `IS`, except in a cell holding a stored operand the card
+  no longer offers, which keeps the full cycle and its operand.
   `IS FILLED` / `IS EMPTY` (author, 2026-10-16) store as `is_not_empty` /
   `is_empty` and test the field alone.
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
