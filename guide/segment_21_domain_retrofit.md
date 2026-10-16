@@ -34,9 +34,9 @@ where the gates differ:
 
 | Sub-segment | What | Gate to start | Provable in CI? |
 |---|---|---|---|
-| **21A — Base-path foundation** | A `BASE_PATH` setting (default empty); an ASGI shim; one URL helper for Python, Jinja and inline JS; trusted-proxy handling and a `PUBLIC_BASE_URL` for absolute links; a prefixed-mode test harness; a **leak ratchet** test. No visible change at root. | None. Can start now. | Yes |
+| **21A — Base-path foundation** | A `BASE_PATH` setting (default empty); an ASGI shim; one URL helper for Python, Jinja and inline JS; the *mechanisms* for trusted-proxy headers (an allowlist, empty by default) and a `PUBLIC_BASE_URL` for absolute links, both inert until set; a prefixed-mode test harness; a **leak ratchet** test. No visible change at root. | None. Can start now. | Yes |
 | **21B — The sweep** | Every emitter routed through the helper, area by area (§ Blast radius), each PR shrinking the ratchet's allowlist; then the allowlist removed and the ratchet made a hard gate. | 21A merged | Yes |
-| **21C — Auth and edge under the mount** | `/.auth/*` links and sign-out; Easy Auth's callback, return URL and session cookie on a shared host; the health probe path; forwarded host and scheme; proof in a non-production Azure slot (integration spec §14 step 5). | NUS IT decisions (Open questions 1–3) and a reachable Azure test slot | Partly: the app side yes, the Easy Auth side no |
+| **21C — Auth and edge under the mount** | `/.auth/*` links and sign-out; Easy Auth's callback, return URL and session cookie on a shared host; the health probe path; the production values for 21A's proxy allowlist and `PUBLIC_BASE_URL`; proof in a non-production Azure slot (integration spec §14 step 5). | NUS IT decisions (Open questions 1–3) and a reachable Azure test slot | Partly: the app side yes, the Easy Auth side no |
 | **21D — Cutover runbook and verification** | `docs/deployment_nus.md` and `docs/nus_azure_status.md` revised, with the addendum folded in; the addendum's twelve cutover checks as a runbook checklist; the cutover itself. | 21B and 21C closed; gateway listener and path map live | No: the author, on Azure |
 
 21A and 21B are most of the code. They depend on nothing outside the
@@ -70,6 +70,8 @@ repository, so they run in parallel with the infrastructure workstream
 - Four sub-segments, not three. 21C waits on NUS IT and 21D waits on infrastructure, and folding either into 21B would leave a merged code segment unable to close (2026-10-16).
 - The leak ratchet is a test that renders every route the suite already reaches in prefix mode and fails on any root-path URL. Its allowlist only shrinks. This is the repo's usual "derive the gate" pattern (`constitution.md` II), and it lets 21B land in small PRs without a flag day (2026-10-16).
 - The literal `/reviewrobin` appears only in deployment configuration and docs, never in `app/`. This is the integration spec's §2.4 and §4.4 (2026-10-16).
+- **Sign-in is identity only; permissions are each app's own** (author, 2026-10-16). Cordware's shared sign-in tells RRW who the person is; RRW alone decides what they may do. This is the integration spec's §2.1, and RRW's model today.
+- 21A builds the proxy and absolute-URL mechanisms inert; 21C sets their production values once NUS IT says how the gateway forwards the host. This keeps 21A free of outside gates (Codex review of #3081, 2026-10-16).
 - The Cordware landing app is out of scope. It is a separate codebase (addendum §6) (2026-10-16).
 
 ## Blast radius (measured)
@@ -122,11 +124,11 @@ own plan carries its PRs.
 ## Open questions
 
 1. **Does the gateway keep or strip `/reviewrobin`?** NUS IT decides, with the gateway design. RRW's code supports both (Decision), so this sets only the gateway rewrite and the probe path. 21C cannot finish without it.
-2. **Easy Auth topology on a shared host.** NUS IT and EUC decide, with a 21C spike.
-   - App Service serves `/.auth/*` at the host root, and its `AppServiceAuthSession` cookie is host-wide. So two Easy Auth apps behind one public host may collide over both. This is unverified, which is why it is a spike.
-   - The choices are a gateway rewrite of `{BASE_PATH}/.auth/*`, one shared registration, or app-level OIDC in place of Easy Auth.
-   - The last would break the project convention of no Microsoft authentication in app code, so it needs the author's explicit say.
-3. **Does the gateway pass the public host in `X-Forwarded-Host` or `Host`?** NUS IT decides. The answer sets 21A's trusted-proxy configuration and whether `PUBLIC_BASE_URL` is required in production.
+2. **How one sign-in reaches every app on the shared host.** NUS IT and EUC decide, with a 21C spike. The principle is already ruled (Judgment calls): sign-in establishes identity only, so a person signs in once for Cordware. What remains is the mechanism.
+   - App Service serves `/.auth/*` at the host root, and its `AppServiceAuthSession` cookie is host-wide and readable only by the App Service that issued it. So per-app Easy Auth behind one host may mean the apps clobber each other's session rather than share one. This is unverified, which is why it is a spike.
+   - The candidates are a gateway rewrite of `{BASE_PATH}/.auth/*` per app, one shared registration with per-app sessions, or one identity layer in front that hands each app the same identity headers.
+   - Whatever is chosen, RRW keeps reading identity from headers and deciding permissions itself. App-level OIDC in place of Easy Auth would break the project convention of no Microsoft authentication in app code, so it needs the author's explicit say.
+3. **Does the gateway pass the public host in `X-Forwarded-Host` or `Host`?** NUS IT decides. 21A builds both mechanisms without needing the answer; the answer sets which one production uses and its values, in 21C.
 4. **Is `/reviewrobin` the final path?** The author and NUS IT decide. Nothing in `app/` depends on it (Judgment calls).
 5. **Should a service build URLs at all?** The author rules in 21B. `services/validation.py`'s fix links could move to a view.
 
