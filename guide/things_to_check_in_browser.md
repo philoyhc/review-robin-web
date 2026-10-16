@@ -252,9 +252,13 @@ with the last section it covers.
   before in UTC).
 - [ ] **CSV.** Download CSV in either zone: the rows match the page, and
   the CreatedAt column is UTC (`+00:00`).
-- [ ] **UTC in Settings.** With Settings set to UTC, the chip is a plain
-  `UTC` pill with no link.
+- [ ] **UTC in Settings.** With Settings set to UTC (or `Etc/UTC`), the
+  chip is a plain `UTC` pill with no link.
+- [ ] **Daylight-saving zone.** With Settings set to America/New_York,
+  the When column and the From / To labels read `(America/New_York)`,
+  not an offset; Europe/London likewise, and it keeps its chip.
 - [ ] **Severity row.** Above the event-type list, one line reads `Event
   type | Severity` followed by the info / warning / error checkboxes;
-  the right column no longer has a Severity block. Narrow the window:
-  the line wraps cleanly.
+  the right column no longer has a Severity block. "Event type" and
+  "Severity" read the same size as "Actor email". Narrow the window: the
+  line wraps cleanly.

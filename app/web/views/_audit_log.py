@@ -80,8 +80,8 @@ class AuditLogZone:
 
     ``utc_chosen`` is the operator's ``?tz=utc``; without it the page
     reads in their Settings timezone. ``switchable`` is False when the
-    Settings timezone is UTC itself, where the two choices are the same
-    and the page shows a plain pill rather than a chip.
+    Settings timezone is zero-offset all year, where the two choices are
+    the same and the page shows a plain pill rather than a chip.
     """
 
     tz_name: str
@@ -133,13 +133,15 @@ def resolve_audit_log_zone(choice: str | None, settings_zone: str) -> AuditLogZo
 
 
 def _year_offsets(tz_name: str) -> set[str]:
-    """The zone's GMT-offset labels in January and July of this year:
-    one label for a fixed-offset zone, two for one with daylight
-    saving (either hemisphere)."""
+    """The zone's GMT-offset labels on the 1st and 15th of each month
+    this year: one label for a fixed-offset zone, more for one whose
+    offset moves (daylight saving in either hemisphere, or a mid-year
+    shift such as Casablanca's in Ramadan)."""
     year = datetime.now(timezone.utc).year
     return {
-        gmt_offset_label(tz_name, datetime(year, month, 1, tzinfo=timezone.utc))
-        for month in (1, 7)
+        gmt_offset_label(tz_name, datetime(year, month, day, tzinfo=timezone.utc))
+        for month in range(1, 13)
+        for day in (1, 15)
     }
 
 

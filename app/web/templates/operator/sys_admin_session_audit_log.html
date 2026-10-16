@@ -15,8 +15,9 @@
   <div class="card">
     {# The zone chip is a cycle chip (spec/ui_elements.md §9): both
        labels are real choices, so it is always solid. It is a link to
-       this page in the other zone, filters kept; with a Settings zone of
-       UTC there is nothing to switch to, so it is a plain pill. #}
+       this page in the other zone, filters kept; with a Settings zone that
+       is zero-offset all year there is nothing to switch to, so it is a
+       plain pill. #}
     {% set zone = filter_form.zone %}
     <div class="audit-log-head">
       <h2>Audit log — {{ audit_session.name }}</h2>

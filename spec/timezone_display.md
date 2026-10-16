@@ -97,9 +97,9 @@ correlating events across sessions and operators can read most clearly
 in one fixed zone. The zone sets the "When" column, whose header names
 its offset (`When (GMT+8)`, `When (UTC)`), and the From / To date
 filter, whose days begin at that zone's midnight and whose labels name
-it the same way. A zone with daylight saving has no one offset for its
-rows, so those labels name the zone id instead (`When
-(America/New_York)`). A Settings zone whose offset is zero all year
+it the same way. A zone whose offset moves during the year (daylight
+saving, or Casablanca's Ramadan shift) has no one offset for its rows,
+so those labels name the zone id instead (`When (America/New_York)`). A Settings zone whose offset is zero all year
 (`UTC`, `Etc/UTC`) reads the same as UTC, so there is nothing to switch
 to and the chip is a plain `UTC` pill; `Europe/London`, GMT+1 in
 summer, keeps its chip. The audit-events

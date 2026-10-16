@@ -188,6 +188,7 @@ def test_the_default_zone_adds_no_tz_and_older_events_keep_utc(
         ("Etc/UTC", None, "UTC"),
         ("Europe/London", "Europe/London", "Europe/London"),
         ("America/New_York", "America/New_York", "America/New_York"),
+        ("Australia/Sydney", "Australia/Sydney", "Australia/Sydney"),
     ],
 )
 def test_zero_offset_and_daylight_saving_zones(
