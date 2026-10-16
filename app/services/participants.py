@@ -21,6 +21,9 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
 from app.services import visibility_policies
 from app.services.email_identity import looks_like_email, normalize_email
+from app.services.session_lifecycle import SessionStatus
+
+_ARCHIVED = SessionStatus.archived.value
 
 #: The three participant roles a person can hold on a session roster.
 #: Names match the audience constants in ``app/web/views/_guide.py``;
@@ -94,15 +97,23 @@ def disclosable_roles(
 
     held: set[str] = set()
 
+    # An archived session is off limits to every participant (author's
+    # ruling 2026-10-16), so it discloses no role: the Guide skips its
+    # cards and a back link never names it. (Reviewees already drop out
+    # there: archive closes every grant.)
     reviewer_query = (
         select(Reviewer.id)
+        .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
         .where(func.lower(func.trim(Reviewer.email)) == normalized)
         .where(Reviewer.status == "active")
+        .where(ReviewSession.status != _ARCHIVED)
     )
     observer_query = (
         select(Observer.id)
+        .join(ReviewSession, ReviewSession.id == Observer.session_id)
         .where(func.lower(func.trim(Observer.email)) == normalized)
         .where(Observer.status == "active")
+        .where(ReviewSession.status != _ARCHIVED)
     )
     if session_id is not None:
         reviewer_query = reviewer_query.where(Reviewer.session_id == session_id)

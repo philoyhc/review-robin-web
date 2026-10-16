@@ -85,10 +85,10 @@ signed-in user.
 | `require_session_operator` | a `session_operators` row for (user, `{session_id}`) | `ReviewSession`; also stamps the session's display timezone on `request.state` | **404**, bare — for a non-member *and* for an id that does not resolve, so the two are indistinguishable and session ids cannot be enumerated. **Exception:** a **sys-admin** (hence super-admin) who is not an owner of an *existing* session gets **403** `You are not an owner of this session…`, pointing at the adopt door; an absent id still answers 404 |
 | `require_sys_admin_or_session_operator` | `is_sys_admin`, else falls through to `require_session_operator` | `ReviewSession` | as above; a sys-admin gets **404** on an unknown id |
 | `require_relationships_enabled_session` / `require_observers_enabled_session` | wraps `require_session_operator`, then the per-session feature toggle | `ReviewSession` | **404** when the feature is off — a deep link to a disabled tab misses cleanly rather than rendering an orphan page. The permission check still runs first |
-| `require_reviewer_in_session` | an **active** `Reviewer` row in the session whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically |
-| `require_reviewee_in_session` | an **active** `Reviewee` row whose `email_or_identifier` *parses as an email* and matches | `(Reviewee, ReviewSession)` | as above. A confidential reviewee (non-email identifier) can never reach the surface, by construction |
+| `require_reviewer_in_session` | a session that is not `archived`, and an **active** `Reviewer` row in it whose email matches the signed-in email (case-insensitive) | `(Reviewer, ReviewSession)` | **404**, bare — unknown session and "not an active reviewer" answer identically |
+| `require_reviewee_in_session` | a session that is not `archived`, and an **active** `Reviewee` row whose `email_or_identifier` *parses as an email* and matches | `(Reviewee, ReviewSession)` | as above. A confidential reviewee (non-email identifier) can never reach the surface, by construction |
 | `require_reviewee_with_current_grant` | wraps `require_reviewee_in_session`, then `visibility_policies.reviewee_has_current_grant` | `(Reviewee, ReviewSession)` | **404**, bare — a reviewee with nothing currently granted is indistinguishable from a stranger |
-| `require_observer_in_session` | an **active** `Observer` row whose email matches | `(Observer, ReviewSession)` | as above |
+| `require_observer_in_session` | a session that is not `archived`, and an **active** `Observer` row whose email matches | `(Observer, ReviewSession)` | as above |
 
 Two things the table implies and the code relies on:
 
@@ -98,7 +98,8 @@ Two things the table implies and the code relies on:
 - **Every participant gate is email-identity, never token.** The
   invitation token (`/me/invite/{token}`) is a *landing* route
   gated only by `get_or_create_user`: it looks the invitation up by
-  `sha256(token)` (404 if unknown or its reviewer is inactive),
+  `sha256(token)` (404 if unknown, its reviewer is inactive, or its session is
+  archived),
   compares the invitation's reviewer email to the signed-in email
   (403 page on mismatch), stamps `opened_at`, and 303s to the
   reviewer surface — which then
@@ -272,7 +273,7 @@ the operation-level mappings.
 |---|---|---|
 | Not on the operator allowlist | **303 → `/me?notice=organizers`** | `OperatorAllowlistDenied` handler, `app/main.py` |
 | Not a sys-admin | **403** `sys_admin required` | `require_sys_admin` |
-| Not a session member; not an active participant | **404**, bare | `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` |
+| Not a session member; not an active participant; session archived (participant gates) | **404**, bare | `require_session_operator`, `require_reviewer_in_session`, `require_reviewee_in_session`, `require_observer_in_session` |
 | Sys-admin, not an owner of an **existing** session | **403** naming the adopt door | `require_session_operator` only |
 | Unknown session / child id, disabled feature tab, unknown invite token | **404** | the gate or route |
 | No identity headers (fake auth off), or no email claim | **401** | `get_or_create_user` |

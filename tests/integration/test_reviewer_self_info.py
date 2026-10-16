@@ -536,21 +536,20 @@ def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
     assert "Rae Reviewer" in info and "rae@example.edu" in info
 
 
-def test_the_closed_pre_open_page_has_no_line(
+def test_an_archived_session_shows_no_page_and_so_no_line(
     client: TestClient,
     db: Session,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The archived variant: the review is over, so nothing on the page
-    acts on the reviewer's details (Item 3, judgment call)."""
+    """Once archived the review is off limits (author's ruling
+    2026-10-16): a 404, so nothing shows the reviewer's details."""
     rs = _pair(client, db, "rsi-closed")
     rs.status = "archived"
     db.commit()
-    html = make_client(rae).get(f"/me/sessions/{rs.id}/1").text
-    assert "This review is not currently open." in html, html[:400]
-    assert "data-reviewer-self-info" not in html
-    assert 'class="rs-role-nav"' not in html
+    resp = make_client(rae).get(f"/me/sessions/{rs.id}/1")
+    assert resp.status_code == 404
+    assert "data-reviewer-self-info" not in resp.text
 
 
 def test_results_and_collation_carry_no_reviewer_line(

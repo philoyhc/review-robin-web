@@ -10,11 +10,11 @@ Contract:
   on their role's surface either way; multi-role users land on
   the reviewer surface (the only role with active work) and use
   the pills to reach the read-only views.
-- ``session_status == "not opened"`` (draft / validated / archived
-  session) disables the reviewer link; the session-name link falls
-  through to the next role.
-- The status pill reads Not open yet / Open / Available / Closed /
-  Finished, one rule for every role (participant audit M6).
+- ``session_status == "not opened"`` (draft / validated session)
+  disables the reviewer link; the session-name link falls through to
+  the next role. An archived session has no row at all.
+- The status pill reads Not open yet / Open / Available / Closed,
+  one rule for every role (participant audit M6).
 """
 
 from __future__ import annotations
@@ -268,7 +268,6 @@ NOT_OPEN_YET = _pill("pill-info", "Not open yet")
 OPEN = _pill("pill-success", "Open")
 AVAILABLE = _pill("pill-success", "Available")
 CLOSED = _pill("pill-error", "Closed")
-FINISHED = _pill("pill-lifecycle-archived", "Finished")
 
 
 def _observer_on(
@@ -290,7 +289,7 @@ def _observer_on(
 def test_one_status_rule_reads_the_lifecycle(
     client: TestClient, db: Session
 ) -> None:
-    """Not open yet / Open / Closed / Finished from the lifecycle, one
+    """Not open yet / Open / Closed from the lifecycle, one
     rule for every role (author's ruling 2026-10-15). Observer-only rows,
     with no observer grant, so "Closed" is not lifted to "Available"."""
     for code, status, pill in (
@@ -298,7 +297,6 @@ def test_one_status_rule_reads_the_lifecycle(
         ("st-validated", "validated", NOT_OPEN_YET),
         ("st-ready", "ready", OPEN),
         ("st-expired", "expired", CLOSED),
-        ("st-archived", "archived", FINISHED),
     ):
         _observer_on(client, db, code=code, status=status)
         body = client.get("/me").text
@@ -436,9 +434,7 @@ def test_observer_row_is_linked_in_every_state_but_archived(
     Observers are deliberately not grant-gated — being appointed an
     observer is not a disclosure *about* the observer — so the link is
     live even before their window opens, on `draft` as much as on
-    `expired`. Archive is the exception: it closes every non-operator
-    grant, so `/collation` there is empty by construction and a live
-    link to it is a dead end.
+    `expired`. An archived session is not listed at all (see below).
     """
     for state in ("draft", "validated", "ready", "expired"):
         review_session = _make_session(client, db, code=f"obs-link-{state}")
@@ -457,57 +453,12 @@ def test_observer_row_is_linked_in_every_state_but_archived(
         ), state
 
 
-def test_an_archived_session_keeps_the_observer_row_but_drops_its_link(
+def test_an_archived_session_leaves_me_for_every_role(
     client: TestClient, db: Session
 ) -> None:
-    """The row stays — the author declined to filter archived sessions
-    off `/me` for reviewers and observers, so they read "Finished" until
-    the session is deleted. Only the link goes."""
-    review_session = _make_session(client, db, code="obs-link-arch")
-    db.add(
-        Observer(
-            session_id=review_session.id,
-            email="alice@example.edu",
-            display_name="Alice",
-        )
-    )
-    db.commit()
-    assert (
-        f'href="/me/sessions/{review_session.id}/collation"'
-        in client.get("/me").text
-    )
-
-    review_session.status = "archived"
-    db.commit()
-    body = client.get("/me").text
-    # Row survives...
-    assert 'class="pill pill-role-observer"' in body
-    assert FINISHED in body
-    # ...without its link.
-    assert f'href="/me/sessions/{review_session.id}/collation"' not in body
-
-
-def test_only_an_archived_session_reads_finished(
-    client: TestClient, db: Session
-) -> None:
-    """"Finished" replaced 19G.9's "not opened" plus an "archived"
-    companion pill: a draft is not open *yet*, an archived session is
-    done, and the one label now says which."""
-    for state in ("draft", "validated", "ready", "expired"):
-        _observer_on(client, db, code=f"fin-none-{state}", status=state)
-        assert FINISHED not in client.get("/me").text, state
-        db.execute(
-            Observer.__table__.delete().where(
-                Observer.email == "alice@example.edu"
-            )
-        )
-        db.commit()
-
-
-def test_an_archived_row_is_not_linked_for_any_role(
-    client: TestClient, db: Session
-) -> None:
-    review_session = _make_session(client, db, code="arch-nolink")
+    """Once archived a session is off limits to participants (author's
+    ruling 2026-10-16): no row for any role, not a "Finished" one."""
+    review_session = _make_session(client, db, code="arch-gone")
     db.add_all(
         [
             Reviewer(
@@ -522,11 +473,16 @@ def test_an_archived_row_is_not_linked_for_any_role(
             ),
         ]
     )
+    db.commit()
+    assert f"/me/sessions/{review_session.id}/" in client.get("/me").text
+
     review_session.status = "archived"
     db.commit()
     body = client.get("/me").text
-    assert FINISHED in body
-    assert f'href="/me/sessions/{review_session.id}' not in body
+    assert f"/me/sessions/{review_session.id}/" not in body
+    assert ">Finished<" not in body
+    assert 'class="pill pill-role-observer"' not in body
+    assert "nothing here for you right now" in body
 
 
 # ── Status: the other routes to "Available", and the grant check ────

@@ -58,6 +58,7 @@ from app.services import (
     sessions,
     visibility_policies,
 )
+from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import normalize_email
 
 log = get_logger(__name__)
@@ -345,13 +346,28 @@ def require_sys_admin_or_session_operator(
     )
 
 
+def _participant_session_or_404(db: Session, session_id: int) -> ReviewSession:
+    """The session a participant gate admits to, or 404: none at all,
+    or one that is archived. Once archived a session is off limits to
+    every participant (author's rulings 2026-10-15 and 2026-10-16), so
+    the answer is the same bare 404 a stranger gets, before any roster
+    lookup."""
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None or lifecycle.is_archived(review_session):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return review_session
+
+
 def require_reviewer_in_session(
     session_id: int,
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewer, ReviewSession]:
-    """404 unless the authenticated user has an active Reviewer row in the session.
+    """404 on an archived session, and unless the authenticated user has an
+    active Reviewer row in the session.
 
     Identity match is case-insensitive email equality through
     ``email_identity.normalize_email`` on both sides — strip then
@@ -360,11 +376,7 @@ def require_reviewer_in_session(
     rows whose ``status`` is anything other than ``active`` do not
     grant access.
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    review_session = _participant_session_or_404(db, session_id)
 
     reviewer = db.execute(
         select(Reviewer).where(
@@ -398,8 +410,8 @@ def require_reviewee_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewee, ReviewSession]:
-    """404 unless the authenticated user has an active Reviewee row
-    in the session whose ``email_or_identifier`` parses as an email
+    """404 on an archived session, and unless the authenticated user has
+    an active Reviewee row in the session whose ``email_or_identifier`` parses as an email
     matching the user's email (case-insensitive).
 
     Confidential reviewees — those whose identifier is not a valid
@@ -414,11 +426,7 @@ def require_reviewee_in_session(
     Not used as a route dependency on its own — the composed gate
     adds the visibility check.
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    review_session = _participant_session_or_404(db, session_id)
 
     user_email = normalize_email(user.email)
     candidates = db.execute(
@@ -501,8 +509,8 @@ def require_observer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Observer, ReviewSession]:
-    """404 unless the authenticated user has an active Observer row
-    in the session.
+    """404 on an archived session, and unless the authenticated user has
+    an active Observer row in the session.
 
     Identity match is case-insensitive email equality. Observer rows
     whose ``status`` is anything other than ``active`` do not grant
@@ -513,11 +521,7 @@ def require_observer_in_session(
     route dependency on ``GET /me/sessions/{id}/collation`` and its
     sub-routes (``routes_reviewer/_collation.py``).
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    review_session = _participant_session_or_404(db, session_id)
 
     user_email = normalize_email(user.email)
     candidates = db.execute(

@@ -148,8 +148,9 @@ with the last section it covers.
 
 - [ ] **Status labels.** On `/me`, rows read "Not open yet" (draft or
   prepared), "Open" (Activated, before the deadline), "Closed" or
-  "Available" after it, and "Finished" (archived, gray). There are no
-  "View responses" or "Until" columns.
+  "Available" after it. Archived sessions are not listed (see "Archived
+  sessions are off limits" below). There are no "View responses" or
+  "Until" columns.
 - [ ] **Available.** As an observer on a closed session with a release
   window open and Band 3 granting observers, the row reads "Available".
   As a reviewer past the deadline who saved an answer, likewise.
@@ -157,10 +158,10 @@ with the last section it covers.
   excluded reads "Nothing assigned to you", not "0/0".
 - [ ] **Start after a revert.** Revert an Activated session to draft:
   its row's Start goes back to "—".
-- [ ] **Not open page.** Open a draft, a prepared and an archived
-  session's review link: each reads "This review is not currently
-  open." A prepared session with a scheduled start shows "Scheduled to
-  open"; set a help contact and it shows on all three.
+- [ ] **Not open page.** Open a draft and a prepared session's review
+  link: each reads "This review is not currently open." A prepared
+  session with a scheduled start shows "Scheduled to open"; set a help
+  contact and it shows on both.
 - [ ] **Archived is off limits.** On an archived session, the summary,
   its CSV and an observer's collation page each show the error page.
 
@@ -217,3 +218,19 @@ with the last section it covers.
   an operator: the rows keep their order (newest-created first).
 - [ ] **Observer CSV name.** Download an observer's per-instrument CSV:
   the file is named after the session code, not the observer's address.
+
+## Archived sessions are off limits to participants
+
+- [ ] **Gone from `/me`.** As a reviewer and observer on a session,
+  archive it as the operator and reload `/me`: the row is gone (with no
+  other sessions, the empty "nothing here for you" text shows).
+- [ ] **Every page refuses.** On that archived session, the review link
+  (`/me/sessions/{id}/1`), the summary, its CSV, the collation page and
+  the invitation link from the email each show the error page, naming no
+  session.
+- [ ] **Guide and back links.** With no other session, the Guide link is
+  gone from the top bar and `/guide` sends you to About; About's back
+  link opened with `?return_to=/me/sessions/{id}` reads "Back to your
+  reviews", not the session's name.
+- [ ] **Operators unchanged.** As the operator, the archived session's
+  pages still open from the Archived list.

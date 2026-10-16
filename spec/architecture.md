@@ -499,8 +499,8 @@ decide both again under the session lock (`spec/lifecycle.md` §3.1).
 
 `/me/invite/{token}` requires Easy Auth sign-in (magic links are not
 built; `spec/audience_and_identity_model.md` "Auth posture"). The route
-looks up the invitation by token hash (404 when unknown or its reviewer
-is inactive), refuses with **403** + a dedicated page if the signed-in
+looks up the invitation by token hash (404 when unknown, its reviewer
+is inactive or its session is archived), refuses with **403** + a dedicated page if the signed-in
 user's email doesn't match the invitation's reviewer email, and
 otherwise stamps `opened_at` once and 303s to `/me/sessions/{id}`.
 

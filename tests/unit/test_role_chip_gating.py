@@ -9,10 +9,9 @@ reached ``/collation`` as an observer, was told there that they are a
 reviewee, and handed a link that 404s.
 
 The integration tests in ``test_me_surface_role_chips.py`` pin what a
-page renders. These pin the builder's own two conditions, one of which
-(the archived observer) no participant surface can reach: archive
-closes the reviewee grant, so ``/results`` 404s, and on ``/collation``
-the observer chip is the *active* one and carries no link either way.
+page renders. These pin the builder's own conditions. (An archived
+session builds no chips at all: every participant gate answers 404
+there, author's ruling 2026-10-16.)
 """
 
 from __future__ import annotations
@@ -135,30 +134,6 @@ def test_reviewee_chip_present_once_a_grant_resolves(db: Session) -> None:
     assert reviewee is not None
     assert reviewee["enabled"] is True
     assert reviewee["target"] == f"/me/sessions/{review_session.id}/results"
-
-
-def test_observer_chip_greys_on_an_archived_session(db: Session) -> None:
-    """Disabled, not dropped — the mirror image of the reviewee rule.
-
-    Being an observer is not a disclosure about the observer (19F
-    decision 4), so the chip stays visible; archive closes the grant, so
-    the page behind it is empty and the link goes."""
-    user = _user(db)
-    review_session = _session(db, code="chip-u-arch", status="archived")
-    db.add(
-        Observer(
-            session_id=review_session.id,
-            email=user.email,
-            display_name="Alice",
-        )
-    )
-    db.flush()
-    chips = build_role_chips(
-        db, user=user, review_session=review_session, active_role="reviewer"
-    )
-    observer = _chip(chips, "observer")
-    assert observer is not None
-    assert observer["enabled"] is False
 
 
 def test_observer_chip_live_on_an_unarchived_session(db: Session) -> None:

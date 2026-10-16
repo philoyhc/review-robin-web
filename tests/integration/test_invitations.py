@@ -2525,19 +2525,16 @@ def test_state_6_copy_does_not_claim_reviewers_were_told(
     assert "have been notified" not in card
 
 
-def test_reviewer_pre_open_page_says_closed_for_an_archived_session(
+def test_an_archived_session_answers_404_on_the_surface(
     client: TestClient,
     db: Session,
     make_client,
 ) -> None:
-    """Findings A25 (2026-10-03): an archived session reaches the same
-    page through an old link. Since participant audit M3 every variant
-    says "not currently open"; an archived one shows no deadline."""
-    import datetime as _dt
-
+    """Findings A25 (2026-10-03) gave an archived session a "closed"
+    page through an old link; since the author's ruling of 2026-10-16
+    an archived session is off limits, so the surface answers the bare
+    404 a stranger gets and names nothing."""
     session = _validated_session(client, db, "arch-preopen")
-    # A deadline, so the absence of its line below means something.
-    session.deadline = _dt.datetime(2030, 1, 1, tzinfo=_dt.timezone.utc)
     session.status = "archived"
     db.commit()
     rae = AuthenticatedUser(
@@ -2546,8 +2543,39 @@ def test_reviewer_pre_open_page_says_closed_for_an_archived_session(
         name="Rae",
         provider="aad",
     )
-    body = make_client(rae).get(f"/me/sessions/{session.id}/1").text
-    assert "This review is not currently open." in body
-    assert "Deadline:" not in body
-    assert "opens later" not in body
-    assert "has archived" not in body
+    resp = make_client(rae).get(f"/me/sessions/{session.id}/1")
+    assert resp.status_code == 404
+    assert session.name not in resp.text
+
+
+def test_an_archived_sessions_invitation_link_answers_404(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """The token is looked up only for a session that isn't archived,
+    so the landing gives its usual 404 and never stamps an open."""
+    operator = make_client(alice)
+    session = _ready_session(operator, db, code="arch-invite")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    operator.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    raw_token = _extract_invite_token(outbox.body)
+    session.status = "archived"
+    db.commit()
+
+    rae = AuthenticatedUser(
+        principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
+    )
+    response = make_client(rae).get(
+        f"/me/invite/{raw_token}", follow_redirects=False
+    )
+    assert response.status_code == 404
+    db.refresh(invitation)
+    assert invitation.opened_at is None

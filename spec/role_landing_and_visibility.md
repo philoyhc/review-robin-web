@@ -108,7 +108,9 @@ relocated one page over rather than removed.
 ## 4. What a participant sees, by session lifecycle state
 
 The row that appears on `/me`, and whether the role's own surface opens.
-Recorded per state with an active roster row in each.
+Recorded per state with an active roster row in each. An archived
+session is off limits to every role: no row, and every page answers 404
+(below).
 
 ### Reviewer
 
@@ -118,20 +120,21 @@ Recorded per state with an active roster row in each.
 | `validated` | listed, "Not open yet" | no | — |
 | `ready` | listed, "Open" — past the deadline "Available" if they saved an answer they may read back, else "Closed" | **yes** | opens |
 | `expired` | listed, "Available" or "Closed", as past the deadline | **yes** | **opens** |
-| `archived` | listed, "Finished" | no | — |
+| `archived` | **absent** | — | **404** |
 
 The surface route admits `is_ready` **or `is_expired`** — a **closed**
-session's review surface still opens. Draft, validated and archived
-render the not-open page instead.
+session's review surface still opens. Draft and validated render the
+not-open page instead; archived is refused by the gate.
 
 **One status rule for every role** (participant audit M6, author's
 ruling 2026-10-15; `spec/reviewer-surface.md` "Session-status pill
 vocabulary"). "Open" and "Closed" say whether the review accepts
 responses; "Available" is closed to responses but viewable by one of
-the row's roles now; "Finished" is archived.
+the row's roles now. An archived session has no label, because it is
+not listed.
 The label decides no link: the **reviewer's** reachability still
 follows `session_status_for_reviewer` (`!= "not opened"`), and the
-observer's tests `is_archived` directly.
+observer's link is live on every row that is listed.
 
 ### Reviewee
 
@@ -190,8 +193,8 @@ reviewee is:
   they belong to (`Assignment.is_self_review`, `spec/assignments.md`
   § *Self-review policy*), knows they are a reviewee because the
   assignment says so. The reviewer surface opens in `ready` and
-  `expired`. Draft, validated and archived sessions show only the
-  pre-open page.
+  `expired`. Draft and validated sessions show only the pre-open page;
+  an archived one answers 404.
 - **An observer in their own cohort.** An observer whose cohort rule
   matches their own reviewee rows (the rule matches on tags) can find
   themselves named in the per-instrument CSV under `Raw`. The
@@ -237,7 +240,7 @@ Nothing hides small cohorts, and nothing drops an observer's own rows.
 | `validated` | listed, "Not open yet" | **yes** | **200** |
 | `ready` | listed, "Open" — past the deadline "Available" while an observer grant resolves, else "Closed" | yes | 200 |
 | `expired` | listed, "Available" or "Closed", as past the deadline | yes | 200 |
-| `archived` | listed, "Finished" | **no — unlinked** | **404** |
+| `archived` | **absent** | — | **404** |
 
 **Observers are deliberately not grant-gated**: being appointed an observer is not a disclosure *about* the observer, so the
 privacy argument that gates reviewees does not transfer. They may see
@@ -245,12 +248,15 @@ that they are an observer before their window opens — which is why the
 link is live on `draft` and `validated` as well as `ready` and
 `expired`.
 
-**Archived is the one exception.** Archive closes every
-non-operator grant, so `/collation` there is empty by construction and a
-live link to it is a dead end. The row reads "Finished" and loses its
-link, matching the reviewer row beside it. Once archived a session is
-off limits (participant audit M4): the surface answers **404** there,
-as do its CSV and the reviewer's `/summary` and `/summary.csv`.
+**Archived is off limits to every participant** (participant audit M4;
+author's rulings 2026-10-15 and 2026-10-16). The three participant gates
+(`require_reviewer_in_session`, `require_reviewee_in_session`,
+`require_observer_in_session`) answer a bare **404** once a session is
+archived, before any roster lookup: the same answer a stranger gets. So
+the review surface and its writes, `/summary`, `/summary.csv`,
+`/results`, `/collation` and its CSV all refuse, and the invitation link
+answers its usual 404 (`invitations.lookup_invitation_by_token` finds no
+archived session's token).
 
 **Before archive, access is not lifecycle-gated on this surface;
 content is.** The route gates on an active roster row and on the
@@ -258,11 +264,11 @@ session not being archived. What renders is decided per instrument by
 the visibility policy and the release window
 (`spec/visibility_policy.md`).
 
-**Archived sessions stay on `/me` for reviewers and observers**, reading
-"Finished" until the session is deleted; they are deliberately not
-filtered out. Only the *reviewee* role leaves an archived
-session, and it leaves via the archive override closing its grant rather
-than by a filter.
+**Archived sessions leave `/me` for every role**, and
+`participants.disclosable_roles` counts no role on one, so the Guide
+offers no card for it and a back link never names it
+(`permissions.may_name_session`). A participant whose only sessions are
+archived reads the empty `/me`, like anyone else with nothing to see.
 
 ---
 
@@ -277,9 +283,10 @@ is not, so it is worth stating plainly:
   keeping their history. **This is what every access gate checks.**
 - **An "active session"** informally means a live one, but the lifecycle
   column has five values (`draft`, `validated`, `ready`, `expired`,
-  `archived`) and no gate checks for "unarchived". Where lifecycle is
-  checked at all it is checked as a **specific state set** — the review
-  surface's `is_ready or is_expired` — and never as "not archived".
+  `archived`). The participant gates check one thing about it, that the
+  session is not archived; beyond that, lifecycle is checked as a
+  **specific state set** — the review surface's `is_ready or
+  is_expired`.
 
 A reviewee identified by a **non-email identifier** holds no role for
 any of this: `require_reviewee_in_session` applies
@@ -314,6 +321,9 @@ configured.
 short-circuit by simulating that relaxation, which is the only
 condition under which it is observable at all. **It is not redundant
 with the window predicates, and must not be removed as though it were.**
+The observer gate now refuses an archived session before the view runs
+(§4), so the short-circuit is the second line, not the first: it still
+holds for any caller of the view that bypasses the gate.
 
 **Sign-in is open to the whole tenant** (§1). If the intended posture is
 that only allowlisted operators and rostered participants may sign in,

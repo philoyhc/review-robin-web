@@ -31,10 +31,10 @@ Every gate is a dependency in `app/web/deps.py`:
   (real ownership); a non-owner sys-admin elevates via the audited self-add
   door `POST /operator/sys-admin/sessions/{id}/adopt` (Diagnostics "Manage").
 - **`require_reviewer_in_session`** — reviewer identity gate. **404s,
-  bare,** unless the caller has an *active* `Reviewer` row whose email
+  bare,** on an archived session, and unless the caller has an *active* `Reviewer` row whose email
   matches the authenticated identity (case-insensitive).
 - **`require_reviewee_in_session`** — reviewee identity gate. **404s,
-  bare,** unless the caller matches an *active* `Reviewee` row by email
+  bare,** on an archived session, and unless the caller matches an *active* `Reviewee` row by email
   (case-insensitive); reviewees with a non-email identifier fail the
   reachability check. The reviewee results surface
   (`/me/sessions/{id}/results`) is gated by
@@ -43,7 +43,7 @@ Every gate is a dependency in `app/web/deps.py`:
   same bare 404 when no grant currently resolves (Segment 19F).
 - **`require_observer_in_session`** — observer identity gate for the
   observer collation surface (`/me/sessions/{id}/collation`). **404s,
-  bare,** unless the caller matches an *active* `Observer` row by email
+  bare,** on an archived session, and unless the caller matches an *active* `Observer` row by email
   (case-insensitive).
 
 ### Three-tier role hierarchy (Segment 18S)

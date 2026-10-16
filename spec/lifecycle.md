@@ -447,13 +447,13 @@ POST routes (save / submit / clear) gate on it through
 (`spec/reviewer-surface.md` "Lifecycle gating"). The reviewer-surface **GET** route branches
 upstream of this check:
 
-- If the session is neither `ready` nor `expired` (draft,
-  validated or archived), the route renders the dedicated
-  **pre-open page**
+- If the session is `draft` or `validated`, the route renders the
+  dedicated **pre-open page**
   (`reviewer/pre_open.html`) — "This review is not currently open."
-  for all three (participant audit M3), with the scheduled opening on
-  a `validated` session, the deadline unless archived, and the help
-  contact (`spec/reviewer-surface.md` "Pre-open page").
+  for both (participant audit M3), with the scheduled opening on
+  a `validated` session, the deadline, and the help contact
+  (`spec/reviewer-surface.md` "Pre-open page"). An `archived` session
+  never reaches the route: the gate answers 404.
 - If the session is `ready` but the predicate returns `False`
   (the deadline passed),
   the existing surface template renders read-only with the "no

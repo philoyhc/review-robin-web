@@ -1,18 +1,15 @@
 {# Reviewer pre-open page — Segment 18F Part 2. Rendered when a
-   reviewer reaches a session that isn't accepting responses and has
-   no read-only form to show: ``draft``, ``validated`` or
-   ``archived``.
+   reviewer reaches a session that has not opened: ``draft`` or
+   ``validated``. An archived session never gets here; the gate
+   answers 404 (author's ruling 2026-10-16).
 
-   One wording for all three (participant audit M3, author's ruling
-   2026-10-15): "This review is not currently open." The earlier
-   variants said the operator "has prepared the review" (also shown
-   for a draft, including one reverted from Activated) or "has
-   archived the review". A prepared session shows when it is
-   scheduled to open, every variant shows the help contact, and the
-   deadline shows unless the session is archived.
+   One wording for both (participant audit M3, author's ruling
+   2026-10-15): "This review is not currently open." A prepared session
+   shows when it is scheduled to open; both show the deadline and the
+   help contact.
 
    ``reviewer_self_fields`` (participant info Item 3): the reviewer's
-   own line, not rendered once archived.
+   own line.
 #}
 {% extends "base.html" %}
 
@@ -24,13 +21,11 @@
 {% block content %}
   <h1>{{ session.name }}</h1>
   {% include "reviewer/_write_refused.html" %}
-  {% if not is_archived %}
-    {# participant info Item 3 — a static `Reviewer` pill and the
-       reviewer's own roster fields after it, as the operator preview
-       renders them: this page has no role navigator of its own. #}
-    {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
-    {% include "reviewer/_role_chips.html" %}
-  {% endif %}
+  {# participant info Item 3 — a static `Reviewer` pill and the
+     reviewer's own roster fields after it, as the operator preview
+     renders them: this page has no role navigator of its own. #}
+  {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
+  {% include "reviewer/_role_chips.html" %}
 
   <div class="card" data-pre-open>
     <div class="banner banner-info pre-open-banner">
@@ -41,7 +36,7 @@
           {{ scheduled_open_text }} ({{ scheduled_open_timezone_label }})
         </p>
       {% endif %}
-      {% if deadline_text and not is_archived %}
+      {% if deadline_text %}
         <p class="pre-open-detail">
           <strong>Deadline:</strong>
           {{ deadline_text }} ({{ deadline_timezone_label }})

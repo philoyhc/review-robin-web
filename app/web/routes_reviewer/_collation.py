@@ -69,12 +69,9 @@ def observer_collation(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    # An archived session never reaches here: the gate answers 404
+    # (``deps._participant_session_or_404``).
     observer, review_session = observer_session
-    # Once archived, off limits (participant audit M4, author's ruling
-    # 2026-10-15), as the CSV below already was: archive closes every
-    # observer grant, so the page could only say there is nothing here.
-    if lifecycle.is_archived(review_session):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     context = views.build_observer_collation_context(
         db, observer=observer, review_session=review_session
     )
@@ -115,15 +112,6 @@ def observer_collation_instrument_csv(
     surface. Returns the cohort-scoped slice in the
     identification mode the operator set on Band 3."""
     observer, review_session = observer_session
-
-    # Archive forces every non-operator audience off
-    # (``spec/visibility_policy.md`` §3.3), stated here as the other
-    # ``resolve_mode`` readers state it rather than left to both window
-    # predicates reading False once archived. 404, the answer this
-    # route already gives an instrument the observer cannot see — and
-    # the page offers no download link once archived.
-    if lifecycle.is_archived(review_session):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     instrument = db.execute(
         select(Instrument).where(

@@ -7,7 +7,8 @@ viewer's own role can still see something, which differs by role, so a
 row past its deadline can read "Available" for an observer and "Closed"
 for a reviewer on another session. The old labels gave an observer-only
 row "open" past the deadline while a reviewer row beside it said
-"closed", and an archived row "not opened".
+"closed". An archived session is not listed at all (author's ruling
+2026-10-16), so it has no label.
 """
 
 from __future__ import annotations
@@ -39,7 +40,6 @@ NOT_OPEN_YET = ParticipantStatus("Not open yet", "pill-info")
 OPEN = ParticipantStatus("Open", "pill-success")
 AVAILABLE = ParticipantStatus("Available", "pill-success")
 CLOSED = ParticipantStatus("Closed", "pill-error")
-FINISHED = ParticipantStatus("Finished", "pill-lifecycle-archived")
 
 
 def _reviewer_can_read_back(
@@ -84,9 +84,8 @@ def participant_session_status(
 ) -> ParticipantStatus:
     """The status pill for one ``/me`` row. ``roles`` is the row's role
     list, which carries ``reviewee`` only while a reviewee grant
-    resolves (19F)."""
-    if lifecycle.is_archived(review_session):
-        return FINISHED
+    resolves (19F). Never called for an archived session, which ``/me``
+    does not list."""
     if not (
         lifecycle.is_ready(review_session) or lifecycle.is_expired(review_session)
     ):
