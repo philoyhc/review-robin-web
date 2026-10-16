@@ -80,7 +80,8 @@ thing to keep green.
   row: rows share setup.
 - The checklist rows stay in `guide/post_azure_todo_checklist.md` as the
   record of what the author checked; a test cites the row it covers in its
-  docstring rather than the checklist citing tests.
+  docstring rather than the checklist citing tests. *(Reversed 2026-10-16:
+  the rows moved to this file's appendix once settled.)*
 
 ## Blast radius (measured)
 

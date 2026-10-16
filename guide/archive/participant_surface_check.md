@@ -1,6 +1,6 @@
 # Participant surface check
 
-**Closed 2026-10-16:** every finding is done or, for P4's remainder (telling reviewees their window opened), carried by email infrastructure (`guide/segment_14B_email_infrastructure.md`); §3's items are tracked where they name. Archived as settled.
+**Closed 2026-10-16:** every finding is done or, for P4's remainder (telling reviewees their window opened), carried by email infrastructure (`guide/segment_14B_email_infrastructure.md`); §3's items are tracked where they name; its request-host bullet is now Segment 21's `PUBLIC_BASE_URL` (`guide/segment_21_domain_retrofit.md`), and its last bullet (draft and validated sessions on `/me`) was settled by the M3 and M6 rulings below. Archived as settled.
 
 **Audited:** 2026-10-15 at `a7cb9143` (main) · **Asked for by:** the author ·
 **Scope:** every page, message and email a reviewer, reviewee or observer

@@ -73,7 +73,6 @@ on both:
 | Need              | Used in Segment 4              | Postgres-specific upgrade (deferred) |
 |-------------------|-------------------------------|--------------------------------------|
 | JSON blob         | `sqlalchemy.JSON`             | `JSONB`                                  |
-| UUID column       | `String(36)` (where used)     | native `UUID`                            |
 | Datetime          | `DateTime(timezone=True)`     | n/a                                      |
 | Enum-like field   | `String` + Python enum check  | optional DB-level `ENUM`                 |
 

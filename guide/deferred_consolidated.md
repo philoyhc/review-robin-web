@@ -1089,12 +1089,16 @@ with the simplest acceptable infrastructure choices.
   provisioning the resource and wiring its connection string is
   the remaining portal step.
 
-The NUS environment (2026-10-01, `docs/nus_azure_status.md`) put the
-database and App Service behind private endpoints and provisioned
-Key Vault and Application Insights; wiring the Key Vault references and
-the Insights connection string is tracked in `docs/deployment_nus.md`'s
-checklist (2026-10-16). Email dispatch is queued as Segment 14B
-(`guide/todo_master.md`).
+- **VNet integration / private endpoints for Postgres on the dev slot.**
+  The personal dev slot still uses public access with firewall rules.
+  The NUS environment already has VNet integration, private endpoints
+  for the Web App and Key Vault and a privately provisioned Postgres
+  (`docs/nus_azure_status.md`), so this closes when the dev slot retires
+  (`guide/post_azure_todo_checklist.md` item 2).
+
+Wiring the NUS Key Vault references and the Insights connection string
+is tracked in `docs/deployment_nus.md`'s checklist. Email dispatch is
+queued as Segment 14B (`guide/todo_master.md`).
 
 ### 2. Postgres platform migrations (destructive, Postgres-only)
 
@@ -1121,6 +1125,9 @@ and need their own careful pass.
 ---
 
 ### 3. Other inherited debt (deferred, not strictly infra)
+
+(Extracting `base.html`'s stylesheet is not tracked here: it is option 3
+of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
 
 - **First-time-user creation auditing.** First sign-in creates
   a `User` row without writing an audit event. Decide whether
@@ -1522,9 +1529,7 @@ flush right, rather than at the foot of the whole form below the
 timeline.
 
 **Lift trigger:** an operator asking for it, or the next change that
-already opens `session_new.html`. The page also owes a `.btn` role
-audit of its inline-styled buttons (10 `style=` attributes on
-2026-10-16), which would ride along.
+already opens `session_new.html`.
 
 ### The lobby's filter box matches tags the chip strip already filters (author, 2026-09-23)
 
