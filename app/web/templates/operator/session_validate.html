@@ -110,7 +110,7 @@
           {% endif %}
         {% endif %}
         <span id="severity-filter-label">Show:</span>
-        <span class="severity-filter-row" role="group" aria-labelledby="severity-filter-label">
+        <span class="severity-filter-chips" role="group" aria-labelledby="severity-filter-label">
           {% for chip in validate.severity_chips %}
             <label class="pill tag-chip status-chip-{{ chip.key }}">
               <input type="checkbox" class="visually-hidden"

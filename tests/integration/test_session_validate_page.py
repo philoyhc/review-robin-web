@@ -244,6 +244,12 @@ def test_validate_page_renders_severity_chip_strip(
     assert _chips_on(resp.text) == ["error", "warning", "info"]
     assert "All issues" not in resp.text
     assert '<input type="hidden" name="severity" value="">' in strip
+    # The chips, not the form, are the group "Show:" labels.
+    assert (
+        '<span class="severity-filter-chips" role="group"'
+        ' aria-labelledby="severity-filter-label">' in strip
+    )
+    assert "role=" not in resp.text.split("data-severity-chips", 1)[0].rsplit("<form", 1)[1]
     # The default is remembered as the three keys.
     assert resp.cookies.get("rrw-validate-severity") == '"error\\054warning\\054info"'
 
@@ -587,4 +593,8 @@ def test_validate_activate_param_no_warnings_redirects(
         "?severity=&severity=info&activate=1",
         follow_redirects=False,
     )
-    assert response.headers["location"].endswith("/validate?severity=&severity=info")
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/validate"
+        "?severity=&severity=info"
+    )

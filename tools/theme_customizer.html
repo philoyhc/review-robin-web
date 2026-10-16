@@ -2049,13 +2049,15 @@
       }
       body.ui-v2 .page-guidance-body > :first-child { margin-top: 0; }
       body.ui-v2 .page-guidance-body > :last-child { margin-bottom: 0; }
-      /* Severity chip strip on the Validate page: a GET form of three
-         status-colored on/off chips (`.tag-chip.status-chip-*`, below). */
+      /* Severity chip strip on the Validate page: a GET form holding
+         "Show:" and the group of three status-colored on/off chips
+         (`.tag-chip.status-chip-*`, below), which wraps as one. */
       body.ui-v2 .card.severity-filter-card {
         padding-top: var(--space-3);
         padding-bottom: var(--space-3);
       }
-      body.ui-v2 .severity-filter-row {
+      body.ui-v2 .severity-filter-row,
+      body.ui-v2 .severity-filter-chips {
         margin: 0;
         display: flex;
         align-items: center;
