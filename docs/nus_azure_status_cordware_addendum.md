@@ -1,5 +1,8 @@
 # Addendum to NUS Azure Deployment Status v7 — Cordware Shared Host Direction
 
+> **On hold, speculative (author, 2026-10-16).** `docs/nus_azure_status.md`
+> stays the status of record; see `guide/todo_master.md` "On hold".
+
 **Addendum date:** 15 October 2026  
 **Applies to:** `docs/nus_azure_status.md` (NUS Azure deployment status, handoff revision 7)  
 **Status:** Proposed architecture update; use this addendum for planning until the main status document is revised.

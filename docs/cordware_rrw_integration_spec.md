@@ -1,5 +1,8 @@
 # Cordware / Review Robin Integration Specification
 
+> **On hold, speculative (author, 2026-10-16).** Nothing here is scheduled;
+> see `guide/todo_master.md` "On hold".
+
 **Version:** 0.1 draft  
 **Purpose:** Define the intended behavior for hosting Review Robin Web (RRW) as an independently deployed application under a shared Cordware public host.  
 **Initial public host:** `https://cordware.nus.edu.sg`  

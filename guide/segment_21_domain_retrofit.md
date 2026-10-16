@@ -2,6 +2,11 @@
 
 **Opened:** 2026-10-16 · **Theme:** RRW stops assuming its public root is `/` · **Related:** `docs/cordware_rrw_integration_spec.md`, `docs/nus_azure_status_cordware_addendum.md`, `docs/nus_azure_status.md`, `docs/deployment_nus.md`
 
+**On hold, speculative (author, 2026-10-16).** Nothing below is
+scheduled, and no other plan waits on it; the two `docs/` files it rests
+on are on hold with it. It stays in `guide/` as the record of the audit
+until the author lifts the hold or retires it.
+
 This is the **outline** for the whole retrofit. The work lands as
 sub-segments `21A`, `21B`, … each with its own
 `guide/segment_21X_<slug>.md` plan opened when it starts. This file holds
