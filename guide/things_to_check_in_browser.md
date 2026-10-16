@@ -301,6 +301,6 @@ with the last section it covers.
   banner stays, and the page scrolls to it rather than to the chips.
 - [ ] **Dark mode and keyboard.** In dark, on chips are bright with dark
   text; Tab to a chip shows a focus ring, Space toggles it.
-- [ ] **Guide screencap.** About → Guide, the Validate figure still shows
-  the old four chips; retake `validate-page.png` and its dark twin when
-  convenient.
+- [ ] **Guide screencap.** About → Guide, the Validate figure shows the
+  three chips (`Show: ERRORS (0) WARNINGS (0) INFO (1)`), in the light
+  theme and, switched to dark, in the dark one.
