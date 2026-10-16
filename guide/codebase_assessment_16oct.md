@@ -230,7 +230,7 @@ it.
 
 | Area | Spec | Status |
 | --- | --- | --- |
-| **Lifecycle (five states)** | `spec/lifecycle.md` | ✓ shipped. Every transition decides under `session_guard.lock_session` (#2881). ⚠ drift: reviewer writes are not under the lock (L3); scheduled events fire only from Session Home (L4); archive has no `can_archive` gate (L5) |
+| **Lifecycle (five states)** | `spec/lifecycle.md` | ✓ shipped. Every transition decides under `session_guard.lock_session` (#2881). ⚠ drift: reviewer writes are not under the lock (L3); scheduled events fire only from Session Home (L4) |
 | Assignments engine | `spec/assignments.md` | ✓ shipped; rules unchanged. ⚠ drift: a boundary edit doesn't reconcile group copies (E2); Prepare re-includes self-reviews switched off (E3) |
 | Validate page | `spec/validate_page.md` | ✓ shipped. 22 rules (unchanged); severity chips remembered (#3078) |
 | Workflow card | `spec/workflow_card.md` | ✓ shipped. Unchanged |
@@ -367,7 +367,7 @@ Worth remembering from the window, each now with a guard:
 
 | Remaining work | Production LOC | Templates | Depends on |
 | --- | --- | --- | --- |
-| The 2026-10-16 bug register | +400–900 | +50–150 | rulings on R1, R6, L4, L8, S4, P2 |
+| The 2026-10-16 bug register | +400–900 | +50–150 | rulings on R1, R6, L4, L5, L8, S4, P2 |
 | Segment 14B, email dispatch, reminders, invitations | +900–1,400 | +200–400 | the institutional Azure deployment |
 | Segment 20, operator polish and documentation | +200–500 | +300–600 | the institutional Azure deployment concluded |
 | Blob storage (18Q) seam and first consumers | +400–700 | +50–150 | an institutional storage account |
@@ -409,8 +409,8 @@ live thread is unchanged: **nothing sends email, and nothing is deployed**.
    where one click acts on data the operator cannot see. R1 needs the
    author's ruling first. These come first because a pilot operator reaches
    each of them through ordinary use.
-2. **Rule the register's six author rows in one sitting** (R1, R6, L4, L8,
-   S4, P2). R1 blocks the reviewer-surface fix and P2 is the only permissions
+2. **Rule the register's seven author rows in one sitting** (R1, R6, L4,
+   L5, L8, S4, P2). R1 blocks the reviewer-surface fix and P2 is the only permissions
    question; the rest are small. The 2026-10-05 register's one-sitting ruling
    (#2852) is why its last row shipped the next day (#2865).
 3. **Schedule the next corpus sweep from `close_check --stale`, and let

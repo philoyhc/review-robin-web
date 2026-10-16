@@ -147,8 +147,15 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **R8** — A 20-digit assignment id answers 500 (`_core.py:57`); and, by
   reading, the observer CSV's self-review rows expose the reviewer through the
   reviewee columns. Code.
-- **L5** — `/workflow/archive` has no `can_archive` gate, and archive and
-  unarchive leave instruments accepting (`_workflow.py:622`). Code.
+- **L5** — Archiving a `ready` session leaves every instrument's
+  `accepting_responses` set, and unarchive carries it into `draft`
+  (`_workflow.py:622`). That is harmless for writes, which
+  `session_accepts_responses` gates on `ready`. But `spec/lifecycle.md`
+  says the flag is cleared at every exit from `ready`, and archive is an
+  exit it doesn't list. (The missing `can_archive` gate is not a finding:
+  `spec/lifecycle.md:47` has `/workflow/archive` accept any non-archived
+  state. Codex on #3084.) Author: clear the flag on archive, or say it is
+  moot outside `ready`.
 - **L6** — Close early, then Release, then Revert: every Session Home Save is
   refused by the ordering check on boxes nobody edited
   (`_session_home.py:483`). *Reproduced.* Code.
