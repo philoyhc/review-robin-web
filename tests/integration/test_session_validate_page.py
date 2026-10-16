@@ -238,7 +238,7 @@ def test_validate_page_renders_severity_chip_strip(
     resp = client.get(f"/operator/sessions/{review_session.id}/validate")
     strip = _chip_strip(resp.text)
     for key, label in (("error", "Errors"), ("warning", "Warnings"), ("info", "Info")):
-        assert f'class="pill pill-count tag-chip status-chip-{key}"' in strip
+        assert f'class="pill tag-chip status-chip-{key}"' in strip
         assert f'name="severity" value="{key}"' in strip
         assert f">{label} (" in strip
     assert _chips_on(resp.text) == ["error", "warning", "info"]

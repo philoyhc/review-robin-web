@@ -632,8 +632,8 @@ everywhere, so "you can click this" reads the same way on every control.
 > describes the box and a locked card has none — only the pills.
 > (Create's Owners card takes one too, but is not this case: it holds a table and
 > a picker, and the picker has its own `<label for>`.)
-> `validation_results.html`'s *"No issues match the current severity
-> filter."* sits in the subtitle position but is neither: it is an
+> `validation_results.html`'s *"No issues match the severity chips
+> that are on."* sits in the subtitle position but is neither: it is an
 > empty-state line under an `<h2>`.
 
 ### 9. Badges / pills

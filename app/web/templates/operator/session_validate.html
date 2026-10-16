@@ -111,7 +111,7 @@
         {% endif %}
         <span>Show:</span>
         {% for chip in validate.severity_chips %}
-          <label class="pill pill-count tag-chip status-chip-{{ chip.key }}">
+          <label class="pill tag-chip status-chip-{{ chip.key }}">
             <input type="checkbox" class="visually-hidden"
                    name="severity" value="{{ chip.key }}"
                    autocomplete="off"{% if chip.selected %} checked{% endif %}>{{ chip.label }} ({{ chip.count }})</label>
