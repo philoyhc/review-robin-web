@@ -41,7 +41,11 @@
       read it. The CSV's times are always UTC.
     </p>
 
-    <form method="get" action="{{ viewer_base_url }}" style="margin-top: 16px;">
+    {# Two columns under the card head: the event-type filters on the
+       left; actor, dates and the Apply / Clear buttons on the right, so
+       the buttons sit with the fields they submit rather than under
+       the taller left column. #}
+    <form method="get" action="{{ viewer_base_url }}" class="audit-filter-form">
       {% if zone.utc_chosen %}<input type="hidden" name="tz" value="utc">{% endif %}
       <div class="page-grid">
         <div>
@@ -61,7 +65,7 @@
             </span>
           </div>
           <select id="filter-event-type" name="event_type" multiple size="6"
-                  style="width: 100%; min-height: 140px;">
+                  class="audit-event-select">
             {% for value, selected in filter_form.event_type_options %}
               <option value="{{ value }}"{% if selected %} selected{% endif %}>{{ value }}</option>
             {% endfor %}
@@ -69,12 +73,9 @@
           <p class="form-help">Ctrl/Cmd-click to select multiple.</p>
         </div>
         <div>
-          {# Right-column filters, post-15A refinement: actor email
-             at the top, then the two date selectors side-by-side
-             (each half-width), read as days in the page's zone.
-             Date inputs use the same shape as the create-session
-             deadline picker — no inline margins, natural label /
-             input spacing. #}
+          {# Right column: actor email, then the two date selectors
+             side by side (each half-width, read as days in the page's
+             zone), then the buttons, right-aligned. #}
           <label for="filter-actor">Actor email</label>
           <input type="text"
                  id="filter-actor"
@@ -82,36 +83,32 @@
                  list="audit-actor-options"
                  value="{{ filter_form.actor_email_value }}"
                  autocomplete="off"
-                 placeholder="any actor"
-                 style="width: 100%;">
+                 placeholder="any actor">
           <datalist id="audit-actor-options">
             {% for email in filter_form.actor_options %}
               <option value="{{ email }}"></option>
             {% endfor %}
           </datalist>
 
-          <div style="display: flex; gap: 12px; margin-top: 12px;">
-            <div style="flex: 1; min-width: 0;">
+          <div class="audit-filter-dates">
+            <div>
               <label for="filter-from">From ({{ zone.short_label }})</label>
               <input type="date" id="filter-from" name="from"
-                     value="{{ filter_form.created_from_value }}"
-                     style="width: 100%;">
+                     value="{{ filter_form.created_from_value }}">
             </div>
-            <div style="flex: 1; min-width: 0;">
+            <div>
               <label for="filter-to">To ({{ zone.short_label }})</label>
               <input type="date" id="filter-to" name="to"
-                     value="{{ filter_form.created_to_value }}"
-                     style="width: 100%;">
+                     value="{{ filter_form.created_to_value }}">
             </div>
           </div>
+          <div class="btn-pair audit-filter-actions">
+            {% if filter_form.is_active %}
+              <a class="btn secondary" href="{{ filter_form.cleared_url }}">Clear</a>
+            {% endif %}
+            <button class="btn secondary" type="submit">Apply filters</button>
+          </div>
         </div>
-      </div>
-      <div class="btn-pair"
-           style="margin-top: 16px; margin-bottom: 24px; justify-content: flex-end;">
-        {% if filter_form.is_active %}
-          <a class="btn secondary" href="{{ filter_form.cleared_url }}">Clear</a>
-        {% endif %}
-        <button class="btn secondary" type="submit">Apply filters</button>
       </div>
     </form>
 

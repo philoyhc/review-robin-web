@@ -810,8 +810,8 @@ Sys-admin-gated.
 | 118 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
 | 276 | Audit log card heading | `GMT+8 Asia/Singapore` ↔ `UTC` | `<a>` | `pill pill-count tag-chip is-selected` | **Not `.btn`** — a cycle chip (`spec/ui_elements.md` §9) | Names the zone the page reads in and links to the page in the other zone, the filters kept and the cursor dropped (`spec/timezone_display.md`). Follows a muted "Display times in", before Download CSV. A plain `pill pill-count` reading `UTC` when the viewer's Settings zone is zero-offset all year. |
 | 119 | Audit log card heading | Download CSV | `<a download>` | `btn secondary` | Secondary | Links (GET) to `/operator/sessions/{id}/export/audit_log.csv`; the URL forward-carries the active filter set, and `tz` when the page reads in UTC, so the CSV holds the rows on screen. |
-| 120 | Filter strip (button row) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned within a `.btn-pair` whose `justify-content: flex-end` is an inline `style` on the wrapper, not the class's; **Secondary, never Primary**, so it doesn't compete with the Download CSV button up at the card heading. |
-| 121 | Filter strip (button row) | Clear | `<a>` | `btn secondary` | Secondary | Renders only when `filter_form.is_active`, before Apply filters. Resets to the canonical viewer URL, keeping only `tz=utc` when the page reads in UTC. |
+| 120 | Filter strip (right column) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned under the From / To dates in a `.btn-pair.audit-filter-actions`; **Secondary, never Primary**, so it doesn't compete with the Download CSV button up at the card heading. |
+| 121 | Filter strip (right column) | Clear | `<a>` | `btn secondary` | Secondary | Renders only when `filter_form.is_active`, before Apply filters. Resets to the canonical viewer URL, keeping only `tz=utc` when the page reads in UTC. |
 | 122 | Per-row detail | (expander) | `<summary>` inside `<details>` | `audit-detail summary` | Inline disclosure (custom) | Inline expander surfacing the canonical audit detail envelopes in human-readable sections + raw JSON in a nested `<details>`. Not a `.btn` but interactive — listed for completeness. |
 | 250 | Below the table | Older events → | `<a>` | `chrome-link` | **Not `.btn`** — `chrome-link` reused in page content, as #187 | Renders only when a further page of events exists; carries the cursor and the active filter set |
 
@@ -823,12 +823,14 @@ Notes:
     the event-type multi-select with its `Ctrl/Cmd-click to select
     multiple` hint.
   - Right column flows actor email → From / To date selectors
-    side-by-side (each half-width, flex children), labelled with the
-    page's zone.
-- **Button-row gap.** The row's `.btn-pair` takes `margin-top: 16px;
-  margin-bottom: 24px;` from an inline `style` on the wrapper — the
-  class sets neither — so the row sits clear of both the filter strip
-  above and the audit-log table below.
+    side-by-side (each half-width, `.audit-filter-dates`), labelled
+    with the page's zone → Clear / Apply filters, right-aligned
+    (`.audit-filter-actions`). The buttons sit with the fields they
+    submit rather than in a row under both columns, where the taller
+    left column pushed them well below the dates.
+- **Spacing.** `.audit-filter-form` keeps the form 16px below the
+  card's description and 24px above the audit-log table; there are no
+  inline styles in the filter strip.
 
 ---
 

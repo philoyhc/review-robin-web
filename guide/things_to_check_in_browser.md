@@ -261,5 +261,10 @@ with the last section it covers.
   type | Severity` followed by the info / warning / error checkboxes;
   the right column no longer has a Severity block. "Event type" and
   "Severity" read the same size as "Actor email", and sit about as far
-  above the event-type list as "Actor email" does above its box. Narrow the window: the
+  above the event-type list as "Actor email" does above its box.
+- [ ] **Two columns.** Under the title and description: Event type /
+  Severity, the list and its hint on the left; Actor email, From / To
+  and the Apply filters button (Clear beside it once a filter is on)
+  on the right, the buttons just under the dates. The table starts a
+  little below the taller column. Narrow the window: the
   line wraps cleanly.
