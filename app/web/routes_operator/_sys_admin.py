@@ -46,6 +46,7 @@ from app.services import (
     account_listing,
     audit,
     invitations,
+    operator_settings,
     permissions,
     session_owners,
     sessions,
@@ -199,6 +200,7 @@ def sys_admin_session_audit_log(
     actor: str | None = Query(default=None),
     from_: str | None = Query(default=None, alias="from"),
     to: str | None = Query(default=None),
+    tz: str | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -214,12 +216,18 @@ def sys_admin_session_audit_log(
     ``?to=`` (ISO date). Filter state composes with the cursor;
     the Download CSV button carries the same query string so the
     spreadsheet honours the filter set.
+
+    ``?tz=utc`` reads the page in UTC; without it, in the viewer's
+    Settings timezone (``views.resolve_audit_log_zone``).
     """
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.id == session_id)
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    zone = views.resolve_audit_log_zone(
+        tz, operator_settings.get_display_timezone(user)
+    )
     try:
         filters = views.parse_audit_log_filters(
             event_types=event_type,
@@ -227,6 +235,7 @@ def sys_admin_session_audit_log(
             actor=actor,
             from_=from_,
             to=to,
+            date_zone=zone.tz_name,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -253,7 +262,7 @@ def sys_admin_session_audit_log(
             "user": user,
             "audit_session": review_session,
             "audit_log": views.build_audit_log_rows(
-                rows, limit=_AUDIT_LOG_PAGE_SIZE
+                rows, limit=_AUDIT_LOG_PAGE_SIZE, tz_name=zone.tz_name
             ),
             "filter_form": views.build_audit_log_filter_form(
                 filters,
@@ -262,8 +271,9 @@ def sys_admin_session_audit_log(
                 ),
                 base_url=base_url,
                 csv_base_url=csv_base_url,
+                zone=zone,
             ),
-            "filters_querystring": views.filters_querystring(filters),
+            "filters_querystring": views.filters_querystring(filters, zone),
             "viewer_base_url": base_url,
         },
     )

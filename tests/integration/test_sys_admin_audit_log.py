@@ -72,8 +72,9 @@ def test_audit_log_page_renders_for_sys_admin(
         in response.text
     )
     assert "Download CSV" in response.text
-    # The audit log is UTC end-to-end — the column header and the
-    # date-filter labels say so.
+    # Bob has no Settings timezone, so the page reads in UTC and the
+    # column header and date-filter labels say so (the zone toggle is
+    # test_audit_log_zone.py's).
     assert "When (UTC)" in response.text
     assert "From (UTC)" in response.text
     assert "To (UTC)" in response.text

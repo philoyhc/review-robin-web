@@ -234,3 +234,27 @@ with the last section it covers.
   reviews", not the session's name.
 - [ ] **Operators unchanged.** As the operator, the archived session's
   pages still open from the Archived list.
+
+## Audit log: zone toggle and Severity row
+
+- [ ] **Settings zone by default.** With a non-UTC timezone in
+  Settings (e.g. Asia/Singapore), open Admin → Sessions Diagnostics →
+  a session's Audit log: "Times in" shows a solid `GMT+8
+  Asia/Singapore` chip before Download CSV; the When column and the
+  From / To labels read `(GMT+8)`, and the times are local.
+- [ ] **UTC by click.** Click the chip: it reads `UTC`, the times shift
+  back by the offset, and the labels read `(UTC)`. Apply a filter, page
+  to Older events and Clear: the page stays in UTC. Click the chip again
+  to return.
+- [ ] **Days follow the zone.** Pick an event logged between 00:00 and
+  08:00 Singapore time; set From and To to that local day: it shows.
+  Switch to UTC with the same dates: it drops out (it falls on the day
+  before in UTC).
+- [ ] **CSV.** Download CSV in either zone: the rows match the page, and
+  the CreatedAt column is UTC (`+00:00`).
+- [ ] **UTC in Settings.** With Settings set to UTC, the chip is a plain
+  `UTC` pill with no link.
+- [ ] **Severity row.** Above the event-type list, one line reads `Event
+  type | Severity` followed by the info / warning / error checkboxes;
+  the right column no longer has a Severity block. Narrow the window:
+  the line wraps cleanly.

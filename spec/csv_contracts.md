@@ -212,9 +212,13 @@ sys-admin only (`require_sys_admin`) and is reached from the
 Sessions Diagnostics row). The button carries the page's filters —
 `event_type` and `severity` (repeatable), `actor`, `from`, `to` — so
 the file honors the page's active filter; with none the file holds
-the whole log, and a filter that does not parse is a 422. The
-`session.audit_log_extracted` event records the active filters in its
-`context`.
+the whole log, and a filter that does not parse is a 422. `from` and
+`to` are days in the page's zone: the requester's Settings timezone,
+or UTC when the link carries `tz=utc` (`spec/timezone_display.md`).
+`tz` changes which rows a date filter keeps, never the `CreatedAt`
+column. The `session.audit_log_extracted` event records the active
+filters in its `context`, with `date_zone` beside a date filter read
+in a zone other than UTC.
 
 | # | Column | Source | Notes |
 |---|---|---|---|

@@ -4911,6 +4911,54 @@
          2026-10-09): base.html owns the app's CSS. Every selector is
          scoped to markup only that page renders.
          ------------------------------------------------------------------ */
+      /* Card head: the title left; the zone chip and the CSV button right. */
+      body.ui-v2 .audit-log-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+      }
+      body.ui-v2 .audit-log-head h2 { margin-top: 0; }
+      body.ui-v2 .audit-log-head-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+      }
+      body.ui-v2 .audit-zone {
+        font-size: var(--fs-small);
+        color: var(--text-subtle);
+      }
+      /* The zone chip is a link: the edge says so, as on a role link. */
+      body.ui-v2 .audit-zone a.tag-chip { text-decoration: none; }
+      body.ui-v2 .audit-zone a.tag-chip:hover { text-decoration: underline; }
+      /* "Event type | Severity [info] [warning] [error]" on one line
+         above the event-type list. */
+      body.ui-v2 .audit-filter-head {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-top: 12px;
+      }
+      body.ui-v2 .audit-filter-head label,
+      body.ui-v2 .audit-filter-head-label {
+        margin: 0;
+        font-weight: 600;
+      }
+      body.ui-v2 .audit-filter-sep { color: var(--text-subtle); }
+      body.ui-v2 .audit-severity-options {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+      }
+      body.ui-v2 .audit-severity-options label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-weight: normal;
+      }
       /* Audit-log table — constrain column widths so the detail
          cell (the per-row expander below) wraps rather than
          horizontally bloating the table. */

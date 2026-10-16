@@ -40,7 +40,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import audit, responses as responses_service
+from app.services import audit, operator_settings, responses as responses_service
 from app.web import views as audit_views
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.audit_events_extract import serialize_audit_events
@@ -751,6 +751,7 @@ def export_audit_log_csv(
     actor: str | None = Query(default=None),
     from_: str | None = Query(default=None, alias="from"),
     to: str | None = Query(default=None),
+    tz: str | None = Query(default=None),
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
@@ -772,6 +773,11 @@ def export_audit_log_csv(
     # string over so the spreadsheet honours the active filter
     # strip. Direct hits to the route URL with no filter params
     # produce the full unfiltered CSV (the pre-PR-2 shape).
+    # ``tz`` decides only which zone's days ``from`` / ``to`` mean, as
+    # on the viewer; the file's timestamps stay UTC.
+    zone = audit_views.resolve_audit_log_zone(
+        tz, operator_settings.get_display_timezone(user)
+    )
     try:
         filters = audit_views.parse_audit_log_filters(
             event_types=event_type,
@@ -779,6 +785,7 @@ def export_audit_log_csv(
             actor=actor,
             from_=from_,
             to=to,
+            date_zone=zone.tz_name,
         )
     except ValueError as exc:
         raise HTTPException(

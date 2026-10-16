@@ -289,11 +289,13 @@ from ._audit_log import (
     AuditLogFilterFormContext,
     AuditLogRowsContext,
     AuditLogTableRow,
+    AuditLogZone,
     build_audit_log_filter_form,
     build_audit_log_rows,
     filters_querystring,
     format_audit_detail,
     parse_audit_log_filters,
+    resolve_audit_log_zone,
 )
 
 __all__ = [
@@ -447,6 +449,7 @@ __all__ = [
     "AuditLogFilterFormContext",
     "AuditLogRowsContext",
     "AuditLogTableRow",
+    "AuditLogZone",
     "build_audit_log_filter_form",
     "build_audit_log_rows",
     "filters_querystring",
@@ -468,6 +471,7 @@ __all__ = [
     "decode_cookie_sort_spec_for_reviewer_surface",
     "order_rows_by_sort_spec",
     "parse_audit_log_filters",
+    "resolve_audit_log_zone",
     "placeholder_for_field",
     "branch_condition_label",
     "resolve_email_preview_tab",
