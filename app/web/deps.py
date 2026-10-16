@@ -366,7 +366,8 @@ def require_reviewer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewer, ReviewSession]:
-    """404 unless the authenticated user has an active Reviewer row in the session.
+    """404 on an archived session, and unless the authenticated user has an
+    active Reviewer row in the session.
 
     Identity match is case-insensitive email equality through
     ``email_identity.normalize_email`` on both sides — strip then
@@ -409,8 +410,8 @@ def require_reviewee_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Reviewee, ReviewSession]:
-    """404 unless the authenticated user has an active Reviewee row
-    in the session whose ``email_or_identifier`` parses as an email
+    """404 on an archived session, and unless the authenticated user has
+    an active Reviewee row in the session whose ``email_or_identifier`` parses as an email
     matching the user's email (case-insensitive).
 
     Confidential reviewees — those whose identifier is not a valid
@@ -508,8 +509,8 @@ def require_observer_in_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> tuple[Observer, ReviewSession]:
-    """404 unless the authenticated user has an active Observer row
-    in the session.
+    """404 on an archived session, and unless the authenticated user has
+    an active Observer row in the session.
 
     Identity match is case-insensitive email equality. Observer rows
     whose ``status`` is anything other than ``active`` do not grant

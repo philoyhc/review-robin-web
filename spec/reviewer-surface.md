@@ -1176,7 +1176,7 @@ reviewee-/observer-only rows show `—` in those cells.
     `GMT+8 Asia/Singapore`, a bare `UTC` for UTC) on hover via
     `<abbr title="...">`.
   - **Session status** — one pill, one rule for every role:
-    `Not open yet` / `Open` / `Available` / `Closed` / `Finished`
+    `Not open yet` / `Open` / `Available` / `Closed`
     (`views.participant_session_status`; vocabulary below).
   - **Reviewer status** — pill (`not started` / `in progress` /
     `submitted`) computed from the reviewer's `Response` rows;

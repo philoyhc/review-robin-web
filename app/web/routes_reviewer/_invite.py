@@ -32,8 +32,9 @@ def reviewer_invite(
 ):
     """Token landing page (Easy Auth required).
 
-    Looks up the invitation by sha256(token); 404 if unknown or if its
-    reviewer is inactive (``lookup_invitation_by_token``). If the
+    Looks up the invitation by sha256(token); 404 if unknown, if its
+    reviewer is inactive or if its session is archived
+    (``lookup_invitation_by_token``). If the
     signed-in user's email matches the invitation's reviewer email
     (case-insensitive), stamps ``opened_at`` on first hit and 303s to
     the reviewer surface for that session. Mismatched email returns 403

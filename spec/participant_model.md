@@ -151,7 +151,7 @@ Every participant-facing surface (reviewer surface, reviewer summary, reviewee r
 
 Full contract in `spec/reviewer-surface.md` "Role-navigator chip strip". Key seam: every surface route calls `build_role_chips(db, user=user, review_session=session, active_role=...)` from `app/web/routes_reviewer/_shared.py` and passes the result as the `role_chips` template context value.
 
-**The chip strip carries the same gating as `/me`**: the `reviewee` chip is omitted without a currently-resolving grant, exactly as the role is absent from the dashboard's `roles`, and the `observer` chip greys on an archived session, exactly as its dashboard link does. The two surfaces answer the question separately — the dashboard for a list of sessions, the chip strip for the one in hand — so the rule is stated in both places rather than inherited.
+**The chip strip carries the same gating as `/me`**: the `reviewee` chip is omitted without a currently-resolving grant, exactly as the role is absent from the dashboard's `roles`; an archived session has neither a chip strip nor a `/me` row, since every participant page answers 404 there. The two surfaces answer the question separately — the dashboard for a list of sessions, the chip strip for the one in hand — so the rule is stated in both places rather than inherited.
 
 ---
 

@@ -1277,10 +1277,10 @@ def test_collation_csv_404_once_the_session_is_archived(
 def test_collation_csv_archive_guard_holds_if_a_window_predicate_relaxes(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The guard's own job, and the only way to see it fail: simulate a
-    window predicate relaxed to admit an archived session. Without the
-    route's ``is_archived`` short-circuit the after-release Raw grant
-    resolves again and the CSV streams."""
+    """Simulate a window predicate relaxed to admit an archived session:
+    the after-release Raw grant would resolve again, but the observer
+    gate refuses the archived session before the route runs, so the CSV
+    still 404s."""
     url = _archived_csv_url(client, db, code="col-csv-archived-relaxed")
     monkeypatch.setattr(
         _collation.lifecycle, "is_response_release_window_open", lambda s: True

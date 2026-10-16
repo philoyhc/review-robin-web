@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Observer, Reviewer, ReviewSession
+from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
+from app.services import visibility_policies
 
 ALICE_EMAIL = "alice@example.edu"
 
@@ -106,6 +107,27 @@ def test_an_archived_session_is_off_limits(
     resp = client.get(
         f"/me/sessions/{review_session.id}/{path}", follow_redirects=False
     )
+    assert resp.status_code == 404
+
+
+def test_results_404_once_archived_even_with_a_grant(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Archive closes every grant, so the reviewee gate's own refusal is
+    only visible if a grant still resolved: simulate one."""
+    review_session = _session(client, db, code="arch-grant", status="archived")
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Alice",
+            email_or_identifier=ALICE_EMAIL,
+        )
+    )
+    db.commit()
+    monkeypatch.setattr(
+        visibility_policies, "reviewee_has_current_grant", lambda *a, **k: True
+    )
+    resp = client.get(f"/me/sessions/{review_session.id}/results")
     assert resp.status_code == 404
 
 

@@ -10,11 +10,11 @@ Contract:
   on their role's surface either way; multi-role users land on
   the reviewer surface (the only role with active work) and use
   the pills to reach the read-only views.
-- ``session_status == "not opened"`` (draft / validated / archived
-  session) disables the reviewer link; the session-name link falls
-  through to the next role.
-- The status pill reads Not open yet / Open / Available / Closed /
-  Finished, one rule for every role (participant audit M6).
+- ``session_status == "not opened"`` (draft / validated session)
+  disables the reviewer link; the session-name link falls through to
+  the next role. An archived session has no row at all.
+- The status pill reads Not open yet / Open / Available / Closed,
+  one rule for every role (participant audit M6).
 """
 
 from __future__ import annotations
