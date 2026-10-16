@@ -107,7 +107,7 @@ For RRW:
 1. select/approve an RRW commit;
 2. automation checks out `review-robin-web`;
 3. automation checks out `cordware`;
-4. replace `app/reviewrobin/`;
+4. replace `app/reviewrobin/`; <!-- path-ref-ok -->
 5. update `module-manifest.yml`;
 6. commit on a Cordware branch;
 7. open a PR;

@@ -5,7 +5,7 @@ procedures see `docs/operations_runbook.md`; for resource names
 and the deploy pipeline see `docs/deployment_dev.md`.
 
 For the NUS environment (provisioned, not yet serving) see
-`docs/nus_azure_status.md` and `docs/deployment_nus.md` §5, which
+`docs/cordware_nus_azure_status_2026-10-16_v8.md` and `docs/deployment_nus.md` §5, which
 moves every pipeline job onto the in-VNet runner. Its Postgres is private, so the
 firewall fixes below do not apply there.
 

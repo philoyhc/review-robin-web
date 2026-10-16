@@ -55,7 +55,12 @@ frontend; the gateway forwards to the Web App's **private endpoint**. The
 Web App, PostgreSQL and Key Vault are private-only inside the NUS VNet,
 and a self-hosted GitHub runner VM is planned in its own subnet so that
 deploys and migrations can reach them. The verified state, addresses and
-open blockers are in [`nus_azure_status.md`](nus_azure_status.md).
+open blockers are in [`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus_azure_status_2026-10-16_v8.md).
+**That report also records where production is heading:** one shared
+Cordware App Service, deployed from a Cordware integration repository, with
+RRW as a module inside it (its §§3 and 5). The diagram above is the
+standalone RRW topology as provisioned; it stays the model here until that
+integration (Segment 21, on hold) is planned.
 **Easy Auth** delegates sign-in to Entra ID and hands the app
 a verified identity — the application holds no passwords and runs no login
 code. Everything the app persists lives in one PostgreSQL database inside a
@@ -135,7 +140,7 @@ Not part of RRW's shape, so not in the topology or the estimate:
 
 - [`azure_ask.md`](../azure_ask.md) — the governance ask (sponsorship,
   data policy, cost cap) for hosting on institutional Azure.
-- [`nus_azure_status.md`](nus_azure_status.md) — the verified NUS
+- [`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus_azure_status_2026-10-16_v8.md) — the verified NUS
   state and its blockers, and [`deployment_nus.md`](deployment_nus.md),
   the runbook that deploys to it.
 - [`security_posture.md`](security_posture.md) — authorization model,

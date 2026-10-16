@@ -1,10 +1,20 @@
 # Segment 21 — Domain retrofit (RRW under `cordware.nus.edu.sg/reviewrobin`)
 
+> **Needs updating to fit the finalized Cordware spec** (author,
+> 2026-10-16). This outline was written against the v0.1 integration spec
+> and the 15 October addendum, both since replaced by
+> `docs/cordware_rrw_integration_spec_v0.2.md`,
+> `docs/cordware_repository_strategy_v0.4.md` and
+> `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Those make RRW a
+> module inside one Cordware App Service rather than its own App Service
+> behind a shared gateway. Rework the split, the decisions and the audit
+> against the final version before any sub-segment opens.
+
 **Opened:** 2026-10-16 · **Theme:** RRW stops assuming its public root is `/` · **Related:** `docs/cordware_rrw_integration_spec.md`, `docs/nus_azure_status_cordware_addendum.md`, `docs/nus_azure_status.md`, `docs/deployment_nus.md`
 
 **On hold, speculative (author, 2026-10-16).** Nothing below is
-scheduled, and no other plan waits on it; the two `docs/` files it rests
-on are on hold with it. It stays in `guide/` as the record of the audit
+scheduled, and no other plan waits on it; the Cordware documents in
+`docs/` are on hold with it. It stays in `guide/` as the record of the audit
 until the author lifts the hold or retires it.
 
 This is the **outline** for the whole retrofit. The work lands as

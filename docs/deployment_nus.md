@@ -16,11 +16,18 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > `docs/cli_setup.md` (workstation CLIs), `guide/deferred_consolidated.md`
 > (hardening deferred until a real deployment forces it).
 >
-> **The verified NUS state is in `docs/nus_azure_status.md`** (2026-10-01):
+> **The verified NUS state is in `docs/cordware_nus_azure_status_2026-10-16_v8.md`** (2026-10-16):
 > what is provisioned, the network design (private Web App, Postgres and Key
-> Vault behind an Application Gateway) and the two external blockers. Where
+> Vault behind an Application Gateway) and the external work still expected. Where
 > this runbook and the status doc disagree, the status doc is current; the
 > §1 checklist and §13 below mark what it has settled.
+>
+> **Superseded in part (2026-10-16).** The v8 report's §17 moves the
+> production workflow and its Azure secrets to a Cordware integration
+> repository, which deploys one Cordware App Service. §§6 and 9 below
+> configure and deploy `review-robin-web` directly, so do not cut over from
+> them; they await a rewrite with the Cordware integration (Segment 21, on
+> hold).
 
 ---
 
