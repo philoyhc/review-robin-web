@@ -26,7 +26,11 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- None.
+- **Assignment rule: pair-context tags as a person's tags** (opened
+  2026-10-16). Band 1 reads a pair-context tag off the pair being
+  judged; the author's model reads it as the reviewer's or the
+  reviewee's tag, held across their pairs. Unbuilt, awaiting the plan's
+  four open questions. **Plan:** `guide/assignment_rule_clarify.md`.
 
 ### On hold
 
