@@ -1462,18 +1462,14 @@ deleting, and points at the two owners. What remains unwritten is the
 rest — which rows each mode deletes and which it retains, a reader today
 learns only from `session_purge.py`'s docstrings.
 
-*Still deferred* because the trigger has not fired. 19O.3 did not change
-purge behaviour; it fixed an FK bug that happened to touch two purge
-functions. Writing the full contract now means transcribing ship-state
-from the code and calling it a spec — the shape `spec/` exists not to be.
-The trigger is unchanged: the next change to purge behaviour writes the
-section.
-
-**Trigger fired, 2026-10-16.** 19U rung 6 changed purge behaviour (it
-now decides under the session lock and commits as one unit), and
-`spec/extract_data.md` names the three modes, their order and their
-audit events. Still unwritten: what each mode deletes and what it keeps.
-Lift it with the next purge change, or now as a spec-only slice.
+**Trigger fired, 2026-10-16; liftable now.** It waited because writing
+the contract unprompted would transcribe ship-state from the code and
+call it a spec. 19U rung 6 then changed purge behavior (it decides under
+the session lock and commits as one unit), and `spec/extract_data.md`
+names the three modes, their order and their audit events. Still
+unwritten: what each mode deletes and what it keeps. The 2026-10-16 bug
+sweep's L7 (Purge rosters leaves Observers) is the next purge change, so
+its fix writes the section.
 
 ### Three carried out of 19Q Item 2
 
