@@ -165,3 +165,70 @@ def test_a_stored_pair_context_rule_keeps_its_option_and_saves(
             "case_sensitive": False,
         }
     ]
+
+
+def _pair_tags_only(db: Session, client: TestClient, code: str) -> tuple[ReviewSession, Instrument]:
+    """Tagged relationships, untagged rosters: every tag the card used to
+    offer was a pair-context one."""
+    session, instrument = _session(db, client, code)
+    for model in (Reviewer, Reviewee):
+        for row in db.execute(select(model).where(model.session_id == session.id)).scalars():
+            row.tag_1 = None
+    db.commit()
+    return session, instrument
+
+
+def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
+    db: Session, client: TestClient
+) -> None:
+    """With no usable reviewer tag the cycle drops the cross-side
+    operators; a stored one must still render with its operand, or the
+    cell falls back to IS with no value and the next Save drops it."""
+    session, instrument = _session(db, client, "b1-stored-operand")
+    saved = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        data=_form(link2=("reviewee.tag1", "IS THE SAME AS", "pair_context.tag1")),
+    )
+    assert saved.status_code == 200, saved.text
+    reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalar_one()
+    reviewer.tag_1 = None
+    db.commit()
+
+    page = _page(client, session.id, instrument.id)
+
+    assert (
+        'data-new-model-operator-cycle='
+        '"IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"'
+    ) in page
+    assert ">IS THE SAME AS</button>" in page
+    assert re.search(
+        r'<option value="pair_context\.tag1" selected data-new-model-stored-only>', page
+    )
+
+
+def test_stored_rules_keep_their_pills_live_with_only_pair_tags(
+    db: Session, client: TestClient
+) -> None:
+    """A Link whose only usable tags were pair-context ones keeps a live
+    pill while it has stored rules (or a stored boundary), so the stored
+    state can still be edited; with nothing stored it is disabled."""
+    session, instrument = _pair_tags_only(db, client, "b1-pair-only")
+    page = _page(client, session.id, instrument.id)
+    assert page.count('title="No usable tags for this link"') == 3
+
+    saved = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        data={
+            **_form(link1=("pair_context.tag1", "IS", "P")),
+            "link3_mode": "grouped",
+            "link3_boundary": "pair_context.tag1",
+        },
+        follow_redirects=False,
+    )
+    assert saved.status_code == 303, saved.text
+
+    page = _page(client, session.id, instrument.id)
+    # Link 2 has nothing stored and stays disabled; Links 1 and 3 are live.
+    assert page.count('title="No usable tags for this link"') == 1
+    assert 'onclick="newModelToggleRuleMode(this)"' in page
+    assert 'onclick="newModelToggleUnitMode(this)"' in page

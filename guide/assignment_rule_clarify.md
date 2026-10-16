@@ -128,8 +128,13 @@ pair's own value. The Relationships page itself.
 
 ### Doc impact
 
-- `spec/instruments.md` — Band 1: no pair-context tags offered; `IS FILLED` / `IS EMPTY` (stage 1).
+Stage 1 (done):
+
+- `spec/instruments.md` — Band 1: no pair-context tags offered; `IS FILLED` / `IS EMPTY`; stored rules keep their option and a live pill (stage 1).
 - `spec/assignments.md` — Operators table: `IS FILLED` / `IS EMPTY`; reviewer-tag operands (stage 1).
+- `spec/setup_pages.md` — Relationships row: Band 1 does not offer pair-context tags (stage 1).
+
+The person-level reading (on hold):
 
 - `spec/instruments.md` — Link 1 / Link 2: a pair-context tag is the person's, across their pairs.
 - `spec/assignments.md` — Predicate vocabulary: person-level resolution for Band 1 pair-context predicates.

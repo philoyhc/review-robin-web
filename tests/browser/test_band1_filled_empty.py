@@ -1,5 +1,6 @@
 """Band 1's IS FILLED / IS EMPTY leave the value box inactive, and a new
-rule cell starts from the offered tags only (author, 2026-10-16;
+cell (``+``) starts from the offered tags only, without a stored tag the
+card no longer offers (author, 2026-10-16;
 ``guide/assignment_rule_clarify.md``, stage 1).
 """
 
@@ -98,3 +99,84 @@ def test_link2_filled_shows_the_inactive_value_box(
     )
     expect(added.locator("[data-new-model-operator-cycle]")).to_have_text("IS THE SAME AS")
     assert added.locator("[data-new-model-operand-value]").evaluate("i => i.readOnly") is False
+
+
+def _store_pair_context_config(live_server: LiveServer, session_id: int) -> None:
+    """A Link 1 rule and a Link 3 boundary on a pair-context tag, stored as
+    the card could store them before it stopped offering one."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, SessionRuleSet
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(Instrument.session_id == session_id)
+            ).scalars().first()
+            rule_set = SessionRuleSet(
+                session_id=session_id,
+                name=f"Band1 {instrument.id}",
+                description="",
+                combinator="ALL_OF",
+                exclude_self_reviews=False,
+                seed=None,
+                rules_json=[
+                    {
+                        "id": "link1",
+                        "enabled": True,
+                        "kind": "COMPOSITE",
+                        "op": "AND",
+                        "rules": [
+                            {
+                                "id": "link1-r0",
+                                "enabled": True,
+                                "kind": "MATCH",
+                                "predicate": {
+                                    "field": "pair_context.tag1",
+                                    "operator": "equals",
+                                    "operand": "Pod",
+                                    "case_sensitive": False,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+            db.add(rule_set)
+            db.flush()
+            instrument.rule_set_id = rule_set.id
+            instrument.group_kind = "p1"
+            instrument.band1_touched_links = ["link1", "link2", "link3"]
+            db.commit()
+    finally:
+        engine.dispose()
+
+
+def _offered(select: Locator) -> list[str]:
+    return select.evaluate("s => Array.from(s.options).map(o => o.value).filter(v => v)")
+
+
+def test_a_new_cell_does_not_offer_a_stored_only_tag(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    session_id = new_session()
+    _seed(api, session_id)
+    _store_pair_context_config(live_server, session_id)
+    card = open_unlocked(page, session_id)
+
+    link1 = card.locator('select[name="link1_field"]')
+    assert _offered(link1.first) == ["reviewer.tag1", "pair_context.tag1"]
+    card.locator("[data-new-model-rule-builder]").first.locator(
+        "[data-new-model-rule-add]"
+    ).click()
+    expect(link1).to_have_count(2)
+    assert _offered(link1.nth(1)) == ["reviewer.tag1"]
+    assert link1.first.input_value() == "pair_context.tag1"
+
+    boundary = card.locator('select[name="link3_boundary"]')
+    assert boundary.first.input_value() == "pair_context.tag1"
+    card.locator("[data-new-model-unit-add]").click()
+    expect(boundary).to_have_count(2)
+    assert _offered(boundary.nth(1)) == ["reviewee.tag1"]

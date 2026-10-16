@@ -623,9 +623,12 @@ pointer, and `Not set` stays amber. The pill is a
 `role="button"` span, so Enter and Space advance it as a click does.
 
 **Disabled state.** When the session has no usable tags for a
-Link's namespace, the pill is permanently stuck on `Not set`
+Link's namespace and the Link has no stored rule (for Link 3, no
+stored boundary), the pill is permanently stuck on `Not set`
 with `aria-disabled="true"` and the title "No usable tags for
-this link". Saving the instrument in that state is fine — the
+this link". A Link with stored rules keeps a live pill, so they can
+still be edited. Pair-context tags do not count as usable, so a session
+whose only tags are pair-context ones is in this state. Saving the instrument in that state is fine — the
 service treats an empty filter as "no constraint on this Link"
 and the workflow card still surfaces it as unconfigured until
 the operator clicks the pill (which on a disabled pill is a

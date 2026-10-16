@@ -259,7 +259,9 @@ with the last section it covers.
   back on the operator saved.
 - [ ] **A stored pair-context rule is kept.** A rule saved earlier with
   a pair-context tag (only possible before this change) shows that tag
-  selected, and Save keeps it. `+` adds a cell without it.
+  selected, and Save keeps it. `+` adds a cell without it. On a session
+  whose rosters carry no tags (only its relationships do), that Link's
+  pill still cycles; a Link with nothing stored reads "No usable tags".
 
 ## Band 1 rules and the Settings import refuse what the engine rejects (S2, E1)
 
