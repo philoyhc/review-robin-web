@@ -258,7 +258,7 @@ with the last section it covers.
   the When column and the From / To labels read `(America/New_York)`,
   not an offset; Europe/London likewise, and it keeps its chip.
 - [ ] **Severity row.** Above the event-type list, one line reads `Event
-  type | Severity` followed by the info / warning / error checkboxes;
+  type | Severity` followed by the info / warning / error chips;
   the right column no longer has a Severity block. "Event type" and
   "Severity" read the same size as "Actor email", and sit about as far
   above the event-type list as "Actor email" does above its box.

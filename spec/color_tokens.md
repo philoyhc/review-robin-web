@@ -23,7 +23,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 104 semantic tokens · 14 non-colour scale tokens.**
+**80 primitives · 104 semantic tokens · 14 non-color scale tokens.**
 
 ---
 

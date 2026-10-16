@@ -49,14 +49,24 @@ def _check_fills(page: Page) -> None:
         expect(box).not_to_be_checked()
 
 
+_TRANSPARENT = "rgba(0, 0, 0, 0)"
+
+
 def test_severity_chips_fill_by_state_in_both_themes(
     page: Page, new_session: Callable[[], int]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sys-admin/sessions/{session_id}/audit-log")
+    light = {v: _token(page, t) for v, t in _ON.items()}
     _check_fills(page)
     page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+    dark = {v: _token(page, t) for v, t in _ON.items()}
     _check_fills(page)
+    # The tokens exist, and the dark theme flips each on-fill, as the
+    # blue chip's --selected-bg does.
+    for value in _ON:
+        assert _TRANSPARENT not in (light[value], dark[value]), value
+        assert light[value] != dark[value], value
 
 
 def test_a_severity_chip_filters_and_stays_on(
