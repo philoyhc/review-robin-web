@@ -1,5 +1,5 @@
 """A refused Save / Submit / Clear keeps what the reviewer typed
-(participant audit P3, `guide/participant_surface_check.md`; author's
+(participant audit P3, `guide/archive/participant_surface_check.md`; author's
 ruling 2026-10-15).
 
 These used to answer the standalone error page, "No longer accepting

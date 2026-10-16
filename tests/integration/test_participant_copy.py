@@ -1,5 +1,5 @@
 """Participant-facing copy on the shared pages: participant audit L2, L3
-and L4, `guide/participant_surface_check.md`."""
+and L4, `guide/archive/participant_surface_check.md`."""
 
 from __future__ import annotations
 
