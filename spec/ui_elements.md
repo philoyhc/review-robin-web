@@ -701,8 +701,10 @@ Three rules make that work:
   chip that says it cannot be clicked must not also say it can.
 
 **A chip can be a form control**: a `<label class="pill pill-count
-tag-chip">` around a visually hidden checkbox, so a click ticks the box
-and the form or row script reads it. The ones that are:
+tag-chip">` around a visually hidden checkbox (a status-colored chip
+drops `pill-count` for `status-chip-*`, which carries its own fill), so
+a click ticks the box and the form or row script reads it. The ones
+that are:
 
 - Session Home's optional-tab chips (`spec/session_home.md`);
 - the Instruments display-field and response-field name chips
