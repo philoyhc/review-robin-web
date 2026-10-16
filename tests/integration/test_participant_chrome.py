@@ -1,6 +1,6 @@
 """The chrome a participant sees on the shared pages (About, Guide,
 Sign-in details): participant audit M8,
-`guide/participant_surface_check.md`."""
+`guide/archive/participant_surface_check.md`."""
 
 from __future__ import annotations
 

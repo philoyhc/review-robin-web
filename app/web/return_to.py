@@ -12,7 +12,7 @@ a participant sent to the lobby is only bounced back to ``/me``.
 A session path is named only for a viewer who could see that session
 anyway (``permissions.may_name_session``). Anyone else gets the default target, so the
 label never confirms that a session exists or says what it is called
-(participant audit P1, `guide/participant_surface_check.md`).
+(participant audit P1, `guide/archive/participant_surface_check.md`).
 """
 
 from __future__ import annotations

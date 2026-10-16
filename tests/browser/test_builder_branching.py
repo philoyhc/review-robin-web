@@ -1,7 +1,7 @@
 """Branching in Band 3's response-field table, driven as an operator
 drives it.
 
-Each test names the row of ``guide/post_azure_todo_checklist.md`` item 6
+Each test names the row of the appendix's item 6
 it repeats (``guide/archive/browser_test.md`` rung 4). A new session's instrument
 starts with "Rating" (Integer 1-5) above "Comments" (String).
 """

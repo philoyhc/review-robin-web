@@ -1,5 +1,5 @@
 """The error page's way out, driven in a browser (participant audit P2,
-`guide/participant_surface_check.md`). "Go back" shows only when the
+`guide/archive/participant_surface_check.md`). "Go back" shows only when the
 page was reached from a page of the app, and links straight to it; with
 no such referrer the page offers only its own link."""
 
