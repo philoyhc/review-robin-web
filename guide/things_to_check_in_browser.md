@@ -193,3 +193,17 @@ with the last section it covers.
   "Recall my submission", reading answers until the review closes, and
   after that only if the people running it allow it; the observer card says a summary
   can show while the review is still open. As an operator, the subtitle is unchanged.
+
+## Email copy (L5)
+
+- [ ] **Default invitation and reminder.** On Invitations, open a
+  reviewer's preview: each email greets the reviewer by name, gives the
+  deadline with its zone (e.g. "(GMT+8 Asia/Singapore)"), says to sign
+  in with the institutional MS365 account, and ends with the help
+  contact. Clear the help contact and the deadline: those lines go,
+  with no "Contact ." or "by .".
+- [ ] **Override fallbacks.** Override the reminder body with
+  "Ask $help_contact" on a session with no help contact: the preview
+  reads "Ask the person running this review". Override the invitation
+  body with text that has no `$invite_url`: the preview still ends with
+  "Open this link: …".

@@ -52,9 +52,14 @@ def test_render_invitation_uses_defaults_when_overrides_null() -> None:
         session, _reviewer(), invite_url="https://app/invite/abc"
     )
     assert subject == "Invitation to review: Spring 2026"
+    # No deadline, no help contact: those default lines drop (L5).
     assert body == (
-        "You've been invited to review for: Spring 2026.\n"
-        "Open this link (sign in with your work email): https://app/invite/abc\n"
+        "Hi Rae Reviewer,\n"
+        "\n"
+        "You've been invited to review for Spring 2026.\n"
+        "\n"
+        "Open this link and sign in with your institutional MS365 account: "
+        "https://app/invite/abc\n"
     )
 
 
@@ -65,8 +70,12 @@ def test_render_reminder_uses_defaults_when_overrides_null() -> None:
     )
     assert subject == "Reminder: review for Spring 2026"
     assert body == (
-        "Reminder — your review for Spring 2026 isn't complete yet.\n"
-        "Open this link (sign in with your work email): https://app/invite/abc\n"
+        "Hi Rae Reviewer,\n"
+        "\n"
+        "Your review for Spring 2026 isn't complete yet.\n"
+        "\n"
+        "Open this link and sign in with your institutional MS365 account: "
+        "https://app/invite/abc\n"
     )
 
 
@@ -80,7 +89,7 @@ def test_invitation_override_subject_only_keeps_default_body() -> None:
     )
     assert subject == "Custom: Spring 2026"
     # Body falls through to default.
-    assert "You've been invited to review for: Spring 2026" in body
+    assert "You've been invited to review for Spring 2026." in body
 
 
 def test_empty_string_override_falls_through_to_default() -> None:
@@ -121,7 +130,7 @@ def test_all_five_merge_fields_substitute() -> None:
     )
     assert body == (
         "Hi Rae,\n"
-        "Please review for Spring 2026 (deadline 2026-06-30 17:00).\n"
+        "Please review for Spring 2026 (deadline 2026-06-30 17:00 (UTC)).\n"
         "Questions? Contact Prof X <x@example.edu>.\n"
         "Link: https://app/i/abc\n"
     )
@@ -138,12 +147,12 @@ def test_deadline_renders_in_the_sessions_own_zone() -> None:
     session = _session(
         deadline=_NINE_UTC,
         display_timezone="Asia/Singapore",
-        overrides={"invitation_body": "Due $deadline"},
+        overrides={"reminder_body": "Due $deadline"},
     )
-    _, body = email_templates.render_invitation(
+    _, body = email_templates.render_reminder(
         session, _reviewer(), invite_url="https://app/x"
     )
-    assert body == "Due 2026-06-30 17:00"
+    assert body == "Due 2026-06-30 17:00 (GMT+8 Asia/Singapore)"
 
 
 def test_deadline_falls_back_to_the_creators_zone() -> None:
@@ -157,24 +166,24 @@ def test_deadline_falls_back_to_the_creators_zone() -> None:
     _, body = email_templates.render_reminder(
         session, _reviewer(), invite_url="https://app/x"
     )
-    assert body == "Due 2026-06-30 05:00"
+    assert body == "Due 2026-06-30 05:00 (GMT-4 America/New_York)"
 
 
 def test_deadline_with_no_zone_anywhere_stays_utc() -> None:
     session = _session(
-        deadline=_NINE_UTC, overrides={"invitation_body": "Due $deadline"}
+        deadline=_NINE_UTC, overrides={"reminder_body": "Due $deadline"}
     )
-    _, body = email_templates.render_invitation(
+    _, body = email_templates.render_reminder(
         session, _reviewer(), invite_url="https://app/x"
     )
-    assert body == "Due 2026-06-30 09:00"
+    assert body == "Due 2026-06-30 09:00 (UTC)"
 
 
 def test_submitted_at_renders_in_the_sessions_zone() -> None:
     session = _session(display_timezone="Asia/Singapore")
     assert (
         email_templates._format_submitted_at(session, _NINE_UTC)
-        == "2026-06-30 17:00"
+        == "2026-06-30 17:00 (GMT+8 Asia/Singapore)"
     )
 
 
@@ -188,17 +197,19 @@ def test_unknown_merge_tag_passes_through_safely() -> None:
     assert subject == "$nonsense_tag — Spring 2026"
 
 
-def test_help_contact_unset_renders_empty_string() -> None:
-    session = _session(overrides={"invitation_body": "Contact: [$help_contact]"})
-    _, body = email_templates.render_invitation(
+def test_an_override_names_a_fallback_when_help_contact_is_unset() -> None:
+    """An operator's own body can't be reshaped, so "Contact ." would
+    ship; it names who to ask instead (participant audit L5)."""
+    session = _session(overrides={"reminder_body": "Contact: [$help_contact]"})
+    _, body = email_templates.render_reminder(
         session, _reviewer(), invite_url="https://app/x"
     )
-    assert body == "Contact: []"
+    assert body == "Contact: [the person running this review]"
 
 
 def test_deadline_unset_renders_empty_string() -> None:
-    session = _session(overrides={"invitation_body": "Deadline: [$deadline]"})
-    _, body = email_templates.render_invitation(
+    session = _session(overrides={"reminder_body": "Deadline: [$deadline]"})
+    _, body = email_templates.render_reminder(
         session, _reviewer(), invite_url="https://app/x"
     )
     assert body == "Deadline: []"
@@ -233,24 +244,24 @@ def test_render_responses_received_treats_a_blank_help_contact_as_unset() -> Non
     assert "Questions?" not in body
 
 
-def test_override_body_gets_an_empty_contact_for_a_blank_help_contact() -> None:
-    """An operator body naming ``$help_contact`` renders it empty, not
-    as the spaces stored, on both emails that take the tag."""
+def test_override_body_gets_the_fallback_for_a_blank_help_contact() -> None:
+    """Spaces alone are no contact: an operator body naming
+    ``$help_contact`` gets the fallback, not the spaces stored."""
     session = _session(
         help_contact="   ",
         overrides={
-            "invitation_body": "Contact [$help_contact]",
+            "reminder_body": "Contact [$help_contact]",
             "responses_received_body": "Contact [$help_contact]",
         },
     )
-    _, invitation = email_templates.render_invitation(
+    _, reminder = email_templates.render_reminder(
         session, _reviewer(), invite_url="https://app/x"
     )
     _, received = email_templates.render_responses_received(
         session, _reviewer("Rae")
     )
-    assert invitation == "Contact []"
-    assert received == "Contact []"
+    assert reminder == "Contact [the person running this review]"
+    assert received == "Contact [the person running this review]"
 
 
 def test_render_responses_received_uses_help_contact_default_when_set() -> None:
@@ -269,8 +280,8 @@ def test_render_responses_received_uses_help_contact_default_when_set() -> None:
 
 
 def test_render_responses_received_override_body_substitutes_verbatim() -> None:
-    """Operator-supplied bodies that reference ``$help_contact`` get
-    it empty when unset — that's their decision to make."""
+    """An operator-supplied body is substituted as written, with the
+    help-contact fallback when none is set."""
     session = _session(
         overrides={
             "responses_received_body": (
@@ -281,7 +292,10 @@ def test_render_responses_received_override_body_substitutes_verbatim() -> None:
     _, body = email_templates.render_responses_received(
         session, _reviewer("Rae")
     )
-    assert body == "Submitted at (not yet submitted) — contact []."
+    assert body == (
+        "Submitted at (not yet submitted) — contact "
+        "[the person running this review]."
+    )
 
 
 def test_render_responses_received_override_subject_substitutes() -> None:
@@ -376,3 +390,69 @@ def test_set_responses_received_enabled_preserves_other_overrides() -> None:
     diff = email_templates.set_responses_received_enabled(session, enabled=True)
     assert diff == [False, True]
     assert session.email_template_overrides == {"invitation_subject": "Custom"}
+
+
+# ── Participant audit L5 ─────────────────────────────────────────────────
+
+
+def test_default_bodies_carry_deadline_greeting_and_help_contact() -> None:
+    """Invitation and reminder omitted the deadline and help contact,
+    and only responses-received greeted by name."""
+    session = _session(
+        deadline=_NINE_UTC,
+        display_timezone="Asia/Singapore",
+        help_contact="help@example.edu",
+    )
+    for render in (email_templates.render_invitation, email_templates.render_reminder):
+        _, body = render(session, _reviewer("Rae"), invite_url="https://app/i/abc")
+        assert body.startswith("Hi Rae,\n\n")
+        assert (
+            "Please complete your review by 2026-06-30 17:00 "
+            "(GMT+8 Asia/Singapore).\n" in body
+        )
+        assert body.endswith("\n\nQuestions? Contact help@example.edu.\n")
+        assert "institutional MS365 account" in body
+        assert "work email" not in body
+
+
+def test_default_body_drops_lines_that_would_render_empty() -> None:
+    _, body = email_templates.render_reminder(
+        _session(), _reviewer(""), invite_url="https://app/i/abc"
+    )
+    assert "Hi ," not in body
+    assert "by ." not in body
+    assert "Contact ." not in body
+    assert "\n\n\n" not in body
+    assert body.startswith("Your review for Spring 2026")
+
+
+def test_an_invitation_override_without_the_link_still_carries_it() -> None:
+    """Reminders reuse the link found in the latest invitation's body,
+    so an override without ``$invite_url`` made every later reminder a
+    fresh invitation that rotated the token."""
+    session = _session(overrides={"invitation_body": "Please review soon."})
+    _, body = email_templates.render_invitation(
+        session, _reviewer(), invite_url="https://app/me/invite/abc"
+    )
+    assert body == "Please review soon.\n\nOpen this link: https://app/me/invite/abc\n"
+
+
+def test_an_escaped_invite_url_tag_still_gets_the_link() -> None:
+    """``$$invite_url`` renders the literal text ``$invite_url``, not the
+    link, so it still needs the appended line (Codex on #3071)."""
+    session = _session(overrides={"invitation_body": "Literal: $$invite_url"})
+    _, body = email_templates.render_invitation(
+        session, _reviewer(), invite_url="https://app/me/invite/abc"
+    )
+    assert body == (
+        "Literal: $invite_url\n\nOpen this link: https://app/me/invite/abc\n"
+    )
+
+
+def test_an_invitation_override_with_the_link_is_left_alone() -> None:
+    for tag in ("$invite_url", "${invite_url}"):
+        session = _session(overrides={"invitation_body": f"Go: {tag}"})
+        _, body = email_templates.render_invitation(
+            session, _reviewer(), invite_url="https://app/me/invite/abc"
+        )
+        assert body == "Go: https://app/me/invite/abc"

@@ -199,28 +199,38 @@ never an error — so a typo in an override cannot fail a send.
 |---|---|---|---|---|
 | `$reviewer_name` | ✓ | ✓ | ✓ | roster name; `""` in previews with no reviewer |
 | `$session_name` | ✓ | ✓ | ✓ | `session.name` |
-| `$deadline` | ✓ | ✓ | ✓ | `session.deadline` in the session's resolved zone (`sessions.resolve_session_timezone`, as `spec/timezone_display.md` requires): `YYYY-MM-DD HH:MM`, plus the zone token when `SHOW_ZONE_TOKEN` is on; `""` when unset |
-| `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` trimmed; `""` when unset or blank |
+| `$deadline` | ✓ | ✓ | ✓ | `session.deadline` in the session's resolved zone (`sessions.resolve_session_timezone`, as `spec/timezone_display.md` requires): `YYYY-MM-DD HH:MM (GMT+8 Asia/Singapore)`, the zone named by `gmt_offset_zone_label`; `""` when unset |
+| `$help_contact` | ✓ | ✓ | ✓ | `session.help_contact` trimmed; when unset or blank, `""` in a default body (whose line is then dropped) and in a subject, and `the person running this review` in an overridden body |
 | `$invite_url` | ✓ | ✓ | — | the reviewer's `/me/invite/{token}` URL; a fixed placeholder in previews |
-| `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM` in the session's resolved zone (plus the zone token when `SHOW_ZONE_TOKEN` is on); `"(not yet submitted)"` when none (previews only, in practice) |
+| `$submitted_at` | — | — | ✓ | latest `Response.submitted_at` for the reviewer in this session, `YYYY-MM-DD HH:MM (zone)` in the session's resolved zone, as `$deadline`; `"(not yet submitted)"` when none (previews only, in practice) |
 
 **Defaults** (what a `NULL` column renders):
 
 - Invitation — subject `Invitation to review: $session_name`; body
-  `You've been invited to review for: $session_name.` / `Open this
-  link (sign in with your work email): $invite_url`.
-- Reminder — subject `Reminder: review for $session_name`; body
-  `Reminder — your review for $session_name isn't complete yet.` /
-  `Open this link (sign in with your work email): $invite_url`.
+  `Hi $reviewer_name,` / `You've been invited to review for
+  $session_name.` / `Please complete your review by $deadline.` /
+  `Open this link and sign in with your institutional MS365 account:
+  $invite_url` / `Questions? Contact $help_contact.`
+- Reminder — subject `Reminder: review for $session_name`; body as the
+  invitation's, with `Your review for $session_name isn't complete
+  yet.` as its second line.
 - Responses received — subject `Responses received: $session_name`;
   body `Hi $reviewer_name,` / `Thanks. Your responses for
   $session_name are recorded as of $submitted_at.` / `Questions?
-  Contact $help_contact.` — and **when `help_contact` is unset or
-  blank and the body is not overridden, the "Questions?" line is
-  dropped** rather than rendering `Contact .`. An overridden body that
-  references `$help_contact` keeps its line and substitutes the
-  contact trimmed, so an unset or blank one renders empty; operator
-  intent wins.
+  Contact $help_contact.`
+
+**A default body drops each line whose tag resolves empty** — no
+deadline, no help contact, a reviewer with no name — so it never mails
+`Contact .` or `by .`. An overridden body is rendered as written,
+except that `$help_contact` reads `the person running this review`
+when the session has none, and **an overridden invitation body whose
+rendered text doesn't contain the link gets an `Open this link: …` line
+appended** (an escaped `$$invite_url` renders as literal text, so it
+counts as no link):
+reminders reuse the link found in the latest invitation's body
+(`invitations.most_recent_invitation_url`), so an invitation without
+one made every later reminder a fresh invitation that rotated the
+token.
 
 **Cc / Bcc.** `cc_bcc_for(session, kind)` returns the operator's
 strings with surrounding whitespace stripped (or `None` when blank);
@@ -277,7 +287,7 @@ imports with none.
 
 One rule touches this page, at **info** severity:
 `email_template.no_help_contact` — "No help contact set — the
-responses-received email omits its 'Questions? Contact …' line". It
+default emails omit their 'Questions? Contact …' line". It
 sits in the Validate page's *setup* group; being info-level it never
 blocks activation and does not trigger the warnings acknowledgement
 (`spec/validate_page.md`). The Validate page's setup-coverage grid
@@ -309,10 +319,18 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   explicit-`False` on uncheck, key removed on re-check).
 - `tests/unit/test_email_templates.py` — resolver fall-through
   (`NULL` / blank / subject-only), all five tags substitute, unknown
-  tag passes through, unset help-contact and deadline render `""`,
-  dates in the session's zone (own zone, creator fallback, UTC), the
-  responses-received default variants and `$invite_url` drop, and
-  every branch of the `enabled` getter / setter.
+  tag passes through, an unset deadline renders `""`, an overridden
+  body reads the help-contact fallback, dates in the session's zone
+  with its label (own zone, creator fallback, UTC), default bodies
+  carry the greeting, deadline and contact and drop empty lines, an
+  invitation override without `$invite_url`, or with only an escaped
+  `$$invite_url`, still carries the link (and one with it is left
+  alone), `$invite_url` drops from the
+  responses-received body, and every branch of the `enabled` getter /
+  setter.
+- `tests/integration/test_invitation_link_reuse.py` — an invitation
+  sent from an override without `$invite_url` still lets the next
+  reminder reuse its link rather than send a fresh invitation.
 - `tests/integration/test_responses_received_queued.py` — the
   submit-time queue (§7): queued on submit, nothing when the toggle is
   off or the submit is blocked, one row refreshed on a second submit,

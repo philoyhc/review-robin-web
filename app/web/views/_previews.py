@@ -417,14 +417,19 @@ _MERGE_TAG_DESCRIPTIONS = {
     "$reviewer_name": "Reviewer's name from the roster.",
     "$session_name": "Session name.",
     "$deadline": (
-        "Session deadline as YYYY-MM-DD HH:MM, in the session's "
-        "timezone; blank when unset."
+        "Session deadline as YYYY-MM-DD HH:MM in the session's "
+        "timezone, followed by the zone, e.g. (GMT+8 Asia/Singapore); "
+        "blank when unset."
     ),
-    "$help_contact": "Per-session help contact.",
+    "$help_contact": (
+        "Per-session help contact. When none is set, your own text "
+        "reads \"the person running this review\"; the default text "
+        "drops its line."
+    ),
     "$invite_url": "Reviewer-specific invitation URL.",
     "$submitted_at": (
         "When the reviewer submitted, as YYYY-MM-DD HH:MM in the "
-        "session's timezone. "
+        "session's timezone, followed by the zone. "
         "Renders \"(not yet submitted)\" in previews before the "
         "reviewer has submitted anything."
     ),

@@ -296,8 +296,8 @@ Two of these are built under other names. The welcome message is the
 session's `description`, shown at the top of the reviewer surface on
 every visit (plain text, not only the first visit). The contact line is
 `help_contact`, shown as "Questions? Contact …" on the reviewer surface
-and in the default responses-received email; both drop the line when it
-is unset. The institution name is **not built** and is
+and in the default invitation, reminder and responses-received emails;
+each drops the line when it is unset. The institution name is **not built** and is
 deferred (`guide/deferred_consolidated.md`, "Institution name and magic
 links").
 

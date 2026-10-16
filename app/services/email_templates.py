@@ -30,6 +30,7 @@ notation in operator-facing copy.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from string import Template
 from typing import Any
@@ -40,25 +41,36 @@ from sqlalchemy.orm.exc import UnmappedInstanceError
 
 from app.db.models import Assignment, Response, Reviewer, ReviewSession, User
 from app.services import audit as audit_service
-from app.services.date_formatting import format_datetime
+from app.services.date_formatting import format_datetime, gmt_offset_zone_label
 from app.services.sessions import resolve_session_timezone
 
-# Default templates — verbatim parameterisations of the strings the
-# original ``invitations._email_body`` / ``_reminder_body`` helpers
-# produced (with the new merge fields slotted in). A session whose
-# ``email_template_overrides`` is ``NULL`` (the post-migration default
-# for every existing row) renders byte-identically to the pre-Segment-
-# 11E behaviour modulo the new merge tags.
+# Default templates: what a session whose ``email_template_overrides``
+# is ``NULL`` renders, less any line whose tag resolves empty
+# (``_drop_empty_lines``).
 
 DEFAULT_INVITATION_SUBJECT = "Invitation to review: $session_name"
 DEFAULT_INVITATION_BODY = (
-    "You've been invited to review for: $session_name.\n"
-    "Open this link (sign in with your work email): $invite_url\n"
+    "Hi $reviewer_name,\n"
+    "\n"
+    "You've been invited to review for $session_name.\n"
+    "Please complete your review by $deadline.\n"
+    "\n"
+    "Open this link and sign in with your institutional MS365 account: "
+    "$invite_url\n"
+    "\n"
+    "Questions? Contact $help_contact.\n"
 )
 DEFAULT_REMINDER_SUBJECT = "Reminder: review for $session_name"
 DEFAULT_REMINDER_BODY = (
-    "Reminder — your review for $session_name isn't complete yet.\n"
-    "Open this link (sign in with your work email): $invite_url\n"
+    "Hi $reviewer_name,\n"
+    "\n"
+    "Your review for $session_name isn't complete yet.\n"
+    "Please complete your review by $deadline.\n"
+    "\n"
+    "Open this link and sign in with your institutional MS365 account: "
+    "$invite_url\n"
+    "\n"
+    "Questions? Contact $help_contact.\n"
 )
 DEFAULT_RESPONSES_RECEIVED_SUBJECT = "Responses received: $session_name"
 DEFAULT_RESPONSES_RECEIVED_BODY = (
@@ -69,18 +81,14 @@ DEFAULT_RESPONSES_RECEIVED_BODY = (
     "\n"
     "Questions? Contact $help_contact.\n"
 )
-# Variant rendered automatically when ``session.help_contact`` is
-# unset or blank and the operator hasn't overridden the body —
-# printing "Questions? Contact ." reads worse in a closing
-# confirmation than just dropping the line. Override bodies that
-# reference ``$help_contact`` always go through the substitute path,
-# so such a body renders an empty contact.
-DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT = (
-    "Hi $reviewer_name,\n"
-    "\n"
-    "Thanks. Your responses for $session_name are recorded as of "
-    "$submitted_at.\n"
-)
+
+# What an operator's own body reads for ``$help_contact`` when the
+# session has none: an override is prose we can't reshape, and
+# "Contact ." is worse than naming who to ask (participant audit L5).
+# A default body drops the line instead (``_drop_empty_lines``).
+HELP_CONTACT_FALLBACK = "the person running this review"
+
+_TAG = re.compile(r"\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})")
 
 
 # Override-keys recognised on ``ReviewSession.email_template_overrides``.
@@ -131,20 +139,66 @@ def _substitute(template_str: str, **merge: Any) -> str:
     )
 
 
+def _format_in_session_zone(
+    review_session: ReviewSession, value: datetime
+) -> str:
+    """A date in the session's resolved zone, like every other
+    session-scoped surface (spec/timezone_display.md), named after it:
+    an email is read outside the app, where nothing else says which
+    zone ``17:00`` is in (participant audit L5)."""
+    zone = resolve_session_timezone(review_session)
+    return f"{format_datetime(value, zone)} ({gmt_offset_zone_label(zone, value)})"
+
+
 def _format_deadline(review_session: ReviewSession) -> str:
-    # Rendered in the session's resolved zone, like every other
-    # session-scoped surface (spec/timezone_display.md). It used to
-    # render in UTC, so a 17:00 Singapore deadline was mailed as 09:00.
     if review_session.deadline is None:
         return ""
-    return format_datetime(
-        review_session.deadline, resolve_session_timezone(review_session)
-    )
+    return _format_in_session_zone(review_session, review_session.deadline)
+
+
+def _drop_empty_lines(template_str: str, merge: dict[str, str]) -> str:
+    """For a default body only: drop each line naming a tag that
+    resolves empty (no deadline, no help contact, a nameless reviewer),
+    then any blank line left doubled or trailing, so the default never
+    mails "Contact ." or "by ." An operator's own body is rendered as
+    written."""
+    kept = [
+        line
+        for line in template_str.split("\n")
+        if not any(
+            merge.get(m.group(1) or m.group(2)) == ""
+            for m in _TAG.finditer(line)
+        )
+    ]
+    lines: list[str] = []
+    for line in kept:
+        if line == "" and (not lines or lines[-1] == ""):
+            continue
+        lines.append(line)
+    while lines and lines[-1] == "":
+        lines.pop()
+    return "\n".join(lines) + "\n"
+
+
+def _body(
+    review_session: ReviewSession, key: str, default: str, merge: dict[str, str]
+) -> str:
+    """Render a body: the operator's override as written, with
+    ``$help_contact`` falling back to ``HELP_CONTACT_FALLBACK``; or the
+    default with its empty lines dropped."""
+    override = get_override(review_session, key)
+    if override is not None and override.strip():
+        return _substitute(
+            override,
+            **{**merge, "help_contact": merge["help_contact"] or HELP_CONTACT_FALLBACK},
+        )
+    return _substitute(_drop_empty_lines(default, merge), **merge)
 
 
 def _help_contact(review_session: ReviewSession) -> str:
-    """The contact as a merge value: spaces alone are no contact, so an
-    override body renders it empty rather than as whitespace."""
+    """The contact as a merge value: spaces alone are no contact, so it
+    resolves empty, and an overridden body gets ``HELP_CONTACT_FALLBACK``
+    (``_body``) rather than whitespace."""
     return (review_session.help_contact or "").strip()
 
 
@@ -173,10 +227,15 @@ def render_invitation(
         _resolve(review_session, "invitation_subject", DEFAULT_INVITATION_SUBJECT),
         **merge,
     )
-    body = _substitute(
-        _resolve(review_session, "invitation_body", DEFAULT_INVITATION_BODY),
-        **merge,
-    )
+    body = _body(review_session, "invitation_body", DEFAULT_INVITATION_BODY, merge)
+    # Every invitation carries its link. Reminders reuse the URL found
+    # in the latest invitation's body (``most_recent_invitation_url``),
+    # so an override without ``$invite_url`` made every later reminder
+    # a fresh invitation that rotated the token (participant audit L5).
+    # Checked on the rendered body, so an escaped ``$$invite_url`` (which
+    # renders as the literal tag, not the link) still gets the line.
+    if invite_url and invite_url not in body:
+        body = body.rstrip("\n") + f"\n\nOpen this link: {invite_url}\n"
     return subject, body
 
 
@@ -191,10 +250,7 @@ def render_reminder(
         _resolve(review_session, "reminder_subject", DEFAULT_REMINDER_SUBJECT),
         **merge,
     )
-    body = _substitute(
-        _resolve(review_session, "reminder_body", DEFAULT_REMINDER_BODY),
-        **merge,
-    )
+    body = _body(review_session, "reminder_body", DEFAULT_REMINDER_BODY, merge)
     return subject, body
 
 
@@ -239,7 +295,7 @@ def _format_submitted_at(
     live send path always has a stamped ``submitted_at``."""
     if submitted_at is None:
         return "(not yet submitted)"
-    return format_datetime(submitted_at, resolve_session_timezone(review_session))
+    return _format_in_session_zone(review_session, submitted_at)
 
 
 def render_responses_received(
@@ -249,12 +305,8 @@ def render_responses_received(
     confirmation sent when a reviewer submits their review.
 
     Drops ``$invite_url`` (moot post-submit); adds ``$submitted_at``,
-    formatted ``YYYY-MM-DD HH:MM`` in the session's zone. When the operator hasn't
-    overridden the body and ``session.help_contact`` is unset or blank, the
-    "Questions? Contact …" line is dropped from the default body
-    rather than rendering a hollow ``Contact .`` — operator-supplied
-    bodies that reference ``$help_contact`` substitute it (an empty
-    string when unset or blank), preserving operator intent."""
+    formatted ``YYYY-MM-DD HH:MM (GMT+8 Asia/Singapore)`` in the session's zone. Empty
+    lines and the help-contact fallback follow ``_body``."""
     submitted_at = _latest_submitted_at(review_session, reviewer)
     merge: dict[str, str] = {
         "reviewer_name": (reviewer.name if reviewer is not None else ""),
@@ -271,14 +323,12 @@ def render_responses_received(
         ),
         **merge,
     )
-    body_override = get_override(review_session, "responses_received_body")
-    if body_override is not None and body_override.strip():
-        body_template = body_override
-    elif merge["help_contact"]:
-        body_template = DEFAULT_RESPONSES_RECEIVED_BODY
-    else:
-        body_template = DEFAULT_RESPONSES_RECEIVED_BODY_NO_HELP_CONTACT
-    body = _substitute(body_template, **merge)
+    body = _body(
+        review_session,
+        "responses_received_body",
+        DEFAULT_RESPONSES_RECEIVED_BODY,
+        merge,
+    )
     return subject, body
 
 
