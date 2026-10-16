@@ -1127,8 +1127,8 @@ participant role** (reviewer / reviewee / observer), as a
 cross-role union. The query hits all three rosters
 (`reviewers`, `reviewees`, `observers`) with case-insensitive email
 matching; only `status == "active"` rows contribute; the result is
-deduplicated per session and sorted by `session.updated_at`
-descending.
+deduplicated per session and sorted newest-created first
+(`created_at`, then `id`), so an operator's edit never moves a row.
 
 **The `reviewee` role additionally requires a currently-resolving
 visibility grant.** An active, email-identified
@@ -1147,7 +1147,7 @@ reviewee-/observer-only rows show `—` in those cells.
 
 - **H1** — "Your reviews".
 - **Body** — single `.card` containing a `<table>` (one row per
-  session). **Six columns:**
+  session, in the order above). **Six columns:**
   - **Session** — session name, with per-role pills on a second
     line below it. The session name itself links to
     the highest-priority reachable role in order Reviewer →
@@ -1167,8 +1167,9 @@ reviewee-/observer-only rows show `—` in those cells.
     deadline` and `pill-count` (neutral) otherwise;
     `<span class="muted">—</span>` when null.
   - **Timezone** — `pill-count` chip carrying the compact
-    GMT-offset (e.g. `GMT+8`) with the raw IANA id (e.g.
-    `Asia/Singapore`) on hover via `<abbr title="...">`.
+    GMT-offset (e.g. `GMT+8`), with `gmt_offset_zone_label` (e.g.
+    `GMT+8 Asia/Singapore`, a bare `UTC` for UTC) on hover via
+    `<abbr title="...">`.
   - **Session status** — one pill, one rule for every role:
     `Not open yet` / `Open` / `Available` / `Closed` / `Finished`
     (`views.participant_session_status`; vocabulary below).

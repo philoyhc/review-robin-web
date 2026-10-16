@@ -14,7 +14,7 @@ from app.db.models import User
 from app.db.session import get_db
 from app.services import invitations as invitations_service
 from app.services.email_identity import normalize_email
-from app.web import breadcrumbs, views
+from app.web import views
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.routes_reviewer._shared import (
     _templates,
@@ -64,7 +64,6 @@ def reviewer_invite(
                 "session": review_session,
                 # Partly masked (participant audit M9).
                 "invited_address": views.masked_email(reviewer.email),
-                "breadcrumbs": breadcrumbs.reviewer_invite_mismatch(),
             },
             status_code=status.HTTP_403_FORBIDDEN,
         )

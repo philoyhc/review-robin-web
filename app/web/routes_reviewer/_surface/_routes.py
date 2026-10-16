@@ -21,7 +21,7 @@ from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
-from app.web import breadcrumbs, views
+from app.web import views
 from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
@@ -254,7 +254,6 @@ def _refused_write_response(
         cookies=dict(request.cookies),
     )
     context.update(extra)
-    context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     context["role_chips"] = build_role_chips(
         db, user=user, review_session=review_session, active_role="reviewer"
     )
@@ -312,7 +311,6 @@ def review_surface(
         page_n=page_n,
         cookies=dict(request.cookies),
     )
-    context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
     context["role_chips"] = build_role_chips(
         db, user=user, review_session=review_session, active_role="reviewer"
     )
@@ -408,7 +406,6 @@ async def reviewer_save(
             bad_values=bad_values,
             cookies=dict(request.cookies),
         )
-        context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
         context["role_chips"] = build_role_chips(
             db,
             user=user,
@@ -489,7 +486,6 @@ async def reviewer_submit(
             cookies=dict(request.cookies),
             show_incomplete_marks=not result.errors,
         )
-        context["breadcrumbs"] = breadcrumbs.reviewer_session(review_session)
         context["role_chips"] = build_role_chips(
             db,
             user=user,

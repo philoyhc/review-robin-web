@@ -207,3 +207,13 @@ with the last section it covers.
   reads "Ask the person running this review". Override the invitation
   body with text that has no `$invite_url`: the preview still ends with
   "Open this link: …".
+
+## Small participant defects (L6)
+
+- [ ] **Timezone hover.** On `/me`, hover the Timezone chip of a UTC
+  session: it reads "UTC", not "UTC UTC". A GMT+8 session reads
+  "GMT+8 Asia/Singapore".
+- [ ] **Row order.** With two sessions on `/me`, edit the older one as
+  an operator: the rows keep their order (newest-created first).
+- [ ] **Observer CSV name.** Download an observer's per-instrument CSV:
+  the file is named after the session code, not the observer's address.

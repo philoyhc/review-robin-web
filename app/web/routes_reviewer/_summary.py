@@ -28,7 +28,7 @@ from app.services.extracts import filename, stream_csv
 from app.services.extracts.responses_extract import (
     serialize_reviewer_session_summary,
 )
-from app.web import breadcrumbs, views
+from app.web import views
 from app.web.deps import get_or_create_user, require_reviewer_in_session
 from app.web.routes_reviewer._shared import (
     _templates,
@@ -105,7 +105,6 @@ def reviewer_session_summary(
                 if summary.last_submitted_at
                 else None
             ),
-            "breadcrumbs": breadcrumbs.reviewer_session(review_session),
             "role_chips": build_role_chips(
                 db,
                 user=user,

@@ -39,7 +39,7 @@ from app.db.models import (
 )
 from app.db.session import get_db
 from app.services import session_lifecycle as lifecycle
-from app.services import visibility_policies
+from app.services import extracts, visibility_policies
 from app.services.extracts.by_instrument_extract import (
     by_instrument_filename_slug,
     serialize_by_instrument,
@@ -201,20 +201,19 @@ def observer_collation_instrument_csv(
             buffer.seek(0)
             buffer.truncate(0)
 
-    # Filename: ``<observer_email>_<instrument_slug>[_anon].csv``.
-    # The email prefix names the recipient so the observer can
-    # tell their downloads apart in a Downloads folder. The
-    # ``_anon`` suffix (Anonymized mode only) makes the
-    # identification mode visible from the filename alone — useful
-    # when the same observer downloads both Raw and Anonymized
-    # copies of the same instrument.
+    # Filename: ``<session_code>_<instrument_slug>[_anon].csv``, the
+    # operator extracts' ``{code}_{kind}.csv`` shape. The session code
+    # tells one session's downloads from another's; the observer's own
+    # address said nothing they didn't know (participant audit L6). The
+    # ``_anon`` suffix (Anonymized mode only) makes the identification
+    # mode visible from the filename alone — useful when the same
+    # observer downloads both Raw and Anonymized copies of the same
+    # instrument.
     instrument_slug = by_instrument_filename_slug(
         instrument, position=position, used=set()
     )
     anon_suffix = "_anon" if mode == "anonymized" else ""
-    filename = (
-        f"{observer.email}_{instrument_slug}{anon_suffix}.csv"
-    )
+    filename = extracts.filename(review_session, f"{instrument_slug}{anon_suffix}")
     return StreamingResponse(
         _stream(),
         media_type="text/csv; charset=utf-8",

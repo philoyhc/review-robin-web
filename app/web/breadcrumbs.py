@@ -1,4 +1,4 @@
-"""Breadcrumb factories for operator and reviewer pages.
+"""Breadcrumb factories for operator pages (participant pages carry none).
 
 Each factory returns a list of ``(label, url)`` tuples. The last tuple
 always has ``url=None`` and is rendered as a non-link label marking the
@@ -77,22 +77,4 @@ def operator_sessions_child(label: str) -> list[Crumb]:
     return [
         ("Sessions", "/operator/sessions"),
         (label, None),
-    ]
-
-
-def reviewer_root() -> list[Crumb]:
-    return [("Reviewer", None)]
-
-
-def reviewer_session(session: ReviewSession) -> list[Crumb]:
-    return [
-        ("Reviewer", "/me"),
-        (session.name, None),
-    ]
-
-
-def reviewer_invite_mismatch() -> list[Crumb]:
-    return [
-        ("Reviewer", "/me"),
-        ("Access denied", None),
     ]
