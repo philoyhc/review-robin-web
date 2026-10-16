@@ -246,13 +246,13 @@ with the last section it covers.
 
 ## Band 1 rules and the Settings import refuse what the engine rejects (S2, E1)
 
-- [ ] **A refused rule says why and changes nothing.** On a session
-  whose reviewers, reviewees and relationships all carry a tag, open an
-  instrument card. In Link 2, pick a pair-context tag as the field, set
-  the operator to IS THE SAME AS, pick a pair-context tag as the operand
-  and Save. The card shows a banner beginning "This assignment rule
-  can't be used", its edits stay on screen, and Assignments and Validate
-  still open.
+- [ ] **A pair-context field hides pair-context operands.** On a
+  session whose reviewers, reviewees and relationships all carry a tag,
+  open an instrument card. In Link 2, set the operator to IS THE SAME AS
+  and pick a pair-context tag as the field. The operand list shows
+  reviewer tags only. Switch the field to a reviewee tag and the
+  pair-context tags come back. (`tests/browser/test_band1_operand_narrowing.py`
+  drives this; the row is for how it looks.)
 - [ ] **A cross-side rule still saves.** Change the operand to a
   reviewer tag and Save: it saves, and a reload shows the rule.
 - [ ] **A bad Settings file is refused by name.** Export the session's

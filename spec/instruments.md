@@ -671,6 +671,10 @@ stacked list of MATCH-rule cells. Each cell has:
   toggles which is visible based on the current operator.
 - An X (remove) button. Disabled on the first cell.
 
+While a Link 2 cell's field is a pair-context tag, its operand list
+hides the pair-context tags (author, 2026-10-16). Changing the field to
+one clears an operand that is now hidden. On load a stored operand
+keeps its option, so a stored rule always renders as stored.
 Save refuses a rule the engine would refuse to load: a cross-side
 operator whose field and operand address the same population (a
 pair-context field compared with a pair-context operand). The card

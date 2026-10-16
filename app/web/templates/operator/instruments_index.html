@@ -644,7 +644,9 @@
                        DIFFERENT FROM", takes room from it rather than
                        spill past the column's divider. #}
                     <select style="flex: 0 1 50%; min-width: 0; padding: 4px;"
-                            form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field">
+                            form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"
+                            data-new-model-rule-field
+                            onchange="newModelSyncOperandTags(this, true)">
                       {% for key, label in tag_options %}
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
@@ -1037,7 +1039,46 @@
             b.setAttribute('title', 'Remove rule');
           });
           container.appendChild(clone);
+          var cloneField = clone.querySelector('[data-new-model-rule-field]');
+          if (cloneField) { window.newModelSyncOperandTags(cloneField, true); }
         };
+        // A cross-side operand must name a different population from
+        // the field (findings E1; the engine refuses pair context
+        // against pair context), so while the field is a pair-context
+        // tag the pair-context operands are hidden. Only the editing
+        // view narrows: the rendered list keeps every option, so a
+        // stored rule always finds its own and survives a Save. On a
+        // field change (``reset``) a now-hidden selection clears to the
+        // blank option; on load the stored selection stays, and Save
+        // refuses it with the banner if it is the refused pair.
+        window.newModelSyncOperandTags =
+          window.newModelSyncOperandTags || function (fieldSel, reset) {
+          var cell = fieldSel.closest('[data-new-model-rule-cell]');
+          var tagSel = cell && cell.querySelector('[data-new-model-operand-tag]');
+          if (!tagSel) { return; }
+          var narrow = fieldSel.value.indexOf('pair_context.') === 0;
+          Array.prototype.forEach.call(tagSel.options, function (opt) {
+            var hide = narrow && opt.value.indexOf('pair_context.') === 0;
+            if (hide && opt.selected && !reset) { hide = false; }
+            opt.hidden = hide;
+            opt.disabled = hide;
+          });
+          var chosen = tagSel.options[tagSel.selectedIndex];
+          if (reset && chosen && chosen.disabled) { tagSel.value = ''; }
+        };
+        if (!window.newModelOperandTagsWired) {
+          window.newModelOperandTagsWired = true;
+          var syncAllOperandTags = function () {
+            document.querySelectorAll('[data-new-model-rule-field]').forEach(function (s) {
+              window.newModelSyncOperandTags(s, false);
+            });
+          };
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', syncAllOperandTags);
+          } else {
+            syncAllOperandTags();
+          }
+        }
         window.newModelCycleOperator = window.newModelCycleOperator || function (btn) {
           var cycle = (btn.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
           var idx = cycle.indexOf(btn.textContent.trim());
