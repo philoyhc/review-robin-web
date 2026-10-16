@@ -538,8 +538,11 @@
          cross-side IS THE SAME AS / IS DIFFERENT FROM operators).
          Hydrated from ``state`` (a dict with mode / combinator /
          rules — see views._instruments.build_band1_state). #}
-      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None) %}
-        {% set _ops = operator_cycle or ["IS", "IS NOT"] %}
+      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None, stored_only_labels=None) %}
+        {% set _ops = operator_cycle or ["IS", "IS NOT", "IS FILLED", "IS EMPTY"] %}
+        {% set _stored_only = stored_only_labels or {} %}
+        {% set _field_keys = tag_options | map('first') | list %}
+        {% set _operand_keys = (operand_tag_options or []) | map('first') | list %}
         {% set _is_active = tag_options | length > 0 %}
         {# Trim IS THE SAME AS / IS DIFFERENT FROM from the cycle
            when there are no operand-side tags to compare against,
@@ -619,6 +622,7 @@
               {% for _rule in _cells %}
                 {% set _r = _rule or {"field": "", "op": _ops[0], "operand_value": "", "operand_tag": ""} %}
                 {% set _use_tag_operand = _r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
+                {% set _no_operand = _r.op in ("IS FILLED", "IS EMPTY") %}
                 {% set _is_first = loop.first %}
                 <div data-new-model-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
@@ -645,11 +649,13 @@
                        spill past the column's divider. #}
                     <select style="flex: 0 1 50%; min-width: 0; padding: 4px;"
                             form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"
-                            data-new-model-rule-field
-                            onchange="newModelSyncOperandTags(this, true)">
+                            data-new-model-rule-field>
                       {% for key, label in tag_options %}
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
+                      {% if _r.field and _r.field not in _field_keys %}
+                        <option value="{{ _r.field }}" selected data-new-model-stored-only>{{ _stored_only.get(_r.field, _r.field) }}</option>
+                      {% endif %}
                     </select>
                     <button type="button" class="btn secondary cohort-cell-btn"
                             data-new-model-operator-cycle="{{ _ops | join('|') }}"
@@ -661,8 +667,8 @@
                            value="{{ _r.op if _r.op in _ops else _ops[0] }}">
                   </div>
                   {# Optional caption above the operand-tag
-                     dropdown (Link 2 only — Link 1's operator
-                     cycle is IS / IS NOT, no tag operand). Shown
+                     dropdown (Link 2 only — Link 1 compares with
+                     a value, never a tag). Shown
                      only when the operator-cycle setting is
                      IS THE SAME AS / IS DIFFERENT FROM (i.e.
                      when the operand-tag select itself is shown).
@@ -687,14 +693,21 @@
                         {% for key, label in operand_tag_options %}
                           <option value="{{ key }}" {% if key == _r.operand_tag %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
+                        {% if _use_tag_operand and _r.operand_tag and _r.operand_tag not in _operand_keys %}
+                          <option value="{{ _r.operand_tag }}" selected data-new-model-stored-only>{{ _stored_only.get(_r.operand_tag, _r.operand_tag) }}</option>
+                        {% endif %}
                       </select>
                     {% else %}
                       <input form="dfsave-{{ instrument_id }}" type="hidden"
                              name="{{ link_id }}_operand_tag" value="">
                     {% endif %}
+                    {# IS FILLED / IS EMPTY take no value: the box stays
+                       (it still submits, keeping the per-rule arrays
+                       aligned) but is read-only and dimmed. #}
                     <input data-new-model-operand-value type="text" placeholder="value"
                            style="flex: 1; min-width: 0; padding: 4px; {% if _use_tag_operand %}display: none;{% endif %}"
                            value="{{ _r.operand_value }}"
+                           {% if _no_operand %}readonly aria-disabled="true"{% endif %}
                            form="dfsave-{{ instrument_id }}" name="{{ link_id }}_operand_value">
                     <button type="button" class="btn destructive cohort-cell-btn"
                             data-new-model-rule-remove
@@ -715,11 +728,16 @@
          slots that have at least one populated row in the
          session — built by ``views._instruments._new_model_usable_tags``.
          Empty lists drive the column's pill into the disabled /
-         inactive state. #}
-      {% set _link1_tags = new_model_tags.reviewer + new_model_tags.pair_context %}
-      {% set _link2_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
-      {% set _link2_operand = new_model_tags.reviewer + new_model_tags.pair_context %}
-      {% set _link3_tags = new_model_tags.reviewee + new_model_tags.pair_context %}
+         inactive state. Pair-context tags are not offered while their
+         meaning is reworked (author, 2026-10-16;
+         ``guide/assignment_rule_clarify.md``). ``_stored_only_labels``
+         names one a stored rule still holds, so its select keeps that
+         option rather than silently dropping it on the next Save. #}
+      {% set _link1_tags = new_model_tags.reviewer %}
+      {% set _link2_tags = new_model_tags.reviewee %}
+      {% set _link2_operand = new_model_tags.reviewer %}
+      {% set _link3_tags = new_model_tags.reviewee %}
+      {% set _stored_only_labels = dict(new_model_tags.pair_context) %}
       {% set _band1_state = new_model_band1_state.get(instrument.id, {"link1": {"mode": "all", "combinator": "AND", "rules": []}, "link2": {"mode": "all", "combinator": "AND", "rules": []}}) %}
       {% set _link3_state = new_model_link3_state.get(instrument.id, {"mode": "individual", "boundary_pairs": []}) %}
       {# Canonical key lookup for the stored boundary pairs:
@@ -750,7 +768,8 @@
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
               "Who does the review", _link1_tags,
               on_label="Filter using tags",
-              field_helper="Reviewer tag") }}
+              field_helper="Reviewer tag",
+              stored_only_labels=_stored_only_labels) }}
           {# "Refresh sample" was previously rendered as a row
              beneath Link 1; moved inline beside the Band 2
              "Preview review instrument" heading per operator
@@ -762,11 +781,12 @@
         <div style="padding: 0 16px; border-left: 1px solid var(--border-default);">
           {{ new_model_rule_list("link2", instrument.id, _band1_state.link2,
               "Who is being reviewed", _link2_tags,
-              operator_cycle=["IS THE SAME AS", "IS DIFFERENT FROM", "IS", "IS NOT"],
+              operator_cycle=["IS THE SAME AS", "IS DIFFERENT FROM", "IS", "IS NOT", "IS FILLED", "IS EMPTY"],
               operand_tag_options=_link2_operand,
               on_label="Filter using tags",
               field_helper="Reviewee tag",
-              operand_tag_helper="Reviewer tag") }}
+              operand_tag_helper="Reviewer tag",
+              stored_only_labels=_stored_only_labels) }}
         </div>
         <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-default);">
           <div data-new-model-link-wrapper>
@@ -846,6 +866,9 @@
                         {% for key, label in _link3_tags %}
                           <option value="{{ key }}" {% if key == _selected_key %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
+                        {% if _selected_key and _selected_key not in (_link3_tags | map('first') | list) %}
+                          <option value="{{ _selected_key }}" selected data-new-model-stored-only>{{ _stored_only_labels.get(_selected_key, _selected_key) }}</option>
+                        {% endif %}
                       </select>
                       {# Ec9: render what ``newModelRefreshUnitButtons``
                          leaves after an add or remove — the last cell
@@ -996,6 +1019,9 @@
           var container = builder.querySelector('[data-new-model-rule-cells]');
           var first = container.querySelector('[data-new-model-rule-cell]');
           var clone = first.cloneNode(true);
+          // A stored-only option (a tag the card no longer offers) is
+          // the first cell's own; a new cell starts from the offered list.
+          clone.querySelectorAll('option[data-new-model-stored-only]').forEach(function (o) { o.remove(); });
           clone.querySelectorAll('input[type="text"], [data-new-model-operand-value]').forEach(function (i) { i.value = ''; });
           clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
           // Reset each operator-toggle button + its hidden op input
@@ -1026,6 +1052,7 @@
             tagSel.style.display = defaultUseTag ? '' : 'none';
             valInput.style.display = defaultUseTag ? 'none' : '';
           }
+          if (valInput) { window.newModelSyncOperandValue(valInput, defaultCycle[0]); }
           var operandHelperRow = clone.querySelector(
             '[data-new-model-rule-operand-helper-row]'
           );
@@ -1039,46 +1066,20 @@
             b.setAttribute('title', 'Remove rule');
           });
           container.appendChild(clone);
-          var cloneField = clone.querySelector('[data-new-model-rule-field]');
-          if (cloneField) { window.newModelSyncOperandTags(cloneField, true); }
         };
-        // A cross-side operand must name a different population from
-        // the field (findings E1; the engine refuses pair context
-        // against pair context), so while the field is a pair-context
-        // tag the pair-context operands are hidden. Only the editing
-        // view narrows: the rendered list keeps every option, so a
-        // stored rule always finds its own and survives a Save. On a
-        // field change (``reset``) a now-hidden selection clears to the
-        // blank option; on load the stored selection stays, and Save
-        // refuses it with the banner if it is the refused pair.
-        window.newModelSyncOperandTags =
-          window.newModelSyncOperandTags || function (fieldSel, reset) {
-          var cell = fieldSel.closest('[data-new-model-rule-cell]');
-          var tagSel = cell && cell.querySelector('[data-new-model-operand-tag]');
-          if (!tagSel) { return; }
-          var narrow = fieldSel.value.indexOf('pair_context.') === 0;
-          Array.prototype.forEach.call(tagSel.options, function (opt) {
-            var hide = narrow && opt.value.indexOf('pair_context.') === 0;
-            if (hide && opt.selected && !reset) { hide = false; }
-            opt.hidden = hide;
-            opt.disabled = hide;
-          });
-          var chosen = tagSel.options[tagSel.selectedIndex];
-          if (reset && chosen && chosen.disabled) { tagSel.value = ''; }
-        };
-        if (!window.newModelOperandTagsWired) {
-          window.newModelOperandTagsWired = true;
-          var syncAllOperandTags = function () {
-            document.querySelectorAll('[data-new-model-rule-field]').forEach(function (s) {
-              window.newModelSyncOperandTags(s, false);
-            });
-          };
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', syncAllOperandTags);
+        // IS FILLED / IS EMPTY test the field alone, so the value box
+        // goes inactive: read-only and dimmed, but still submitted, so
+        // the per-rule arrays stay aligned. The service ignores it.
+        window.newModelSyncOperandValue =
+          window.newModelSyncOperandValue || function (valInput, op) {
+          var noOperand = op === 'IS FILLED' || op === 'IS EMPTY';
+          valInput.readOnly = noOperand;
+          if (noOperand) {
+            valInput.setAttribute('aria-disabled', 'true');
           } else {
-            syncAllOperandTags();
+            valInput.removeAttribute('aria-disabled');
           }
-        }
+        };
         window.newModelCycleOperator = window.newModelCycleOperator || function (btn) {
           var cycle = (btn.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
           var idx = cycle.indexOf(btn.textContent.trim());
@@ -1090,10 +1091,12 @@
           var opInput = cell.querySelector('[data-new-model-op-input]');
           if (opInput) { opInput.value = next; }
           // If this cell has both operand variants, swap their
-          // visibility: IS / IS NOT → value input; anything else
-          // (IS THE SAME AS / IS DIFFERENT FROM) → tag dropdown.
+          // visibility: IS THE SAME AS / IS DIFFERENT FROM → tag
+          // dropdown; anything else → value input (inactive for
+          // IS FILLED / IS EMPTY).
           var tagSel = cell.querySelector('[data-new-model-operand-tag]');
           var valInput = cell.querySelector('[data-new-model-operand-value]');
+          if (valInput) { window.newModelSyncOperandValue(valInput, next); }
           if (tagSel && valInput) {
             var useTag = next === 'IS THE SAME AS' || next === 'IS DIFFERENT FROM';
             tagSel.style.display = useTag ? '' : 'none';
@@ -1338,6 +1341,7 @@
           var container = builder.querySelector('[data-new-model-unit-cells]');
           var first = container.querySelector('[data-new-model-unit-cell]');
           var clone = first.cloneNode(true);
+          clone.querySelectorAll('option[data-new-model-stored-only]').forEach(function (o) { o.remove(); });
           clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
           container.appendChild(clone);
           newModelRefreshUnitButtons(container);

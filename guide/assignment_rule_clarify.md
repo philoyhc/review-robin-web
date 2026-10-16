@@ -91,9 +91,13 @@ Taken 2026-10-16 at `c863dfa8`.
 
 ### PR ladder
 
-To be cut after the rulings. A likely first rung is the engine change
-behind the Band 1 predicates, with its tests. The specs and the lifting
-of the #3085 refusal would follow.
+1. **Stage 1 (author, 2026-10-16).** The card stops offering
+   pair-context tags in all four lists (Link 1 field, Link 2 field and
+   operand, Link 3 boundary) and gains `IS FILLED` / `IS EMPTY` in Links
+   1 and 2, with the value box inactive for them. A stored pair-context
+   selection keeps its option. No engine change.
+2. Further stages to be cut once the author has settled how pair-context
+   tags are to be used.
 
 ### Definition of done
 
@@ -104,14 +108,18 @@ of the #3085 refusal would follow.
 
 ### Open questions
 
-1. **Is the per-pair reading lost on purpose?** Today, "pair tag IS
-   `Mentor`" in Link 2 assigns each reviewer their own mentees only. Under
-   the person-level reading the card can no longer say that. *Author.*
-2. **How `IS THE SAME AS` / `IS DIFFERENT FROM` work on sets.** For
-   example, "shares at least one value" and "shares none". *Author.*
-3. **Whether `IS NOT` passes a person with no value.** *Author.*
-4. **Scope.** Which of these follow the change: Link 3 grouping by a
-   pair tag, and the operator-authored rules outside Band 1? *Author.*
+Answered 2026-10-16, then reopened: the author is rethinking how
+pair-context tags are used, and stage 1 takes them off the card
+meanwhile.
+
+1. **Is the per-pair reading lost on purpose?** Yes. Link 1 "Reviewer's
+   pair tag IS `Mentor`" with Link 2 "Reviewee's pair tag IS `Mentor`".
+2. **Matching.** `IS` / `IS NOT` fully match a value; `IS THE SAME AS`
+   / `IS DIFFERENT FROM` fully match another tag's value. Open: which of
+   a person's several pair values counts.
+3. **`IS NOT` passes an empty value.** Open: for every tag, or pair tags
+   only, which would change existing reviewer and reviewee rules.
+4. **No pair-context grouping in Link 3.** Done in stage 1.
 
 ### Out of scope
 
@@ -120,9 +128,13 @@ pair's own value. The Relationships page itself.
 
 ### Doc impact
 
+- `spec/instruments.md` — Band 1: no pair-context tags offered; `IS FILLED` / `IS EMPTY` (stage 1).
+- `spec/assignments.md` — Operators table: `IS FILLED` / `IS EMPTY`; reviewer-tag operands (stage 1).
+
 - `spec/instruments.md` — Link 1 / Link 2: a pair-context tag is the person's, across their pairs.
 - `spec/assignments.md` — Predicate vocabulary: person-level resolution for Band 1 pair-context predicates.
 
 ### Status
 
-Opened 2026-10-16 after #3085. Unbuilt, awaiting Open questions 1–4.
+Opened 2026-10-16 after #3085. Stage 1 built 2026-10-16 (rung 1).
+The person-level reading is on hold pending the author's rethink.

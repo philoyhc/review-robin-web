@@ -501,9 +501,16 @@ spills either.
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
-| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` |
-| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + `pair_context.tag1 / 2 / 3` (with cross-side operands) |
-| Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee + pair-context boundary tags |
+| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` |
+| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` (with reviewer-tag operands) |
+| Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee boundary tags |
+
+The card offers no pair-context tag in any of the three columns
+(author, 2026-10-16) while their meaning is reworked
+(`guide/assignment_rule_clarify.md`). A rule or boundary stored with
+one keeps it: its select renders that one tag as an extra option, so
+the card shows it and a Save keeps it, and a new cell does not offer
+it.
 
 #### Self-review exclusion (Link 3 column, below the rule)
 
@@ -657,30 +664,30 @@ When the pill is in `filter`, the column renders a vertically
 stacked list of MATCH-rule cells. Each cell has:
 
 - A field dropdown — the column's tag namespace (e.g.
-  Link 1: `reviewer.tag1 / tag2 / tag3 + pair_context.tag1 / tag2 / tag3`).
+  Link 1: `reviewer.tag1 / tag2 / tag3`).
   Only namespaces with at least one populated row in the
   session appear — the dropdown's options come from
   `views._instruments.new_model_usable_tags`.
-- An operator-cycle button. Link 1 cycles through `IS | IS NOT`;
-  Link 2 cycles through `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT`,
+- An operator-cycle button. Link 1 cycles through
+  `IS | IS NOT | IS FILLED | IS EMPTY`; Link 2 cycles through
+  `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT | IS FILLED | IS EMPTY`,
   starting on `IS THE SAME AS`, the most common (author, 2026-10-16), so a
-  new Link 2 cell opens on it
-  (the cross-side operators take a reviewer or pair-context tag as
-  operand, for "same as the reviewer's role" or "same as the pair's
-  tag" semantics; author, 2026-10-16).
+  new Link 2 cell opens on it (the cross-side operators take a reviewer
+  tag as operand, for "same as the reviewer's role" semantics).
+  `IS FILLED` / `IS EMPTY` (author, 2026-10-16) store as `is_not_empty` /
+  `is_empty` and test the field alone.
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
   or a tag dropdown (for the cross-side operators). The JS
-  toggles which is visible based on the current operator.
+  toggles which is visible based on the current operator. For
+  `IS FILLED` / `IS EMPTY` the value box shows but is inactive:
+  read-only and dimmed, still submitted so the per-rule arrays stay
+  aligned, and not stored.
 - An X (remove) button. Disabled on the first cell.
 
-While a Link 2 cell's field is a pair-context tag, its operand list
-hides the pair-context tags (author, 2026-10-16). Changing the field to
-one clears an operand that is now hidden. On load a stored operand
-keeps its option, so a stored rule always renders as stored.
-
 Save refuses a rule the engine would refuse to load: a cross-side
-operator whose field and operand address the same population (a
-pair-context field compared with a pair-context operand). The card
+operator whose field and operand address the same population (only a
+stored rule can hold one now, a pair-context field compared with a
+pair-context operand). The card
 answers 422 with its banner, the `/fields/save` fallback 400, and
 nothing is stored (`set_band1_assignment_rules`, via
 `rules_payload_error`).
@@ -696,7 +703,8 @@ so they intersect (Link 1 ∩ Link 2).
 When the pill is in `group`, the column renders the same
 vertical builder shape — `+` button + boundary-tag cells. Each
 cell is a single dropdown picking one of the session's usable
-reviewee or pair-context tags. The cells additively define the
+reviewee tags (a stored pair-context boundary keeps its option, as
+above). The cells additively define the
 **group boundary**: reviewees sharing the same values across
 every picked tag form one group.
 
