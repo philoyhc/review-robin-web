@@ -1025,8 +1025,9 @@ differently:
 - **Invitation landing** (`/me/invite/{token}`,
   `app/web/routes_reviewer/_invite.py`) — folds both sides through
   `normalize_email`, after `invitations.lookup_invitation_by_token`
-  has resolved only an `active` reviewer's invitation. An inactive
-  reviewer is treated as if not a reviewer at all: their token answers 404 as an unknown one does — the
+  has resolved only an `active` reviewer's invitation on a session
+  that is not `archived` (an archived session's token answers the same
+  404). An inactive reviewer is treated as if not a reviewer at all: their token answers 404 as an unknown one does — the
   answer the surface gives a signed-in non-reviewer — for whoever
   follows it, and the visit records no open (no `opened_at`, no
   `invitation.opened` event). An active reviewer's token followed by
@@ -1607,8 +1608,9 @@ Behaviour:
 1. Easy Auth must be signed in (otherwise the platform redirects to
    sign-in and back).
 2. Look up the invitation by `sha256(token)`. Not found → **404**,
-   and an inactive reviewer's invitation is not found ("Identity
-   matching" above), whoever follows it. The page says the link "has
+   and an inactive reviewer's invitation, or one on an archived
+   session, is not found ("Identity matching" above), whoever
+   follows it. The page says the link "has
    been replaced by a newer one or is no longer valid" and points to
    the most recent email: invitations don't expire, but a fresh send or
    a Regenerate rotates the token and kills the links in earlier
