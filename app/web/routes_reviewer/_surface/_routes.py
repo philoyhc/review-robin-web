@@ -145,8 +145,9 @@ def _pre_open_response(
     extra: dict | None = None,
     status_code: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
-    """The pre-open page, for a session that is neither ``ready`` nor
-    ``expired``. ``extra`` carries a refused write's notice (P3)."""
+    """The pre-open page, for a ``draft`` or ``validated`` session (an
+    archived one never passes the gate). ``extra`` carries a refused
+    write's notice (P3)."""
     session_zone = sessions_service.resolve_session_timezone(review_session)
     deadline_text = (
         date_formatting.format_datetime(review_session.deadline, session_zone)
@@ -188,14 +189,10 @@ def _pre_open_response(
                 if scheduled_open_at
                 else None
             ),
-            "is_archived": lifecycle.is_archived(review_session),
             # participant info Item 3 — the reviewer's own roster
-            # fields, so they can check them before the review
-            # opens. The closed (archived) variant shows none.
-            "reviewer_self_fields": (
-                []
-                if lifecycle.is_archived(review_session)
-                else views.reviewer_self_line_for(review_session, reviewer)
+            # fields, so they can check them before the review opens.
+            "reviewer_self_fields": views.reviewer_self_line_for(
+                review_session, reviewer
             ),
             **(extra or {}),
         },

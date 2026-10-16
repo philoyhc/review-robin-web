@@ -495,7 +495,9 @@ def lookup_invitation_by_token(
     ruling, 2026-10-02), so their token answers as an unknown one —
     the landing's 404, the same answer ``require_reviewer_in_session``
     gives a signed-in non-reviewer — for whoever follows it, and the
-    landing never reaches ``record_open``.
+    landing never reaches ``record_open``. An **archived** session's
+    tokens answer the same way: once archived a session is off limits
+    to every participant (author's ruling 2026-10-16).
     """
     token_hash = hash_token(raw_token)
     row = db.execute(
@@ -505,6 +507,7 @@ def lookup_invitation_by_token(
         .where(
             Invitation.token_hash == token_hash,
             Reviewer.status == "active",
+            ReviewSession.status != lifecycle.SessionStatus.archived.value,
         )
     ).first()
     if row is None:

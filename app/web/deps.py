@@ -58,6 +58,7 @@ from app.services import (
     sessions,
     visibility_policies,
 )
+from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import normalize_email
 
 log = get_logger(__name__)
@@ -345,6 +346,20 @@ def require_sys_admin_or_session_operator(
     )
 
 
+def _participant_session_or_404(db: Session, session_id: int) -> ReviewSession:
+    """The session a participant gate admits to, or 404: none at all,
+    or one that is archived. Once archived a session is off limits to
+    every participant (author's rulings 2026-10-15 and 2026-10-16), so
+    the answer is the same bare 404 a stranger gets, before any roster
+    lookup."""
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.id == session_id)
+    ).scalar_one_or_none()
+    if review_session is None or lifecycle.is_archived(review_session):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return review_session
+
+
 def require_reviewer_in_session(
     session_id: int,
     request: Request,
@@ -360,11 +375,7 @@ def require_reviewer_in_session(
     rows whose ``status`` is anything other than ``active`` do not
     grant access.
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    review_session = _participant_session_or_404(db, session_id)
 
     reviewer = db.execute(
         select(Reviewer).where(
@@ -414,11 +425,7 @@ def require_reviewee_in_session(
     Not used as a route dependency on its own — the composed gate
     adds the visibility check.
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    review_session = _participant_session_or_404(db, session_id)
 
     user_email = normalize_email(user.email)
     candidates = db.execute(
@@ -513,11 +520,7 @@ def require_observer_in_session(
     route dependency on ``GET /me/sessions/{id}/collation`` and its
     sub-routes (``routes_reviewer/_collation.py``).
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    review_session = _participant_session_or_404(db, session_id)
 
     user_email = normalize_email(user.email)
     candidates = db.execute(

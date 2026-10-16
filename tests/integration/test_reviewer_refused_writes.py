@@ -311,9 +311,12 @@ def test_a_session_that_never_opened_names_nobody(
     assert "Carol" not in listed
 
 
-def test_an_archived_session_shows_the_closed_page_with_the_notice(
+def test_an_archived_session_refuses_the_write_like_a_stranger(
     client: TestClient, db: Session, make_client
 ) -> None:
+    """Once archived a session is off limits (author's ruling
+    2026-10-16): the gate's bare 404, not the refused-write page, which
+    would name the session."""
     review_session = _ready_session(client, db, code="refused-archived")
     review_session.status = "archived"
     db.commit()
@@ -324,9 +327,9 @@ def test_an_archived_session_shows_the_closed_page_with_the_notice(
         {"response[1][comments]": "late"},
     )
 
-    assert resp.status_code == 403
-    assert "data-pre-open" in text
-    assert "This review is not currently open, so your last changes weren't saved." in text
+    assert resp.status_code == 404
+    assert "data-pre-open" not in text
+    assert review_session.name not in text
 
 
 def test_a_value_matching_the_stored_answer_is_still_listed(

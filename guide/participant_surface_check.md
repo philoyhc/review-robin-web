@@ -108,6 +108,10 @@ Second pass, same day:
   right now, and can become Available when a release window opens.
 - **M4 (a):** once a session is archived it is off limits: `/summary`
   and `/collation` are refused, as the observer CSV already is.
+  Widened 2026-10-16 ("gone everywhere"): an archived session leaves
+  `/me` for every role, every participant gate answers 404 (the surface,
+  its writes and the invitation link included), and it counts toward
+  neither the Guide's roles nor a back link's name. "Finished" retires.
 - **M7 (b):** drop "View responses" and "Until".
 - **M8:** About, Guide and Sign-in details take the participant top
   bar for a participant.

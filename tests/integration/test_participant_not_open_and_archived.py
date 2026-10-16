@@ -1,6 +1,6 @@
 """The pre-open page's copy (participant audit M3) and archived
-sessions being off limits (M4), from the author's rulings of
-2026-10-15 in `guide/participant_surface_check.md`."""
+sessions being off limits to participants (M4, author's rulings of
+2026-10-15 and 2026-10-16 in `guide/participant_surface_check.md`)."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def _session(
     return review_session
 
 
-@pytest.mark.parametrize("status", ["draft", "validated", "archived"])
+@pytest.mark.parametrize("status", ["draft", "validated"])
 def test_every_not_open_state_reads_the_same(
     client: TestClient, db: Session, status: str
 ) -> None:
@@ -84,7 +84,7 @@ def test_a_draft_shows_no_schedule(client: TestClient, db: Session) -> None:
     assert "data-pre-open-scheduled" not in body
 
 
-@pytest.mark.parametrize("status", ["draft", "archived"])
+@pytest.mark.parametrize("status", ["draft", "validated"])
 def test_the_help_contact_shows(
     client: TestClient, db: Session, status: str
 ) -> None:
@@ -97,7 +97,7 @@ def test_the_help_contact_shows(
 
 @pytest.mark.parametrize(
     "path",
-    ["summary", "summary.csv", "collation"],
+    ["1", "summary", "summary.csv", "collation", "results"],
 )
 def test_an_archived_session_is_off_limits(
     client: TestClient, db: Session, path: str
@@ -112,7 +112,73 @@ def test_an_archived_session_is_off_limits(
 def test_collation_still_answers_before_archive(
     client: TestClient, db: Session
 ) -> None:
-    """The 404 is archive's, not the observer gate's."""
+    """The 404 is archive's, not the observer gate's or the roster's."""
     review_session = _session(client, db, code="arch-before", status="expired")
     resp = client.get(f"/me/sessions/{review_session.id}/collation")
     assert resp.status_code == 200
+
+
+def test_a_write_to_an_archived_session_is_refused_like_a_strangers(
+    client: TestClient, db: Session
+) -> None:
+    """Save on an archived session is the gate's bare 404, not the
+    refused-write page (that one names the session)."""
+    review_session = _session(client, db, code="arch-save", status="archived")
+    resp = client.post(
+        f"/me/sessions/{review_session.id}/1/save", data={}, follow_redirects=False
+    )
+    assert resp.status_code == 404
+    assert "Spring" not in resp.text
+
+
+def test_the_surface_still_answers_before_archive(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _session(client, db, code="arch-surf-before", status="expired")
+    assert client.get(f"/me/sessions/{review_session.id}/1").status_code == 200
+
+
+def test_an_archived_session_names_no_role_on_the_guide(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """A participant whose only session is archived holds no role there
+    (``participants.disclosable_roles``), so the Guide bounces them to
+    About like any other signed-in stranger."""
+    from app.auth.identity import AuthenticatedUser
+    from app.services import participants
+
+    pat = AuthenticatedUser(
+        principal_id="pat-oid", email="pat@example.edu", name="Pat", provider="aad"
+    )
+    review_session = _session(client, db, code="arch-guide", status="ready")
+    db.add(Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu"))
+    db.commit()
+    assert participants.disclosable_roles(db, "pat@example.edu")
+    assert make_client(pat).get("/guide", follow_redirects=False).status_code == 200
+
+    review_session.status = "archived"
+    db.commit()
+    assert participants.disclosable_roles(db, "pat@example.edu") == frozenset()
+    resp = make_client(pat).get("/guide", follow_redirects=False)
+    assert resp.status_code in (302, 303)
+    assert resp.headers["location"].startswith("/about")
+
+
+def test_a_back_link_does_not_name_an_archived_session(
+    client: TestClient, db: Session, make_client
+) -> None:
+    from app.auth.identity import AuthenticatedUser
+
+    pat = AuthenticatedUser(
+        principal_id="pat-oid", email="pat@example.edu", name="Pat", provider="aad"
+    )
+    review_session = _session(client, db, code="arch-back", status="ready")
+    review_session.name = "Secret Spring"
+    db.add(Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu"))
+    db.commit()
+    path = f"/about?return_to=/me/sessions/{review_session.id}"
+    assert "Back to Secret Spring" in make_client(pat).get(path).text
+
+    review_session.status = "archived"
+    db.commit()
+    assert "Secret Spring" not in make_client(pat).get(path).text

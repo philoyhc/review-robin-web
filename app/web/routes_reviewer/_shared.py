@@ -128,8 +128,8 @@ def build_role_chips(
       that chip renders in full colour and carries no link.
     - ``enabled`` — ``True`` when the role's surface is
       currently reachable. Reviewer ``not opened`` flips this
-      ``False`` so the chip greys without a link; an observer's
-      chip greys the same way on an archived session.
+      ``False`` so the chip greys without a link. (No surface renders
+      for an archived session, so no chip is built for one.)
 
     **The reviewee role is omitted, not greyed, without a current
     grant** (19F PR 7). The two are not interchangeable here: a
@@ -228,12 +228,7 @@ def build_role_chips(
     if observer is not None:
         role_targets["observer"] = {
             "target": f"/me/sessions/{review_session.id}/collation",
-            # Archive closes every non-operator grant and the page
-            # answers 404 there, so the link is a dead end. Grayed,
-            # not dropped: being an observer is not a disclosure about
-            # the observer (19F decision 4), so the chip stays visible
-            # exactly as the dashboard row does.
-            "enabled": not lifecycle.is_archived(review_session),
+            "enabled": True,
         }
 
     chips: list[dict[str, object]] = []

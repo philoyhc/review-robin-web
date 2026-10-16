@@ -85,6 +85,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Reviewer.session_id)
             .where(
                 Reviewer.status == "active",
+                ReviewSession.status != lifecycle.SessionStatus.archived.value,
                 func.lower(func.trim(Reviewer.email)) == user_email,
             )
         ).all()
@@ -95,6 +96,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Reviewee.session_id)
             .where(
                 Reviewee.status == "active",
+                ReviewSession.status != lifecycle.SessionStatus.archived.value,
                 func.lower(func.trim(Reviewee.email_or_identifier))
                 == user_email,
             )
@@ -106,6 +108,7 @@ def reviewer_dashboard(
             .join(ReviewSession, ReviewSession.id == Observer.session_id)
             .where(
                 Observer.status == "active",
+                ReviewSession.status != lifecycle.SessionStatus.archived.value,
                 func.lower(func.trim(Observer.email)) == user_email,
             )
         ).all()
@@ -186,10 +189,10 @@ def reviewer_dashboard(
                     else f"/me/sessions/{review_session.id}/1"
                 ),
                 # Off while ``session_status_for_reviewer`` says "not
-                # opened" (draft, validated or archived; the row's pill
-                # reads "Not open yet" or "Finished"): there the surface
-                # renders only the ``reviewer/pre_open.html`` holding
-                # page, so the row carries no link to it.
+                # opened" (draft or validated; the row's pill reads "Not
+                # open yet"): there the surface renders only the
+                # ``reviewer/pre_open.html`` holding page, so the row
+                # carries no link to it.
                 "enabled": session_status != "not opened",
             }
         if "reviewee" in roles:
@@ -210,22 +213,18 @@ def reviewer_dashboard(
         if "observer" in roles:
             role_links["observer"] = {
                 "target": f"/me/sessions/{review_session.id}/collation",
-                # Live in every lifecycle state except ``archived``
-                # (19F decision 7). Observers are deliberately *not*
+                # Live in every lifecycle state a row is listed in (19F
+                # decision 7). Observers are deliberately *not*
                 # grant-gated the way reviewees are — being appointed an
                 # observer is not a disclosure about the observer, so
                 # they may see that they are one before their window
-                # opens. But archive closes every non-operator grant, so
-                # on an archived session the page answers 404 and a live
-                # link to it is a dead end. The row stays, reading
-                # "Finished", and loses its link — matching the reviewer
-                # row beside it.
+                # opens.
                 #
                 # (A placeholder marker naming W17 stood here until 19F
                 # PR 5, the twin of W16's above. W17 shipped in
                 # PRs #1769–#1808 and the marker outlived it too. Phrase
                 # deliberately not quoted — see the note above.)
-                "enabled": not lifecycle.is_archived(review_session),
+                "enabled": True,
             }
 
         link_target: str | None = None

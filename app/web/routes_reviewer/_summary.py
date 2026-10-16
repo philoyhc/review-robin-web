@@ -13,7 +13,7 @@ Segment 17B Phase 2 PR B. Carries:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from starlette import status
@@ -67,12 +67,9 @@ def reviewer_session_summary(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
+    # An archived session never reaches here: the gate answers 404
+    # (``deps._participant_session_or_404``).
     reviewer, review_session = reviewer_session
-    # Once archived, off limits (participant audit M4, author's ruling
-    # 2026-10-15): the read-back is already empty by then
-    # (``spec/visibility_policy.md`` §2.2), so a page would only say so.
-    if lifecycle.is_archived(review_session):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if not _is_session_fully_submitted(
         db, reviewer=reviewer, session_id=review_session.id
     ):
@@ -136,8 +133,6 @@ def reviewer_session_summary_csv(
     db: Session = Depends(get_db),
 ) -> StreamingResponse | RedirectResponse:
     reviewer, review_session = reviewer_session
-    if lifecycle.is_archived(review_session):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if not _is_session_fully_submitted(
         db, reviewer=reviewer, session_id=review_session.id
     ):
