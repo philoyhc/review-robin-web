@@ -809,6 +809,7 @@ Sys-admin-gated.
 |---|---|---|---|---|---|---|
 | 118 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
 | 276 | Audit log card heading | `GMT+8 Asia/Singapore` ↔ `UTC` | `<a>` | `pill pill-count tag-chip is-selected` | **Not `.btn`** — a cycle chip (`spec/ui_elements.md` §9) | Names the zone the page reads in and links to the page in the other zone, the filters kept and the cursor dropped (`spec/timezone_display.md`). Follows a muted "Display times in", before Download CSV. A plain `pill pill-count` reading `UTC` when the viewer's Settings zone is zero-offset all year. |
+| 277 | Filter strip (left column) | `info` / `warning` / `error` | `<label>` around a hidden `severity` checkbox | `pill tag-chip status-chip-{value}` | **Not `.btn`** — on/off chips in a status color (`spec/ui_elements.md` §9) | After `Event type \|` and a `Severity` label, on one line above the event-type list. Pale status tint when off, solid status fill when on; none on is no severity filter. Each carries `title="Show {value} events"`. |
 | 119 | Audit log card heading | Download CSV | `<a download>` | `btn secondary` | Secondary | Links (GET) to `/operator/sessions/{id}/export/audit_log.csv`; the URL forward-carries the active filter set, and `tz` when the page reads in UTC, so the CSV holds the rows on screen. |
 | 120 | Filter strip (right column) | Apply filters | `<button type="submit">` | `btn secondary` | Secondary | Right-aligned under the From / To dates in a `.btn-pair.audit-filter-actions`; **Secondary, never Primary**, so it doesn't compete with the Download CSV button up at the card heading. |
 | 121 | Filter strip (right column) | Clear | `<a>` | `btn secondary` | Secondary | Renders only when `filter_form.is_active`, before Apply filters. Resets to the canonical viewer URL, keeping only `tz=utc` when the page reads in UTC. |
@@ -819,7 +820,7 @@ Notes:
 
 - **Filter strip layout:**
   - Left column: one line reading `Event type | Severity` with the
-    three severity checkboxes after it (`.audit-filter-head`), then
+    three severity chips after it (`.audit-filter-head`, row 277), then
     the event-type multi-select with its `Ctrl/Cmd-click to select
     multiple` hint.
   - Right column flows actor email → From / To date selectors

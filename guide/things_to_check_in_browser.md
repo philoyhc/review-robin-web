@@ -258,7 +258,7 @@ with the last section it covers.
   the When column and the From / To labels read `(America/New_York)`,
   not an offset; Europe/London likewise, and it keeps its chip.
 - [ ] **Severity row.** Above the event-type list, one line reads `Event
-  type | Severity` followed by the info / warning / error checkboxes;
+  type | Severity` followed by the info / warning / error chips;
   the right column no longer has a Severity block. "Event type" and
   "Severity" read the same size as "Actor email", and sit about as far
   above the event-type list as "Actor email" does above its box.
@@ -268,3 +268,18 @@ with the last section it covers.
   and the Apply filters button (Clear beside it once a filter is on)
   on the right, the buttons just under the dates. The table starts a
   little below the taller column.
+
+## Audit log Severity chips
+
+- [ ] **Chips, not checkboxes.** After `Event type | Severity`, three
+  chips: `INFO`, `WARNING`, `ERROR`, each in its pale status tint with
+  the blue chip edge. Click one: info turns solid blue, warning solid dark
+  amber, error solid red, each with white text. Apply filters: the table
+  narrows and the chips you picked stay on.
+- [ ] **Dark mode.** Switch to dark: off chips are the dark status
+  tints; on, warning is bright amber and error light red, with dark text
+  (as the blue chip turns light blue with dark text).
+- [ ] **Keyboard.** Tab to a chip: a focus ring shows; Space toggles it.
+- [ ] **Guide.** About → Guide, "Reading the controls": the new "On or
+  off, in a status color" row has a Warning (on) and an Error (off) chip;
+  both switch on a click.
