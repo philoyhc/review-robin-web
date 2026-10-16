@@ -23,7 +23,7 @@ Read alongside `spec/visual_style_rrw.md` (accent assignments, light/dark),
 (independent slots; marked `@coupled` for deliberate coupling; dark `:root`
 remaps semantics onto the one primitive palette) are in `guide/archive/semantic_tokens.md`.
 
-**80 primitives · 104 semantic tokens · 14 non-color scale tokens.**
+**80 primitives · 101 semantic tokens · 14 non-color scale tokens.**
 
 ---
 
@@ -462,9 +462,6 @@ inheriting `--text-body`.
 | `--focus-ring-strong` | `--blue-deep` | `--blue-soft` | `#1d4ed8` | `#93c5fd` |
 | `--row-pending-marker` | `--amber` | `--amber-deep-dk` | `#f59e0b` | `#b45309` |
 | `--row-pending-bg` | `--amber-pale` | `--amber-abyss` | `#fef3c7` | `#3a2c0a` |
-| `--chip-active-border` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
-| `--chip-active-fg` | `--blue-strong` | `--blue-glow` | `#2563eb` | `#4b8bf5` |
-| `--chip-active-bg` | `--blue-wash` | `--blue-abyss-soft` | `#eff6ff` | `#12283f` |
 | `--chip-selected-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 | `--selection-panel-bg` | `--blue-pale` | `--blue-abyss` | `#dbeafe` | `#16324f` |
 
@@ -487,7 +484,7 @@ survive is the literal shared value, and a reader comparing the two
 columns should expect the dark one to differ. **Do not move
 `--blue-glow` itself** to close that gap: it is the reserved shade, and
 many other dark tokens (`--selected-bg`, `--focus-ring`,
-`--btn-primary-bg`, `--chip-active-fg` among them) resolve to it.
+`--btn-primary-bg` among them) resolve to it.
 
 **The scope is the ambiguity, not the element type.** The reservation
 exists because a pill and a chip have a **dual nature**: one rounded

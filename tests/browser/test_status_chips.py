@@ -1,5 +1,5 @@
 """On/off chips in a status color (spec/ui_elements.md §9): the audit
-log's Severity chips and the Guide's sample. Off wears the status's pale
+log's Severity chips, the Validate page's, and the Guide's sample. Off wears the status's pale
 tint, on its solid fill (info: the blue chip's own), in both themes, and
 the chip is a real control: a click, Space and the form all go through
 its hidden box.
@@ -84,6 +84,32 @@ def test_a_severity_chip_filters_and_stays_on(
     assert "severity=warning" in page.url
     expect(page.locator("label.status-chip-warning input")).to_be_checked()
     expect(page.locator("label.status-chip-info input")).not_to_be_checked()
+
+
+def test_a_validate_chip_submits_at_once_and_is_remembered(
+    page: Page, new_session: Callable[[], int]
+) -> None:
+    """All three on by default; turning one off reloads the page without
+    a button, and a bare URL later finds it still off."""
+    session_id = new_session()
+    url = f"/operator/sessions/{session_id}/validate"
+    page.goto(url)
+    strip = page.locator("form[data-severity-chips]")
+    for value in ("error", "warning", "info"):
+        expect(strip.locator(f"label.status-chip-{value} input")).to_be_checked()
+    assert _bg(strip.locator("label.status-chip-error")) == _token(
+        page, "--status-error-solid-bg"
+    )
+    with page.expect_navigation():
+        strip.locator("label.status-chip-warning").click()
+    assert "severity=error" in page.url and "severity=warning" not in page.url
+    page.goto(url)
+    strip = page.locator("form[data-severity-chips]")
+    expect(strip.locator("label.status-chip-warning input")).not_to_be_checked()
+    expect(strip.locator("label.status-chip-error input")).to_be_checked()
+    assert _bg(strip.locator("label.status-chip-warning")) == _token(
+        page, "--status-warning-bg"
+    )
 
 
 def test_the_guide_sample_answers_a_click(page: Page) -> None:

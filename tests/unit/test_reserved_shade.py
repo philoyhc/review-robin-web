@@ -60,9 +60,6 @@ RESERVED = {"light": "#2563eb", "dark": "#4b8bf5"}
 #: - ``label.tag-chip:has(> input:focus-visible)`` — the keyboard focus
 #:   ring of such a chip, whose box is visually hidden; the inputs' own
 #:   ring uses the same ``--focus-ring``.
-#: - ``.severity-chip.active`` — the Validate page's severity filter,
-#:   an ``<a>``. Already an outlined pill; active takes the shade on its
-#:   border and text, and is the precedent rung 3 generalised.
 #: - the lobby and Archived cycle-chip fill — the AND/OR and Select all /
 #:   Clear all chips (``role="button"``), always dark because every state is a choice
 #:   (``spec/ui_elements.md`` §9 type 2; operator pages Item 3).
@@ -99,7 +96,6 @@ CONTROL_SELECTORS = {
     ),
     "body.ui-v2 label.tag-chip:has(> input:focus-visible)",
     "body.ui-v2 .tag-chip.status-chip-info:has(> input:checked)",
-    "body.ui-v2 .severity-chip.active",
     "body.ui-v2 .pill.pill-tag-clear, body.ui-v2 .pill.tag-mode-chip",
     "body.ui-v2 span.tag-chip.is-fixed, body.ui-v2 label.tag-chip.is-fixed:has(> input:checked)",
     (

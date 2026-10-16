@@ -37,7 +37,7 @@ def test_validate_renders_with_errors_for_empty_session(
     assert "No reviewees" in body
     # Severity-counts row used to live on the (now-removed) readiness
     # summary card; the same totals surface in the chip-strip labels.
-    assert "Errors only (" in body
+    assert ">Errors (" in body
 
 
 def test_validate_renders_clean_for_populated_session(

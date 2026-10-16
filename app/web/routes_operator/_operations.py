@@ -10,7 +10,9 @@ monitoring redirect).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -168,11 +170,13 @@ def _invitation_redirect_url(session_id: int, return_to: str | None) -> str:
 
 router = APIRouter()
 
+_ONE_YEAR = 365 * 24 * 60 * 60
+
 
 @router.get("/sessions/{session_id}/validate", response_class=HTMLResponse)
 def validate_session(
     request: Request,
-    severity: str = "all",
+    severity: list[str] | None = Query(default=None),
     activate: int = 0,
     return_to: str | None = None,
     super_status: str | None = None,
@@ -197,13 +201,18 @@ def validate_session(
     # ineligible states (draft / ready / expired / archived) or
     # when there's
     # nothing to acknowledge, drop the param and 303 to the clean
-    # URL — operator can activate (or not) from the Workflow card.
+    # URL (keeping any ``severity``) — operator can activate (or not)
+    # from the Workflow card.
     activate_banner: dict[str, object] | None = None
+    # A chip change made from the banner keeps its chips through the
+    # redirect, so the page it lands on remembers them.
+    clean_url = f"/operator/sessions/{review_session.id}/validate"
+    if severity is not None:
+        clean_url += "?" + urlencode([("severity", value) for value in severity])
     if activate:
         if not lifecycle.is_validated(review_session):
             return RedirectResponse(
-                url=f"/operator/sessions/{review_session.id}/validate",
-                status_code=status.HTTP_303_SEE_OTHER,
+                url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
         if report.errors:
             activate_banner = {
@@ -217,11 +226,17 @@ def validate_session(
             }
         else:
             return RedirectResponse(
-                url=f"/operator/sessions/{review_session.id}/validate",
-                status_code=status.HTTP_303_SEE_OTHER,
+                url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
+    # The severity chips: no ``severity`` in the URL (a nav link, a
+    # bookmark, the Workflow card's Activate detour) takes the chips last
+    # asked for (author, 2026-10-16); an explicit one, even every chip
+    # off, is remembered for next time.
+    severities = views.parse_validate_severities(
+        severity, request.cookies.get(views.VALIDATE_SEVERITY_COOKIE)
+    )
     validate_ctx = views.build_validate_context(
-        db, review_session, issues, severity_filter=severity
+        db, review_session, issues, severities=severities
     )
     workflow_ctx = views.build_workflow_card_context(
         db,
@@ -239,7 +254,7 @@ def validate_session(
         # (19R Item 5 rung 1; `guide/app_responsiveness.md` Finding 6).
         issues=issues,
     )
-    return _templates.TemplateResponse(
+    response = _templates.TemplateResponse(
         request,
         "operator/session_validate.html",
         {
@@ -256,6 +271,16 @@ def validate_session(
             **workflow_ctx,
         },
     )
+    # One choice for every session's Validate page, hence the path.
+    response.set_cookie(
+        views.VALIDATE_SEVERITY_COOKIE,
+        views.validate_severity_cookie(severities),
+        max_age=_ONE_YEAR,
+        path="/operator/sessions",
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 @router.get("/sessions/{session_id}/previews", response_class=HTMLResponse)

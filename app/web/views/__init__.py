@@ -207,11 +207,14 @@ from ._upload_problems import UploadProblems, problem_kinds, upload_problems
 
 # Validate page view-shape adapter (sliced in PR 8).
 from ._validate import (
+    VALIDATE_SEVERITY_COOKIE,
     IssueSourceGroup,
     SetupCoverageRow,
     SeverityChip,
     ValidateContext,
     build_validate_context,
+    parse_validate_severities,
+    validate_severity_cookie,
 )
 
 # Workflow card context builder (per spec/workflow_card.md
@@ -391,6 +394,9 @@ __all__ = [
     "build_responses_rows",
     "build_setup_rows",
     "build_validate_context",
+    "parse_validate_severities",
+    "validate_severity_cookie",
+    "VALIDATE_SEVERITY_COOKIE",
     "build_auto_send_invites_caption",
     "build_auto_send_reminders_caption",
     "build_manual_activate_cancellation",

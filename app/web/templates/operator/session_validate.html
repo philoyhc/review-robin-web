@@ -95,16 +95,42 @@
   </div>
 
   {% if validate.error_count + validate.warning_count + validate.info_count > 0 %}
-    <div class="card severity-filter-card">
-      <p class="severity-filter-row">
-        {% for chip in validate.severity_chips %}
-          <a class="severity-chip{% if chip.is_active %} active{% endif %}"
-             {% if chip.is_active %}aria-current="page"{% endif %}
-             href="/operator/sessions/{{ session.id }}/validate{% if chip.key != 'all' %}?severity={{ chip.key }}{% endif %}">
-            {{ chip.label }} ({{ chip.count }})
-          </a>
-        {% endfor %}
-      </p>
+    {# The severity chips (`spec/validate_page.md` §2.3): on/off in their
+       status color, all three on by default, and a change submits at
+       once. The blank `severity` keeps "every chip off" distinct from no
+       `severity` at all, which takes the chips last asked for. #}
+    <div class="card severity-filter-card" id="severity-filter">
+      <form method="get" action="/operator/sessions/{{ session.id }}/validate#severity-filter"
+            class="severity-filter-row" data-severity-chips>
+        <input type="hidden" name="severity" value="">
+        {% if activate_banner %}
+          <input type="hidden" name="activate" value="1">
+          {% if activate_return_to %}
+            <input type="hidden" name="return_to" value="{{ activate_return_to }}">
+          {% endif %}
+        {% endif %}
+        <span id="severity-filter-label">Show:</span>
+        <span class="severity-filter-chips" role="group" aria-labelledby="severity-filter-label">
+          {% for chip in validate.severity_chips %}
+            <label class="pill tag-chip status-chip-{{ chip.key }}">
+              <input type="checkbox" class="visually-hidden"
+                     name="severity" value="{{ chip.key }}"
+                     autocomplete="off"{% if chip.selected %} checked{% endif %}>{{ chip.label }} ({{ chip.count }})</label>
+          {% endfor %}
+        </span>
+        <noscript><button class="btn secondary" type="submit">Apply</button></noscript>
+      </form>
+      <script>
+        (function () {
+          var form = document.querySelector("form[data-severity-chips]");
+          if (!form) return;
+          form.querySelectorAll('input[type="checkbox"]').forEach(function (box) {
+            box.addEventListener("change", function () {
+              form.requestSubmit ? form.requestSubmit() : form.submit();
+            });
+          });
+        })();
+      </script>
     </div>
   {% endif %}
 
