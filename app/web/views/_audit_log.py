@@ -91,8 +91,9 @@ class AuditLogZone:
     """The chip's label: ``UTC``, or e.g. ``GMT+8 Asia/Singapore``."""
     short_label: str
     """For the column header and the date labels: ``UTC`` / ``GMT+8``,
-    or the zone id for a zone with daylight saving, whose rows don't
-    share one offset (``America/New_York``)."""
+    or the zone id for a zone whose offset moves during the year
+    (daylight saving, Casablanca's Ramadan shift), whose rows don't share
+    one offset (``America/New_York``)."""
     other_label: str
     """The label the chip moves to on a click."""
 

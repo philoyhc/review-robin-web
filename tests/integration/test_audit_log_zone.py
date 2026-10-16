@@ -189,6 +189,8 @@ def test_the_default_zone_adds_no_tz_and_older_events_keep_utc(
         ("Europe/London", "Europe/London", "Europe/London"),
         ("America/New_York", "America/New_York", "America/New_York"),
         ("Australia/Sydney", "Australia/Sydney", "Australia/Sydney"),
+        # A Ramadan shift, not daylight saving: GMT+1 most of the year.
+        ("Africa/Casablanca", "Africa/Casablanca", "Africa/Casablanca"),
     ],
 )
 def test_zero_offset_and_daylight_saving_zones(
