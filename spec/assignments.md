@@ -167,9 +167,9 @@ The engine accepts every field above (`ALLOWED_PREDICATE_FIELDS` in
 `app/schemas/rules.py`); Band 1 offers only the reviewer and reviewee
 tag slots, and of those only namespace + slot combinations with at
 least one populated roster row appear in its dropdowns
-(`views._instruments.new_model_usable_tags`). It stopped offering
-`pair_context.tagN` on 2026-10-16 (`spec/instruments.md`, Band 1); the
-engine still evaluates a stored rule that holds one.
+(`views._instruments.new_model_usable_tags`). It does not offer
+`pair_context.tagN` (`spec/instruments.md`, Band 1); the engine still
+evaluates a stored rule that holds one.
 
 **Operators** (UI → engine internal):
 

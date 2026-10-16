@@ -507,9 +507,10 @@ spills either.
 
 The card offers no pair-context tag in any of the three columns
 (author, 2026-10-16) while their meaning is reworked
-(`guide/assignment_rule_clarify.md`). A rule or boundary stored with
-one keeps it: its select renders that one tag as an extra option, so
-the card shows it and a Save keeps it, and a new cell does not offer
+(`guide/assignment_rule_clarify.md`). A rule or boundary stored with a
+tag the card does not offer, a pair-context tag or a roster slot since
+emptied, keeps it: its select renders that one tag as an extra option,
+so the card shows it and a Save keeps it, and a new cell does not offer
 it.
 
 #### Self-review exclusion (Link 3 column, below the rule)
@@ -673,7 +674,9 @@ stacked list of MATCH-rule cells. Each cell has:
   `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT | IS FILLED | IS EMPTY`,
   starting on `IS THE SAME AS`, the most common (author, 2026-10-16), so a
   new Link 2 cell opens on it (the cross-side operators take a reviewer
-  tag as operand, for "same as the reviewer's role" semantics).
+  tag as operand, for "same as the reviewer's role" semantics). With no
+  usable reviewer tag, Link 2's cycle drops the two cross-side operators
+  and opens on `IS`.
   `IS FILLED` / `IS EMPTY` (author, 2026-10-16) store as `is_not_empty` /
   `is_empty` and test the field alone.
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
