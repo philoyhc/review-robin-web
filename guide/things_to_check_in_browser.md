@@ -233,3 +233,13 @@ with the last section it covers.
 - [ ] **Guide.** About → Guide, "Reading the controls": the new "On or
   off, in a status color" row has a Warning (on) and an Error (off) chip;
   both switch on a click.
+
+## Session-nav hover (19J, carried from the post-Azure checklist)
+
+- [ ] **Hover paints the selected colors.** On Session Home, hover a
+  Setup tab, an Operations tab and the Home anchor, in **both** themes:
+  each paints the colors its own selected state uses (no tinted
+  near-white on light, no pale block on dark), and the active underline
+  stays on the current tab only. Moved from
+  `guide/post_azure_todo_checklist.md` item 3 on 2026-10-16: the only
+  row there with no recorded pass, and a local browser settles it.

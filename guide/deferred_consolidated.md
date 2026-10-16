@@ -1813,7 +1813,7 @@ spreadsheet round trip.
 ### The tag typeahead in Safari and with a screen reader (19S Item 7, moved here 2026-10-01)
 
 The typeahead on the four tag boxes was checked in a browser against a
-local run on 2026-10-01 (`guide/post_azure_todo_checklist.md` item 5).
+local run on 2026-10-01 (`guide/archive/browser_test.md`, appendix item 5).
 Two of that item's rows name more than a Chromium-family browser: in
 **Safari**, arrowing to a suggestion and pressing Enter takes it, and in
 the lobby's expanders never submits the form (#2579); with **VoiceOver or
