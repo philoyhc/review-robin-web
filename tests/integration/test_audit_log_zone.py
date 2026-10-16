@@ -78,11 +78,10 @@ def test_the_page_reads_in_the_settings_zone_by_default(
     assert "From (GMT+8)" in body and "To (GMT+8)" in body
     assert "2026-03-02 04:30" in body
     # The cycle chip names the zone in use and links to the other.
-    assert (
-        f'<a class="pill pill-count tag-chip is-selected"\n'
-        f'               href="{url}?tz=utc"'
-    ) in body
-    assert ">GMT+8 Asia/Singapore</a>" in body
+    chip = body.split("data-audit-zone>", 1)[1].split("</span>", 1)[0]
+    assert 'class="pill pill-count tag-chip is-selected"' in chip
+    assert f'href="{url}?tz=utc"' in chip
+    assert ">GMT+8 Asia/Singapore</a>" in chip
     assert "The CSV's times are always UTC." in body
 
 
@@ -161,3 +160,47 @@ def test_the_extract_event_records_a_non_utc_date_zone() -> None:
     assert "date_zone" not in AuditFilters(created_from=date(2026, 3, 2)).as_audit_context()
     assert AuditFilters(date_zone="Asia/Singapore").as_audit_context() == {}
     assert not AuditFilters(date_zone="Asia/Singapore").is_active
+
+
+def test_the_default_zone_adds_no_tz_and_older_events_keep_utc(
+    client: TestClient, db: Session, make_client, bob, monkeypatch
+) -> None:
+    from app.web.routes_operator import _sys_admin
+
+    bob_client, url, csv_url = _setup(client, db, make_client, bob, monkeypatch, code="tz-pages")
+    body = bob_client.get(f"{url}?severity=info").text
+    assert f'href="{csv_url}?severity=info"' in body
+    assert '<input type="hidden" name="tz"' not in body
+    # A full page offers Older events; under UTC its link keeps the choice.
+    monkeypatch.setattr(_sys_admin, "_AUDIT_LOG_PAGE_SIZE", 1)
+    body = bob_client.get(f"{url}?tz=utc").text
+    older = body.rsplit("Older events &rarr;", 1)[0].rsplit("href=", 1)[1]
+    assert "cursor=" in older and "tz=utc" in older
+    # The chip back to the Settings zone drops the cursor and the choice.
+    cursor_body = bob_client.get(f"{url}?tz=utc&cursor=999999").text
+    chip = cursor_body.split("data-audit-zone>", 1)[1].split("</span>", 1)[0]
+    assert f'href="{url}"' in chip
+
+
+@pytest.mark.parametrize(
+    ("zone", "chip", "short"),
+    [
+        ("Etc/UTC", None, "UTC"),
+        ("Europe/London", "Europe/London", "Europe/London"),
+        ("America/New_York", "America/New_York", "America/New_York"),
+    ],
+)
+def test_zero_offset_and_daylight_saving_zones(
+    client: TestClient, db: Session, make_client, bob, monkeypatch, zone, chip, short
+) -> None:
+    code = "tz-" + zone.replace("/", "-").lower()
+    bob_client, url, _ = _setup(client, db, make_client, bob, monkeypatch, code=code, zone=zone)
+    body = bob_client.get(url).text
+    head = body.split("data-audit-zone>", 1)[1].split("</span>", 1)[0]
+    if chip is None:
+        assert '<span class="pill pill-count">UTC' in head
+        assert "<a " not in head
+    else:
+        assert "tag-chip" in head and chip in head
+    # A zone with daylight saving names itself, not today's offset.
+    assert f"When ({short})" in body

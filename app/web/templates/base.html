@@ -4959,10 +4959,14 @@
         gap: var(--space-2);
         margin-top: 12px;
       }
+      /* Both heads read as the page's other field labels (``body.ui-v2
+         label``): the span takes the size and weight a label would. */
       body.ui-v2 .audit-filter-head label,
       body.ui-v2 .audit-filter-head-label {
         margin: 0;
-        font-weight: 600;
+        font-weight: 500;
+        font-size: var(--fs-small);
+        color: var(--text-body);
       }
       body.ui-v2 .audit-filter-sep { color: var(--text-subtle); }
       body.ui-v2 .audit-severity-options {

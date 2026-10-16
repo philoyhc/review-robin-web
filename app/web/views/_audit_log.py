@@ -40,7 +40,7 @@ stay UTC.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, datetime, timezone
 from urllib.parse import urlencode
 
 from app.services.audit import AuditFilters, AuditLogRow
@@ -90,7 +90,9 @@ class AuditLogZone:
     label: str
     """The chip's label: ``UTC``, or e.g. ``GMT+8 Asia/Singapore``."""
     short_label: str
-    """For the column header and the date labels: ``UTC`` / ``GMT+8``."""
+    """For the column header and the date labels: ``UTC`` / ``GMT+8``,
+    or the zone id for a zone with daylight saving, whose rows don't
+    share one offset (``America/New_York``)."""
     other_label: str
     """The label the chip moves to on a click."""
 
@@ -101,9 +103,15 @@ class AuditLogZone:
 
 def resolve_audit_log_zone(choice: str | None, settings_zone: str) -> AuditLogZone:
     """``choice`` is the raw ``?tz=`` value; anything but ``utc`` means
-    the Settings zone, as an unknown filter token drops silently."""
+    the Settings zone, as an unknown filter token drops silently.
+
+    A Settings zone whose offset is zero all year (``UTC``, ``Etc/UTC``,
+    ``Africa/Abidjan``) reads the same as UTC, so there is nothing to
+    switch to; ``Europe/London`` is GMT+1 in summer and stays
+    switchable."""
+    offsets = _year_offsets(settings_zone)
     settings_label = gmt_offset_zone_label(settings_zone)
-    switchable = settings_zone != DEFAULT_TIMEZONE
+    switchable = offsets != {"UTC"}
     utc_chosen = switchable and (choice or "").strip().lower() == _UTC_CHOICE
     if utc_chosen or not switchable:
         return AuditLogZone(
@@ -119,9 +127,20 @@ def resolve_audit_log_zone(choice: str | None, settings_zone: str) -> AuditLogZo
         utc_chosen=False,
         switchable=True,
         label=settings_label,
-        short_label=gmt_offset_label(settings_zone),
+        short_label=offsets.pop() if len(offsets) == 1 else settings_zone,
         other_label=DEFAULT_TIMEZONE,
     )
+
+
+def _year_offsets(tz_name: str) -> set[str]:
+    """The zone's GMT-offset labels in January and July of this year:
+    one label for a fixed-offset zone, two for one with daylight
+    saving (either hemisphere)."""
+    year = datetime.now(timezone.utc).year
+    return {
+        gmt_offset_label(tz_name, datetime(year, month, 1, tzinfo=timezone.utc))
+        for month in (1, 7)
+    }
 
 
 @dataclass(frozen=True)

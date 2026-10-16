@@ -51,7 +51,8 @@ operator default resolves the same way:
 
 **Session-scoped surfaces render in the session's resolved zone.**
 Every surface that belongs to a single session — and so has one
-unambiguous zone — localises to it:
+unambiguous zone — localises to it, except the Sys Admin per-session
+audit-log viewer (below):
 
 - **Operator session pages** — Session Home / Detail (the old
   `/edit` URL is only a redirect to its details card), the
@@ -96,8 +97,12 @@ correlating events across sessions and operators can read most clearly
 in one fixed zone. The zone sets the "When" column, whose header names
 its offset (`When (GMT+8)`, `When (UTC)`), and the From / To date
 filter, whose days begin at that zone's midnight and whose labels name
-it the same way. With a Settings zone of UTC there is nothing to
-switch to, and the chip is a plain `UTC` pill. The audit-events
+it the same way. A zone with daylight saving has no one offset for its
+rows, so those labels name the zone id instead (`When
+(America/New_York)`). A Settings zone whose offset is zero all year
+(`UTC`, `Etc/UTC`) reads the same as UTC, so there is nothing to switch
+to and the chip is a plain `UTC` pill; `Europe/London`, GMT+1 in
+summer, keeps its chip. The audit-events
 extract keeps its stored offsets whichever zone the page shows
 (above); the Download CSV link carries `tz` only so the file's From /
 To days match the page's.
