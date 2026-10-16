@@ -13,7 +13,9 @@ provisioned but not yet serving**: a P0V3 App Service and Key Vault
 behind private endpoints, a privately provisioned Postgres (no public
 access), an Application Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and on DNS and TLS for its production hostname
-(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). At cutover the F1 and public-database
+(`docs/cordware_nus_azure_status_2026-10-16_v8.md`), and on project-side
+work that has not started: the Cordware repository and production
+workflow, and RRW's integration into Cordware (Segment 21, on hold). At cutover the F1 and public-database
 entries stop applying; secrets stay plain App Settings until Key Vault
 references are wired, and the app's logs reach Application Insights
 only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
