@@ -699,7 +699,8 @@ answers 422 with its banner, the `/fields/save` fallback 400, and
 nothing is stored (`set_band1_assignment_rules`, via
 `rules_payload_error`).
 
-Above the cells, a `+` button adds another cell and a combinator
+Above the cells, a `+` button adds another cell (none when the Link
+offers no tag, as when only a stored rule keeps it live) and a combinator
 toggle (`AND` / `OR`) sets how the cells combine within the Link.
 Each Link contributes its own Composite to the materialised
 `SessionRuleSet`; the outer `ALL_OF` combinator wraps both Links

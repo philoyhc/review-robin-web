@@ -220,7 +220,8 @@ def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
         r'<option value="pair_context\.tag1" selected data-new-model-stored-only>', page
     )
 
-    # The rendered values posted back keep both rules.
+    # The same values saved again (what the rendered cells above carry)
+    # keep both rules.
     again = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
     )
