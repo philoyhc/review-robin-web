@@ -42,9 +42,9 @@
     </p>
 
     {# Two columns under the card head: the event-type filters on the
-       left; actor, dates and the Apply / Clear buttons on the right, so
-       the buttons sit with the fields they submit rather than under
-       the taller left column. #}
+       left; actor, dates and the Apply / Clear buttons on the right,
+       the buttons just under the dates whatever the left column's
+       height. #}
     <form method="get" action="{{ viewer_base_url }}" class="audit-filter-form">
       {% if zone.utc_chosen %}<input type="hidden" name="tz" value="utc">{% endif %}
       <div class="page-grid">
