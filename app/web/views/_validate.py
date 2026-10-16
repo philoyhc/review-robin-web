@@ -318,7 +318,9 @@ def parse_validate_severities(
     the URL carries none, the cookie. Neither means all three. A blank
     value (the form's hidden field) with no key beside it is every chip
     off; ``all``, the retired fourth chip's old bookmarks, is all three;
-    unknown keys drop out."""
+    unknown keys drop out. Values with no key and no blank (a mistyped
+    link, a mangled cookie) read as all three, so a typo never hides
+    every issue."""
     if values is None:
         if not remembered:
             return SEVERITY_KEYS
@@ -326,7 +328,10 @@ def parse_validate_severities(
             return ()
         values = remembered.split(",")
     picked = set(SEVERITY_KEYS) if "all" in values else set(values)
-    return tuple(key for key in SEVERITY_KEYS if key in picked)
+    severities = tuple(key for key in SEVERITY_KEYS if key in picked)
+    if not severities and "" not in values:
+        return SEVERITY_KEYS
+    return severities
 
 
 def validate_severity_cookie(severities: tuple[str, ...]) -> str:

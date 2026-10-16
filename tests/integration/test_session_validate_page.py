@@ -218,7 +218,7 @@ def test_validate_page_renders_per_issue_id_anchors(
 
 
 def _chip_strip(body: str) -> str:
-    return body.split("data-severity-chips>", 1)[1].split("</form>", 1)[0]
+    return body.split("data-severity-chips", 1)[1].split("</form>", 1)[0]
 
 
 def _chips_on(body: str) -> list[str]:
@@ -301,26 +301,55 @@ def test_a_retired_or_unknown_severity_reads_sensibly(
     assert resp.cookies.get("rrw-validate-severity") == "info"
 
 
-def test_a_session_with_no_issues_ignores_a_remembered_off(
-    client: TestClient, db: Session
-) -> None:
-    """With nothing to filter the strip does not render, so neither does
-    its empty line, whatever the cookie says."""
-    from app.web.views._validate import (
-        SEVERITY_KEYS,
-        ValidateContext,
-        parse_validate_severities,
-    )
+def test_the_parse_reads_blank_all_and_unknown_keys() -> None:
+    from app.web.views._validate import SEVERITY_KEYS, parse_validate_severities
 
     assert parse_validate_severities(None, None) == SEVERITY_KEYS
     assert parse_validate_severities(None, "none") == ()
     assert parse_validate_severities(None, "info,error") == ("error", "info")
     assert parse_validate_severities([""], "info") == ()
-    context = ValidateContext(
-        error_count=0, warning_count=0, info_count=0, setup_coverage=[],
-        severities=(), severity_chips=[], issue_groups=[], filtered_issue_count=0,
+    assert parse_validate_severities(["", "bogus"], None) == ()
+    # No key and no blank: a typo never hides every issue.
+    assert parse_validate_severities(["bogus"], None) == SEVERITY_KEYS
+    assert parse_validate_severities(None, "garbage") == SEVERITY_KEYS
+
+
+def test_a_mistyped_severity_link_shows_everything(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="chips-typo")
+    resp = client.get(
+        f"/operator/sessions/{review_session.id}/validate?severity=Errors"
     )
-    assert not context.filter_active
+    assert _chips_on(resp.text) == ["error", "warning", "info"]
+    assert "No issues shown." not in resp.text
+    assert resp.cookies.get("rrw-validate-severity") != "none"
+
+
+def test_a_quoted_multi_key_cookie_reads_back(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="chips-quoted")
+    url = f"/operator/sessions/{review_session.id}/validate"
+    client.get(f"{url}?severity=&severity=error&severity=info")
+    assert _chips_on(client.get(url).text) == ["error", "info"]
+
+
+def test_a_session_with_no_issues_ignores_a_remembered_off(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """With nothing to filter the strip does not render, so neither does
+    its empty line, whatever the cookie says."""
+    from app.services import validation
+
+    review_session = _make_session(client, db, code="chips-clean")
+    url = f"/operator/sessions/{review_session.id}/validate"
+    client.get(f"{url}?severity=")  # remembers every chip off
+    monkeypatch.setattr(validation, "validate_session_setup", lambda db, s: [])
+    body = client.get(url).text
+    assert "data-severity-chips" not in body
+    assert "No issues shown." not in body
+    assert "No issues match" not in body
 
 
 def test_validate_page_filter_errors_only(
@@ -478,6 +507,44 @@ def test_validate_activate_param_acknowledge_post_activates_session(
     assert response.status_code == 303
     db.refresh(review_session)
     assert review_session.status == "ready"
+
+
+def test_the_chip_form_keeps_the_activate_banner(
+    client: TestClient, db: Session
+) -> None:
+    """While the banner shows, the chip form carries ``activate`` and
+    ``return_to``, and a chip GET with them still renders the banner."""
+    review_session = _seed_validated_with_warnings(
+        client, db, code="banner-chips"
+    )
+    url = f"/operator/sessions/{review_session.id}/validate"
+    strip = _chip_strip(client.get(f"{url}?activate=1&return_to=assignments").text)
+    assert '<input type="hidden" name="activate" value="1">' in strip
+    assert '<input type="hidden" name="return_to" value="assignments">' in strip
+    assert 'name="activate"' not in _chip_strip(client.get(url).text)
+    body = client.get(
+        f"{url}?severity=&severity=error&activate=1&return_to=assignments"
+    ).text
+    assert "Acknowledge and activate" in body
+    assert _chips_on(body) == ["error"]
+
+
+def test_a_chip_change_survives_the_activate_redirect(
+    client: TestClient, db: Session
+) -> None:
+    """A banner that no longer applies redirects to the clean URL, which
+    keeps the chips the click asked for."""
+    review_session = _make_session(client, db, code="chips-redirect")
+    response = client.get(
+        f"/operator/sessions/{review_session.id}/validate"
+        "?severity=&severity=warning&activate=1",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == (
+        f"/operator/sessions/{review_session.id}/validate"
+        "?severity=&severity=warning"
+    )
 
 
 def test_validate_activate_param_on_draft_redirects_to_clean_url(

@@ -99,9 +99,10 @@
        status color, all three on by default, and a change submits at
        once. The blank `severity` keeps "every chip off" distinct from no
        `severity` at all, which takes the chips last asked for. #}
-    <div class="card severity-filter-card">
-      <form method="get" action="/operator/sessions/{{ session.id }}/validate"
-            class="severity-filter-row" data-severity-chips>
+    <div class="card severity-filter-card" id="severity-filter">
+      <form method="get" action="/operator/sessions/{{ session.id }}/validate#severity-filter"
+            class="severity-filter-row" data-severity-chips
+            role="group" aria-labelledby="severity-filter-label">
         <input type="hidden" name="severity" value="">
         {% if activate_banner %}
           <input type="hidden" name="activate" value="1">
@@ -109,7 +110,7 @@
             <input type="hidden" name="return_to" value="{{ activate_return_to }}">
           {% endif %}
         {% endif %}
-        <span>Show:</span>
+        <span id="severity-filter-label">Show:</span>
         {% for chip in validate.severity_chips %}
           <label class="pill tag-chip status-chip-{{ chip.key }}">
             <input type="checkbox" class="visually-hidden"

@@ -10,6 +10,8 @@ monitoring redirect).
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
@@ -201,11 +203,15 @@ def validate_session(
     # nothing to acknowledge, drop the param and 303 to the clean
     # URL — operator can activate (or not) from the Workflow card.
     activate_banner: dict[str, object] | None = None
+    # A chip change made from the banner keeps its chips through the
+    # redirect, so the page it lands on remembers them.
+    clean_url = f"/operator/sessions/{review_session.id}/validate"
+    if severity is not None:
+        clean_url += "?" + urlencode([("severity", value) for value in severity])
     if activate:
         if not lifecycle.is_validated(review_session):
             return RedirectResponse(
-                url=f"/operator/sessions/{review_session.id}/validate",
-                status_code=status.HTTP_303_SEE_OTHER,
+                url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
         if report.errors:
             activate_banner = {
@@ -219,8 +225,7 @@ def validate_session(
             }
         else:
             return RedirectResponse(
-                url=f"/operator/sessions/{review_session.id}/validate",
-                status_code=status.HTTP_303_SEE_OTHER,
+                url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
     # The severity chips: no ``severity`` in the URL (a nav link, a
     # bookmark, the Activate detour's redirect) takes the chips last

@@ -55,7 +55,8 @@ GET commits the same cache the same way.
   for (the `rrw-validate-severity` cookie), else all three;
   **present but blank** means none, which is why the chip form
   always sends one blank `severity`. `all` turns all three on;
-  unknown keys drop out. The setup-coverage grid always renders the
+  unknown keys drop out, and values holding no key and no blank read
+  as all three. The setup-coverage grid always renders the
   full picture; only the issue list below is filtered.
 - `?activate=1` — Activate-warns detour. The Workflow card's
   Activate button 303s here when warnings exist; the page
@@ -170,10 +171,12 @@ count in parentheses, whichever chips are on:
 
 The three are exhaustive, so all three on is every issue, and that
 is the default. Each chip is a checkbox in one GET form
-(`?severity=`, §1), and a change submits it at once; without
-script an *Apply* button does. The form carries `activate` and
-`return_to` while the Activate banner shows, so a chip change keeps
-it. The choice is remembered in the browser across sessions
+(`?severity=`, §1) labelled by *Show:* as a group, and a change
+submits it at once, landing back on the strip (`#severity-filter`);
+without script an *Apply* button does. The form carries `activate`
+and `return_to` while the Activate banner shows, so a chip change
+keeps it; if the banner no longer applies, the redirect to the clean
+URL keeps the `severity` values. The choice is remembered in the browser across sessions
 (`rrw-validate-severity`, `spec/settings_inventory.md`).
 
 ### 2.4 Issues card
