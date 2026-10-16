@@ -4965,6 +4965,25 @@
         margin-top: 12px;
         margin-bottom: 2px;
       }
+      /* The filter form: the gap above it the old inline style gave,
+         and the gap to the table below that the button row used to
+         carry before the buttons moved into the right column. */
+      body.ui-v2 .audit-filter-form {
+        margin: var(--space-4) 0 var(--space-6);
+      }
+      body.ui-v2 .audit-event-select { min-height: 140px; }
+      /* From / To side by side, each half the right column. */
+      body.ui-v2 .audit-filter-dates {
+        display: flex;
+        gap: var(--space-3);
+        margin-top: var(--space-3);
+      }
+      body.ui-v2 .audit-filter-dates > div { flex: 1; min-width: 0; }
+      /* Apply / Clear, right-aligned under the dates. */
+      body.ui-v2 .audit-filter-actions {
+        justify-content: flex-end;
+        margin-top: var(--space-4);
+      }
       /* Both heads read as the page's other field labels (``body.ui-v2
          label``): the span takes the size and weight a label would. */
       body.ui-v2 .audit-filter-head label,
