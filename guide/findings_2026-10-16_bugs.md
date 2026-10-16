@@ -60,7 +60,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   and `/validate` then answer 500 until a Band 1 re-save replaces it.
   `spec/csv_contracts.md:469` puts shape checks in phase 1. *Reproduced* by
   two reads. Code: `TypeAdapter(Rule)` per entry, raising `_ParseError`.
-- ~~**E1**~~ — **Done in #3085** by refusing the rule on Save. **The operand list is not filtered:** narrowing it to reviewer tags would drop a stored `reviewee.tagN IS THE SAME AS pair_context.tagM`, which the engine accepts, on the card's next Save. Ruled 2026-10-16: Link 2 takes reviewer and pair-context operands, as the card offers; the specs now say so. **The Band 1 card offers a rule the engine rejects.** With a
+- ~~**E1**~~ — **Done in #3085** by refusing the rule on Save. Ruled 2026-10-16: Link 2 takes reviewer and pair-context operands, as the card offers, and the specs say so. While the field is a pair-context tag the card's script hides the pair-context operands. The rendered list stays complete, because narrowing it would drop a stored `reviewee.tagN IS THE SAME AS pair_context.tagM` on the next Save. **The Band 1 card offers a rule the engine rejects.** With a
   pair-context tag as Link 2's field, the operand list still offers
   pair-context tags (`instruments_index.html:718-719`);
   `set_band1_assignment_rules` stores the rule unvalidated

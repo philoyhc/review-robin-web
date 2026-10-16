@@ -109,3 +109,71 @@ def test_a_hidden_operand_clears_when_the_field_turns_pair_context(
     _set_field(card, "pair_context.tag1")
 
     assert operand.evaluate("(select) => select.value") == ""
+
+
+def _store_refused_rule(live_server: LiveServer, session_id: int) -> None:
+    """A pair-context against pair-context Link 2 rule, stored as the card
+    could store it before Save refused one (findings E1)."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, SessionRuleSet
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(Instrument.session_id == session_id)
+            ).scalars().first()
+            rule_set = SessionRuleSet(
+                session_id=session_id,
+                name=f"Band1 {instrument.id}",
+                description="",
+                combinator="ALL_OF",
+                exclude_self_reviews=False,
+                seed=None,
+                rules_json=[
+                    {
+                        "id": "link2",
+                        "enabled": True,
+                        "kind": "COMPOSITE",
+                        "op": "AND",
+                        "rules": [
+                            {
+                                "id": "link2-r0",
+                                "enabled": True,
+                                "kind": "MATCH",
+                                "predicate": {
+                                    "field": "pair_context.tag1",
+                                    "operator": "same_as",
+                                    "operand": "pair_context.tag1",
+                                    "case_sensitive": False,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+            db.add(rule_set)
+            db.flush()
+            instrument.rule_set_id = rule_set.id
+            instrument.band1_touched_links = ["link1", "link2", "link3"]
+            db.commit()
+    finally:
+        engine.dispose()
+
+
+def test_a_stored_operand_keeps_its_option_on_load(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """On load the narrowing spares the stored selection, so the cell still
+    submits its operand and Save answers with the refusal banner rather than
+    a form whose rule arrays no longer line up."""
+    session_id = new_session()
+    _seed(api, live_server, session_id)
+    _store_refused_rule(live_server, session_id)
+    card = open_unlocked(page, session_id)
+    operand = card.locator('select[name="link2_operand_tag"]').first
+
+    assert operand.evaluate("(select) => select.value") == "pair_context.tag1"
+    assert _operands(card) == {"reviewer.tag1": True, "pair_context.tag1": True}
