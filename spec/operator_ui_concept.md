@@ -409,9 +409,11 @@ Takes `?return_to=` and renders a "← Back to {context}" affordance.
 **The Access card is where "how do I get in?" is answered**, not the Guide.
 It opens with how to reach the app and sign in — hosted, nothing to
 install, single sign-on with an institutional MS365 account, no separate
-password — and states that an address on the operator allowlist lands on the
-Sessions lobby. A reader of the Guide has already signed in; on `/about` the
-same facts answer the question a stranger is actually asking. What an *empty*
+password — and states that someone who runs reviews lands on the Sessions
+lobby. Participants read this page as well as operators, so its copy uses no
+operator vocabulary ("operator", "allowlist"). A reader of the Guide has
+already signed in; on `/about` the same facts answer the question a stranger
+is actually asking. What an *empty*
 lobby means belongs to the lobby's own first-run card, not here.
 
 ### `/guide` — Guide
@@ -419,7 +421,8 @@ lobby means belongs to the lobby's own first-run card, not here.
 The in-app documentation page. Sits **beside `/about`** in the same chrome link
 row and takes the same `?return_to=` treatment; the two are siblings and neither
 absorbs the other. `/about` is identity and access — what this software is, who
-to contact. `/guide` is how to run a session.
+to contact. `/guide` is how to run a session; a participant's subtitle instead
+says what to expect in the reviews they take part in (`participant_chrome`).
 
 Suppressed on its own path, exactly as `/about` is, so the row never offers a
 link to the page already being viewed. **Also suppressed for a viewer who

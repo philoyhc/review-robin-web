@@ -19,7 +19,7 @@
 
   <h1>Guide</h1>
   <p class="page-subtitle">
-    How to run a review session, and what each role sees.
+    {% if participant_chrome %}What to expect in the reviews you take part in.{% else %}How to run a review session, and what each role sees.{% endif %}
   </p>
 
   {% if "what_it_does" in visible_sections %}
@@ -1013,7 +1013,10 @@
       Your dashboard lists the reviews that apply to you. Click into one to see
       the reviewees assigned to you and the questions to answer.
       <strong>Save</strong> as you go and <strong>Submit</strong> when finished.
-      You can revisit until the session closes.
+      Until the deadline passes (or the review closes early), you can come back
+      and change your answers, or use <strong>Recall my submission</strong> to
+      edit a submitted review. You can still read your answers until the review
+      closes; after that, only if the people running it allow it.
     </p>
     <p>
       A * marks a field that is, or may become, required. Some fields open
@@ -1029,9 +1032,10 @@
     <h2>For observers</h2>
     <p>
       An observer views collated results for a session without reviewing
-      anyone. Once the operator releases responses, your collation page shows
-      the results in the form the operator allowed — raw, anonymised, or
-      summarised.
+      anyone. Your collation page shows the results whenever the people running
+      the review allow it: a summary can appear while the review is still open,
+      and once they release the results, these can be raw, anonymized or
+      summarized.
     </p>
   </div>
   {% endif %}
@@ -1040,10 +1044,10 @@
   <div class="card" id="guide-for_reviewees">
     <h2>For reviewees</h2>
     <p>
-      A reviewee is someone being reviewed. After the operator closes the
-      session and releases responses, your results appear on your own page, in
-      the form the operator allowed — raw, anonymised, or summarised. Until
-      then there is nothing to see.
+      A reviewee is someone being reviewed. Once the review has closed and the
+      people running it release responses, your results appear on your own
+      page, in the form they chose: raw, anonymized or summarized. Until then
+      there is nothing to see.
     </p>
   </div>
   {% endif %}
