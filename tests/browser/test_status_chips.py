@@ -58,6 +58,8 @@ def test_severity_chips_fill_by_state_in_both_themes(
     session_id = new_session()
     page.goto(f"/operator/sys-admin/sessions/{session_id}/audit-log")
     light = {v: _token(page, t) for v, t in _ON.items()}
+    for token in [*_ON.values(), *_OFF.values()]:
+        assert _token(page, token) != _TRANSPARENT, token
     _check_fills(page)
     page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
     dark = {v: _token(page, t) for v, t in _ON.items()}

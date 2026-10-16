@@ -722,7 +722,7 @@ that are:
 - the Sys Admin audit log's three Severity chips (`info`, `warning`, `error`), on/off chips in a status color around the `severity` boxes; none on is no severity filter (`spec/operator_button_audit.md` §20).
 
 `.tag-chip:has(> input:checked)` is the
-`.is-selected` fill (a status-colored chip's own on-fill instead, above), read off the box itself, so a form reset repaints
+`.is-selected` fill (a status-colored chip's own on-fill instead: the chip-types table below), read off the box itself, so a form reset repaints
 the chip with no script; the hidden box's keyboard focus shows as a
 `--focus-ring` outline on the chip. **`.tag-chip.is-locked`** is the
 chip of a locked card: it drops the edge
