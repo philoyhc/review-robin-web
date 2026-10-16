@@ -50,9 +50,13 @@ GET commits the same cache the same way.
 
 **Query params:**
 
-- `?severity=<error|warning|info>` — severity-chip filter. The
-  setup-coverage grid always renders the full picture; only the
-  issue list below is filtered.
+- `?severity=<error|warning|info>` (repeatable) — the severity
+  chips that are on (§2.3). **Absent** means the chips last asked
+  for (the `rrw-validate-severity` cookie), else all three;
+  **present but blank** means none, which is why the chip form
+  always sends one blank `severity`. `all` turns all three on;
+  unknown keys drop out. The setup-coverage grid always renders the
+  full picture; only the issue list below is filtered.
 - `?activate=1` — Activate-warns detour. The Workflow card's
   Activate button 303s here when warnings exist; the page
   renders an inline "Acknowledge and activate" banner instead
@@ -153,19 +157,24 @@ picture, then drills into Issues for diagnostics.
 
 ### 2.3 Severity filter chip strip
 
-Renders only when at least one issue exists. Four chips, each
-labelled with its count in parentheses:
+Renders only when at least one issue exists. After a *Show:*
+label, three on/off chips in their status color
+(`spec/ui_elements.md` §9), each labelled with its severity's whole
+count in parentheses, whichever chips are on:
 
-| Chip | URL state | Counts |
+| Chip | Key | Counts |
 |---|---|---|
-| All issues (N) | no `?severity=` param (default) | total |
-| Errors only (N) | `?severity=error` | error count |
-| Warnings only (N) | `?severity=warning` | warning count |
-| Info (N) | `?severity=info` | info count |
+| Errors (N) | `error` | error count |
+| Warnings (N) | `warning` | warning count |
+| Info (N) | `info` | info count |
 
-The active chip carries `aria-current="page"` + `.active`
-styling. Clicking a chip is a GET — server-side filter, no JS
-state.
+The three are exhaustive, so all three on is every issue, and that
+is the default. Each chip is a checkbox in one GET form
+(`?severity=`, §1), and a change submits it at once; without
+script an *Apply* button does. The form carries `activate` and
+`return_to` while the Activate banner shows, so a chip change keeps
+it. The choice is remembered in the browser across sessions
+(`rrw-validate-severity`, `spec/settings_inventory.md`).
 
 ### 2.4 Issues card
 
@@ -200,9 +209,10 @@ Each `<li>` carries `id="issue-{rule_key}-{loop.index}"` so
 inbound links from the Setup coverage card or external bookmarks
 can target a specific issue.
 
-When the severity filter is active and matches nothing, the
-Issues card renders an empty-state line: *"No issues match the
-current severity filter."*
+When a chip is off and the chips that are on match nothing, the
+Issues card renders an empty-state line: *"No issues shown. Turn a
+severity chip on to see them."* with every chip off, otherwise
+*"No issues match the severity chips that are on."*
 
 ---
 
@@ -389,24 +399,25 @@ hand-off is per request, never a cache.
 ### 5.2 View adapter — `build_validate_context(...)`
 
 Lives in `app/web/views/_validate.py`. Takes the issue list +
-the current `?severity=` filter + the session, returns a
+the severities whose chips are on + the session, returns a
 `ValidateContext` dataclass with:
 
 - `setup_coverage` — `list[SetupCoverageRow]` for the 4-col grid.
 - `severity_chips` — `list[SeverityChip]` with per-chip count
-  and `is_active`.
+  and `selected`.
 - `issue_groups` — `list[IssueSourceGroup]` of issues
   post-filter, grouped by `(gate, source)`: setup-gate groups
   first, then operations-gate, each in registry order (§2.4).
 - `filtered_issue_count` — total after the severity filter.
 - `error_count` / `warning_count` / `info_count` — pre-filter
   totals used by the chip strip.
-- `severity_filter` — the current `?severity=` value (or
-  `"all"`).
+- `severities` — the keys whose chips are on, in strip order;
+  `filter_active` is true when one is off and there are issues.
 
 The chip-strip card hides itself when all three counts are 0
-(no issues at all → no filter needed). The Issues card hides
-when filtered count is 0 AND no filter is active.
+(no issues at all → no filter needed), and then so does the
+empty-state line, whatever the cookie remembers. The Issues card
+hides when filtered count is 0 AND no filter is active.
 
 ### 5.3 Lifecycle integration
 

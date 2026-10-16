@@ -507,7 +507,7 @@ Source: `app/web/templates/operator/session_validate.html`.
 | 68 | Activate banner (warnings present) | Cancel | `<a>` | `btn secondary` | Secondary | Returns to validate page without `?activate=1` |
 | 69 | Activate banner (warnings present) | Acknowledge and activate | `<button type="submit">` | `btn alert` | Outline-amber | Posts `/activate` with `acknowledge_warnings=true` |
 | 70 | Activate banner (errors present) | Cancel | `<a>` | `btn secondary` | Secondary | Errors block activation; this just dismisses the banner |
-| 71 | Severity filter chip strip | All / Errors / Warnings / Info | `<a>` | `severity-chip` (with `.active` state) | Filter chip (custom — not in §6) | One per severity level; not part of the canonical button family |
+| 71 | Severity filter chip strip | Errors / Warnings / Info | `<label>` around a hidden checkbox | `pill pill-count tag-chip status-chip-{key}` | On/off chip with a status color (`spec/ui_elements.md` §9; not in §6) | One per severity, all on by default; a change submits the GET form. The `<noscript>` *Apply* is `btn secondary` |
 
 ---
 

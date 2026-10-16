@@ -283,3 +283,24 @@ with the last section it covers.
 - [ ] **Guide.** About → Guide, "Reading the controls": the new "On or
   off, in a status color" row has a Warning (on) and an Error (off) chip;
   both switch on a click.
+
+## Validate severity chips
+
+- [ ] **Three chips, all on.** Validate setup on a session with issues:
+  after *Show:*, `Errors (N)`, `Warnings (N)`, `Info (N)` in their solid
+  status colors (red, dark amber, blue), and no *All issues* chip. The
+  issue list holds every issue.
+- [ ] **A click filters at once.** Turn Warnings off: the page reloads
+  with no button press, Warnings goes to its pale amber tint, its count
+  stays, and the warnings leave the list. Turn every chip off: the list
+  reads *No issues shown. Turn a severity chip on to see them.*
+- [ ] **Remembered.** With Info off, go to Reviewers and back to
+  Validate (or open another session's Validate): Info is still off.
+- [ ] **Activate banner.** On a Prepared session with warnings, press
+  Activate to reach the acknowledgment banner, then toggle a chip: the
+  banner stays.
+- [ ] **Dark mode and keyboard.** In dark, on chips are bright with dark
+  text; Tab to a chip shows a focus ring, Space toggles it.
+- [ ] **Guide screencap.** About → Guide, the Validate figure still shows
+  the old four chips; retake `validate-page.png` and its dark twin when
+  convenient.

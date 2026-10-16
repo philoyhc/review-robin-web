@@ -114,16 +114,15 @@ class SetupCoverageRow:
 
 @dataclass(frozen=True)
 class SeverityChip:
-    """One row of the severity-filter chip strip on the Validate page.
+    """One on/off chip of the Validate page's severity strip
+    (`spec/validate_page.md` §2.3): a checkbox in its status color,
+    on when ``selected``. ``count`` is the severity's whole tally,
+    whichever chips are on."""
 
-    Rendered as an anchor link flipping ``?severity=`` to ``key``
-    (or absent for ``key="all"``). The active chip carries
-    ``aria-current="page"`` and a visual outline."""
-
-    key: str  # "all" | "error" | "warning" | "info"
-    label: str  # "All issues" | "Errors only" | "Warnings only" | "Info"
+    key: str  # "error" | "warning" | "info"
+    label: str  # "Errors" | "Warnings" | "Info"
     count: int
-    is_active: bool
+    selected: bool
 
 
 @dataclass(frozen=True)
@@ -152,16 +151,24 @@ class ValidateContext:
     warning_count: int
     info_count: int
     setup_coverage: list[SetupCoverageRow]
-    severity_filter: str
-    """``"all"`` (no filter) / ``"error"`` / ``"warning"`` / ``"info"``"""
+    severities: tuple[str, ...]
+    """The severities the chips have on, in ``SEVERITY_KEYS`` order."""
     severity_chips: list[SeverityChip]
-    """The four-chip strip above the issue list."""
+    """The three-chip strip above the issue list."""
     issue_groups: list[IssueSourceGroup]
     """Pre-grouped issues respecting the severity filter; the partial
     iterates these instead of computing its own per-source split."""
     filtered_issue_count: int
     """Total issues *after* the filter is applied. Drives the
     issue-list empty state when the filter narrows to zero rows."""
+
+    @property
+    def filter_active(self) -> bool:
+        """A chip is off and there are issues for it to hide. With none
+        at all the chips do not render, so neither does their empty
+        line, whatever the cookie remembers."""
+        total = self.error_count + self.warning_count + self.info_count
+        return total > 0 and len(self.severities) < len(SEVERITY_KEYS)
 
 
 def _setup_coverage_rows(
@@ -293,7 +300,39 @@ def _setup_coverage_rows(
     return rows
 
 
-_VALID_SEVERITY_FILTERS = ("all", "error", "warning", "info")
+#: The severity chips, in strip order; all three on is every issue.
+SEVERITY_KEYS = ("error", "warning", "info")
+_SEVERITY_LABELS = {"error": "Errors", "warning": "Warnings", "info": "Info"}
+
+#: The Validate severity chips, remembered between visits (author,
+#: 2026-10-16): the last ``severity`` the page was asked for, across
+#: sessions, so coming back from a Setup page finds the same chips on.
+VALIDATE_SEVERITY_COOKIE = "rrw-validate-severity"
+_NO_SEVERITIES = "none"
+
+
+def parse_validate_severities(
+    values: list[str] | None, remembered: str | None = None
+) -> tuple[str, ...]:
+    """The chips on, from the URL's repeatable ``severity`` or, when
+    the URL carries none, the cookie. Neither means all three. A blank
+    value (the form's hidden field) with no key beside it is every chip
+    off; ``all``, the retired fourth chip's old bookmarks, is all three;
+    unknown keys drop out."""
+    if values is None:
+        if not remembered:
+            return SEVERITY_KEYS
+        if remembered == _NO_SEVERITIES:
+            return ()
+        values = remembered.split(",")
+    picked = set(SEVERITY_KEYS) if "all" in values else set(values)
+    return tuple(key for key in SEVERITY_KEYS if key in picked)
+
+
+def validate_severity_cookie(severities: tuple[str, ...]) -> str:
+    """The cookie value for ``severities``: their keys, or ``none`` for
+    every chip off (an empty cookie value would read as absent)."""
+    return ",".join(severities) or _NO_SEVERITIES
 
 
 def _per_source_count_summary(group_issues: list[Any]) -> str:
@@ -320,19 +359,15 @@ def build_validate_context(
     review_session: ReviewSession,
     issues: list[Any],
     *,
-    severity_filter: str = "all",
+    severities: tuple[str, ...] = SEVERITY_KEYS,
 ) -> ValidateContext:
     """Builds the page's view-shape context. ``issues`` is the
     ``list[ValidationIssue]`` returned by
     ``validation.validate_session_setup``.
 
-    ``severity_filter`` (PR C) is one of ``"all"`` / ``"error"`` /
-    ``"warning"`` / ``"info"``; anything else falls through to
-    ``"all"``. The severity-counts row + chip totals always reflect
-    the unfiltered issue counts so the operator can see what they
-    *would* see at a different filter."""
-    if severity_filter not in _VALID_SEVERITY_FILTERS:
-        severity_filter = "all"
+    ``severities`` are the chips on (``parse_validate_severities``).
+    The chip totals always reflect the unfiltered issue counts so the
+    operator can see what they *would* see with another chip on."""
 
     error_count = sum(1 for i in issues if i.severity.value == "error")
     warning_count = sum(1 for i in issues if i.severity.value == "warning")
@@ -350,39 +385,17 @@ def build_validate_context(
         db, review_session, issue_counts_by_source
     )
 
+    counts = {"error": error_count, "warning": warning_count, "info": info_count}
     severity_chips = [
         SeverityChip(
-            key="all",
-            label="All issues",
-            count=len(issues),
-            is_active=severity_filter == "all",
-        ),
-        SeverityChip(
-            key="error",
-            label="Errors only",
-            count=error_count,
-            is_active=severity_filter == "error",
-        ),
-        SeverityChip(
-            key="warning",
-            label="Warnings only",
-            count=warning_count,
-            is_active=severity_filter == "warning",
-        ),
-        SeverityChip(
-            key="info",
-            label="Info",
-            count=info_count,
-            is_active=severity_filter == "info",
-        ),
+            key=key,
+            label=_SEVERITY_LABELS[key],
+            count=counts[key],
+            selected=key in severities,
+        )
+        for key in SEVERITY_KEYS
     ]
-
-    if severity_filter == "all":
-        filtered_issues = list(issues)
-    else:
-        filtered_issues = [
-            i for i in issues if i.severity.value == severity_filter
-        ]
+    filtered_issues = [i for i in issues if i.severity.value in severities]
 
     # Group by (gate, source) so the Validate page can render two
     # gate sections (Setup / Operations) with per-source headings
@@ -412,7 +425,7 @@ def build_validate_context(
         warning_count=warning_count,
         info_count=info_count,
         setup_coverage=setup_coverage,
-        severity_filter=severity_filter,
+        severities=severities,
         severity_chips=severity_chips,
         issue_groups=issue_groups,
         filtered_issue_count=len(filtered_issues),

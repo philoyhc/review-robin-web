@@ -720,6 +720,7 @@ that are:
   § *Observers page*);
 - Accounts' invite role chip, a cycle chip `Invite as operator` ↔ `Invite as sys-admin` around the `invite_as_sys_admin` box (`spec/operator_ui_concept.md` §6). Its label is rewritten by script on the box's `change` and on the form's `reset`.
 - the Sys Admin audit log's three Severity chips (`info`, `warning`, `error`), on/off chips in a status color around the `severity` boxes; none on is no severity filter (`spec/operator_button_audit.md` §20).
+- the Validate page's three severity chips (`Errors`, `Warnings`, `Info`), on/off chips in a status color around the `severity` boxes, all on by default (`spec/validate_page.md` §2.3).
 
 `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill (a status-colored chip's own on-fill instead: the chip-types table below), read off the box itself, so a form reset repaints
@@ -736,9 +737,6 @@ or lock glyph, an unticked field faded (a cycle chip names its state
 and is not faded; a link chip on "Not set" keeps its amber, a status),
 read off the card's
 `data-instrument-locked` so an in-page lock or unlock repaints them.
-
-`.severity-chip` on Validate is the shape this generalises: an outlined
-pill, with `.active` taking the shade on its border and text.
 
 `.is-selected` is unchanged — a solid `--selected-bg` fill, which is how
 a chip says its filter is on, and it reaches the reserved shade only on
@@ -759,7 +757,7 @@ new type adds a row there too:
 | Type | States | Fill | Standard |
 |---|---|---|---|
 | **On/off** | selected, not selected; the label doesn't change | solid when on, faint when off | the Setup pages' column chips |
-| **On/off with a status color** | selected, not selected, where each chip stands for a status; the label doesn't change | the status's pale tint when off, as the matching pill (`--status-*-bg` with `--status-*-fg`; info's text is `--text-body`, as `.pill-info`); solid when on: `--status-warning-solid-*` and `--status-error-solid-*`, info taking the blue chip's own `--selected-*` (`.tag-chip.status-chip-info` / `-warning` / `-error`) | the audit log's Severity filter |
+| **On/off with a status color** | selected, not selected, where each chip stands for a status; the label doesn't change | the status's pale tint when off, as the matching pill (`--status-*-bg` with `--status-*-fg`; info's text is `--text-body`, as `.pill-info`); solid when on: `--status-warning-solid-*` and `--status-error-solid-*`, info taking the blue chip's own `--selected-*` (`.tag-chip.status-chip-info` / `-warning` / `-error`) | the audit log's Severity filter; Validate's severity chips |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | solid when all, faint when none, amber (`pill-empty`) when some; a click on faint or amber turns all on | the Assignments page's "Include N self reviews" |
 | **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always solid (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation"; Accounts' "Invite as operator ↔ Invite as sys-admin"; the audit log's Settings zone ↔ "UTC", a link rather than a box |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, solid otherwise (on a locked Instruments card, the plain pill when set; amber stays) | the Instruments page's Band 1 link chips |
@@ -839,7 +837,7 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `.session-expander-*` + `.exp-*` | The lobby expander's field and button rows. `.exp-field-name` / `-code` / `-deadline` / `-tags` share the row 3 / 2 / 2 / 3, and the bulk expander's `.exp-field-bulk-tags` takes half of it flush right. `.exp-allow-delete` is the confirm, `.exp-purge-opts` (+ `.exp-purge-title`) the purge checkboxes, grayed to 0.5 opacity by `.is-disabled`, and `.exp-sep` the divider between them. `spec/sessions_overview.md` owns the contract. `.exp-confirm-label` is the compact delete confirm in a roster or Accounts expander: it sets `.confirm-label`'s top margin to 0, so the confirm sits on the count's line rather than hanging below it, and keeps `.confirm-label`'s top alignment, so a long confirm that wraps keeps its tick beside the first line. The override is scoped `.confirm-label.exp-confirm-label` because `.confirm-label` is declared later at the same specificity and would otherwise win. |
 | `.quick-setup-*` | The Quick Setup card's layout: `.quick-setup-top-grid` is two columns, one at 800px or narrower; `.quick-setup-slot`s are separated by a top rule; `.quick-setup-body.locked` grays the body to 0.55 opacity with a `not-allowed` cursor; `.quick-setup-card-footer` holds Submit outside that body, flush right. `spec/quick_setup_card_spec.md` owns the contract. |
 | `.card.setup-coverage` (+ `.setup-coverage-*`) | Validate's setup-coverage card: the H2 and its subtitle on one line, over a grid of four columns, two at 900px or narrower and one at 500px. |
-| `.card.severity-filter-card` + `.severity-filter-row` | Validate's severity filter: a tighter-padded card holding one wrapping row of `.severity-chip`s (§9). |
+| `.card.severity-filter-card` + `.severity-filter-row` | Validate's severity filter: a tighter-padded card holding one wrapping, vertically centered row of status-colored on/off chips (§9). |
 | `.btn-pair` (inline pair) | Two buttons side by side at their natural widths. **`.is-one-line`** keeps a row's buttons on one line however narrow its cell (`flex-wrap: nowrap`): Sessions Diagnostics' Manage / Outbox / Audit log. |
 | `.fill-col` (flex column whose last child grows) | |
 | `.subcard-row` (+ `.stepped`, `.subcard-arrow`) | Equal-width tile row inside a card. Detailed below. |

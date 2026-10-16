@@ -6,7 +6,8 @@
 {% if validate is defined %}
   {% set _groups = validate.issue_groups %}
   {% set _has_issues = validate.filtered_issue_count > 0 %}
-  {% set _filter_active = validate.severity_filter != "all" %}
+  {% set _filter_active = validate.filter_active %}
+  {% set _none_on = not validate.severities %}
 {% else %}
   {% set _groups = [] %}
   {% set _legacy_issues = issues if issues else [] %}
@@ -90,6 +91,10 @@
 {% elif _filter_active %}
   <div class="card">
     <h2>Issues</h2>
-    <p class="muted">No issues match the current severity filter.</p>
+    {% if _none_on %}
+      <p class="muted">No issues shown. Turn a severity chip on to see them.</p>
+    {% else %}
+      <p class="muted">No issues match the severity chips that are on.</p>
+    {% endif %}
   </div>
 {% endif %}

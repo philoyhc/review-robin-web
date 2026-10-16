@@ -263,9 +263,6 @@
         --focus-ring-strong: var(--blue-deep);
         --row-pending-marker: var(--amber);
         --row-pending-bg: var(--amber-pale);
-        --chip-active-border: var(--blue-strong);
-        --chip-active-fg: var(--blue-strong);
-        --chip-active-bg: var(--blue-wash);
         --chip-selected-bg: var(--blue-pale);
         /* The interior of a selection's action panel (19L.2). Was
            --row-selected-bg, the selected row's fill, until that fill
@@ -405,9 +402,6 @@
         --focus-ring-strong: var(--blue-soft);
         --row-pending-marker: var(--amber-deep-dk);
         --row-pending-bg: var(--amber-abyss);
-        --chip-active-border: var(--blue-glow);
-        --chip-active-fg: var(--blue-glow);
-        --chip-active-bg: var(--blue-abyss-soft);
         --chip-selected-bg: var(--blue-abyss);
         --selection-panel-bg: var(--blue-abyss);
         /* ===== end design tokens ===== */
@@ -2072,10 +2066,8 @@
       }
       body.ui-v2 .page-guidance-body > :first-child { margin-top: 0; }
       body.ui-v2 .page-guidance-body > :last-child { margin-bottom: 0; }
-      /* Severity-filter chip strip — anchor links flipping
-         ?severity= on the Validate page. The active chip carries
-         a thicker border + slight background tint so the operator
-         sees their current narrowing at a glance. */
+      /* Severity chip strip on the Validate page: a GET form of three
+         status-colored on/off chips (`.tag-chip.status-chip-*`, below). */
       body.ui-v2 .card.severity-filter-card {
         padding-top: var(--space-3);
         padding-bottom: var(--space-3);
@@ -2083,24 +2075,9 @@
       body.ui-v2 .severity-filter-row {
         margin: 0;
         display: flex;
+        align-items: center;
         gap: var(--space-2);
         flex-wrap: wrap;
-      }
-      body.ui-v2 .severity-chip {
-        padding: 4px 12px;
-        border: 1px solid var(--border-default);
-        border-radius: 999px;
-        text-decoration: none;
-        color: var(--text-body);
-        font-size: 0.92em;
-      }
-      body.ui-v2 .severity-chip:hover {
-        background: var(--surface-muted);
-      }
-      body.ui-v2 .severity-chip.active {
-        border-color: var(--chip-active-border);
-        color: var(--chip-active-fg);
-        background: var(--chip-active-bg);
       }
       body.ui-v2 .card.danger-zone {
         border-color: var(--card-warning-border);

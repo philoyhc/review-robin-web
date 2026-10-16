@@ -15,6 +15,7 @@ activate-warns detour from Home (PR D).
 
 from __future__ import annotations
 
+import re
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -216,28 +217,117 @@ def test_validate_page_renders_per_issue_id_anchors(
 # --------------------------------------------------------------------------- #
 
 
+def _chip_strip(body: str) -> str:
+    return body.split("data-severity-chips>", 1)[1].split("</form>", 1)[0]
+
+
+def _chips_on(body: str) -> list[str]:
+    """The keys of the severity chips rendered on."""
+    return re.findall(
+        r'name="severity" value="(\w+)"\s+autocomplete="off" checked>',
+        _chip_strip(body),
+    )
+
+
 def test_validate_page_renders_severity_chip_strip(
     client: TestClient, db: Session
 ) -> None:
+    """Three status-colored on/off chips with their unfiltered totals,
+    all on by default; the retired All issues chip is gone."""
     review_session = _make_session(client, db, code="chip-strip")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
-    ).text
-    # Four chips render with their unfiltered totals.
-    assert "All issues (" in body
-    assert "Errors only (" in body
-    assert "Warnings only (" in body
-    assert "Info (" in body
-    # Default no-filter state: All chip is active.
-    assert "severity-chip active" in body
-    assert 'aria-current="page"' in body
+    resp = client.get(f"/operator/sessions/{review_session.id}/validate")
+    strip = _chip_strip(resp.text)
+    for key, label in (("error", "Errors"), ("warning", "Warnings"), ("info", "Info")):
+        assert f'class="pill pill-count tag-chip status-chip-{key}"' in strip
+        assert f'name="severity" value="{key}"' in strip
+        assert f">{label} (" in strip
+    assert _chips_on(resp.text) == ["error", "warning", "info"]
+    assert "All issues" not in resp.text
+    assert '<input type="hidden" name="severity" value="">' in strip
+    # The default is remembered as the three keys.
+    assert resp.cookies.get("rrw-validate-severity") == '"error\\054warning\\054info"'
+
+
+def test_the_chips_last_asked_for_are_remembered(
+    client: TestClient, db: Session
+) -> None:
+    """An explicit choice is written to the cookie; a bare URL reads it
+    back, across sessions, and a URL choice outranks it."""
+    first = _make_session(client, db, code="chip-cookie-a")
+    resp = client.get(
+        f"/operator/sessions/{first.id}/validate?severity=&severity=warning"
+    )
+    assert resp.cookies.get("rrw-validate-severity") == "warning"
+    second = _make_session(client, db, code="chip-cookie-b")
+    body = client.get(f"/operator/sessions/{second.id}/validate").text
+    assert _chips_on(body) == ["warning"]
+    # A URL choice wins over the cookie, and is remembered in turn.
+    resp = client.get(
+        f"/operator/sessions/{second.id}/validate?severity=&severity=error"
+    )
+    assert _chips_on(resp.text) == ["error"]
+    assert "assignments.no_included_pairs" not in resp.text
+    assert resp.cookies.get("rrw-validate-severity") == "error"
+
+
+def test_every_chip_off_shows_no_issues_and_is_remembered(
+    client: TestClient, db: Session
+) -> None:
+    review_session = _make_session(client, db, code="chips-off")
+    url = f"/operator/sessions/{review_session.id}/validate"
+    resp = client.get(f"{url}?severity=")
+    assert resp.cookies.get("rrw-validate-severity") == "none"
+    assert "No issues shown. Turn a severity chip on to see them." in resp.text
+    assert 'id="issue-reviewers.empty-1"' not in resp.text
+    # The chips still count everything, so the operator sees what is hidden.
+    assert ">Errors (" in resp.text and ">Errors (0)" not in resp.text
+    body = client.get(url).text
+    assert _chips_on(body) == []
+    assert "No issues shown." in body
+
+
+def test_a_retired_or_unknown_severity_reads_sensibly(
+    client: TestClient, db: Session
+) -> None:
+    """``?severity=all``, the retired chip's old URL, turns all three on;
+    an unknown key drops out."""
+    review_session = _make_session(client, db, code="chips-legacy")
+    url = f"/operator/sessions/{review_session.id}/validate"
+    assert _chips_on(client.get(f"{url}?severity=all").text) == [
+        "error", "warning", "info"
+    ]
+    resp = client.get(f"{url}?severity=bogus&severity=info")
+    assert _chips_on(resp.text) == ["info"]
+    assert resp.cookies.get("rrw-validate-severity") == "info"
+
+
+def test_a_session_with_no_issues_ignores_a_remembered_off(
+    client: TestClient, db: Session
+) -> None:
+    """With nothing to filter the strip does not render, so neither does
+    its empty line, whatever the cookie says."""
+    from app.web.views._validate import (
+        SEVERITY_KEYS,
+        ValidateContext,
+        parse_validate_severities,
+    )
+
+    assert parse_validate_severities(None, None) == SEVERITY_KEYS
+    assert parse_validate_severities(None, "none") == ()
+    assert parse_validate_severities(None, "info,error") == ("error", "info")
+    assert parse_validate_severities([""], "info") == ()
+    context = ValidateContext(
+        error_count=0, warning_count=0, info_count=0, setup_coverage=[],
+        severities=(), severity_chips=[], issue_groups=[], filtered_issue_count=0,
+    )
+    assert not context.filter_active
 
 
 def test_validate_page_filter_errors_only(
     client: TestClient, db: Session
 ) -> None:
     """``?severity=error`` filters the issue list to errors and
-    flips the All chip's active styling onto Errors only."""
+    leaves only the Errors chip on."""
     review_session = _make_session(client, db, code="errors-only")
     body = client.get(
         f"/operator/sessions/{review_session.id}/validate?severity=error"
@@ -245,11 +335,7 @@ def test_validate_page_filter_errors_only(
     # Warnings like assignments.no_included_pairs should not appear
     # under errors-only filtering of the bare session.
     assert "assignments.no_included_pairs" not in body
-    # Errors chip carries the active styling now.
-    assert (
-        'href="/operator/sessions/' in body
-        and "/validate?severity=error" in body
-    )
+    assert _chips_on(body) == ["error"]
 
 
 def test_validate_page_filter_no_match_shows_empty_message(
@@ -262,7 +348,7 @@ def test_validate_page_filter_no_match_shows_empty_message(
         f"/operator/sessions/{review_session.id}/validate?severity=error"
     ).text
     # Seeded session has no errors → filter-empty message renders.
-    assert "No issues match the current severity filter." in body
+    assert "No issues match the severity chips that are on." in body
 
 
 def test_validate_page_per_source_group_count_summary(
