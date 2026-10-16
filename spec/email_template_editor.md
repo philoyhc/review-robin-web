@@ -223,8 +223,10 @@ never an error — so a typo in an override cannot fail a send.
 deadline, no help contact, a reviewer with no name — so it never mails
 `Contact .` or `by .`. An overridden body is rendered as written,
 except that `$help_contact` reads `the person running this review`
-when the session has none, and **an overridden invitation body that
-never names `$invite_url` gets an `Open this link: …` line appended**:
+when the session has none, and **an overridden invitation body whose
+rendered text doesn't contain the link gets an `Open this link: …` line
+appended** (an escaped `$$invite_url` renders as literal text, so it
+counts as no link):
 reminders reuse the link found in the latest invitation's body
 (`invitations.most_recent_invitation_url`), so an invitation without
 one made every later reminder a fresh invitation that rotated the
@@ -321,8 +323,9 @@ types are registered in `EVENT_SCHEMAS` (`spec/architecture.md`).
   body reads the help-contact fallback, dates in the session's zone
   with its label (own zone, creator fallback, UTC), default bodies
   carry the greeting, deadline and contact and drop empty lines, an
-  invitation override without `$invite_url` still carries the link
-  (and one with it is left alone), `$invite_url` drops from the
+  invitation override without `$invite_url`, or with only an escaped
+  `$$invite_url`, still carries the link (and one with it is left
+  alone), `$invite_url` drops from the
   responses-received body, and every branch of the `enabled` getter /
   setter.
 - `tests/integration/test_invitation_link_reuse.py` — an invitation

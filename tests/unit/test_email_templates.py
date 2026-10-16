@@ -437,6 +437,18 @@ def test_an_invitation_override_without_the_link_still_carries_it() -> None:
     assert body == "Please review soon.\n\nOpen this link: https://app/me/invite/abc\n"
 
 
+def test_an_escaped_invite_url_tag_still_gets_the_link() -> None:
+    """``$$invite_url`` renders the literal text ``$invite_url``, not the
+    link, so it still needs the appended line (Codex on #3071)."""
+    session = _session(overrides={"invitation_body": "Literal: $$invite_url"})
+    _, body = email_templates.render_invitation(
+        session, _reviewer(), invite_url="https://app/me/invite/abc"
+    )
+    assert body == (
+        "Literal: $invite_url\n\nOpen this link: https://app/me/invite/abc\n"
+    )
+
+
 def test_an_invitation_override_with_the_link_is_left_alone() -> None:
     for tag in ("$invite_url", "${invite_url}"):
         session = _session(overrides={"invitation_body": f"Go: {tag}"})

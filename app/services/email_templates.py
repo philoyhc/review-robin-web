@@ -88,7 +88,6 @@ DEFAULT_RESPONSES_RECEIVED_BODY = (
 # A default body drops the line instead (``_drop_empty_lines``).
 HELP_CONTACT_FALLBACK = "the person running this review"
 
-_INVITE_URL_TAG = re.compile(r"\$(?:invite_url\b|\{invite_url\})")
 _TAG = re.compile(r"\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})")
 
 
@@ -233,8 +232,9 @@ def render_invitation(
     # in the latest invitation's body (``most_recent_invitation_url``),
     # so an override without ``$invite_url`` made every later reminder
     # a fresh invitation that rotated the token (participant audit L5).
-    override = get_override(review_session, "invitation_body")
-    if override and override.strip() and not _INVITE_URL_TAG.search(override):
+    # Checked on the rendered body, so an escaped ``$$invite_url`` (which
+    # renders as the literal tag, not the link) still gets the line.
+    if invite_url and invite_url not in body:
         body = body.rstrip("\n") + f"\n\nOpen this link: {invite_url}\n"
     return subject, body
 
