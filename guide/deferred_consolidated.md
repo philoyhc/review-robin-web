@@ -476,11 +476,6 @@ auto-send-invites / reminders captions); two
   "archived"`. Skip with `reason="not_archived"`, audit
   `session.scheduled_purge_skipped`. Reuses 18C's
   `session_purge` service for the actual deletes.
-- **Ride-along: 18D Part 5.** The Settings-CSV round-trip of
-  the retention columns (`retention_exception` /
-  `retention_overrides`) — Segment 18D's Part 5 — was handed
-  to this part. Adds the `retention.*` rows to the Settings CSV
-  serialiser / importer as part of Part 5.
 
 **Why deferred.** Three pragmatic reasons:
 
@@ -511,8 +506,8 @@ a startup validation; Settings-page editor + JSON
 read/write helper for `retention_overrides`; one
 `retention.policy_run` event and one
 `session.scheduled_purge_skipped` event registered in
-`EVENT_SCHEMAS`. The 18D Part 5 Settings-CSV ride-along
-(added alongside).
+`EVENT_SCHEMAS`. (The 18D Part 5 Settings-CSV round-trip of the
+retention columns already shipped in 18N, #1560.)
 
 ---
 
@@ -658,59 +653,6 @@ the `newModelRefreshBand2` loop). D2 also touches
 `app/web/views/_instruments.py` to thread the
 session-level roster into the page context once instead of
 per-card. No schema change.
-
----
-
-#### ~~18J Rec E — Verify Band 1 no-op Save stays cache-warm~~ *(retired 2026-09-21)*
-
-> **Retired: everything it names is gone.** Wave 5 PR 5.1
-> retired the helper `evaluate_session_rule_eligibility` and
-> PR 5.2 dropped the `session_rule_sets` eligibility-cache
-> columns with the rest of the library tier; there is no
-> `app/services/session_library.py`. <!-- path-ref-ok --> The entry survived because
-> nothing re-reads a deferred register against the code —
-> found by 19R Item 2, whose own cache made its `Doc impact`
-> point here. Text kept below, struck, because its *reasoning*
-> is the live part: a cache with no hit/miss signal cannot be
-> confirmed after deploy, and 19R Item 2 answers that with a
-> benchmark rather than a counter.
->
-> Carved from `guide/archive/new_model_instruments_outstanding.md`
-> 2026-05-26. Tiny safety-net follow-on to Rec A — never
-> blocking, but worth doing once someone is in
-> `evaluate_session_rule_eligibility` for another reason.
-
-**Ships.**
-
-- Observability: a counter / log line in
-  `evaluate_session_rule_eligibility`
-  (`app/services/session_library.py`) distinguishing cache <!-- path-ref-ok -->
-  hit vs miss. Confirms post-deploy whether no-op Saves on a
-  per-instrument card actually hit the
-  `session_rule_sets.cached_eligibility_stamp` cache. If they
-  don't, the rules serialiser is drifting — fix the
-  comparison rather than the cache.
-- Drift check: a regression test that opens + closes the lock
-  with no field changes and asserts the stamp value is
-  unchanged. Cheap insurance against future edits to the
-  rule-serialise path silently invalidating every no-op Save.
-
-**Why deferred.** Doesn't fix a user-visible problem — Rec A
-already removed the engine cost from the Save redirect, so a
-stale-cache miss costs nothing today either. The check
-mainly protects against future regressions.
-
-**Lift trigger.** Someone is editing the rule-serialiser path
-for another reason and wants the regression test in place
-first, or a routine perf-audit benchmarks the no-op Save and
-finds the cache is missing.
-
-**Wire-up.** Touch `evaluate_session_rule_eligibility` for the
-log / counter; new test in
-`tests/integration/test_instrument_builder_routes.py` (or a
-new `test_band1_no_op_save_cache.py`) that opens the lock,
-posts an unmodified Band 1 form, and asserts
-`SessionRuleSet.cached_eligibility_stamp` is unchanged.
 
 ---
 
@@ -941,65 +883,6 @@ include pattern (matches existing `_quick_setup_card.html` /
 Band partials each consume ~15 outer variables — macro arg
 lists at that size are worse than `with`-context.
 
-#### Runtime interaction tests for the template-JS surfaces (Playwright smoke layer)
-
-> Flagged by the 2026-08-19 codebase assessment (§5, "the instrument card's
-> behaviour still lives in inline template JS"). Recurring weakness, not tied
-> to a single segment.
-
-**The gap.** The instrument card's behaviour — the lock/unlock state machine,
-the Band 1 rule editor, the `?editing=1` display↔edit swap (shared with the
-Session Home config card), live preview render, +Page break / reorder — is
-hand-written inline JS in `instruments_index.html` with **no build step** (a
-deliberate `CLAUDE.md` constraint, not a defect). The problem is the *test*
-gap, not the inline-ness: the suite asserts the JS **exists and parses**
-(`node --check` + string-presence), never that it **does the right thing**, so
-the interaction-regression class is only catchable by hand on the dev slot.
-Two such bugs already slipped structural tests — the 18R space-key
-card-collapse (#1914 → #1915) and the lost-column-width-on-save (#1920).
-
-**Ships.**
-
-- A thin **Playwright** smoke layer (`tests/e2e/` or similar) driving the <!-- path-ref-ok -->
-  highest-risk interaction paths in a real browser against `uvicorn` +
-  `ALLOW_FAKE_AUTH`: unlock → edit → save on the instrument card; the
-  `?editing=1` swap on Session Home; add/remove a Band 1 rule; +Page break;
-  the reviewer-surface Save / Prev / Next. **No new dependency and no build
-  step** — Chromium + Playwright are already provisioned in the agent env
-  (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`), driving the existing
-  server-rendered pages + inline JS.
-- A **separate, non-blocking CI track** (the repo already runs two — SQLite
-  `pytest` + `ci-postgres`); browser tests are slower/flakier and need the app
-  running, so they don't gate the fast suite.
-- *(Optional, secondary — not required for the above.)* Extract the card's
-  `<script>` bodies into a static `app/web/static/*.js` (still no build step;
-  it already reads inputs from `data-*` attributes) so the JS is lintable +
-  unit-testable in isolation with Node's built-in test runner. This is an
-  organisation win, not a correctness one — extracted-but-untested JS is no
-  safer — so it rides along only if the inline JS gets hard to navigate.
-
-**Why deferred.** Not blocking and not next: recommended-move #1 stays 14B
-email. The cost gap is real but bounded (two caught bugs over the window), and
-a browser-test track is its own maintenance surface (flake management, a third
-CI job) that shouldn't be stood up speculatively — scope it tight or it becomes
-the problem it was meant to catch. Catches *interaction logic*, not visual/CSS
-(dev-slot eyeballing still owns the pixels).
-
-**Lift trigger.** Any of: (a) a third interaction regression slips the
-structural-only tests; (b) someone is next doing substantial work in the
-instrument-card JS — land a couple of interaction tests alongside the change
-rather than as a standalone project; (c) a deliberate pre-pilot hardening pass
-once 14B email is in and the surface is stable.
-
-**Wire-up.** New `tests/e2e/` dir + a Playwright config pinned to the <!-- path-ref-ok -->
-provisioned Chromium (`executablePath: '/opt/pw-browsers/chromium'` if a
-project ever pins a different `@playwright/test`; do **not** run
-`playwright install`). A fixture that boots `uvicorn app.main:app` with
-`ALLOW_FAKE_AUTH=true` on a throwaway SQLite db, seeds one session, and drives
-it. A new `.github/workflows/` job (browser track), allowed-to-fail-soft or on
-a nightly cadence at first. Start with the instrument card (bitten twice),
-grow outward.
-
 ### Operator theming
 
 #### 19C — Token lifecycle: add / delete / rename a colour token
@@ -1192,11 +1075,6 @@ with the simplest acceptable infrastructure choices.
   For staging/production, switch the App Setting to a Key Vault
   reference and assign the App Service a managed identity with
   `Get` permissions on the relevant secrets.
-- **VNet integration / private endpoints for Azure Postgres.**
-  Segment 5 used public access with firewall rules. For
-  staging/production, put the database behind a private
-  endpoint, integrate the App Service into the VNet, and remove
-  "Allow Azure services" plus the developer-IP firewall rules.
 - **Migration-on-deploy safety controls.** Segment 5A's
   migrate-on-deploy step fails the workflow if migration fails,
   but does not gate destructive migrations. Add: a
@@ -1211,22 +1089,12 @@ with the simplest acceptable infrastructure choices.
   provisioning the resource and wiring its connection string is
   the remaining portal step.
 
----
-
-- **Email dispatch — Segment 14B Part A onward.** Deliberately
-  gated on institutional Azure provisioning (decision 2026-09-05;
-  full rationale in `guide/segment_14B_email_infrastructure.md`
-  "Why this segment is stalled"). The dispatch leg needs a sending
-  identity the institution will accept (Options B–D in
-  `spec/email_infra_options.md`); building Option A against personal
-  Azure would be built twice. **Operationally optional meanwhile:**
-  since the participant model, access is roster + sign-in, so an
-  operator's own generic email pointing at the app URL covers
-  invitations (the in-app Guide's "Give reviewers access"). **The real gap is
-  reminders** — targeting exactly the reviewers who have not
-  submitted — chased by hand from the Responses page until then.
-  **Lift trigger:** the institutional host exists with a sending
-  identity; Part A is the first slice, reminders the payoff.
+The NUS environment (2026-10-01, `docs/nus_azure_status.md`) put the
+database and App Service behind private endpoints and provisioned
+Key Vault and Application Insights; wiring the Key Vault references and
+the Insights connection string is tracked in `docs/deployment_nus.md`'s
+checklist (2026-10-16). Email dispatch is queued as Segment 14B
+(`guide/todo_master.md`).
 
 ### 2. Postgres platform migrations (destructive, Postgres-only)
 
@@ -1240,11 +1108,6 @@ and need their own careful pass.
   the other JSON columns should move to `JSONB` for indexing
   and operator-friendly queries. Postgres-only migration; tests
   continue on SQLite using `JSON`.
-- **Migrate string-UUID columns to native `UUID`.** Where
-  Segment 4 used `String(36)` for UUID-shaped columns, swap to
-  Postgres `UUID` for storage efficiency and constraint
-  correctness; add explicit casting in application code if
-  needed.
 - **Consider DB-level enums.** Where Segment 4 used `String` +
   Python enum validation (e.g. `AuditEvent.event_type` /
   `severity`), decide per column whether a Postgres `ENUM` type
@@ -1255,20 +1118,10 @@ and need their own careful pass.
   `JSONB` migration above. (14A's index review, by contrast,
   adds only cross-dialect B-tree indexes.)
 
-The Postgres-against-Docker CI job — also a Segment 4A
-deferral — has since **shipped**: the `ci-postgres` workflow
-runs the full `pytest` suite against `postgres:16`, so dialect
-drift is caught in CI.
-
 ---
 
 ### 3. Other inherited debt (deferred, not strictly infra)
 
-- **CSS extraction + design pass.** `base.html` carries inline
-  `<style>` blocks; extract to static assets, decide on a
-  design language, and migrate `me_debug.html` to extend
-  `base.html`. Per `CLAUDE.md`, CSS extraction is a
-  Segment-14-era concern. Cosmetic — no functional dependency.
 - **First-time-user creation auditing.** First sign-in creates
   a `User` row without writing an audit event. Decide whether
   first-sign-in deserves its own audit event, or whether the
@@ -1522,6 +1375,13 @@ carried through the action panel, which fills with
 surface-neutral names, and document a general contract in
 `spec/ui_elements.md` §10 rather than the lobby-local entry it has today.
 
+**Half done, 2026-10-16.** The general contract is written
+(`spec/ui_elements.md` §10, "Two meanings"), and the trigger's "first
+caller outside the lobby family" arrived with 19P.1; the classes now
+mark selection on the four roster pages, Assignments and Accounts. The
+rename is what remains, and the lobby-local names are now in eight
+templates.
+
 **Raised by the author, 2026-09-12**, after 19L.3: *"the promotion
 question is worth reconsidering, especially if, in the future, session
 lobby, archive page, and the roster pages all make use of the same
@@ -1602,6 +1462,12 @@ from the code and calling it a spec — the shape `spec/` exists not to be.
 The trigger is unchanged: the next change to purge behaviour writes the
 section.
 
+**Trigger fired, 2026-10-16.** 19U rung 6 changed purge behaviour (it
+now decides under the session lock and commits as one unit), and
+`spec/extract_data.md` names the three modes, their order and their
+audit events. Still unwritten: what each mode deletes and what it keeps.
+Lift it with the next purge change, or now as a spec-only slice.
+
 ### Three carried out of 19Q Item 2
 
 The item's cumulative cold read found all three cited as "recorded
@@ -1641,89 +1507,24 @@ unifying it reaches into the monitoring layer and past the rung.
 than claiming the surfaces cannot drift. Two copies of a query agree by
 luck; the trigger is the next change to either.
 
-### Tags, Owners and a typeahead on the Create page (19R Item 9, moved here unbuilt)
+### Create's buttons at the foot of the right column (19R Item 9's change 2)
 
-> **Nearly all of this is now scheduled, 2026-09-22.** **19S Item 6
-> built the Tags half** — a Tags card on `session_new.html` writing
-> through `set_tags`, ordered after the settings CSV so a typed tag
-> beats a bundle's `session_tags[]` rows. It went in the **right**
-> column below User interface settings, not the left column below
-> Description as change 1 below proposes. The **typeahead** is 19S
-> Item 7, open on the fork this entry's own analysis found. And
-> **Owners on Create and tags on Session Home are 19S Item 9**, on
-> the author's instruction, taking with them the two blockers below
-> that this entry preserved: that Owners cannot reuse its own routes,
-> and that the config card's `config_editing` gate would make tags
-> editable in 2 of 5 lifecycle states where the lobby edits them in
-> any. **Item 9 built both, 2026-09-23**: Owners are staged on Create
-> and applied after `create_session` (the contract below, as
-> predicted), and Session Home's Tags follow the card's gate — the
-> author's ruling, so the two surfaces disagree on purpose
-> (`spec/sessions_overview.md`).
->
-> **What is left here is change 2 alone** — moving Cancel / Create
-> session to the foot of the right column. It rides whatever next
-> opens the page; Item 9 scopes it out. The rest of this entry stays
-> as the reasoning those three items start from.
+What is left of 19R Item 9, moved here unbuilt on 2026-09-21. Its Tags
+card, tag typeahead and staged Owners all shipped in 19S Items 6, 7 and
+9; Session Home's Tags became a field of the details card in 19U
+(`guide/archive/segment_19S_post_assessment.md`,
+`guide/archive/segment_19U_post_assessment_7oct.md`). Trimmed to the
+remainder on 2026-10-16.
 
-Opened as 19R Item 9 on 2026-09-21, designed against a mock-up over
-four rounds, then moved here the same day: *"it's not absolutely
-essential."* Nothing was built. Recorded at design-settled state so a
-later pick-up starts from the answer rather than the question.
-
-**The gap.** Every tag write surface is on the lobby — the bulk-tags
-toolbar action and the single-session expander's Save
-(`POST /sessions/{id}/lobby-edit`). `session_new.html` carries **0**
-tag mentions, so a session is born untagged and the operator goes back
-to the lobby to classify it. Session Home's config card is the same:
-**0** mentions, on a card that edits every other session-level
-attribute. Owners is lobby-adjacent in the same way — the card exists
-on Session Home and nowhere on Create.
-
-**Nothing is missing underneath.** `app/services/session_tags.py` is
-complete (`set_tags` is the whole write path), `session.tag_added` /
-`session.tag_removed` are already emitted, and **tags already reach a
-new session through the settings CSV** — the Create form takes
-`settings_file` and `_apply_session_tags` applies `session_tags[N].tag`
-(18P PR D2). The gap is UI over a path that works end to end.
-
-**The settled design**, current page plus three changes, nothing else
-moving:
-
-1. **Tags**, half width, left column below Description — the slot the
-   buttons vacate.
-2. **Cancel** then **Create session** to the foot of the right column,
-   under *Release responses until*, flush right.
-3. **Owners**, half width, below the User interface settings card in
-   the bottom row's right column.
-
-**The finding worth keeping: Owners cannot reuse its own routes.**
-`POST /sessions/{id}/owners/add` and `.../remove` need a session id and
-there is none on this page. Rows must be staged in the form and applied
-after `sessions.create_session` — the same ordering a form tag needs
-against a settings-CSV tag, and a contract the build states rather than
-discovers. That makes Owners a different size of work from Tags: Tags
-is one input and one `set_tags` call; Owners is a staged mini-editor.
-Split them if this is ever taken up.
-
-**Carried with it, unplanned:** typeahead on the tag boxes, the lobby's
-existing one included. The lobby computes `vocabulary(db, session_ids)`
-over the sessions on screen; Create has none, so a suggestion list
-needs the operator's own sessions — a new query shape, not a new
-service.
-
-**Session Home's config card was scoped out before the move** and stays
-out, with its blocker recorded: a box there sits inside the card, whose
-`config_editing` is `is_draft or is_validated`
-(`app/web/routes_operator/_session_home.py`), so it would be editable
-in 2 of 5 lifecycle states where the lobby edits tags in **any** state.
-Either the box escapes the card's gate or the two surfaces disagree.
-That is a design call, and it is the reason Create came first.
+**Ships.** **Cancel** then **Create session** at the foot of
+`session_new.html`'s right column, under *Release responses until*,
+flush right, rather than at the foot of the whole form below the
+timeline.
 
 **Lift trigger:** an operator asking for it, or the next change that
-already opens `session_new.html` — the page also owes a `.btn` role
-audit on 8 inline-styled buttons (`grep -c 'style="[^"]*"'`), which
-would ride along.
+already opens `session_new.html`. The page also owes a `.btn` role
+audit of its inline-styled buttons (10 `style=` attributes on
+2026-10-16), which would ride along.
 
 ### The lobby's filter box matches tags the chip strip already filters (author, 2026-09-23)
 
