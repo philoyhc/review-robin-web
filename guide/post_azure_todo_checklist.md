@@ -127,7 +127,7 @@ recorded nowhere the person executing that plan would look.
 ## 3. ~~Verify the navigation busy indicator in a browser~~ — settled, removed 2026-10-16
 
 Seen on the dev slot when 19J closed (2026-09-11; `guide/archive/segment_19J_assessment_moves.md`
-19J.4, 19J.7, 19J.8). The chip-edge row is partly pinned by `tests/browser/test_chip_edge_rendered.py` (the lobby's chips and the Guide's samples), which also found the edge broken until 2026-10-10 despite the recorded pass.
+19J.4, 19J.7, 19J.8). The chip-edge row is partly pinned by `tests/browser/test_chip_edge_rendered.py` (the lobby's chips and the Guide's samples), which fails without the 2026-10-10 edge fix: the recorded pass had not caught it.
 The one row with no recorded pass, the session-nav hover, moved to
 `guide/things_to_check_in_browser.md`, since a local browser settles it.
 
