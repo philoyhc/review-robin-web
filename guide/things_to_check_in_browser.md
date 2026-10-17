@@ -449,3 +449,17 @@ groups by a pair tag:
 - [ ] **Observers are gone.** On a session with observers, Purge and
   archive with `Rosters` ticked, then Unarchive: the Observers page has
   no rows.
+
+## A timezone change keeps the instants (L8)
+
+- [ ] **Create converts every box.** On New Session fill Start, End and
+  both Release responses boxes, then change Timezone: every box shows
+  the same moment in the new zone. Create, and Session Home shows those
+  moments.
+- [ ] **Session Home converts too.** Unlock the details card on a
+  session with all four dates set, change Timezone and Save without
+  touching the dates: the instants are unchanged (the lobby and the
+  audit log's UTC view agree).
+- [ ] **An edit after the change reads in the new zone.** Change
+  Timezone, then type a new End and Save: End is that wall-clock time
+  in the new zone.
