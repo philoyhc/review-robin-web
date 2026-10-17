@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 3 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+**Open:** 2 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
 R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
-R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1, R7, L5, P2, L4 and R6 done).
+R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1, R7, L5, P2, L4, R6 and P5 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -201,7 +201,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**P4**~~ — **Done in #3106**: ids typed as text go through `app.services.text.parse_id`, ASCII digits only (`tests/integration/test_bad_input_refused.py`). Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
   (`_setup_observers.py:722`, `_band2.py:213`, `:396`);
   `app/web/return_to.py` already documents the trap. Code.
-- **P5** — **Ruled 2026-10-17**: honor the stated priority and match the Entra object id first: a row holding the principal id wins and takes the new email when no other row has it, so a pre-seeded invite for the new email cannot strand the original account (Codex on #3112); otherwise the email matches as today and records the principal id on the row. When the new email already belongs to a pre-seeded invite row, the principal row absorbs it: its flags are OR'd in, its session ownerships move, and it is deleted, in one audited step; a row with its own principal id or activity is never merged (Codex on #3112). Tried in #3108 without the fallback, it would have moved such users to a fresh row (Codex). `app/auth/identity.py` `_claim` returns the first claim in token
+- ~~**P5**~~ — **Done in #3117** (ruled 2026-10-17): `_claim` honors the stated priority, and `users.find_signed_in_user` matches the Entra object id first. That row takes a changed email when nobody holds it, or absorbs a never-used invite row holding it (flags OR'd, memberships moved, one `workspace.user_absorbed` event). Otherwise it matches by email and records the object id, audited as `workspace.user_principal_recorded`. Legacy duplicate rows resolve to the one holding the email, else the newest (`docs/security_posture.md` §5.5a; `tests/integration/test_principal_id_fallback.py`). `app/auth/identity.py` `_claim` returns the first claim in token
   order, not the stated priority, so `preferred_username` can win over
   `emailaddress` (`:45-56`, `:76-81`). Fails closed. Code.
 - ~~**E4**~~ — **Done in #3086**: a rule or boundary stored with a tag the card no longer offers keeps its option (`data-new-model-stored-only`), so a Save keeps it, and `+` adds a cell without it (`spec/instruments.md`, Band 1; `tests/integration/test_band1_filled_empty.py`). **A Band 1 rule on a tag column now empty has no `<option>`, so the

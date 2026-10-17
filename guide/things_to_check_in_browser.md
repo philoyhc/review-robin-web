@@ -514,3 +514,20 @@ groups by a pair tag:
 - [ ] **Versions count changes (R6).** In `responses.csv`, `Version`
   goes up and `SavedAt` moves only after a reviewer saves a changed
   answer; a re-save of the same value leaves both.
+
+## Sign-in keeps its row when the email changes (P5)
+
+These need real Easy Auth claims, so they are checks for an Azure
+deployment, not a local run.
+
+- [ ] **A changed email keeps the account.** Sign in as an operator, have
+  the tenant change that account's primary email, and sign in again:
+  the same sessions, flags and SMTP settings are there, and the
+  sys-admin audit log shows `workspace.user_email_changed`.
+- [ ] **An invite for the new address folds in.** Before that sign-in,
+  invite the new address as an operator on Accounts Management: after
+  it, there is one account, an operator, and the log shows
+  `workspace.user_absorbed`.
+- [ ] **An invited user's first sign-in binds them.** Invite a new
+  address, then sign in as it: the log shows
+  `workspace.user_principal_recorded`.
