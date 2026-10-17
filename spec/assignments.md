@@ -627,21 +627,23 @@ the fan-out. Readers that ignore `include` (e.g. the observer collation
 pool, the responses extract, the session response counts) see the
 copy, as they always saw the row.
 
-**A group whose members change is cleared.** A group instrument's
-subject is the group, so a group whose members changed is a different
-subject, and its reviewer answers it again (author's ruling 2026-10-17,
-findings E2). Every change that can redraw a group
-snapshots the groups first, and after it every group whose rows are not
-exactly one group's rows before has all its answers deleted
-(`responses.clear_changed_groups`). A member moving clears the group it
-left and the group it joined; a new member clears the group it joins; a
-removed one clears the group it leaves. No answer is copied onto a row.
-The changes are:
+**A group that gains a member is cleared.** A group instrument's
+subject is the group, so a group with someone new in it is a different
+subject, and its reviewer answers it again; a group that only lost
+members still describes everyone in it, and keeps its answer (author's
+rulings 2026-10-17, findings E2). Every change that can redraw a group
+snapshots the groups first, and after it a group keeps its answer only
+when every member came from one group before — the same group, or a
+subset of it (`responses.keeps_answer`). Every other group has all its
+answers deleted (`responses.clear_changed_groups`). So a member moving
+clears the group it joins and leaves the one it left; a new member
+clears the group it joins; a removed one clears nothing; and a split
+keeps both halves. No answer is copied onto a row. The changes are:
 
 - the Instrument card's boundary tags or unit of review
-  (`set_unit_of_review`; `set_group_boundary` does the same): a split,
-  a merge, Individual to Grouped and Grouped to Individual, wherever a
-  group's rows differ;
+  (`set_unit_of_review`; `set_group_boundary` does the same): a merge,
+  and Individual to Grouped, clear; a split, a finer boundary, and
+  Grouped to Individual keep every answer;
 - a reviewee boundary-tag edit;
 - a relationship's pair-context tag edit or re-point;
 - a relationship created, imported, deleted, or switched active /
@@ -651,11 +653,12 @@ The changes are:
 - Generate (and Prepare, which runs it) adding a row for a member new
   to a group, or dropping one the rules no longer produce.
 
-A group that comes through with the same rows keeps its answer, so
-re-importing an unchanged relationships file, re-pointing a relationship
-that has no tags, or retagging every member of a group alike deletes
-nothing. Group identity is its rows, not its tag value: a one-member
-group whose tag changes is still that member. The triggering audit
+So re-importing an unchanged relationships file, re-pointing a
+relationship that has no tags, or retagging every member of a group
+alike deletes nothing. Group identity is its rows, not its tag value: a
+one-member group whose tag changes is still that member. A group that
+loses one member and gains another in the same change gained someone,
+and is cleared. The triggering audit
 event's `context` counts the deletions as `defuncted_group_responses`;
 `assignments.generated` counts them as `group_responses_cleared`. The
 roster delete and Generate ask for the response-loss acknowledgement as
@@ -1173,7 +1176,7 @@ instrument `_materialise_one_instrument`
      the counts first, so the operator acknowledges the loss
      before it happens (`spec/workflow_card.md`); the dry-run
      (`reconcile_impact`) also counts the answers the run would
-     clear on kept rows of groups it redraws. The `Response`
+     clear on kept rows of groups that gain a member. The `Response`
      rows go before the `Assignment` rows, and the order is
      load-bearing: these are bulk Core deletes, which bypass the
      ORM cascade, so the other order leaves the responses behind

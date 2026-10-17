@@ -1607,16 +1607,16 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     assert _rating(by_reviewee["Eve"]) == "5"
 
 
-def test_group_boundary_tag_change_clears_the_group_it_left(
+def test_group_boundary_tag_change_keeps_the_group_it_left(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Editing a reviewee's group-boundary tag changes the group they
-    left, so every answer in it is deleted, the members who stayed
-    included (author's ruling 2026-10-17: the group is the subject;
-    before it, Segment 13C PR 5 deleted only the mover's copies)."""
+    """Editing a reviewee's group-boundary tag moves them out of their
+    group, which only shrinks: the members who stay keep the answer.
+    The group they join gains a member and is cleared (author's rulings
+    2026-10-17: the group is the subject)."""
     from app.db.models import User
     from app.services import reviewees as reviewees_service
 
@@ -1721,10 +1721,10 @@ def test_group_boundary_tag_change_clears_the_group_it_left(
         db, reviewee=carol, tag_1="Team B", user=operator_user
     )
 
-    # Team A lost Carol, so it is a different subject: Eve's copy goes
-    # with Carol's.
+    # Team A only lost Carol, so Eve keeps the answer; Team B gained
+    # Carol, so it is cleared and she holds nothing.
     assert _rating(by_reviewee["Carol"]) is None
-    assert _rating(by_reviewee["Eve"]) is None
+    assert _rating(by_reviewee["Eve"]) == "5"
 
 
 def test_tag_change_into_answered_group_clears_it(
@@ -1855,11 +1855,9 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     db: Session,
 ) -> None:
     """Editing a relationship's grouping pair-context tag moves the
-    pair out of its group, which changes that group: every answer in it
-    is deleted, the pair's and the member who stayed alike (author's
-    ruling 2026-10-17; before it, Segment 13C PR 5 deleted the pair's
-    only). Renaming the tag of a group whose members all keep it moves
-    nobody, so that group keeps its answer."""
+    pair into another group, which gains a member: every answer in it
+    is deleted, the newcomer's included. The group it left only shrank
+    and keeps its answer (author's rulings 2026-10-17)."""
     import datetime as _dt
 
     from app.db.models import (
@@ -1932,8 +1930,24 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
             status="active",
         )
     )
+    fay = Reviewee(
+        session_id=review_session.id,
+        name="Fay",
+        email_or_identifier="fay@example.edu",
+    )
+    db.add(fay)
+    db.flush()
+    db.add(
+        Relationship(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=fay.id,
+            tag_1="Cohort B",
+            status="active",
+        )
+    )
     rows = {}
-    for name, reviewee in (("Carol", carol), ("Dan", dan)):
+    for name, reviewee in (("Carol", carol), ("Dan", dan), ("Fay", fay)):
         rows[name] = Assignment(
             session_id=review_session.id,
             reviewer_id=reviewer.id,
@@ -1968,12 +1982,13 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
 
     assert _response_count("Carol") == _response_count("Dan") == 1
 
-    # Carol's relationship moves to Cohort B: Cohort A loses her, so
-    # Dan's copy goes too.
+    # Carol's relationship moves to Cohort B: it gains her and is
+    # cleared, Fay's answer with it; Cohort A only loses her.
     relationships_service.update_relationship(
         db, relationship=relationship, tag_1="Cohort B", user=user
     )
-    assert _response_count("Carol") == _response_count("Dan") == 0
+    assert _response_count("Carol") == _response_count("Fay") == 0
+    assert _response_count("Dan") == 1
 
 
 def test_relationship_repoint_defuncts_both_old_and_new_pair(
@@ -1981,11 +1996,12 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
 ) -> None:
     """Re-pointing a relationship to a different pair — even with no
     tag value change — moves its pair-context tags off the old pair
-    and onto the new one, so both pairs change group: Cohort A swaps
-    Carol for Dave and the untagged group swaps Dave for Carol, and
-    every answer in both is deleted (author's ruling 2026-10-17). An
-    unrelated reviewer's pair on the same group instrument is untouched
-    (Segment 18H — re-point handling)."""
+    and onto the new one: Cohort A swaps Carol for Dave, so it gained a
+    member and is cleared, Fay's answer included; Carol leaves alone
+    for the untagged group, a part of Cohort A, and keeps her answer
+    (author's rulings 2026-10-17). An unrelated reviewer's pair on the
+    same group instrument is untouched (Segment 18H — re-point
+    handling)."""
     import datetime as _dt
 
     from app.db.models import (
@@ -2124,9 +2140,9 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
         db, relationship=relationship, reviewee_id=dave.id, user=user
     )
 
-    # Both the old pair and the new pair are defuncted, and with them
-    # the member of Cohort A who stayed.
-    assert not _has_response(a_old)
+    # Cohort A gained Dave: his and Fay's answers go. Carol left it
+    # alone and keeps hers.
+    assert _has_response(a_old)
     assert not _has_response(a_new)
     assert not _has_response(a_stays)
     # The unrelated pair on the same group instrument survives.

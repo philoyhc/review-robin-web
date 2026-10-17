@@ -356,10 +356,10 @@ def update_reviewee(
         correlation_id=correlation_id,
     )
 
-    # A boundary-tag change moves this reviewee between groups, which
-    # changes the group it left and the group it joined: both are
-    # cleared (``responses.clear_changed_groups``). Snapshotted before
-    # the edit; a group the move didn't touch keeps its answer.
+    # A boundary-tag change moves this reviewee between groups: the
+    # group it joins gained a member and is cleared, the one it left
+    # only shrank and keeps its answer (``responses.keeps_answer``).
+    # Snapshotted before the edit.
     from app.services import responses as responses_service
 
     groups_before = (

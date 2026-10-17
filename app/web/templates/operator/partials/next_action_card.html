@@ -47,7 +47,7 @@
      ``group_responses_cleared`` / ``deleted_pairs`` keys), the card
      renders the saved-response confirmation banner: re-preparing
      would delete that many responses, on pairs the current setup no
-     longer produces and in groups whose members it changes.
+     longer produces and in groups it adds members to.
    - ``super_failure`` (dict | None) with ``button`` /
      ``step`` / ``error`` slots — surfaces the workflow-button
      failure banner in the right column.
@@ -81,7 +81,7 @@
       {# Saved-response confirmation. Preparing the session runs the
          reconcile, which would delete responses on pairs the current
          setup no longer produces, and clear the answers of any group
-         whose members it changes (a group is the subject, so a new
+         it adds a member to (a group is the subject, so a new
          composition is answered again). The operator confirms before
          the run proceeds. #}
       <div class="banner banner-warning banner-scroll-target"
@@ -104,8 +104,8 @@
         <p style="margin: var(--space-2) 0 0 0;">
           {{ prepare_confirm.group_responses_cleared }}
           {{ "is" if prepare_confirm.group_responses_cleared == 1 else "are" }}
-          on groups whose members it changes, which it clears: a group
-          with new or fewer members is answered again.
+          on groups it adds members to, which it clears: a group
+          with someone new in it is answered again.
         </p>
         {% endif %}
         <p style="margin: var(--space-2) 0 0 0;">

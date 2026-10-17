@@ -870,11 +870,10 @@ and Relationships cascade to nothing** — no table references them — so
 their gate never fires and their expander never offers the
 acknowledgement. An Observers delete loses no response. A
 Relationships delete can: a pair it moves to another pair-context
-group clears the group it left and the group it joined, and this asks for no
+group clears the group it joins, and this asks for no
 acknowledgement, as a tag edit asks for none (`spec/assignments.md`
-"Group-scoped fan-out"). A Reviewees delete also clears every group
-the deleted rows leave; its count names only the deleted rows' own
-responses, not the answers cleared on the members who stay.
+"Group-scoped fan-out"). A Reviewees delete leaves the groups the
+deleted rows leave with their answers, since those only shrink.
 
 **The confirmation names what goes**, on the pattern of the
 Instruments page's *"Yes, delete Instrument_1 and its associated

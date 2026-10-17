@@ -1,7 +1,7 @@
 """Group-scoped response reconciliation — the Segment 13C / 18H
 machinery that fans a single group answer out to every member's
 Response row and collapses N member rows back to one on read, plus
-``clear_changed_groups``: a change that redraws a group clears it
+``clear_changed_groups``: a change that adds a member to a group clears it
 (author's ruling 2026-10-17, which retired the 18H re-fan).
 
 Carved out of the legacy single-file ``responses.py`` in Segment
@@ -317,35 +317,46 @@ def snapshot_group_partitions(
     }
 
 
+def keeps_answer(
+    group: frozenset[Pair], before: set[frozenset[Pair]]
+) -> bool:
+    """Whether ``group`` may keep its answer: every member came from
+    the same group in ``before``, so it is that group or a subset of it
+    (author's ruling 2026-10-17). A group that gained anyone, a newcomer
+    or a member of another group, is a different subject."""
+    origin = next((old for old in before if next(iter(group)) in old), None)
+    return origin is not None and group <= origin
+
+
 def clear_changed_groups(
     db: Session, *, session_id: int, before: GroupPartitions
 ) -> int:
-    """Delete the answers of every group whose rows changed since
-    ``before`` (author's ruling 2026-10-17: a group instrument's
-    subject is the group, so a group whose members changed is a
-    different subject and its reviewer answers it again).
+    """Delete the answers of every group that gained a member since
+    ``before`` (author's rulings 2026-10-17: a group instrument's
+    subject is the group, so a group with someone new in it is a
+    different subject and its reviewer answers it again; one that only
+    lost members still describes everyone in it, and keeps its answer).
 
     The one rule behind every change that can redraw a group: an
     instrument's boundary tags or unit of review (findings E2), a
     reviewee's boundary tag, any relationship change (a tag edit, a
     re-point, a create, import, delete, or a status switch, since an
-    inactive or missing relationship reads as empty tags), and Generate
-    adding or removing a member. A group whose rows are not exactly one
-    group's rows in ``before`` has all its rows' answers deleted, so a
-    split clears both halves, a member moving clears the group it left
-    and the group it joined, and a new member clears its group. A group
-    that came through with the same rows keeps its answer, so a change
-    that redraws nothing (an unchanged re-import, a re-point with no
-    tags) deletes nothing. No answer is copied onto a row. The caller
-    flushes the change first. Returns the number of ``Response`` rows
-    deleted."""
+    inactive or missing relationship reads as empty tags), a reviewee
+    deleted, and Generate adding or removing a member. A group is kept
+    when every member came from one group in ``before``
+    (:func:`keeps_answer`): an unchanged group, one that shrank, and
+    each half of a split. Otherwise all its rows' answers are deleted,
+    so a member moving clears the group it joined and leaves the one
+    it left, and a new member clears its group. No answer is copied
+    onto a row. The caller flushes the change first. Returns the number
+    of ``Response`` rows deleted."""
     changed: set[int] = set()
     for instrument_id, groups in before.items():
         after, ids = _instrument_groups(
             db, session_id=session_id, instrument_id=instrument_id
         )
         for group in after:
-            if group not in groups:
+            if not keeps_answer(group, groups):
                 changed |= {ids[pair] for pair in group}
     if not changed:
         return 0

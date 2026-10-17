@@ -1127,9 +1127,9 @@ def _projected_group_clears(
 ) -> int:
     """How many answers :func:`_materialise_one_instrument` would clear
     on this instrument's kept rows, without writing: the groups the
-    diff's kept and new pairs would form, each compared with today's,
-    as ``responses.clear_changed_groups`` compares them after the
-    write, by the ``(reviewer_id, reviewee_id)`` pairs it compares."""
+    diff's kept and new pairs would form, each judged against today's
+    by ``responses.keeps_answer``, as ``clear_changed_groups`` judges
+    them after the write: a group that gained a member is cleared."""
     if instrument.group_kind is None or not (diff.to_insert or diff.to_delete):
         return 0
     from app.services import instruments as instruments_service
@@ -1155,7 +1155,7 @@ def _projected_group_clears(
     changed = {
         diff.existing_rows[key].id
         for members in groups.values()
-        if frozenset(members) not in before
+        if not responses_service.keeps_answer(frozenset(members), before)
         for key in members
         if key in diff.to_keep
     }

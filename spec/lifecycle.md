@@ -333,12 +333,12 @@ rather than 400). The Reviewers and Reviewees Setup-page CSV import
 (`_shared.py` `_handle_import`) applies the same gate inline and
 answers its 400 in the upload card's banner rather than an error page
 (`spec/setup_pages.md`).
-**Relationship changes do not call it**, although moving a pair to
-another pair-context group clears the group it left and the group it
-joined
+**Relationship changes do not call it**, although moving a pair into
+another pair-context group clears the group it joins
 (`spec/assignments.md` "Group-scoped fan-out"), as a reviewee tag edit
 does. Nor does an Instrument card Save that redraws the instrument's
-groups, though it deletes the answers of every group it changed.
+groups, though it deletes the answers of every group that gains a
+member.
 **Delete Data does not call it**: its own confirm tick names the loss
 ("Yes, delete every reviewer response on …") and is the
 acknowledgement. Delete session does not

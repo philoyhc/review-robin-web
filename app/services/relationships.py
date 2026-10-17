@@ -831,9 +831,9 @@ def update_relationship(
     # re-pointed off, to another pair-context group: a grouping tag
     # value changes, the row is re-pointed (its tags leave the old pair
     # for the new one), or its status flips (an inactive relationship
-    # reads as empty tags). Every group the move changed, the one a pair
-    # left and the one it joined, is cleared (author's ruling
-    # 2026-10-17: the group is the subject; findings B34 for status).
+    # reads as empty tags). The group a pair joins gained a member and
+    # is cleared; the one it left only shrank and keeps its answer
+    # (author's rulings 2026-10-17; findings B34 for status).
     before = pair_context_groups_before(db, session_id=session_id)
 
     for field, (_, new_value) in changes.items():

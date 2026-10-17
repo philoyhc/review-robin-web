@@ -1,9 +1,10 @@
-"""Redrawing an instrument's groups clears the groups it changed
-(findings E2).
+"""Redrawing an instrument's groups clears the groups that gained a
+member (findings E2).
 
-A group instrument's subject is the group, so a group whose members
-changed is a different subject and its reviewer answers it again
-(author's ruling 2026-10-17). Changing the boundary tags or the unit
+A group instrument's subject is the group, so a group with someone new
+in it is a different subject and its reviewer answers it again; one
+that only lost members keeps its answer (author's rulings 2026-10-17).
+Changing the boundary tags or the unit
 of review used to rewrite ``group_kind`` and leave every copy in
 place, so one group could hold several answers and the next Save
 overwrote one member's with another's.
@@ -143,7 +144,7 @@ def _unit(db: Session, world: _World, mode: str, pairs: list[tuple[str, str]]) -
 _TEAMS = {"Ann": ("red", "x"), "Bo": ("red", "x"), "Cy": ("blue", "x"), "Di": ("blue", "x")}
 
 
-def test_a_split_clears_both_halves(db: Session) -> None:
+def test_a_split_keeps_both_halves(db: Session) -> None:
     world = _seed(
         db,
         group_kind=instruments_service.encode_group_kind([]),
@@ -151,8 +152,8 @@ def test_a_split_clears_both_halves(db: Session) -> None:
         answers={"Ann": "4", "Bo": "4", "Cy": "4", "Di": "4"},
     )
     _boundary(db, world, [_TEAM])
-    assert _answers(db, world) == {"Ann": None, "Bo": None, "Cy": None, "Di": None}
-    assert _cleared(db, world) == 4
+    assert _answers(db, world) == {"Ann": "4", "Bo": "4", "Cy": "4", "Di": "4"}
+    assert _cleared(db, world) is None
 
 
 def test_a_merge_clears_the_merged_group(db: Session) -> None:
@@ -179,7 +180,7 @@ def test_a_boundary_that_redraws_no_group_clears_nothing(db: Session) -> None:
     assert _cleared(db, world) is None
 
 
-def test_only_the_changed_group_is_cleared(db: Session) -> None:
+def test_a_finer_boundary_keeps_every_part(db: Session) -> None:
     tags = {**_TEAMS, "Cy": ("blue", "y"), "Di": ("blue", "z")}
     world = _seed(
         db,
@@ -188,8 +189,8 @@ def test_only_the_changed_group_is_cleared(db: Session) -> None:
         answers={"Ann": "2", "Bo": "2", "Cy": "5", "Di": "5"},
     )
     _boundary(db, world, [_TEAM, _SITE])
-    assert _answers(db, world) == {"Ann": "2", "Bo": "2", "Cy": None, "Di": None}
-    assert _cleared(db, world) == 2
+    assert _answers(db, world) == {"Ann": "2", "Bo": "2", "Cy": "5", "Di": "5"}
+    assert _cleared(db, world) is None
 
 
 def test_individual_to_grouped_keeps_only_a_one_member_group(db: Session) -> None:
@@ -202,7 +203,7 @@ def test_individual_to_grouped_keeps_only_a_one_member_group(db: Session) -> Non
     assert _cleared(db, world) == 2
 
 
-def test_grouped_to_individual_keeps_only_a_one_member_group(db: Session) -> None:
+def test_grouped_to_individual_keeps_every_answer(db: Session) -> None:
     tags = {"Ann": ("red", "x"), "Bo": ("red", "x"), "Cy": ("blue", "x")}
     world = _seed(
         db,
@@ -211,8 +212,8 @@ def test_grouped_to_individual_keeps_only_a_one_member_group(db: Session) -> Non
         answers={"Ann": "4", "Bo": "4", "Cy": "5"},
     )
     _unit(db, world, "individual", [])
-    assert _answers(db, world) == {"Ann": None, "Bo": None, "Cy": "5"}
-    assert _cleared(db, world) == 2
+    assert _answers(db, world) == {"Ann": "4", "Bo": "4", "Cy": "5"}
+    assert _cleared(db, world) is None
 
 
 def test_an_unanswered_instrument_regroups_without_a_count(db: Session) -> None:
@@ -226,23 +227,23 @@ def test_an_unanswered_instrument_regroups_without_a_count(db: Session) -> None:
 def test_an_excluded_member_is_cleared_with_its_group(db: Session) -> None:
     world = _seed(
         db,
-        group_kind=instruments_service.encode_group_kind([]),
+        group_kind=instruments_service.encode_group_kind([_TEAM]),
         tags=_TEAMS,
-        answers={"Ann": "4", "Bo": "4", "Cy": "4", "Di": "4"},
+        answers={"Ann": "2", "Bo": "2", "Cy": "5", "Di": "5"},
     )
     world.rows["Bo"].include = False
     db.commit()
-    _boundary(db, world, [_TEAM])
+    _boundary(db, world, [])
     assert _answers(db, world)["Bo"] is None
     assert _cleared(db, world) == 4
 
 
 def test_another_reviewers_unchanged_group_keeps_its_answer(db: Session) -> None:
-    """Groups are per reviewer: a split in one reviewer's universe is
+    """Groups are per reviewer: a merge in one reviewer's universe is
     not a change to another's group that keeps its rows."""
     world = _seed(
         db,
-        group_kind=instruments_service.encode_group_kind([]),
+        group_kind=instruments_service.encode_group_kind([_TEAM]),
         tags={"Ann": ("red", "x"), "Bo": ("blue", "x")},
         answers={"Ann": "4", "Bo": "4"},
     )
@@ -276,15 +277,16 @@ def test_another_reviewers_unchanged_group_keeps_its_answer(db: Session) -> None
     db.commit()
     world.rows["Sam/Ann"] = sams
 
-    _boundary(db, world, [_TEAM])
+    _boundary(db, world, [])
 
     assert _answers(db, world) == {"Ann": None, "Bo": None, "Sam/Ann": "1"}
     assert _cleared(db, world) == 2
 
 
-def test_a_member_removed_clears_the_group_it_leaves(db: Session) -> None:
+def test_a_member_removed_keeps_the_group_it_leaves(db: Session) -> None:
     """Generate dropping a row the rules no longer produce goes through
-    the same rule: the group it left is a different subject."""
+    the same rule: the group it left only shrank, so it keeps its
+    answer."""
     from app.services import responses as responses_service
 
     world = _seed(
@@ -306,11 +308,11 @@ def test_a_member_removed_clears_the_group_it_leaves(db: Session) -> None:
         db, session_id=session_id, before=before
     )
 
-    assert cleared == 1
-    assert _answers(db, world) == {"Ann": None, "Cy": "5", "Di": "5"}
+    assert cleared == 0
+    assert _answers(db, world) == {"Ann": "2", "Cy": "5", "Di": "5"}
 
 
-def test_deleting_a_reviewee_clears_the_group_it_leaves(db: Session) -> None:
+def test_deleting_a_reviewee_keeps_the_group_it_leaves(db: Session) -> None:
     from app.services import reviewees as reviewees_service
 
     world = _seed(
@@ -328,13 +330,13 @@ def test_deleting_a_reviewee_clears_the_group_it_leaves(db: Session) -> None:
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": None, "Cy": "5", "Di": "5"}
+    assert _answers(db, world) == {"Ann": "2", "Cy": "5", "Di": "5"}
     event = db.execute(
         select(AuditEvent)
         .where(AuditEvent.event_type == "reviewee.bulk_deleted")
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
-    assert event.detail["context"] == {"defuncted_group_responses": 1}
+    assert "context" not in event.detail
 
 
 def test_a_reused_assignment_id_still_reads_as_a_new_member(db: Session) -> None:
