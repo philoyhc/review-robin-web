@@ -1,8 +1,8 @@
 """Unit tests for ``app/services/rules/predicates.py`` — Segment 13A
 PR 2.
 
-One test per operator (plus the missing-value rule from spec §9 and
-the case-sensitive override).
+One test per operator (plus the empty-value rule and the
+case-sensitive override).
 """
 from __future__ import annotations
 
@@ -209,30 +209,59 @@ def test_different_from_inverse_of_same_as() -> None:
     )
 
 
-def test_missing_field_returns_false_unless_is_empty() -> None:
-    """Spec §9: predicates referencing a missing field evaluate to
-    false unless the operator is ``is_empty``."""
+@pytest.mark.parametrize(
+    ("operator", "operand", "expected"),
+    [
+        ("equals", "anything", False),
+        ("not_equals", "anything", True),
+        ("in", ["a"], False),
+        ("not_in", ["a"], True),
+        ("matches", ".", False),
+        ("not_matches", ".", False),
+        ("is_empty", None, True),
+        ("is_not_empty", None, False),
+    ],
+)
+def test_a_missing_field_against_a_literal(operator, operand, expected) -> None:
+    """The empty-value rule (author, 2026-10-17): no value fails a
+    positive match and passes its negation, ``not_matches`` aside."""
 
     r = Reviewer(email="a@x.edu", tag_1=None)
     e = Reviewee(email_or_identifier="b@x.edu")
-    for operator, operand in [
-        ("equals", "anything"),
-        ("not_equals", "anything"),
-        ("in", ["a"]),
-        ("not_in", ["a"]),
-        ("matches", "."),
-        ("not_matches", "."),
-        ("same_as", "reviewee.tag1"),
-        ("different_from", "reviewee.tag1"),
-    ]:
-        assert not _eval(
-            {
-                "field": "reviewer.tag1",
-                "operator": operator,
-                "operand": operand,
-            },
-            r,
-            e,
+    predicate = {"field": "reviewer.tag1", "operator": operator}
+    if operand is not None:
+        predicate["operand"] = operand
+    assert _eval(predicate, r, e) is expected
+
+
+@pytest.mark.parametrize(
+    ("reviewer_tag", "reviewee_tag", "same"),
+    [
+        ("Friend", "friend", True),
+        ("Friend", "Office", False),
+        ("Friend", None, False),
+        (None, "Friend", False),
+        (None, None, True),
+        ("  ", None, True),
+    ],
+)
+def test_same_as_and_different_from_treat_empty_as_a_value(
+    reviewer_tag, reviewee_tag, same
+) -> None:
+    """Both sides empty are the same; one empty side differs (author,
+    2026-10-17: Friend and empty pass IS DIFFERENT FROM, empty and empty
+    fail it)."""
+
+    r = Reviewer(email="a@x.edu", tag_1=reviewer_tag)
+    e = Reviewee(email_or_identifier="b@x.edu", tag_1=reviewee_tag)
+    for operator, expected in (("same_as", same), ("different_from", not same)):
+        assert (
+            _eval(
+                {"field": "reviewer.tag1", "operator": operator, "operand": "reviewee.tag1"},
+                r,
+                e,
+            )
+            is expected
         ), operator
 
 

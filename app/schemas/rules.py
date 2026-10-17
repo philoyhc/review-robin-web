@@ -120,6 +120,14 @@ ALLOWED_PREDICATE_FIELDS: frozenset[str] = frozenset(
         "pair_context.tag1",
         "pair_context.tag2",
         "pair_context.tag3",
+        # A person's pair tag: their values across their relationships
+        # (``app/services/rules/fields.py``; author, 2026-10-17).
+        "reviewer.pair_tag1",
+        "reviewer.pair_tag2",
+        "reviewer.pair_tag3",
+        "reviewee.pair_tag1",
+        "reviewee.pair_tag2",
+        "reviewee.pair_tag3",
     }
 )
 
