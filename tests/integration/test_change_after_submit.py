@@ -274,11 +274,12 @@ def test_blanking_a_submitted_answer_unsubmits_the_rest(db: Session) -> None:
     assert _pill(db, reviewer, review_session) == "submitted"
 
 
-def test_blanking_an_unsubmitted_answer_leaves_the_submission(
+def test_blanking_any_answer_after_submit_unsubmits_the_rest(
     db: Session,
 ) -> None:
-    """A draft answer added after Submit and blanked again changed
-    nothing that was submitted."""
+    """A blanked answer the Submit never saw cannot be told from one
+    changed and saved before it was blanked, so either withholds the
+    rest until the next Submit (the read of the R1 PR)."""
     op, reviewer, review_session, [a] = _seed(db)
     _submit(db, op, reviewer, review_session, a, rating="3")
     _save(db, op, reviewer, review_session, a, rating="3", comments="draft")
@@ -286,8 +287,22 @@ def test_blanking_an_unsubmitted_answer_leaves_the_submission(
 
     _save(db, op, reviewer, review_session, a, rating="3", comments="")
 
-    assert _stamps(db, a) == {"rating": True}
-    assert _pill(db, reviewer, review_session) == "submitted"
+    assert _stamps(db, a) == {"rating": False}
+    assert _pill(db, reviewer, review_session) == "in progress"
+
+
+def test_change_then_blank_still_needs_a_resubmit(db: Session) -> None:
+    """Changing a submitted answer and blanking it in a second Save
+    leaves no submission standing (the read of the R1 PR)."""
+    op, reviewer, review_session, [a] = _seed(db)
+    _submit(db, op, reviewer, review_session, a, rating="3", comments="ok")
+    _save(db, op, reviewer, review_session, a, rating="3", comments="okay")
+    assert _stamps(db, a) == {"rating": True, "comments": False}
+
+    _save(db, op, reviewer, review_session, a, rating="3", comments="")
+
+    assert _stamps(db, a) == {"rating": False}
+    assert _pill(db, reviewer, review_session) == "in progress"
 
 
 def test_group_blanking_a_submitted_answer_unsubmits_every_copy(

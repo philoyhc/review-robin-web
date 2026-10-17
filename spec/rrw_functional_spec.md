@@ -1817,8 +1817,9 @@ every page. On click:
    (`#N Label: Reviewee X — field Y`, the instrument named as its
    status pill names it). No partial submit happens.
 4. If validation passes, every populated cell receives a
-   submitted-at timestamp in one atomic transaction; per-
-   page status pills flip to `submitted` and each row's trailing
+   submitted-at timestamp in one atomic transaction; the status
+   pill of every page holding a saved answer flips to `submitted`
+   and each row's trailing
    status column shows a complete (✓) icon where its required
    fields are filled — an icon only, with no per-row
    timestamp. The reviewer lands on the summary page once every
@@ -1828,11 +1829,11 @@ After submission, the reviewer **may continue to edit** — the
 session is not locked. Re-editing a previously-submitted
 required field back to empty deletes the row and flips the
 operator's monitoring view back to "in progress". Changing a
-submitted value clears that answer's submitted-at timestamp, as a
-new answer has none, and blanking any submitted answer clears the
-timestamps on that assignment's remaining answers, so each reads "in progress" on the monitoring
-view, and is no longer "submitted" on the reviewer's own pills, until
-the reviewer submits again (`spec/reviewer-surface.md` "Persistence semantics").
+submitted value clears that answer's submission, as a new answer
+has none, and blanking any answer after Submit clears the submission
+of that assignment's remaining answers. Until the reviewer submits
+again, the assignment reads "in progress" on the monitoring view
+and not "submitted" on the reviewer's own pills.
 Submission in RRW is a status marker, not an enforcement gate.
 
 ### 10.7 Clear all

@@ -263,7 +263,7 @@ intentional-nav escape prompts on the app's own controls.
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill of every instrument with a saved answer flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -338,7 +338,10 @@ each of its instruments. The route distinguishes:
   deletes the row and clears `submitted_at` on the assignment's
   remaining rows (on a group-scoped instrument, on every member's
   copy in the group), so the rest is not released as submitted
-  without it and the reviewer must Submit again.
+  without it and the reviewer must Submit again. Emptying an answer
+  saved since the Submit does the same: one changed and saved before
+  it was emptied has already lost its stamp, and nothing tells the two
+  apart.
 - **Clear all** deletes every `Response` row of this reviewer's
   included assignments in this session, across every instrument, and
   an excluded member's copy in a group they still review (a group
@@ -383,7 +386,9 @@ The states are the dashboard's (§ "Reviewer-status pill vocabulary"),
 read over this instrument's rows (findings R7): no answer is `not
 started` on both, every answer submitted is `submitted` on both, and
 anything between is the dashboard's `in progress`, which covers both
-`in progress` and `complete` here. `complete` is the part of it where
+`in progress` and `complete` here (one exception: a saved answer the
+lifecycle hides, with a required field unmet, reads `not started` here
+and `in progress` there). `complete` is the part of it where
 nothing required is missing, so a page whose answers a changed value
 just un-submitted (findings R1) reads `complete` here and `in
 progress` there, by design. A group-scoped instrument's row is its
@@ -629,7 +634,7 @@ In rendered order:
    already shown on the reviewer summary page, once for every
    reviewee.
    ``Response.submitted_at`` itself stays in the data model: it
-   drives ``is_complete`` rollups, audit-event counts, the
+   drives the `submitted` page pills, audit-event counts, the
    session-status pill (``Submitted`` / ``Saved but not
    submitted`` / ``Draft``) on the overview card, and the summary
    page's session-level timestamp.
@@ -782,6 +787,8 @@ The route builds the table data in `_surface_context` as
       "missing_count": int,
       "required_count": int,
       "submitted_at": datetime | None,
+      "answer_count": int,
+      "unsubmitted_count": int,
       "accepting": bool,
       "show_values": bool,
       # group rows only: "group_identity", "group_label" (below)

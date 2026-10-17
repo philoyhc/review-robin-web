@@ -349,7 +349,11 @@ def _apply_upserts(
     that held its stamp, so it clears the stamps on the assignment's
     remaining rows instead — and on a group-scoped instrument on every
     member's copy in the group — so the rest is not still released as
-    submitted without the answer (Codex on the R1 ruling)."""
+    submitted without the answer (Codex on the R1 ruling). Any blanked
+    answer counts: one changed and saved before it was blanked has
+    already lost its stamp, and nothing tells it from an answer added
+    after Submit, so a two-step edit would otherwise restore the
+    submission without a resubmit (the read of the R1 PR)."""
     group_key_by_assignment = group_key_by_assignment or {}
     written = 0
     cleared = 0
@@ -379,10 +383,9 @@ def _apply_upserts(
         ).scalar_one_or_none()
         if u.value == "":
             if existing is not None:
-                if existing.submitted_at is not None:
-                    blanked_assignment_ids.add(assignment.id)
-                    if group_key is not None:
-                        blanked_groups.add((assignment.instrument_id, group_key))
+                blanked_assignment_ids.add(assignment.id)
+                if group_key is not None:
+                    blanked_groups.add((assignment.instrument_id, group_key))
                 db.delete(existing)
             continue
         cell = (
