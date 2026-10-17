@@ -112,6 +112,9 @@ def _stash_display_timezone(request: Request, user: User) -> None:
     )
 
 
+_ASCII_WHITESPACE = " \t\n\r\f\v"
+
+
 def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
     """The persisted ``users`` row for this identity, or ``None``;
     never creates one.
@@ -130,9 +133,12 @@ def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
         select(User)
         # Trimmed on both sides: a row stored padded before
         # ``get_or_create_user`` stripped on write still finds its owner
-        # rather than gaining a duplicate (findings P3).
+        # rather than gaining a duplicate (findings P3). SQL ``trim``
+        # alone strips only spaces, so name the whitespace ``str.strip``
+        # also takes.
         .where(
-            func.lower(func.trim(User.email)) == normalize_email(current_user.email)
+            func.lower(func.trim(User.email, _ASCII_WHITESPACE))
+            == normalize_email(current_user.email)
         )
         .order_by(User.id)
         .limit(1)

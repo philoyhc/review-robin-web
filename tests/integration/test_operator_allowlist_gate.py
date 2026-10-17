@@ -619,13 +619,14 @@ def test_get_or_create_user_stores_a_padded_claim_trimmed(
     assert second.id == first.id
 
 
+@pytest.mark.parametrize("stored", [" Old@example.edu ", "\tOld@example.edu\r\n"])
 def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(
-    db: Session,
+    db: Session, stored: str
 ) -> None:
     """Findings P3, the read of #3108: a row an older build stored
     padded is found by the trimmed lookup, not shadowed by a second row
     that would lose its flags."""
-    padded = User(email=" Old@example.edu ", display_name="Old", is_operator=True)
+    padded = User(email=stored, display_name="Old", is_operator=True)
     db.add(padded)
     db.commit()
     auth = AuthenticatedUser(
