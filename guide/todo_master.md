@@ -24,13 +24,6 @@ Two sibling registers hold the open work that is not queued here:
 
 ## Upcoming
 
-### In progress
-
-- **Warnings updates** — `guide/warnings_updates.md` Item 1: a Save
-  that clears group answers refuses, then re-offers with a `Yes, clear
-  them` tick, on the Instrument card, Reviewees and Relationships
-  (author, 2026-10-17). PR ladder rungs 2–5 to go.
-
 ### On hold
 
 - **21 — Domain retrofit: speculative, on hold** (author,
