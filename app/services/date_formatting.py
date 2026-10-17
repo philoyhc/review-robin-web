@@ -45,6 +45,24 @@ DEFAULT_TIMEZONE = "UTC"
 # every ``format_datetime`` render and both timezone-card previews.
 SHOW_ZONE_TOKEN = False
 
+# How close to the edge of ``datetime``'s range an entered instant may
+# sit (findings L2). Every zone's offset is under a day, so an instant
+# inside this margin converts into any zone without overflowing.
+_CALENDAR_MARGIN = timedelta(days=1)
+_EARLIEST_INSTANT = datetime.min + _CALENDAR_MARGIN
+_LATEST_INSTANT = datetime.max - _CALENDAR_MARGIN
+
+
+def in_entry_range(value: datetime) -> bool:
+    """Whether ``value`` sits inside the range an entered instant may
+    take: a day clear of either edge of ``datetime``'s range, so it
+    converts into any zone (findings L2). Naive values are UTC."""
+    try:
+        instant = _as_utc(value).replace(tzinfo=None)
+    except OverflowError:
+        return False
+    return _EARLIEST_INSTANT <= instant <= _LATEST_INSTANT
+
 
 def _as_utc(value: datetime) -> datetime:
     """Normalise a datetime to tz-aware UTC.
@@ -55,6 +73,28 @@ def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
+
+
+def _converts(value: datetime, tz_name: str | None) -> bool:
+    """Whether ``value`` converts into ``tz_name``'s zone without leaving
+    ``datetime``'s range."""
+    try:
+        _as_utc(value).astimezone(resolve_zone(tz_name))
+    except OverflowError:
+        return False
+    return True
+
+
+def _in_zone(value: datetime, tz_name: str | None) -> datetime:
+    """A stored datetime converted into ``tz_name``'s zone, or left in
+    UTC when that conversion would leave ``datetime``'s range: an
+    instant stored at the calendar's edge renders unconverted rather
+    than raising (findings L2)."""
+    utc = _as_utc(value)
+    try:
+        return utc.astimezone(resolve_zone(tz_name))
+    except OverflowError:
+        return utc
 
 
 def resolve_zone(tz_name: str | None) -> ZoneInfo:
@@ -79,7 +119,7 @@ def format_datetime(value: datetime | None, tz_name: str | None = None) -> str:
     """
     if value is None:
         return ""
-    local = _as_utc(value).astimezone(resolve_zone(tz_name))
+    local = _in_zone(value, tz_name)
     rendered = local.strftime(_DATETIME_FORMAT)
     if SHOW_ZONE_TOKEN:
         rendered = f"{rendered} {local.strftime('%Z')}"
@@ -98,7 +138,7 @@ def format_date(
     if value is None:
         return ""
     if isinstance(value, datetime):
-        value = _as_utc(value).astimezone(resolve_zone(tz_name)).date()
+        value = _in_zone(value, tz_name).date()
     return value.strftime(_DATE_FORMAT)
 
 
@@ -112,9 +152,14 @@ def gmt_offset_label(tz_name: str | None, at: datetime | None = None) -> str:
     ``at`` unset the current moment is used.
     """
     zone = resolve_zone(tz_name)
-    reference = (
-        _as_utc(at).astimezone(zone) if at is not None else datetime.now(zone)
-    )
+    reference = datetime.now(zone)
+    if at is not None:
+        try:
+            reference = _as_utc(at).astimezone(zone)
+        except OverflowError:
+            # An instant at the calendar's edge renders in UTC, so its
+            # label says UTC (findings L2).
+            return "UTC"
     offset = reference.utcoffset()
     if offset is None or offset == timedelta(0):
         return "UTC"
@@ -137,6 +182,9 @@ def gmt_offset_zone_label(tz_name: str | None, at: datetime | None = None) -> st
     """
     zone = tz_name or DEFAULT_TIMEZONE
     offset = gmt_offset_label(tz_name, at)
+    if at is not None and not _converts(at, tz_name):
+        # Rendered in UTC (findings L2), so labelled UTC alone.
+        return "UTC"
     if offset == zone:
         return zone
     return f"{offset} {zone}"
@@ -148,10 +196,15 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     instant, naive (matching how stored timestamps are kept).
 
     Raises ``ValueError`` for an unparseable string — callers turn
-    that into a 4xx. Segment 18B PR 4.
+    that into a 4xx. Segment 18B PR 4. A moment within a day of the
+    edge of ``datetime``'s range is refused the same way: converting
+    it, now or for display in another zone, would overflow
+    (findings L2).
     """
     naive = datetime.fromisoformat(value)
     local = naive.replace(tzinfo=resolve_zone(tz_name))
+    if not in_entry_range(local):
+        raise ValueError(f"datetime out of range: {value!r}")
     return local.astimezone(timezone.utc).replace(tzinfo=None)
 
 
@@ -169,7 +222,7 @@ def iso_in_zone(
     """
     if value is None:
         return ""
-    return _as_utc(value).astimezone(resolve_zone(tz_name)).isoformat(timespec=timespec)
+    return _in_zone(value, tz_name).isoformat(timespec=timespec)
 
 
 def format_datetime_local(
@@ -182,5 +235,4 @@ def format_datetime_local(
     """
     if value is None:
         return ""
-    local = _as_utc(value).astimezone(resolve_zone(tz_name))
-    return local.strftime("%Y-%m-%dT%H:%M")
+    return _in_zone(value, tz_name).strftime("%Y-%m-%dT%H:%M")

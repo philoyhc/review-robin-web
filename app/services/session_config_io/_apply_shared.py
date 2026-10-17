@@ -13,6 +13,8 @@ from dataclasses import dataclass, field as _dataclass_field
 from datetime import datetime
 from typing import Any
 
+from app.services import date_formatting
+
 from app.services.instruments import (
     GROUP_KIND_SENTINEL,
     decode_group_kind,
@@ -233,11 +235,16 @@ def _parse_datetime(value: str) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise _ParseError(
             f"expected ISO-8601 datetime, got {value!r}"
         ) from exc
+    # The range the card's boxes accept (findings L2): nearer the
+    # calendar's edge, the instant cannot be shown in every zone.
+    if not date_formatting.in_entry_range(parsed):
+        raise _ParseError(f"datetime out of range, got {value!r}")
+    return parsed
 
 
 def _parse_json(value: str, *, default: Any) -> Any:
