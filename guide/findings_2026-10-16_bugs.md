@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 33 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1, S1,
-R2, E2, R3, R4, O4, O6 and P4 done).
+**Open:** 26 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2,
+R3, R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4 and E4 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -108,20 +108,20 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **O2** — After Regenerate all, the Invitations table and counters still say
   "sent" while the rows are pending (`_invitations.py:113-124`;
   `spec/operations_pages.md` "Invitation card"). *Reproduced.* Code.
-- **S3** — The Settings import accepts any `field_key`; one containing `]` can
-  never be answered, so a required field blocks Submit
+- ~~**S3**~~ — **Done in (this PR)**: phase 1 holds each `field_key` to the card's `_validate_field_key` and refuses a bad one as a row error (`spec/csv_contracts.md` §3.3; `tests/unit/test_settings_import_bug_sweep.py`). **The Settings import accepts any `field_key`; one containing `]` can
+  never be answered, so a required field blocks Submit**
   (`_apply_instrument.py:116`). *Reproduced.* Code: `_validate_field_key`.
 - **S4** — A Settings file with no instrument rows deletes every instrument
   (`_apply.py:181`), and a direct Prepare POST then creates a Default
   instrument whose Band 1 links are Not set. *Reproduced.* Author: refuse the
   file, or keep instruments it doesn't name.
-- **S5** — The import can pin several instruments to one rule set
+- ~~**S5**~~ — **Done in (this PR)**: a second instrument naming a rule set gets its own copy, named as Band 1 names one (`spec/instruments.md`, `Delete` semantics; `tests/unit/test_settings_import_bug_sweep.py`). **The import can pin several instruments to one rule set**
   (`_apply_instrument.py:398`), so a Band 1 edit on one changes the others;
   `spec/instruments.md:1585`. *Reproduced.* Code.
-- **S6** — The import turns Relationships and Observers off while they hold
-  rows (`_apply_session.py:64`), against the lock-on-data rule in
+- ~~**S6**~~ — **Done in (this PR)**: the import leaves either toggle on while its roster has rows, as `sessions.update_session` does (`spec/participant_model.md` §2; `tests/unit/test_settings_import_bug_sweep.py`). **The import turns Relationships and Observers off while they hold
+  rows** (`_apply_session.py:64`), against the lock-on-data rule in
   `spec/participant_model.md:46`. *Reproduced.* Code.
-- **S7** — A NUL byte in a roster or Settings CSV is accepted
+- ~~**S7**~~ — **Done in (this PR)**: `decode_csv` refuses a roster file holding a NUL, and `split_rows` refuses a Settings row holding one, so Quick Setup and Rehydrate both report it (`tests/unit/test_roster_csv_bug_sweep.py`, `tests/unit/test_settings_import_bug_sweep.py`). **A NUL byte in a roster or Settings CSV is accepted**
   (`csv_imports.py:90`); Postgres refuses it with a 500. *Reproduced* to the
   driver; not run against a live Postgres. Code.
 - **P1** — Demoting a sys-admin who is a session's only owner orphans it: the
@@ -187,13 +187,13 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **O10** — *Latent, no caller yet:* `email_send.py` builds the From display
   name without `formataddr` and doesn't refuse CR/LF in subject, cc or bcc.
   Fix before segment 14B sends mail.
-- **S8** — Saving unchanged friendly labels un-validates the session and
-  writes a same-to-same event (`field_labels.py:267`). Code.
-- **S9** — A header mapped twice (`ReviewerTag1` and `ReviewerTag1.Tutor`)
-  silently drops one column (`field_label_csv.py:89`, `csv_imports.py:183`).
+- ~~**S8**~~ — **Done in (this PR)**: `field_labels.upsert` returns early on an unchanged label, with no event and no invalidation (`tests/integration/test_field_labels_resolver.py`). **Saving unchanged friendly labels un-validates the session and
+  writes a same-to-same event** (`field_labels.py:267`). Code.
+- ~~**S9**~~ — **Done in (this PR)**: `_read_dict_rows` refuses a file whose header names one column twice as a blocking issue (`spec/csv_contracts.md` §1a; `tests/unit/test_roster_csv_bug_sweep.py`). **A header mapped twice (`ReviewerTag1` and `ReviewerTag1.Tutor`)
+  silently drops one column** (`field_label_csv.py:89`, `csv_imports.py:183`).
   Code.
-- **S10** — Observer audit events report `cascaded_assignments` that were never
-  deleted (`csv_imports.py:1380`, `:1566`). Code.
+- ~~**S10**~~ — **Done in (this PR)**: `observers.imported` and `observers.deleted_all` omit `cascaded_assignments`, as they omit `cascaded_relationships` (`spec/architecture.md`; `tests/integration/test_relationship_cascade_accounting.py`). **Observer audit events report `cascaded_assignments` that were never
+  deleted** (`csv_imports.py:1380`, `:1566`). Code.
 - **P3** — An email claim with surrounding spaces works once, then answers 500
   on every request: `deps.py:179` stores it untrimmed and `find_user` (`:131`)
   compares trimmed. `docs/security_posture.md` §5.5a. Code.

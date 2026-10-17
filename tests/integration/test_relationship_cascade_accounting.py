@@ -324,6 +324,59 @@ def test_observers_events_keep_the_payload_they_had(
     assert _relationships(db, rs.id) == 3, "an observer delete reaches none"
 
 
+def test_observer_events_do_not_report_assignments_they_never_delete(
+    client: TestClient, db: Session
+) -> None:
+    """Findings S10 (2026-10-16): `observers.imported` and
+    `observers.deleted_all` counted every assignment in the session as
+    `cascaded_assignments`, though nothing in `assignments` references an
+    observer and none was deleted. The key is omitted, not zero, as
+    `cascaded_relationships` is for these events."""
+    from app.services import csv_imports
+
+    rs = _mk(client, db, "relcc-obs-asg")
+    reviewers, reviewees = _seed(db, rs.id)
+    instrument = Instrument(session_id=rs.id, name="I", order=0)
+    db.add(instrument)
+    db.flush()
+    db.add(
+        Assignment(
+            session_id=rs.id,
+            reviewer_id=reviewers[0].id,
+            reviewee_id=reviewees[0].id,
+            instrument_id=instrument.id,
+            include=True,
+            created_by_mode="rule_based",
+        )
+    )
+    db.add(Observer(session_id=rs.id, email="o@example.org", display_name="O"))
+    db.commit()
+    user = db.get(User, rs.created_by_user_id)
+
+    parsed = csv_imports.parse_observer_csv(b"ObserverEmail\np@example.org\n")
+    assert not parsed.is_blocked, parsed.issues
+    csv_imports.save_observers(
+        db,
+        session=rs,
+        user=user,
+        rows=parsed.rows,
+        filename="observers.csv",
+        correlation_id="s10-import",
+    )
+    client.post(
+        f"/operator/sessions/{rs.id}/observers/delete-all",
+        data={"confirm": "true"},
+        follow_redirects=False,
+    )
+    db.expire_all()
+
+    assert _counts(db, rs.id, "observers.imported") == {"new": 1, "replaced": 1}
+    assert _counts(db, rs.id, "observers.deleted_all") == {"deleted": 1}
+    assert db.execute(
+        select(Assignment.id).where(Assignment.session_id == rs.id)
+    ).all(), "the assignment the old count reported is still there"
+
+
 @pytest.mark.parametrize(
     "page,field,event_type",
     [

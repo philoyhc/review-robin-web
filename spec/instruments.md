@@ -1704,10 +1704,10 @@ confirm-checkbox guard is the only friction.
 
 The session's `SessionRuleSet` row referenced by
 `Instrument.rule_set_id` is **not** deleted on instrument
-delete (the FK is `ON DELETE SET NULL`). Replicate gives each copy
-its own row, but a Settings CSV import that names one rule set on
-several instruments pins them all to it, so the row may still be in
-use; an orphaned row is left behind without harm.
+delete (the FK is `ON DELETE SET NULL`); an orphaned row is left
+behind without harm. No row is shared: Replicate gives each copy its
+own, and a Settings CSV import that names one rule set on several
+instruments gives each after the first its own copy.
 
 The route guards against deleting the **only** instrument
 (returns 400); the UI mirrors this with a disabled Delete

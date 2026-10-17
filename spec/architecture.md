@@ -741,6 +741,8 @@ and a roster replace takes every pair with it. It is **omitted rather
 than zero** on the rosters that reach no relationship — all three
 emitters splat an empty dict — so its absence means "not a roster this
 cascade reaches" and `0` means "reached, and there were none".
+`cascaded_assignments` is omitted the same way on `observers.imported`
+and `observers.deleted_all`: no assignment references an observer.
 
 #### `set_changes` — collection mutations
 

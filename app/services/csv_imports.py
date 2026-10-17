@@ -38,6 +38,9 @@ log = get_logger(__name__)
 
 MAX_BYTES = 1 * 1024 * 1024
 MAX_ROWS = 5000
+#: Why a file holding a NUL character is refused; the Settings import
+#: reports the same text per row (``session_config_io.split_rows``).
+NUL_MESSAGE = "File contains a NUL character, which cannot be stored"
 
 
 @dataclass
@@ -97,6 +100,18 @@ def decode_csv(
             severity=Severity.error,
             source=source,
             message="File is not valid UTF-8",
+        )
+    if "\x00" in text:
+        # Valid UTF-8 and stored by SQLite, but Postgres refuses a NUL in
+        # a text column at flush: a 500, not a report (findings S7).
+        log.warning(
+            "csv import rejected",
+            extra={"source": source, "reason": "nul_character"},
+        )
+        return None, ValidationIssue(
+            severity=Severity.error,
+            source=source,
+            message=NUL_MESSAGE,
         )
     return text, None
 
@@ -160,6 +175,24 @@ def _read_dict_rows(
             ),
         )
     canonical, captured = field_label_csv.normalize_headers(list(raw_fieldnames))
+    # Two headers naming one column (`ReviewerTag1` and
+    # `ReviewerTag1.Tutor`, or one name twice) would leave `DictReader`
+    # keeping the last and dropping the other silently (findings S9).
+    seen: set[str] = set()
+    for column in canonical:
+        if column and column in seen:
+            return (
+                None,
+                canonical,
+                captured,
+                ValidationIssue(
+                    severity=Severity.error,
+                    source=source,
+                    field=column,
+                    message=f"The {column} column appears more than once",
+                ),
+            )
+        seen.add(column)
     label_limit = SessionFieldLabel.__table__.columns["label"].type.length
     for slot, label in captured.items():
         if len(label) > label_limit:
@@ -1377,7 +1410,14 @@ def _save(
         reason=f"{source_label}_imported",
         correlation_id=correlation_id,
     )
-    cascaded_assignment_count = _count_assignments(db, session.id)
+    # Nothing in `assignments` references an observer, so their events
+    # omit the key rather than count rows they never delete (findings
+    # S10). The same omitted-not-zero rule as `cascaded_relationships`.
+    cascaded_assignment_count = (
+        _count_assignments(db, session.id)
+        if _reaches_assignments(model)
+        else None
+    )
     # Before the delete below: the FK cascade is the database's, so
     # counting afterwards reads 0. Same mechanism as `_delete_all`.
     cascaded_relationship_count = (
@@ -1408,7 +1448,11 @@ def _save(
         payload=audit.counts(
             new=len(rows),
             replaced=replaced,
-            cascaded_assignments=cascaded_assignment_count,
+            **(
+                {"cascaded_assignments": cascaded_assignment_count}
+                if cascaded_assignment_count is not None
+                else {}
+            ),
             # 19O.5 — a replace deletes every existing row and re-adds,
             # so it takes the relationships with it exactly as
             # `delete-all` does. Counted before `_replace_rows` runs.
@@ -1432,7 +1476,11 @@ def _save(
                 "source": source_label,
                 "new": len(rows),
                 "replaced": replaced,
-                "cascaded_assignments": cascaded_assignment_count,
+                **(
+                    {"cascaded_assignments": cascaded_assignment_count}
+                    if cascaded_assignment_count is not None
+                    else {}
+                ),
                 **(
                     {"cascaded_relationships": cascaded_relationship_count}
                     if cascaded_relationship_count is not None
@@ -1464,6 +1512,13 @@ def _detach_outbox_if_reviewers(
         reviewer_ids=[row.id for row in rows],
         reviewers_deleted=True,
     )
+
+
+def _reaches_assignments(model: type) -> bool:
+    """Whether deleting a ``model`` row deletes assignments: a reviewer
+    or reviewee row does, through the foreign-key cascade; an observer
+    row does not."""
+    return model is Reviewer or model is Reviewee
 
 
 def _count_assignments(db: Session, session_id: int) -> int:
@@ -1563,7 +1618,12 @@ def _delete_all(
         reason=f"{source_label}_deleted_all",
         correlation_id=correlation_id,
     )
-    cascaded = _count_assignments(db, review_session.id)
+    # Omitted for observers, as in `_save` (findings S10).
+    cascaded_assignments = (
+        _count_assignments(db, review_session.id)
+        if _reaches_assignments(model)
+        else None
+    )
     # 19O.5 — the whole session's relationships, because emptying either
     # roster empties them all. Taken before the delete: the cascade is
     # `ondelete="CASCADE"` on the FK with no ORM collection on either
@@ -1594,7 +1654,11 @@ def _delete_all(
         session=review_session,
         payload=audit.counts(
             deleted=deleted,
-            cascaded_assignments=cascaded,
+            **(
+                {"cascaded_assignments": cascaded_assignments}
+                if cascaded_assignments is not None
+                else {}
+            ),
             # Omitted, not zero, for observers: nothing references them,
             # so their event keeps the payload it had.
             **(
@@ -1612,7 +1676,11 @@ def _delete_all(
             "session_id": review_session.id,
             "source": source_label,
             "deleted": deleted,
-            "cascaded_assignments": cascaded,
+            **(
+                {"cascaded_assignments": cascaded_assignments}
+                if cascaded_assignments is not None
+                else {}
+            ),
             **(
                 {"cascaded_relationships": cascaded_relationships}
                 if cascaded_relationships is not None
@@ -1621,4 +1689,4 @@ def _delete_all(
             "correlation_id": correlation_id,
         },
     )
-    return deleted, cascaded
+    return deleted, cascaded_assignments or 0

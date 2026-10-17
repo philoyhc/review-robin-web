@@ -39,7 +39,7 @@ The envelope is the same shape on both sides — Python `csv.reader`
 
 | Concern | Choice |
 |---|---|
-| Encoding | UTF-8. Files with a BOM are tolerated by `decode_csv` (BOM stripped on read). |
+| Encoding | UTF-8. Files with a BOM are tolerated by `decode_csv` (BOM stripped on read). A NUL character refuses a roster file as a single blocking issue, since Postgres cannot store one; the Settings import refuses its row (§3.3). |
 | Delimiter | Comma. |
 | Quoting | Python `csv.QUOTE_MINIMAL` — values containing comma, quote, or newline are double-quoted. |
 | Line endings | `\r\n` on write (Python `csv` default); `\r\n` or `\n` accepted on read. |
@@ -69,6 +69,9 @@ PairContextTag1.Mentor of  → pair_context.1, friendly label "Mentor of"
 ReviewerTag1               → reviewer.tag_1, no suffix (see below)
 ```
 
+- **A column named twice refuses the file**, as a single blocking
+  issue: `ReviewerTag1` beside `ReviewerTag1.Tutor`, or one name
+  repeated, would otherwise keep one column and drop the other.
 - **First-period split, labelable columns only.** Only those nine
   tag columns are split, and only on the first period — so a label
   may itself contain periods (`RevieweeTag2.Dept. Head`). Every
@@ -84,7 +87,8 @@ ReviewerTag1               → reviewer.tag_1, no suffix (see below)
   of a NULL tag value, and clears any existing override (resolving
   back to the built-in default — `Tag N`, or `Pair context N` for a
   pair-context slot). Clearing an already-unset
-  slot is a no-op.
+  slot is a no-op, and so is setting a slot to the label it already
+  has (no `session_field_label.set` event).
 - **Export emits the suffix** when an override exists, bare
   otherwise (a slot on its default is never given a fabricated
   default-label suffix) — so download → edit → re-import is symmetric.
@@ -475,12 +479,17 @@ the round-trip notes below.
    file, but as an error on its row like the others
    (`session_config_io.split_rows`): the rest of the file is still
    validated (`validate_session_config`), so the report names every
-   short row beside every other error. Quick Setup reports it
+   short row beside every other error. A row holding a NUL character
+   is refused the same way, since Postgres cannot store one. Quick Setup reports it
    before the replacement gates, as it does any malformed file, and
    Rehydrate fails its settings step with it. A blank or absent
    required value is an error naming its path: a `session_rule_sets`
    `name`, an instrument's `name`, a display field's `source_type`,
    and a response field's `field_key`, `label` and `response_type`.
+   A `field_key` the instrument card would refuse (not a lowercase
+   letter followed by lowercase letters, digits or underscores, or over
+   64 characters) is an error naming its path, since the reviewer
+   surface cannot answer it.
    Three keys phase 2 writes as unique are errors when repeated: a `session_rule_sets` name (§4 item 7), a
    `data_shapes` name among the shapes phase 2 writes (those with a
    name and a known axis), and a response field's `field_key` within
@@ -520,7 +529,9 @@ the round-trip notes below.
    the affected section (e.g. all instruments for a session, which
    also deletes every assignment and response in it).
    `session_rule_sets` is the exception: an upsert by name that
-   deletes the rows the CSV omits (§4 item 7).
+   deletes the rows the CSV omits (§4 item 7). A rule set is per
+   instrument, so a second instrument naming one gets its own copy
+   (`spec/instruments.md`, `Delete` semantics).
    Atomic transaction. On any apply error, raise; the caller's
    transaction handler rolls back.
 
