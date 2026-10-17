@@ -24,7 +24,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
-    EmailOutbox,
     Instrument,
     Invitation,
     Observer,
@@ -38,7 +37,6 @@ from app.services import assignments, csv_imports
 from app.services import field_labels as field_labels_service
 from app.services._queries import slot_row_count, tag_slot_counts
 from app.services import instruments as instruments_service
-from app.services import invitations as invitations_service
 from app.services.text import pluralize
 from app.services import relationships as relationships_service
 
@@ -185,12 +183,13 @@ def _invitations_state(db: Session, session_id: int) -> str:
     """Compute the chrome-strip ``invitations`` pill state.
 
     ``not_created`` — zero ``Invitation`` rows for the session.
-    ``not_sent`` — invitations exist; no reviewer has a ``sent``
-      outbox row for their invitation yet.
-    ``partial_sent`` — at least one but not every reviewer has a
-      ``sent`` outbox row.
-    ``all_sent`` — every reviewer with an invitation has a ``sent``
-      outbox row.
+    ``not_sent`` — invitations exist; none has been sent.
+    ``partial_sent`` — at least one but not every invitation has.
+    ``all_sent`` — every invitation has.
+
+    "Sent" is ``Invitation.sent_at``, which Regenerate clears, as the
+    Invitations table and its *Invitations sent* counter read it: a
+    ``sent`` outbox row outlives the token it carried (findings O2).
     """
     invitation_reviewer_ids: set[int] = set(
         db.execute(
@@ -203,11 +202,9 @@ def _invitations_state(db: Session, session_id: int) -> str:
         return "not_created"
     sent_reviewer_ids: set[int] = set(
         db.execute(
-            select(EmailOutbox.reviewer_id).where(
-                EmailOutbox.session_id == session_id,
-                EmailOutbox.kind == invitations_service.INVITATION_KIND,
-                EmailOutbox.status == "sent",
-                EmailOutbox.reviewer_id.is_not(None),
+            select(Invitation.reviewer_id).where(
+                Invitation.session_id == session_id,
+                Invitation.sent_at.is_not(None),
             )
         ).scalars()
     )

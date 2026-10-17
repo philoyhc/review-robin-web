@@ -187,6 +187,29 @@ def test_smtp_send_refuses_a_line_break_in_a_header_or_recipient(
     connect.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "setting, value",
+    [
+        ("username", "alice@example.edu\nRCPT TO:<evil@x.edu>"),
+        ("from_display_name", "Alice\r\nBcc: evil@x.edu"),
+    ],
+)
+def test_smtp_send_refuses_a_line_break_in_the_operator_settings(
+    setting: str, value: str
+) -> None:
+    """The envelope sender is the SMTP username and the From name the
+    display name, both from the operator's settings: a line break in
+    either is refused the same way (findings O10, the read of #3111)."""
+    from dataclasses import replace
+
+    transport = SmtpEmailTransport(replace(_settings(), **{setting: value}))
+    with patch.object(transport, "_connect") as connect:
+        result = transport.send(_msg())
+    assert result.ok is False
+    assert "line break" in (result.error_message or "")
+    connect.assert_not_called()
+
+
 # ── SMTP backend failure paths ───────────────────────────────────────────
 
 

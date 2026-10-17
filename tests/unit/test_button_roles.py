@@ -64,13 +64,14 @@ def test_each_moved_button_keeps_its_role(
 # Every Cancel in the templates holding the seven banner Cancels Item 11
 # moved that still read Cancel (Quick Setup's, the eighth, reads Dismiss:
 # PINNED_DISMISSES), banner ones included (Instruments has two instrument-card
-# Cancels, bottom row and header, beside its three banner ones), plus
+# Cancels, bottom row and header, beside its one banner one: the response-
+# field save banner and its two Cancels retired in findings O7), plus
 # the reviewer pair a comment once hid. Exact, so a dropped or
 # relabelled Cancel fails here.
 PINNED_CANCELS = {
     "operator/session_validate.html": 2,
     "operator/partials/next_action_card.html": 1,
-    "operator/instruments_index.html": 5,
+    "operator/instruments_index.html": 3,
     "operator/session_assignments.html": 1,
     "reviewer/_action_row.html": 2,
 }

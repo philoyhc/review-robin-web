@@ -1461,7 +1461,9 @@ a reviewer-centric Operations-row tab.
   search + Clear / **`Search`**.
 - **Invitations table** — one row per reviewer carrying:
   reviewer name + email, email status (the latest invitation
-  outbox row's status, or `not sent` with no row), email-sent timestamp, per-reviewer progress
+  outbox row's status, or `not sent` with no row or while the
+  invitation is pending after a Regenerate), email-sent timestamp
+  (`Invitation.sent_at`), per-reviewer progress
   (not started / in progress / submitted), required-fields-
   filled count, last-reminder timestamp, per-row Send /
   Send-reminder / Regenerate actions (lifecycle-gated).

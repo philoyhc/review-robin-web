@@ -788,41 +788,11 @@ def export_audit_log_csv(
             detail=f"audit log filter parsing failed: {exc}",
         ) from exc
     # Counted in the database rather than by materialising the
-    # streaming generator. The file is read after the commit below, so
-    # it holds this download's own ``session.audit_log_extracted`` row
-    # whenever the filter keeps it: the event is written first and the
-    # count taken with it in place, so the recorded count is the file's
+    # streaming generator, with this download's own event in place
     # (findings O5).
-    def _summary(rows: int) -> str:
-        return (
-            f"Extracted Audit log CSV for session {review_session.code} "
-            f"({rows} rows"
-            f"{', filtered' if filters.is_active else ''})"
-        )
-
-    prior_count = audit.count_events_for_session(
-        db, review_session, filters=filters
+    audit.record_audit_log_extract(
+        db, review_session, actor_user_id=user.id, filters=filters
     )
-    event = audit.write_event(
-        db,
-        event_type="session.audit_log_extracted",
-        summary=_summary(prior_count),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit.counts(rows=prior_count),
-        context=filters.as_audit_context() or None,
-    )
-    body_count = audit.count_events_for_session(
-        db, review_session, filters=filters
-    )
-    if body_count != prior_count:
-        # The filter keeps this event: count it in its own row. The
-        # detail is reassigned whole so the JSON column sees the change.
-        event.summary = _summary(body_count)
-        event.detail = {
-            **(event.detail or {}),
-            **audit.counts(rows=body_count).to_dict(),
-        }
     db.commit()
 
     download_name = filename(review_session, "audit_log")

@@ -428,8 +428,9 @@ The steps:
    `lifecycle.mark_validated(...)` flips `draft → validated`.
    When the report has errors, the chain stops here — assignment
    pairs survive, the session stays in `draft`, and the card shows
-   State 2 with the failure signal line ("Validation reported N
-   errors."); the Validate page carries the diagnostic.
+   State 2 with the failure signal line ("Validation reported
+   errors. The Validate page lists them."); the Validate page
+   carries the diagnostic.
 3. **Invite.** `invitations.generate_invitations(...)` —
    idempotently creates one `Invitation` row per eligible
    reviewer (assigned, with at least one `include=True`
@@ -609,7 +610,7 @@ the operator-choice step, not failed.
 Pre-flight gates:
 
 - **Prepare** — session not editable (already `ready`) → 303
-  with `super_button=prepare&super_step=precondition`.
+  with `super_button=prepare&super_step=precondition&super_error=not_editable`
 - **Activate** — session already `ready` → 303 with
   `super_button=activate&super_step=precondition&super_error=already_active`
 - **Activate** — session not yet `validated` → 303 with

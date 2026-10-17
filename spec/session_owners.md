@@ -105,8 +105,8 @@ the page's card list; this spec owns its contents.
 - **Errors** are the card's own banner: a redirect back to
   `#owners-card`, `?owners_error=<code>` appended when there is one.
   Codes rendered: `already_owner`, `not_in_workspace`, `not_owner`,
-  `self_only`, else a generic "couldn't apply that change" naming the
-  code. `last_owner` is not among them: it is a bare 409 (§5).
+  `self_only`, each fixed copy; any other code shows no banner
+  (findings O7). `last_owner` is not among them: it is a bare 409 (§5).
 
 ---
 

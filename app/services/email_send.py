@@ -110,10 +110,10 @@ class SmtpEmailTransport:
     def send(self, msg: EmailMessage) -> SendResult:
         if _has_line_break(msg, self._settings):
             # Refused before anything is built or sent: a CR or LF in a
-            # header value or a recipient would start a new header or
-            # SMTP command (findings O10). The stdlib refuses some of
-            # these with a ``ValueError`` this method would not catch,
-            # and Bcc, which is never a header, not at all.
+            # header value, a recipient or the envelope sender would
+            # start a new header or SMTP command (findings O10). Newer
+            # stdlibs refuse these too, but with a ``ValueError`` after
+            # connecting, which would escape this method's SendResult.
             return _failure(
                 "The message has a line break in its sender, subject or "
                 "recipients, so it was not sent.",
@@ -199,6 +199,7 @@ def _has_line_break(msg: EmailMessage, settings: EmailSettings) -> bool:
     """Whether any value bound for a header or an SMTP envelope carries
     a CR or LF. The body is exempt: it is content, not a header."""
     values = [
+        settings.username or "",
         msg.from_addr,
         msg.from_display_name or "",
         settings.from_display_name or "",

@@ -1541,7 +1541,7 @@ Bottom row of the card, right-aligned, in this order:
   `sort_save_error` (a code: `misaligned`, `bad_id`, or the
   `SortSpecError.code`) + `sort_save_error_instrument_id`, and the page
   renders a "Could not save the sort order" banner, its line fixed copy
-  for that code (none for an unlisted one), whose Cancel
+  for that code (an unlisted code shows no banner), whose Cancel
   returns to that card in edit mode (`spec/ui_elements.md` §5a).
 - **Cancel** — only in edit mode. Reloads the same edit-mode
   URL to discard unsaved edits. Same dirty-aware enable

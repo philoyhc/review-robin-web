@@ -106,7 +106,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`_session_home.py:124`); `spec/lifecycle.md` §8.3 says the Operations pages
   and the lobby too. `guide/post_azure_todo_checklist.md` item 7 tracks the
   scheduler. Author: say so in the spec, or add the callers.
-- ~~**O2**~~ — **Done in #3111**: the table's Email Status reads `not sent` while the invitation is `pending`, and Sent and the *Invitations sent* counter read `Invitation.sent_at` (`tests/integration/test_invitations.py::test_regenerate_all_resets_the_table_and_the_sent_counter`). After Regenerate all, the Invitations table and counters still say
+- ~~**O2**~~ — **Done in #3111**: the table's Email Status reads `not sent` while the invitation is `pending`, and Sent, the *Invitations sent* counter and the chrome strip's Invitations pill read `Invitation.sent_at` (`tests/integration/test_invitations.py::test_regenerate_all_resets_the_table_and_the_sent_counter`, `tests/integration/test_chrome_invitations_state.py::test_invitations_pill_reads_not_sent_after_regenerate_all`). After Regenerate all, the Invitations table and counters still say
   "sent" while the rows are pending (`_invitations.py:113-124`;
   `spec/operations_pages.md` "Invitation card"). *Reproduced.* Code.
 - ~~**S3**~~ — **Done in #3107**: phase 1 holds each `field_key` to the card's `_validate_field_key` and refuses a bad one as a row error (`spec/csv_contracts.md` §3.3; `tests/unit/test_settings_import_bug_sweep.py`). **The Settings import accepts any `field_key`; one containing `]` can
@@ -185,7 +185,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   encrypted value differs every time (`operator_settings.py:154-157`). Code.
 - ~~**O9**~~ — **Done in #3111**: the snapshot input's value is single-quoted (`tests/integration/test_instrument_builder_routes.py::test_column_widths_snapshot_value_survives_html_parsing`). `instruments_index.html:1433` puts `| tojson` inside a quoted
   attribute, breaking it (benign today). Code.
-- ~~**O10**~~ — **Done in #3111**: From goes through `formataddr`, and a CR or LF in the sender, subject, To, Cc or Bcc is a failed `SendResult` before connecting (`tests/unit/test_email_send.py`). *Latent, no caller yet:* `email_send.py` builds the From display
+- ~~**O10**~~ — **Done in #3111**: From goes through `formataddr`, and a CR or LF in the envelope sender (the SMTP username), the From address or name, subject, To, Cc or Bcc is a failed `SendResult` before connecting (`tests/unit/test_email_send.py`). *Latent, no caller yet:* `email_send.py` builds the From display
   name without `formataddr` and doesn't refuse CR/LF in subject, cc or bcc.
   Fix before segment 14B sends mail.
 - ~~**S8**~~ — **Done in #3107**: `field_labels.upsert` returns early on an unchanged label, with no event and no invalidation (`tests/integration/test_field_labels_resolver.py`). **Saving unchanged friendly labels un-validates the session and
