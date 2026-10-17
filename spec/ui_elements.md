@@ -431,7 +431,7 @@ card).
 
 **Auto-scroll on display.** Every banner card carries the
 `banner-scroll-target` class plus a unique anchor id (e.g.
-`id="rf-save-error-banner"`). A small page-wide script in
+`id="sort-save-error-banner"`). A small page-wide script in
 `base.html` scrolls the first `.banner-scroll-target` on the
 page smoothly into view on `DOMContentLoaded`, overriding any
 natural URL fragment-jump that would otherwise scroll past the

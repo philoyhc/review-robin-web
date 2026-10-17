@@ -257,13 +257,13 @@ def test_stop_release_refuses_a_session_archived_at_the_lock(
         (
             "release-responses",
             "release_responses",
-            "Archived sessions can't have responses released.",
+            "archived_release",
             "session.responses_released",
         ),
         (
             "stop-release",
             "stop_release",
-            "Archived sessions can't have releases stopped.",
+            "archived_stop_release",
             "session.responses_release_stopped",
         ),
     ],

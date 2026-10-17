@@ -74,8 +74,8 @@ def test_audit_log_route_emits_audit_event(
     client: TestClient, db: Session
 ) -> None:
     """The act of downloading the audit log goes into the audit
-    log. The body_count reflects pre-download rows; the
-    just-written event captures next time."""
+    log, and counts itself among the file's rows
+    (``test_audit_log_recorded_count_matches_the_file``)."""
 
     review_session = _make_session(client, db, code="al-audit")
     response = client.get(
@@ -137,3 +137,43 @@ def test_audit_log_route_rejects_non_sys_admin(
         follow_redirects=False,
     )
     assert response.status_code == 403
+
+
+def _extract_events(db: Session, session_id: int) -> list[AuditEvent]:
+    db.expire_all()
+    return list(
+        db.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.event_type == "session.audit_log_extracted",
+                AuditEvent.session_id == session_id,
+            )
+            .order_by(AuditEvent.id)
+        ).scalars()
+    )
+
+
+def test_audit_log_recorded_count_matches_the_file(
+    client: TestClient, db: Session
+) -> None:
+    """The extract's own event is in the file it describes (the file is
+    read after the event commits), so its recorded count includes it;
+    a filter that excludes it leaves the count at the rows it keeps
+    (findings O5)."""
+    review_session = _make_session(client, db, code="al-count")
+    base = f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+
+    rows = list(csv.reader(io.StringIO(client.get(base).text)))[1:]
+    [event] = _extract_events(db, review_session.id)
+    assert "session.audit_log_extracted" in [r[0] for r in rows]
+    assert cast(dict, event.detail)["counts"]["rows"] == len(rows)
+    assert f"({len(rows)} rows)" in event.summary
+
+    filtered = list(
+        csv.reader(
+            io.StringIO(client.get(f"{base}?event_type=session.created").text)
+        )
+    )[1:]
+    latest = _extract_events(db, review_session.id)[-1]
+    assert [r[0] for r in filtered] == ["session.created"]
+    assert cast(dict, latest.detail)["counts"]["rows"] == len(filtered) == 1

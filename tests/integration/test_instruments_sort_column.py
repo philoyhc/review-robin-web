@@ -259,7 +259,7 @@ def test_bulk_save_misaligned_arrays_redirects_with_banner(
         _query_param(location, "sort_save_error_instrument_id")
         == str(instrument.id)
     )
-    assert "misaligned" in (_query_param(location, "sort_save_error") or "")
+    assert _query_param(location, "sort_save_error") == "misaligned"
 
 
 def test_bulk_save_over_cap_redirects_with_banner(
@@ -293,8 +293,9 @@ def test_bulk_save_over_cap_redirects_with_banner(
     )
     assert response.status_code == 303
     location = response.headers["location"]
-    msg = _query_param(location, "sort_save_error") or ""
-    assert "maximum is 3" in msg or "maximum" in msg
+    assert _query_param(location, "sort_save_error") == "too_many"
+    body = client.get(location).text
+    assert "the maximum is 3." in body
 
 
 def test_rejected_sort_spec_renders_the_error_banner(
@@ -350,8 +351,10 @@ def test_bulk_save_unknown_dir_redirects_with_banner(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    msg = _query_param(response.headers["location"], "sort_save_error") or ""
-    assert "sideways" in msg or "not one of" in msg
+    location = response.headers["location"]
+    assert _query_param(location, "sort_save_error") == "unknown_dir"
+    body = client.get(location).text
+    assert "A sort direction is not one of asc or desc." in body
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -484,17 +487,34 @@ def _banner(body: str, banner_id: str) -> str:
     return body[start : body.index("</div>\n    </div>", start)]
 
 
-def test_instruments_error_banners_use_the_banner_actions_row(
+def test_instruments_error_banners_show_no_text_from_the_url(
     db: Session, client: TestClient
 ) -> None:
-    """Both Instruments error banners put Cancel in ``.banner-actions``
-    rather than an inline flex row (findings Ec5, 2026-10-05)."""
-    review_session = _make_session(client, db, code="dfsort-banner-row")
-    body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
-        "?rf_save_error=Boom"
+    """The sort banner's line is fixed copy looked up by code, and an
+    unlisted code renders no banner; the response-field banner, which
+    nothing redirected to, is gone. A link cannot put its own words on
+    the page (findings O7)."""
+    review_session = _make_session(client, db, code="dfsort-banner-url")
+    instrument = _instrument(db, review_session)
+    base = f"/operator/sessions/{review_session.id}/instruments"
+    forged = client.get(
+        f"{base}?rf_save_error=Boom"
+        f"&sort_save_error=Your+session+is+compromised"
+        f"&sort_save_error_instrument_id={instrument.id}"
     ).text
-    banner = _banner(body, "rf-save-error-banner")
-    assert "<strong>Could not save:</strong> Boom" in banner
+    assert 'id="rf-save-error-banner"' not in forged
+    assert 'id="sort-save-error-banner"' not in forged
+    assert "Boom" not in forged
+    assert "compromised" not in forged
+
+    known = client.get(
+        f"{base}?sort_save_error=duplicate_id"
+        f"&sort_save_error_instrument_id={instrument.id}"
+    ).text
+    banner = _banner(known, "sort-save-error-banner")
+    assert (
+        "<strong>Could not save the sort order:</strong> "
+        "A display field appears more than once in the sort spec."
+    ) in banner
     assert '<div class="banner-actions">' in banner
     assert "display: flex" not in banner

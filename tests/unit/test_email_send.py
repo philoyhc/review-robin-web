@@ -144,6 +144,72 @@ def test_smtp_send_uses_starttls_when_encryption_is_starttls() -> None:
     smtp_instance.login.assert_called_once_with("alice@example.edu", "app-pw-1234")
 
 
+def test_from_header_quotes_a_display_name_with_specials() -> None:
+    """The From display name goes through ``formataddr``: a comma or a
+    quote in it is quoted rather than read as a second address
+    (findings O10)."""
+    from dataclasses import replace
+    from email.utils import getaddresses
+
+    from app.services.email_send import _build_message
+
+    settings = replace(_settings(), from_display_name='Doe, Jane "JD"')
+    payload = _build_message(_msg(), settings)
+    [(name, addr)] = getaddresses([str(payload["From"])])
+    assert (name, addr) == ('Doe, Jane "JD"', "alice@example.edu")
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("subject", "Invitation\r\nBcc: evil@x.edu"),
+        ("subject", "Invitation\nX-Injected: 1"),
+        ("to", "rae@example.edu\r\nRCPT TO:<evil@x.edu>"),
+        ("cc", ["cc@x.edu\nBcc: evil@x.edu"]),
+        ("bcc", ["bcc@x.edu\r\nRCPT TO:<evil@x.edu>"]),
+    ],
+)
+def test_smtp_send_refuses_a_line_break_in_a_header_or_recipient(
+    field: str, value: object
+) -> None:
+    """A CR or LF in the subject, a recipient or Cc / Bcc is refused as a
+    failed ``SendResult`` before anything connects — never raised, and
+    Bcc, which the stdlib never sees as a header, included (findings
+    O10)."""
+    from dataclasses import replace
+
+    transport = SmtpEmailTransport(_settings())
+    with patch.object(transport, "_connect") as connect:
+        result = transport.send(replace(_msg(), **{field: value}))
+    assert result.ok is False
+    assert result.error_message is not None
+    assert "line break" in result.error_message
+    connect.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "setting, value",
+    [
+        ("username", "alice@example.edu\nRCPT TO:<evil@x.edu>"),
+        ("from_display_name", "Alice\r\nBcc: evil@x.edu"),
+    ],
+)
+def test_smtp_send_refuses_a_line_break_in_the_operator_settings(
+    setting: str, value: str
+) -> None:
+    """The envelope sender is the SMTP username and the From name the
+    display name, both from the operator's settings: a line break in
+    either is refused the same way (findings O10, the read of #3111)."""
+    from dataclasses import replace
+
+    transport = SmtpEmailTransport(replace(_settings(), **{setting: value}))
+    with patch.object(transport, "_connect") as connect:
+        result = transport.send(_msg())
+    assert result.ok is False
+    assert "line break" in (result.error_message or "")
+    connect.assert_not_called()
+
+
 # ── SMTP backend failure paths ───────────────────────────────────────────
 
 

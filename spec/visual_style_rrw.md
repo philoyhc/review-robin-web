@@ -216,9 +216,9 @@ Zero reads `none` rather than `0 / 0`, matching Reviewers and Reviewees; instrum
 | Label | Pill class | Condition |
 |---|---|---|
 | `Not created` | `pill-empty` | No `Invitation` rows exist for the session yet. |
-| `Not sent` | `pill-warning` | `Invitation` rows exist, but no reviewer has a `sent` outbox row for their invitation. |
-| `Partially sent` | `pill-warning` | At least one reviewer has a `sent` outbox row, but not every reviewer with an invitation does. |
-| `All sent` | `pill-info` | Every reviewer with an invitation has a `sent` outbox row. |
+| `Not sent` | `pill-warning` | `Invitation` rows exist, but none has been sent (`Invitation.sent_at`, which Regenerate clears, as the Invitations table reads it). |
+| `Partially sent` | `pill-warning` | At least one invitation has been sent, but not every one. |
+| `All sent` | `pill-info` | Every invitation has been sent. |
 
 The `Not created` vs `Not sent` split matters because the operator's next action differs: generate the invitation rows first vs. press Send. Collapsing both into a single "not sent" pill would hide that.
 

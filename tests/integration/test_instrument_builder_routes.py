@@ -2244,6 +2244,39 @@ def test_new_model_column_widths_snapshot_rides_with_form_save(
     assert 'data-new-model-band2-identity-width="240"' in body
 
 
+def test_column_widths_snapshot_value_survives_html_parsing(
+    client: TestClient, db: Session
+) -> None:
+    """The hidden snapshot carries the stored widths as JSON a browser
+    reads back whole. Inside a double-quoted attribute ``tojson``'s
+    ``"`` ended the value at ``{`` (findings O9)."""
+    from html.parser import HTMLParser
+    import json
+
+    review_session = _make_session(client, db, code="nm-widths-attr")
+    _seed_tag_data(db, review_session.id)
+    instrument = _instrument(db, review_session.id)
+    instrument.column_widths = {"identity": 240, "tag_1": 120}
+    db.commit()
+
+    values: list[str | None] = []
+
+    class _Snapshot(HTMLParser):
+        def handle_starttag(self, tag, attrs):  # type: ignore[no-untyped-def]
+            found = dict(attrs)
+            if tag == "input" and found.get("name") == "column_widths_snapshot":
+                values.append(found.get("value"))
+
+    _Snapshot().feed(
+        client.get(
+            f"/operator/sessions/{review_session.id}"
+            f"/instruments?editing={instrument.id}"
+        ).text
+    )
+    assert values, "the snapshot input renders"
+    assert json.loads(values[0] or "") == {"identity": 240, "tag_1": 120}
+
+
 def test_new_model_response_field_width_persists_on_band2_state(
     client: TestClient, db: Session
 ) -> None:

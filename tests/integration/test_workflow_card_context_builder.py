@@ -199,24 +199,26 @@ def test_parse_super_failure_decodes_query_params() -> None:
     # Step name implies the button when ``super_button`` is absent
     # (legacy URL).
     assert views.parse_super_failure(
-        "failed", "validate", "Validation failed."
+        "failed", "validate", "has_errors"
     ) == {
         "button": "prepare",
         "step": "validate",
-        "error": "Validation failed.",
+        "error": "Validation reported errors. The Validate page lists them.",
     }
+    # ``super_error`` is a code: a sentence in the URL is an unlisted
+    # code and shows nothing (findings O7).
     assert views.parse_super_failure(
         "failed", "activate", "Activate raised."
     ) == {
         "button": "activate",
         "step": "activate",
-        "error": "Activate raised.",
+        "error": "",
     }
     # Explicit ``super_button`` wins (e.g. precondition on Activate).
     assert views.parse_super_failure(
         "failed",
         "precondition",
-        "Session is already activated.",
+        "already_active",
         "activate",
     ) == {
         "button": "activate",

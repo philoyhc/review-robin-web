@@ -224,7 +224,9 @@ or UTC when the link carries `tz=utc` (`spec/timezone_display.md`).
 `tz` changes which rows a date filter keeps, never the `CreatedAt`
 column. The `session.audit_log_extracted` event records the active
 filters in its `context`, with `date_zone` beside a date filter read
-in a zone other than UTC.
+in a zone other than UTC, and the file's row count in `counts.rows`:
+the file holds that event too whenever the filter keeps it, so it
+counts itself.
 
 | # | Column | Source | Notes |
 |---|---|---|---|

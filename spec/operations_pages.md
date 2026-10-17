@@ -295,8 +295,8 @@ excluded nothing is worth saying.
 | 2 | Tag1 | ✓ | `tag_1` | `data-col-toggle="tag-1"` / `class="tag-col tag-col-1"`; header label via `field_label_header(session, "reviewer", "tag_1")` |
 | 3 | Tag2 | ✓ | `tag_2` | `data-col-toggle="tag-2"` / `class="tag-col tag-col-2"` |
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
-| 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none. **Rendered, not enumerated**, so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
-| 6 | Sent | — | `email_sent_at` | Timestamp pill, or `—` |
+| 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none or the invitation is back at `pending` (a regenerate rotated its token), the same gate as the Invitation card's delivery pill. **Rendered, not enumerated**, so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
+| 6 | Sent | — | `email_sent_at` | Timestamp pill from `Invitation.sent_at`, or `—`; the *Invitations sent* counter counts these |
 | 7 | Progress | — | `review_progress` | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
 | 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
 | 9 | Reminder | — | `last_reminder_at` | Timestamp pill, or `—` |

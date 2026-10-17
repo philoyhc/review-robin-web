@@ -564,12 +564,12 @@ def test_prepare_failure_banner_renders_in_right_column(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
         f"?super_status=failed&super_button=prepare&super_step=validate"
-        f"&super_error=Validation+reported+1+error."
+        f"&super_error=has_errors"
     ).text
     assert 'id="next-action-super-failure-banner"' in body
     assert "Prepare session failed" in body
     assert "Validate setup" in body
-    assert "Validation reported 1 error." in body
+    assert "Validation reported errors. The Validate page lists them." in body
 
 
 def test_activate_failure_banner_renders_in_right_column(
@@ -579,11 +579,30 @@ def test_activate_failure_banner_renders_in_right_column(
     body = client.get(
         f"/operator/sessions/{review_session.id}/assignments"
         f"?super_status=failed&super_button=activate&super_step=activate"
-        f"&super_error=Activate+raised."
+        f"&super_error=needs_acknowledge"
     ).text
     assert 'id="next-action-super-failure-banner"' in body
     assert "Activate session failed" in body
-    assert "Activate raised." in body
+    assert "Activation requires acknowledging the warnings." in body
+
+
+def test_failure_banner_shows_no_text_from_the_url(
+    client: TestClient, db: Session
+) -> None:
+    """``super_error`` is a code the card maps to fixed copy; a link
+    carrying a sentence, or any unlisted code, adds no line under the
+    headline, so a link cannot put its own words on the card (findings
+    O7)."""
+    review_session = _seed_pair_plus_pinned(client, db, code="banner-url")
+    body = client.get(
+        f"/operator/sessions/{review_session.id}"
+        f"?super_status=failed&super_button=activate&super_step=activate"
+        f"&super_error=Your+session+is+compromised.+Call+555-0100."
+    ).text
+    assert 'id="next-action-super-failure-banner"' in body
+    assert "Activate session failed" in body
+    assert "compromised" not in body
+    assert "555-0100" not in body
 
 
 # --------------------------------------------------------------------------- #

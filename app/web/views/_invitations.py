@@ -7,7 +7,7 @@ Slice 3 of the §12.B ladder (``guide/archive/major_refactor.md``).
 Owns the ``InvitationsRow`` dataclass and ``build_invitations_rows``
 adapter that joins per-reviewer progress (from
 ``monitoring.per_reviewer_progress``) with the latest invitation
-outbox row's status + sent_at — in a single batched outbox query
+outbox row's status — in a single batched outbox query
 rather than firing N queries per row.
 
 Filter / search helpers (`filter_invitations_rows`,
@@ -37,7 +37,8 @@ class InvitationsRow:
     invitation: Invitation | None
     email_status: str
     """The latest invitation outbox row's status, or ``"not sent"`` when
-    no outbox row exists for this reviewer's invitation. Today the value
+    no outbox row exists for this reviewer's invitation or the
+    invitation is back at ``pending`` (a regenerate rotated its token). Today the value
     set is ``{"not sent", "queued", "sent"}``; Segment 11C Part 2 widens
     it to include ``"sending"`` and ``"failed"``."""
     email_sent_at: datetime | None
@@ -78,8 +79,8 @@ def _latest_invitation_outbox_by_reviewer(
 ) -> dict[int, EmailOutbox]:
     """One latest ``kind="invitation"`` outbox row per reviewer.
 
-    Used by ``build_invitations_rows`` to populate the Email Status +
-    Email Sent columns. Sorted descending by created_at then id, then
+    Used by ``build_invitations_rows`` to populate the Email Status
+    column (the Sent column reads ``Invitation.sent_at``). Sorted descending by created_at then id, then
     the first row per reviewer wins.
     """
     rows = list(
@@ -111,12 +112,24 @@ def build_invitations_rows(
     out: list[InvitationsRow] = []
     for p in progress_rows:
         outbox_row = latest_outbox.get(p.reviewer.id)
-        if outbox_row is None:
+        # A regenerate resets the invitation to ``pending`` and clears
+        # its ``sent_at`` but leaves the old token's outbox row, so the
+        # row's own state gates what the outbox says (findings O2) —
+        # the same split the reviewer detail's Invitation card makes:
+        # the date from ``Invitation.sent_at``, the state only once the
+        # invitation is past ``pending``.
+        invitation = p.invitation
+        email_sent_at: datetime | None = (
+            invitation.sent_at if invitation is not None else None
+        )
+        if (
+            outbox_row is None
+            or invitation is None
+            or invitation.status == "pending"
+        ):
             email_status = "not sent"
-            email_sent_at: datetime | None = None
         else:
             email_status = outbox_row.status
-            email_sent_at = outbox_row.sent_at
         out.append(
             InvitationsRow(
                 reviewer=p.reviewer,

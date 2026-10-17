@@ -130,29 +130,13 @@
     </div>
   {% endif %}
 
-  {% if rf_save_error %}
-    <div class="banner banner-error banner-scroll-target" id="rf-save-error-banner">
-      <p style="margin: 0;"><strong>Could not save:</strong> {{ rf_save_error }}</p>
-      <div class="banner-actions">
-        {# Cancel returns to the source row (the instrument card the
-           bulk-save POST came from), preserving editing mode so the
-           operator can fix the row set. The natural fragment-jump
-           lands the operator back at where they were before the
-           banner appeared. Slice 4d / banner-scroll convention. #}
-        {% if editing_instrument_id %}
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments?editing={{ editing_instrument_id }}#instrument-{{ editing_instrument_id }}">Cancel</a>
-        {% else %}
-          <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/instruments">Cancel</a>
-        {% endif %}
-      </div>
-    </div>
-  {% endif %}
-
   {# The no-JS ``/fields/save`` fallback 303s here when the sort spec
      is rejected; the JSON ``/save`` answers 422 to the card instead.
-     Cancel returns to that instrument's card in edit mode. #}
+     Cancel returns to that instrument's card in edit mode.
+     ``sort_save_error`` is the view's fixed copy for the redirect's
+     code, ``None`` for an unlisted one (findings O7). The response-
+     field banner beside it, ``rf_save_error``, retired with it: nothing
+     had redirected with that param since Wave 5 PR 5.3. #}
   {% if sort_save_error and sort_save_error_instrument_id %}
     <div class="banner banner-error banner-scroll-target" id="sort-save-error-banner">
       <p style="margin: 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
@@ -1560,11 +1544,13 @@
            mirrors every resize into this input and marks the card
            dirty; the widths persist through the consolidated /save on
            Save (the immediate /column-widths POST retired). Always
-           rendered (only submitted when the unlocked card is Saved). #}
+           rendered (only submitted when the unlocked card is Saved).
+           Single-quoted: ``tojson`` escapes ``'`` but not ``"``, so a
+           double-quoted value ended at the JSON's first key. #}
         <input form="dfsave-{{ instrument.id }}" type="hidden"
                name="column_widths_snapshot"
                data-new-model-band2-widths-snapshot
-               value="{{ (instrument.column_widths or {}) | tojson }}">
+               value='{{ (instrument.column_widths or {}) | tojson }}'>
         {# Segment 18R Item 2 PR 5b — Band 2 state snapshot. The client
            stageBand2State() serializes the display-field selection +
            response-field rows (every named row — the lost-edit fix)

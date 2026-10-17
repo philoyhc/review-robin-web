@@ -787,28 +787,11 @@ def export_audit_log_csv(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"audit log filter parsing failed: {exc}",
         ) from exc
-    # Count up front so the audit event carries the row count
-    # without materialising the streaming generator. The
-    # ``session.audit_log_extracted`` event we're about to write
-    # is NOT included in this count — the next download will
-    # capture it (the recursion is bounded and intentional).
-    body_count = audit.count_events_for_session(
-        db, review_session, filters=filters
-    )
-
-    audit_event_payload = audit.counts(rows=body_count)
-    audit.write_event(
-        db,
-        event_type="session.audit_log_extracted",
-        summary=(
-            f"Extracted Audit log CSV for session {review_session.code} "
-            f"({body_count} rows"
-            f"{', filtered' if filters.is_active else ''})"
-        ),
-        actor_user_id=user.id,
-        session=review_session,
-        payload=audit_event_payload,
-        context=filters.as_audit_context() or None,
+    # Counted in the database rather than by materialising the
+    # streaming generator, with this download's own event in place
+    # (findings O5).
+    audit.record_audit_log_extract(
+        db, review_session, actor_user_id=user.id, filters=filters
     )
     db.commit()
 

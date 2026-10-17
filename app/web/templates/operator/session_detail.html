@@ -537,7 +537,10 @@
           session always retains at least one owner.
         </p>
 
-        {% if owners_error %}
+        {# Codes only, each mapped to fixed copy here: an unlisted one
+           renders no banner, so a link cannot put its own words on the
+           card (findings O7). #}
+        {% if owners_error in ("already_owner", "not_in_workspace", "not_owner", "self_only") %}
           <div class="card banner-scroll-target" role="alert">
             <p>
               {% if owners_error == "already_owner" %}
@@ -551,8 +554,6 @@
                 As a sys-admin who isn't an owner of this session, you can
                 only add <em>yourself</em> as an owner. Add yourself first,
                 then add others.
-              {% else %}
-                Couldn't apply that change ({{ owners_error }}).
               {% endif %}
             </p>
           </div>

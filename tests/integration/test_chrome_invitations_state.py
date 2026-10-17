@@ -218,3 +218,25 @@ def test_invitations_pill_all_sent_when_every_reviewer_sent(
     assert (
         f'<span class="pill pill-info" title="{_SENT_TITLE}">All sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'All sent'"
+
+
+def test_invitations_pill_reads_not_sent_after_regenerate_all(
+    client: TestClient, db: Session
+) -> None:
+    """Regenerate all leaves the sent outbox rows but clears each
+    invitation's ``sent_at``, so the pill agrees with the Invitations
+    table and its counter (findings O2)."""
+    session = _create_session(client, db, "chrome-inv-regen")
+    _seed_two_reviewers(client, db, session.id)
+    _validated(client, db, session.id)
+    for action in ("send-all", "regenerate-all"):
+        response = client.post(
+            f"/operator/sessions/{session.id}/invitations/{action}",
+            follow_redirects=False,
+        )
+        assert response.status_code == 303, response.text
+
+    body = client.get(f"/operator/sessions/{session.id}").text
+    assert (
+        f'<span class="pill pill-warning" title="{_SENT_TITLE}">Not sent</span>' in body
+    ), "expected the chrome-strip Invitations pill to read 'Not sent'"

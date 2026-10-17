@@ -287,3 +287,46 @@ def test_new_session_form_includes_live_update_script(
         'IDS = [\n      "scheduled_activate_at",\n      "deadline",\n      "responses_release_at",\n      "responses_release_until",\n    ]'
         in body
     )
+
+
+def test_edit_does_not_check_a_pair_neither_box_changed(
+    client: TestClient, db: Session
+) -> None:
+    """Close early, then Release, stamps Release-from before End; after
+    a Revert every Save re-submits both stored values. A pair whose two
+    boxes both still hold their stored values is not checked, so the
+    Save goes through; editing either side checks the pair again
+    (findings L6)."""
+    from app.services import date_formatting, sessions
+
+    review_session = _make_session(client, db, code="ord-l6-stored")
+    review_session.deadline = _ts(2027, 2, 1, 9)
+    # What **Release responses** leaves on a session closed before End.
+    review_session.responses_release_at = _ts(2027, 1, 15, 9)
+    db.commit()
+    zone = sessions.resolve_session_timezone(review_session)
+
+    def _box(value: _dt.datetime) -> str:
+        return date_formatting.format_datetime_local(value, zone)
+
+    status_code, body = _submit_edit(
+        client,
+        review_session,
+        display_timezone=zone,
+        name="Renamed",
+        deadline=_box(review_session.deadline),
+        responses_release_at=_box(review_session.responses_release_at),
+    )
+    assert status_code == 303, body
+    db.refresh(review_session)
+    assert review_session.name == "Renamed"
+
+    status_code, body = _submit_edit(
+        client,
+        review_session,
+        display_timezone=zone,
+        deadline=_box(review_session.deadline),
+        responses_release_at=_box(_ts(2027, 1, 20, 9)),
+    )
+    assert status_code == 422
+    assert "Release responses from must be on or after End" in body

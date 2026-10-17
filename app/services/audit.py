@@ -1037,6 +1037,59 @@ def count_events_for_session(
     return db.execute(stmt).scalar_one()
 
 
+
+def record_audit_log_extract(
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    actor_user_id: int,
+    filters: AuditFilters,
+) -> int:
+    """Write the ``session.audit_log_extracted`` event for an audit-log
+    CSV download and return the row count it records (findings O5).
+
+    The file is read after the caller commits, so it holds this event
+    whenever the filter keeps it. The event is written first and the
+    count taken with it in place, so the recorded count is the file's;
+    the patched detail is validated again, as ``write_event`` validated
+    the first one.
+    """
+
+    def _summary(rows: int) -> str:
+        return (
+            f"Extracted Audit log CSV for session {review_session.code} "
+            f"({rows} rows{', filtered' if filters.is_active else ''})"
+        )
+
+    prior = count_events_for_session(db, review_session, filters=filters)
+    event = write_event(
+        db,
+        event_type="session.audit_log_extracted",
+        summary=_summary(prior),
+        actor_user_id=actor_user_id,
+        session=review_session,
+        payload=counts(rows=prior),
+        context=filters.as_audit_context() or None,
+    )
+    rows = count_events_for_session(db, review_session, filters=filters)
+    if rows != prior:
+        # The filter keeps this event: count it in its own row. The
+        # detail is reassigned whole so the JSON column sees the change.
+        detail = {**(event.detail or {}), **counts(rows=rows).to_dict()}
+        try:
+            validate_detail(event.event_type, detail)
+        except AuditDetailValidationError as exc:
+            if _audit_strict_mode():
+                raise
+            warnings.warn(
+                f"audit.record_audit_log_extract {exc}; writing the row "
+                f"anyway because settings.audit_strict_mode is False",
+                stacklevel=2,
+            )
+        event.summary = _summary(rows)
+        event.detail = detail
+    return rows
+
 def list_events_for_session(
     db: Session,
     review_session: ReviewSession,

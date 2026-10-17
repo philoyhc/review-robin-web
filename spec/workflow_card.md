@@ -428,8 +428,9 @@ The steps:
    `lifecycle.mark_validated(...)` flips `draft → validated`.
    When the report has errors, the chain stops here — assignment
    pairs survive, the session stays in `draft`, and the card shows
-   State 2 with the failure signal line ("Validation reported N
-   errors."); the Validate page carries the diagnostic.
+   State 2 with the failure signal line ("Validation reported
+   errors. The Validate page lists them."); the Validate page
+   carries the diagnostic.
 3. **Invite.** `invitations.generate_invitations(...)` —
    idempotently creates one `Invitation` row per eligible
    reviewer (assigned, with at least one `include=True`
@@ -541,8 +542,10 @@ Both routes wrap their step chain in a try/except that catches
 internal `_StepFailed` sentinel; Prepare also catches anything else,
 to audit it before it answers 500 (**Any other exception** below). For
 the caught set the redirect URL carries
-`super_status=failed&super_button=<prepare|activate|close|release_responses|stop_release>&super_step=<step>&super_error=<msg>`
-so the workflow-failure signal line adapts.
+`super_status=failed&super_button=<prepare|activate|close|release_responses|stop_release>&super_step=<step>&super_error=<code>`
+so the workflow-failure signal line adapts. `<code>` is the caught
+`LifecycleError.code` (or `_StepFailed`'s), absent for a bare
+`ValueError`; the message itself stays in the audit event.
 
 **Prepare failures:**
 
@@ -553,7 +556,7 @@ so the workflow-failure signal line adapts.
   survives that rollback, so the failure row has its start. A refusal
   from the session-state guard (the session left `draft`/`validated`
   since the page loaded) lands here too. Redirect carries
-  `super_button=prepare&super_step=generate&super_error=<msg>`.
+  `super_button=prepare&super_step=generate&super_error=<code>`.
   The card renders the session's unchanged state on next render.
 - **Validate finds errors.** No rollback. The fresh assignments
   stay. The summary is computed only for a `validated` session, so
@@ -607,11 +610,11 @@ the operator-choice step, not failed.
 Pre-flight gates:
 
 - **Prepare** — session not editable (already `ready`) → 303
-  with `super_button=prepare&super_step=precondition`.
+  with `super_button=prepare&super_step=precondition&super_error=not_editable`
 - **Activate** — session already `ready` → 303 with
-  `super_button=activate&super_step=precondition&super_error=Session+is+already+activated.`
+  `super_button=activate&super_step=precondition&super_error=already_active`
 - **Activate** — session not yet `validated` → 303 with
-  `super_button=activate&super_step=precondition&super_error=Run+Prepare+session+before+activating.`
+  `super_button=activate&super_step=precondition&super_error=not_validated`
 - `is_setup_empty` is True → no defensive gate at the route
   layer; the workflow card renders no Prepare button in State 1
   (`prepare_visible` excludes a setup-empty draft), so there is no
@@ -822,7 +825,7 @@ auto-send reminders.
 #### Workflow-failure signal
 
 Renders when `super_failure` is populated (i.e. the page was hit
-with `?super_status=failed&super_button=<button>&super_step=<step>&super_error=<msg>`).
+with `?super_status=failed&super_button=<button>&super_step=<step>&super_error=<code>`).
 Bold headline: **"<Button label> failed at the <step>."** — the
 label comes from `super_failure.button` through a map in the
 partial that carries **all five** values the routes pass, each
@@ -838,7 +841,10 @@ invitations", `activate` → "Activate session", `close` → "Close
 session", `precondition` → "pre-flight check"), and **the step
 phrase is suppressed when it repeats the button label** — "Close session failed at the Close
 session." says nothing twice. The error detail (when
-present) renders inline below the headline. State 4Err's
+present) renders inline below the headline: fixed copy looked up by
+the `super_error` code in `SUPER_ERROR_MESSAGES`
+(`app/web/views/_workflow_card.py`), and nothing for an unlisted code,
+so a link cannot put its own words on the card. State 4Err's
 validation counts and their Validate link continue to render in
 the per-state detail block — the failure signal doesn't suppress
 them.

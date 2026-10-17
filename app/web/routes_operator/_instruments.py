@@ -66,7 +66,6 @@ def instruments_index(
     request: Request,
     editing: int | None = Query(default=None),
     saved: int | None = Query(default=None),
-    rf_save_error: str | None = Query(default=None),
     sort_save_error: str | None = Query(default=None),
     sort_save_error_instrument_id: int | None = Query(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -82,7 +81,6 @@ def instruments_index(
         user=user,
         editing=editing,
         saved=saved,
-        rf_save_error=rf_save_error,
         sort_save_error=sort_save_error,
         sort_save_error_instrument_id=sort_save_error_instrument_id,
     )
@@ -612,7 +610,7 @@ async def instrument_bulk_save_fields(
                         f"/operator/sessions/{review_session.id}/instruments"
                         f"?editing={instrument.id}"
                         f"&sort_save_error_instrument_id={instrument.id}"
-                        f"&sort_save_error=Sort+spec+arrays+misaligned."
+                        f"&sort_save_error=misaligned"
                         f"#instrument-{instrument.id}"
                     ),
                     status_code=status.HTTP_303_SEE_OTHER,
@@ -628,7 +626,7 @@ async def instrument_bulk_save_fields(
                             f"/operator/sessions/{review_session.id}/instruments"
                             f"?editing={instrument.id}"
                             f"&sort_save_error_instrument_id={instrument.id}"
-                            f"&sort_save_error=Sort+spec+ids+must+be+integers."
+                            f"&sort_save_error=bad_id"
                             f"#instrument-{instrument.id}"
                         ),
                         status_code=status.HTTP_303_SEE_OTHER,
@@ -645,12 +643,14 @@ async def instrument_bulk_save_fields(
                 from urllib.parse import quote
 
                 db.rollback()
+                # The code, never the message: the page maps it to fixed
+                # copy (findings O7).
                 return RedirectResponse(
                     url=(
                         f"/operator/sessions/{review_session.id}/instruments"
                         f"?editing={instrument.id}"
                         f"&sort_save_error_instrument_id={instrument.id}"
-                        f"&sort_save_error={quote(exc.message, safe=' ')}"
+                        f"&sort_save_error={quote(exc.code, safe='')}"
                         f"#instrument-{instrument.id}"
                     ),
                     status_code=status.HTTP_303_SEE_OTHER,

@@ -1538,8 +1538,10 @@ Bottom row of the card, right-aligned, in this order:
   The `/fields/save` 303-redirect form action stays as the
   no-JS fallback. A sort spec it rejects (misaligned arrays, a
   non-integer id, or a `SortSpecError`) redirects back with
-  `sort_save_error` + `sort_save_error_instrument_id`, and the page
-  renders a "Could not save the sort order" banner whose Cancel
+  `sort_save_error` (a code: `misaligned`, `bad_id`, or the
+  `SortSpecError.code`) + `sort_save_error_instrument_id`, and the page
+  renders a "Could not save the sort order" banner, its line fixed copy
+  for that code (an unlisted code shows no banner), whose Cancel
   returns to that card in edit mode (`spec/ui_elements.md` §5a).
 - **Cancel** — only in edit mode. Reloads the same edit-mode
   URL to discard unsaved edits. Same dirty-aware enable
