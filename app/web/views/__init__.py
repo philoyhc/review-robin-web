@@ -197,6 +197,8 @@ from ._quick_setup import (
     QuickSetupSlot,
     build_new_session_quick_setup_context,
     build_quick_setup_context,
+    deleted_instrument_details,
+    quick_setup_url_failure,
     roster_problem_details,
     settings_error_details,
 )
@@ -475,6 +477,8 @@ __all__ = [
     "apply_cookie_sort",
     "decode_cookie_sort_spec",
     "decode_cookie_sort_spec_for_reviewer_surface",
+    "deleted_instrument_details",
+    "quick_setup_url_failure",
     "order_rows_by_sort_spec",
     "parse_audit_log_filters",
     "resolve_audit_log_zone",

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Observer, ReviewSession
 from app.web import views
+from ._quick_setup_refusal import refusal
 
 
 OBSERVER_CSV = (
@@ -152,10 +153,8 @@ def test_observers_route_replace_requires_confirm(
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=observers" in location
-    assert "quick_setup_reason=needs_confirm" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("observers", "needs_confirm")
 
 
 def test_observers_lifecycle_gate_on_ready(
@@ -186,8 +185,7 @@ def test_observers_lifecycle_gate_on_ready(
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert refusal(response).reason == "lifecycle"
 
 
 # ---------------------------------------------------------------------------

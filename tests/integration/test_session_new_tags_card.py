@@ -430,7 +430,12 @@ def test_the_settings_slot_commits_its_own_work(
                     filename="s.csv",
                     file=io.BytesIO(
                         _settings_csv(
-                            [("session.help_contact", "x@example.edu", "string")]
+                            [
+                                ("session.help_contact", "x@example.edu", "string"),
+                                # Keeps the Default instrument, so the
+                                # import does not ask first (findings S4).
+                                ("instruments[1].name", "Default", "string"),
+                            ]
                         )
                     ),
                 )

@@ -531,3 +531,24 @@ deployment, not a local run.
 - [ ] **An invited user's first sign-in binds them.** Invite a new
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
+
+## The Settings import names what it deletes; refused uploads re-render (S4, O7)
+
+- [ ] **Deletes are named first (S4).** On a draft session with two
+  instruments, upload a Settings CSV naming only one through Quick
+  Setup Submit with the replace box ticked: the 422 banner reads
+  "Nothing was imported. This settings file deletes 1 instrument…",
+  lists its label, and offers "Yes, delete it." Choose the file
+  again, tick both boxes and Submit: it applies and that instrument is
+  gone. A file naming every instrument applies without asking.
+- [ ] **A refused upload stays on Home (O7).** Upload a bad roster or
+  Settings file on an existing session: the page re-renders with the
+  banner and the file's lines, scrolled to the banner, and the address
+  bar reads the session's Home path. Unlock, Cancel and a reload stay
+  on Home.
+- [ ] **No text from a link.** Open Home with
+  `?quick_setup_error=settings&quick_setup_reason=parse&quick_setup_detail=hello`:
+  no banner.
+- [ ] **New session (O7).** Stage a bad file on New session: you land
+  on the new session's Home with the fixed "…was refused…" sentence and
+  no lines; upload it again in Quick Setup and the lines appear.

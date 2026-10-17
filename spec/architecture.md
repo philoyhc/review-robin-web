@@ -469,7 +469,9 @@ CRUD, assignment generate) refuses. Most return **HTTP 409** via the
 `_require_editable` route gate in
 `app/web/routes_operator/_shared.py`; instrument CRUD applies the same
 predicate through `_require_instrument_editable`, and Quick Setup and
-the settings import test it inline and answer with a 303 instead. Session Home's Delete Data and
+the settings import test it inline and re-render Session Home at 422
+instead (the New session page, which has no session yet, cannot hit
+it). Session Home's Delete Data and
 Delete session are an exception: `_require_not_ready` refuses them
 only in `ready`. So are the Observers roster, which accepts edits
 until the session is archived, and the email-template editor, which

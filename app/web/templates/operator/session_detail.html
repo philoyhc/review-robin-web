@@ -25,6 +25,19 @@
     // no fragment): a Save the server refuses (a 422 error page) leaves the
     // key behind, and a later visit to Home must not inherit its scroll
     // or its fade (read on #2894).
+    // A refused Quick Setup upload re-renders this page at 422 under the
+    // POST's URL (findings O7). Name Home's own path instead, before
+    // anything reads the location, so the in-place Unlock / Lock, the
+    // Save seat key and a reload all address Home, never the POST-only
+    // route (the read of the S4 / O7 PR).
+    (function () {
+      var home = {{ ('/operator/sessions/' ~ session.id) | tojson }};
+      if (window.location.pathname !== home) {
+        try {
+          history.replaceState(history.state, '', home + window.location.hash);
+        } catch (e) { /* no History API: the page still works */ }
+      }
+    })();
     window.rrwSeatKey = 'sessionHomeScrollY:' + window.location.pathname;
     window.rrwSaveSeat = null;
     window.rrwSaveFade = function () {
@@ -356,11 +369,13 @@
           <button type="submit" form="config-save-{{ session.id }}"
                   class="btn secondary" data-config-save data-edit-only>Save</button>
           <a class="btn secondary" data-config-cancel data-edit-only
-             href="{{ request.url.path }}#session-config"
+             href="/operator/sessions/{{ session.id }}#session-config"
              onclick="return sessionConfig.cancel(this);">Cancel</a>
+          {# Home's own path, not ``request.url.path``: a refused Quick
+             Setup upload renders this page at its POST's URL (O7). #}
           {% if is_draft or is_validated %}
             <a class="btn secondary" data-config-lock-toggle
-               href="{{ request.url.path }}{% if not config_editing %}?editing=1{% endif %}#session-config"
+               href="/operator/sessions/{{ session.id }}{% if not config_editing %}?editing=1{% endif %}#session-config"
                onclick="return sessionConfig.toggle(this);">{{ 'Lock' if config_editing else 'Unlock' }}</a>
           {% else %}
             <a class="btn secondary" data-config-lock-toggle aria-disabled="true"

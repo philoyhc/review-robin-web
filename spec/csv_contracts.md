@@ -320,8 +320,9 @@ per missing column, no rows. A blocked file saves nothing. The Setup
 page's upload re-renders the page at **400** with an error banner in
 the upload card listing the file's kinds of problem, each with how many
 rows have it, never the rows (`views.upload_problems`); Quick Setup's
-slot 303s back to Session Home with `?quick_setup_error=…` and shows the
-same lines.
+slot renders Session Home again at **422** with the same lines, except
+on the New session page, which redirects with a fixed message and no
+lines (`spec/quick_setup_card_spec.md`, "Result reporting").
 
 **Per-row validation** (every importer):
 
@@ -548,6 +549,20 @@ the round-trip notes below.
    deletes the rows the CSV omits (§4 item 7). A rule set is per
    instrument, so a second instrument naming one gets its own copy
    (`spec/instruments.md`, `Delete` semantics).
+   **Instruments stay replace-all, and the import warns first**
+   (findings S4, author's ruling). An instrument survives
+   only as a file row carrying its `name`, one row each, so a file
+   with no instrument rows deletes them all. Between the phases, a
+   caller that passes `acknowledged_deletions` gets
+   `InstrumentsWouldDelete` naming the instruments the file does not
+   bring back (`instruments_deleted_by`, by label: `short_label`, else
+   `Instrument_{N}`) unless it equals their count; nothing is applied.
+   A file that deletes no instrument never asks. Quick Setup on an
+   existing session asks: the Settings banner lists them and offers a
+   `Yes, delete` tick carrying the count as
+   `acknowledge_instrument_deletion`, and the next submit with the file
+   chosen again applies it (`spec/quick_setup_card_spec.md`, "Result
+   reporting"). Create and Rehydrate pass nothing and never ask.
    Atomic transaction. On any apply error, raise; the caller's
    transaction handler rolls back.
 
@@ -568,7 +583,15 @@ the keys `display_name`, `email`, `tag_1` and the default `display_name`,
 `email`.
 
 If phase 1 finds errors, phase 2 is **not attempted** — the
-`ApplyResult` carries `errors` and the route surfaces them.
+`ApplyResult` carries `errors` and the route surfaces them. On an
+existing session Quick Setup renders Session Home again at 422 with
+the errors under the Settings banner, never in a URL, so a link cannot
+put text on the page (findings O7, author's ruling). The New session
+page keeps its 303, since its session is committed and a re-render
+would replay the create on a refresh, and shows a fixed sentence
+instead of the lines (`quick_setup_reason=refused`); uploading the
+file again in Quick Setup shows them (`spec/quick_setup_card_spec.md`,
+"Result reporting").
 
 `apply_session_config` is the inverse of `serialize_session_config`.
 
@@ -960,7 +983,7 @@ the real import and save paths rather than a fixture
 (`tests/integration/test_setup_template_download.py`). It also
 asserts the Workflow card offers no Prepare until the Band 1 save,
 since the Prepare route itself does not check. The test
-asserts the submit redirect carries no `quick_setup_error` flag,
+asserts the submit answers its 303 rather than a refusal's 422,
 because a silently-skipped slot would still let the session
 validate on the remaining rosters. A second test asserts the roster
 counts and that assignments outnumber the reviewers — `validated`

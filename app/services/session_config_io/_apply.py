@@ -21,12 +21,14 @@ stays here; private re-exports the unit tests reach for
 """
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import ReviewSession, User
+from app.db.models import Instrument, ReviewSession, User
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
 
@@ -67,6 +69,53 @@ class ApplyResult:
     @property
     def ok(self) -> bool:
         return not self.errors
+
+
+class InstrumentsWouldDelete(Exception):
+    """Raised by :func:`apply_session_config` instead of applying, when
+    the file would delete instruments and the caller has not
+    acknowledged that many (findings S4, author's ruling: keep
+    replace-all, and warn). ``labels`` names them as the operator pages
+    do (``short_label``, else ``Instrument_{N}``); the route catches it,
+    rolls the transaction back and re-offers the import with a tick
+    carrying ``count``."""
+
+    def __init__(self, labels: list[str]) -> None:
+        count = len(labels)
+        super().__init__(
+            f"This settings file deletes {count} "
+            f"instrument{'' if count == 1 else 's'} this session holds."
+        )
+        self.labels = labels
+        self.count = count
+
+
+def instruments_deleted_by(
+    db: Session, review_session: ReviewSession, plan: _ParsedConfig
+) -> list[str]:
+    """The labels of the session's instruments the file does not bring
+    back, in display order. The apply deletes every instrument and
+    rebuilds the file's, so an instrument survives only as a file row
+    carrying its ``name`` (the handle the export writes). Each row
+    stands for one instrument, so two sharing a name need two rows. A
+    file with no instrument rows deletes them all."""
+    from app.services.instruments import _instrument_label
+
+    unclaimed = Counter(
+        spec.name for spec in plan.instruments.values() if spec.name
+    )
+    deleted: list[str] = []
+    existing = db.execute(
+        select(Instrument)
+        .where(Instrument.session_id == review_session.id)
+        .order_by(Instrument.order, Instrument.id)
+    ).scalars()
+    for instrument in existing:
+        if unclaimed[instrument.name] > 0:
+            unclaimed[instrument.name] -= 1
+        else:
+            deleted.append(_instrument_label(instrument))
+    return deleted
 
 
 def _validate(
@@ -115,12 +164,21 @@ def apply_session_config(
     user: User | None = None,
     correlation_id: str | None = None,
     row_errors: Sequence[ApplyError] = (),
+    acknowledged_deletions: int | None = None,
 ) -> ApplyResult:
     """Parse + apply a Settings CSV against ``review_session``.
 
     ``row_errors`` are the rows ``split_rows`` could not read; any one
     refuses the file, reported with phase 1's errors and nothing
     applied (findings D10).
+
+    ``acknowledged_deletions`` is for a caller that asks first (findings
+    S4): a valid file that would delete instruments
+    (:func:`instruments_deleted_by`) raises :class:`InstrumentsWouldDelete`
+    unless this equals their count. ``None`` applies without asking, for
+    a caller with nothing of the operator's to lose (Create, Rehydrate).
+    Checked under the session lock phase 1 takes, so the instruments
+    named are the ones the apply deletes.
 
     Phase 1 — parse + validate every row. Collect every error
     before reporting; one bad row doesn't mask the next.
@@ -137,6 +195,10 @@ def apply_session_config(
     plan, errors = _validate(review_session, rows)
     if row_errors or errors:
         return ApplyResult(counts={}, errors=list(row_errors) + errors)
+    if acknowledged_deletions is not None:
+        deleted = instruments_deleted_by(db, review_session, plan)
+        if deleted and len(deleted) != acknowledged_deletions:
+            raise InstrumentsWouldDelete(deleted)
 
     counts = _apply_plan(
         db,

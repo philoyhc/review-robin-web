@@ -25,6 +25,11 @@ problem a refused upload had"), and nothing here is queued.
 
 ### Opportunity
 
+*Since findings O7 (2026-10-17) a refusal on an existing session
+re-renders Session Home at 422 with the file's lines, so only the New
+session page's redirect still loses them; this plan's premise and its
+counts below predate that.*
+
 A refused Quick Setup file redirects to Session Home, and only the query
 string survives the redirect. So the banner can name the *kinds* of
 problem (#2997) but never *which rows*. A 5,000-row file's list does not

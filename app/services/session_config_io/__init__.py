@@ -43,7 +43,9 @@ from __future__ import annotations
 
 from app.services.session_config_io._apply import (
     ApplyResult,
+    InstrumentsWouldDelete,
     apply_session_config,
+    instruments_deleted_by,
     validate_session_config,
 )
 from app.services.session_config_io._apply_parse import ApplyError, split_rows
@@ -61,8 +63,10 @@ __all__ = [
     "ApplyError",
     "ApplyResult",
     "HEADER",
+    "InstrumentsWouldDelete",
     "Row",
     "apply_session_config",
+    "instruments_deleted_by",
     "serialize_session_config",
     "split_rows",
     "validate_session_config",

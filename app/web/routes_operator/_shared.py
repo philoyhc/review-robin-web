@@ -39,8 +39,14 @@ from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
-from app.services import lifecycle_display, roster_bulk, scheduled_events
+from app.services import (
+    lifecycle_display,
+    operator_settings,
+    roster_bulk,
+    scheduled_events,
+)
 from app.services import session_lifecycle as lifecycle
+from app.services import session_owners, session_tags
 from app.services import sessions as sessions_service
 from app.services import unit_of_work
 from app.web import breadcrumbs, views
@@ -1188,3 +1194,142 @@ def _save_field_labels(
                     user=user,
                     correlation_id=correlation_id,
                 )
+
+
+# ------------------------------------------------------------------ #
+# Session Home render — shared by its GET and the Quick Setup routes'
+# refusals (findings O7).
+# ------------------------------------------------------------------ #
+
+
+def render_session_home(
+    request: Request,
+    db: Session,
+    *,
+    user: User,
+    review_session: ReviewSession,
+    quick_setup: views.QuickSetupContext | None = None,
+    super_failure: dict[str, str] | None = None,
+    prepare_confirm: str | None = None,
+    editing: bool = False,
+    owners_error: str | None = None,
+    http_status: int = status.HTTP_200_OK,
+) -> HTMLResponse:
+    """Render Session Home.
+
+    Its GET calls this after the scheduled-event observer; the Quick
+    Setup routes call it on an existing session to answer a refused
+    upload in place, at 422, with ``quick_setup`` carrying the banner
+    and the file's own lines, which therefore never ride a URL
+    (findings O7). ``quick_setup`` defaults to the card with no banner."""
+    setup_rows = views.build_setup_rows(db, review_session)
+    workflow_ctx = views.build_workflow_card_context(
+        db,
+        review_session,
+        return_to="home",
+        super_failure=super_failure,
+        prepare_confirm=prepare_confirm,
+    )
+    if quick_setup is None:
+        quick_setup = views.build_quick_setup_context(
+            db, review_session, user=user
+        )
+    # 18R Item 4 Slice 2 (mock-up) — the same schedule input-value
+    # prefills the Edit route builds, so the inert Session config card
+    # can render filled edit boxes. Reused verbatim; the edit-mode
+    # wiring in a later slice consumes them for real.
+    session_tz = sessions_service.resolve_session_timezone(review_session)
+    return _templates.TemplateResponse(
+        request,
+        "operator/session_detail.html",
+        {
+            "user": user,
+            "session": review_session,
+            "setup_rows": setup_rows,
+            "status_pills": views.session_status_pills(db, review_session),
+            "has_responses": lifecycle.session_has_responses(db, review_session),
+            "quick_setup": quick_setup,
+            "session_timezone_label": date_formatting.gmt_offset_zone_label(
+                session_tz
+            ),
+            # Schedule input-value prefills for the Session config card
+            # mock-up (18R Item 4 Slice 2) — mirror the Edit route.
+            "scheduled_activate_at_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.scheduled_activate_at, session_tz
+                )
+            ),
+            "deadline_input_value": date_formatting.format_datetime_local(
+                review_session.deadline, session_tz
+            ),
+            "responses_release_at_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.responses_release_at, session_tz
+                )
+            ),
+            "responses_release_until_input_value": (
+                date_formatting.format_datetime_local(
+                    review_session.responses_release_until, session_tz
+                )
+            ),
+            "invite_offsets_input_value": ", ".join(
+                review_session.invite_offsets or []
+            ),
+            "reminder_offsets_input_value": ", ".join(
+                review_session.reminder_offsets or []
+            ),
+            # 18R Item 4 — display mode shows each offset + its resolved
+            # send datetime (invites off Start, reminders off End).
+            "invite_offset_rows": views.build_offset_display_rows(
+                review_session.scheduled_activate_at,
+                review_session.invite_offsets,
+                session_tz,
+            ),
+            "reminder_offset_rows": views.build_offset_display_rows(
+                review_session.deadline,
+                review_session.reminder_offsets,
+                session_tz,
+            ),
+            # The Owners card: the current owners, and the Add-owner
+            # picker's candidates — operators not already owners.
+            "config_owners": session_owners.list_owners(db, review_session),
+            "config_owner_candidates": (
+                session_owners.session_owner_candidates(db, review_session)
+            ),
+            # 19S Item 9 Part B — the details card's Tags field, shown as a
+            # ``.config-value`` when locked and prefilled when editing.
+            "session_tag_list": session_tags.tags_for_sessions(
+                db, [review_session.id]
+            )[review_session.id],
+            # 19S Item 7 — the Tags field's typeahead.
+            "tag_vocabulary": session_tags.vocabulary_for_user(db, user),
+            # Owner add/remove errors, the Owners card's banner
+            # (redirected here from the routes; 19S Item 10).
+            "owners_error": owners_error,
+            # 18R Item 4 Slice 3 — edit-mode wiring for the Session details
+            # card. ``config_editing`` is the canonical server state (from
+            # ``?editing=1``), gated on the session actually being editable so a
+            # stale link on an activated session degrades to display mode. The
+            # timezone options + current zone feed the edit-mode timezone
+            # datalist; the has-* signals lock the UI-settings checkboxes when a
+            # roster has rows (mirrors the Edit page + service-layer guard).
+            "config_editing": (
+                editing
+                and (
+                    lifecycle.is_draft(review_session)
+                    or lifecycle.is_validated(review_session)
+                )
+            ),
+            "timezone_options": operator_settings.timezone_options(),
+            "current_session_timezone": session_tz,
+            "has_relationships": sessions_service._has_relationships(
+                db, review_session.id
+            ),
+            "has_observers": sessions_service._has_observers(
+                db, review_session.id
+            ),
+            "breadcrumbs": breadcrumbs.operator_session(review_session),
+            **workflow_ctx,
+        },
+        status_code=http_status,
+    )

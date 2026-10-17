@@ -24,6 +24,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._validated import validate_session
+from ._quick_setup_refusal import refusal
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -237,7 +238,7 @@ def test_card_level_replacement_checkbox_renders_once(
 # --------------------------------------------------------------------------- #
 
 
-def test_reviewers_replace_without_confirm_redirects_with_error(
+def test_reviewers_replace_without_confirm_renders_the_error(
     client: TestClient, db: Session
 ) -> None:
     review_session = _seed_pair(client, db, code="qs-needs-confirm")
@@ -246,13 +247,10 @@ def test_reviewers_replace_without_confirm_redirects_with_error(
         files={"file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=reviewers" in location
-    assert "quick_setup_reason=needs_confirm" in location
-    assert "#quick-setup-reviewers" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("reviewers", "needs_confirm")
 
-    body = client.get(location).text
+    body = response.text
     assert (
         "Tick the replacement-confirmation box just above "
         "Submit, then submit again."
@@ -311,12 +309,10 @@ def test_reviewers_parse_error_routes_to_scoped_error_banner(
         files={"file": ("bad.csv", BAD_CSV, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=reviewers" in location
-    assert "quick_setup_reason=parse" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("reviewers", "parse")
 
-    body = client.get(location).text
+    body = response.text
     # Error banner scoped to Reviewers slot only.
     assert "Could not import reviewers." in body
     # Reviewees slot's error banner stays hidden.
@@ -341,7 +337,7 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
 ) -> None:
     """On ``ready`` the operator may visually unlock the card via
     the toggle, but the importer rejects the submit at the service
-    layer. The route 303s with a lifecycle error and the banner
+    layer. The route renders Home at 422 and the banner
     inside the slot names the next move (Pause)."""
 
     operator = make_client(alice)
@@ -354,12 +350,10 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=reviewers" in location
-    assert "quick_setup_reason=lifecycle" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("reviewers", "lifecycle")
 
-    body = operator.get(location).text
+    body = response.text
     # Both sentences. 19O Item 7 entry 13 renamed the second and left
     # the first saying "paused" — two vocabularies in one banner, which
     # survived because only the second half was ever asserted.

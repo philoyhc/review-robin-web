@@ -81,17 +81,36 @@
    competing for layout space with its slot's file input. Dismiss
    returns to a clean URL with the slot fragment; it reads Dismiss, as
    the Setup pages' upload cards do, since a refused file holds nothing
-   to cancel. #}
-{% macro quick_setup_slot_banner(slot) -%}
+   to cancel.
+
+   A Settings file refused for the instruments it would delete re-offers
+   the import (findings S4): the tick rides the submit-all form and
+   carries the count the banner named, so the next Submit with the file
+   chosen again applies it. #}
+{% macro quick_setup_slot_banner(slot, form_id) -%}
 <div class="banner banner-error banner-scroll-target"
      id="quick-setup-{{ slot.key }}-error-banner"
-     {% if not slot.error_message %}hidden{% endif %}>
+     {% if slot.error_message %}data-quick-setup-reason="{{ slot.error_reason or '' }}"{% else %}hidden{% endif %}>
   {% if slot.error_message %}
     <p class="banner-lead">{{ slot.error_message }}</p>
     {% if slot.error_details %}
       <ul data-quick-setup-error-details>
         {% for line in slot.error_details %}<li>{{ line }}</li>{% endfor %}
       </ul>
+    {% endif %}
+    {% if slot.deletion_count %}
+      <p class="form-help">
+        <label style="font-weight: normal;">
+          <input type="checkbox"
+                 name="acknowledge_instrument_deletion"
+                 value="{{ slot.deletion_count }}"
+                 form="{{ form_id }}"
+                 data-quick-setup-confirm-deletion>
+          Yes, delete {{ "it" if slot.deletion_count == 1 else "them" }}.
+          Choose the file again, tick the replace box below again, then
+          Submit.
+        </label>
+      </p>
     {% endif %}
     <div class="banner-actions">
       <a class="btn secondary" href="{{ slot.cancel_url }}">Dismiss</a>
@@ -140,7 +159,7 @@
        with no current ``error_message`` render hidden so the layout
        doesn't shift when the JS re-checks. #}
     {% for slot in quick_setup.slots %}
-      {{ quick_setup_slot_banner(slot) }}
+      {{ quick_setup_slot_banner(slot, submit_all_form_id) }}
     {% endfor %}
     {# Slot layout: Reviewers + Reviewees on the left, the remaining
        slots (Relationships, Observers, Session settings) on the

@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 2 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+**Open:** 0 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
 R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
-R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1, R7, L5, P2, L4, R6 and P5 done).
+R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1, R7, L5, P2, L4, R6, P5, S4 and O7 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -112,7 +112,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**S3**~~ — **Done in #3107**: phase 1 holds each `field_key` to the card's `_validate_field_key` and refuses a bad one as a row error (`spec/csv_contracts.md` §3.3; `tests/unit/test_settings_import_bug_sweep.py`). **The Settings import accepts any `field_key`; one containing `]` can
   never be answered, so a required field blocks Submit**
   (`_apply_instrument.py:116`). *Reproduced.* Code: `_validate_field_key`.
-- **S4** — **Ruled 2026-10-17**: keep replace-all, and warn: the import names the instruments it will delete before applying, so a file with no instrument rows says it deletes them all. A Settings file with no instrument rows deletes every instrument
+- ~~**S4**~~ — **Done in #3118** (ruled 2026-10-17, keep replace-all and warn): on an existing session the import refuses a file that does not bring back every instrument by `name`, names those it would delete, and applies only on a resubmit carrying a tick with their count; Create and Rehydrate never ask (`spec/csv_contracts.md` §3.3; `tests/integration/test_settings_import_names_deleted_instruments.py`). A Settings file with no instrument rows deletes every instrument
   (`_apply.py:181`), and a direct Prepare POST then creates a Default
   instrument whose Band 1 links are Not set. *Reproduced.* Author: refuse the
   file, or keep instruments it doesn't name.
@@ -175,8 +175,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   comment says otherwise (`_extracts.py:796-800`). Code.
 - ~~**O6**~~ — **Done in #3106**: an app-wide dependency answers 404 for an id path or query parameter past a 64-bit column, the answer Postgres gives (`app/web/oversized_ids.py`; `tests/integration/test_bad_input_refused.py`). Oversized integer ids in paths and queries answer 500 on SQLite;
   Postgres compares them. Code.
-- **O7** — **Ruled 2026-10-17**: `quick_setup_detail` goes. A refused Quick Setup upload on an existing session re-renders Session Home with the lines (422) instead of redirecting. Run from the New Session page, where the session is already created and a re-render would replay the create on refresh (Codex on #3112), it keeps its redirect to the new session's Home with a fixed line asking for the upload again there. *Partly done in #3111*: `super_error`, `owners_error` and `sort_save_error` now carry codes the page maps to fixed copy, an unlisted code showing nothing, and `rf_save_error`, which nothing produced, retired. Still open: `quick_setup_detail`, whose lines are a refused file's own errors, which no fixed set of codes can carry; author: stash them server-side, re-render instead of redirecting, or drop the lines (`spec/csv_contracts.md` §3.3 requires them). Error text taken from the URL is shown on trusted chrome:
-  `super_error`, `quick_setup_detail`, `owners_error`, `rf_save_error`,
+- ~~**O7**~~ — **Done in #3111 and #3118**: #3111 turned `super_error`, `owners_error` and `sort_save_error` into codes and retired `rf_save_error`. Here, `quick_setup_detail` goes: a refused upload on an existing session re-renders Session Home at 422 with the file's lines, and the New session page redirects with only a `refused` code mapped to fixed copy (`spec/quick_setup_card_spec.md`; `tests/integration/_quick_setup_refusal.py`, `tests/browser/test_quick_setup_refusal_url.py`). Error text taken from the URL is shown on trusted chrome: `super_error`, `quick_setup_detail`, `owners_error`, `rf_save_error`,
   `sort_save_error` (`next_action_card.html:443`,
   `instruments_index.html:135`, `:158`). Escaped, so not XSS, but a link can
   put any sentence on the page; `spec/permissions.md` §4.1 rules that out for

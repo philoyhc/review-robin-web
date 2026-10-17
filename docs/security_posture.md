@@ -268,7 +268,7 @@ service writes an `audit_events` row).
 | Delete all observers (`delete-all`) | `confirm=true` only — nothing references an observer, so no response can be lost | `require_session_operator` (via `require_observers_enabled_session`) | ✓ |
 | Replace assignments (generate) | `confirm_replace` + response-loss ack | `require_session_operator` | ✓ |
 | Replace relationships (`delete-all`) | `confirm=true` | `require_session_operator` | ✓ |
-| Replace settings (`/import-config`, Quick Setup Settings) — rebuilds every instrument, deleting assignments and responses | `confirm_replace` + response-loss ack (findings C3) | `require_session_operator` | ✓ |
+| Replace settings (`/import-config`, Quick Setup Settings) — rebuilds every instrument, deleting assignments and responses | `confirm_replace` + response-loss ack (findings C3), + `acknowledge_instrument_deletion` carrying the count when the file deletes instruments it does not name (findings S4) | `require_session_operator` | ✓ |
 | Delete instrument / field | `confirm=true` | `require_session_operator` (via helper) | ✓ |
 | Reviewer clear (`/clear`) | `confirm=true` | `require_reviewer_in_session` | ✓ |
 | Revoke / regenerate invitation links | operator UI action | `require_session_operator` | ✓ |

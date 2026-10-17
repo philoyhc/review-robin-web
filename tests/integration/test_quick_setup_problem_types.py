@@ -11,8 +11,6 @@ roster parsers raise carries a row-free ``problem``
 
 from __future__ import annotations
 
-from urllib.parse import parse_qs, urlsplit
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -23,6 +21,8 @@ from app.schemas.validation import Severity, ValidationIssue
 from app.services import csv_imports
 from app.services import relationships as relationships_service
 from app.web.views import roster_problem_details
+
+from ._quick_setup_refusal import refusal
 
 
 def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -37,8 +37,10 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
     ).scalar_one()
 
 
-def _details(location: str) -> list[str]:
-    return parse_qs(urlsplit(location).query).get("quick_setup_detail", [])
+def _details(response) -> list[str]:
+    """The lines under the refused slot's banner, on the 422 re-render
+    (findings O7)."""
+    return refusal(response).details
 
 
 BAD_REVIEWERS = (
@@ -59,14 +61,12 @@ def test_a_refused_roster_names_each_kind_of_problem_with_a_count(
         files={"file": ("r.csv", BAD_REVIEWERS, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert _details(location) == [
+    assert _details(response) == [
         "ReviewerEmail is blank (2 rows)",
         "ReviewerEmail is not a valid email address (1 row)",
         "Status is not active or inactive (1 row)",
     ]
-    body = client.get(location).text
+    body = response.text
     assert "Could not import reviewers. The file has these problems:" in body
     # It points at no Setup page: a refused file never reaches one
     # (quick_setup_update Item 3).
@@ -85,7 +85,7 @@ def test_a_file_level_problem_reads_as_itself(
         files={"file": ("r.csv", b"ReviewerName,Wrong\nAnn,x\n", "text/csv")},
         follow_redirects=False,
     )
-    assert _details(response.headers["location"]) == [
+    assert _details(response) == [
         "Missing required column: ReviewerEmail"
     ]
 
@@ -100,10 +100,7 @@ def test_the_submit_all_form_carries_the_problems_too(
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    assert "ReviewerEmail is blank (2 rows)" in _details(
-        response.headers["location"]
-    )
+    assert "ReviewerEmail is blank (2 rows)" in _details(response)
 
 
 @pytest.mark.parametrize(
@@ -132,7 +129,7 @@ def test_the_other_roster_slots_name_their_problems(
         files={"file": ("x.csv", content, "text/csv")},
         follow_redirects=False,
     )
-    assert _details(response.headers["location"]) == [line]
+    assert _details(response) == [line]
 
 
 def test_a_name_another_roster_holds_is_named_without_the_email(
@@ -146,15 +143,18 @@ def test_a_name_another_roster_holds_is_named_without_the_email(
         files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nAnnie,ann@example.org\n", "text/csv")},
         follow_redirects=False,
     )
-    assert _details(response.headers["location"]) == [
+    assert _details(response) == [
         "ReviewerEmail is already used under a different name in another "
         "roster (1 row)"
     ]
 
 
-def test_the_new_session_page_carries_the_problems_too(
+def test_the_new_session_page_says_the_file_was_refused_without_its_lines(
     client: TestClient, db: Session
 ) -> None:
+    """Create keeps its redirect, since the session is committed, so the
+    file's lines are not carried: a fixed code says which file was
+    refused, and uploading it again in Quick Setup shows why (O7)."""
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring", "code": "qsp-new", "description": ""},
@@ -162,21 +162,51 @@ def test_the_new_session_page_carries_the_problems_too(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    assert "ReviewerEmail is blank (2 rows)" in _details(
-        response.headers["location"]
+    location = response.headers["location"]
+    assert location.endswith(
+        "?quick_setup_error=reviewers&quick_setup_reason=refused"
+        "#quick-setup-reviewers"
     )
+    body = client.get(location).text
+    assert (
+        '<p class="banner-lead">The reviewers file was refused, so none of '
+        "the files uploaded with the new session were saved. Upload them "
+        "again in Quick Setup to see why.</p>"
+    ) in body
+    assert "ReviewerEmail is blank" not in body
 
 
-def test_a_link_with_no_lines_says_only_what_failed(
+@pytest.mark.parametrize("reason", ["parse", "lifecycle", "needs_confirm", "x"])
+def test_a_link_with_any_other_code_shows_nothing(
+    client: TestClient, db: Session, reason: str
+) -> None:
+    """Only the Create page's ``refused`` code reaches Home by URL; an
+    older link's reason, or one a link makes up, shows no banner, and
+    ``quick_setup_detail`` puts nothing on the page (findings O7)."""
+    rs = _session(client, db, "qsp-old-link-" + reason.replace("_", "-"))
+    body = client.get(
+        f"/operator/sessions/{rs.id}",
+        params=[
+            ("quick_setup_error", "reviewers"),
+            ("quick_setup_reason", reason),
+            ("quick_setup_detail", "qsdmark anything"),
+        ],
+    ).text
+    assert 'data-quick-setup-reason="' not in body
+    assert "Could not import reviewers" not in body
+    assert "qsdmark" not in body
+
+
+def test_a_refused_code_for_an_unknown_slot_shows_nothing(
     client: TestClient, db: Session
 ) -> None:
-    rs = _session(client, db, "qsp-old-link")
+    rs = _session(client, db, "qsp-unknown-slot")
     body = client.get(
         f"/operator/sessions/{rs.id}"
-        "?quick_setup_error=reviewers&quick_setup_reason=parse"
+        "?quick_setup_error=elsewhere&quick_setup_reason=refused"
     ).text
-    assert '<p class="banner-lead">Could not import reviewers.</p>' in body
-    assert "per-row error details" not in body
+    assert 'data-quick-setup-reason="' not in body
+    assert "was refused" not in body
 
 
 def test_relationships_name_an_unknown_reviewer(
@@ -197,7 +227,7 @@ def test_relationships_name_an_unknown_reviewer(
         files={"file": ("rel.csv", csv, "text/csv")},
         follow_redirects=False,
     )
-    assert _details(response.headers["location"]) == [
+    assert _details(response) == [
         "ReviewerEmail is not on the Reviewers roster "
         "(import reviewers first) (1 row)",
         "A reviewer–reviewee pair appears on more than one row (1 row)",

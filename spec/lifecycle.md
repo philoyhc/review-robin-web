@@ -264,9 +264,10 @@ Six exceptions to that list, all easy to mis-read:
 - **Quick Setup and the settings import do not call this helper.**
   Their handlers in `app/web/routes_operator/_quick_setup.py` test
   `lifecycle.is_editable` inline — the same predicate — and on failure
-  return the `lifecycle` reason token, which the route turns into a
-  303 carrying `quick_setup_error=…&quick_setup_reason=lifecycle`
-  rather than a 409.
+  return the `lifecycle` reason token, which the route turns into
+  Session Home rendered again at 422 with the slot's lifecycle banner
+  rather than a 409 (`spec/quick_setup_card_spec.md`, "Result
+  reporting").
 
 - **The lobby expander's Save (`{id}/lobby-edit`) does not call this
   helper either.** It tests `lifecycle.is_editable` inline — the same

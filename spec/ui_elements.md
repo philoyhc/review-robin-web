@@ -425,9 +425,9 @@ banners — Quick Setup's slot banner and a Setup page's upload-problems
 banner — report an upload that did not happen (a refused file, or a
 replace without its tick), and no edit is held in a form to back out
 of, so their one button reads **Dismiss**. It does what Cancel
-would: it returns to the page without the banner (Quick Setup's drops
-the query flag; the Setup page's, a 400 re-render, reopens the upload
-card).
+would: it returns to the page without the banner (Quick Setup's, on a 422
+re-render of Session Home, links back to Home's card; the Setup page's,
+a 400 re-render, reopens the upload card).
 
 **Auto-scroll on display.** Every banner card carries the
 `banner-scroll-target` class plus a unique anchor id (e.g.
