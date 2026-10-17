@@ -21,11 +21,11 @@ PAGES = {
 }
 
 
-def _make(api: httpx.Client, *, archived: bool) -> tuple[int, str]:
+def _make(api: httpx.Client, *, archived: bool, word: str = "") -> tuple[int, str]:
     code = f"o1{uuid.uuid4().hex[:8]}"
     response = api.post(
         "/operator/sessions",
-        data={"name": f"Select {code}", "code": code},
+        data={"name": f"Select {word} {code}".replace("  ", " "), "code": code},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -69,3 +69,37 @@ def test_select_all_ticks_only_the_rows_the_filter_shows(
     page.locator(f".{prefix}-search-input").fill("")
     expect(box(hidden_id)).to_be_visible()
     assert select_all.evaluate("b => b.indeterminate") is True
+
+
+def test_the_bulk_panel_follows_the_filter_and_keeps_an_unsaved_edit(
+    page: Page, api: httpx.Client, live_server: LiveServer
+) -> None:
+    """The panel rebuilds when the filter unticks a row, and only then:
+    it is editable, so a keystroke that hides nothing ticked must not
+    re-seed it (diff read on #3095)."""
+    word = f"w{uuid.uuid4().hex[:6]}"
+    first, _ = _make(api, archived=False, word=word)
+    second, _ = _make(api, archived=False, word=word)
+    other, _ = _make(api, archived=False)
+    page.goto(live_server.base_url + "/operator/sessions")
+    box = lambda session_id: page.locator(  # noqa: E731
+        f'.sessions-list-select-row[value="{session_id}"]'
+    )
+    search = page.locator(".sessions-search-input")
+
+    for session_id in (first, second, other):
+        box(session_id).check()
+    count = page.locator(".session-expander [data-expander-count]")
+    expect(count).to_have_text("3")
+    search.fill(word)
+    expect(box(other)).not_to_be_checked()
+    expect(count).to_have_text("2")
+
+    # One row left ticked: the single panel, with an edit not yet saved.
+    box(second).uncheck()
+    name = page.locator('.session-expander [data-expander-field="name"]')
+    name.fill("Renamed, not saved")
+    search.press("End")
+    search.type(" ")  # still matches the ticked row once trimmed
+    expect(box(first)).to_be_visible()
+    expect(name).to_have_value("Renamed, not saved")

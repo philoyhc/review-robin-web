@@ -803,8 +803,10 @@
             refreshExpander();
           });
         }
-        // The filter unticked what it hid (findings O1).
-        document.addEventListener("rrw:session-rows-filtered", function () {
+        // The filter unticked what it hid (findings O1). Only then: a
+        // rebuild re-seeds the panel and would drop unsaved edits.
+        document.addEventListener("rrw:session-rows-filtered", function (event) {
+          if (!event.detail || !event.detail.unticked) return;
           tickOrder = tickOrder.filter(function (cb) { return cb.checked; });
           refreshExpander();
         });
@@ -890,17 +892,25 @@
 
         function apply() {
           var visible = 0;
+          var unticked = 0;
           rows.forEach(function (row) {
             var show = matchesTags(row) && matchesFilter(row);
             row.style.display = show ? "" : "none";
             if (show) visible++;
             // A row the filter hides leaves the selection (findings O1).
             var box = show ? null : row.querySelector(".sessions-list-select-row");
-            if (box) box.checked = false;
+            if (box && box.checked) {
+              box.checked = false;
+              unticked++;
+            }
           });
           // The select-all and expander scripts listen rather than being
           // called: each lives in its own IIFE (as Assignments does it).
-          document.dispatchEvent(new CustomEvent("rrw:session-rows-filtered"));
+          // ``unticked`` tells the expander whether the selection moved:
+          // its panel is editable, so it rebuilds only then.
+          document.dispatchEvent(new CustomEvent("rrw:session-rows-filtered", {
+            detail: { unticked: unticked },
+          }));
           if (noMatch) {
             noMatch.style.display = visible === 0 ? "" : "none";
           }
