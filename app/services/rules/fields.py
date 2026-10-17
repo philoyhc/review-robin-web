@@ -26,7 +26,7 @@ the row didn't exist (return ``None``), per the locked
 "skip-at-lookup" semantic.
 
 ``reviewer.pair_tag1/2/3`` and ``reviewee.pair_tag1/2/3`` (author,
-2026-10-17; ``guide/assignment_rule_clarify.md`` Item 2) read the same
+2026-10-17; ``guide/archive/assignment_rule_clarify.md`` Item 2) read the same
 relationship tags as a *person's* tag: every value the reviewer (or the
 reviewee) holds in that slot across their active pairs, whoever the
 other side is. They are multi-valued, so predicates read them through

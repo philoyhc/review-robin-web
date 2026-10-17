@@ -1,7 +1,7 @@
 """Band 1's IS FILLED / IS EMPTY leave the value box inactive, and a new
 cell (``+``) starts from the offered tags only, without a stored tag the
 card no longer offers (author, 2026-10-16;
-``guide/assignment_rule_clarify.md``, stage 1).
+``guide/archive/assignment_rule_clarify.md``, stage 1).
 """
 
 from __future__ import annotations

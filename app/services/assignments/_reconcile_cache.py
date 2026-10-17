@@ -67,7 +67,7 @@ from app.services.rules.fields import FIELD_MAP
 #: with a value computed a different way. It is the reason the column
 #: is ``String(80)`` and not the ``String(64)`` a bare digest needs.
 #: Bump it too when what a stored rule *means* changes with every input
-#: the same — ``v2`` (2026-10-17, ``guide/assignment_rule_clarify.md``
+#: the same — ``v2`` (2026-10-17, ``guide/archive/assignment_rule_clarify.md``
 #: Item 2) for the empty-value rule, so no verdict cached under the old
 #: reading survives.
 STAMP_VERSION = "v2"

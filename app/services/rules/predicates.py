@@ -8,7 +8,7 @@ Every field reads as a *set* of values (``fields.get_field_values``): at
 most one for a roster or per-pair tag, any number for a person-level
 pair tag (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``). An empty
 string is no value. The operators over that set (author, 2026-10-17;
-``guide/assignment_rule_clarify.md`` Item 2):
+``guide/archive/assignment_rule_clarify.md`` Item 2):
 
 - ``equals`` / ``in`` / ``matches`` pass when some value matches, so a
   field with no value fails them; ``not_equals`` / ``not_in`` are their

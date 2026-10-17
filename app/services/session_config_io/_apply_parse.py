@@ -668,7 +668,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
             )
     # A Link 2 pair-tag IS keeps pairs one by one, so a grouped
     # instrument cannot use it — the refusal Band 1's Save makes
-    # (``guide/assignment_rule_clarify.md`` Item 2), so an import
+    # (``guide/archive/assignment_rule_clarify.md`` Item 2), so an import
     # cannot store the combination either.
     rules_by_name = {
         spec.name: spec.rules_json or []

@@ -2,7 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** every row.
+**Open:** 43 of 46 rows (refreshed 2026-10-17 at `b9efe5e8`: S2, E1 and
+E4 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -60,7 +61,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   and `/validate` then answer 500 until a Band 1 re-save replaces it.
   `spec/csv_contracts.md:469` puts shape checks in phase 1. *Reproduced* by
   two reads. Code: `TypeAdapter(Rule)` per entry, raising `_ParseError`.
-- ~~**E1**~~ — **Done in #3085** by refusing the rule on Save. Ruled 2026-10-16: Link 2 takes reviewer and pair-context operands, as the card offers, and the specs say so. While the field is a pair-context tag the card's script hides the pair-context operands. The rendered list stays complete, because narrowing it would drop a stored `reviewee.tagN IS THE SAME AS pair_context.tagM` on the next Save. *Superseded the same day by #3086 (stage 1 of `guide/assignment_rule_clarify.md`): the card offers no pair-context tag, the script is gone, and the Save refusal stays for stored rules.* **The Band 1 card offers a rule the engine rejects.** With a
+- ~~**E1**~~ — **Done in #3085** by refusing the rule on Save. Ruled 2026-10-16: Link 2 takes reviewer and pair-context operands, as the card offers, and the specs say so. While the field is a pair-context tag the card's script hides the pair-context operands. The rendered list stays complete, because narrowing it would drop a stored `reviewee.tagN IS THE SAME AS pair_context.tagM` on the next Save. *Superseded the same day by #3086 (stage 1 of `guide/archive/assignment_rule_clarify.md`): the card offers no pair-context tag, the script is gone, and the Save refusal stays for stored rules. Item 2 of that plan (#3088–#3091) brought relationship tags back with Save choosing each one's field by Link and operator, so the card cannot build a same-side rule; the refusal stays for stored and forged ones.* **The Band 1 card offers a rule the engine rejects.** With a
   pair-context tag as Link 2's field, the operand list still offers
   pair-context tags (`instruments_index.html:718-719`);
   `set_band1_assignment_rules` stores the rule unvalidated
@@ -202,7 +203,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **P5** — `app/auth/identity.py` `_claim` returns the first claim in token
   order, not the stated priority, so `preferred_username` can win over
   `emailaddress` (`:45-56`, `:76-81`). Fails closed. Code.
-- **E4** — A Band 1 rule on a tag column now empty has no `<option>`, so the
+- ~~**E4**~~ — **Done in #3086**: a rule or boundary stored with a tag the card no longer offers keeps its option (`data-new-model-stored-only`), so a Save keeps it, and `+` adds a cell without it (`spec/instruments.md`, Band 1; `tests/integration/test_band1_filled_empty.py`). **A Band 1 rule on a tag column now empty has no `<option>`, so the
   card's next Save silently rewrites the rule to the first field
   (`instruments_index.html:647-650`); Link 3's boundary boxes look the same
   and would trigger E2. Template shape *reproduced*; what the browser posts

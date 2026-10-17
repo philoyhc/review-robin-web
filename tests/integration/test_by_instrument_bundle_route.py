@@ -384,7 +384,7 @@ def test_all_rows_query_param_off_drops_empty_assignment_rows(
 def test_pool_rule_rows_render_filled_and_empty_without_an_operand(
     client: TestClient, db: Session
 ) -> None:
-    """IS FILLED / IS EMPTY take no value (``guide/assignment_rule_clarify.md``
+    """IS FILLED / IS EMPTY take no value (``guide/archive/assignment_rule_clarify.md``
     stage 1), so the Pool rows name the field and operator only, not an
     empty quoted operand."""
     review_session = _make_session(client, db, code="bi-filled")
