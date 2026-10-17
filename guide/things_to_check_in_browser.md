@@ -463,3 +463,17 @@ groups by a pair tag:
 - [ ] **An edit after the change reads in the new zone.** Change
   Timezone, then type a new End and Save: End is that wall-clock time
   in the new zone.
+
+## The Self review toggle survives Prepare (E3)
+
+- [ ] **Off stays off.** On an instrument whose rule produces
+  self-review pairs, turn its Self review toggle off on the Assignments
+  page, then edit a roster row (any field) and run Prepare: the
+  instrument's self-review rows are still excluded and the chip still
+  reads off. Another instrument's toggle is unaffected.
+- [ ] **New rows follow the instrument.** With the toggle off, add a
+  reviewer who reviews themselves and Prepare: the new self-review row
+  arrives excluded.
+- [ ] **Carried along.** Duplicate the session, and Replicate the
+  instrument: both copies keep the toggle off. Export the Settings CSV
+  and find `instruments[n].self_reviews_active` = `false`.

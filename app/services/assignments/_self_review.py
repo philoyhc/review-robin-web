@@ -340,16 +340,18 @@ def recompute_self_review_classification(
         # that stops being a self-review comes back on unless a side is
         # inactive — otherwise it stays excluded where the per-instrument
         # toggle, which reads the flag, cannot reach it. A row that
-        # becomes one is switched off when the session has self-reviews
-        # off, and otherwise keeps its value, so a first classification
-        # never overrides an ``include`` written with the row.
-        self_reviews_active = bool(
-            db.execute(
-                select(ReviewSession.self_reviews_active).where(
-                    ReviewSession.id == session_id
+        # becomes one is switched off when its instrument has
+        # self-reviews off (findings E3), and otherwise keeps its value,
+        # so a first classification never overrides an ``include``
+        # written with the row.
+        self_reviews_active = {
+            instrument_id: bool(active)
+            for instrument_id, active in db.execute(
+                select(Instrument.id, Instrument.self_reviews_active).where(
+                    Instrument.session_id == session_id
                 )
-            ).scalar_one()
-        )
+            ).all()
+        }
         for pair in flipped:
             is_self = classification[pair.id]
             changed.append(
@@ -357,7 +359,8 @@ def recompute_self_review_classification(
                     "id": pair.id,
                     "is_self_review": is_self,
                     "include": (
-                        included[pair.id] and self_reviews_active
+                        included[pair.id]
+                        and self_reviews_active.get(pair.instrument_id, True)
                         if is_self
                         else included[pair.id] or both_active[pair.id]
                     ),
@@ -497,11 +500,17 @@ def set_instrument_self_reviews_active(
     active: bool,
     correlation_id: str,
 ) -> int:
-    """Bulk-flip self-review rows' ``include`` flag scoped to one
-    instrument. Mirror of the retired session-wide
-    ``set_self_reviews_active`` — the per-instrument Self review
-    column on the Slice 3a Assignments-page status blocks owns
-    this surface now.
+    """Set one instrument's Self review toggle: store it on
+    :attr:`Instrument.self_reviews_active` and bulk-flip that
+    instrument's self-review rows' ``include`` to match. Mirror of the
+    retired session-wide ``set_self_reviews_active`` — the
+    per-instrument Self review column on the Slice 3a Assignments-page
+    status blocks owns this surface now.
+
+    The stored flag is what Prepare / Generate writes a self-review
+    row's ``include`` from, so the toggle survives the next regenerate
+    (findings E3, 2026-10-17); before it, the rows were the only record
+    and Prepare reset them from the session's flag.
 
     Returns the row count actually flipped (rows whose previous
     ``include`` differed from ``active``). Mixed states converge:
@@ -530,15 +539,15 @@ def set_instrument_self_reviews_active(
         if assignment.include != active:
             assignment.include = active
             flipped += 1
-    db.flush()
     # Scoped like the row query: an id from another session (or none)
-    # flips nothing and must not name that session's instrument here.
+    # flips nothing, stores nothing, and must not name that session's
+    # instrument here.
     instrument = db.get(Instrument, instrument_id)
-    label = (
-        _instrument_label(instrument)
-        if instrument is not None and instrument.session_id == review_session.id
-        else "(unknown)"
-    )
+    owned = instrument is not None and instrument.session_id == review_session.id
+    if owned:
+        instrument.self_reviews_active = active
+    db.flush()
+    label = _instrument_label(instrument) if owned else "(unknown)"
     audit.write_event(
         db,
         event_type="assignments.instrument_self_reviews_active_set",

@@ -11,9 +11,12 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    column,
     func,
     select,
+    table,
     text,
+    true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -59,6 +62,31 @@ def _next_session_seq(context: Any) -> int:
         )
     ).scalar()
     return (highest or 0) + 1
+
+
+def _session_self_reviews_active(context: Any) -> bool:
+    """The owning session's ``self_reviews_active``, read at insert —
+    the seed for :attr:`Instrument.self_reviews_active` (findings E3,
+    2026-10-17).
+
+    Context-sensitive like ``_next_session_seq`` above, so every creation
+    path gets the seed without remembering it. A path that carries the
+    flag itself — Duplicate copies every mapped column, the Settings
+    import passes the file's value when the file has one — supplies an
+    explicit value and this default is skipped. The ORM flushes a
+    pending change to the session row before inserting its instruments,
+    so the value read here is the one in memory.
+    """
+    sessions = table(
+        "sessions", column("id"), column("self_reviews_active", Boolean)
+    )
+    params = context.get_current_parameters()
+    value = context.connection.execute(
+        select(sessions.c.self_reviews_active).where(
+            sessions.c.id == params["session_id"]
+        )
+    ).scalar()
+    return True if value is None else bool(value)
 
 
 class Instrument(Base, TimestampMixin):
@@ -117,6 +145,21 @@ class Instrument(Base, TimestampMixin):
     ``app.services.instruments.create_page_break_after`` /
     ``clear_page_break`` / ``reorder_instruments`` (Segment 18M
     PR 1)."""
+    self_reviews_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=_session_self_reviews_active,
+        server_default=true(),
+        nullable=False,
+    )
+    """Whether this instrument's self-review rows are included — the
+    Assignments page's per-instrument **Self review** toggle (findings
+    E3, 2026-10-17). Prepare / Generate writes a self-review row whose
+    sides are both active with this value, so the toggle survives the
+    next regenerate; before this column the toggle lived only in the
+    rows' ``include`` and Prepare reset it from the session's flag.
+    Seeded from ``ReviewSession.self_reviews_active`` at creation
+    (``_session_self_reviews_active``); backfilled the same way by
+    revision ``f3a7c1e9d5b2``."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )

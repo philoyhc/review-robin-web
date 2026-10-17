@@ -147,8 +147,20 @@ governed by the per-instrument **visibility policy**
 
 Beyond the standard rows (id / session_id / name /
 short_label / description / order /
-accepting_responses) one
-boolean carries the operator-controlled page-break layout:
+accepting_responses) two booleans carry operator settings. One
+is the Assignments page's per-instrument **Self review** toggle:
+
+- **`self_reviews_active: Boolean NOT NULL`** (Alembic revision
+  `f3a7c1e9d5b2`, findings E3). Whether this instrument's
+  self-review rows are included; Prepare / Generate writes each
+  self-review row whose sides are both active with this value
+  (`spec/assignments.md` "Self-review policy"). A new instrument
+  seeds it from the session's `self_reviews_active`; the migration
+  backfilled existing ones the same way. Written by
+  `assignments.set_instrument_self_reviews_active`; carried by
+  Replicate, Duplicate and the Settings CSV.
+
+The other carries the operator-controlled page-break layout:
 
 - **`starts_new_page: Boolean NOT NULL`** (Alembic
   revision `e5c1a3b9d472`). `true` means "this instrument
@@ -1679,6 +1691,8 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 - `sort_display_fields`, `column_widths` — copied, re-pointed at the
   copy's own display and response fields (both name fields by id).
 - `accepting_responses` — copied as-is.
+- `self_reviews_active` — copied as-is: the copy's self-review rows
+  start in the source's Self review state.
 - Visibility policies — copied row for row: the copy shows its responses to the same audiences,
   in the same modes, as its source. Each row goes through
   `visibility_policies.upsert_policy`, so it is checked against the

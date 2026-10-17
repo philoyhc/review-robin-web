@@ -48,7 +48,7 @@ responses. See `spec/rehydrate.md`.
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
 | `name`, `code`, `description`, `deadline`, `help_contact` | ✅ | ✅ | Settings-CSV applies these only when the target is empty (fallback semantics); clone rewrites name→"Copy of …", derives a unique code, resets deadline |
-| `display_timezone`, `self_reviews_active` | ✅ | ✅ | Force-applied |
+| `display_timezone`, `self_reviews_active` | ✅ | ✅ | Force-applied. The session's `self_reviews_active` only seeds a new instrument's own flag (below), so it reaches no imported instrument whose block carries one |
 | `email_template_overrides` (12 keys + `responses_received_enabled`) | ✅ | ✅ | Whole-JSON replace |
 | `scheduled_activate_at`, `responses_release_at`, `responses_release_until`, `invite_offsets`, `reminder_offsets`, `archive_offset` | ✅ | ❌ *(by design)* | Clone resets the schedule **on purpose** — a clone is a fresh cycle the operator re-schedules, like the deadline. Settings-CSV round-trips these for backup / restore |
 | `retention_exception`, `retention_overrides` | ✅ | ✅ | Clone copies retention config |
@@ -67,6 +67,7 @@ responses. See `spec/rehydrate.md`.
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it**: the `instruments[n]` number decides, stored as its 0-based rank. The cell round-trips because the export writes the 0-based position, not the stored value |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |
+| **`self_reviews_active`** (the Assignments page's Self review toggle) | ✅ | ✅ | `instruments[n].self_reviews_active` in the Settings CSV; an older file without the row, or a blank cell, seeds it from the file's `session.self_reviews_active`. Clone copies the column (findings E3) |
 | `session_seq` (the stable `Instrument_{N}` number) | ⚠️ | ✅ | Not in the Settings CSV. Import rebuilds the instruments and the column default numbers them 1…n in file order, so a gap (1, 3) or a post-drag sequence (1, 3, 2) comes back renumbered. Clone copies the value verbatim |
 | `deadline_closed_at`, `cached_group_pair_count/_stamp` | — | — | Runtime / cache |
 
@@ -140,7 +141,7 @@ is silently ignored on apply rather than failing the import.
 
 | Setting | Any path | Notes |
 |---|:--:|---|
-| **Manual per-pair include overrides** (`Assignment.include`, set via the Assignments page's bulk Activate / Inactivate) | ❌ | **Gap — no path, and not reproducible.** Not exported: the coverage CSV emits column labels only, no row data, and there is no assignments importer at all. Clone doesn't copy assignments, and **regenerating from the rule set recomputes `include`** — `self_reviews_active` for a self-review pair, `False` when either side is inactive, otherwise `True` — discarding the override. Matches the `spec/rehydrate.md` caveat |
+| **Manual per-pair include overrides** (`Assignment.include`, set via the Assignments page's bulk Activate / Inactivate) | ❌ | **Gap — no path, and not reproducible.** Not exported: the coverage CSV emits column labels only, no row data, and there is no assignments importer at all. Clone doesn't copy assignments, and **regenerating from the rule set recomputes `include`** — the instrument's `self_reviews_active` for a self-review pair, `False` when either side is inactive, otherwise `True` — discarding the override. Matches the `spec/rehydrate.md` caveat |
 | `is_self_review`, `created_by_mode` | — | Engine-derived, not operator overrides |
 
 ### Permissions (`session_operators`)

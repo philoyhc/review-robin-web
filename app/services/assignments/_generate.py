@@ -417,9 +417,11 @@ def _diff_one_instrument(
         # ``include=False`` (author's ruling 2026-10-02, findings B2):
         # they are never assigned work, and their responses survive a
         # deactivate / reactivate round trip, which leaving the pair
-        # out would delete.
+        # out would delete. A self-review pair takes its instrument's
+        # Self review toggle (findings E3), not the session's flag,
+        # which only seeds a new instrument's.
         pair_include = (
-            (review_session.self_reviews_active if is_self else True)
+            (instrument.self_reviews_active if is_self else True)
             and _is_active(reviewer)
             and _is_active(reviewee)
         )
@@ -576,8 +578,9 @@ def _materialise_one_instrument(
         )
 
     # Matched pairs keep their row + responses. ``include`` is
-    # recomputed, not preserved: the expected value is
-    # ``self_reviews_active`` for a self-review pair and ``True`` for
+    # recomputed, not preserved: the expected value is the
+    # instrument's ``self_reviews_active`` for a self-review pair (the
+    # stored Self review toggle, findings E3) and ``True`` for
     # every other, and ``False`` whenever either side is inactive, so
     # this also resets a row an operator inactivated by hand.
     # Deliberate for now — assignment-row status round-trips

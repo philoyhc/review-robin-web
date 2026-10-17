@@ -42,6 +42,10 @@ def _make_session(
     ).scalar_one()
     if not self_reviews_active:
         review_session.self_reviews_active = False
+        # The session flag only seeds a new instrument's (findings E3),
+        # and the default instrument already exists, so it is set too.
+        for instrument in review_session.instruments:
+            instrument.self_reviews_active = False
         db.commit()
         db.refresh(review_session)
     return review_session

@@ -463,8 +463,9 @@ def assignments_instrument_self_reviews_active(
 ) -> RedirectResponse:
     """Per-instrument self-review include toggle — owns the
     checkbox in the Self review column on the Assignments-page
-    status blocks. Bulk-flips every self-review row on this
-    instrument to the posted ``active`` boolean. Mixed states
+    status blocks. Stores the posted ``active`` boolean on the
+    instrument, which the next Prepare keeps (findings E3), and
+    bulk-flips every self-review row on it to match. Mixed states
     converge: ``active=false`` flips remaining active rows to
     false; ``active=true`` flips remaining deactivated rows to
     true. Audit event

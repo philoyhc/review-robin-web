@@ -1021,12 +1021,15 @@ for those labels.
 
 ### 8.6 Self-review behaviour
 
-Each session carries a **self-reviews active** flag. When true,
-self-review pairs (reviewer reviewing themselves on a given
+Each instrument carries a **self-reviews active** flag, the
+Assignments page's per-instrument Self review toggle. When true,
+self-review pairs (reviewer reviewing themselves on that
 instrument) participate in the review surface; when false, they
-are inactive in bulk. Per-pair include overrides apply
-post-flip. The flag has no editor; it is set by the Settings CSV
-import or Duplicate.
+are inactive in bulk, and Prepare / Generate keeps them so.
+Per-pair include overrides apply post-flip. The session's own
+flag only seeds a new instrument's; it has no editor and is set
+by the Settings CSV import or Duplicate
+(`spec/assignments.md`).
 
 Separately, each instrument's rule can **exclude self-reviews
 outright**: the **Include / Exclude self reviews** chip under Link 3 of the

@@ -324,8 +324,8 @@ def _rule_cases() -> list[tuple[str, Callable[[Inputs], Undo]]]:
             lambda i: _set(i.instrument, "group_kind", "reviewee.tag1"),
         ),
         (
-            "the session's self-review toggle",
-            lambda i: _flip(i.review_session, "self_reviews_active"),
+            "the instrument's self-review toggle",
+            lambda i: _flip(i.instrument, "self_reviews_active"),
         ),
         (
             "the caller's self-review override",
