@@ -346,3 +346,14 @@ delete them once no remaining section points to them.
   row counts `defuncted_group_responses`.
 - [ ] **An unchanged group keeps its answer.** A group the change left
   with the same members still shows its answer.
+
+## A group whose members change is cleared, everywhere (group is the subject)
+
+- [ ] **A tag edit clears both groups.** On a session back in draft with
+  a group instrument answered for two teams, edit one reviewee's team
+  tag to the other team: the reviewer's page shows both teams
+  unanswered, and the `reviewee.updated` audit row counts
+  `defuncted_group_responses`.
+- [ ] **Generate clears a joined group.** Add a reviewee to an answered
+  team and Generate (ticking the response-loss acknowledgement): that
+  team shows unanswered; a team nobody joined keeps its answer.
