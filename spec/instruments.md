@@ -1522,6 +1522,19 @@ Bottom row of the card, right-aligned, in this order:
   any refusal rolls the whole request back. A 422 leaves nothing of the
   card persisted, and a `validated` session stays `validated`. The
   `/fields/save` fallback does the same.
+
+  **A Save that would clear group answers asks first.** When the unit
+  of review or its boundary tags would add a member to a group that has
+  saved answers (`spec/assignments.md` "Group-scoped fan-out"), the
+  JSON `/save` refuses with 422
+  `{"ok": false, "errors": [line], "confirm_group_clear": N}` and
+  stores nothing; the line is `spec/lifecycle.md` §3.2's. The summary
+  banner adds a `Yes, clear them` tick (`acknowledge_response_loss`, bound to `dfsave-{id}`,
+  value `N`), and the next Save sends that count. A tick left on after
+  further edits that change the count is refused afresh, and a rebuilt
+  banner starts unticked. The no-JS `/fields/save` fallback refuses with
+  a bare 422 carrying the line and has no re-offer: it cannot clear
+  group answers. A change that only splits or shrinks groups never asks.
   The `/fields/save` 303-redirect form action stays as the
   no-JS fallback. A sort spec it rejects (misaligned arrays, a
   non-integer id, or a `SortSpecError`) redirects back with

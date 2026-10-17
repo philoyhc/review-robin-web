@@ -1067,7 +1067,8 @@ while creating the session.
    Relationships' own replace has no further cascade — it *is* the
    leaf — except that a pair it moves to another pair-context group
    clears the group it joins, if that group already had members
-   (`spec/assignments.md` "Group-scoped fan-out").
+   (`spec/assignments.md` "Group-scoped fan-out"). The Setup page's
+   upload refuses and asks first (`spec/lifecycle.md` §3.2).
 
 3. **Two-phase parse + apply (Settings).** Parse everything,
    collect every error, then apply or rollback, so one submit

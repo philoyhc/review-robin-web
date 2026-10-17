@@ -87,6 +87,55 @@ Taken 2026-10-17 at `df32ff26`.
 | Specs naming the acknowledgement | 9 | `grep -rln "response-loss acknowledgement\|acknowledge_response_loss" spec docs \| grep -v archive` |
 | Tests posting to those routes | 53 | `grep -rln "relationships/create\|relationships/import\|reviewees/.*/update\|instruments/.*/save" tests \| wc -l` |
 
+### Status — closed 2026-10-17
+
+**Intended vs done.** Done as planned: all ten routes refuse, then
+re-offer, and each has a test. The ladder ran as written: #3101 (plan),
+#3102 (gate and Instrument card), #3103 (Reviewees) and #3104
+(Relationships), then this close. The following diverged from the
+Decision and Semantics above, which stand as the intent:
+
+- **The tick carries the count, not `true`** (Codex on #3102). A tick
+  left on after further edits approved a different, possibly larger,
+  clear. The service takes `acknowledged_loss: int | None` rather than
+  `acknowledged: bool`, and a Save goes through only when the count
+  equals what it would delete. `None`, the default, deletes without
+  asking, so the plan's "fails open" reasoning holds as written.
+- **The no-JS `/fields/save` refuses with a bare 422.** This is an
+  exception to "keeps the operator's input": the fallback has no page of
+  its own to re-offer from. A form that carries the card's tick
+  (`form="dfsave-<id>"`) goes through.
+- **The bulk Relationships routes re-render rather than redirect.** The
+  page comes back with the refused selection checked, and the selection
+  panel adds the line and the tick. That is how "inline in the row
+  expander" was met.
+- **One field, two value formats.** The cascade gates still want
+  `acknowledge_response_loss=true`; the group-clear gate wants a count,
+  and neither satisfies the other. They never meet in one request: a
+  relationship carries no cascade, and a reviewee delete only shrinks
+  groups.
+- **Refusals keep the view.** Codex on #3103 found the reviewee refusal
+  dropping the filter, search and offset; the Relationships editor
+  refusals got the same fix.
+
+**Decisions confirmed at build:** a refusal writes no audit row and
+rolls back the `validated → draft` flip with the change. The count line
+is singular for one response.
+
+**Close pass.** `spec-writer` wrote the six Doc-impact specs and found
+one more, `spec/csv_contracts.md` §1, whose upload line it amended; the
+bullet was added at the close. It flagged Quick Setup's relationships
+replace as ungated. That is this plan's Out of scope as written: the
+card locks once the session has responses.
+
+**Reads.** One cumulative `diff-reviewer` read, on rung 4 from
+`df32ff26`. It found nothing blocking. It turned up eight lower
+findings, fixed in #3104 (`185ef29d`): an assertion that could never
+fail, four missing tests, an import refusal that dropped the CSV's
+issues, the plural, and a parser 500 on `"²"`. It also caught two
+stale comments and the plan drift recorded above. Codex found one
+issue on each of #3102 and #3103; both were fixed before merge.
+
 ### PR ladder
 
 1. **PR 1 — this plan.** Lands the plan, its README row and the
@@ -142,3 +191,5 @@ None open. The pattern and the scope were ruled by the author on
   ask.
 - `spec/operator_button_audit.md` — the Relationships rows that gain
   the tick.
+- `spec/csv_contracts.md` — §1: the Setup-page Relationships upload asks
+  first (added at the close; see `Status`).

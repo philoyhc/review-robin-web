@@ -668,8 +668,16 @@ event's `context` counts the deletions as `defuncted_group_responses`;
 roster delete and Generate ask for the response-loss acknowledgement as
 they always did; Prepare's dry-run counts the answers a run would clear
 with those it deletes (`reconcile_impact`'s `responses_lost`), so a
-clear alone detours it ("Reconcile + regenerate"). The other changes
-ask for none.
+clear alone detours it ("Reconcile + regenerate").
+
+**Every operator Save that would clear asks first.** The Instrument
+card's Save, a reviewee tag edit, and every relationship create, edit,
+import, Delete all, bulk Inactivate, bulk Activate and bulk Delete
+refuse and persist nothing, then re-offer the Save with the count and a
+`Yes, clear them` tick (`spec/lifecycle.md` §3.2). A change that clears
+nothing, such as a group that only shrank, never asks. The service
+parameter `acknowledged_loss` on `responses.clear_changed_groups` is
+that gate; `None`, its default, deletes without asking; Generate asks at its route, as above.
 
 ### Self-review interaction
 
