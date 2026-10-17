@@ -870,11 +870,11 @@ and Relationships cascade to nothing** — no table references them — so
 their gate never fires and their expander never offers the
 acknowledgement. An Observers delete loses no response. A
 Relationships delete can: a pair it moves to another pair-context
-group clears the group it joins if that group already had members,
-and this asks for no
-acknowledgement, as a tag edit asks for none (`spec/assignments.md`
-"Group-scoped fan-out"). A Reviewees delete leaves the groups the
-deleted rows leave with their answers, since those only shrink.
+group clears the group it joins if that group already had members, and
+that asks through the group-clear tick, not this cascade gate (§ *Saves
+that clear group answers*). A Reviewees delete leaves the groups the
+deleted rows leave with their answers, since those only shrink, and
+keeps its gate unchanged.
 
 **The confirmation names what goes**, on the pattern of the
 Instruments page's *"Yes, delete Instrument_1 and its associated
@@ -918,7 +918,9 @@ that cannot happen.
 checkbox, so where responses exist a hidden
 `acknowledge_response_loss` field accompanies it rather than a second
 box appearing beside it. The route still requires both fields and
-still refuses without the tick that carries them.
+still refuses without the tick that carries them. The one exception is
+a Relationships bulk action refused for clearing group answers, whose
+panel gains a second tick (§ *Saves that clear group answers*).
 
 An id from another session is a **400** and deletes nothing, including
 the valid ids in the same request — `roster_bulk.bulk_delete` raises
@@ -996,9 +998,10 @@ delete a roster that has responses.
 **Observers' `delete-all` has no response-loss gate at all.** Nothing
 references an observer, so the delete destroys no assignment and no
 response — requiring an acknowledgement would ask the operator to
-accept a loss that cannot occur. Relationships has no gate either. The
-requirement stands only where the cascade does, on Reviewers and
-Reviewees.
+accept a loss that cannot occur. Relationships has no cascade gate
+either; its group-clear tick is a separate gate (§ *Saves that clear
+group answers*). The cascade requirement stands only where the cascade
+does, on Reviewers and Reviewees.
 
 The card itself is hidden whenever the session is not editable, and so
 is the Upload card — both are tenants of the Unlock panel, which is
@@ -1064,7 +1067,8 @@ second tick goes through.
 `delete-all` has none: nothing references an observer, so replacing
 that roster destroys no assignment and no response. It keeps its
 `confirm_replace` tick, which guards the observer roster itself.
-Relationships' import has none either.
+Relationships' import has no cascade gate either, but can be refused for
+clearing group answers (§ *Saves that clear group answers*).
 
 **A parse-blocked upload re-renders the page from a context the
 import handler builds itself**, key by key, rather than from the one
@@ -1073,6 +1077,31 @@ to be repeated there by hand. Omitting one fails silently rather than
 loudly: Jinja's `Undefined` is falsy in `{% if %}`, so the label takes
 its no-loss branch on that path alone. Check the second builder
 whenever a key is added.
+
+### Saves that clear group answers
+
+A reviewee tag edit and a relationship change can add a member to a
+group that has saved answers, which deletes them
+(`spec/assignments.md` "Group-scoped fan-out"). The route refuses,
+persists nothing, and re-renders at **400** with "This change clears N
+saved responses on groups whose members it changes." (singular at one)
+and a `Yes, clear them` tick named `acknowledge_response_loss`. The
+tick's value is the count shown, not `true`: a tick left on after
+further edits that change the count is refused afresh. The gate and its
+service parameter are in `spec/lifecycle.md` §3.2. A change that clears
+nothing, such as a group that only shrank, never asks.
+
+| Route | Re-rendered | The tick |
+|---|---|---|
+| Reviewees `…/reviewees/{id}/update` | the row editor, with the typed values, filter, search and offset | on `reviewee-edit-form` |
+| Relationships `…/relationships/create` and `…/relationships/{id}/update` | the row editor, with the typed values and view kept | on `relationship-edit-form` |
+| Relationships `…/relationships/import` | the Upload card, panel open, CSV issues kept; the file is chosen again | beside `confirm_replace` |
+| Relationships `…/relationships/delete-all` | the Danger Zone, panel open | beside the `confirm` tick |
+| Relationships `…/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | the page, with the same rows selected and the view kept | in the row expander, on `relationships-bulk-form` |
+
+On a bulk action the expander shows the line and the tick beside its
+own confirmation. Reviewees' bulk Inactivate and Activate never clear
+groups and are not gated.
 
 ### Search matching and suggestions
 
@@ -1527,8 +1556,9 @@ to count them:
 - **Its index is literal-labeled and lists `Tag` even at zero** —
   § *The roster index* below.
 - **No `acknowledge_response_loss` cascade**, because nothing
-  references `observers`; Relationships is the same. § *Deleting the
-  selected rows*.
+  references `observers`; Relationships is the same, though a
+  relationship change can still be refused for clearing group answers.
+  § *Deleting the selected rows*, § *Saves that clear group answers*.
 
 **The lock card's condition is this page's too.**
 `_roster_lock_card.html` defaults to `not is_editable`; Observers

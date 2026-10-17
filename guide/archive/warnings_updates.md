@@ -122,6 +122,12 @@ Decision and Semantics above, which stand as the intent:
 rolls back the `validated → draft` flip with the change. The count line
 is singular for one response.
 
+**Close pass.** `spec-writer` wrote the six Doc-impact specs and found
+one more, `spec/csv_contracts.md` §1, whose upload line it amended; the
+bullet was added at the close. It flagged Quick Setup's relationships
+replace as ungated. That is this plan's Out of scope as written: the
+card locks once the session has responses.
+
 **Reads.** One cumulative `diff-reviewer` read, on rung 4 from
 `df32ff26`. It found nothing blocking. It turned up eight lower
 findings, fixed in #3104 (`185ef29d`): an assertion that could never
@@ -129,7 +135,6 @@ fail, four missing tests, an import refusal that dropped the CSV's
 issues, the plural, and a parser 500 on `"²"`. It also caught two
 stale comments and the plan drift recorded above. Codex found one
 issue on each of #3102 and #3103; both were fixed before merge.
-`spec-writer` ran once, at this close.
 
 ### PR ladder
 
@@ -186,3 +191,5 @@ None open. The pattern and the scope were ruled by the author on
   ask.
 - `spec/operator_button_audit.md` — the Relationships rows that gain
   the tick.
+- `spec/csv_contracts.md` — §1: the Setup-page Relationships upload asks
+  first (added at the close; see `Status`).

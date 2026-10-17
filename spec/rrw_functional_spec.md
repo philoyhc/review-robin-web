@@ -2245,15 +2245,16 @@ deleting an instrument, uploading over or deleting reviewer or
 reviewee rows, or a Settings import, which rebuilds the instruments.
 Each is confirm-gated, and the roster and Settings paths also ask for
 a response-loss acknowledgement when the session holds responses.
-Two losses outside regeneration ask for neither. On a group-scoped
-instrument, a reviewee boundary-tag edit or any relationship change
-(create, import, delete, tag edit, re-point, status switch) that
-moves a pair into a group that already had members clears that group
-at once,
-and redrawing an instrument's groups on its card clears every group
-that gains a member (`spec/assignments.md` "Group-scoped fan-out"). A
-group that only loses members, by a move, a split or a delete, keeps
-its answer.
+A save that clears group answers asks too, and persists nothing until
+the operator agrees. On a group-scoped instrument, a reviewee
+boundary-tag edit, any relationship change (create, import, delete,
+tag edit, re-point, status switch) or redrawing the instrument's
+groups on its card clears every group that gains a member. The page
+says how many saved responses would go and offers the save again with a
+tick naming that count; a tick for a different count is not accepted
+(`spec/assignments.md` "Group-scoped fan-out"). A group that only loses
+members, by a move, a split or a delete, keeps its answer and asks
+nothing.
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete
@@ -2455,9 +2456,8 @@ Destructive actions require **explicit confirmation** (a
 tick-box gating the destructive submit) and write one or more
 audit events. A tag or relationship change that moves a pair to
 another group on a group-scoped instrument, or redraws an instrument's
-groups, deletes the answers of every group that gains a member without
-a response-loss acknowledgement
-([§14](#14-reconciling-regeneration)).
+groups, deletes the answers of every group that gains a member, and
+asks the operator first ([§14](#14-reconciling-regeneration)).
 
 Per-cell trust: reviewer POST endpoints build the assignment
 index from the authenticated reviewer's own assignments;

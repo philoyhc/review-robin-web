@@ -333,8 +333,9 @@ rather than 400). The Reviewers and Reviewees Setup-page CSV import
 (`_shared.py` `_handle_import`) applies the same gate inline and
 answers its 400 in the upload card's banner rather than an error page
 (`spec/setup_pages.md`).
-**A change that clears group answers is a second gate**, not this
-one: it asks through `acknowledge_response_loss=<N>`, below.
+A change that clears group answers is a second gate, not this one: it
+asks through `acknowledge_response_loss=<N>`, below.
+
 **Delete Data does not call it**: its own confirm tick names the loss
 ("Yes, delete every reviewer response on …") and is the
 acknowledgement. Delete session does not
@@ -366,7 +367,7 @@ a stale tick cannot approve a different clear. The service parameter
 (`app/services/responses/_group_reconciliation.py`) unless it equals the
 rows the change would delete; the route rolls back and re-renders. A
 count of zero never asks. `None`, the default, deletes without asking:
-Generate, Duplicate, Rehydrate, and every service caller that is not an
+Generate, Rehydrate, and every other service caller that is not an
 operator Save. The cascade gate above never applies here, and a
 reviewee delete only shrinks groups, so it keeps its own gate unchanged.
 
@@ -378,7 +379,7 @@ Ten routes carry it. Surfaces and ticks are in `spec/setup_pages.md`
 | `POST …/instruments/{iid}/save` | 422 JSON with `confirm_group_clear`; the card's banner adds the tick |
 | `POST …/instruments/{iid}/fields/save` | bare 422 `HTTPException` carrying the line; no re-offer |
 | `POST …/reviewees/{id}/update` | 400, row editor re-rendered |
-| `POST …/relationships` create and `…/{id}/update` | 400, row editor re-rendered |
+| `POST …/relationships/create` and `…/relationships/{id}/update` | 400, row editor re-rendered |
 | `POST …/relationships/import` | 400, upload card re-rendered |
 | `POST …/relationships/delete-all` | 400, Danger Zone re-rendered |
 | `POST …/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | 400, page re-rendered with the selection kept |
