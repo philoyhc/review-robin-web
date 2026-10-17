@@ -321,3 +321,118 @@ def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
     operator.click()  # IS NOT
     unit.click()
     expect(unit).to_have_attribute("data-new-model-unit-mode", "group")
+
+
+def test_link2_caption_reads_pairwise_for_a_pair_tag_under_is(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """A relationship tag under IS / IS NOT judges the pair itself, so
+    Link 2's caption reads "Pairwise tag" (author, 2026-10-17); any other
+    tag or operator keeps "Reviewee's tag"."""
+    session_id = new_session()
+    _seed(api, session_id)
+    _tag_the_pair(live_server, session_id)
+    pin_full_matrix(live_server.database_url, session_id)
+    card = open_unlocked(page, session_id)
+    cell = _filter_on(card, "link2")
+    caption = cell.locator("[data-new-model-rule-field-helper]")
+    field = cell.locator('select[name="link2_field"]')
+    operator = cell.locator("[data-new-model-operator-cycle]")
+    expect(caption).to_have_text("Reviewee's tag")
+
+    field.select_option("pair_context.tag1")
+    seen = []
+    for _ in range(6):
+        seen.append((operator.inner_text(), caption.inner_text()))
+        operator.click()
+    assert seen == [
+        ("IS THE SAME AS", "Reviewee's tag"),
+        ("IS DIFFERENT FROM", "Reviewee's tag"),
+        ("IS", "Pairwise tag"),
+        ("IS NOT", "Pairwise tag"),
+        ("IS FILLED", "Reviewee's tag"),
+        ("IS EMPTY", "Reviewee's tag"),
+    ]
+
+    while operator.inner_text() != "IS":
+        operator.click()
+    expect(caption).to_have_text("Pairwise tag")
+    field.select_option("reviewee.tag1")
+    expect(caption).to_have_text("Reviewee's tag")
+    field.select_option("pair_context.tag1")
+    expect(caption).to_have_text("Pairwise tag")
+
+    # A new cell starts on the default operator and field, so on the
+    # default caption.
+    card.locator("[data-new-model-rule-builder]").nth(1).locator(
+        "[data-new-model-rule-add]"
+    ).click()
+    expect(card.locator("[data-new-model-rule-field-helper]").filter(
+        has_text="Pairwise tag"
+    )).to_have_count(1)
+
+
+def test_a_stored_pair_tag_is_renders_the_pairwise_caption(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    session_id = new_session()
+    _seed(api, session_id)
+    _tag_the_pair(live_server, session_id)
+    _store_link2_pair_is(live_server, session_id)
+    card = open_unlocked(page, session_id)
+    cell = card.locator('select[name="link2_field"]').locator(
+        "xpath=ancestor::*[@data-new-model-rule-cell]"
+    )
+    expect(cell.locator("[data-new-model-operator-cycle]")).to_have_text("IS")
+    expect(cell.locator("[data-new-model-rule-field-helper]")).to_have_text("Pairwise tag")
+
+
+def _store_link2_pair_is(live_server: LiveServer, session_id: int) -> None:
+    """``pair_context.tag1 IS Pod`` in Link 2."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, SessionRuleSet
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(Instrument.session_id == session_id)
+            ).scalars().first()
+            rule_set = SessionRuleSet(
+                session_id=session_id,
+                name=f"Band1 {instrument.id}",
+                description="",
+                combinator="ALL_OF",
+                exclude_self_reviews=False,
+                seed=None,
+                rules_json=[
+                    {
+                        "id": "link2",
+                        "enabled": True,
+                        "kind": "COMPOSITE",
+                        "op": "AND",
+                        "rules": [
+                            {
+                                "id": "link2-r0",
+                                "enabled": True,
+                                "kind": "MATCH",
+                                "predicate": {
+                                    "field": "pair_context.tag1",
+                                    "operator": "equals",
+                                    "operand": "Pod",
+                                    "case_sensitive": False,
+                                },
+                            }
+                        ],
+                    }
+                ],
+            )
+            db.add(rule_set)
+            db.flush()
+            instrument.rule_set_id = rule_set.id
+            instrument.band1_touched_links = ["link1", "link2", "link3"]
+            db.commit()
+    finally:
+        engine.dispose()

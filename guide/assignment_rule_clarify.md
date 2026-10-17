@@ -303,3 +303,8 @@ cumulative diff read: `cc7e1ac0` (main before rung 1).
   - the cohort rule strips the typed value as well as the tag.
   The `spec-writer` verify on rung 3 found the cohort paragraph silent on
   `IS` / `CONTAINS` on no value; stated and pinned.
+- **Follow-up, 2026-10-17 (author, after the browser checks passed).**
+  Link 2's caption reads "Pairwise tag", not "Reviewee's tag", while a
+  cell holds a relationship tag under `IS` / `IS NOT`, so the pair-level
+  reading is visible on the card (`newModelSyncFieldHelper`). It
+  reopens `app/` after the read, so it takes its own read.

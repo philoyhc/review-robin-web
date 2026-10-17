@@ -262,10 +262,23 @@ with the last section it covers.
   relationship pairs carrying that value are assigned. Change it to IS
   NOT: every pair but those is assigned, pairs with no relationship
   included.
+- [ ] **"Pairwise tag" caption.** In Link 2, pick a "Pair: …" tag and
+  cycle the operator: on `IS` and `IS NOT` the caption above the tag list
+  reads "Pairwise tag"; on every other operator, and for any roster tag,
+  it reads "Reviewee's tag". Save and reload a Pair `IS` rule: it comes
+  back captioned "Pairwise tag".
 - [ ] **Group steps aside.** With that Link 2 `IS` rule on the card, the
   Unit of review pill goes Individual → Not set, never Group; with `IS
   NOT` it reaches Group again. An instrument already grouped refuses a
   Save that adds the `IS` rule, with a banner saying why.
+- [ ] **A Settings import refuses Group beside a Pair IS.** Export a
+  session's settings, set an instrument's `group_kind` to a reviewee tag
+  while its rule set's Link 2 holds a Pair `IS` rule, and import: the
+  import is refused with an error on `group_kind`, and nothing changes.
+- [ ] **A Group Pair IS NOT drops one member.** On a Group instrument,
+  Link 2 "Pair: <label> IS NOT <value>", Generate: the reviewer in that
+  tagged pair loses only that one reviewee, and keeps the rest of the
+  group.
 - [ ] **An observer with no tag.** On the Observers page, give an
   observer the rule "Reviewer: <tag> IS DIFFERENT FROM Observer: Tag" and
   leave their tag empty: their collation shows every response whose
