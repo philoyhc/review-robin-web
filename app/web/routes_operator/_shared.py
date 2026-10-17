@@ -186,6 +186,16 @@ _REVERT_RETURN_TO = {
 }
 
 
+def acknowledged_loss(raw: object) -> int:
+    """The count a ``Yes, clear them`` tick was shown on a Save refused
+    for clearing group answers (``acknowledge_response_loss``), or 0
+    with no tick. The tick carries the count rather than ``true`` so a
+    tick left on after further edits cannot approve a different clear
+    (``responses.clear_changed_groups``)."""
+    text = str(raw or "").strip()
+    return int(text) if text.isdigit() else 0
+
+
 def _require_editable(review_session: ReviewSession) -> None:
     """Reject mutating operator actions while session is not draft/validated."""
     if not lifecycle.is_editable(review_session):

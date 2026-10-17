@@ -271,11 +271,17 @@ def update_reviewee(
     status: str | object = _UNSET,
     user: User,
     correlation_id: str | None = None,
+    acknowledged_loss: int | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update. Only emits ``reviewee.updated`` if at
     least one field actually changed; the changes envelope carries
     ``{field: [old, new]}`` for each changed field only. Returns the
-    changes dict (empty if nothing changed)."""
+    changes dict (empty if nothing changed).
+
+    ``acknowledged_loss`` is the row editor's ``Yes, clear them`` count:
+    a tag edit that would clear a different number of group answers
+    raises ``responses.GroupAnswersWouldClear`` after flushing the edit,
+    so the caller rolls back (``responses.clear_changed_groups``)."""
     lifecycle.require_editable(db, reviewee.session)
     proposed: dict[str, object] = {}
     if name is not _UNSET:
@@ -379,7 +385,10 @@ def update_reviewee(
     db.flush()
 
     defuncted = responses_service.clear_changed_groups(
-        db, session_id=reviewee.session_id, before=groups_before
+        db,
+        session_id=reviewee.session_id,
+        before=groups_before,
+        acknowledged_loss=acknowledged_loss,
     )
 
     # ``Assignment.is_self_review`` is keyed off

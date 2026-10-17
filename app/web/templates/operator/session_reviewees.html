@@ -63,6 +63,17 @@
           {% if edit_error %}
             <span class="row-editor-error">{{ edit_error }}</span>
           {% endif %}
+          {# A tag edit refused for clearing group answers offers itself
+             again: the tick carries the count it shows, so a Save after
+             further edits that change it is refused afresh. #}
+          {% if edit_confirm_group_clear %}
+            <label class="row-editor-error">
+              <input type="checkbox" form="reviewee-edit-form"
+                     name="acknowledge_response_loss"
+                     value="{{ edit_confirm_group_clear }}">
+              Yes, clear them
+            </label>
+          {% endif %}
           {# Save then Cancel, the order the card rendered and the order
              Reviewers and Observers settled on. All four roster pages
              agree from this rung. #}

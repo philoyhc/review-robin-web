@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports, participant_info
+from app.services import responses as responses_service
 from app.services import reviewees as reviewees_service
 from app.services import roster_bulk
 from app.services import session_lifecycle as lifecycle
@@ -41,6 +42,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _setup_row_window,
     _handle_import,
+    acknowledged_loss,
     _redirect_keeping_selection,
     _row_action_anchor,
     _require_delete_confirm,
@@ -116,6 +118,9 @@ def _render_reviewees_page(
     add_mode: bool = False,
     edit_values: dict[str, str] | None = None,
     edit_error: str | None = None,
+    # The count a refused tag edit would clear, which the row editor
+    # offers back with a ``Yes, clear them`` tick (warnings_updates.md).
+    edit_confirm_group_clear: int | None = None,
     selected_ids: set[int] | None = None,
     # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
     # open. Server state, not a second source of truth for the JS
@@ -328,6 +333,7 @@ def _render_reviewees_page(
             "add_mode": add_mode,
             "edit_values": edit_values,
             "edit_error": edit_error,
+            "edit_confirm_group_clear": edit_confirm_group_clear,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Reviewees"
             ),
@@ -481,6 +487,7 @@ def reviewees_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    acknowledge_response_loss: str = Form(default=""),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -490,6 +497,15 @@ def reviewees_update(
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     reviewee = _require_reviewee_in_session(db, review_session, reviewee_id)
+    edit_values = {
+        "name": name,
+        "email_or_identifier": email_or_identifier,
+        "profile_link": profile_link,
+        "tag_1": tag_1,
+        "tag_2": tag_2,
+        "tag_3": tag_3,
+        "status": status_value,
+    }
     try:
         reviewees_service.update_reviewee(
             db,
@@ -503,6 +519,7 @@ def reviewees_update(
             status=status_value,
             user=user,
             correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RevieweeOperationError as exc:
         return _render_reviewees_page(
@@ -511,16 +528,29 @@ def reviewees_update(
             user=user,
             review_session=review_session,
             edit_id=reviewee_id,
-            edit_values={
-                "name": name,
-                "email_or_identifier": email_or_identifier,
-                "profile_link": profile_link,
-                "tag_1": tag_1,
-                "tag_2": tag_2,
-                "tag_3": tag_3,
-                "status": status_value,
-            },
+            edit_values=edit_values,
             edit_error=exc.message,
+            http_status=status.HTTP_400_BAD_REQUEST,
+        )
+    except responses_service.GroupAnswersWouldClear as exc:
+        # Refuse, then re-offer (author's ruling 2026-10-17): the edit
+        # was flushed, so roll it back and re-render the row editor with
+        # the operator's values, the count and a ``Yes, clear them`` tick.
+        db.rollback()
+        return _render_reviewees_page(
+            request=request,
+            db=db,
+            user=user,
+            review_session=review_session,
+            edit_id=reviewee_id,
+            # The view the operator was on, so the re-offered Save
+            # carries it too (Codex on #3103).
+            status_filter=filter_status,
+            search=filter_q,
+            offset=filter_offset,
+            edit_values=edit_values,
+            edit_error=str(exc),
+            edit_confirm_group_clear=exc.count,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
