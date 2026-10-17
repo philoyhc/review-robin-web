@@ -339,7 +339,7 @@ def _field_friendly_label(field_path: str, session: ReviewSession) -> str:
     if (
         len(lookup_field) == 4
         and lookup_field.startswith("tag")
-        and lookup_field[3].isdigit()
+        and lookup_field[3] in "123"
     ):
         lookup_field = f"tag_{lookup_field[3]}"
     try:

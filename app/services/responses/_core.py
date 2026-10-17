@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from app.services import session_lifecycle as lifecycle
 from app.services.text import pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
 from app.services.responses._branching import (
+    DECIMAL_PATTERN,
     may_be_required_field_ids,
     required_field_ids,
 )
@@ -35,7 +37,14 @@ from app.services.responses._group_reconciliation import (
     group_keys,
 )
 
-_FORM_FIELD_PATTERN = re.compile(r"^response\[(?P<aid>\d+)\]\[(?P<key>[^\]]+)\]$")
+# ``aid`` is ASCII and at most 18 digits: a longer id fits no 64-bit
+# column, and SQLite answers 500 binding one (findings R8). Such a key is
+# ignored like any other that doesn't match.
+_FORM_FIELD_PATTERN = re.compile(
+    r"^response\[(?P<aid>[0-9]{1,18})\]\[(?P<key>[^\]]+)\]$"
+)
+_DECIMAL = re.compile(DECIMAL_PATTERN)
+_INTEGER = re.compile(r"[+-]?[0-9]+")
 
 
 def parse_form_payload(
@@ -90,6 +99,39 @@ class ValidationError:
 _STEP_TOLERANCE = 1e-6
 
 
+def canonical_number(data_type: str | None, value: str) -> str | None:
+    """``value`` as a numeric field stores it, or None when it is not a
+    number the field takes (findings R3, R4).
+
+    Only plain ASCII numbers: ``float`` and ``int`` also take ``nan``,
+    ``inf``, ``1_000`` and full-width digits, which the builder's and the
+    reviewer surface's scripts refuse (``DECIMAL_PATTERN``). A value past
+    a float's range is refused too, since min, max and step compare as
+    floats. The stored form is canonical, so ``04`` and ``+4`` read as
+    ``4`` to the data-shape step columns and to branching: an Integer
+    as its ``int``, a Decimal as the shortest decimal that round-trips,
+    with no exponent and no trailing ``.0``.
+    """
+    text = value.strip()
+    if data_type == "Integer":
+        if not _INTEGER.fullmatch(text):
+            return None
+        number = int(text)
+        try:
+            float(number)
+        except OverflowError:
+            return None
+        return str(number)
+    if not _DECIMAL.fullmatch(text):
+        return None
+    number = float(text)
+    if not math.isfinite(number):
+        return None
+    if number == int(number):
+        return str(int(number))
+    return format(Decimal(repr(number)), "f")
+
+
 def _format_number(v: float, *, integer: bool) -> str:
     if integer:
         # A non-whole bound kept by the whole-bounds exemption reads as
@@ -121,10 +163,10 @@ def validate_value(
     data_type = field.data_type
     if data_type in ("Integer", "Decimal"):
         integer = data_type == "Integer"
-        try:
-            v = int(value) if integer else float(value)
-        except ValueError:
+        canonical = canonical_number(data_type, value)
+        if canonical is None:
             return "Must be a whole number." if integer else "Must be a number."
+        v = int(canonical) if integer else float(canonical)
         min_ = field._inline_min
         max_ = field._inline_max
         step = field._inline_step
@@ -473,7 +515,21 @@ def _split_validated(
             continue
         message = validate_value(field, u.value)
         if message is None:
-            valid.append(u)
+            # A number is stored in its canonical form (findings R4).
+            canonical = (
+                canonical_number(field.data_type, u.value)
+                if u.value and field.data_type in ("Integer", "Decimal")
+                else None
+            )
+            valid.append(
+                u
+                if canonical is None or canonical == u.value
+                else ResponseUpsert(
+                    assignment_id=u.assignment_id,
+                    field_key=u.field_key,
+                    value=canonical,
+                )
+            )
             continue
         errors.append(
             ValidationError(

@@ -11,6 +11,7 @@ from app.db.models import User
 from app.logging_config import configure_logging, get_logger
 from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
+from app.web.oversized_ids import refuse_oversized_ids
 from app.web.routes_about import router as about_router
 from app.web.routes_guide import router as guide_router
 from app.web.routes_templates import router as templates_router
@@ -67,7 +68,12 @@ def create_app() -> FastAPI:
             "SUPER_ADMIN_EMAILS to enable the protected top tier",
             extra={"event": "super_admin.unconfigured"},
         )
-    app = FastAPI(title="Review Robin Web")
+    # App-wide, so it runs before any route's own dependencies reach the
+    # database with an id SQLite cannot bind (findings O6).
+    app = FastAPI(
+        title="Review Robin Web",
+        dependencies=[Depends(refuse_oversized_ids)],
+    )
     # The app's first and only static mount. Everything visual has so far
     # been inline CSS in `base.html` with no image anywhere in the repo,
     # which is why no mount existed; the Guide's screencaps are the first

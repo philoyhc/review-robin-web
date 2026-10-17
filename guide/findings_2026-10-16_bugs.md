@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 38 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1, S1,
-R2 and E2 done).
+**Open:** 33 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1, S1,
+R2, E2, R3, R4, O4, O6 and P4 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -79,11 +79,11 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 
 ## 2. Medium
 
-- **R3** — `nan`, `inf` and very large numbers: a stepped field answers 500 on
+- ~~**R3**~~ — **Done in (this PR)**: a numeric answer must be a plain ASCII number (`DECIMAL_PATTERN`) a float can hold, so `nan`, `inf` and `1e400` are refused, and the extracts count an already-stored non-finite value as other (`canonical_number`; `tests/integration/test_bad_input_refused.py`). `nan`, `inf` and very large numbers: a stepped field answers 500 on
   Save; `NaN` passes min/max and then breaks the extracts' `_format_number`
   (`_core.py:125-138`, `entity_metadata_extract.py:313`,
   `data_shape_extract.py:141`). *Reproduced.* Code.
-- **R4** — Non-canonical numbers (`04`, `2.0`, `+4`, `0_5`, full-width digits)
+- ~~**R4**~~ — **Done in (this PR)**: a valid number is stored canonical (`04` → `4`, `+2.50` → `2.5`) and `0_5` or full-width digits are refused (`canonical_number`; `tests/integration/test_bad_input_refused.py`). Non-canonical numbers (`04`, `2.0`, `+4`, `0_5`, full-width digits)
   are stored raw; data-shape step columns miss them and branching reads `0_5`
   as unanswered, deleting branch answers. *Reproduced.* Code: canonicalize
   with `DECIMAL_PATTERN`.
@@ -145,7 +145,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **R7** — The surface's status pill and the dashboard disagree on
   all-optional blank rows and on a new answer after Submit
   (`_surface/_status.py:59`). Code.
-- **R8** — A 20-digit assignment id answers 500 (`_core.py:57`); and, by
+- **R8** — *(First half done in (this PR): a form key with an id past 18 digits is ignored.)* A 20-digit assignment id answers 500 (`_core.py:57`); and, by
   reading, the observer CSV's self-review rows expose the reviewer through the
   reviewee columns. Code.
 - **L5** — Archiving a `ready` session leaves every instrument's
@@ -168,11 +168,11 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   Author.
 - **O3** — The audit log's date filter answers 500 at calendar edges, in the
   viewer and the CSV (`app/services/audit.py:983`, `:990`). Code.
-- **O4** — The SMTP port is unchecked: a 500 or a negative value stored
+- ~~**O4**~~ — **Done in (this PR)**: the port must be 1 to 65535 (`tests/integration/test_bad_input_refused.py`). The SMTP port is unchecked: a 500 or a negative value stored
   (`_settings.py:103`). Code.
 - **O5** — The audit-log CSV's recorded row count is off by one, and the
   comment says otherwise (`_extracts.py:796-800`). Code.
-- **O6** — Oversized integer ids in paths and queries answer 500 on SQLite;
+- ~~**O6**~~ — **Done in (this PR)**: an app-wide dependency answers 404 for an id path or query parameter past a 64-bit column, the answer Postgres gives (`app/web/oversized_ids.py`; `tests/integration/test_bad_input_refused.py`). Oversized integer ids in paths and queries answer 500 on SQLite;
   Postgres compares them. Code.
 - **O7** — Error text taken from the URL is shown on trusted chrome:
   `super_error`, `quick_setup_detail`, `owners_error`, `rf_save_error`,
@@ -197,7 +197,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **P3** — An email claim with surrounding spaces works once, then answers 500
   on every request: `deps.py:179` stores it untrimmed and `find_user` (`:131`)
   compares trimmed. `docs/security_posture.md` §5.5a. Code.
-- **P4** — Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
+- ~~**P4**~~ — **Done in (this PR)**: ids typed as text go through `app.services.text.parse_id`, ASCII digits only (`tests/integration/test_bad_input_refused.py`). Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
   (`_setup_observers.py:722`, `_band2.py:213`, `:396`);
   `app/web/return_to.py` already documents the trap. Code.
 - **P5** — `app/auth/identity.py` `_claim` returns the first claim in token
