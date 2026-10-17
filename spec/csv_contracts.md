@@ -983,7 +983,7 @@ the real import and save paths rather than a fixture
 (`tests/integration/test_setup_template_download.py`). It also
 asserts the Workflow card offers no Prepare until the Band 1 save,
 since the Prepare route itself does not check. The test
-asserts the submit redirect carries no `quick_setup_error` flag,
+asserts the submit answers its 303 rather than a refusal's 422,
 because a silently-skipped slot would still let the session
 validate on the remaining rosters. A second test asserts the roster
 counts and that assignments outnumber the reviewers — `validated`

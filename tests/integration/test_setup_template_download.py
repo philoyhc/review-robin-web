@@ -262,8 +262,8 @@ def test_the_demo_set_builds_a_validated_session(
         },
         follow_redirects=False,
     )
-    # A slot that fails redirects with ?quick_setup_error=...; a clean
-    # submit carries no flag. Asserted because a silently-skipped slot
+    # A slot that fails re-renders Session Home at 422; a clean submit
+    # answers 303. Asserted because a silently-skipped slot
     # would still let the session validate on the remaining rosters.
     assert submitted.status_code == 303
     assert "quick_setup_error" not in submitted.headers["location"]
