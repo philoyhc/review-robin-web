@@ -419,8 +419,8 @@ The steps:
    `spec/assignments.md` "Reconcile + regenerate") — inserting newly eligible
    pairs, deleting pairs the rule no longer produces along with
    their responses, and leaving matched pairs and their responses
-   untouched, except that a group-scoped instrument's group whose
-   members it changes is cleared. The saved-response confirmation
+   untouched, except that a group-scoped instrument's group it adds
+   a member to is cleared. The saved-response confirmation
    detour below gates this step when it would delete responses.
 2. **Validate.** `validation.validate_session_setup(...)` →
    `lifecycle.build_readiness_report(...)`. When the report is
@@ -471,10 +471,10 @@ builder kwarg, which re-runs `reconcile_impact` to populate the
 body: *"Preparing will delete N saved responses"* over, when dropped
 pairs hold responses, *"Regenerating drops M assignment pairs that the
 current setup no longer produces, along with their K saved
-responses."*, when a changed group holds answers, *"J are on groups
-whose members it changes, which it clears: a group with new or fewer
-members is answered again."*, and *"Responses on unchanged pairs and unchanged groups are
-kept."*, then two buttons:
+responses."*, when a group that gains members holds answers, *"J are on groups
+it adds members to, which it clears: a group with someone new in it
+is answered again."*, and *"Responses on unchanged pairs, and on groups
+that gain no one, are kept."*, then two buttons:
 
 - **Regenerate & prepare** (`.btn.destructive`, since it deletes saved responses) posts back to `/workflow/prepare`
   with `acknowledge_response_loss=true`, which skips the detour

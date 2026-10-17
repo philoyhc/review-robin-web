@@ -513,17 +513,16 @@ def _materialise_one_instrument(
         override_exclude_self_reviews=override_exclude_self_reviews,
     )
 
-    # A member added or removed changes its group, which is cleared once
-    # the rows land (``responses.clear_changed_groups``): the group is
-    # the subject, so a new composition is answered afresh.
+    # A new member makes its group a different subject, cleared once the
+    # rows land (``responses.clear_changed_groups``); a dropped one only
+    # shrinks its group, which keeps its answer.
     from app.services import responses as responses_service
 
     groups_before = (
         responses_service.snapshot_group_partitions(
             db, session_id=review_session.id, instrument_ids={instrument.id}
         )
-        if instrument.group_kind is not None
-        and bool(diff.to_insert or diff.to_delete)
+        if instrument.group_kind is not None and diff.to_insert
         else {}
     )
 
@@ -758,7 +757,7 @@ class ReconcileImpact:
     deleted: int
     kept: int
     responses_deleted: int
-    # Answers on kept rows of groups the run would redraw
+    # Answers on kept rows of groups the run would add a member to
     # (``responses.clear_changed_groups``).
     group_responses_cleared: int = 0
 
@@ -1127,10 +1126,11 @@ def _projected_group_clears(
 ) -> int:
     """How many answers :func:`_materialise_one_instrument` would clear
     on this instrument's kept rows, without writing: the groups the
-    diff's kept and new pairs would form, each compared with today's,
-    as ``responses.clear_changed_groups`` compares them after the
-    write, by the ``(reviewer_id, reviewee_id)`` pairs it compares."""
-    if instrument.group_kind is None or not (diff.to_insert or diff.to_delete):
+    diff's kept and new pairs would form, each judged against today's
+    by ``responses.keeps_answer``, as ``clear_changed_groups`` judges
+    them after the write: a group that gained a member is cleared."""
+    # Only a new member can clear: a dropped one only shrinks its group.
+    if instrument.group_kind is None or not diff.to_insert:
         return 0
     from app.services import instruments as instruments_service
     from app.services import responses as responses_service
@@ -1140,6 +1140,7 @@ def _projected_group_clears(
     ).get(instrument.id)
     if not before:
         return 0
+    origin_of = responses_service.origins(before)
     boundary = instruments_service.decode_group_kind(instrument.group_kind)
     groups: dict[tuple[int, tuple[str, ...]], set[tuple[int, int]]] = {}
     for key in diff.to_keep | diff.to_insert:
@@ -1155,7 +1156,7 @@ def _projected_group_clears(
     changed = {
         diff.existing_rows[key].id
         for members in groups.values()
-        if frozenset(members) not in before
+        if not responses_service.keeps_answer(frozenset(members), origin_of)
         for key in members
         if key in diff.to_keep
     }

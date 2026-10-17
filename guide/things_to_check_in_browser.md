@@ -337,29 +337,22 @@ delete them once no remaining section points to them.
   setup card's Zip all: both download (no error page), and the saved
   files are named `Café-日本_reviewers.csv` and `Café-日本_setup.zip`.
 
-## Redrawing an instrument's groups clears the groups it changed (E2)
+## A group that gains a member is cleared; one that only shrinks keeps its answer
 
-- [ ] **A split clears.** On a session back in draft with answers saved
-  on a `Group using tags` instrument, add a boundary tag with its `+`
-  cell that splits a group, and Save: that group's members show no answer on the
-  reviewer's page, and the audit log's `instrument.group_boundary_updated`
-  row counts `defuncted_group_responses`.
-- [ ] **An unchanged group keeps its answer.** A group the change left
-  with the same members still shows its answer.
-
-## A group whose members change is cleared, everywhere (group is the subject)
-
-- [ ] **A tag edit clears both groups.** On a session back in draft with
-  a group instrument answered for two teams, edit one reviewee's team
-  tag to the other team: the reviewer's page shows both teams
-  unanswered, and the `reviewee.updated` audit row counts
-  `defuncted_group_responses`.
+- [ ] **A merge clears, a split keeps.** On a session back in draft with
+  answers saved on a `Group using tags` instrument, remove a boundary
+  tag so two answered groups merge, and Save: the merged group shows no
+  answer, and the audit log's `instrument.group_boundary_updated` row
+  counts `defuncted_group_responses`. Add a boundary tag that splits a
+  group: both halves still show its answer.
+- [ ] **A tag edit clears only the group joined.** Edit one reviewee's
+  team tag to another answered team: that team shows unanswered, and
+  the team they left keeps its answer.
 - [ ] **Prepare asks before clearing a joined group.** Add a reviewee
   to an answered team and click `Prepare session`: the card's banner
-  reads "Preparing will delete N saved responses" with a line that it
-  "also clears" them on groups whose members it changes. `Regenerate &
-  prepare` then shows that team unanswered; a team nobody joined keeps
-  its answer.
-- [ ] **Deleting a reviewee clears their group.** Delete one member of
-  an answered team on Reviewees: the members who remain show the team
-  unanswered.
+  reads "Preparing will delete N saved responses" with a line that
+  they are "on groups it adds members to". `Regenerate & prepare` then
+  shows that team unanswered; a team nobody joined keeps its answer.
+- [ ] **Deleting a reviewee keeps their group's answer.** Delete one
+  member of an answered team on Reviewees: the members who remain still
+  show the team's answer.

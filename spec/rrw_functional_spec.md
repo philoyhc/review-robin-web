@@ -2234,8 +2234,8 @@ and rebuild from scratch. Instead it **reconciles**:
    cascade-delete their response rows.
 4. Keep pairs that are in both — preserving their existing
    responses, except on a group-scoped instrument whose group the
-   run redraws, which is cleared (a group with new or fewer members
-   is answered again).
+   run adds a member to, which is cleared (a group with someone new
+   in it is answered again).
 
 This means a small rule edit or a single reviewer renaming
 does not destroy mid-cycle reviewer work.
@@ -2248,15 +2248,16 @@ a response-loss acknowledgement when the session holds responses.
 Two losses outside regeneration ask for neither. On a group-scoped
 instrument, a reviewee boundary-tag edit or any relationship change
 (create, import, delete, tag edit, re-point, status switch) that
-moves a pair to another group clears the group it left and the group
-it joined at once, and redrawing an instrument's groups on its card
-clears every group it changed (`spec/assignments.md` "Group-scoped
-fan-out"). A reviewee delete, which is gated, also clears the groups
-the deleted rows leave.
+moves a pair into a group that already had members clears that group
+at once,
+and redrawing an instrument's groups on its card clears every group
+that gains a member (`spec/assignments.md` "Group-scoped fan-out"). A
+group that only loses members, by a move, a split or a delete, keeps
+its answer.
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete
-any, on dropped pairs or in groups it redraws, the Workflow card asks
+any, on dropped pairs or in groups it adds a member to, the Workflow card asks
 the operator to confirm, naming how many responses and pairs would
 go, before the actual reconcile runs.
 Activate does not regenerate.
@@ -2454,8 +2455,8 @@ Destructive actions require **explicit confirmation** (a
 tick-box gating the destructive submit) and write one or more
 audit events. A tag or relationship change that moves a pair to
 another group on a group-scoped instrument, or redraws an instrument's
-groups, deletes the answers of every group it changed without a
-response-loss acknowledgement
+groups, deletes the answers of every group that gains a member without
+a response-loss acknowledgement
 ([§14](#14-reconciling-regeneration)).
 
 Per-cell trust: reviewer POST endpoints build the assignment

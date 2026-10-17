@@ -1,14 +1,14 @@
-"""Relationship changes clear the groups they redraw (findings B34;
-author's ruling 2026-10-17).
+"""Relationship changes clear the groups they add a member to (findings
+B34; author's rulings 2026-10-17).
 
 A group instrument boundaried on pair context (``group_kind="p1"``)
 keeps one answer per group, copied onto every member's assignment. A
 pair's group key is its active relationship's ``tag_1``; an inactive
 or missing relationship reads as empty. The group is the subject, so
-when a change moves a pair to another group, the group it left and the
-group it joined are both different subjects: every answer in both is
-deleted, and none is copied. A group the change left alone keeps its
-answer. Before B34 only a tag edit or a re-point through
+when a change moves a pair into a group, that group has someone new in
+it and every answer in it is deleted; none is copied. The group the
+pair left only shrank, and keeps its answer, as does every group the
+change left alone (author's rulings 2026-10-17). Before B34 only a tag edit or a re-point through
 ``update_relationship`` touched the copies at all.
 """
 
@@ -178,7 +178,7 @@ def test_creating_a_relationship_clears_both_groups(
     }
 
 
-def test_inactivating_clears_the_group_and_reactivating_restores_nothing(
+def test_inactivating_keeps_both_parts_and_reactivating_clears_the_merge(
     db: Session,
 ) -> None:
     world = _seed(
@@ -192,10 +192,9 @@ def test_inactivating_clears_the_group_and_reactivating_restores_nothing(
         relationship_ids=[bob],
         user=world.user,
     )
-    assert _answers(db, world) == {"Ann": None, "Bob": None}
-    assert _last_context(db, "relationship.bulk_inactivated") == {
-        "defuncted_group_responses": 2
-    }
+    # Bob leaves for the empty-tag group, alone: both parts only shrank.
+    assert _answers(db, world) == {"Ann": "4", "Bob": "4"}
+    assert _last_context(db, "relationship.bulk_inactivated") is None
 
     relationships_service.bulk_reactivate(
         db,
@@ -203,7 +202,11 @@ def test_inactivating_clears_the_group_and_reactivating_restores_nothing(
         relationship_ids=[bob],
         user=world.user,
     )
+    # Bob rejoins Ann: her group gained a member.
     assert _answers(db, world) == {"Ann": None, "Bob": None}
+    assert _last_context(db, "relationship.bulk_reactivated") == {
+        "defuncted_group_responses": 2
+    }
 
 
 def test_a_status_edit_moves_the_pair_out(db: Session) -> None:
@@ -220,11 +223,11 @@ def test_a_status_edit_moves_the_pair_out(db: Session) -> None:
         user=world.user,
     )
 
-    # Bob now reads as an empty tag, joining Dan: the group he left and
-    # the group he joined both changed.
-    assert _answers(db, world) == {"Ann": None, "Bob": None, "Dan": None}
+    # Bob now reads as an empty tag, joining Dan: the group he joined
+    # gained a member; the one he left only shrank.
+    assert _answers(db, world) == {"Ann": "4", "Bob": None, "Dan": None}
     assert _last_context(db, "relationship.updated") == {
-        "defuncted_group_responses": 3
+        "defuncted_group_responses": 2
     }
 
 
@@ -242,10 +245,9 @@ def test_deleting_the_selected_relationship_moves_the_pair_out(
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": None, "Bob": None}
-    assert _last_context(db, "relationship.bulk_deleted") == {
-        "defuncted_group_responses": 2
-    }
+    # Bob leaves alone for the empty-tag group: nothing gained anyone.
+    assert _answers(db, world) == {"Ann": "4", "Bob": "4"}
+    assert _last_context(db, "relationship.bulk_deleted") is None
 
 
 def test_deleting_every_relationship_moves_each_pair_to_the_empty_group(
@@ -316,8 +318,8 @@ def test_importing_moves_only_the_pairs_whose_group_changed(
 def test_a_status_edit_with_a_re_point_moves_the_old_pair(db: Session) -> None:
     """One save that inactivates Bob's relationship and re-points it at
     Cal moves Bob out (his tags leave) and leaves Cal where an inactive
-    row puts him, with Dan: Ann's group lost Bob and the empty-tag group
-    gained him, so both are cleared."""
+    row puts him, with Dan: the empty-tag group gained Bob and is
+    cleared; Ann's group only lost him and keeps its answer."""
     world = _seed(
         db,
         tags={"Ann": "A", "Bob": "A", "Cal": None, "Dan": None},
@@ -333,13 +335,13 @@ def test_a_status_edit_with_a_re_point_moves_the_old_pair(db: Session) -> None:
     )
 
     assert _answers(db, world) == {
-        "Ann": None,
+        "Ann": "4",
         "Bob": None,
         "Cal": None,
         "Dan": None,
     }
     assert _last_context(db, "relationship.updated") == {
-        "defuncted_group_responses": 4
+        "defuncted_group_responses": 3
     }
 
 
@@ -367,7 +369,9 @@ def test_re_pointing_an_untagged_relationship_moves_nothing(
 
 def test_another_reviewers_answers_are_untouched(db: Session) -> None:
     world = _seed(
-        db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"}
+        db,
+        tags={"Ann": "A", "Bob": "A", "Cal": None},
+        answers={"Ann": "4", "Bob": "4", "Cal": "7"},
     )
     other = Reviewer(
         session_id=world.review_session.id,
@@ -417,7 +421,9 @@ def test_another_reviewers_answers_are_untouched(db: Session) -> None:
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": None, "Bob": None}
+    # Bob joins Cal in R's empty-tag group, which is cleared; Ola's
+    # group of the same two reviewees keeps its answer.
+    assert _answers(db, world) == {"Ann": "4", "Bob": None, "Cal": None}
     assert {
         name: db.execute(
             select(Response.value).where(Response.assignment_id == row_id)
