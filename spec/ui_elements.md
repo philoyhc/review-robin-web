@@ -954,9 +954,10 @@ a rewrite.
   name. **A page with a client-side filter counts only visible rows**:
   Assignments, whose instrument-name chips hide rows with
   `display: none`, and the two lobby pages, whose tag chips and filter
-  box do the same. Select all ticks the rows shown, the header reads
-  them alone, and a row the filter hides is unticked, so no bulk action
-  reaches a session nobody can see (findings O1, 2026-10-16). An
+  box do the same. The header select-all checkbox ticks the rows shown
+  and reads them alone, and a row the filter hides is unticked, so no
+  bulk action reaches a session nobody can see. (The lobby's Select all
+  / Clear all chip, above, picks filter tags; it ticks no row.) An
   expander anchored after a hidden row, or a `colSpan` counted before a
   chip toggle, both follow from treating a selectable row as a visible
   one.
