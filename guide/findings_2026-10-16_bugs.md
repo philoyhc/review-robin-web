@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 10 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+**Open:** 9 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
 R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
-R8, O2, L6, L7, O5, O8, O9, O10 and L8 done).
+R8, O2, L6, L7, O5, O8, O9, O10, L8 and E3 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -136,7 +136,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`routes_operator/_lobby.py:343-372`, `session_clone.py:396-404`).
   `spec/permissions.md` §3 lists clone as a deliberate relaxation.
   *Reproduced.* Author: gate it on ownership, or at least audit the source.
-- **E3** — **Ruled 2026-10-17**: store the toggle per instrument: a new instrument column, written by the Self review toggle and read by Prepare for kept and inserted self-review rows, carried by the Settings CSV, Duplicate and Replicate (Codex on #3112); `self_reviews_active` only seeds a new instrument, and the migration seeds each existing instrument from its session's flag (Codex on #3112). A majority vote over the rows, tried in #3108, could not recover it. The next Prepare turns a per-instrument self-review "off" back on:
+- ~~**E3**~~ — **Done in #3114** (ruled 2026-10-17): `instruments.self_reviews_active` (migration `f3a7c1e9d5b2`, seeded from each session's flag) stores the toggle; Prepare / Generate and the self-review recompute read it for kept and inserted rows, and the Settings CSV, Duplicate and Replicate carry it (`spec/assignments.md`; `tests/integration/test_instrument_self_reviews_active.py`). A majority vote over the rows, tried in #3108, could not recover it. The next Prepare turns a per-instrument self-review "off" back on:
   `replace_assignments` resets `include` on kept self-review rows
   (`_generate.py:582-586`), and any roster edit sends the session back
   through Prepare. `spec/assignments.md:406`, `:443`. *Reproduced.* Code.
