@@ -978,17 +978,26 @@ def _apply_filters(stmt: Any, filters: AuditFilters | None, user_table: Any) -> 
 
         zone = resolve_zone(filters.date_zone)
 
-        def _midnight(day: date) -> _dt:
-            # The day's midnight in the viewer's zone, as a UTC instant.
-            return _dt.combine(day, _time.min, tzinfo=zone).astimezone(_tz.utc)
+        def _midnight(day: date) -> _dt | None:
+            # The day's midnight in the viewer's zone, as a UTC instant;
+            # ``None`` when that falls outside ``datetime``'s range, which
+            # only a day at the calendar's edge does, and then the bound
+            # excludes nothing (findings O3).
+            try:
+                return _dt.combine(day, _time.min, tzinfo=zone).astimezone(_tz.utc)
+            except OverflowError:
+                return None
 
         if filters.created_from:
-            stmt = stmt.where(AuditEvent.created_at >= _midnight(filters.created_from))
-        if filters.created_to:
-            # Inclusive upper bound: include the whole "to" day.
-            stmt = stmt.where(
-                AuditEvent.created_at < _midnight(filters.created_to + _td(days=1))
-            )
+            start = _midnight(filters.created_from)
+            if start is not None:
+                stmt = stmt.where(AuditEvent.created_at >= start)
+        if filters.created_to and filters.created_to < date.max:
+            # Inclusive upper bound: include the whole "to" day. The
+            # calendar's last day has no day after it, and bounds nothing.
+            end = _midnight(filters.created_to + _td(days=1))
+            if end is not None:
+                stmt = stmt.where(AuditEvent.created_at < end)
     return stmt
 
 

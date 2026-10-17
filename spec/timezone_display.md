@@ -129,6 +129,11 @@ To days match the page's.
   Timezone columns** are tighter still: the cell shows just the compact GMT-offset
   (`gmt_offset_label`, e.g. `GMT+8`), with the full
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
+- **The calendar's edge.** `parse_local_datetime` refuses a moment
+  within a day of the first or last instant Python's `datetime` can
+  hold, as it refuses a malformed one, so every entered instant
+  converts into any zone. An instant stored nearer the edge than that
+  renders in UTC, unconverted, rather than failing the page.
 - **No surface shows the CLDR long display name** (e.g.
   `Australian Eastern Standard Time`) — the offset-plus-IANA forms
   above are the only zone renderings, and the app carries no helper
