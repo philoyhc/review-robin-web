@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 40 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1 and
-S1 done).
+**Open:** 39 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1, S1
+and R2 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -30,7 +30,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   does as it says; but a *new* answer saved after Submit flips the pill back
   to in progress, so the two paths disagree. *Reproduced.* Author: clear the
   stamp on a changed row, or say an edit after Submit is treated as submitted.
-- **R2** — **A session code outside Latin-1 makes every CSV download answer
+- ~~**R2**~~ — **Done in #3097**: every download builds its header with `app/web/downloads.py`'s `content_disposition` — an ASCII `filename` plus `filename*=UTF-8''` when the name needs it — and a unit test refuses a raw one (`tests/unit/test_downloads.py`, `tests/integration/test_download_filenames.py`). **A session code outside Latin-1 makes every CSV download answer
   500**, because the filename goes into `Content-Disposition` raw
   (`app/services/extracts/__init__.py:40` and 19 other sites); a `"` in the
   code corrupts the header too. The extract's audit event is committed before

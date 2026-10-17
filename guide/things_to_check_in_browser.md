@@ -329,3 +329,10 @@ delete them once no remaining section points to them.
 - [ ] **An unchanged Save does not.** Validate again and Save the card
   without editing anything: the session stays validated and no new row
   is logged.
+
+## Downloads keep a session code's own characters (R2)
+
+- [ ] **A code past ASCII downloads.** Create a session with the code
+  `Café-日本`, then on Extract data download its Reviewers CSV and the
+  setup card's Zip all: both download (no error page), and the saved
+  files are named `Café-日本_reviewers.csv` and `Café-日本_setup.zip`.

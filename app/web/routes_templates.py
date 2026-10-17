@@ -27,6 +27,7 @@ from fastapi.responses import Response
 
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.services.setup_templates import build_zip, set_by_key
+from app.web.downloads import content_disposition
 
 router = APIRouter()
 
@@ -40,9 +41,7 @@ def _zip_response(set_key: str) -> Response:
         content=build_zip(template_set),
         media_type="application/zip",
         headers={
-            "Content-Disposition": (
-                f'attachment; filename="{template_set.zip_name}"'
-            ),
+            "Content-Disposition": content_disposition(template_set.zip_name),
         },
     )
 

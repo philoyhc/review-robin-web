@@ -54,6 +54,7 @@ from app.web.deps import (
     request_correlation_id,
 )
 from app.web.routes_operator._shared import _templates
+from app.web.downloads import content_disposition
 
 router = APIRouter()
 
@@ -286,8 +287,6 @@ def rehydrate_dropped_csv(
         content=payload,
         media_type="text/csv",
         headers={
-            "Content-Disposition": (
-                'attachment; filename="rehydrate_dropped_responses.csv"'
-            )
+            "Content-Disposition": content_disposition("rehydrate_dropped_responses.csv")
         },
     )
