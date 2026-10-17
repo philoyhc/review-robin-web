@@ -287,6 +287,7 @@ def _apply_session_config_form(
     responses_release_at: str | None,
     responses_release_until: str | None,
     correlation_id: str,
+    tz_converted: str = "",
 ) -> None:
     """Parse + validate + persist the session-config form fields.
 
@@ -344,15 +345,19 @@ def _apply_session_config_form(
     # alone) or in the submitted zone (the page's script, which re-renders
     # every box as the zone changes). Any other text is an edit, read as
     # wall-clock in the submitted zone. With the zone unchanged the two
-    # renderings are one, the check before the ruling.
+    # renderings are one, the check before the ruling. A box the script
+    # re-rendered (``tz_converted``, its names) no longer shows its
+    # seeded text, so that text typed back into it is an edit.
     seeded_zone = sessions.resolve_session_timezone(review_session)
+    converted = {name.strip() for name in tz_converted.split(",")}
     unedited: set[str] = set()
 
     def _read_as(
         field: str, raw: str | None, stored: datetime | None
     ) -> tuple[str | None, str]:
-        if sessions.datetime_box_unedited(
-            stored, raw, seeded_zone
+        if (
+            field not in converted
+            and sessions.datetime_box_unedited(stored, raw, seeded_zone)
         ) or sessions.datetime_box_unedited(stored, raw, timezone_name):
             unedited.add(field)
             if stored is not None and not date_formatting.in_entry_range(stored):
@@ -586,6 +591,7 @@ def session_config_submit(
     responses_release_until: str | None = Form(default=None),
     tags: str = Form(default=""),
     tags_present: str = Form(default=""),
+    tz_converted: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -620,6 +626,7 @@ def session_config_submit(
         responses_release_at=responses_release_at,
         responses_release_until=responses_release_until,
         correlation_id=correlation_id,
+        tz_converted=tz_converted,
     )
     # 19S Item 9 Part B — the card's Tags field, written after the config
     # apply so a rejected save writes no tags either. An emptied box

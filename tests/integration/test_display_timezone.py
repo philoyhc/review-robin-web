@@ -900,3 +900,35 @@ def test_config_zone_change_reads_an_edited_box_in_the_new_zone(
     assert _l8_stored(db, session, "responses_release_until") == typed
     for field in ("scheduled_activate_at", "deadline", "responses_release_at"):
         assert _l8_stored(db, session, field) == stored[field], field
+
+
+def test_config_zone_change_reads_old_text_typed_back_as_an_edit(
+    client: TestClient, db: Session
+) -> None:
+    """The script re-rendered Release-until in the new zone and names it in
+    ``tz_converted``; the operator typed its old Singapore text back,
+    meaning that wall-clock in New York. It is an edit, not the seeded
+    text (the read of #3113)."""
+    from app.services.date_formatting import format_datetime_local
+
+    session, stored = _l8_session(client, db, "tz-l8-retyped")
+    boxes = {
+        f: format_datetime_local(v, "America/New_York") for f, v in stored.items()
+    }
+    old_text = format_datetime_local(
+        stored["responses_release_until"], "Asia/Singapore"
+    )
+    boxes["responses_release_until"] = old_text
+    boxes["tz_converted"] = ",".join(stored)
+
+    response = _l8_save(client, session, boxes)
+
+    assert response.status_code == 303, response.text
+    expected = (
+        datetime.strptime(old_text, "%Y-%m-%dT%H:%M")
+        .replace(tzinfo=ZoneInfo("America/New_York"))
+        .astimezone(timezone.utc)
+    )
+    assert _l8_stored(db, session, "responses_release_until") == expected
+    for field in ("scheduled_activate_at", "deadline", "responses_release_at"):
+        assert _l8_stored(db, session, field) == stored[field], field

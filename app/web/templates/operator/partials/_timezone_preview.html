@@ -14,7 +14,10 @@
      instant it is rather than the first reading of its text.
 
    Without script the boxes keep their text and the server keeps each
-   box still holding its seeded text (`_apply_session_config_form`). #}
+   box still holding its seeded text (`_apply_session_config_form`).
+   With it, the form carries `tz_converted`, the names of the boxes this
+   has re-rendered, so a box typed back to its old-zone text after a
+   zone change reads as the edit it is. #}
 <script>
   (function () {
     var input = document.getElementById({{ tz_input_id | default("display_timezone") | tojson }});
@@ -99,6 +102,19 @@
     // from its text, so passing through other zones (a half-typed name
     // that happens to be one) never drifts it.
     var zone, known;
+    var converted = null;
+    if (input.form) {
+      converted = document.createElement("input");
+      converted.type = "hidden";
+      converted.name = "tz_converted";
+      input.form.appendChild(converted);
+    }
+    function report() {
+      if (!converted) return;
+      converted.value = boxes.filter(function (box, i) {
+        return known[i] && known[i].moved;
+      }).map(function (box) { return box.name; }).join(",");
+    }
     function seed() {
       zone = validZone(ianaFromValue(input.value))
         ? ianaFromValue(input.value) : "UTC";
@@ -107,6 +123,7 @@
         return (ms !== null && box.value === box.defaultValue)
           ? { text: box.value, ms: ms } : null;
       });
+      report();
     }
     function update() {
       var next = ianaFromValue(input.value);
@@ -120,9 +137,10 @@
         if (text === null) { known[i] = null; return; }
         if (box.value !== text) moved.push(box);
         box.value = text;
-        known[i] = { text: text, ms: ms };
+        known[i] = { text: text, ms: ms, moved: true };
       });
       zone = next;
+      report();
       // Once every box has moved, so listeners read them together:
       // Create's ordering script re-takes each box's min / max from
       // its neighbors, which would otherwise still bound it in the

@@ -103,9 +103,14 @@ def test_session_home_re_renders_from_the_stored_instant(
     page.locator("[data-config-cancel]").click()
     page.locator("[data-config-lock-toggle]").click()
     expect(end).to_have_value(in_new_york)
+    converted = page.locator('input[name="tz_converted"]')
+    expect(converted).to_have_value("")
     zone.fill("Asia/Tokyo")
     tokyo = in_utc.replace("T06:30", "T15:30")
     expect(end).to_have_value(tokyo)
+    # The form names the boxes the script re-rendered, so the server reads
+    # old-zone text typed back into one as an edit (the read of #3113).
+    expect(converted).to_have_value("deadline")
 
     with page.expect_navigation():
         page.locator("[data-config-save]").click()
