@@ -228,12 +228,13 @@ Taken 2026-10-17 at `9dc78ae3`.
 1. **Engine.** The empty-value rule for every tag; the two person-level
    fields; Band 1 cross-side operands checked reviewer-versus-reviewee.
    Unit tests per operator and per empty case.
-2. **Save and the card.** Pair tags back in the Link 1 and Link 2 lists
-   with the `Pair:` prefix and the new captions; Save maps each to its
-   field; decode maps back; the stored-only option retires for pair
-   tags.
-3. **Link 3 and the observer rule.** Group hidden and refused alongside
-   a pair-tag `IS`; the observer cohort's empty-value rule.
+2. **Save and the card, with the Link 3 guard.** Pair tags back in the
+   Link 1 and Link 2 lists with the `Pair:` prefix and the new captions;
+   Save maps each to its field; decode maps back; the stored-only option
+   retires for pair tags. Group is hidden and refused at Save alongside a
+   pair-tag `IS` in this same rung, so no merged state can store the
+   combination (Codex on #3087).
+3. **The observer rule.** The observer cohort's empty-value rule.
 4. **Close.** Specs, Guide card wording if any, browser checks.
 
 ### Definition of done
