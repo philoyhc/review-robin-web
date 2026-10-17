@@ -468,12 +468,12 @@ The workflow card decodes that param (via the `prepare_confirm`
 builder kwarg, which re-runs `reconcile_impact` to populate the
 `responses_lost` / `responses_deleted` / `group_responses_cleared` /
 `deleted_pairs` counts) and renders a confirmation banner in the card
-body: *"Preparing will delete N saved responses"* over, when pairs
-drop, *"Regenerating drops M assignment pairs that the current setup
-no longer produces, along with their K saved responses."*, when
-groups change, *"It also clears J saved responses on groups whose
-members it changes: a group with new or fewer members is answered
-again."*, and *"Responses on unchanged pairs and unchanged groups are
+body: *"Preparing will delete N saved responses"* over, when dropped
+pairs hold responses, *"Regenerating drops M assignment pairs that the
+current setup no longer produces, along with their K saved
+responses."*, when a changed group holds answers, *"J are on groups
+whose members it changes, which it clears: a group with new or fewer
+members is answered again."*, and *"Responses on unchanged pairs and unchanged groups are
 kept."*, then two buttons:
 
 - **Regenerate & prepare** (`.btn.destructive`, since it deletes saved responses) posts back to `/workflow/prepare`

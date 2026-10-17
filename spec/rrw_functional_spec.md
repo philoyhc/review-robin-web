@@ -2251,7 +2251,8 @@ instrument, a reviewee boundary-tag edit or any relationship change
 moves a pair to another group clears the group it left and the group
 it joined at once, and redrawing an instrument's groups on its card
 clears every group it changed (`spec/assignments.md` "Group-scoped
-fan-out").
+fan-out"). A reviewee delete, which is gated, also clears the groups
+the deleted rows leave.
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete

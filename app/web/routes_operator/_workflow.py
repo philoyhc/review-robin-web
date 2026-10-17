@@ -97,7 +97,8 @@ def workflow_prepare(
     ``acknowledge_response_loss="true"`` confirms the saved-response
     detour: the operator has seen the workflow card's confirmation
     and accepts that the reconcile will delete responses on pairs
-    the current setup no longer produces. Absent it, the route
+    the current setup no longer produces and clear the groups whose
+    members it changes. Absent it, the route
     dry-runs the reconcile and detours to the confirmation when a
     run would delete responses.
     """
@@ -120,7 +121,8 @@ def workflow_prepare(
 
     # Saved-response confirmation detour. The Generate step reconciles
     # assignments, which deletes responses on pairs the current setup
-    # no longer produces. Dry-run; if it would delete responses and
+    # no longer produces and clears the groups whose members it
+    # changes. Dry-run; if it would lose any response and
     # the operator hasn't acknowledged that, bounce to the workflow
     # card's confirmation banner. ``session_has_responses`` is a
     # cheap pre-check so a first preparation skips the dry-run.

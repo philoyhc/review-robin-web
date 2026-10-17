@@ -115,7 +115,7 @@ def test_a_newcomer_to_an_answered_team_detours_prepare(
         ).text.split()
     )
     assert "Preparing will delete 1 saved response." in body
-    assert "It also clears 1 saved response on groups whose members it changes" in body
+    assert "1 is on groups whose members it changes, which it clears" in body
     assert "drops 0 assignment pair" not in body
 
 

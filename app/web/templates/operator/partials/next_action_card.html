@@ -43,10 +43,11 @@
    - ``next_action_return_to`` (str | None) — Operations-row slug
      so the post-action redirect lands back on the same page.
    - ``prepare_confirm`` (dict | None) — when set
-     (``responses_deleted`` / ``deleted_pairs`` keys), the card
+     (``responses_lost`` / ``responses_deleted`` /
+     ``group_responses_cleared`` / ``deleted_pairs`` keys), the card
      renders the saved-response confirmation banner: re-preparing
-     would delete that many responses on pairs the current setup
-     no longer produces.
+     would delete that many responses, on pairs the current setup no
+     longer produces and in groups whose members it changes.
    - ``super_failure`` (dict | None) with ``button`` /
      ``step`` / ``error`` slots — surfaces the workflow-button
      failure banner in the right column.
@@ -101,10 +102,10 @@
         {% endif %}
         {% if prepare_confirm.group_responses_cleared %}
         <p style="margin: var(--space-2) 0 0 0;">
-          It also clears {{ prepare_confirm.group_responses_cleared }}
-          saved response{{ "" if prepare_confirm.group_responses_cleared == 1 else "s" }}
-          on groups whose members it changes: a group with new or fewer
-          members is answered again.
+          {{ prepare_confirm.group_responses_cleared }}
+          {{ "is" if prepare_confirm.group_responses_cleared == 1 else "are" }}
+          on groups whose members it changes, which it clears: a group
+          with new or fewer members is answered again.
         </p>
         {% endif %}
         <p style="margin: var(--space-2) 0 0 0;">
