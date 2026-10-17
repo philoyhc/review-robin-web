@@ -200,10 +200,12 @@ An analyst joins a preamble help text to its data column via the
 shared `FieldKey`.
 
 `SavedAt` is when the value last changed and `Version` counts its
-values: a row is first saved at `Version` 1, every later save that
+values: a row is created at `Version` 1 (a cleared field's row is
+deleted, so re-answering it starts again at 1), every later save that
 changes the value moves `SavedAt` and adds 1 to `Version`, and a save
 that leaves the value as it was touches neither
-(`responses._apply_upserts`).
+(`responses._apply_upserts`). An import writes both as the file gives
+them.
 
 `SavedAt` / `SubmittedAt` are ISO 8601 carrying the **session
 zone's** UTC offset (e.g. `2026-06-02T08:00:00+08:00`), via

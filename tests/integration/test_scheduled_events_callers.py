@@ -97,14 +97,17 @@ def test_lobby_runs_the_pass_for_every_listed_session(
     assert len(_skipped(db, second)) == 1
 
 
-def test_lobby_skips_archived_sessions(
+def test_lobby_skips_archived_and_expired_sessions(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The lobby table lists only non-archived sessions, so the pass runs
-    for those alone."""
+    """The pass runs for the listed sessions that can still fire: not an
+    archived one, which the table doesn't list, nor an expired one,
+    whose past entries would cost a lock on every load."""
     listed = _make_session(client, db, "l4-arch-listed")
     archived = _make_session(client, db, "l4-arch-gone")
     archived.status = "archived"
+    expired = _make_session(client, db, "l4-arch-expired")
+    expired.status = "expired"
     db.commit()
     seen: list[int] = []
     monkeypatch.setattr(
@@ -117,6 +120,7 @@ def test_lobby_skips_archived_sessions(
 
     assert listed.id in seen
     assert archived.id not in seen
+    assert expired.id not in seen
 
 
 def test_the_pass_runs_once_per_session_per_request(

@@ -407,7 +407,9 @@ def _apply_upserts(
             # an unchanged one touches neither.
             existing.value = u.value
             existing.saved_at = datetime.now(timezone.utc)
-            existing.version = existing.version + 1
+            # In SQL, so two concurrent saves (reviewer saves share the
+            # session lock) both count.
+            existing.version = Response.version + 1
             if existing.submitted_at is not None:
                 existing.submitted_at = None
                 cleared += 1

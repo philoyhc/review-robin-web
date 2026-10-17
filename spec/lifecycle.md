@@ -979,7 +979,10 @@ browsers, and direct POSTs bypass the picker entirely).
   short-circuits on no-op. The pages are Session Home, the four
   Operations pages of §5 (Validate, Assignments, Invitations,
   Responses) and the Sessions lobby, which runs it for each session
-  its table lists (every non-archived one the operator owns). All go
+  its table lists that can still fire (every one the operator owns
+  that is neither `expired` nor `archived`: an expired session has
+  nothing left to fire, and its past entries would cost a lock on
+  every load). All go
   through `observe_scheduled_events_on_load`
   (`app/web/routes_operator/_shared.py`), which runs
   `scheduled_events.observe_scheduled_events` once per session per

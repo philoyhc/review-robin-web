@@ -301,20 +301,17 @@ Checked locally by the author on 2026-10-01. The rows, which the browser tests c
 2026-10-01, on `guide/archive/findings_2026-10-01_corpus.md` B19).
 
 **What is wrong.** Scheduled activation, invitations and reminders fire
-only when someone opens a session's Session Home:
-`scheduled_events.observe_scheduled_events` has one caller,
-`app/web/routes_operator/_session_home.py`. `spec/lifecycle.md` §8.3
-says the Operations pages and the Sessions lobby run the sweep too, and
-the function's own docstring repeats that. Either way, nothing fires
-while nobody has the app open, so a reminder scheduled for 09:00 goes
-out whenever an operator next looks.
+only when an operator opens a page that runs the sweep: Session Home,
+the four Operations pages and the Sessions lobby (`spec/lifecycle.md`
+§8.3, findings L4). Nothing fires while nobody has the app open, so a
+reminder scheduled for 09:00 goes out whenever an operator next looks.
 
 **Why it waits here.** The real fix is a trigger that runs on a clock,
 such as a scheduled job, a timer, or an always-on worker. Which one
 depends on what the NUS App Service plan and network allow
-(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). Widening the page-view trigger to the
-Operations pages and the lobby would still leave the gap, so the author
-held it rather than ship a half-step.
+(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). The page-view trigger now covers the
+Operations pages and the lobby (findings L4), which narrows the gap but
+does not close it.
 
 **Do, after the cutover.** Choose the trigger the deployment supports
 and run `observe_scheduled_events` from it for every session with a

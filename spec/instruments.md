@@ -138,8 +138,8 @@ Below it, left-aligned under the pill row:
 
 **No session-level bulk flip of `accepting_responses`, and none per
 instrument either.** Accepting is session-wide: Activate opens every
-instrument, and the deadline, Close session or Revert closes them
-all (`spec/lifecycle.md`). What shows once an instrument closes is
+instrument, and the deadline, Close session, Revert or Archive closes
+them all (`spec/lifecycle.md`). What shows once an instrument closes is
 governed by the per-instrument **visibility policy**
 (`spec/visibility_policy.md`).
 
