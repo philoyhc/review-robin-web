@@ -534,7 +534,7 @@ async def instrument_bulk_save_fields(
             previous_group_kind = instrument.group_kind
             try:
                 instruments_service.set_band1_assignment_rules(
-                    db, instrument=instrument, actor=user, **band1
+                    db, instrument=instrument, actor=user, link3_mode=link3_mode, **band1
                 )
             except instruments_service.Band1ParseError as exc:
                 raise HTTPException(
@@ -807,7 +807,7 @@ async def instrument_consolidated_save(
             previous_group_kind = instrument.group_kind
             try:
                 instruments_service.set_band1_assignment_rules(
-                    db, instrument=instrument, actor=user, **band1
+                    db, instrument=instrument, actor=user, link3_mode=link3_mode, **band1
                 )
             except instruments_service.Band1ParseError as exc:
                 return _fail(str(exc))

@@ -8,12 +8,16 @@ The new-model instrument card surfaces three Links in Band 1:
   ``reviewee.*`` tag predicates, including cross-side ``same_as`` /
   ``different_from`` operators that take a reviewer tag as operand.
 - Both Links also offer ``is_not_empty`` / ``is_empty`` (``IS FILLED``
-  / ``IS EMPTY``), which take no operand. The card stopped offering
-  ``pair_context.*`` tags on 2026-10-16 while their meaning is
-  reworked (``guide/assignment_rule_clarify.md``); a rule stored with
-  one still decodes and saves, and one the engine rejects (pair
-  context against pair context) is refused by
-  :func:`set_band1_assignment_rules`.
+  / ``IS EMPTY``), which take no operand.
+- **Pair tags** (author, 2026-10-17; ``guide/assignment_rule_clarify.md``
+  Item 2). The card names a relationship tag ``pair_context.tagN``
+  wherever it offers one; what is stored depends on where it is used
+  (:func:`_engine_field`). In Link 1 it is the reviewer's pair tag
+  (``reviewer.pair_tagN``); as a Link 2 operand, the reviewer's too; as
+  a Link 2 field it is the pair itself (``pair_context.tagN``) under
+  ``IS`` / ``IS NOT``, the reviewee's pair tag otherwise. Decode maps
+  all three back to ``pair_context.tagN``. A Link 2 pair-tag ``IS``
+  picks pairs one by one, so it refuses a grouped Link 3.
 - **Link 3 — Unit of review.** Individual vs Grouped + boundary
   tags. Link 3 is wired separately in
   :func:`app.services.instruments.set_unit_of_review` (it writes
@@ -81,6 +85,7 @@ def set_band1_assignment_rules(
     link2_rules: list[dict[str, str]],
     actor: User,
     touched_links: set[str] | None = None,
+    link3_mode: str | None = None,
 ) -> Instrument:
     """Persist Band 1's two Link rule lists onto the instrument's
     pinned :class:`SessionRuleSet`. Materialises a fresh per-instrument
@@ -116,6 +121,15 @@ def set_band1_assignment_rules(
     rules_error = rules_payload_error(rules_json)
     if rules_error is not None:
         raise Band1ParseError(f"This assignment rule can't be used: {rules_error}")
+    # ``link3_mode`` is the Unit of review the same Save writes; a Link 2
+    # pair-tag IS names pairs one by one, which a group cannot honor
+    # (author, 2026-10-17).
+    if link3_mode == "grouped" and keeps_pairs_by_pair_tag(rules_json):
+        raise Band1ParseError(
+            "Unit of review can't be Group while Who is being reviewed "
+            "keeps pairs by a relationship tag (IS). Set Unit of review "
+            "to Individual, or change that rule."
+        )
 
     _mark_touched_links(instrument, touched_links, {"link1", "link2"})
 
@@ -627,6 +641,48 @@ def _build_rules_json(
     return payload
 
 
+_PAIR_PREFIX = "pair_context.tag"
+
+
+def _engine_field(card_key: str, *, link_id: str, engine_op: str, as_operand: bool) -> str:
+    """The stored field for a card key. Only a relationship tag
+    (``pair_context.tagN``) is mapped; every other key stores as is."""
+    if not card_key.startswith(_PAIR_PREFIX):
+        return card_key
+    slot = card_key[len(_PAIR_PREFIX):]
+    if link_id == "link1" or as_operand:
+        return f"reviewer.pair_tag{slot}"
+    if engine_op in ("equals", "not_equals"):
+        return card_key
+    return f"reviewee.pair_tag{slot}"
+
+
+def _card_key(stored: str) -> str:
+    """Inverse of :func:`_engine_field`: a person's pair tag shows on the
+    card as the relationship tag it reads."""
+    for side in ("reviewer.pair_tag", "reviewee.pair_tag"):
+        if stored.startswith(side):
+            return f"{_PAIR_PREFIX}{stored[len(side):]}"
+    return stored
+
+
+def keeps_pairs_by_pair_tag(rules_json: list[dict[str, Any]]) -> bool:
+    """Whether Link 2 holds an enabled pair-tag ``IS``: a rule that keeps
+    pairs one by one, so the instrument cannot be grouped."""
+    for entry in rules_json:
+        if entry.get("id") != "link2" or entry.get("kind") != "COMPOSITE":
+            continue
+        for child in entry.get("rules", []):
+            predicate = child.get("predicate") or {}
+            if (
+                child.get("enabled", True)
+                and predicate.get("operator") == "equals"
+                and str(predicate.get("field", "")).startswith(_PAIR_PREFIX)
+            ):
+                return True
+    return False
+
+
 def _build_match_rule(
     rule_dict: dict[str, str], link_id: str, idx: int
 ) -> dict[str, Any] | None:
@@ -637,6 +693,7 @@ def _build_match_rule(
     field = rule_dict.get("field", "").strip()
     if not field:
         return None
+    field = _engine_field(field, link_id=link_id, engine_op=engine_op, as_operand=False)
     operand: str | None
     if engine_op in _NO_OPERAND_OPS:
         operand = None
@@ -644,6 +701,7 @@ def _build_match_rule(
         operand = rule_dict.get("operand_tag", "").strip()
         if not operand:
             return None
+        operand = _engine_field(operand, link_id=link_id, engine_op=engine_op, as_operand=True)
     else:
         operand = rule_dict.get("operand_value", "").strip()
         if not operand:
@@ -666,15 +724,16 @@ def _decode_match_rule(child: dict[str, Any]) -> dict[str, str]:
     engine_op = predicate.get("operator", "equals")
     ui_op = _ENGINE_TO_UI_OP.get(engine_op, "IS")
     operand = predicate.get("operand", "") or ""
+    field = _card_key(str(predicate.get("field", "")))
     if engine_op in _TAG_OPERAND_OPS:
         return {
-            "field": predicate.get("field", ""),
+            "field": field,
             "op": ui_op,
             "operand_value": "",
-            "operand_tag": str(operand),
+            "operand_tag": _card_key(str(operand)),
         }
     return {
-        "field": predicate.get("field", ""),
+        "field": field,
         "op": ui_op,
         "operand_value": str(operand),
         "operand_tag": "",

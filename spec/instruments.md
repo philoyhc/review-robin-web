@@ -501,17 +501,35 @@ spills either.
 
 | Column | Link (operator label) | Vocabulary |
 |---|---|---|
-| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` |
-| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` (with reviewer-tag operands) |
+| Left | Link 1 — Who does the review | `reviewer.tag1 / 2 / 3` + the relationship tags |
+| Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + the relationship tags (with reviewer-tag and relationship-tag operands) |
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee boundary tags |
 
-The card offers no pair-context tag in any of the three columns
-(author, 2026-10-16) while their meaning is reworked
-(`guide/assignment_rule_clarify.md`). A rule or boundary stored with a
-tag the card does not offer, a pair-context tag or a roster slot since
-emptied, keeps it: its select renders that one tag as an extra option,
-so the card shows it and a Save keeps it, and a new cell does not offer
-it.
+**Relationship tags** (author, 2026-10-17; `guide/assignment_rule_clarify.md`
+Item 2) are offered under their labels as "Pair: <label>". A
+relationship pair joins two people, so one works like a hand-made
+assignment pair or exclusion, and what Save stores depends on where it
+is used (`spec/assignments.md`, Predicate vocabulary):
+
+| Where | Operators | Stored as | Meaning |
+|---|---|---|---|
+| Link 1 field | all four | `reviewer.pair_tagN` | the reviewer holds it in any active pair |
+| Link 2 field | `IS` / `IS NOT` | `pair_context.tagN` | the pair itself: `IS` keeps exactly the pairs carrying it, `IS NOT` rules them out |
+| Link 2 field | `IS THE SAME AS` / `IS DIFFERENT FROM` / `IS FILLED` / `IS EMPTY` | `reviewee.pair_tagN` | the reviewee holds it in any active pair |
+| Link 2 operand | `IS THE SAME AS` / `IS DIFFERENT FROM` | `reviewer.pair_tagN` | the reviewer holds it in any active pair |
+
+The card names all three by the relationship tag they read, so a rule
+the card saved reloads as it was saved. A rule stored otherwise, before
+this mapping or by a Settings import, with `pair_context.tagN` in Link 1
+or as a Link 2 operand, shows as that relationship tag and is rewritten
+to the mapping above on its next Save, changing its meaning from the
+pair to the reviewer's tag; pre-Azure sessions are disposable (author,
+2026-10-17). Link 3 groups by reviewee tags only.
+
+A rule or boundary stored with a tag the card does not offer (a roster
+or relationship slot since emptied, or a relationship-tag boundary)
+keeps it: its select renders that one tag as an extra option, so the
+card shows it and a Save keeps it, and a new cell does not offer it.
 
 #### Self-review exclusion (Link 3 column, below the rule)
 
@@ -627,8 +645,8 @@ Link's namespace and the Link has no stored rule (for Link 3, no
 stored boundary), the pill is permanently stuck on `Not set`
 with `aria-disabled="true"` and the title "No usable tags for
 this link". A Link with stored rules keeps a live pill, so they can
-still be edited. Pair-context tags do not count as usable, so a session
-whose only tags are pair-context ones is in this state. Saving the instrument in that state is fine — the
+still be edited. Relationship tags count as usable for Links 1 and 2,
+not for Link 3. Saving the instrument in that state is fine — the
 service treats an empty filter as "no constraint on this Link"
 and the workflow card still surfaces it as unconfigured until
 the operator clicks the pill (which on a disabled pill is a
@@ -667,8 +685,9 @@ Writers respect ownership when updating the touched set:
 When the pill is in `filter`, the column renders a vertically
 stacked list of MATCH-rule cells. Each cell has:
 
-- A field dropdown — the column's tag namespace (e.g.
-  Link 1: `reviewer.tag1 / tag2 / tag3`).
+- A field dropdown — the column's tag namespace plus the relationship
+  tags (e.g. Link 1: `reviewer.tag1 / tag2 / tag3`, "Pair: …"), under a
+  caption: "Reviewer's tag" in Link 1, "Reviewee's tag" in Link 2.
   Only namespaces with at least one populated row in the
   session appear — the dropdown's options come from
   `views._instruments.new_model_usable_tags`.
@@ -677,8 +696,9 @@ stacked list of MATCH-rule cells. Each cell has:
   `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT | IS FILLED | IS EMPTY`,
   starting on `IS THE SAME AS`, the most common (author, 2026-10-16), so a
   new Link 2 cell opens on it (the cross-side operators take a reviewer
-  tag as operand, for "same as the reviewer's role" semantics). With no
-  usable reviewer tag, Link 2's cycle drops the two cross-side operators
+  or relationship tag as operand, under the caption "Reviewer's tag",
+  for "same as the reviewer's role" semantics). With no usable reviewer
+  or relationship tag, Link 2's cycle drops the two cross-side operators
   and opens on `IS`, except in a cell holding a stored operand the card
   no longer offers, which keeps the full cycle and its operand.
   `IS FILLED` / `IS EMPTY` (author, 2026-10-16) store as `is_not_empty` /
@@ -692,12 +712,20 @@ stacked list of MATCH-rule cells. Each cell has:
 - An X (remove) button. Disabled on the first cell.
 
 Save refuses a rule the engine would refuse to load: a cross-side
-operator whose field and operand address the same population (only a
-stored rule can hold one now, a pair-context field compared with a
-pair-context operand). The card
+operator whose field and operand address the same population (the
+card cannot build one; a forged form or a stored rule can). The card
 answers 422 with its banner, the `/fields/save` fallback 400, and
 nothing is stored (`set_band1_assignment_rules`, via
 `rules_payload_error`).
+
+**Link 2 pair-tag `IS` and Group.** A Link 2 relationship-tag `IS`
+keeps pairs one by one, so it cannot stand beside a grouped unit of
+review, in an `AND` or an `OR` list alike. While the card holds one,
+the Link 3 pill cycles Not set → Individual → Not set, skipping Group;
+and Save refuses one while the Unit of review it posts is Group (a Group
+already stored posts as Group), with the banner
+(422, or 400 from `/fields/save`), storing nothing. `IS NOT` and the
+person-level operators leave Group available.
 
 Above the cells, a `+` button adds another cell (none when the Link
 offers no tag, as when only a stored rule keeps it live) and a combinator

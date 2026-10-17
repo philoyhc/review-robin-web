@@ -274,3 +274,11 @@ cumulative diff read: `cc7e1ac0` (main before rung 1).
   reads roster sides only, is unchanged. `spec/assignments.md` gains the
   fields and the rule in this rung, not at close, since the behavior
   ships here.
+- **Rung 2 (Save, card, Link 3 guard), 2026-10-17.** The card offers
+  relationship tags as "Pair: …" in Link 1 and Link 2 under the captions
+  "Reviewer's tag" / "Reviewee's tag"; Save maps each by Link and
+  operator (`_band1._engine_field`) and decode maps back. A Link 2
+  pair-tag `IS` refuses a grouped Link 3 at Save and the Link 3 pill
+  skips Group while one is on the card. The stored-only option stays,
+  now for emptied slots and relationship-tag boundaries.
+  `spec/instruments.md` and `spec/setup_pages.md` updated in this rung.
