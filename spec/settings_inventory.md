@@ -26,8 +26,8 @@ that should be updated alongside the per-page spec.
 ## 1. Operator-level settings (per signed-in user)
 
 Stored on the `users` table. One row per authenticated principal
-(matched by `external_principal_id` and `email` from Azure Easy
-Auth). The same row backs every session that operator owns or
+(matched by `external_principal_id`, then by `email`, from Azure
+Easy Auth). The same row backs every session that operator owns or
 co-operates.
 
 **Surface:** `/operator/settings`. The Email send (SMTP) form-card
@@ -44,9 +44,9 @@ operator to wherever they came from (`?return_to=<path>`).
 
 | Field | Type | Notes |
 |---|---|---|
-| `email` | `String(320)` | Identity. Set by Easy Auth on first sign-in; not user-editable from the Operator Settings form. |
+| `email` | `String(320)` | Identity. Set by Easy Auth on first sign-in, and moved by a later sign-in whose resolved email changed (`docs/security_posture.md` §5.5a); not user-editable from the Operator Settings form. |
 | `display_name` | `String(255)` | Identity. Same as `email` — Easy Auth-supplied, not user-editable. |
-| `external_principal_id` | `String(255)` | Identity. Same as above. |
+| `external_principal_id` | `String(255)` | Identity. Set by Easy Auth on first sign-in, or recorded by the first sign-in on an email-matched row without one (an invite, typically); never overwritten once non-blank. |
 | `smtp_host` | `String(255)` | SMTP server hostname. |
 | `smtp_port` | `Integer` | SMTP server port. |
 | `smtp_username` | `String(320)` | SMTP login. |

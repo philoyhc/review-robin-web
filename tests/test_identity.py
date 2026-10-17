@@ -99,6 +99,65 @@ def test_rich_client_principal_header_extracts_claims() -> None:
     assert user.is_fake is False
 
 
+_EMAILADDRESS = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+_NAME_URI = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+_OID_URI = "http://schemas.microsoft.com/identity/claims/objectidentifier"
+_RICH_CLAIMS = [
+    {"typ": "email", "val": "plain@example.edu"},
+    {"typ": "preferred_username", "val": "upn@example.edu"},
+    {"typ": _EMAILADDRESS, "val": "primary@example.edu"},
+    {"typ": _NAME_URI, "val": "Uri Name"},
+    {"typ": "name", "val": "Short Name"},
+    {"typ": "sub", "val": "sub-1"},
+    {"typ": "oid", "val": "oid-1"},
+    {"typ": _OID_URI, "val": "oid-uri-1"},
+]
+
+
+@pytest.mark.parametrize(
+    "claims",
+    [_RICH_CLAIMS, list(reversed(_RICH_CLAIMS))],
+    ids=["lowest-priority-first", "highest-priority-first"],
+)
+def test_claim_priority_is_honored_regardless_of_token_order(
+    claims: list[dict[str, str]],
+) -> None:
+    """Findings P5: each slot takes the first claim type its priority
+    names, not the first the token happens to list."""
+    rich = _encode_principal({"auth_typ": "aad", "claims": claims})
+
+    user = resolve_current_user(
+        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
+    )
+
+    assert user.email == "primary@example.edu"
+    assert user.name == "Short Name"
+    assert user.principal_id == "oid-uri-1"
+
+
+def test_claim_priority_falls_through_to_the_next_type() -> None:
+    """An absent or empty higher-priority claim yields to the next."""
+    rich = _encode_principal(
+        {
+            "claims": [
+                {"typ": "email", "val": "plain@example.edu"},
+                {"typ": _EMAILADDRESS, "val": ""},
+                {"typ": "preferred_username", "val": "upn@example.edu"},
+                {"typ": "sub", "val": "sub-1"},
+                {"typ": _NAME_URI, "val": "Uri Name"},
+            ]
+        }
+    )
+
+    user = resolve_current_user(
+        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
+    )
+
+    assert user.email == "upn@example.edu"
+    assert user.name == "Uri Name"
+    assert user.principal_id == "sub-1"
+
+
 def test_simple_id_overrides_rich_when_both_present() -> None:
     rich = _encode_principal(
         {

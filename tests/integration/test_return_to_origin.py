@@ -113,7 +113,7 @@ def test_me_debug_renders_when_the_user_lookup_fails(
 
     import app.web.routes_auth as routes_auth
 
-    def broken(*_args: object) -> None:
+    def broken(*_args: object, **_kwargs: object) -> None:
         raise OperationalError("SELECT 1", {}, Exception("database down"))
 
     monkeypatch.setattr(routes_auth, "find_user", broken)

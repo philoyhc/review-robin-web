@@ -42,7 +42,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import Depends, HTTPException, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
@@ -56,6 +56,7 @@ from app.services import (
     participants,
     permissions,
     sessions,
+    users,
     visibility_policies,
 )
 from app.services import session_lifecycle as lifecycle
@@ -112,37 +113,16 @@ def _stash_display_timezone(request: Request, user: User) -> None:
     )
 
 
-_ASCII_WHITESPACE = " \t\n\r\f\v"
-
-
-def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
+def find_user(
+    db: Session, current_user: AuthenticatedUser, *, move_email: bool = True
+) -> User | None:
     """The persisted ``users`` row for this identity, or ``None``;
-    never creates one.
-
-    Case-insensitive lookup so a pre-seeded row (e.g. via the
-    sys-admin invite path at app/services/users.py:430) is reused
-    regardless of casing. Order by id and take the oldest match so
-    any historical case-variant duplicates (rows created before
-    this normalization landed) resolve deterministically to the
-    original row rather than raising MultipleResultsFound. The
-    storage-level guard against new duplicates is Slice D.
+    never creates one. The Entra object id first, moving its row to a
+    changed email; then the email, recording the object id on a row
+    that has none (findings P5). ``move_email=False`` writes neither —
+    the rules are ``users.find_signed_in_user``'s.
     """
-    if not current_user.email:
-        return None
-    return db.execute(
-        select(User)
-        # Trimmed on both sides: a row stored padded before
-        # ``get_or_create_user`` stripped on write still finds its owner
-        # rather than gaining a duplicate (findings P3). SQL ``trim``
-        # alone strips only spaces, so name the whitespace ``str.strip``
-        # also takes.
-        .where(
-            func.lower(func.trim(User.email, _ASCII_WHITESPACE))
-            == normalize_email(current_user.email)
-        )
-        .order_by(User.id)
-        .limit(1)
-    ).scalar_one_or_none()
+    return users.find_signed_in_user(db, current_user, move_email=move_email)
 
 
 def get_or_create_user(
