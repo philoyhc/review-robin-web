@@ -1762,6 +1762,9 @@ def test_an_out_of_range_duration_is_a_parse_error() -> None:
 
     with pytest.raises(ValueError, match="out of range"):
         parse_iso_duration("P99999999999D")
+    # Builds, then overflows on negation (Codex on #3093).
+    with pytest.raises(ValueError, match="out of range"):
+        parse_iso_duration("-P999999999DT23H59M59S")
 
 
 def test_an_offset_beside_a_calendar_edge_anchor_is_refused_not_raised(
