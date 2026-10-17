@@ -175,7 +175,7 @@ is a miss, so the columns land inert and need no backfill.
 
 | Table / columns | Holds | Stamped against |
 |---|---|---|
-| `instruments.cached_reconcile_stamp` / `_stale` / `_eligible` / `_self_reviews_excluded` | the per-instrument staleness verdict and the two counts beside it (19R Item 2) | both rosters, the relationships rows, the pinned rule, `rule_set_id`, `group_kind`, the session's self-review setting, **and** a summary of the instrument's own `assignments` rows |
+| `instruments.cached_reconcile_stamp` / `_stale` / `_eligible` / `_self_reviews_excluded` | the per-instrument staleness verdict and the two counts beside it (19R Item 2) | both rosters, the relationships rows, the pinned rule, `rule_set_id`, `group_kind`, the instrument's self-review setting, **and** a summary of the instrument's own `assignments` rows |
 | `instruments.cached_group_pair_count` / `_stamp` | the reviewer-group pair count on a group-scoped instrument's rule card (13C) | roster + pinned rule + `group_kind`. **No reader or writer exists** — the helper that was to populate it never landed. |
 
 Two things worth knowing before adding another:
