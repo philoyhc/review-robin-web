@@ -405,3 +405,29 @@ def test_recording_a_principal_id_on_an_invite_is_audited(db: Session) -> None:
     ).scalars()
     assert event.actor_user_id is None
     assert event.detail["refs"] == {"target_user_id": invited.id}
+    assert event.detail["changes"] == {"external_principal_id": [None, "invitee-oid"]}
+
+
+def test_without_a_row_holding_the_email_the_newest_duplicate_moves(
+    db: Session,
+) -> None:
+    """Neither duplicate holds the resolved email: the newest, the row an
+    older build created last and so the one in use, takes it."""
+    stale = User(email="pat.a@example.edu", display_name="Pat", external_principal_id="pat-oid")
+    current = User(
+        email="pat.b@example.edu",
+        display_name="Pat",
+        external_principal_id="pat-oid",
+        is_operator=True,
+    )
+    db.add(stale)
+    db.flush()
+    db.add(current)
+    db.commit()
+
+    returned = _sign_in(db, _identity("pat.c@example.edu", "pat-oid"))
+
+    assert returned.id == current.id
+    assert returned.email == "pat.c@example.edu"
+    db.expire_all()
+    assert db.get(User, stale.id).email == "pat.a@example.edu"

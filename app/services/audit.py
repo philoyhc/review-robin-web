@@ -820,7 +820,9 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     ),
     # Findings P5: a sign-in recorded its principal id on the invited
     # row its email matched; that identity decides the row from then on.
-    "workspace.user_principal_recorded": EventSchema(frozenset({"refs"})),
+    "workspace.user_principal_recorded": EventSchema(
+        frozenset({"changes", "refs"})
+    ),
     "workspace.operator_admitted": EventSchema(frozenset({"changes", "refs"})),
     "workspace.operator_revoked": EventSchema(frozenset({"changes", "refs"})),
     "workspace.user_removed": EventSchema(frozenset({"snapshot", "refs"})),

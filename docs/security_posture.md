@@ -129,7 +129,8 @@ whitespace gap but never to the merge.
 whose `external_principal_id` is the identity's object id is the user:
 the one already holding the resolved email if several carry the id (a
 build before this one gave a principal whose email changed a second
-row), else the oldest, whatever email the claims now resolve to, so a user whose
+row), else the newest, the one that build created last and so the one
+in use, whatever email the claims now resolve to, so a user whose
 resolved email changes (under the claim priority below, or because
 Entra renamed them) keeps their row, flags and session
 ownership, and a pre-seeded invite for the new address cannot strand

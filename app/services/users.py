@@ -77,9 +77,12 @@ def find_signed_in_user(
     """The persisted ``users`` row for this identity, or ``None``;
     never creates one (findings P5).
 
-    **The principal id decides first.** The oldest row whose
+    **The principal id decides first.** A row whose
     ``external_principal_id`` is the identity's Entra object id is the
-    user, whatever email the claims now resolve to, so a pre-seeded
+    user, whatever email the claims now resolve to: the one holding the
+    resolved email if several carry the id (a build before P5 gave a
+    principal whose email changed a second row), else the newest, the
+    row that build created last and so the one in use. So so a pre-seeded
     invite for a new address cannot strand the account that holds the
     person's flags and session ownership. When that row's email
     differs from the resolved one (compared folded, as below) it takes
@@ -105,8 +108,8 @@ def find_signed_in_user(
     ``MultipleResultsFound``. An email match with no stored principal
     id records this one, under the same exclusions, so an invited row
     (``invite`` stores none) is found by principal id from then on.
-    Not audited: the sign-in path's other writes to the row (its
-    creation, ``_reassert_super_admin``) are not either. A non-empty
+    Audited as ``workspace.user_principal_recorded``, with no actor: from
+    then on that identity decides the row. A non-empty
     stored principal id that differs is never overwritten: no row with
     this principal id exists (step one found none), and overwriting
     would take the row from the identity that recorded it.
@@ -126,13 +129,13 @@ def find_signed_in_user(
     if usable_principal:
         # A build before P5 gave a principal whose email changed a second
         # row with the same principal id; the one holding the resolved
-        # email is the account in use, so it wins over the oldest (the
+        # email is the account in use, so it wins (the
         # read of the P5 PR).
         rows = list(
             db.execute(
                 select(User)
                 .where(User.external_principal_id == principal_id)
-                .order_by(User.id)
+                .order_by(User.id.desc())
             ).scalars()
         )
         for row in rows:
@@ -162,6 +165,7 @@ def find_signed_in_user(
             db,
             event_type="workspace.user_principal_recorded",
             summary=f"Sign-in recorded the principal id for {by_email.email}",
+            payload=audit.changes({"external_principal_id": [stored, principal_id]}),
             refs={"target_user_id": by_email.id},
         )
         db.commit()
@@ -185,7 +189,7 @@ def _move_to_email(db: Session, target: User, new_email: str) -> None:
     holder = _by_email(db, new_email, other_than=target.id)
     if holder is None:
         _write_email_change(db, target, new_email)
-    elif _absorbable(db, holder, target.external_principal_id):
+    elif _absorbable(db, holder):
         _absorb(db, target, holder, new_email)
     else:
         log.warning(
@@ -197,7 +201,7 @@ def _move_to_email(db: Session, target: User, new_email: str) -> None:
     db.refresh(target)
 
 
-def _absorbable(db: Session, holder: User, principal_id: str | None) -> bool:
+def _absorbable(db: Session, holder: User) -> bool:
     """Whether ``holder`` — the row already holding the signed-in
     identity's new email — can fold into the principal-id row: it
     carries no principal id, and nothing
