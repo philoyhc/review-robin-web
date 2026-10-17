@@ -184,9 +184,10 @@ def bulk_set_status(
 # purpose: nothing references them, so deleting one cascades to no
 # assignment and no response — measured from the model graph
 # (Segment 19I Item 2 PR 2). A relationship change can still move a
-# pair to another pair-context group, which deletes the group answer
-# copy the pair carried (findings B34); the author ruled 2026-10-03
-# that this takes no response-loss gate, as a tag edit takes none.
+# pair to another pair-context group, clearing the group it joins
+# (findings B34). That loss is not a cascade: the route asks for it
+# through ``acknowledged_loss`` instead (warnings_updates.md Item 1,
+# which reversed the 2026-10-03 ruling that it asks nothing).
 _ASSIGNMENT_FK = {
     Reviewer: Assignment.reviewer_id,
     Reviewee: Assignment.reviewee_id,

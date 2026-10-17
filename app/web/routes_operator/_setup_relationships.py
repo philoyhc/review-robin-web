@@ -177,6 +177,7 @@ async def relationships_import_submit(
         return _refuse_group_clear(
             request, review_session, user, db, exc,
             surface="import", panel_open=True,
+            issues=result.issues, filename=file.filename,
         )
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
     # the Unlock panel now, and a bare redirect closes the panel the
@@ -618,13 +619,13 @@ def _refuse_group_clear(
     ``Yes, clear them`` tick on the control that was used (``surface``).
     The tick carries the count, so it cannot approve a different clear."""
     db.rollback()
+    render.setdefault("issues", [])
+    render.setdefault("filename", None)
     return _render_relationships_page(
         request=request,
         review_session=review_session,
         user=user,
         db=db,
-        issues=[],
-        filename=None,
         group_clear={
             "count": exc.count,
             "message": str(exc),
@@ -801,10 +802,10 @@ def _render_relationships_page(
             # relationship cascades to no response — nothing
             # references one, measured from the model graph at PR 2.
             # A pair it moves into another pair-context group clears
-            # the group it joins, and the author
-            # ruled 2026-10-03 that this asks for no acknowledgement,
-            # as a tag edit asks for none. The route's gate reaches
-            # the same answer on its own via ``cascade_counts``.
+            # the group it joins; that asks through the group-clear
+            # refusal and its own tick (``group_clear``), not this
+            # cascade gate, which reaches ``False`` on its own via
+            # ``cascade_counts``.
             "delete_discards_assignments": False,
             "roster_response_count": 0,
             "delete_discards_responses": False,

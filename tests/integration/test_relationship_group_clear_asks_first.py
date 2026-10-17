@@ -15,6 +15,7 @@ so he sits alone and unanswered in the empty-tag group.
 from __future__ import annotations
 
 import datetime as dt
+import re
 
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
+    AuditEvent,
     Instrument,
     InstrumentResponseField,
     Relationship,
@@ -37,10 +39,17 @@ _TICK = 'name="acknowledge_response_loss"'
 
 
 def _line(count: int) -> str:
-    return (
-        f"This change clears {count} saved responses on groups whose "
-        "members it changes."
-    )
+    noun = "response" if count == 1 else "responses"
+    return f"This change clears {count} saved {noun} on groups whose members it changes."
+
+
+def _reselected(page: str, relationship_id: int) -> bool:
+    """Whether the refused selection's own row box comes back checked."""
+    return re.search(
+        rf'class="relationship-select"\s+name="relationship_ids" value="{relationship_id}"'
+        r"[^>]*\bchecked\b",
+        page,
+    ) is not None
 
 
 def _seed(
@@ -219,6 +228,37 @@ def test_an_add_into_an_answered_group_is_refused_then_goes_through(
     assert _responses(db) == 2
 
 
+def test_an_add_that_clears_nothing_never_asks(db: Session, client: TestClient) -> None:
+    # Ed alone in a new tag is the group he came from: nothing clears.
+    session = _seed(db, client, "rgc-add-noop")
+
+    resp = client.post(f"{_base(session)}/create", data=_edit("Ed", "z"), follow_redirects=False)
+
+    assert resp.status_code == 303
+    assert _responses(db) == 4
+
+
+def test_a_refusal_leaves_a_validated_session_validated(
+    db: Session, client: TestClient
+) -> None:
+    # Every service demotes a validated session before the clear: the
+    # refusal's rollback must take the demotion, and any audit row, with it.
+    session = _seed(db, client, "rgc-validated")
+    session.status = "validated"
+    db.commit()
+    events_before = db.execute(select(func.count()).select_from(AuditEvent)).scalar_one()
+    ann = _relationship(db, session.id, "Ann")
+
+    refused = client.post(
+        f"{_base(session)}/{ann.id}/update", data=_edit("Ann", "y"), follow_redirects=False
+    )
+
+    assert refused.status_code == 400
+    db.expire_all()
+    assert db.get(ReviewSession, session.id).status == "validated"
+    assert db.execute(select(func.count()).select_from(AuditEvent)).scalar_one() == events_before
+
+
 # --- bulk Inactivate / Reactivate / Delete --------------------------------
 
 
@@ -242,7 +282,9 @@ def test_an_inactivate_into_an_answered_group_is_refused_then_goes_through(
     # The panel rebuilds over the refused selection, with the tick.
     assert '"count": 1' in refused.text
     assert _line(1) in refused.text
-    assert "checked" in refused.text
+    ann_id = _relationship(db, session.id, "Ann").id
+    assert _reselected(refused.text, ann_id)
+    assert not _reselected(refused.text, _relationship(db, session.id, "Bo").id)
     assert _relationship(db, session.id, "Ann").status == "active"
     assert _responses(db) == 4
 
@@ -263,7 +305,12 @@ def test_a_reactivate_into_an_answered_group_is_refused_then_goes_through(
     refused = client.post(url, data=_bulk(session, db, "Ann"), follow_redirects=False)
     assert refused.status_code == 400
     assert '"count": 2' in refused.text
+    assert _reselected(refused.text, _relationship(db, session.id, "Ann").id)
     assert _relationship(db, session.id, "Ann").status == "inactive"
+
+    stale = client.post(url, data=_bulk(session, db, "Ann", 1), follow_redirects=False)
+    assert stale.status_code == 400
+    assert _responses(db) == 4
     assert _responses(db) == 4
 
     accepted = client.post(url, data=_bulk(session, db, "Ann", 2), follow_redirects=False)
@@ -282,6 +329,7 @@ def test_a_bulk_delete_into_an_answered_group_is_refused_then_goes_through(
     )
     assert refused.status_code == 400
     assert '"count": 1' in refused.text
+    assert _reselected(refused.text, _relationship(db, session.id, "Ann").id)
     assert db.execute(select(func.count()).select_from(Relationship)).scalar_one() == 4
 
     accepted = client.post(

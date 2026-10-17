@@ -193,7 +193,8 @@ def acknowledged_loss(raw: object) -> int:
     tick left on after further edits cannot approve a different clear
     (``responses.clear_changed_groups``)."""
     text = str(raw or "").strip()
-    return int(text) if text.isdigit() else 0
+    # ``isdecimal``, not ``isdigit``: ``"²"`` is a digit ``int`` refuses.
+    return int(text) if text.isdecimal() else 0
 
 
 def _require_editable(review_session: ReviewSession) -> None:
