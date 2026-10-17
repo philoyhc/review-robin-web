@@ -413,6 +413,22 @@ def clone_session(
         context={"mode": mode},
         correlation_id=correlation_id,
     )
+    # The source's own trail names who copied it and where to, since a
+    # full Duplicate carries its rosters to a session the actor owns
+    # (findings P2): a non-owner sys-admin may clone.
+    audit.write_event(
+        db,
+        event_type="session.duplicated",
+        summary=(
+            f"Session {source.code} duplicated as {clone.code} "
+            f"({'full' if mode == 'all' else 'config-only'})"
+        ),
+        actor_user_id=user.id,
+        session=source,
+        refs={"clone_session_id": clone.id},
+        context={"mode": mode, "clone_code": clone.code},
+        correlation_id=correlation_id,
+    )
     db.commit()
     db.refresh(clone)
     return clone

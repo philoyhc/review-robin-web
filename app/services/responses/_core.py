@@ -402,7 +402,12 @@ def _apply_upserts(
                 )
             )
         elif existing.value != u.value:
+            # ``saved_at`` is when the value last changed and ``version``
+            # counts the changes (findings R6): a changed save moves both,
+            # an unchanged one touches neither.
             existing.value = u.value
+            existing.saved_at = datetime.now(timezone.utc)
+            existing.version = existing.version + 1
             if existing.submitted_at is not None:
                 existing.submitted_at = None
                 cleared += 1

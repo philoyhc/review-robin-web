@@ -446,6 +446,11 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # copied-entity tallies, ``refs.source_session_id`` the origin,
     # ``context.mode`` the clone mode (``all`` / ``config``).
     "session.cloned": EventSchema(_IDENTITY | {"counts", "refs", "context"}),
+    # Findings P2 (2026-10-17) — the same clone, on the SOURCE session's
+    # trail: ``refs.clone_session_id`` the copy, ``context.clone_code``
+    # its code, ``context.mode`` the clone mode; the actor is the row's
+    # ``actor_user_id``.
+    "session.duplicated": EventSchema(_IDENTITY | {"refs", "context"}),
     # Segment 18P Group 2 — rehydrate a session from a complete extract
     # set. ``counts`` carries the reconstructed-entity tallies;
     # ``context.source_code`` / ``context.source_name`` name the origin

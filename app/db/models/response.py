@@ -29,6 +29,9 @@ class Response(Base):
         ForeignKey("instrument_response_fields.id"), index=True, nullable=False
     )
     value: Mapped[str | None] = mapped_column(Text)
+    # ``saved_at`` is when ``value`` last changed and ``version`` how many
+    # times it has (1 on insert): a save that changes the value moves both,
+    # one that doesn't touches neither (findings R6).
     saved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -13,6 +13,7 @@ evolves.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +39,7 @@ from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
-from app.services import lifecycle_display, roster_bulk
+from app.services import lifecycle_display, roster_bulk, scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 from app.services import unit_of_work
@@ -195,6 +196,42 @@ def acknowledged_loss(raw: object) -> int:
     text = str(raw or "").strip()
     # ``isdecimal``, not ``isdigit``: ``"²"`` is a digit ``int`` refuses.
     return int(text) if text.isdecimal() else 0
+
+
+def observe_scheduled_events_on_load(
+    request: Request,
+    db: Session,
+    review_sessions: Iterable[ReviewSession],
+) -> None:
+    """Run the lazy scheduled-event pass (``spec/lifecycle.md`` §8.3)
+    for each session an operator GET shows, before the page reads it.
+
+    The callers are Session Home, the four Operations pages (Validate,
+    Assignments, Invitations, Responses) and the Sessions lobby, which
+    passes every session it lists. The pass is
+    ``scheduled_events.observe_scheduled_events``; a session with
+    nothing due returns before any query. Each session runs at most
+    once per request, tracked on ``request.state``. ``build_invite_url``
+    closes over the request so the invite and reminder sends can build
+    absolute URLs.
+    """
+    done: set[int] = getattr(request.state, "scheduled_events_observed", set())
+    request.state.scheduled_events_observed = done
+    correlation_id = request_correlation_id()
+
+    def build_invite_url(token: str) -> str:
+        return str(request.url_for("reviewer_invite", token=token))
+
+    for review_session in review_sessions:
+        if review_session.id in done:
+            continue
+        done.add(review_session.id)
+        scheduled_events.observe_scheduled_events(
+            db,
+            review_session,
+            correlation_id=correlation_id,
+            build_invite_url=build_invite_url,
+        )
 
 
 def _require_editable(review_session: ReviewSession) -> None:

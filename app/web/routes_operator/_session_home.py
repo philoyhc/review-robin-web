@@ -56,6 +56,7 @@ from app.web.routes_operator._shared import (
     _redirect_url,
     _require_not_ready,
     _templates,
+    observe_scheduled_events_on_load,
     parse_session_deadline,
     session_payload_error,
 )
@@ -117,18 +118,9 @@ def session_detail(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    # Lazy observer for scheduled lifecycle events (Segment 18G).
-    # Fires past-due triggers (activation PR 1B; auto-send invites
-    # PR 2A) before rendering. ``build_invite_url`` closes over the
-    # request so the invite-dispatch path can build absolute URLs.
-    scheduled_events.observe_scheduled_events(
-        db,
-        review_session,
-        correlation_id=request_correlation_id(),
-        build_invite_url=lambda token: str(
-            request.url_for("reviewer_invite", token=token)
-        ),
-    )
+    # Lazy observer for scheduled lifecycle events (Segment 18G):
+    # fires past-due triggers before rendering.
+    observe_scheduled_events_on_load(request, db, [review_session])
     setup_rows = views.build_setup_rows(db, review_session)
     workflow_ctx = views.build_workflow_card_context(
         db,

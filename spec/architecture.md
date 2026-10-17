@@ -444,9 +444,9 @@ and `spec/lifecycle.md` diverge, the lifecycle spec wins.
 **Session status overrides instrument acceptance.** Activation
 (`validated → ready`, `activate_session`) flips every instrument's
 `accepting_responses` to `true`. Revert (`ready → draft` or
-`expired → draft`, `revert_session_to_draft`) and Close
-(`ready → expired`, `expire_session`) flip them all back to `false` in
-the same transaction — revert emits a single `session.reverted_to_draft`
+`expired → draft`, `revert_session_to_draft`), Close
+(`ready → expired`, `expire_session`) and Archive (`archive_session`)
+flip them all back to `false` in the same transaction — revert emits a single `session.reverted_to_draft`
 audit event (no per-instrument close events on that path). Existing
 `Response` rows are preserved untouched on revert and on close; the
 reviewer surface returns to read-only.

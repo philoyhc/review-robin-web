@@ -56,6 +56,7 @@ from app.web.routes_operator._shared import (
     _require_instrument_in_session,
     _require_response_loss_ack,
     _templates,
+    observe_scheduled_events_on_load,
 )
 
 
@@ -83,6 +84,7 @@ def assignments_hub(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    observe_scheduled_events_on_load(request, db, [review_session])
     response = _render_assignments_hub(
         request,
         db,

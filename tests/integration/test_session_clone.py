@@ -295,6 +295,30 @@ def test_clone_writes_audit_event(db: Session) -> None:
     assert event.detail["counts"]["observers"] == 0
 
 
+def test_clone_writes_an_event_on_the_source(db: Session) -> None:
+    """Findings P2: the source session's trail names who copied it and
+    the copy, by id and code; the clone's trail carries none of it."""
+    source, op = _source_session(db, "clone-src-audit")
+
+    clone = session_clone.clone_session(
+        db, source=source, user=op, mode="config"
+    )
+
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.duplicated",
+        )
+    ).scalar_one()
+    assert event.session_id == source.id
+    assert event.actor_user_id == op.id
+    assert event.detail["session_code"] == source.code
+    assert event.detail["refs"] == {"clone_session_id": clone.id}
+    assert event.detail["context"] == {
+        "mode": "config",
+        "clone_code": clone.code,
+    }
+
+
 def test_clone_derives_a_unique_code(db: Session) -> None:
     source, op = _source_session(db, "clone-dup")
 

@@ -547,12 +547,31 @@ def test_non_owner_sys_admin_can_still_clone(
     before = db.execute(select(SessionOperator.id)).all()
     resp = make_client(bob).post(
         f"/operator/sessions/{review_session.id}/clone",
-        data={"mode": "config"},
+        data={"mode": "all"},
         follow_redirects=False,
     )
     assert resp.status_code == 303
     after = db.execute(select(SessionOperator.id)).all()
     assert len(after) > len(before)  # a new owned clone was created
+    # Findings P2: the source's own trail names the non-owner actor and
+    # the copy, since a full Duplicate carries the roster with it.
+    clone_id = int(resp.headers["location"].split("/")[3].split("?")[0])
+    clone = db.get(ReviewSession, clone_id)
+    bob_row = db.execute(
+        select(User).where(User.email == "bob@example.edu")
+    ).scalar_one()
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "session.duplicated",
+            AuditEvent.session_id == review_session.id,
+        )
+    ).scalar_one()
+    assert event.actor_user_id == bob_row.id
+    assert event.detail["refs"] == {"clone_session_id": clone_id}
+    assert event.detail["context"] == {
+        "mode": "all",
+        "clone_code": clone.code,
+    }
 
 
 def test_adopt_idempotent_when_already_owner(

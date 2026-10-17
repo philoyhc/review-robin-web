@@ -1105,7 +1105,9 @@ The lobby supports:
   history, and neither carries the deadline or the schedule (its
   anchors and offsets), which reset on purpose: the clone is a fresh
   `draft`, owned by the operator who cloned it, for a new cycle the
-  operator schedules.
+  operator schedules. The copy's trail opens with `session.cloned`;
+  the original's records `session.duplicated`, naming who copied it
+  and the copy's id and code.
 
 The **archived-sessions child page** (`/operator/sessions/archived`)
 lists sessions in `archived` state with the lobby's table, sort, search

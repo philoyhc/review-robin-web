@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditEvent, ReviewSession, User
+from app.db.models import AuditEvent, Instrument, ReviewSession, User
 from app.schemas.sessions import SessionCreate
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions
@@ -54,6 +54,43 @@ def test_archive_session_accepts_non_draft_states(db: Session) -> None:
         )
     ).scalar_one()
     assert event.detail["changes"]["status"] == ["ready", "archived"]
+
+
+def test_archive_from_ready_closes_every_instrument(db: Session) -> None:
+    """Archive is an exit from ``ready``, so like Close and Revert it
+    clears every instrument's ``accepting_responses``, and unarchive
+    lands in ``draft`` with nothing accepting (findings L5)."""
+    review_session, op = _draft_session(db, "arch-close")
+    db.add_all(
+        [
+            Instrument(session_id=review_session.id, name="A", order=10),
+            Instrument(session_id=review_session.id, name="B", order=11),
+        ]
+    )
+    db.flush()
+    instruments = list(
+        db.execute(
+            select(Instrument).where(
+                Instrument.session_id == review_session.id
+            )
+        ).scalars()
+    )
+    assert len(instruments) >= 2
+    for instrument in instruments:
+        instrument.accepting_responses = True
+    review_session.status = "ready"
+    db.commit()
+
+    lifecycle.archive_session(db, review_session=review_session, user=op)
+    for instrument in instruments:
+        db.refresh(instrument)
+        assert instrument.accepting_responses is False
+
+    lifecycle.unarchive_session(db, review_session=review_session, user=op)
+    assert review_session.status == "draft"
+    for instrument in instruments:
+        db.refresh(instrument)
+        assert instrument.accepting_responses is False
 
 
 def test_archive_session_rejects_already_archived(db: Session) -> None:
