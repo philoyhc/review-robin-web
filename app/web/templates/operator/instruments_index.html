@@ -745,14 +745,20 @@
          slots that have at least one populated row in the
          session — built by ``views._instruments._new_model_usable_tags``.
          Empty lists drive the column's pill into the disabled /
-         inactive state. Pair-context tags are not offered while their
-         meaning is reworked (author, 2026-10-16;
-         ``guide/assignment_rule_clarify.md``). ``_stored_only_labels``
-         names one a stored rule still holds, so its select keeps that
-         option rather than silently dropping it on the next Save. #}
-      {% set _link1_tags = new_model_tags.reviewer %}
-      {% set _link2_tags = new_model_tags.reviewee %}
-      {% set _link2_operand = new_model_tags.reviewer %}
+         inactive state. Relationship tags join Links 1 and 2 as
+         "Pair: <label>" (author, 2026-10-17;
+         ``guide/assignment_rule_clarify.md`` Item 2); Save decides
+         whose tag each one is (``_band1._engine_field``). Link 3 groups
+         by reviewee tags only. ``_stored_only_labels`` names a tag a
+         stored rule holds that the card no longer offers, so its select
+         keeps that option rather than dropping it on the next Save. #}
+      {% set _pair_ns = namespace(tags=[]) %}
+      {% for key, label in new_model_tags.pair_context %}
+        {% set _pair_ns.tags = _pair_ns.tags + [(key, "Pair: " ~ label)] %}
+      {% endfor %}
+      {% set _link1_tags = new_model_tags.reviewer + _pair_ns.tags %}
+      {% set _link2_tags = new_model_tags.reviewee + _pair_ns.tags %}
+      {% set _link2_operand = new_model_tags.reviewer + _pair_ns.tags %}
       {% set _link3_tags = new_model_tags.reviewee %}
       {% set _stored_only_labels = dict(new_model_tags.pair_context) %}
       {% set _band1_state = new_model_band1_state.get(instrument.id, {"link1": {"mode": "all", "combinator": "AND", "rules": []}, "link2": {"mode": "all", "combinator": "AND", "rules": []}}) %}
@@ -785,7 +791,7 @@
           {{ new_model_rule_list("link1", instrument.id, _band1_state.link1,
               "Who does the review", _link1_tags,
               on_label="Filter using tags",
-              field_helper="Reviewer tag",
+              field_helper="Reviewer's tag",
               stored_only_labels=_stored_only_labels) }}
           {# "Refresh sample" was previously rendered as a row
              beneath Link 1; moved inline beside the Band 2
@@ -801,8 +807,8 @@
               operator_cycle=["IS THE SAME AS", "IS DIFFERENT FROM", "IS", "IS NOT", "IS FILLED", "IS EMPTY"],
               operand_tag_options=_link2_operand,
               on_label="Filter using tags",
-              field_helper="Reviewee tag",
-              operand_tag_helper="Reviewer tag",
+              field_helper="Reviewee's tag",
+              operand_tag_helper="Reviewer's tag",
               stored_only_labels=_stored_only_labels) }}
         </div>
         <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-default);">
@@ -1227,6 +1233,21 @@
           var combInput = wrap.querySelector('[data-new-model-combinator-input]');
           if (combInput) { combInput.value = next; }
         };
+        // True while the card's Link 2 is filtering with a relationship
+        // tag under IS (the cell's field a ``pair_context.`` key, its
+        // operator IS).
+        window.newModelKeepsPairsByPairTag = window.newModelKeepsPairsByPairTag || function (el) {
+          var card = el.closest('[id^="instrument-"]');
+          if (!card) { return false; }
+          var mode = card.querySelector('input[name="link2_mode"]');
+          if (!mode || mode.value !== 'filter') { return false; }
+          var cells = card.querySelectorAll('select[name="link2_field"]');
+          return Array.prototype.some.call(cells, function (sel) {
+            var cell = sel.closest('[data-new-model-rule-cell]');
+            var op = cell && cell.querySelector('[data-new-model-op-input]');
+            return sel.value.indexOf('pair_context.') === 0 && op && op.value === 'IS';
+          });
+        };
         window.newModelToggleUnitMode = window.newModelToggleUnitMode || function (btn) {
           // 3-state cycle: not_set → individual → group →
           // not_set → … . Same wrap-back-to-Not-set contract as
@@ -1243,6 +1264,12 @@
           } else if (current === 'individual') {
             next = 'group';
           } else {
+            next = 'not_set';
+          }
+          // A Link 2 pair-tag IS keeps pairs one by one, so Group is
+          // skipped while one is set (author, 2026-10-17); Save refuses
+          // the pair if it was already grouped.
+          if (next === 'group' && newModelKeepsPairsByPairTag(btn)) {
             next = 'not_set';
           }
           btn.setAttribute('data-new-model-unit-mode', next);

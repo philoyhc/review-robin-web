@@ -123,53 +123,140 @@ def test_link1_cycle_offers_filled_and_empty(db: Session, client: TestClient) ->
     assert 'data-new-model-operator-cycle="IS|IS NOT|IS FILLED|IS EMPTY"' in page
 
 
-def test_no_dropdown_offers_a_pair_context_tag(db: Session, client: TestClient) -> None:
-    session, instrument = _session(db, client, "b1-no-pc")
+def test_pair_tags_join_links_1_and_2_but_not_link_3(db: Session, client: TestClient) -> None:
+    """Item 2 (author, 2026-10-17): a relationship tag is offered, as
+    "Pair: <label>", in Link 1's field, Link 2's field and Link 2's
+    operand list; Link 3 groups by reviewee tags only."""
+    session, instrument = _session(db, client, "b1-pc-offered")
 
     page = _page(client, session.id, instrument.id)
 
-    # The session has a tagged relationship, so pair context was offered
-    # before; now no select lists it, Link 3 included.
-    assert 'value="pair_context.' not in page
-    assert '<option value="reviewer.tag1"' in page
-    assert '<option value="reviewee.tag1"' in page
+    assert len(re.findall(r'<option value="pair_context\.tag1"\s*>Pair: ', page)) == 3
+    boundary = page[page.index('name="link3_boundary"') :]
+    boundary = boundary[: boundary.index("</select>")]
+    assert "pair_context." not in boundary
+    assert "Reviewer&#39;s tag" in page or "Reviewer's tag" in page
+    assert "Reviewee&#39;s tag" in page or "Reviewee's tag" in page
 
 
-def test_a_stored_pair_context_rule_keeps_its_option_and_saves(
-    db: Session, client: TestClient
-) -> None:
-    session, instrument = _session(db, client, "b1-stored-pc")
+def _link2_rules(*rules: tuple[str, str, str, str]) -> dict[str, object]:
+    """``(field, op, operand_value, operand_tag)`` per Link 2 cell."""
+    return {
+        "link2_mode": "filter",
+        "link2_field": [r[0] for r in rules],
+        "link2_op": [r[1] for r in rules],
+        "link2_operand_value": [r[2] for r in rules],
+        "link2_operand_tag": [r[3] for r in rules],
+    }
+
+
+def test_save_stores_a_pair_tag_by_link_and_operator(db: Session, client: TestClient) -> None:
+    session, instrument = _session(db, client, "b1-pc-map")
+    form = {
+        **_form(link1=("pair_context.tag1", "IS", "P")),
+        **_link2_rules(
+            ("pair_context.tag1", "IS", "P", ""),
+            ("pair_context.tag1", "IS NOT", "C", ""),
+            ("pair_context.tag1", "IS FILLED", "", ""),
+            ("reviewee.tag1", "IS THE SAME AS", "", "pair_context.tag1"),
+            ("pair_context.tag1", "IS DIFFERENT FROM", "", "pair_context.tag1"),
+        ),
+    }
+
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_form(link1=("pair_context.tag1", "IS", "P")),
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
     )
+
     assert saved.status_code == 200, saved.text
+    assert [(p["field"], p["operator"], p.get("operand")) for p in _predicates(db, instrument.id)] == [
+        ("reviewer.pair_tag1", "equals", "P"),
+        ("pair_context.tag1", "equals", "P"),
+        ("pair_context.tag1", "not_equals", "C"),
+        ("reviewee.pair_tag1", "is_not_empty", None),
+        ("reviewee.tag1", "same_as", "reviewer.pair_tag1"),
+        ("reviewee.pair_tag1", "different_from", "reviewer.pair_tag1"),
+    ]
 
+    # The card shows each as the relationship tag it reads, offered
+    # rather than stored-only, and saving it again stores the same.
     page = _page(client, session.id, instrument.id)
-    assert re.search(
-        r'<option value="pair_context\.tag1" selected data-new-model-stored-only>', page
-    )
-    assert page.count('value="pair_context.tag1"') == 1
-
-    # Saving the card as it stands keeps the rule.
+    assert "selected data-new-model-stored-only" not in page
+    assert len(re.findall(r'<option value="pair_context\.tag1" selected>', page)) == 7  # 1 + 4 fields, 2 operands
+    before = _predicates(db, instrument.id)
     again = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_form(link1=("pair_context.tag1", "IS", "P")),
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
     )
     assert again.status_code == 200, again.text
-    assert _predicates(db, instrument.id) == [
+    assert _predicates(db, instrument.id) == before
+
+
+def _with_group(form: dict[str, object]) -> dict[str, object]:
+    return {**form, "link3_mode": "grouped", "link3_boundary": "reviewee.tag1"}
+
+
+def test_group_is_refused_beside_a_link2_pair_tag_is(db: Session, client: TestClient) -> None:
+    session, instrument = _session(db, client, "b1-pc-group")
+    form = _with_group(
+        {**_form(), **_link2_rules(("pair_context.tag1", "IS", "P", ""))}
+    )
+
+    card = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+    )
+    fallback = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        data=form,
+        follow_redirects=False,
+    )
+
+    assert card.status_code == 422
+    assert any("can't be Group" in error for error in card.json()["errors"])
+    assert fallback.status_code == 400
+    db.expire_all()
+    stored = db.get(Instrument, instrument.id)
+    assert stored.rule_set_id is None
+    assert stored.group_kind is None
+
+
+def test_group_stands_beside_other_link2_pair_tags(db: Session, client: TestClient) -> None:
+    """Only IS keeps pairs one by one: IS NOT and the person-level
+    operators leave a group meaningful, and an OR list counts the IS."""
+    session, instrument = _session(db, client, "b1-pc-group-ok")
+    form = _with_group(
         {
-            "field": "pair_context.tag1",
-            "operator": "equals",
-            "operand": "P",
-            "case_sensitive": False,
+            **_form(),
+            **_link2_rules(
+                ("pair_context.tag1", "IS NOT", "C", ""),
+                ("pair_context.tag1", "IS FILLED", "", ""),
+            ),
         }
-    ]
+    )
+    saved = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+    )
+    assert saved.status_code == 200, saved.text
+    db.expire_all()
+    assert db.get(Instrument, instrument.id).group_kind == "r1"
+
+    with_or = _with_group(
+        {
+            **_form(),
+            **_link2_rules(
+                ("reviewee.tag1", "IS", "A", ""),
+                ("pair_context.tag1", "IS", "P", ""),
+            ),
+            "link2_combinator": "OR",
+        }
+    )
+    refused = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=with_or
+    )
+    assert refused.status_code == 422
 
 
 def _pair_tags_only(db: Session, client: TestClient, code: str) -> tuple[ReviewSession, Instrument]:
-    """Tagged relationships, untagged rosters: every tag the card used to
-    offer was a pair-context one."""
+    """Tagged relationships, untagged rosters: the card's only usable
+    tags are relationship ones."""
     session, instrument = _session(db, client, code)
     for model in (Reviewer, Reviewee):
         for row in db.execute(select(model).where(model.session_id == session.id)).scalars():
@@ -178,23 +265,26 @@ def _pair_tags_only(db: Session, client: TestClient, code: str) -> tuple[ReviewS
     return session, instrument
 
 
-def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
+def test_a_stored_operand_from_an_emptied_slot_survives_with_no_reviewer_tags(
     db: Session, client: TestClient
 ) -> None:
-    """With no usable reviewer tag the cycle drops the cross-side
-    operators; a stored one must still render with its operand, or the
-    cell falls back to IS with no value and the next Save drops it."""
+    """With no usable reviewer tag (and no relationships) the cycle
+    drops the cross-side operators; a stored one must still render with
+    its operand, or the cell falls back to IS with no value and the next
+    Save drops it. Only that cell keeps the full cycle."""
     session, instrument = _session(db, client, "b1-stored-operand")
-    form = _form(link2=("reviewee.tag1", "IS THE SAME AS", "pair_context.tag1"))
-    # A second Link 2 rule, comparing with a value.
-    form.update(
-        {
-            "link2_field": ["reviewee.tag1", "reviewee.tag1"],
-            "link2_op": ["IS THE SAME AS", "IS"],
-            "link2_operand_value": ["", "A"],
-            "link2_operand_tag": ["pair_context.tag1", ""],
-        }
-    )
+    for relationship in db.execute(
+        select(Relationship).where(Relationship.session_id == session.id)
+    ).scalars():
+        db.delete(relationship)
+    db.commit()
+    form = {
+        **_form(),
+        **_link2_rules(
+            ("reviewee.tag1", "IS THE SAME AS", "", "reviewer.tag1"),
+            ("reviewee.tag1", "IS", "A", ""),
+        ),
+    }
     saved = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
     )
@@ -206,8 +296,7 @@ def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
     page = _page(client, session.id, instrument.id)
 
     cycles = re.findall(r'data-new-model-operator-cycle="([^"]*)"', page)
-    # Link 1's default cell, then Link 2's two: only the stored-operand
-    # cell keeps the cross-side operators.
+    # Link 1's default cell, then Link 2's two.
     assert cycles[1:3] == [
         "IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY",
         "IS|IS NOT|IS FILLED|IS EMPTY",
@@ -216,9 +305,7 @@ def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
         "IS THE SAME AS",
         "IS",
     ]
-    assert re.search(
-        r'<option value="pair_context\.tag1" selected data-new-model-stored-only>', page
-    )
+    assert re.search(r'<option value="reviewer\.tag1" selected data-new-model-stored-only>', page)
 
     # The same values saved again (what the rendered cells above carry)
     # keep both rules.
@@ -227,20 +314,19 @@ def test_a_stored_pair_context_operand_survives_with_no_reviewer_tags(
     )
     assert again.status_code == 200, again.text
     assert [(p["operator"], p.get("operand")) for p in _predicates(db, instrument.id)] == [
-        ("same_as", "pair_context.tag1"),
+        ("same_as", "reviewer.tag1"),
         ("equals", "A"),
     ]
 
 
-def test_stored_rules_keep_their_pills_live_with_only_pair_tags(
+def test_link3_pill_follows_a_stored_boundary_with_only_pair_tags(
     db: Session, client: TestClient
 ) -> None:
-    """A Link whose only usable tags were pair-context ones keeps a live
-    pill while it has stored rules (or a stored boundary), so the stored
-    state can still be edited; with nothing stored it is disabled."""
+    """Relationship tags make Links 1 and 2 usable; Link 3, which groups
+    by reviewee tags only, stays disabled unless a boundary is stored."""
     session, instrument = _pair_tags_only(db, client, "b1-pair-only")
     page = _page(client, session.id, instrument.id)
-    assert page.count('title="No usable tags for this link"') == 3
+    assert page.count('title="No usable tags for this link"') == 1
 
     saved = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
@@ -254,7 +340,5 @@ def test_stored_rules_keep_their_pills_live_with_only_pair_tags(
     assert saved.status_code == 303, saved.text
 
     page = _page(client, session.id, instrument.id)
-    # Link 2 has nothing stored and stays disabled; Links 1 and 3 are live.
-    assert page.count('title="No usable tags for this link"') == 1
-    assert 'onclick="newModelToggleRuleMode(this)"' in page
+    assert page.count('title="No usable tags for this link"') == 0
     assert 'onclick="newModelToggleUnitMode(this)"' in page

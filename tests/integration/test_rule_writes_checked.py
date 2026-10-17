@@ -129,7 +129,7 @@ def test_band1_fallback_save_refuses_a_same_side_rule(db: Session, client: TestC
 
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
-        data=_link2_form("pair_context.tag1", "pair_context.tag2"),
+        data=_link2_form("reviewee.tag1", "reviewee.tag2"),
         follow_redirects=False,
     )
 
@@ -145,7 +145,7 @@ def test_band1_card_save_refuses_a_same_side_rule(db: Session, client: TestClien
 
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_link2_form("pair_context.tag1", "pair_context.tag1"),
+        data=_link2_form("reviewee.tag1", "reviewee.tag1"),
     )
 
     assert response.status_code == 422
@@ -185,7 +185,7 @@ def test_band1_refusal_leaves_a_stored_rule_and_its_links_alone(
 
     refused = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
-        data={**_link2_form("pair_context.tag1", "pair_context.tag2"), "link1_touched": ""},
+        data={**_link2_form("reviewee.tag1", "reviewee.tag2"), "link1_touched": ""},
         follow_redirects=False,
     )
 

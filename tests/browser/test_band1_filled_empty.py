@@ -266,3 +266,58 @@ def _store_link2_operand(live_server: LiveServer, session_id: int) -> None:
             db.commit()
     finally:
         engine.dispose()
+
+
+def _tag_the_pair(live_server: LiveServer, session_id: int) -> None:
+    """One relationship tagged ``Pod``, so the card offers ``Pair: …``."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Relationship, Reviewee, Reviewer
+
+    engine = create_engine(live_server.database_url)
+    try:
+        with Session(engine) as db:
+            reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session_id)).scalar_one()
+            reviewee = db.execute(select(Reviewee).where(Reviewee.session_id == session_id)).scalar_one()
+            db.add(
+                Relationship(
+                    session_id=session_id,
+                    reviewer_id=reviewer.id,
+                    reviewee_id=reviewee.id,
+                    tag_1="Pod",
+                )
+            )
+            db.commit()
+    finally:
+        engine.dispose()
+
+
+def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+) -> None:
+    """Item 2 (author, 2026-10-17): a Link 2 pair-tag IS picks pairs one
+    by one, so the Unit of review pill cycles Individual → Not set,
+    skipping Group; any other Link 2 rule leaves Group in the cycle."""
+    session_id = new_session()
+    _seed(api, session_id)
+    _tag_the_pair(live_server, session_id)
+    pin_full_matrix(live_server.database_url, session_id)
+    card = open_unlocked(page, session_id)
+    unit = card.locator("[data-new-model-unit-mode]")
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "individual")
+
+    cell = _filter_on(card, "link2")
+    cell.locator('select[name="link2_field"]').select_option("pair_context.tag1")
+    operator = cell.locator("[data-new-model-operator-cycle]")
+    while operator.inner_text() != "IS":
+        operator.click()
+
+    unit.click()
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "not_set")
+    unit.click()
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "individual")
+
+    operator.click()  # IS NOT
+    unit.click()
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "group")
