@@ -1,0 +1,16 @@
+ReviewerEmail,RevieweeEmail,PairContextTag1.Official,PairContextTag2.Social
+operator@example.edu,kenji.russo@example.edu,Mentor,
+operator@example.edu,wen.novak@example.edu,Mentor,Friend
+operator@example.edu,felix.ali@example.edu,Supervisor,
+operator@example.edu,jonah.bakr@example.edu,COI,
+kenji.russo@example.edu,operator@example.edu,,Friend
+felix.ali@example.edu,operator@example.edu,,Roommate
+ben.russo@example.edu,victor.alvarez@example.edu,,Friend
+victor.alvarez@example.edu,ben.russo@example.edu,,Friend
+farah.silva@example.edu,aisha.duarte@example.edu,Mentor,
+grace.tanaka@example.edu,gabriel.rossi@example.edu,COI,
+helena.rahman@example.edu,hana.russo@example.edu,,Roommate
+chen.aziz@example.edu,noor.wei@example.edu,Mentor,Friend
+julia.kowalski@example.edu,william.mensah@example.edu,Supervisor,
+tomas.haddad@example.edu,tomas.aziz@example.edu,,Friend
+caleb.hughes@example.edu,jonah.bakr@example.edu,COI,
