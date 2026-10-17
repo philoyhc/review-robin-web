@@ -158,6 +158,18 @@ def _write_refusal(
     return None
 
 
+def _race_refusal(
+    db: Session, review_session: ReviewSession, reviewer: Reviewer
+) -> str:
+    """The cause to show when the service refused a write the route's
+    check let through, because the session closed or was reverted in
+    between (findings L3): the write's transaction is rolled back and
+    the cause read afresh, so the page re-renders with what was typed
+    rather than the standalone error page."""
+    db.rollback()
+    return _write_refusal(db, review_session, reviewer) or REFUSED_CLOSED
+
+
 def _surface_context(
     *,
     db: Session,

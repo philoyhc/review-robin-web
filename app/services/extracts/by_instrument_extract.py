@@ -394,7 +394,7 @@ def _data_block(
     header = _header_row(review_session, fields)
     with_link = reviewer_identity == "name_email_profile"
     yield _with_profile_column(header, "ReviewerProfileLink") if with_link else header
-    for reviewer, row in _data_rows(
+    for assignment, row in _data_rows(
         db,
         review_session,
         instrument,
@@ -407,8 +407,14 @@ def _data_block(
     ):
         if reviewer_identity == "name":
             row = (row[0], "", "", "", "", *row[5:])
+            if assignment.is_self_review:
+                # A self-review row's reviewee is the reviewer: their
+                # email and tags would name them there (findings R8).
+                row = (*row[:6], "", "", "", "", *row[10:])
         elif with_link:
-            row = _with_profile_column(row, reviewer.profile_link or "")
+            row = _with_profile_column(
+                row, assignment.reviewer.profile_link or ""
+            )
         yield row
 
 
@@ -452,12 +458,13 @@ def _data_rows(
     row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
     sort_by_reviewer_email: bool = True,
-) -> Iterable[tuple[Reviewer, tuple[str, ...]]]:
-    """Each data row, sorted, with the reviewer it names (for the
+) -> Iterable[tuple[Assignment, tuple[str, ...]]]:
+    """Each data row, sorted, with the assignment it reads (for the
     identity-level columns :func:`_data_block` adjusts). A ``name``-level
     download blanks the email, so it doesn't sort on it either: the
     order of two same-named reviewers would otherwise spell out which
-    email was whose."""
+    email was whose. Nor, on a self-review row, on the reviewee email,
+    which is the same person's and blanked with it."""
     assignments = list(
         db.execute(
             select(Assignment)
@@ -492,7 +499,7 @@ def _data_rows(
 
     field_ids = [f.id for f in fields]
     rows: list[
-        tuple[tuple[str, str, str, str, int], Reviewer, tuple[str, ...]]
+        tuple[tuple[str, str, str, str, int], Assignment, tuple[str, ...]]
     ] = []
     seen_group_rows: set[tuple[int, tuple[str, ...]]] = set()
     for assignment in assignments:
@@ -523,15 +530,17 @@ def _data_rows(
         sort_key = (
             row[5],
             row[0],
-            row[6],
+            row[6]
+            if sort_by_reviewer_email or not assignment.is_self_review
+            else "",
             row[1] if sort_by_reviewer_email else "",
             assignment.id,
         )
-        rows.append((sort_key, assignment.reviewer, row))
+        rows.append((sort_key, assignment, row))
 
     rows.sort(key=lambda entry: entry[0])
-    for _, reviewer, row in rows:
-        yield reviewer, row
+    for _, assignment, row in rows:
+        yield assignment, row
 
 
 def _assignment_row(

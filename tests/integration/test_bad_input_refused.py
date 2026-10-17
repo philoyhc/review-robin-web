@@ -123,6 +123,9 @@ def test_an_integer_refuses_what_is_not_plain_digits(value: str) -> None:
 def test_a_saved_number_is_stored_canonical(db: Session) -> None:
     op, reviewer, review_session, assignment = _seed(db)
     _field(db, assignment, "Integer")
+    # Reviewer writes take the session's accepting gate (findings L3).
+    review_session.status = "ready"
+    db.flush()
 
     responses_service.save_draft(
         db,

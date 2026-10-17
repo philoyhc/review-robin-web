@@ -440,3 +440,41 @@ def test_an_accepted_save_shows_no_notice(
     assert resp.status_code == 303
     page = rae_client.get(f"/me/sessions/{review_session.id}/1")
     assert "data-rs-write-refused" not in page.text
+
+
+def test_a_save_the_deadline_overtakes_mid_request_keeps_what_was_typed(
+    client: TestClient, db: Session, make_client, monkeypatch
+) -> None:
+    """The route's check lets the Save through, then the deadline passes
+    before the service's locked re-check (findings L3): the page re-renders with the typed answers, as a refusal at
+    the route does, not the standalone error page."""
+    from sqlalchemy import update
+
+    from app.services import session_lifecycle
+
+    review_session = _ready_session(client, db, code="refused-race")
+    aid = _assignment_of(db, review_session, "rae@example.edu").id
+    real_gate = session_lifecycle.require_accepting_responses
+
+    def overtaken(db_: Session, session: ReviewSession) -> ReviewSession:
+        db_.execute(
+            update(ReviewSession)
+            .where(ReviewSession.id == session.id)
+            .values(deadline=datetime.now(timezone.utc) - timedelta(minutes=1))
+        )
+        db_.commit()
+        return real_gate(db_, session)
+
+    monkeypatch.setattr(session_lifecycle, "require_accepting_responses", overtaken)
+    resp, text = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.id}/1/save",
+        {f"response[{aid}][comments]": TYPED},
+    )
+
+    assert resp.status_code == 403
+    assert "data-rs-write-refused" in resp.text
+    assert "This review closed at its deadline" in text
+    assert "data-rs-unsaved-answers" in resp.text
+    assert "Line one\nLine two" in text
+    assert db.execute(select(Response)).scalars().first() is None

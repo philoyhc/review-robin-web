@@ -35,7 +35,9 @@ class SessionStateConflict(LifecycleError):
     have always answered with."""
 
 
-def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
+def lock_session(
+    db: Session, session: ReviewSession, *, shared: bool = False
+) -> ReviewSession:
     """``SELECT … FOR NO KEY UPDATE`` the session row + return it,
     refreshed from the database.
 
@@ -56,6 +58,13 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
 
     Taking it again in the same transaction is cheap and re-reads the
     row; the lock is held until the transaction commits or rolls back.
+
+    ``shared`` takes ``FOR SHARE`` instead: it still holds off every
+    exclusive locker (the transitions, the scheduled passes) until the
+    caller commits, but two shared lockers do not wait on each other.
+    Only for a caller that never writes the session row nor locks it
+    exclusively later in the same transaction, which would deadlock
+    against another shared holder doing the same.
     """
     # Flush first: ``populate_existing`` overwrites the object with the
     # row, and the app's sessions do not autoflush, so an unflushed edit
@@ -64,7 +73,7 @@ def lock_session(db: Session, session: ReviewSession) -> ReviewSession:
     return db.execute(
         select(ReviewSession)
         .where(ReviewSession.id == session.id)
-        .with_for_update(key_share=True)
+        .with_for_update(read=shared, key_share=not shared)
         .execution_options(populate_existing=True)
     ).scalar_one()
 
@@ -76,12 +85,20 @@ def require_state(
     *,
     code: str,
     message: str,
+    shared: bool = False,
 ) -> ReviewSession:
     """Lock and re-read the session, then refuse unless ``allowed``.
 
     ``message`` may name ``{status}``, filled from the re-read row so
-    the refusal reports the state that actually refused it."""
-    locked = lock_session(db, session)
+    the refusal reports the state that actually refused it. ``shared``
+    is :func:`lock_session`'s."""
+    # The two-argument call for the default lock, which every other
+    # caller and its test spies use.
+    locked = (
+        lock_session(db, session, shared=True)
+        if shared
+        else lock_session(db, session)
+    )
     if not allowed(locked):
         raise SessionStateConflict(
             message.format(status=locked.status), code=code

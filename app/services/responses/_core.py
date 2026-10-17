@@ -635,6 +635,8 @@ def save_draft(
     range and step) are skipped — only valid upserts are persisted. The caller
     surfaces the error list so the offending fields can be re-rendered
     with the typed value still in the box."""
+    # Decided under the session-row lock, held to the commit (findings L3).
+    lifecycle.require_accepting_responses(db, review_session)
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
     group_instrument_ids = _group_instrument_ids(
@@ -751,6 +753,8 @@ def submit(
     elsewhere if the operator has already loosened a ``required``
     constraint) before the submit can land.
     """
+    # Decided under the session-row lock, held to the commit (findings L3).
+    lifecycle.require_accepting_responses(db, review_session)
     assignments = _reviewer_assignments(db, reviewer, review_session.id)
     assignment_index = {a.id: a for a in assignments}
     group_instrument_ids = _group_instrument_ids(
@@ -925,14 +929,16 @@ def recall(
 
     Nulls ``submitted_at`` on every Response row belonging to the
     reviewer's assignments in this session — saved values are
-    preserved. Pre-conditions are checked by the route layer
-    (session must be ``ready``); this service trusts the caller.
+    preserved. The route refuses early; this service re-checks under
+    the session lock (``ready``, before the deadline).
 
     Idempotent: zero rows-already-submitted is a no-op that
     still writes an audit event so the operator can see the
     intent in the log. Driver of the reviewer summary page's
     "Recall my submission" button.
     """
+    # Decided under the session-row lock, held to the commit (findings L3).
+    lifecycle.require_accepting_responses(db, review_session)
     assignments = _with_excluded_group_members(db, reviewer, review_session.id)
     recalled_count = 0
     for assignment in assignments:
@@ -976,6 +982,8 @@ def clear_all(
     """Delete every Response row for this reviewer's assignments in the
     session, including an excluded group member's copy of the group's
     answers (``_excluded_group_members``)."""
+    # Decided under the session-row lock, held to the commit (findings L3).
+    lifecycle.require_accepting_responses(db, review_session)
     assignments = _with_excluded_group_members(db, reviewer, review_session.id)
     deleted = 0
     for assignment in assignments:

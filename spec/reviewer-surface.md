@@ -883,7 +883,10 @@ three** of the following hold:
    deadline counts as open).
 
 Failing any of those three, or having no included assignment, refuses
-a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). The
+a Save / Submit / Clear POST with **HTTP 403** (`_write_refusal`). A
+session closed or reverted after that check, before the service's
+locked re-check (`spec/lifecycle.md` §8.3), is refused the same way,
+its cause read afresh once the write is rolled back. The
 refusal renders the page again rather than the standalone error page,
 which used to throw away what the reviewer typed (participant audit P3):
 the page the reviewer was on (page 1 for Clear, and for a page number
@@ -1310,7 +1313,8 @@ dashboard's Session column once Reviewer Status is
   passed (`can_recall`): past either, the form it would land on is
   read-only and Submit is refused, so a recall would strand the
   reviewer at "Saved but not submitted" (participant audit M1). The
-  route refuses the same states with a 403. Recall rolls the
+  route refuses the same states with a 403, and so does a Recall the
+  service refuses after the session closed under it. Recall rolls the
   reviewer's submission back to draft (nulls `submitted_at`) and 303s
   to the surface so they can keep editing. Handled by `reviewer_recall` in
   `routes_reviewer/_surface/_routes.py`.
