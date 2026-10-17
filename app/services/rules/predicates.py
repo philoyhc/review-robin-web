@@ -4,11 +4,20 @@ One function per operator from ``spec/rule_based_assignment.md`` §4.4.
 The dispatch table at the bottom is what
 ``app/services/rules/engine.py`` calls into.
 
-Empty / missing values follow spec §9: a predicate referencing a
-missing field returns ``False`` unless the operator is
-``is_empty``. ``app/services/rules/fields.py::get_field_value``
-normalises empty strings to ``None`` so this module's operators see a
-uniform notion of "missing".
+Every field reads as a *set* of values (``fields.get_field_values``): at
+most one for a roster or per-pair tag, any number for a person-level
+pair tag (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``). An empty
+string is no value. The operators over that set (author, 2026-10-17;
+``guide/assignment_rule_clarify.md`` Item 2):
+
+- ``equals`` / ``in`` / ``matches`` pass when some value matches, so a
+  field with no value fails them; ``not_equals`` / ``not_in`` are their
+  negation, so a field with no value **passes**.
+- ``same_as`` passes when the two sides share a value, or both have
+  none; ``different_from`` is its negation, so a value against no
+  value passes and no value against no value fails.
+- ``is_empty`` / ``is_not_empty`` test for no value / some value.
+- ``not_matches`` keeps failing a field with no value.
 
 All string comparisons trim leading/trailing whitespace and lowercase
 both sides by default; a predicate may opt in to case-sensitive
@@ -21,7 +30,7 @@ import re
 from typing import Callable
 
 from app.schemas.rules import Predicate
-from app.services.rules.fields import get_field_value
+from app.services.rules.fields import FIELD_MAP, get_field_values
 
 
 def _normalise(value: object | None, *, case_sensitive: bool) -> str | None:
@@ -33,32 +42,19 @@ def _normalise(value: object | None, *, case_sensitive: bool) -> str | None:
     return text if case_sensitive else text.lower()
 
 
-def _resolve_operand(
-    operand: object,
-    *,
-    reviewer: object,
-    reviewee: object,
-) -> object | None:
-    """``same_as`` / ``different_from`` operands are field references on
-    the opposite side. Other operators carry literal values."""
+def _values(
+    dotted: str, predicate: Predicate, *, reviewer: object, reviewee: object
+) -> frozenset[str]:
+    """The field's values, normalised, empties dropped."""
+    normalised = (
+        _normalise(raw, case_sensitive=predicate.case_sensitive)
+        for raw in get_field_values(dotted, reviewer=reviewer, reviewee=reviewee)
+    )
+    return frozenset(v for v in normalised if v is not None)
 
-    if isinstance(operand, str) and operand in {
-        "reviewer.email",
-        "reviewer.tag1",
-        "reviewer.tag2",
-        "reviewer.tag3",
-        "reviewee.email",
-        "reviewee.tag1",
-        "reviewee.tag2",
-        "reviewee.tag3",
-        "pair_context.tag1",
-        "pair_context.tag2",
-        "pair_context.tag3",
-    }:
-        return get_field_value(
-            operand, reviewer=reviewer, reviewee=reviewee
-        )
-    return operand
+
+def _lhs(predicate: Predicate, *, reviewer: object, reviewee: object) -> frozenset[str]:
+    return _values(predicate.field, predicate, reviewer=reviewer, reviewee=reviewee)
 
 
 # ---------------------------------------------------------------------------
@@ -67,121 +63,84 @@ def _resolve_operand(
 
 
 def _equals(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
-    lhs = _normalise(
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee),
-        case_sensitive=predicate.case_sensitive,
-    )
-    if lhs is None:
-        return False
-    rhs_raw = _resolve_operand(
-        predicate.operand, reviewer=reviewer, reviewee=reviewee
-    )
-    rhs = _normalise(rhs_raw, case_sensitive=predicate.case_sensitive)
+    rhs = _normalise(predicate.operand, case_sensitive=predicate.case_sensitive)
     if rhs is None:
         return False
-    return lhs == rhs
+    return rhs in _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
 def _not_equals(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    lhs = _normalise(
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee),
-        case_sensitive=predicate.case_sensitive,
-    )
-    if lhs is None:
-        return False
-    rhs_raw = _resolve_operand(
-        predicate.operand, reviewer=reviewer, reviewee=reviewee
-    )
-    rhs = _normalise(rhs_raw, case_sensitive=predicate.case_sensitive)
-    if rhs is None:
-        return False
-    return lhs != rhs
+    return not _equals(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
 def _in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
-    lhs = _normalise(
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee),
-        case_sensitive=predicate.case_sensitive,
-    )
-    if lhs is None:
-        return False
-    members = [
+    members = {
         _normalise(item, case_sensitive=predicate.case_sensitive)
         for item in (predicate.operand or [])
-    ]
-    return lhs in members
+    }
+    members.discard(None)
+    return bool(_lhs(predicate, reviewer=reviewer, reviewee=reviewee) & members)
 
 
 def _not_in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
-    lhs = _normalise(
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee),
-        case_sensitive=predicate.case_sensitive,
-    )
-    if lhs is None:
-        return False
-    members = [
-        _normalise(item, case_sensitive=predicate.case_sensitive)
-        for item in (predicate.operand or [])
-    ]
-    return lhs not in members
+    return not _in(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
 def _matches(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    lhs = _normalise(
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee),
-        case_sensitive=predicate.case_sensitive,
-    )
-    if lhs is None:
-        return False
     flags = 0 if predicate.case_sensitive else re.IGNORECASE
-    return re.search(str(predicate.operand), lhs, flags=flags) is not None
+    return any(
+        re.search(str(predicate.operand), value, flags=flags) is not None
+        for value in _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
+    )
 
 
 def _not_matches(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    lhs = _normalise(
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee),
-        case_sensitive=predicate.case_sensitive,
-    )
-    if lhs is None:
+    values = _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
+    if not values:
         return False
     flags = 0 if predicate.case_sensitive else re.IGNORECASE
-    return re.search(str(predicate.operand), lhs, flags=flags) is None
+    return all(
+        re.search(str(predicate.operand), value, flags=flags) is None
+        for value in values
+    )
 
 
 def _is_empty(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    return (
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee)
-        is None
-    )
+    return not _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
 def _is_not_empty(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    return (
-        get_field_value(predicate.field, reviewer=reviewer, reviewee=reviewee)
-        is not None
-    )
+    return bool(_lhs(predicate, reviewer=reviewer, reviewee=reviewee))
 
 
 def _same_as(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    return _equals(predicate, reviewer=reviewer, reviewee=reviewee)
+    operand = str(predicate.operand)
+    if operand not in FIELD_MAP:
+        # The schema admits only field operands here; defensive only.
+        return False
+    lhs = _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
+    rhs = _values(operand, predicate, reviewer=reviewer, reviewee=reviewee)
+    if not lhs and not rhs:
+        return True
+    return bool(lhs & rhs)
 
 
 def _different_from(
     predicate: Predicate, *, reviewer: object, reviewee: object
 ) -> bool:
-    return _not_equals(predicate, reviewer=reviewer, reviewee=reviewee)
+    return not _same_as(predicate, reviewer=reviewer, reviewee=reviewee)
 
 
 _DISPATCH: dict[

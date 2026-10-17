@@ -159,7 +159,9 @@ A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensiti
 |---|---|---|
 | `reviewer.tagN` | `Reviewer.tag_N` | `tag1 / tag2 / tag3` |
 | `reviewee.tagN` | `Reviewee.tag_N` | `tag1 / tag2 / tag3` |
-| `pair_context.tagN` | `Relationship.tag_N` | `tag1 / tag2 / tag3` |
+| `pair_context.tagN` | `Relationship.tag_N` of the pair being judged | `tag1 / tag2 / tag3` |
+| `reviewer.pair_tagN` | `Relationship.tag_N` of every active relationship the reviewer is in | `tag1 / tag2 / tag3` |
+| `reviewee.pair_tagN` | `Relationship.tag_N` of every active relationship the reviewee is in | `tag1 / tag2 / tag3` |
 | `reviewer.email` | `Reviewer.email` | — |
 | `reviewee.email` | `Reviewee.email_or_identifier` | — |
 
@@ -194,6 +196,19 @@ tag" without listing every value in the world.
 
 `case_sensitive=False` is the default; the engine lowercases
 both sides before comparison.
+
+**Values and empty values** (author, 2026-10-17). A field holds a set
+of values: at most one for a roster tag, an email or `pair_context.tagN`,
+any number for a person's pair tag. An empty string is no value, and
+an inactive or missing relationship gives none. Over that set:
+
+- `equals` / `in` / `matches` pass when some value matches, so no value
+  fails them; `not_equals` / `not_in` are their negation, so **no value
+  passes `IS NOT`**. `not_matches` fails no value.
+- `same_as` passes when the two sides share a value, or when both have
+  none; `different_from` is its negation. So `Friend` against no value
+  passes `IS DIFFERENT FROM`, and no value against no value fails it.
+- `is_empty` / `is_not_empty` pass on no value / some value.
 
 ### Combinator semantics
 

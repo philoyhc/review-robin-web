@@ -264,4 +264,13 @@ the reviewer surface.
 
 ### Status
 
-Opened 2026-10-17 from the author's rulings. Unbuilt.
+Opened 2026-10-17 from the author's rulings. Item base for the
+cumulative diff read: `cc7e1ac0` (main before rung 1).
+
+- **Rung 1 (engine), 2026-10-17.** Predicates read every field as a set
+  of values; the empty-value rule applies to every tag; the six
+  person-level fields join `FIELD_MAP` under their own sides
+  (`reviewer_pairs` / `reviewee_pairs`), so the staleness stamp, which
+  reads roster sides only, is unchanged. `spec/assignments.md` gains the
+  fields and the rule in this rung, not at close, since the behavior
+  ships here.
