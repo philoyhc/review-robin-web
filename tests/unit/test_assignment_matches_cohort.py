@@ -389,3 +389,19 @@ def test_cross_roster_operand_tag_returns_false_for_now(
     assert not assignment_matches_cohort(
         rule_set, observer=obs, reviewer=r, reviewee=e
     )
+
+
+def test_a_padded_value_matches_like_the_tag_it_names(db: Session) -> None:
+    """Both sides strip, as the assignment engine's do: a value typed
+    with stray spaces still matches the tag."""
+    sess = _session(db, code="amr-padded-value")
+    obs = _observer(db, sess)
+    r = _reviewer(db, sess, tag_1="math")
+    e = _reviewee(db, sess)
+    rule_set = {
+        "combinator": "AND",
+        "rules": [
+            {"field": "reviewer.tag1", "op": "IS", "operand_tag": "", "operand_value": " math "}
+        ],
+    }
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e)

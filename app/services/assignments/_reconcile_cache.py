@@ -66,7 +66,11 @@ from app.services.rules.fields import FIELD_MAP
 #: row stamped by an older build reads as a miss instead of colliding
 #: with a value computed a different way. It is the reason the column
 #: is ``String(80)`` and not the ``String(64)`` a bare digest needs.
-STAMP_VERSION = "v1"
+#: Bump it too when what a stored rule *means* changes with every input
+#: the same — ``v2`` (2026-10-17, ``guide/assignment_rule_clarify.md``
+#: Item 2) for the empty-value rule, so no verdict cached under the old
+#: reading survives.
+STAMP_VERSION = "v2"
 
 
 @dataclass(frozen=True)

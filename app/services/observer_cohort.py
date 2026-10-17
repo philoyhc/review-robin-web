@@ -182,7 +182,7 @@ def _rule_matches_row(
         return left_cmp != right_cmp
 
     left_cmp = (left or "").strip().lower()
-    value_cmp = operand_value.lower()
+    value_cmp = operand_value.strip().lower()
     if op == "IS":
         return left_cmp == value_cmp
     if op == "IS NOT":

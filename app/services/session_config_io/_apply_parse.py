@@ -20,6 +20,7 @@ from ._apply_shared import (
     _ParseError,
 )
 from ._rows import Row
+from app.services.instruments._band1 import keeps_pairs_by_pair_tag
 from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
@@ -661,6 +662,32 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     field=f"instruments[{n}].rule_set_name",
                     message=(
                         f"no such RuleSet on this session: "
+                        f"{instrument.rule_set_name!r}"
+                    ),
+                )
+            )
+    # A Link 2 pair-tag IS keeps pairs one by one, so a grouped
+    # instrument cannot use it — the refusal Band 1's Save makes
+    # (``guide/assignment_rule_clarify.md`` Item 2), so an import
+    # cannot store the combination either.
+    rules_by_name = {
+        spec.name: spec.rules_json or []
+        for spec in plan.session_rule_sets.values()
+        if spec.name
+    }
+    for n, instrument in sorted(plan.instruments.items()):
+        if (
+            instrument.group_kind
+            and instrument.rule_set_name
+            and keeps_pairs_by_pair_tag(rules_by_name.get(instrument.rule_set_name, []))
+        ):
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"instruments[{n}].group_kind",
+                    message=(
+                        "a group instrument can't use a rule set whose Link 2 "
+                        "keeps pairs by a relationship tag (IS): "
                         f"{instrument.rule_set_name!r}"
                     ),
                 )

@@ -285,3 +285,21 @@ cumulative diff read: `cc7e1ac0` (main before rung 1).
 - **Rung 3 (observer rule), 2026-10-17.** The cohort rule's cross-
   attribute operators treat no value as a value; `IS NOT` already passed
   one. Last build rung: the cumulative diff read covers `cc7e1ac0..` here.
+- **Cumulative read (`diff-reviewer`, `cc7e1ac0..`), 2026-10-17.** One
+  read for the item; six findings, all acted on in #3090:
+  - per-pair predicate cost rose 29–59% at 1000 × 1000 (one rule, the
+    reader's benchmark). Values now read as tuples with a single-value
+    fast path and one field parse, back to parity for `IS` and +7–18%
+    for `IS THE SAME AS`;
+  - rung 1's "stamp unchanged" held for its inputs, not its verdicts:
+    `STAMP_VERSION` goes to `v2`, so no cached verdict made under the
+    old empty-value reading survives;
+  - a Settings import could store Group beside a Link 2 pair-tag `IS`;
+    it now refuses the combination as Save does;
+  - `spec/instruments.md` now names the legacy Link 2 field rewrite
+    (pair → reviewee) and the Group `IS NOT` per-member ruling, the
+    latter pinned through Generate on real relationship rows
+    (`tests/integration/test_pair_tags_generate.py`);
+  - the cohort rule strips the typed value as well as the tag.
+  The `spec-writer` verify on rung 3 found the cohort paragraph silent on
+  `IS` / `CONTAINS` on no value; stated and pinned.

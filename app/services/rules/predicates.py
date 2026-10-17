@@ -44,16 +44,25 @@ def _normalise(value: object | None, *, case_sensitive: bool) -> str | None:
 
 def _values(
     dotted: str, predicate: Predicate, *, reviewer: object, reviewee: object
-) -> frozenset[str]:
-    """The field's values, normalised, empties dropped."""
-    normalised = (
-        _normalise(raw, case_sensitive=predicate.case_sensitive)
-        for raw in get_field_values(dotted, reviewer=reviewer, reviewee=reviewee)
-    )
-    return frozenset(v for v in normalised if v is not None)
+) -> tuple[str, ...]:
+    """The field's values, normalised, empties dropped.
+
+    A tuple, not a set: this runs once per pair per rule, and nearly
+    every field has at most one value, so the single-value path stays
+    allocation-light at 1000 × 1000 rosters.
+    """
+    raws = get_field_values(dotted, reviewer=reviewer, reviewee=reviewee)
+    if not raws:
+        return ()
+    case_sensitive = predicate.case_sensitive
+    if len(raws) == 1:
+        value = _normalise(raws[0], case_sensitive=case_sensitive)
+        return () if value is None else (value,)
+    normalised = (_normalise(raw, case_sensitive=case_sensitive) for raw in raws)
+    return tuple(v for v in normalised if v is not None)
 
 
-def _lhs(predicate: Predicate, *, reviewer: object, reviewee: object) -> frozenset[str]:
+def _lhs(predicate: Predicate, *, reviewer: object, reviewee: object) -> tuple[str, ...]:
     return _values(predicate.field, predicate, reviewer=reviewer, reviewee=reviewee)
 
 
@@ -81,7 +90,7 @@ def _in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
         for item in (predicate.operand or [])
     }
     members.discard(None)
-    return bool(_lhs(predicate, reviewer=reviewer, reviewee=reviewee) & members)
+    return any(v in members for v in _lhs(predicate, reviewer=reviewer, reviewee=reviewee))
 
 
 def _not_in(predicate: Predicate, *, reviewer: object, reviewee: object) -> bool:
@@ -132,9 +141,11 @@ def _same_as(
         return False
     lhs = _lhs(predicate, reviewer=reviewer, reviewee=reviewee)
     rhs = _values(operand, predicate, reviewer=reviewer, reviewee=reviewee)
-    if not lhs and not rhs:
-        return True
-    return bool(lhs & rhs)
+    if not lhs or not rhs:
+        return not lhs and not rhs
+    if len(lhs) == 1:
+        return lhs[0] in rhs
+    return any(v in rhs for v in lhs)
 
 
 def _different_from(
