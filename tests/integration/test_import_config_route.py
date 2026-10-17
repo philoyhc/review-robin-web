@@ -56,7 +56,9 @@ def test_import_config_success_redirects_to_the_slot(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
-        data={"confirm_replace": "true"},
+        # The file replaces the Default instrument: one deletion, ticked
+        # (findings S4).
+        data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -230,7 +232,7 @@ def test_import_config_emits_audit_event(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
-        data={"confirm_replace": "true"},
+        data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -342,7 +344,11 @@ def test_a_settings_replace_needs_the_tick_and_the_response_loss_ack(
 
     response = client.post(
         url,
-        data={"confirm_replace": "true", "acknowledge_response_loss": "true"},
+        data={
+            "confirm_replace": "true",
+            "acknowledge_response_loss": "true",
+            "acknowledge_instrument_deletion": "1",
+        },
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )

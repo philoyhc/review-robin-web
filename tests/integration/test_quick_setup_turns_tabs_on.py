@@ -83,6 +83,9 @@ def _settings(observers_enabled: str) -> bytes:
     writer = csv.writer(buf)
     writer.writerow(("field", "value", "data_type"))
     writer.writerow(("session.observers_enabled", observers_enabled, "boolean"))
+    # Names the session's Default instrument, so the import keeps it
+    # rather than asking first (findings S4).
+    writer.writerow(("instruments[1].name", "Default", "string"))
     return buf.getvalue().encode()
 
 

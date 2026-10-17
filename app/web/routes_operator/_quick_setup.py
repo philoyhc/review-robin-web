@@ -57,6 +57,7 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _require_response_loss_ack,
+    acknowledged_loss,
     session_payload_error,
 )
 
@@ -403,11 +404,14 @@ class _SlotFailure:
     """Why a slot refused an upload: the ``quick_setup_reason`` token,
     plus the lines its banner lists when the file failed validation —
     a Settings CSV's errors (findings D31), a roster file's kinds of
-    problem (``views.roster_problem_details``) — and none for every
-    other reason."""
+    problem (``views.roster_problem_details``), the instruments a
+    Settings file would delete — and none for every other reason.
+    ``count`` is how many instruments that is, the value the re-offered
+    tick carries (findings S4)."""
 
     reason: str
     details: list[str] = field(default_factory=list)
+    count: int = 0
 
 
 @dataclass(frozen=True)
@@ -461,6 +465,7 @@ async def _run_quick_setup(
     acknowledge_response_loss: str | None,
     replacing: bool,
     correlation_id: str | None = None,
+    acknowledge_instrument_deletion: str | None = None,
 ) -> _SlotRefusal | None:
     """Check every attached file, then save every one in one unit.
 
@@ -471,6 +476,11 @@ async def _run_quick_setup(
     (author's rule, 2026-10-12); one refused file leaves the session as
     it was. ``replacing`` is ``False`` only on Create, whose Settings
     slot has nothing to replace.
+
+    ``acknowledge_instrument_deletion`` is the count the re-offered
+    Settings tick carries: a Settings file that would delete instruments
+    is refused naming them unless it matches (findings S4). Create does
+    not ask, since a new session holds only its Default instrument.
 
     The saves run in the threadpool: they wait on the session row lock,
     and waiting on the event loop would stall the worker whose other
@@ -504,6 +514,11 @@ async def _run_quick_setup(
             user=user,
             staged=staged,
             correlation_id=correlation_id or request_correlation_id(),
+            acknowledged_deletions=(
+                acknowledged_loss(acknowledge_instrument_deletion)
+                if replacing
+                else None
+            ),
         )
     except _UnitRefused as exc:
         return exc.refusal
@@ -673,6 +688,7 @@ def _save_uploads(
     user: User,
     staged: list[_StagedSlot],
     correlation_id: str,
+    acknowledged_deletions: int | None = None,
 ) -> None:
     """Save every checked file in one ``unit_of_work.atomic``: the
     per-entity savers nest inside it, so nothing commits until the last
@@ -706,6 +722,7 @@ def _save_uploads(
                     review_session=review_session,
                     user=user,
                     correlation_id=correlation_id,
+                    acknowledged_deletions=acknowledged_deletions,
                 )
                 if saved:
                     populated.append(item.kind)
@@ -735,6 +752,7 @@ def _save_slot(
     review_session: ReviewSession,
     user: User,
     correlation_id: str,
+    acknowledged_deletions: int | None = None,
 ) -> int:
     """Save one checked slot; returns how many roster rows it saved
     (0 for Settings)."""
@@ -791,13 +809,28 @@ def _save_slot(
         return len(result.rows)
     else:  # settings
         lifecycle.require_editable(db, review_session)
-        result = session_config_io.apply_session_config(
-            db,
-            review_session,
-            item.rows,
-            user=user,
-            correlation_id=correlation_id,
-        )
+        try:
+            result = session_config_io.apply_session_config(
+                db,
+                review_session,
+                item.rows,
+                user=user,
+                correlation_id=correlation_id,
+                acknowledged_deletions=acknowledged_deletions,
+            )
+        except session_config_io.InstrumentsWouldDelete as exc:
+            # Refuse, then re-offer (findings S4): the banner names the
+            # instruments, and its tick sends their count back.
+            raise _UnitRefused(
+                _SlotRefusal(
+                    "settings",
+                    _SlotFailure(
+                        "deletes_instruments",
+                        views.deleted_instrument_details(exc.labels),
+                        count=exc.count,
+                    ),
+                )
+            ) from exc
         if not result.ok:
             raise _UnitRefused(
                 _SlotRefusal(
@@ -820,7 +853,10 @@ def _slot_redirect(
         url = f"{home_url}#quick-setup-{kind}"
     else:
         query = _quick_setup_error_query(
-            refusal.kind, refusal.failure.reason, refusal.failure.details
+            refusal.kind,
+            refusal.failure.reason,
+            refusal.failure.details,
+            count=refusal.failure.count,
         )
         url = f"{home_url}?{query}#quick-setup-{refusal.kind}"
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
@@ -835,6 +871,7 @@ async def _single_slot(
     db: Session,
     confirm_replace: str | None,
     acknowledge_response_loss: str | None = None,
+    acknowledge_instrument_deletion: str | None = None,
 ) -> RedirectResponse:
     """A per-slot route: the shared pipeline with one file."""
 
@@ -846,6 +883,7 @@ async def _single_slot(
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
         replacing=True,
+        acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
     return _slot_redirect(review_session, kind, refusal)
 
@@ -964,6 +1002,7 @@ async def quick_setup_submit_all(
     settings_file: UploadFile | None = File(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
+    acknowledge_instrument_deletion: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -992,6 +1031,7 @@ async def quick_setup_submit_all(
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
         replacing=True,
+        acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
     if refusal is not None or uploads:
         return _slot_redirect(
@@ -1017,6 +1057,7 @@ async def import_session_config(
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
+    acknowledge_instrument_deletion: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1030,7 +1071,9 @@ async def import_session_config(
     explicitly so the rebuild does not trip the ``responses`` foreign
     key. It therefore needs ``confirm_replace=true``, and
     ``acknowledge_response_loss=true`` when responses exist (findings
-    C3).
+    C3). A file that would delete instruments it does not name is
+    refused naming them until ``acknowledge_instrument_deletion``
+    carries their count (findings S4).
 
     Reachable from the Quick Setup Settings slot and as a direct POST
     endpoint, with the redirect shape the other slots use."""
@@ -1043,17 +1086,25 @@ async def import_session_config(
         db=db,
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
+        acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
 
 
 def _quick_setup_error_query(
-    kind: str, reason: str, details: list[str] | tuple[str, ...] = ()
+    kind: str,
+    reason: str,
+    details: list[str] | tuple[str, ...] = (),
+    *,
+    count: int = 0,
 ) -> str:
     """The ``?quick_setup_error=…`` query a failed slot redirects with;
-    each detail line rides as a ``quick_setup_detail`` value."""
+    each detail line rides as a ``quick_setup_detail`` value, and the
+    count a re-offered tick carries as ``quick_setup_count``."""
 
     pairs = [("quick_setup_error", kind), ("quick_setup_reason", reason)]
     pairs += [("quick_setup_detail", line) for line in details]
+    if count:
+        pairs.append(("quick_setup_count", str(count)))
     return urlencode(pairs)
 
 

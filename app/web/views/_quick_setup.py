@@ -92,7 +92,15 @@ class QuickSetupSlot:
     """The lines listed under ``error_message`` for a rejected file, one
     each: a Settings CSV's validation errors (findings D31), or a roster
     file's kinds of problem with no row named
-    (``roster_problem_details``; the roster's Setup page shows rows)."""
+    (``roster_problem_details``; the roster's Setup page shows rows), or
+    the instruments a Settings file would delete."""
+
+    deletion_count: int = 0
+    """How many instruments a refused Settings file would delete, when
+    that is why it was refused (findings S4): the banner then carries a
+    ``Yes, delete`` tick whose value is this count, which the next
+    submit sends as ``acknowledge_instrument_deletion``. ``0`` renders
+    no tick."""
 
 
 @dataclass(frozen=True)
@@ -157,6 +165,7 @@ def build_quick_setup_context(
     error_kind: str | None = None,
     error_reason: str | None = None,
     error_details: tuple[str, ...] = (),
+    error_count: int = 0,
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
 
@@ -164,7 +173,8 @@ def build_quick_setup_context(
     ``?quick_setup_error=...&quick_setup_reason=...`` redirect flag set
     by the slot's POST handler on rejection. The pair drives that
     slot's ``banner-error``, rendered full-width above the slots.
-    Other slots are unaffected.
+    Other slots are unaffected. ``error_count`` is the instrument count
+    a ``deletes_instruments`` refusal re-offers its tick with.
     """
 
     sid = review_session.id
@@ -203,12 +213,24 @@ def build_quick_setup_context(
     cancel_url_for = lambda key: (  # noqa: E731
         f"/operator/sessions/{sid}#quick-setup-{key}"
     )
+    # The re-offered tick renders only for the refusal that asks for it,
+    # with a count to carry; the card is never live without one.
+    _deletion_count = (
+        error_count
+        if error_kind == "settings"
+        and error_reason == "deletes_instruments"
+        and error_count > 0
+        else 0
+    )
 
     def _error_for(slot_key: str) -> str | None:
         if error_kind != slot_key:
             return None
         return _quick_setup_error_message(
-            slot_key, error_reason, has_details=bool(error_details)
+            slot_key,
+            error_reason,
+            has_details=bool(error_details),
+            count=_deletion_count,
         )
 
     def _details_for(slot_key: str) -> tuple[str, ...]:
@@ -289,6 +311,7 @@ def build_quick_setup_context(
             error_message=_error_for("settings"),
             error_details=_details_for("settings"),
             cancel_url=cancel_url_for("settings"),
+            deletion_count=_deletion_count,
         )
     )
 
@@ -372,6 +395,14 @@ def roster_problem_details(issues: list) -> list[str]:
     return _capped(problem_kinds(issues))
 
 
+def deleted_instrument_details(labels: list[str]) -> list[str]:
+    """The instruments a Settings file would delete, one label a line,
+    capped as the other lists are (findings S4); the banner's lead
+    sentence carries the full count."""
+
+    return _capped(labels)
+
+
 def _capped(all_lines: list[str]) -> list[str]:
     """The lines the redirect carries: at most
     ``SETTINGS_ERROR_DETAIL_LIMIT``, each clipped, within the byte
@@ -395,7 +426,10 @@ def _capped(all_lines: list[str]) -> list[str]:
 
 
 def _quick_setup_error_message(
-    slot_key: str, reason: str | None, has_details: bool = False
+    slot_key: str,
+    reason: str | None,
+    has_details: bool = False,
+    count: int = 0,
 ) -> str:
     """Render the banner-error copy for a slot's last failed submit.
 
@@ -412,6 +446,9 @@ def _quick_setup_error_message(
     - ``"needs_confirm"`` — the form was submitted without ticking
       the card-level replacement-confirmation checkbox at the top
       of Quick Setup.
+    - ``"deletes_instruments"`` — a valid Settings file would delete
+      ``count`` instruments it does not name (findings S4). The banner
+      lists them under this sentence and re-offers the tick.
     """
 
     label_for = {
@@ -431,6 +468,13 @@ def _quick_setup_error_message(
         return (
             "Tick the replacement-confirmation box just above "
             "Submit, then submit again."
+        )
+    if reason == "deletes_instruments" and slot_key == "settings" and count:
+        one = count == 1
+        return (
+            f"Nothing was imported. This settings file deletes {count} "
+            f"instrument{'' if one else 's'} it does not name, with "
+            f"{'its' if one else 'their'} fields:"
         )
     # Default / parse-error path. The lines are the kinds of problem
     # (``roster_problem_details``), as the Setup pages' upload cards

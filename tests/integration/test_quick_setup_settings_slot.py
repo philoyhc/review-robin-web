@@ -119,7 +119,8 @@ def test_import_config_route_via_quick_setup_slot(
     )
     response = client.post(
         f"/operator/sessions/{review_session.id}/import-config",
-        data={"confirm_replace": "true"},
+        # Replaces the Default instrument: one deletion, ticked (S4).
+        data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
@@ -160,7 +161,7 @@ def test_submit_all_runs_settings_after_rosters_and_relationships(
 
     response = client.post(
         f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
-        data={"confirm_replace": "true"},
+        data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={
             "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
             "reviewees_file": ("e.csv", REVIEWEE_CSV, "text/csv"),

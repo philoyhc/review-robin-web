@@ -56,6 +56,7 @@ from app.web.routes_operator._shared import (
     _redirect_url,
     _require_not_ready,
     _templates,
+    acknowledged_loss,
     observe_scheduled_events_on_load,
     parse_session_deadline,
     session_payload_error,
@@ -107,6 +108,7 @@ def session_detail(
     quick_setup_error: str | None = Query(default=None),
     quick_setup_reason: str | None = Query(default=None),
     quick_setup_detail: list[str] = Query(default=[]),
+    quick_setup_count: str | None = Query(default=None),
     super_status: str | None = Query(default=None),
     super_button: str | None = Query(default=None),
     super_step: str | None = Query(default=None),
@@ -152,6 +154,7 @@ def session_detail(
                 error_kind=quick_setup_error,
                 error_reason=quick_setup_reason,
                 error_details=tuple(quick_setup_detail),
+                error_count=acknowledged_loss(quick_setup_count),
             ),
             "session_timezone_label": date_formatting.gmt_offset_zone_label(
                 session_tz

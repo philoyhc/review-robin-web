@@ -548,6 +548,20 @@ the round-trip notes below.
    deletes the rows the CSV omits (§4 item 7). A rule set is per
    instrument, so a second instrument naming one gets its own copy
    (`spec/instruments.md`, `Delete` semantics).
+   **Instruments stay replace-all, and the import warns first**
+   (findings S4, author's ruling). An instrument survives
+   only as a file row carrying its `name`, one row each, so a file
+   with no instrument rows deletes them all. Between the phases, a
+   caller that passes `acknowledged_deletions` gets
+   `InstrumentsWouldDelete` naming the instruments the file does not
+   bring back (`instruments_deleted_by`, by label: `short_label`, else
+   `Instrument_{N}`) unless it equals their count; nothing is applied.
+   A file that deletes no instrument never asks. Quick Setup on an
+   existing session asks: the Settings banner lists them and offers a
+   `Yes, delete` tick carrying the count as
+   `acknowledge_instrument_deletion`, and the next submit with the file
+   chosen again applies it (`spec/quick_setup_card_spec.md`, "Result
+   reporting"). Create and Rehydrate pass nothing and never ask.
    Atomic transaction. On any apply error, raise; the caller's
    transaction handler rolls back.
 
