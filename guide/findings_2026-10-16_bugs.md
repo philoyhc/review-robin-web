@@ -24,7 +24,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 
 ## 1. High
 
-- **R1** — **Ruled 2026-10-17**: saving a changed value after Submit clears that row's `submitted_at`, so the reviewer submits again, as a new answer already does. **A Save after Submit changes a submitted answer and keeps its
+- **R1** — **Ruled 2026-10-17**: saving a changed value after Submit clears that row's `submitted_at`, so the reviewer submits again, as a new answer already does; blanking a submitted answer, which deletes its row, clears the stamps on that assignment's other rows (Codex on #3112). **A Save after Submit changes a submitted answer and keeps its
   `submitted_at`**, so the edited value is released as submitted with no
   resubmit (`app/services/responses/_core.py:313`). `spec/reviewer-surface.md`
   "Persistence semantics" says Save never touches `submitted_at`, and the code
@@ -136,7 +136,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`routes_operator/_lobby.py:343-372`, `session_clone.py:396-404`).
   `spec/permissions.md` §3 lists clone as a deliberate relaxation.
   *Reproduced.* Author: gate it on ownership, or at least audit the source.
-- **E3** — **Ruled 2026-10-17**: store the toggle per instrument: a new instrument column, written by the Self review toggle and read by Prepare for kept and inserted self-review rows, carried by the Settings CSV and Duplicate; `self_reviews_active` only seeds a new instrument. A majority vote over the rows, tried in #3108, could not recover it. The next Prepare turns a per-instrument self-review "off" back on:
+- **E3** — **Ruled 2026-10-17**: store the toggle per instrument: a new instrument column, written by the Self review toggle and read by Prepare for kept and inserted self-review rows, carried by the Settings CSV, Duplicate and Replicate (Codex on #3112); `self_reviews_active` only seeds a new instrument. A majority vote over the rows, tried in #3108, could not recover it. The next Prepare turns a per-instrument self-review "off" back on:
   `replace_assignments` resets `include` on kept self-review rows
   (`_generate.py:582-586`), and any roster edit sends the session back
   through Prepare. `spec/assignments.md:406`, `:443`. *Reproduced.* Code.
@@ -201,7 +201,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**P4**~~ — **Done in #3106**: ids typed as text go through `app.services.text.parse_id`, ASCII digits only (`tests/integration/test_bad_input_refused.py`). Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
   (`_setup_observers.py:722`, `_band2.py:213`, `:396`);
   `app/web/return_to.py` already documents the trap. Code.
-- **P5** — **Ruled 2026-10-17**: honor the stated priority and fall back to the principal id: when the email finds no account, `find_user` looks one up by the Entra object id and updates its stored email. Tried in #3108 without the fallback, it would have moved such users to a fresh row (Codex). `app/auth/identity.py` `_claim` returns the first claim in token
+- **P5** — **Ruled 2026-10-17**: honor the stated priority and match the Entra object id first: a row holding the principal id wins and takes the new email when no other row has it, so a pre-seeded invite for the new email cannot strand the original account (Codex on #3112); otherwise the email matches as today and records the principal id on the row. Tried in #3108 without the fallback, it would have moved such users to a fresh row (Codex). `app/auth/identity.py` `_claim` returns the first claim in token
   order, not the stated priority, so `preferred_username` can win over
   `emailaddress` (`:45-56`, `:76-81`). Fails closed. Code.
 - ~~**E4**~~ — **Done in #3086**: a rule or boundary stored with a tag the card no longer offers keeps its option (`data-new-model-stored-only`), so a Save keeps it, and `+` adds a cell without it (`spec/instruments.md`, Band 1; `tests/integration/test_band1_filled_empty.py`). **A Band 1 rule on a tag column now empty has no `<option>`, so the
