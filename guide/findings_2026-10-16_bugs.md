@@ -24,7 +24,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 
 ## 1. High
 
-- **R1** — **A Save after Submit changes a submitted answer and keeps its
+- **R1** — **Ruled 2026-10-17**: saving a changed value after Submit clears that row's `submitted_at`, so the reviewer submits again, as a new answer already does. **A Save after Submit changes a submitted answer and keeps its
   `submitted_at`**, so the edited value is released as submitted with no
   resubmit (`app/services/responses/_core.py:313`). `spec/reviewer-surface.md`
   "Persistence semantics" says Save never touches `submitted_at`, and the code
@@ -91,7 +91,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**R5**~~ — **Done in #3110**: the reviewer's `summary.csv` names a group by the members that reviewer has an included row for, as the surface does (`_group_export_index(reviewer_id=)`; `tests/unit/test_responses_extract.py`). The reviewer `summary.csv` group name lists members the reviewer is
   not assigned, excluded ones included (`responses_extract.py:150-170`).
   *Reproduced.* Code.
-- **R6** — `Response.saved_at` never updates and `version` never increments
+- **R6** — **Ruled 2026-10-17**: `saved_at` moves on every changed save; `version`, which nothing reads, is retired with a migration. `Response.saved_at` never updates and `version` never increments
   (`app/db/models/response.py:32-36`). *Reproduced.* Author: maintain them or
   retire them.
 - ~~**L2**~~ — **Done in #3109**: `parse_local_datetime` refuses a moment within a day of `datetime`'s range, so Create, `/config` and the lobby edit give the box's usual refusal on End, Start and both Release boxes, and the Settings CSV import refuses its schedule datetimes the same way; a stored edge instant renders unconverted, labelled `UTC`, and `/config` keeps it when its box is untouched (`tests/integration/test_date_overflow_refused.py`). Durations already refused since L1. **Far-future dates and durations answer 500 (`OverflowError`) on
@@ -102,7 +102,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   session lock, so a write can land after Close or Revert on Postgres
   (`_surface/_context.py:126-158`). `spec/lifecycle.md` §8.3. *Code reading;*
   the race needs Postgres. Code.
-- **L4** — Scheduled events fire only from Session Home
+- **L4** — **Ruled 2026-10-17**: add the callers: the Operations pages and the lobby run the scheduled-event pass on load, as `spec/lifecycle.md` §8.3 says, until the Azure scheduler replaces all three. Scheduled events fire only from Session Home
   (`_session_home.py:124`); `spec/lifecycle.md` §8.3 says the Operations pages
   and the lobby too. `guide/post_azure_todo_checklist.md` item 7 tracks the
   scheduler. Author: say so in the spec, or add the callers.
@@ -112,7 +112,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**S3**~~ — **Done in #3107**: phase 1 holds each `field_key` to the card's `_validate_field_key` and refuses a bad one as a row error (`spec/csv_contracts.md` §3.3; `tests/unit/test_settings_import_bug_sweep.py`). **The Settings import accepts any `field_key`; one containing `]` can
   never be answered, so a required field blocks Submit**
   (`_apply_instrument.py:116`). *Reproduced.* Code: `_validate_field_key`.
-- **S4** — A Settings file with no instrument rows deletes every instrument
+- **S4** — **Ruled 2026-10-17**: keep replace-all, and warn: the import names the instruments it will delete before applying, so a file with no instrument rows says it deletes them all. A Settings file with no instrument rows deletes every instrument
   (`_apply.py:181`), and a direct Prepare POST then creates a Default
   instrument whose Band 1 links are Not set. *Reproduced.* Author: refuse the
   file, or keep instruments it doesn't name.
@@ -130,26 +130,26 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   refuse (`app/services/users.py:283`, `:305`, batch at `:598`).
   `spec/permissions.md` §4.2 holds owners to be operators; `revoke` guards
   this, `demote` doesn't. *Reproduced.* Code.
-- **P2** — A sys-admin who doesn't own a session can POST `/clone` with
+- **P2** — **Ruled 2026-10-17**: keep the relaxation and audit on the source: Duplicate writes an event on the source session naming the actor and the copy. A sys-admin who doesn't own a session can POST `/clone` with
   `mode=all` and read the full roster through the copy, while the roster page
   itself answers 403; no event lands on the source
   (`routes_operator/_lobby.py:343-372`, `session_clone.py:396-404`).
   `spec/permissions.md` §3 lists clone as a deliberate relaxation.
   *Reproduced.* Author: gate it on ownership, or at least audit the source.
-- **E3** — **Needs a ruling** (2026-10-17): the toggle is stored nowhere but in the rows' `include`, so Prepare cannot recover it reliably; a majority vote over the rows was tried in #3108 and its reads showed reset rows outvoting untouched ones and inserted rows still seeding from `self_reviews_active`. A fix stores the toggle per instrument. The next Prepare turns a per-instrument self-review "off" back on:
+- **E3** — **Ruled 2026-10-17**: store the toggle per instrument: a new instrument column, written by the Self review toggle and read by Prepare for kept and inserted self-review rows, carried by the Settings CSV and Duplicate; `self_reviews_active` only seeds a new instrument. A majority vote over the rows, tried in #3108, could not recover it. The next Prepare turns a per-instrument self-review "off" back on:
   `replace_assignments` resets `include` on kept self-review rows
   (`_generate.py:582-586`), and any roster edit sends the session back
   through Prepare. `spec/assignments.md:406`, `:443`. *Reproduced.* Code.
 
 ## 3. Low
 
-- **R7** — The surface's status pill and the dashboard disagree on
+- **R7** — **Ruled 2026-10-17**: answers-based on both surfaces: a row with no answers is not started even when nothing is required, and an unsubmitted change after Submit shows in progress (with R1). The pill's `complete` needs answers and every required field. The surface's status pill and the dashboard disagree on
   all-optional blank rows and on a new answer after Submit
   (`_surface/_status.py:59`). Code.
 - ~~**R8**~~ — **Done in #3106 and #3110**: #3106 ignores a form key whose id is past the largest SQL integer; here, at the `name` level a self-review row of the observer download blanks the reviewee email and tags too, since they are the reviewer's, and doesn't sort on that email (`tests/integration/test_reviewer_identity_level.py`). The level covers the reviewer's columns, so a row where that person is someone else's reviewee still names them there, as `spec/participant_model.md` §4.2 has it. A 20-digit assignment id answers 500 (`_core.py:57`); and, by
   reading, the observer CSV's self-review rows expose the reviewer through the
   reviewee columns. Code.
-- **L5** — Archiving a `ready` session leaves every instrument's
+- **L5** — **Ruled 2026-10-17**: Archive clears every instrument's `accepting_responses`, like every other exit from `ready`. Archiving a `ready` session leaves every instrument's
   `accepting_responses` set, and unarchive carries it into `draft`
   (`_workflow.py:622`). That is harmless for writes, which
   `session_accepts_responses` gates on `ready`. But `spec/lifecycle.md`
@@ -163,7 +163,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`_session_home.py:483`). *Reproduced.* Code.
 - ~~**L7**~~ — **Done in #3111**: Purge rosters deletes observers and counts them in `session.rosters_purged` (`tests/integration/test_session_purge.py`). Purge rosters leaves Observers, which are personal data
   (`session_purge.py:96-170`). *Reproduced* by two reads. Code.
-- **L8** — A timezone change moves stored instants, and the spec contradicts
+- **L8** — **Ruled 2026-10-17**: the instant stays: changing the zone converts every date box's text to the new zone, on Create and on Session Home, so the stored instants don't move; `spec/session_home.md` is corrected. A timezone change moves stored instants, and the spec contradicts
   itself (`spec/settings_inventory.md:109` against
   `spec/session_home.md:368`); Create's preview re-renders only `#deadline`.
   Author.
@@ -175,7 +175,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   comment says otherwise (`_extracts.py:796-800`). Code.
 - ~~**O6**~~ — **Done in #3106**: an app-wide dependency answers 404 for an id path or query parameter past a 64-bit column, the answer Postgres gives (`app/web/oversized_ids.py`; `tests/integration/test_bad_input_refused.py`). Oversized integer ids in paths and queries answer 500 on SQLite;
   Postgres compares them. Code.
-- **O7** — *Partly done in #3111*: `super_error`, `owners_error` and `sort_save_error` now carry codes the page maps to fixed copy, an unlisted code showing nothing, and `rf_save_error`, which nothing produced, retired. Still open: `quick_setup_detail`, whose lines are a refused file's own errors, which no fixed set of codes can carry; author: stash them server-side, re-render instead of redirecting, or drop the lines (`spec/csv_contracts.md` §3.3 requires them). Error text taken from the URL is shown on trusted chrome:
+- **O7** — **Ruled 2026-10-17**: `quick_setup_detail` goes: a refused Quick Setup upload re-renders Session Home with the lines (422) instead of redirecting, so nothing travels in the URL. *Partly done in #3111*: `super_error`, `owners_error` and `sort_save_error` now carry codes the page maps to fixed copy, an unlisted code showing nothing, and `rf_save_error`, which nothing produced, retired. Still open: `quick_setup_detail`, whose lines are a refused file's own errors, which no fixed set of codes can carry; author: stash them server-side, re-render instead of redirecting, or drop the lines (`spec/csv_contracts.md` §3.3 requires them). Error text taken from the URL is shown on trusted chrome:
   `super_error`, `quick_setup_detail`, `owners_error`, `rf_save_error`,
   `sort_save_error` (`next_action_card.html:443`,
   `instruments_index.html:135`, `:158`). Escaped, so not XSS, but a link can
@@ -201,7 +201,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**P4**~~ — **Done in #3106**: ids typed as text go through `app.services.text.parse_id`, ASCII digits only (`tests/integration/test_bad_input_refused.py`). Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
   (`_setup_observers.py:722`, `_band2.py:213`, `:396`);
   `app/web/return_to.py` already documents the trap. Code.
-- **P5** — **Needs a ruling** (2026-10-17): honoring the stated priority, tried in #3108, moves a user whose token lists a differing `preferred_username` first to a new email, and `find_user` matches on email only, so they would get a fresh row without their flags or ownership (Codex on #3108). A fix either matches existing rows by principal id or migrates them first. `app/auth/identity.py` `_claim` returns the first claim in token
+- **P5** — **Ruled 2026-10-17**: honor the stated priority and fall back to the principal id: when the email finds no account, `find_user` looks one up by the Entra object id and updates its stored email. Tried in #3108 without the fallback, it would have moved such users to a fresh row (Codex). `app/auth/identity.py` `_claim` returns the first claim in token
   order, not the stated priority, so `preferred_username` can win over
   `emailaddress` (`:45-56`, `:76-81`). Fails closed. Code.
 - ~~**E4**~~ — **Done in #3086**: a rule or boundary stored with a tag the card no longer offers keeps its option (`data-new-model-stored-only`), so a Save keeps it, and `+` adds a cell without it (`spec/instruments.md`, Band 1; `tests/integration/test_band1_filled_empty.py`). **A Band 1 rule on a tag column now empty has no `<option>`, so the
