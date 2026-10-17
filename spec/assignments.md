@@ -166,13 +166,12 @@ A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensiti
 | `reviewee.email` | `Reviewee.email_or_identifier` | — |
 
 The engine accepts every field above (`ALLOWED_PREDICATE_FIELDS` in
-`app/schemas/rules.py`); Band 1 offers only the reviewer and reviewee
-tag slots, and of those only namespace + slot combinations with at
-least one populated roster row appear in its dropdowns
-(`views._instruments.new_model_usable_tags`). It does not offer
+`app/schemas/rules.py`); Band 1 offers the tag slots, and of those
+only namespace + slot combinations with at least one populated row
+appear in its dropdowns (`views._instruments.new_model_usable_tags`).
+It offers a relationship tag once, as "Pair: <label>", and stores it as
 `pair_context.tagN`, `reviewer.pair_tagN` or `reviewee.pair_tagN`
-(`spec/instruments.md`, Band 1); the engine still evaluates a stored
-rule that holds one.
+according to the Link and operator (`spec/instruments.md`, Band 1).
 
 **Operators** (UI → engine internal):
 
@@ -180,15 +179,16 @@ rule that holds one.
 |---|---|---|
 | `IS` | `equals` | Free-text string |
 | `IS NOT` | `not_equals` | Free-text string |
-| `IS THE SAME AS` | `same_as` | A reviewer tag (e.g. `reviewer.tag1`) |
-| `IS DIFFERENT FROM` | `different_from` | A reviewer tag |
+| `IS THE SAME AS` | `same_as` | A reviewer tag or the reviewer's pair tag (e.g. `reviewer.tag1`, `reviewer.pair_tag1`) |
+| `IS DIFFERENT FROM` | `different_from` | A reviewer tag or the reviewer's pair tag |
 | `IS FILLED` | `is_not_empty` | None |
 | `IS EMPTY` | `is_empty` | None |
 
 The operand must address a different population from the field: the
 engine refuses the same population on both sides, and Band 1's Save
 refuses it before storing (`spec/instruments.md`, Link 1 / Link 2). Of
-what the card offers, a reviewee field takes a reviewer operand.
+what the card offers, a reviewee field or the reviewee's pair tag takes
+a reviewer operand or the reviewer's pair tag.
 
 The cross-side operators (`same_as` / `different_from`) read
 the operand as another field reference rather than a literal —
