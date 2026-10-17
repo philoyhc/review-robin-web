@@ -908,8 +908,9 @@ def new_model_usable_tags(
     }
     # The dropdown option label is just the operator's friendly
     # name for the tag — no per-namespace prefix. The per-dropdown
-    # caption above each select ("Reviewer tag" / "Reviewee tag")
-    # carries the namespace hint now, so the in-option ``R-`` /
+    # caption above each select ("Reviewer's tag" / "Reviewee's tag",
+    # or "Pairwise tag" for a Link 2 relationship tag under IS / IS
+    # NOT) carries the namespace hint now, so the in-option ``R-`` /
     # ``E-`` prefixes are retired.
     namespace_specs = [
         ("reviewer", Reviewer, "reviewer.tag", False),
