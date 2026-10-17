@@ -493,3 +493,24 @@ groups by a pair tag:
 - [ ] **No answer is not started.** On an instrument with nothing
   required, leave a row blank: its pill reads `not started`, as the
   dashboard does.
+
+## Archive, Duplicate's trail, scheduled events off Home, response versions (L5, P2, L4, R6)
+
+- [ ] **Operations pages and the lobby fire scheduled events (L4).**
+  Give a `validated` session a Start a minute or two ahead and wait
+  for it to pass. Without visiting Session Home, open the lobby (or
+  Validate, Assignments, Invitations or Responses): the session reads
+  Activated, and the audit log shows `session.activated` with
+  `trigger=scheduled`. Repeat with a `draft` session: it logs
+  `session.scheduled_activation_skipped` and clears Start.
+- [ ] **Duplicate leaves a trace on the original (P2).** As a non-owner
+  sys-admin, Duplicate someone else's session from the lobby: the
+  original's audit log lists `session.duplicated` naming you and the
+  new code.
+- [ ] **Archive closes accepting (L5).** Archive an Activated session
+  (only a direct POST to `/workflow/archive` reaches this), then
+  Unarchive: the reviewer surface stays read-only and the Instruments
+  page shows nothing accepting.
+- [ ] **Versions count changes (R6).** In `responses.csv`, `Version`
+  goes up and `SavedAt` moves only after a reviewer saves a changed
+  answer; a re-save of the same value leaves both.
