@@ -263,7 +263,7 @@ intentional-nav escape prompts on the app's own controls.
 | **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
-| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
+| **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill of every instrument with a saved answer flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
 | **Clear all** | Review-session | POST `/me/sessions/{id}/clear` | Wipe every response across every instrument (confirmation checkbox required). Clears any submitted state. Lives in the half-width-flush-right Danger Zone card at the foot of the surface, not in the action rows. |
 
 ### Why Submit is session-wide
@@ -309,9 +309,18 @@ each of its instruments. The route distinguishes:
 - **Save** upserts `Response` rows in `(assignment_id,
   response_field_id)` shape. An empty submitted value **deletes**
   the matching `Response` row (so absence == empty answer); a
-  non-empty value upserts. Save never touches `submitted_at`. The
-  page filter keeps a stale form from touching another page's saved
-  values when only the current page should change.
+  non-empty value upserts. A **changed** value clears that
+  `Response` row's `submitted_at`, so an edit after Submit is not
+  released as submitted until the reviewer submits again, as a new
+  answer after Submit isn't (findings R1, author's ruling
+  2026-10-17); an unchanged value, which every Save re-posts, keeps
+  its stamp. On a group-scoped instrument a change clears the stamp
+  on every member's copy of that field in the group. Blanking a
+  submitted answer is a change too ("Submit" below). The
+  `responses.saved` event counts the cleared stamps as
+  `submissions_cleared`. The page filter keeps a stale form from
+  touching another page's saved values when only the current page
+  should change.
 - **Submit** persists pending writes session-wide (treating the
   whole form body as a session-wide save), then validates required
   fields across every instrument. With no required field missing
@@ -319,11 +328,20 @@ each of its instruments. The route distinguishes:
   `submitted_at` on every Response row of the reviewer's included
   assignments in the session (and on an excluded
   member's copy in a group they still review, `spec/assignments.md`
-  "Group-scoped fan-out") and writes a `responses.submitted` audit event. Editing a
+  "Group-scoped fan-out") and writes a `responses.submitted` audit event. A
+  blocked Submit still writes its drafts, so a change it carries
+  clears its stamp as a Save's does. Editing a
   previously-submitted required field to empty deletes its
   `Response` row (including the `submitted_at` stamp), which flips
-  the dashboard pill back to `in progress` on next render — no
-  per-row resubmit required.
+  the dashboard pill back to `in progress` on next render. Emptying
+  any submitted answer, optional ones included, is a change: it
+  deletes the row and clears `submitted_at` on the assignment's
+  remaining rows (on a group-scoped instrument, on every member's
+  copy in the group), so the rest is not released as submitted
+  without it and the reviewer must Submit again. Emptying an answer
+  saved since the Submit does the same: one changed and saved before
+  it was emptied has already lost its stamp, and nothing tells the two
+  apart.
 - **Clear all** deletes every `Response` row of this reviewer's
   included assignments in this session, across every instrument, and
   an excluded member's copy in a group they still review (a group
@@ -336,11 +354,16 @@ each of its instruments. The route distinguishes:
 
 **"Submitted" status on the dashboard.** Once Submit succeeds, every
 saved `Response` row of the reviewer's in the session has
-`submitted_at` set. The dashboard's
-session-level pill ("submitted" / "in progress" / "not started")
-follows the same rule it does today (every assignment submitted →
-"submitted"). With session-wide Submit, the rollup is always
-all-or-nothing rather than "submitted on some pages but not others".
+`submitted_at` set. The dashboard's session-level pill ("submitted" /
+"in progress" / "not started", "Reviewer-status pill vocabulary"
+below) and this surface's pills follow **one answers-based rule**
+(findings R7, author's ruling 2026-10-17): no saved answer is `not
+started`, even when nothing is required; `submitted` needs a saved
+answer, every required field filled and no saved answer without
+`submitted_at`, so a row left blank on an all-optional instrument
+doesn't hold it off and a new or changed answer after Submit does.
+With session-wide Submit the rollup is all-or-nothing until such an
+answer lands.
 
 ---
 
@@ -354,10 +377,22 @@ clicks Save (and the page re-renders).
 
 | Pill state | Pill class | Condition |
 |---|---|---|
-| `not started` | `.pill.pill-info` | No non-empty value shown in any of this instrument's rows, and neither `complete` nor `submitted` applies. A saved value the reviewer may not read back (see "Lifecycle gating") is not shown, so it counts as none here; `complete` and `submitted` read the saved rows, not the shown values, so they are unaffected. |
+| `not started` | `.pill.pill-info` | No non-empty value shown in any of this instrument's rows, and neither `complete` nor `submitted` applies. Rows with no answer are `not started` even when nothing on them is required. A saved value the reviewer may not read back (see "Lifecycle gating") is not shown, so it counts as none here; `complete` and `submitted` read the saved rows, not the shown values, so they are unaffected. |
 | `in progress` | `.pill.pill-warning` | At least one non-empty value shown, but neither `complete` nor `submitted` applies. |
-| `complete` | `.pill.pill-success` | Every required field on every assignment of this instrument has a saved value. |
-| `submitted` | `.pill.pill-success` | Every assignment of this instrument has `submitted_at` set (i.e. the session has been submitted; all pills flip together). |
+| `complete` | `.pill.pill-success` | At least one saved answer, and every required field on every assignment of this instrument has one, but `submitted` doesn't apply. |
+| `submitted` | `.pill.pill-success` | At least one saved answer, every required field filled, and every saved answer carries `submitted_at`. A blank row with nothing required doesn't hold it off; a new or changed answer since the Submit does, and the page reads `complete` or `in progress` until the next one. |
+
+The states are the dashboard's (§ "Reviewer-status pill vocabulary"),
+read over this instrument's rows (findings R7): no answer is `not
+started` on both, every answer submitted is `submitted` on both, and
+anything between is the dashboard's `in progress`, which covers both
+`in progress` and `complete` here (one exception: a saved answer the
+lifecycle hides, with a required field unmet, reads `not started` here
+and `in progress` there). `complete` is the part of it where
+nothing required is missing, so a page whose answers a changed value
+just un-submitted (findings R1) reads `complete` here and `in
+progress` there, by design. A group-scoped instrument's row is its
+representative member's, the one the dashboard counts.
 
 Pill copy is `{label}: {state}`, where `label` is `#{N} {short_label}`
 (or bare `#{N}` when no short label is set) — a space where the
@@ -381,7 +416,7 @@ states:
 
 | Pill | Pill class | Condition |
 |---|---|---|
-| `Submitted` | `.pill.pill-success` | Every page is `submitted`. |
+| `Submitted` | `.pill.pill-success` | The `submitted` rule over every row on every page, so it matches the dashboard: a page left blank with nothing on it required reads `not started` beside it. |
 | `Draft` | `.pill.pill-empty` | Every page is `not started`. |
 | `Saved but not submitted` | `.pill.pill-warning` | Anything in between — some pages carry saved data, not all submitted. |
 
@@ -599,7 +634,7 @@ In rendered order:
    already shown on the reviewer summary page, once for every
    reviewee.
    ``Response.submitted_at`` itself stays in the data model: it
-   drives ``is_complete`` rollups, audit-event counts, the
+   drives the `submitted` page pills, audit-event counts, the
    session-status pill (``Submitted`` / ``Saved but not
    submitted`` / ``Draft``) on the overview card, and the summary
    page's session-level timestamp.
@@ -752,6 +787,8 @@ The route builds the table data in `_surface_context` as
       "missing_count": int,
       "required_count": int,
       "submitted_at": datetime | None,
+      "answer_count": int,
+      "unsubmitted_count": int,
       "accepting": bool,
       "show_values": bool,
       # group rows only: "group_identity", "group_label" (below)
@@ -1249,12 +1286,16 @@ row (§ "Cross-role union and reachability").
 
 ### Reviewer-status pill vocabulary
 
-Computed by `app/services/responses::session_pill_for_reviewer`:
+Computed by `app/services/responses::session_pill_for_reviewer`
+(`RollupParts.pill_state`, which the operator's Invitations page reads
+too, through `monitoring.per_reviewer_progress`). The reviewer
+surface's pills follow the same rule (§ "Per-page status", findings
+R7):
 
 | Pill | Style | Condition |
 |---|---|---|
-| `submitted` | `pill-success` | Every required field on every assignment in the session has a `Response.submitted_at` timestamp. The paired counter chip is also `pill-success`. |
-| `in progress` | `pill-warning` | At least one `Response` row exists, but the `submitted` rule doesn't hold. Counter chip is `pill-warning`. |
+| `submitted` | `pill-success` | At least one `Response` row exists, every required field on every included assignment has a saved value, and every `Response` row carries `submitted_at`. A new or changed answer after Submit has none, so it reads `in progress` until the next Submit. The paired counter chip is also `pill-success`. |
+| `in progress` | `pill-warning` | At least one `Response` row exists, but the `submitted` rule doesn't hold. It covers both the surface's `in progress` and its `complete`, which this pill has no state for, so a page reading `complete` on the surface reads `in progress` here by design. Counter chip is `pill-warning`. |
 | `not started` | `pill-info` | No `Response` rows exist for this reviewer in this session. Counter chip is `pill-info`. |
 
 Reviewer Status renders independently of Session Status — even

@@ -32,33 +32,66 @@ class PageStatus:
     state: PageStatusState
 
 
+@dataclass(frozen=True)
+class _SavedState:
+    """What a set of built rows' saved answers say, read off the saved
+    Response rows rather than the shown values (findings R7).
+
+    The same three facts drive the dashboard's pill
+    (``responses.RollupParts.pill_state``): whether any answer is saved,
+    whether every required field is filled, and whether any saved answer
+    lacks a ``submitted_at``.
+    """
+
+    answered: bool
+    required_met: bool
+    unsubmitted: bool
+
+    @property
+    def submitted(self) -> bool:
+        """The dashboard's ``submitted``: something saved, nothing
+        required missing, and nothing saved left unsubmitted."""
+        return self.answered and self.required_met and not self.unsubmitted
+
+
+def _saved_state(rows: list[dict]) -> _SavedState:
+    return _SavedState(
+        answered=any(r.get("answer_count", 0) for r in rows),
+        required_met=all(r.get("is_complete") for r in rows),
+        unsubmitted=any(r.get("unsubmitted_count", 0) for r in rows),
+    )
+
+
 def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
     """Roll up per-row completion data into a single page state.
 
     Order of evaluation matches the spec table in
-    ``spec/reviewer-surface.md`` "Per-page status":
+    ``spec/reviewer-surface.md`` "Per-page status". It is the
+    dashboard's answers-based rule (findings R7, author's ruling
+    2026-10-17), with ``complete`` splitting the dashboard's
+    ``in progress`` where every required field is filled:
 
-    1. ``submitted`` — every row has ``submitted_at`` set. Submit is
-       a hard gate on missing-required, so ``submitted`` implies
-       ``complete`` today; the two states are kept separate so a
-       future operator-side ``required`` change after submit
-       doesn't silently demote the row from ``submitted``.
-    2. ``complete`` — every required field on every row has a saved
-       value (``is_complete``).
-    3. ``in_progress`` — at least one row carries Response data,
-       but neither ``submitted`` nor ``complete`` apply.
-    4. ``not_started`` — no Response data on any row.
+    1. ``submitted`` — at least one saved answer, every required field
+       filled, and no saved answer without ``submitted_at``. A row left
+       blank on an all-optional instrument does not hold it off, as it
+       doesn't on the dashboard; a new or changed answer after Submit
+       (findings R1) does.
+    2. ``complete`` — at least one saved answer and every required
+       field filled, with something not yet submitted.
+    3. ``in_progress`` — at least one non-empty value shown.
+    4. ``not_started`` — none. A page with no answer is not started even
+       when nothing on it is required.
 
-    ``in_progress`` falls back to "any row has at least one cell
-    with a non-empty value" — a Response row can exist with an
-    empty string, but that's the same shape as "not started" for
-    pill-display purposes.
+    ``submitted`` and ``complete`` read the saved rows; ``in_progress``
+    reads the shown cells, so a saved value the reviewer may not read
+    back counts as none there.
     """
     if not group_rows:
         return "not_started"
-    if all(r.get("submitted_at") for r in group_rows):
+    saved = _saved_state(group_rows)
+    if saved.submitted:
         return "submitted"
-    if all(r.get("is_complete") for r in group_rows):
+    if saved.answered and saved.required_met:
         return "complete"
     has_any_value = any(
         any((cell.get("value") or "") for cell in r.get("cells", []))
@@ -70,18 +103,21 @@ def _page_status_for_group(group_rows: list[dict]) -> PageStatusState:
 SessionStatusState = Literal["draft", "saved", "submitted"]
 
 
-def _session_status(page_statuses: list["PageStatus"]) -> SessionStatusState | None:
+def _session_status(
+    page_statuses: list["PageStatus"], rows: list[dict]
+) -> SessionStatusState | None:
     """Roll the per-page states into one session-wide status.
 
-    ``submitted`` — every page submitted; ``draft`` — nothing started
-    on any page; ``saved`` — anything in between (some saved but not
-    all submitted). ``None`` when the reviewer has no pages, so the
-    template renders no session pill.
+    ``submitted`` — the dashboard's rule over ``rows``, every row on
+    every page (``_SavedState.submitted``), so a page left blank with
+    nothing on it required doesn't hold it off (findings R7). ``draft`` — nothing started on any page; ``saved``
+    — anything in between. ``None`` when the reviewer has no pages, so
+    the template renders no session pill.
     """
     if not page_statuses:
         return None
     states = {ps.state for ps in page_statuses}
-    if states == {"submitted"}:
+    if _saved_state(rows).submitted:
         return "submitted"
     if states == {"not_started"}:
         return "draft"

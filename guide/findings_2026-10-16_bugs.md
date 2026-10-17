@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 9 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+**Open:** 7 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
 R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
-R8, O2, L6, L7, O5, O8, O9, O10, L8 and E3 done).
+R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1 and R7 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -24,7 +24,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 
 ## 1. High
 
-- **R1** — **Ruled 2026-10-17**: saving a changed value after Submit clears that row's `submitted_at`, so the reviewer submits again, as a new answer already does; blanking a submitted answer, which deletes its row, clears the stamps on that assignment's other rows (Codex on #3112). **A Save after Submit changes a submitted answer and keeps its
+- ~~**R1**~~ — **Done in #3115** (ruled 2026-10-17): a changed value saved after Submit clears that row's `submitted_at`, and blanking any answer after Submit clears the assignment's remaining stamps, group copies included, so the reviewer submits again (`spec/reviewer-surface.md` "Persistence semantics"; `tests/integration/test_change_after_submit.py`). **A Save after Submit changes a submitted answer and keeps its
   `submitted_at`**, so the edited value is released as submitted with no
   resubmit (`app/services/responses/_core.py:313`). `spec/reviewer-surface.md`
   "Persistence semantics" says Save never touches `submitted_at`, and the code
@@ -143,7 +143,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 
 ## 3. Low
 
-- **R7** — **Ruled 2026-10-17**: answers-based on both surfaces: a row with no answers is not started even when nothing is required, and an unsubmitted change after Submit shows in progress (with R1). The pill's `complete` needs answers and every required field; the dashboard has no `complete`, so a complete but unsubmitted page reads `in progress` there, as it does today (Codex on #3112). The surface's status pill and the dashboard disagree on
+- ~~**R7**~~ — **Done in #3115** (ruled 2026-10-17): the reviewer page's pills read answers, as the dashboard does: no answer is `not started`, `complete` needs answers and every required field, and `submitted` needs every saved answer stamped; the dashboard's `in progress` covers the pill's `complete` (`tests/integration/test_status_pill_parity.py`, `tests/unit/test_reviewer_surface_status.py`). The surface's status pill and the dashboard disagree on
   all-optional blank rows and on a new answer after Submit
   (`_surface/_status.py:59`). Code.
 - ~~**R8**~~ — **Done in #3106 and #3110**: #3106 ignores a form key whose id is past the largest SQL integer; here, at the `name` level a self-review row of the observer download blanks the reviewee email and tags too, since they are the reviewer's, and doesn't sort on that email (`tests/integration/test_reviewer_identity_level.py`). The level covers the reviewer's columns, so a row where that person is someone else's reviewee still names them there, as `spec/participant_model.md` §4.2 has it. A 20-digit assignment id answers 500 (`_core.py:57`); and, by

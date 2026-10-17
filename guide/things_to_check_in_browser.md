@@ -477,3 +477,19 @@ groups by a pair tag:
 - [ ] **Carried along.** Duplicate the session, and Replicate the
   instrument: both copies keep the toggle off. Export the Settings CSV
   and find `instruments[n].self_reviews_active` = `false`.
+
+## A change after Submit needs a new Submit (R1, R7)
+
+- [ ] **A changed answer un-submits it.** As a reviewer, fill a rating
+  and a comment and Submit. Change the comment and Save: the page pill
+  reads `complete`, the session pill "Saved but not submitted", and
+  the operator's Invitations row `in progress`. Submit again: all three
+  read submitted.
+- [ ] **A blanked answer un-submits the rest.** After Submit, empty the
+  comment and Save: the same three readings as above. So does changing
+  the comment, saving, and then emptying it in a second Save.
+- [ ] **Re-saving unchanged keeps it.** After Submit, press Save
+  without editing: everything still reads submitted.
+- [ ] **No answer is not started.** On an instrument with nothing
+  required, leave a row blank: its pill reads `not started`, as the
+  dashboard does.
