@@ -805,6 +805,19 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # audit row's ``actor_user_id`` slot, the target user goes
     # through ``refs.target_user_id``.
     "workspace.user_invited": EventSchema(frozenset({"snapshot", "refs"})),
+    # Findings P5: a sign-in whose email finds no row but whose Entra
+    # object id does moves that row to the new email. No actor — the
+    # sign-in did it — and ``changes.email`` carries old -> new.
+    "workspace.user_email_changed": EventSchema(
+        frozenset({"changes", "refs"})
+    ),
+    # Findings P5: the new email was held by a row never signed in to
+    # (an invite), folded into the principal-id row. ``changes`` carries
+    # the email and any flag the fold raised; ``refs`` names both rows
+    # (``absorbed_user_id`` is deleted); ``context.memberships_moved``.
+    "workspace.user_absorbed": EventSchema(
+        frozenset({"changes", "refs", "context"})
+    ),
     "workspace.operator_admitted": EventSchema(frozenset({"changes", "refs"})),
     "workspace.operator_revoked": EventSchema(frozenset({"changes", "refs"})),
     "workspace.user_removed": EventSchema(frozenset({"snapshot", "refs"})),

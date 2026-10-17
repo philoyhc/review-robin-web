@@ -44,7 +44,8 @@ def me_debug(
     user: AuthenticatedUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    # Looked up, never created: this page has to render for an identity
+    # Looked up, never created, and a changed email is not moved onto
+    # the row (findings P5): this page has to render for an identity
     # ``get_or_create_user`` would refuse (no email claim). The back
     # link needs the row to name a session or to pick its fallback (the
     # lobby or /me), and a failed lookup reads as no row, so a database
@@ -57,7 +58,7 @@ def me_debug(
         # Once per request: the back link and the top bar both ask.
         if not looked_up:
             try:
-                looked_up.append(find_user(db, user))
+                looked_up.append(find_user(db, user, move_email=False))
             except SQLAlchemyError:
                 # Logged: this page is where a broken sign-in is diagnosed.
                 log.warning("user lookup failed", exc_info=True)

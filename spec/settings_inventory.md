@@ -26,8 +26,8 @@ that should be updated alongside the per-page spec.
 ## 1. Operator-level settings (per signed-in user)
 
 Stored on the `users` table. One row per authenticated principal
-(matched by `external_principal_id` and `email` from Azure Easy
-Auth). The same row backs every session that operator owns or
+(matched by `external_principal_id`, then by `email`, from Azure
+Easy Auth). The same row backs every session that operator owns or
 co-operates.
 
 **Surface:** `/operator/settings`. The Email send (SMTP) form-card

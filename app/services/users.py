@@ -30,8 +30,15 @@ and apply the invariants:
 
 ``invite`` creates a pre-seeded ``users`` row before the invitee's
 first Entra sign-in. ``get_or_create_user`` matches by email on
-sign-in, so the pre-seeded row picks up the principal at that
-point without overriding the flags this module set.
+sign-in (``find_signed_in_user``), so the invitee lands on the
+pre-seeded row without overriding the flags this module set. The
+row is stored with no principal id; that first sign-in records it, so
+the principal-id match below reaches invited accounts too.
+
+``find_signed_in_user`` matches the Entra object id before the email
+(findings P5): the row whose ``external_principal_id`` matches takes a
+changed email, so a user whose email claim changes keeps their flags
+and session ownership.
 """
 
 from __future__ import annotations
@@ -39,13 +46,227 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from app.auth.identity import AuthenticatedUser
 from app.auth.roles import effective_super_admin_emails, is_super_admin
-from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
+from app.db.models import (
+    AuditEvent,
+    DataShape,
+    RehydrateStash,
+    ReviewSession,
+    SessionOperator,
+    User,
+)
+from app.logging_config import get_logger
 from app.services import audit
 from app.services.email_identity import normalize_email
+
+log = get_logger(__name__)
+
+
+# SQL ``trim`` alone strips only spaces; name the whitespace
+# ``str.strip`` (and so ``normalize_email``) also takes.
+_ASCII_WHITESPACE = " \t\n\r\f\v"
+
+
+def find_signed_in_user(
+    db: Session, identity: AuthenticatedUser, *, move_email: bool = True
+) -> User | None:
+    """The persisted ``users`` row for this identity, or ``None``;
+    never creates one (findings P5).
+
+    **The principal id decides first.** The oldest row whose
+    ``external_principal_id`` is the identity's Entra object id is the
+    user, whatever email the claims now resolve to, so a pre-seeded
+    invite for a new address cannot strand the account that holds the
+    person's flags and session ownership. When that row's email
+    differs from the resolved one (compared folded, as below) it takes
+    the new email, stripped, audited as ``workspace.user_email_changed``
+    — unless **another** row already holds that email, which would
+    collide with the unique ``users.email``. That row is typically an
+    invite pre-seeded for the new address, carrying newly granted flags
+    or ownerships; when it has never been signed in to (``_absorbable``)
+    it is folded in — flags OR'd, memberships moved, row deleted, email
+    taken — audited as ``workspace.user_absorbed``. Otherwise the
+    principal-id row keeps its email and a warning is logged.
+    A missing or blank principal id never matches, and neither does a
+    fake one: ``FAKE_AUTH_PRINCIPAL_ID`` is one constant slot shared by
+    every ``FAKE_AUTH_EMAIL``, so matching on it would rename the
+    developer's row whenever they switched identities.
+
+    **Then the email.** Case-insensitive, trimmed on both sides: a
+    pre-seeded row (``invite``) is reused regardless of casing, and a
+    row stored padded before ``get_or_create_user`` stripped on write
+    still finds its owner rather than gaining a duplicate (findings
+    P3). The oldest match wins, so historical case-variant duplicates
+    resolve deterministically rather than raising
+    ``MultipleResultsFound``. An email match with no stored principal
+    id records this one, under the same exclusions, so an invited row
+    (``invite`` stores none) is found by principal id from then on.
+    Not audited: the sign-in path's other writes to the row (its
+    creation, ``_reassert_super_admin``) are not either. A non-empty
+    stored principal id that differs is never overwritten: no row with
+    this principal id exists (step one found none), and overwriting
+    would take the row from the identity that recorded it.
+
+    ``move_email=False`` writes nothing — no rename, no absorb, no recorded
+    principal id — for a diagnostic page that must not sign anyone in
+    (``/auth/me/debug``).
+    """
+    principal_id = identity.principal_id
+    usable_principal = (
+        not identity.is_fake
+        and principal_id is not None
+        and bool(principal_id.strip())
+    )
+    new_email = (identity.email or "").strip()
+
+    if usable_principal:
+        by_principal = db.execute(
+            select(User)
+            .where(User.external_principal_id == principal_id)
+            .order_by(User.id)
+            .limit(1)
+        ).scalar_one_or_none()
+        if by_principal is not None:
+            if (
+                move_email
+                and new_email
+                and normalize_email(by_principal.email) != normalize_email(new_email)
+            ):
+                _move_to_email(db, by_principal, new_email)
+            return by_principal
+
+    if not new_email:
+        return None
+    by_email = _by_email(db, new_email)
+    if by_email is None:
+        return None
+    stored = by_email.external_principal_id
+    if move_email and usable_principal and not (stored and stored.strip()):
+        by_email.external_principal_id = principal_id
+        db.commit()
+        db.refresh(by_email)
+    return by_email
+
+
+def _by_email(
+    db: Session, email: str, *, other_than: int | None = None
+) -> User | None:
+    stmt = select(User).where(
+        func.lower(func.trim(User.email, _ASCII_WHITESPACE))
+        == normalize_email(email)
+    )
+    if other_than is not None:
+        stmt = stmt.where(User.id != other_than)
+    return db.execute(stmt.order_by(User.id).limit(1)).scalar_one_or_none()
+
+
+def _move_to_email(db: Session, target: User, new_email: str) -> None:
+    holder = _by_email(db, new_email, other_than=target.id)
+    if holder is None:
+        _write_email_change(db, target, new_email)
+    elif _absorbable(db, holder, target.external_principal_id):
+        _absorb(db, target, holder, new_email)
+    else:
+        log.warning(
+            "signed-in email held by another user row; not renamed",
+            extra={"user_id": target.id, "holder_user_id": holder.id},
+        )
+        return
+    db.commit()
+    db.refresh(target)
+
+
+def _absorbable(db: Session, holder: User, principal_id: str | None) -> bool:
+    """Whether ``holder`` — the row already holding the signed-in
+    identity's new email — can fold into the principal-id row: it
+    carries no principal id of its own (or the same one), and nothing
+    but flags and session memberships, so it has never been signed in
+    to. Anything a sign-in leaves behind (an audit row it acted in, a
+    session it created, a rehydrate stash, a data shape) refuses."""
+    stored = (holder.external_principal_id or "").strip()
+    if stored and holder.external_principal_id != principal_id:
+        return False
+    if _has_history(db, holder.id):
+        return False
+    for column in (RehydrateStash.operator_user_id, DataShape.created_by_user_id):
+        if db.execute(select(column).where(column == holder.id).limit(1)).first():
+            return False
+    return True
+
+
+def _absorb(db: Session, target: User, holder: User, new_email: str) -> None:
+    """Fold ``holder`` into ``target`` in the caller's transaction: OR
+    the two role flags, move the session memberships (a session both
+    are on keeps ``target``'s), delete ``holder`` and give ``target``
+    its email. One ``workspace.user_absorbed`` event names both ids."""
+    old = {
+        "email": target.email,
+        "is_operator": target.is_operator,
+        "is_sys_admin": target.is_sys_admin,
+    }
+    holder_id = holder.id
+    target.is_operator = target.is_operator or holder.is_operator
+    target.is_sys_admin = target.is_sys_admin or holder.is_sys_admin
+    shared = select(SessionOperator.session_id).where(
+        SessionOperator.user_id == target.id
+    )
+    db.execute(
+        delete(SessionOperator)
+        .where(SessionOperator.user_id == holder_id)
+        .where(SessionOperator.session_id.in_(shared))
+        .execution_options(synchronize_session=False)
+    )
+    moved = db.execute(
+        update(SessionOperator)
+        .where(SessionOperator.user_id == holder_id)
+        .values(user_id=target.id)
+        .execution_options(synchronize_session=False)
+    ).rowcount
+    # The memberships were moved in SQL; a collection loaded before
+    # would make the delete cascade take them with the row.
+    db.expire(holder, ["session_operators"])
+    db.expire(target, ["session_operators"])
+    db.delete(holder)
+    # The unit of work flushes updates before deletes; the email is
+    # unique, so the row holding it goes first.
+    db.flush()
+    target.email = new_email
+    new = {
+        "email": new_email,
+        "is_operator": target.is_operator,
+        "is_sys_admin": target.is_sys_admin,
+    }
+    audit.write_event(
+        db,
+        event_type="workspace.user_absorbed",
+        summary=(
+            f"Sign-in email changed from {old['email']} to {new_email}; "
+            f"absorbed the row that held it"
+        ),
+        payload=audit.changes(
+            {key: [old[key], new[key]] for key in old if old[key] != new[key]}
+        ),
+        refs={"target_user_id": target.id, "absorbed_user_id": holder_id},
+        context={"memberships_moved": int(moved or 0)},
+    )
+
+
+def _write_email_change(db: Session, target: User, new_email: str) -> None:
+    old = target.email
+    target.email = new_email
+    # No actor: the sign-in changed the row, not a person acting in
+    # the app, so the row does not count as history (``_has_history``).
+    audit.write_event(
+        db,
+        event_type="workspace.user_email_changed",
+        summary=f"Sign-in email changed from {old} to {new_email}",
+        payload=audit.changes({"email": [old, new_email]}),
+        refs={"target_user_id": target.id},
+    )
 
 
 @dataclass(frozen=True)

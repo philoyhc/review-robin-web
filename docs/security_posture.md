@@ -83,7 +83,8 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
 
 ## §5.5a Identity matching — the fold
 
-Every identity comparison in the app decides on an email match. Most
+Every identity comparison in the app decides on an email match —
+`get_or_create_user` once the Entra object id has not (below). Most
 sit behind a gate audited in §5.6; three do not appear in that table
 at all — `get_or_create_user` (which `User` row an authenticated
 principal becomes), `auth.roles.is_super_admin`, and the reviewer
@@ -122,6 +123,39 @@ stripped lookup on the next request, and the second insert answered
 above does not name, which is not an inconsistency: it always folded
 with `.lower()`, never `.casefold()`, so it was exposed to the
 whitespace gap but never to the merge.
+
+**The Entra object id decides before the email** (findings P5).
+`find_user` delegates to `users.find_signed_in_user`. First, the
+oldest row whose `external_principal_id` is the identity's object id
+is the user, whatever email the claims now resolve to, so a user whose
+resolved email changes (because the claim priority below now holds, or
+because Entra renamed them) keeps their row, flags and session
+ownership, and a pre-seeded invite for the new address cannot strand
+that account. A row whose email differs from the resolved one, folded
+as above, takes it, stripped, audited as `workspace.user_email_changed`
+with no actor. If another row already holds that email, typically an
+invite pre-seeded for the new address with newly granted flags or
+ownerships, and it has never been signed in to (no principal id of its
+own, no audit activity as actor, no session, stash or data shape it
+created), it is absorbed in the same transaction: flags OR'd,
+memberships moved, the row deleted and its email taken, audited once as
+`workspace.user_absorbed` naming both ids. A holder that has been
+signed in to is someone's account: the row keeps its email, a warning
+is logged, and nothing is merged. Only then
+does the email decide, as above. An email match whose row holds no
+principal id records this one, unaudited like the sign-in path's other
+writes to the row, so an invited row (`users.invite` stores none) is
+found by principal id from its first sign-in on. A stored principal id
+that differs is never overwritten. A missing or blank principal id
+never matches or is recorded, and neither is a fake one:
+`FAKE_AUTH_PRINCIPAL_ID` is one slot every fake email shares.
+`/auth/me/debug` finds the same row but writes, renames and absorbs
+nothing. The object id
+is the Easy Auth `X-MS-CLIENT-PRINCIPAL-ID` header or the token's own
+claim, never caller input. One case is left: an invited row still
+without a principal id when the stated claim priority ships, whose
+email under that priority differs from the one it was invited under,
+gets a fresh row on its next sign-in.
 
 **This was a live fail-open, not a hypothetical.** A `ß` holder
 could not match their *own* lower-cased row — the closed direction —
@@ -357,8 +391,12 @@ injects.*
   `X-MS-CLIENT-PRINCIPAL` (base64 JSON claim set). Its claims are read
   first: `X-MS-CLIENT-PRINCIPAL-NAME` supplies the email only when the
   claim set has none, and only the object id and the provider prefer
-  the simple headers. The email claim is the first of `emailaddress`,
-  `preferred_username` and `email` in the token's own claim order. The parser is
+  the simple headers. Each slot takes the first claim type its priority
+  names, whatever order the token lists them in (findings P5): the
+  email is `emailaddress`, then `preferred_username`, then `email`; the
+  object id is the `objectidentifier` URI, then `oid`, then `sub`; the
+  name is `name`, then the `name` URI. A changed email reaches the same
+  `users` row through the object id (§5.5a). The parser is
   defensive: a malformed `X-MS-CLIENT-PRINCIPAL` falls back to the
   simple headers rather than raising.
 - **Fake auth** (local only): with `ALLOW_FAKE_AUTH=true`,
@@ -408,7 +446,8 @@ through on what is already set, never a caller's choice:
   (`invitations.record_open`) once the signed-in email matches the
   invited reviewer.
 - **The first authenticated request** from a new principal creates its
-  `users` row (`get_or_create_user`).
+  `users` row (`get_or_create_user`), and the first after a known
+  principal's email changes moves its row to the new email (§5.5a).
 
 None takes input that changes what is written, and a cross-origin page
 cannot read the response, so a forged navigation gains at most what the
