@@ -141,6 +141,8 @@ def test_two_instruments_naming_one_rule_set_get_a_row_each(
     result = apply_session_config(db, destination, rows)
 
     assert result.ok, result.errors
+    # The copy is a row the file did not name; the import's counts say so.
+    assert result.counts.get("rule_set_copies") == 1
     instruments = db.scalars(
         select(Instrument)
         .where(Instrument.session_id == destination.id)

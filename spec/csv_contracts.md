@@ -69,10 +69,11 @@ PairContextTag1.Mentor of  → pair_context.1, friendly label "Mentor of"
 ReviewerTag1               → reviewer.tag_1, no suffix (see below)
 ```
 
-- **Any column named twice refuses the file**, as a single blocking
-  issue, tag column or not: `ReviewerTag1` beside
+- **A roster column named twice refuses the file**, as a single
+  blocking issue, tag column or not: `ReviewerTag1` beside
   `ReviewerTag1.Tutor`, or one name repeated, would otherwise keep one
-  column and drop the other.
+  column and drop the other. A column the file does not define is
+  ignored, so a repeat of it is too.
 - **First-period split, labelable columns only.** Only those nine
   tag columns are split, and only on the first period — so a label
   may itself contain periods (`RevieweeTag2.Dept. Head`). Every
@@ -482,8 +483,9 @@ the round-trip notes below.
    validated (`validate_session_config`), so the report names every
    short row beside every other error. A row holding a NUL character
    is refused the same way, since Postgres cannot store one. Quick Setup reports it
-   before the replacement gates, as it does any malformed file, and
-   Rehydrate fails its settings step with it. A blank or absent
+   before the replacement gates, as it does any malformed file.
+   Rehydrate, gated off and incomplete (`spec/rehydrate.md`), is not
+   covered: it reads the session's name and code before this check. A blank or absent
    required value is an error naming its path: a `session_rule_sets`
    `name`, an instrument's `name`, a display field's `source_type`,
    and a response field's `field_key`, `label` and `response_type`.
@@ -868,7 +870,7 @@ shares. Public surface:
 | Helper | Role |
 |---|---|
 | `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the three operator-facing failures — file too large, not valid UTF-8, a NUL character — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
-| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), a header naming one column twice once the `.label` suffix is stripped, or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
+| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), a header naming one roster column twice once the `.label` suffix is stripped, or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |

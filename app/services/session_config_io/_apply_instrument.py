@@ -434,6 +434,7 @@ def _apply_instruments(
 
     # Rule sets already pinned to an earlier instrument of this file.
     pinned_rule_set_ids: set[int] = set()
+    rule_set_copies = 0
 
     for position, n in enumerate(sorted(plan.instruments.keys())):
         spec = plan.instruments[n]
@@ -479,6 +480,7 @@ def _apply_instruments(
                 instrument.rule_set_id = _copy_rule_set(
                     db, resolved_rule_set_id, instrument
                 )
+                rule_set_copies += 1
             else:
                 pinned_rule_set_ids.add(resolved_rule_set_id)
 
@@ -619,4 +621,9 @@ def _apply_instruments(
             )
             counts["view_policies"] += 1
 
+    # The copies are rows the file did not name; the import's own event
+    # counts them, as Replicate's ``session_rule_set.created`` does its one
+    # (findings S5's read). Absent when there are none.
+    if rule_set_copies:
+        counts["rule_set_copies"] = rule_set_copies
     return counts

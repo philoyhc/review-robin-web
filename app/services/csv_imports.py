@@ -38,9 +38,27 @@ log = get_logger(__name__)
 
 MAX_BYTES = 1 * 1024 * 1024
 MAX_ROWS = 5000
-#: Why a file holding a NUL character is refused; the Settings import
-#: reports the same text per row (``session_config_io.split_rows``).
+#: Why a roster file holding a NUL character is refused (findings S7). The
+#: Settings import refuses such a row with its own row-level wording
+#: (``session_config_io.split_rows``).
 NUL_MESSAGE = "File contains a NUL character, which cannot be stored"
+
+#: The columns the roster CSVs define (``spec/csv_contracts.md`` §1). A
+#: header naming one of them twice refuses the file, since ``DictReader``
+#: would keep one copy and drop the other (findings S9); any other column
+#: is ignored, so two of it lose nothing.
+_ROSTER_COLUMNS: frozenset[str] = frozenset(
+    {
+        "ReviewerName", "ReviewerEmail", "RevieweeName", "RevieweeEmail",
+        "ObserverName", "ObserverEmail", "ProfileLink", "PhotoLink", "Status",
+        "CohortRule",
+        *(
+            f"{prefix}Tag{n}"
+            for prefix in ("Reviewer", "Reviewee", "Observer", "PairContext")
+            for n in (1, 2, 3)
+        ),
+    }
+)
 
 
 @dataclass
@@ -177,10 +195,11 @@ def _read_dict_rows(
     canonical, captured = field_label_csv.normalize_headers(list(raw_fieldnames))
     # Two headers naming one column (`ReviewerTag1` and
     # `ReviewerTag1.Tutor`, or one name twice) would leave `DictReader`
-    # keeping the last and dropping the other silently (findings S9).
+    # keeping the last and dropping the other silently (findings S9). Only
+    # a column the roster files define counts; any other is ignored.
     seen: set[str] = set()
     for column in canonical:
-        if column and column in seen:
+        if column in _ROSTER_COLUMNS and column in seen:
             return (
                 None,
                 canonical,

@@ -74,3 +74,14 @@ def test_blank_header_cells_are_not_a_repeat() -> None:
 
     assert not result.is_blocked, result.issues
     assert len(result.rows) == 1
+
+
+def test_a_repeated_column_the_file_does_not_define_is_ignored() -> None:
+    """An extra column is ignored (``spec/csv_contracts.md`` §1), so two
+    of one lose nothing and don't refuse the file (findings S9's read)."""
+    content = b"ReviewerName,ReviewerEmail,Notes,Notes\nAda,ada@example.org,a,b\n"
+
+    result = csv_imports.parse_reviewer_csv(content)
+
+    assert not result.is_blocked, result.issues
+    assert len(result.rows) == 1
