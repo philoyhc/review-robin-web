@@ -19,7 +19,9 @@ def _ascii_fallback(filename: str) -> str:
     for ch in unicodedata.normalize("NFKD", filename):
         if unicodedata.combining(ch):
             continue
-        out.append(ch if " " <= ch <= "~" and ch not in '"\\' else "_")
+        # ``%`` too: some older clients percent-decode the plain
+        # ``filename`` (RFC 6266 Appendix D).
+        out.append(ch if " " <= ch <= "~" and ch not in '"\\%' else "_")
     return "".join(out)
 
 
