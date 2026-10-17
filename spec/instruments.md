@@ -505,7 +505,7 @@ spills either.
 | Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + the relationship tags (with reviewer-tag and relationship-tag operands) |
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee boundary tags |
 
-**Relationship tags** (author, 2026-10-17; `guide/assignment_rule_clarify.md`
+**Relationship tags** (author, 2026-10-17; `guide/archive/assignment_rule_clarify.md`
 Item 2) are offered under their labels as "Pair: <label>". A
 relationship pair joins two people, so one works like a hand-made
 assignment pair or exclusion, and what Save stores depends on where it

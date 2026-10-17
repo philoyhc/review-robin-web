@@ -26,14 +26,7 @@ Two sibling registers hold the open work that is not queued here:
 
 ### In progress
 
-- **Assignment rule: pair-context tags as a person's tags** (opened
-  2026-10-16). Band 1 reads a pair-context tag off the pair being
-  judged; the author's model reads it as the reviewer's or the
-  reviewee's tag, held across their pairs. Item 1 (stage 1, #3086) took
-  pair-context tags off the card and added `IS FILLED` / `IS EMPTY`.
-  Item 2 (ruled 2026-10-17, unbuilt) brings them back: a person's tag in
-  Links 1 and 2, the pair itself under Link 2 `IS` / `IS NOT`, and an
-  empty-value rule for every tag. **Plan:** `guide/assignment_rule_clarify.md`.
+None.
 
 ### On hold
 

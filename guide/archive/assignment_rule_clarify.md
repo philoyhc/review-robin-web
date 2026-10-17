@@ -9,9 +9,9 @@ shape of `guide/import_error_reporting.md`: items close independently,
 each with its own `### Doc impact` and `### Status`, checked by hand at
 close (`tools/close_check.py` reads only `segment_*` files).
 
-**Status (2026-10-17).** Item 1 stage 1 shipped in #3086; its
-person-level reading is superseded by Item 2, which the author ruled on
-2026-10-17. Item 2 is unbuilt.
+**Status (closed 2026-10-17).** Item 1 stage 1 shipped in #3086; its
+person-level reading was superseded by Item 2, which shipped in
+#3088–#3091. Archived 2026-10-17.
 
 ---
 
@@ -109,18 +109,10 @@ Taken 2026-10-16 at `c863dfa8`.
 
 ### Open questions
 
-Answered 2026-10-16, then reopened: the author is rethinking how
-pair-context tags are used, and stage 1 takes them off the card
-meanwhile.
-
-1. **Is the per-pair reading lost on purpose?** Yes. Link 1 "Reviewer's
-   pair tag IS `Mentor`" with Link 2 "Reviewee's pair tag IS `Mentor`".
-2. **Matching.** `IS` / `IS NOT` fully match a value; `IS THE SAME AS`
-   / `IS DIFFERENT FROM` fully match another tag's value. Open: which of
-   a person's several pair values counts.
-3. **`IS NOT` passes an empty value.** Open: for every tag, or pair tags
-   only, which would change existing reviewer and reviewee rules.
-4. **No pair-context grouping in Link 3.** Done in stage 1.
+All answered by Item 2 (author, 2026-10-17): a pair tag is a person's
+outside Link 2 `IS` / `IS NOT`; a person's several values match if any
+one does; `IS NOT` passes an empty value for every tag; no pair-tag
+grouping in Link 3 (done in stage 1).
 
 ### Out of scope
 
@@ -137,15 +129,16 @@ Stage 1 (done):
 
 The person-level reading (on hold):
 
-- `spec/instruments.md` — Link 1 / Link 2: a pair-context tag is the person's, across their pairs.
-- `spec/assignments.md` — Predicate vocabulary: person-level resolution for Band 1 pair-context predicates.
+- `spec/instruments.md` — Link 1 / Link 2: a pair-context tag is the person's, across their pairs. <!-- doc-impact-waived: superseded by Item 2, whose Doc impact carries the reading that shipped -->
+- `spec/assignments.md` — Predicate vocabulary: person-level resolution for Band 1 pair-context predicates. <!-- doc-impact-waived: superseded by Item 2, whose Doc impact carries the reading that shipped -->
 
 ### Status
 
-Opened 2026-10-16 after #3085. Stage 1 shipped in #3086 (rung 1). The
-person-level reading in the Decision above is superseded by Item 2
-(author, 2026-10-17): a pair tag is a person's tag except under Link 2
-`IS` / `IS NOT`, which read the pair itself.
+Closed 2026-10-17. Stage 1 shipped in #3086 (rung 1). The person-level
+reading in the Decision above is superseded by Item 2 (author,
+2026-10-17): a pair tag is a person's tag except under Link 2 `IS` /
+`IS NOT`, which read the pair itself. Rung 2 was never cut; Item 2 took
+its place.
 
 ---
 
@@ -245,66 +238,45 @@ Taken 2026-10-17 at `9dc78ae3`.
   `spec/instruments.md` (Band 1) state the table and the empty-value
   rule; `spec/setup_pages.md` (Observers, cohort rule) states the
   cohort rule's.
-- `### Doc impact` honored; `### Status` compacted at close.
+- `### Doc impact` honored; `### Status
 
-### Open questions
+Closed 2026-10-17. Item base for the cumulative read: `cc7e1ac0`.
 
-None open (author, 2026-10-17).
+**Intended vs done.** The ladder held: engine (#3088), Save + card +
+Link 3 guard (#3089), observer rule (#3090), close. One step was added
+at the author's request after the browser checks (#3091): Link 2's
+caption reads "Pairwise tag" while a cell holds a relationship tag under
+`IS` / `IS NOT`, so the pair-level reading shows on the card.
 
-### Out of scope
+**Decisions confirmed at build:**
+- Every field reads as a set of values; person-level pair tags are new
+  `FIELD_MAP` sides (`reviewer_pairs` / `reviewee_pairs`) built from one
+  person index per `evaluate()`.
+- `spec/assignments.md` took the fields and the empty-value rule in
+  rung 1, not at close, since the behavior shipped there.
+- Save maps a `Pair: …` option by Link and operator
+  (`_band1._engine_field`); a stored `pair_context.tagN` elsewhere is
+  rewritten on its next Save, so its meaning changes. Pre-Azure sessions
+  are disposable.
+- The stored-only option stays, now for emptied slots and
+  relationship-tag boundaries.
 
-Pair tags as Link 3 boundaries (Item 1). Pair-context display fields on
-the reviewer surface.
+**Scope that moved, from the reads.** One cumulative `diff-reviewer`
+read (`cc7e1ac0..`) found six things, all fixed in #3090:
+- a 29–59% per-pair slowdown at 1000 × 1000, cut to parity for `IS`
+  and +7–18% for `IS THE SAME AS`;
+- `STAMP_VERSION` `v2`, so no cached verdict made under the old
+  empty-value rule survives;
+- a Settings import refusing Group beside a Link 2 pair-tag `IS`;
+- two spec gaps (the legacy Link 2 field rewrite, and Group `IS NOT`
+  dropping one member, pinned in
+  `tests/integration/test_pair_tags_generate.py`);
+- the cohort rule stripping the typed value.
 
-### Doc impact
-
-- `spec/assignments.md` — Predicate vocabulary: person-level pair-tag fields; Operators: the empty-value rule.
-- `spec/instruments.md` — Band 1: pair tags by Link and operator, captions, Link 3 Group rule.
-- `spec/setup_pages.md` — Relationships row: Band 1 offers pair tags again; Observers cohort rule: the empty-value rule.
-
-### Status
-
-Opened 2026-10-17 from the author's rulings. Item base for the
-cumulative diff read: `cc7e1ac0` (main before rung 1).
-
-- **Rung 1 (engine), 2026-10-17.** Predicates read every field as a set
-  of values; the empty-value rule applies to every tag; the six
-  person-level fields join `FIELD_MAP` under their own sides
-  (`reviewer_pairs` / `reviewee_pairs`), so the staleness stamp, which
-  reads roster sides only, is unchanged. `spec/assignments.md` gains the
-  fields and the rule in this rung, not at close, since the behavior
-  ships here.
-- **Rung 2 (Save, card, Link 3 guard), 2026-10-17.** The card offers
-  relationship tags as "Pair: …" in Link 1 and Link 2 under the captions
-  "Reviewer's tag" / "Reviewee's tag"; Save maps each by Link and
-  operator (`_band1._engine_field`) and decode maps back. A Link 2
-  pair-tag `IS` refuses a grouped Link 3 at Save and the Link 3 pill
-  skips Group while one is on the card. The stored-only option stays,
-  now for emptied slots and relationship-tag boundaries.
-  `spec/instruments.md` and `spec/setup_pages.md` updated in this rung.
-- **Rung 3 (observer rule), 2026-10-17.** The cohort rule's cross-
-  attribute operators treat no value as a value; `IS NOT` already passed
-  one. Last build rung: the cumulative diff read covers `cc7e1ac0..` here.
-- **Cumulative read (`diff-reviewer`, `cc7e1ac0..`), 2026-10-17.** One
-  read for the item; six findings, all acted on in #3090:
-  - per-pair predicate cost rose 29–59% at 1000 × 1000 (one rule, the
-    reader's benchmark). Values now read as tuples with a single-value
-    fast path and one field parse, back to parity for `IS` and +7–18%
-    for `IS THE SAME AS`;
-  - rung 1's "stamp unchanged" held for its inputs, not its verdicts:
-    `STAMP_VERSION` goes to `v2`, so no cached verdict made under the
-    old empty-value reading survives;
-  - a Settings import could store Group beside a Link 2 pair-tag `IS`;
-    it now refuses the combination as Save does;
-  - `spec/instruments.md` now names the legacy Link 2 field rewrite
-    (pair → reviewee) and the Group `IS NOT` per-member ruling, the
-    latter pinned through Generate on real relationship rows
-    (`tests/integration/test_pair_tags_generate.py`);
-  - the cohort rule strips the typed value as well as the tag.
-  The `spec-writer` verify on rung 3 found the cohort paragraph silent on
-  `IS` / `CONTAINS` on no value; stated and pinned.
-- **Follow-up, 2026-10-17 (author, after the browser checks passed).**
-  Link 2's caption reads "Pairwise tag", not "Reviewee's tag", while a
-  cell holds a relationship tag under `IS` / `IS NOT`, so the pair-level
-  reading is visible on the card (`newModelSyncFieldHelper`). It
-  reopens `app/` after the read, so it takes its own read.
+#3091 reopened `app/`, so it took its own read: no defects, three low
+notes left as they are (two checklist rows that belong to #3090, two
+untested stored-rule paths correct by reading, and a possible stale
+caption after a Firefox form restore, which the operator button shares).
+The `spec-writer` verify passes found one gap each (cohort `IS` /
+`CONTAINS` on no value; one ambiguous clause), both fixed. Browser
+checks passed (author, 2026-10-17).
