@@ -631,8 +631,8 @@ def _populated_round_trip_session(
     review_session.responses_release_at = dt.datetime(
         2026, 6, 30, 23, 59, tzinfo=dt.timezone.utc
     )
-    review_session.invite_offsets = ["-7d", "-1d"]
-    review_session.reminder_offsets = ["-3d", "-1d", "-12h"]
+    review_session.invite_offsets = ["-P7D", "-P1D"]
+    review_session.reminder_offsets = ["-P3D", "-P1D", "-PT12H"]
     review_session.archive_offset = "+30d"
     review_session.responses_release_until = dt.datetime(
         2026, 7, 14, 23, 59, tzinfo=dt.timezone.utc
@@ -1716,3 +1716,122 @@ def test_a_whitespace_only_email_override_cell_resets(db: Session) -> None:
     assert review_session.email_template_overrides == {
         "reminder_subject": " Kept "
     }
+
+
+@pytest.mark.parametrize(
+    ("column", "value", "message"),
+    [
+        ("reminder_offsets", "-P99999999999D", "isn't a valid ISO 8601 duration"),
+        ("reminder_offsets", "-P30D", "10-day"),
+        ("reminder_offsets", "P1D", "fires at or after End"),
+        ("reminder_offsets", "-PT10M", "minimum reviewer notice"),
+        ("invite_offsets", "1d", "isn't a valid ISO 8601 duration"),
+        ("invite_offsets", "PT2H", "fires at or after Start"),
+    ],
+)
+def test_an_import_refuses_an_offset_the_details_card_refuses(
+    db: Session, column: str, value: str, message: str
+) -> None:
+    """L1 (findings 2026-10-16): an out-of-range offset stored unchecked
+    made Session Home answer 500 on every load. The card's rules run in
+    phase 1; nothing is applied."""
+    dst = _bare_session(db, code="l1-offsets")
+    dst.scheduled_activate_at = dt.datetime(2026, 5, 1, 9, 0, tzinfo=dt.timezone.utc)
+    db.flush()
+    result = apply_session_config(db, dst, [Row(f"session.{column}", value, "string")])
+    assert [e.field for e in result.errors] == [f"session.{column}"]
+    assert message in result.errors[0].message
+    db.refresh(dst)
+    assert getattr(dst, column) is None
+
+
+def test_an_import_waives_only_the_lead_time_floor(db: Session) -> None:
+    """An exported schedule whose moments have since passed still
+    imports: reminders before an End already past."""
+    dst = _bare_session(db, code="l1-lead")
+    assert dst.deadline < dt.datetime.now(dt.timezone.utc)
+    assert apply_session_config(
+        db, dst, [Row("session.reminder_offsets", "-P2D, -P1D", "string")]
+    ).errors == []
+    db.refresh(dst)
+    assert dst.reminder_offsets == ["-P2D", "-P1D"]
+
+
+def test_an_out_of_range_duration_is_a_parse_error() -> None:
+    from app.services.scheduled_events import parse_iso_duration
+
+    with pytest.raises(ValueError, match="out of range"):
+        parse_iso_duration("P99999999999D")
+    # Builds, then overflows on negation (Codex on #3093).
+    with pytest.raises(ValueError, match="out of range"):
+        parse_iso_duration("-P999999999DT23H59M59S")
+
+
+def test_an_offset_beside_a_calendar_edge_anchor_is_refused_not_raised(
+    db: Session,
+) -> None:
+    """A Start in year 1 put ``anchor + offset`` past ``datetime``'s range,
+    so the check itself raised; it is refused like any card rule."""
+    dst = _bare_session(db, code="l1-edge")
+    result = apply_session_config(
+        db,
+        dst,
+        [
+            Row("session.scheduled_activate_at", "0001-01-01T12:00:00+00:00", "datetime"),
+            Row("session.invite_offsets", "-P1D", "string"),
+        ],
+    )
+    assert [e.field for e in result.errors] == ["session.invite_offsets"]
+    assert "outside the dates" in result.errors[0].message
+
+
+@pytest.mark.parametrize(
+    ("stored", "start", "message"),
+    [
+        (["-P1D"], "0001-01-01T12:00:00+00:00", "outside the dates"),
+        (["P1D"], "2026-05-01T09:00:00+00:00", "fires at or after Start"),
+    ],
+    ids=["calendar-edge", "now-anchored"],
+)
+def test_a_file_that_moves_only_the_anchor_checks_the_stored_list(
+    db: Session, stored: list[str], start: str, message: str
+) -> None:
+    """The card checks the stored list again on every Save, so an import
+    that moves Start alone checks it too; nothing is applied."""
+    dst = _bare_session(db, code="l1-anchor-only")
+    dst.invite_offsets = stored
+    db.flush()
+    result = apply_session_config(
+        db, dst, [Row("session.scheduled_activate_at", start, "datetime")]
+    )
+    assert [e.field for e in result.errors] == ["session.invite_offsets"]
+    assert message in result.errors[0].message
+    db.refresh(dst)
+    assert dst.scheduled_activate_at is None
+
+
+def test_reminders_are_checked_against_the_end_the_session_keeps(
+    db: Session,
+) -> None:
+    """End fills a blank only, so a file's reminders meet the
+    destination's End where it has one, and the file's End otherwise."""
+    kept = _bare_session(db, code="l1-end-kept")
+    assert apply_session_config(
+        db,
+        kept,
+        [
+            Row("session.deadline", "2026-09-01T12:00:00+00:00", "datetime"),
+            Row("session.reminder_offsets", "PT2H", "string"),
+        ],
+    ).errors[0].field == "session.reminder_offsets"
+    blank = _session(db, code="l1-end-blank")
+    assert apply_session_config(
+        db,
+        blank,
+        [
+            Row("session.deadline", "2026-09-01T12:00:00+00:00", "datetime"),
+            Row("session.reminder_offsets", "-P1D", "string"),
+        ],
+    ).errors == []
+    db.refresh(blank)
+    assert blank.reminder_offsets == ["-P1D"]

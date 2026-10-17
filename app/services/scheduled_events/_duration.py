@@ -48,14 +48,21 @@ def parse_iso_duration(text: str) -> timedelta:
     hours = int(parts["hours"] or 0)
     minutes = int(parts["minutes"] or 0)
     seconds = int(parts["seconds"] or 0)
-    total = timedelta(
-        days=years * 365 + months * 30 + days,
-        hours=hours,
-        minutes=minutes,
-        seconds=seconds,
-    )
-    if parts["sign"] == "-":
-        total = -total
+    try:
+        total = timedelta(
+            days=years * 365 + months * 30 + days,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+        )
+        # Negating can overflow too: ``-timedelta.max`` is past
+        # ``timedelta.min`` (Codex on #3093).
+        if parts["sign"] == "-":
+            total = -total
+    except OverflowError as exc:
+        # Past ``timedelta``'s range: as unusable as a malformed string,
+        # so callers that catch ``ValueError`` refuse it (findings L1).
+        raise ValueError(f"ISO 8601 duration out of range: {text!r}") from exc
     return total
 
 

@@ -496,6 +496,15 @@ the round-trip notes below.
    A schedule out of order (Start ≤ End ≤ Release-from <
    Release-until) is an error naming the field, on the values the
    session would hold after the apply (`spec/lifecycle.md` §8.2.7).
+   So is a `session.invite_offsets` or `session.reminder_offsets` entry
+   the details card would refuse: not an ISO 8601 duration, past the
+   10-day cap, or, while its anchor is set on those same post-apply
+   values, under the reviewer notice, not before the anchor, or
+   resolving outside the dates the app can hold. The list checked is
+   the file's, or the stored one when the file moves its anchor, as the
+   card checks the stored list again on every Save. The card's lead-time
+   floor, which measures from now, is the one rule waived, so an
+   exported schedule whose moments have since passed still imports.
    A `session_rule_sets[N].rules_json` the rule engine would refuse
    to load is an error naming the field (`rules_payload_error` in
    `app/schemas/rules.py`, the check the reader makes), and so is an

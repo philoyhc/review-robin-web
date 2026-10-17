@@ -302,3 +302,14 @@ with the last section it covers.
   `[{"kind": "NOPE"}]`, and import it. The import is refused, the error
   names `rules_json`, and Instruments, Assignments and Validate all still
   open.
+
+## The Settings import refuses an offset the details card refuses (L1)
+
+- [ ] **A bad reminder offset is refused.** Export a session's
+  settings, set `session.reminder_offsets` to `-P99999999999D` (or
+  `-P30D`, past the 10-day cap), and import it: the import is refused
+  with the error on `session.reminder_offsets`, nothing changes, and
+  Session Home still loads.
+- [ ] **An old schedule still imports.** Import the settings of a
+  session whose End has passed, reminders included: it applies, since
+  only the lead-time floor is waived.
