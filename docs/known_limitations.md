@@ -63,19 +63,19 @@ only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
   `Send reminders` to every reviewer who has not submitted — but like invitations they are
   recorded, not delivered; until 14B, chase non-submitters by hand
   from the Responses page's coverage view.
-- **Scheduled sends wait for a Session Home visit.** Scheduled
+- **Scheduled sends wait for an operator page view.** Scheduled
   activation, invitations and reminders have no clock of their own:
   they fire when an operator next opens that session's Session Home,
-  the only page that runs the scheduler
-  (`app/web/routes_operator/_session_home.py`). A reminder set for
-  09:00 goes out when an operator next looks, and nothing fires while
-  nobody opens the page. A failed invitation or reminder pass is
+  one of its Operations pages (Validate, Assignments, Invitations,
+  Responses), or the Sessions lobby (`spec/lifecycle.md` §8.3). A
+  reminder set for 09:00 goes out when an operator next looks, and
+  nothing fires while nobody opens those pages. A failed invitation or reminder pass is
   logged and audited (`session.scheduled_event_failed`) and retried on the next
   visit; scheduled activation retries a fixed number of times, then
   stops.
   Until a clock-driven trigger lands after the Azure cutover
-  (`guide/post_azure_todo_checklist.md` item 7), open Session Home at
-  or after each scheduled time.
+  (`guide/post_azure_todo_checklist.md` item 7), open the lobby or
+  Session Home at or after each scheduled time.
 - **Reviewer answers are not autosaved.** The reviewer surface
   saves only when the reviewer presses Save or Submit, and it has
   no leave-page (`beforeunload`) guard, so navigating away (the

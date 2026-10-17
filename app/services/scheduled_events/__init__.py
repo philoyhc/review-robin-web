@@ -1,7 +1,9 @@
 """Lazy observer for scheduled session-lifecycle events (Segment 18G).
 
 Per ``spec/lifecycle.md`` §8.2 + §8.3: scheduled events fire on
-the operator's GET of Session Home (the observer's only caller). Each trigger checks its
+the operator's GET of Session Home, the four Operations pages and the
+Sessions lobby (``observe_scheduled_events_on_load`` in
+``app/web/routes_operator/_shared.py``). Each trigger checks its
 precondition (§8.2.3), locks the session row and re-reads it
 (``lock_session``), and is idempotent via the column clear at the end
 of a successful fire.
@@ -190,8 +192,12 @@ def observe_scheduled_events(
     correlation_id: str | None = None,
     build_invite_url: Callable[[str], str] | None = None,
 ) -> None:
-    """Lazy observer entry point — called from Session Home's GET, its
-    only caller.
+    """Lazy observer entry point — called, through the route layer's
+    ``observe_scheduled_events_on_load``, from the GETs of Session
+    Home, the four Operations pages (Validate, Assignments,
+    Invitations, Responses) and the Sessions lobby, which runs it for
+    each session it lists (``spec/lifecycle.md`` §8.3). A session with
+    nothing due returns before any query.
 
     Fires any scheduled-event triggers whose fire-time has passed
     and whose preconditions are met. Idempotent and concurrency-safe
@@ -205,9 +211,8 @@ def observe_scheduled_events(
 
     ``build_invite_url`` is the URL builder consumed by the
     invite-dispatch path (``send_invitation`` in
-    ``app.services.invitations``). The caller — typically the
-    Session Home GET handler — passes
-    ``lambda token: str(request.url_for("reviewer_invite", token=token))``.
+    ``app.services.invitations``). The route-layer caller passes one
+    that returns ``str(request.url_for("reviewer_invite", token=token))``.
     When omitted the invite trigger no-ops (a stand-alone
     background-worker dispatch path will plumb a deployment-base-URL
     closure here).
@@ -276,7 +281,8 @@ def _run_guarded(
     state; invites and reminders do not yet (work in progress awaiting
     Azure, ``guide/post_azure_todo_checklist.md`` item 7). Until then an
     uncaught render, outbox or audit error would propagate out of this
-    observer and fail the GET that ran it — Session Home, on every load.
+    observer and fail the GET that ran it — Session Home, an Operations
+    page or the lobby, on every load.
     Here it is rolled back, logged and recorded as
     ``session.scheduled_event_failed``; the next visit tries again.
 

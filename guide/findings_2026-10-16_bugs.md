@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 7 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+**Open:** 3 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
 R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
-R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1 and R7 done).
+R8, O2, L6, L7, O5, O8, O9, O10, L8, E3, R1, R7, L5, P2, L4 and R6 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -91,7 +91,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**R5**~~ — **Done in #3110**: the reviewer's `summary.csv` names a group by the members that reviewer has an included row for, as the surface does (`_group_export_index(reviewer_id=)`; `tests/unit/test_responses_extract.py`). The reviewer `summary.csv` group name lists members the reviewer is
   not assigned, excluded ones included (`responses_extract.py:150-170`).
   *Reproduced.* Code.
-- **R6** — **Ruled 2026-10-17**: maintain both: `saved_at` moves and `version` increments on every changed save, and the Responses CSV, the by-instrument extract and the rehydration import keep carrying them (re-ruled the same day once Codex on #3112 showed those readers). `Response.saved_at` never updates and `version` never increments
+- ~~**R6**~~ — **Done in #3116** (ruled 2026-10-17): a changed save moves `saved_at` and adds 1 to `version`, an unchanged one touches neither (`spec/csv_contracts.md`; `tests/integration/test_responses_service.py`). `Response.saved_at` never updates and `version` never increments
   (`app/db/models/response.py:32-36`). *Reproduced.* Author: maintain them or
   retire them.
 - ~~**L2**~~ — **Done in #3109**: `parse_local_datetime` refuses a moment within a day of `datetime`'s range, so Create, `/config` and the lobby edit give the box's usual refusal on End, Start and both Release boxes, and the Settings CSV import refuses its schedule datetimes the same way; a stored edge instant renders unconverted, labelled `UTC`, and `/config` keeps it when its box is untouched (`tests/integration/test_date_overflow_refused.py`). Durations already refused since L1. **Far-future dates and durations answer 500 (`OverflowError`) on
@@ -102,7 +102,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   session lock, so a write can land after Close or Revert on Postgres
   (`_surface/_context.py:126-158`). `spec/lifecycle.md` §8.3. *Code reading;*
   the race needs Postgres. Code.
-- **L4** — **Ruled 2026-10-17**: add the callers: the Operations pages and the lobby run the scheduled-event pass on load, as `spec/lifecycle.md` §8.3 says, until the Azure scheduler replaces all three. Scheduled events fire only from Session Home
+- ~~**L4**~~ — **Done in #3116** (ruled 2026-10-17): Validate, Assignments, Invitations, Responses and the lobby (for every listed session neither expired nor archived) run the scheduled-event pass on load, once per session per request (`spec/lifecycle.md` §8.3; `tests/integration/test_scheduled_events_callers.py`). Scheduled events fire only from Session Home
   (`_session_home.py:124`); `spec/lifecycle.md` §8.3 says the Operations pages
   and the lobby too. `guide/post_azure_todo_checklist.md` item 7 tracks the
   scheduler. Author: say so in the spec, or add the callers.
@@ -130,7 +130,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   refuse (`app/services/users.py:283`, `:305`, batch at `:598`).
   `spec/permissions.md` §4.2 holds owners to be operators; `revoke` guards
   this, `demote` doesn't. *Reproduced.* Code.
-- **P2** — **Ruled 2026-10-17**: keep the relaxation and audit on the source: Duplicate writes an event on the source session naming the actor and the copy. A sys-admin who doesn't own a session can POST `/clone` with
+- ~~**P2**~~ — **Done in #3116** (ruled 2026-10-17): Duplicate also writes `session.duplicated` on the source session, naming the actor and the copy (`spec/permissions.md` §3; `tests/integration/test_session_clone.py`). A sys-admin who doesn't own a session can POST `/clone` with
   `mode=all` and read the full roster through the copy, while the roster page
   itself answers 403; no event lands on the source
   (`routes_operator/_lobby.py:343-372`, `session_clone.py:396-404`).
@@ -149,7 +149,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**R8**~~ — **Done in #3106 and #3110**: #3106 ignores a form key whose id is past the largest SQL integer; here, at the `name` level a self-review row of the observer download blanks the reviewee email and tags too, since they are the reviewer's, and doesn't sort on that email (`tests/integration/test_reviewer_identity_level.py`). The level covers the reviewer's columns, so a row where that person is someone else's reviewee still names them there, as `spec/participant_model.md` §4.2 has it. A 20-digit assignment id answers 500 (`_core.py:57`); and, by
   reading, the observer CSV's self-review rows expose the reviewer through the
   reviewee columns. Code.
-- **L5** — **Ruled 2026-10-17**: Archive clears every instrument's `accepting_responses`, like every other exit from `ready`. Archiving a `ready` session leaves every instrument's
+- ~~**L5**~~ — **Done in #3116** (ruled 2026-10-17): `archive_session` sets `accepting_responses=false` on every instrument in the same transaction, so Unarchive lands in `draft` with nothing accepting (`spec/lifecycle.md`; `tests/integration/test_session_archive.py`). Archiving a `ready` session leaves every instrument's
   `accepting_responses` set, and unarchive carries it into `draft`
   (`_workflow.py:622`). That is harmless for writes, which
   `session_accepts_responses` gates on `ready`. But `spec/lifecycle.md`

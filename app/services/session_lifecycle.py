@@ -826,7 +826,8 @@ def archive_session(
     """Flip any non-archived session into ``archived`` — file it
     out of the active lobby.
 
-    Archiving is reversible (see ``unarchive_session``) and
+    Clears every instrument's ``accepting_responses``, as every other
+    exit from ``ready`` does. Archiving is reversible (see ``unarchive_session``) and
     deletes no data. Accepts any starting state except
     ``archived`` itself; the audit event records the actual
     from-state so the round-trip is reconstructible. The lobby's
@@ -842,6 +843,13 @@ def archive_session(
             code="already_archived",
         )
     from_status = review_session.status
+    # Archive is an exit from ``ready`` like Close and Revert, so it
+    # closes every instrument too (findings L5); unarchive then lands
+    # in ``draft`` with nothing accepting.
+    for instrument in db.execute(
+        select(Instrument).where(Instrument.session_id == review_session.id)
+    ).scalars():
+        instrument.accepting_responses = False
     review_session.status = SessionStatus.archived.value
     db.flush()
     audit.write_event(
@@ -897,7 +905,7 @@ def unarchive_session(
 # --------------------------------------------------------------------------- #
 # Accepting is session-wide, so there is no per-instrument open or close:
 # ``activate_session`` opens every instrument, and ``observe_deadline``,
-# Close session (``expire_session``) and Revert close them all. ``open_instrument`` / ``close_instrument``
+# Close session (``expire_session``), Revert and Archive close them all. ``open_instrument`` / ``close_instrument``
 # were removed with their routes on 2026-10-01.
 
 

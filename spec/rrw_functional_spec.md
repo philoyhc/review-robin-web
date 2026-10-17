@@ -427,8 +427,8 @@ list of display fields, and per-audience **visibility policies**
 rule produces, the cached eligible-pair count, the per-instrument
 fan-out copies for group-scoped instruments, and the
 accepting-responses flag, which the session's lifecycle sets on
-every instrument at once (Activate opens; the deadline, Close session
-or Revert closes).
+every instrument at once (Activate opens; the deadline, Close session,
+Revert or Archive closes).
 
 A session may have any number of instruments (no cap). Each
 instrument defines its own response fields, display fields, rule,
@@ -1105,7 +1105,9 @@ The lobby supports:
   history, and neither carries the deadline or the schedule (its
   anchors and offsets), which reset on purpose: the clone is a fresh
   `draft`, owned by the operator who cloned it, for a new cycle the
-  operator schedules.
+  operator schedules. The copy's trail opens with `session.cloned`;
+  the original's records `session.duplicated`, naming who copied it
+  and the copy's id and code.
 
 The **archived-sessions child page** (`/operator/sessions/archived`)
 lists sessions in `archived` state with the lobby's table, sort, search
@@ -1301,7 +1303,7 @@ the **Expand all / Collapse all instruments** buttons, which act on
 the page rather than on any instrument.
 
 Accepting follows the lifecycle: Activate opens every instrument,
-and the deadline, Close session or Revert closes them all. What a
+and the deadline, Close session, Revert or Archive closes them all. What a
 participant sees once an instrument closes follows its visibility
 policy. `spec/instruments.md` owns that contract and states it in
 full.

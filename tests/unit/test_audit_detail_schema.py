@@ -110,6 +110,7 @@ def test_every_emitted_event_type_has_a_registered_schema() -> None:
         "session.tag_removed",
         # Segment 18A — session cloning
         "session.cloned",
+        "session.duplicated",
         # Segment 18A — session archiving
         "session.archived",
         "session.unarchived",

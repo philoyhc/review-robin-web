@@ -392,8 +392,11 @@ route that changes state on the caller's say-so is a POST, so the GET
 exception isn't exploitable. The GETs that write record or follow
 through on what is already set, never a caller's choice:
 
-- **Session Home** runs `observe_scheduled_events` first, which fires
-  the session's past-due scheduled activation, invites and reminders.
+- **Session Home, the four Operations pages (Validate, Assignments,
+  Invitations, Responses) and the Sessions lobby** run
+  `observe_scheduled_events` first, which fires the session's past-due
+  scheduled activation, invites and reminders; the lobby runs it for
+  each session it lists.
 - **The Instruments page and the reviewer surface** run
   `lifecycle.observe_deadline` first, which closes the session's
   instruments and writes the close's audit events once the deadline

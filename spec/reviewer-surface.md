@@ -913,8 +913,8 @@ three** of the following hold:
    session).
 2. `Instrument.accepting_responses == true` on the instruments the
    reviewer writes to. Accepting is session-wide (`spec/lifecycle.md`):
-   Activate sets it on every instrument and the deadline, Close session
-   or Revert clears it on every instrument, so the gate is effectively
+   Activate sets it on every instrument and the deadline, Close session,
+   Revert or Archive clears it on every instrument, so the gate is effectively
    one switch per session.
 3. `now() < ReviewSession.deadline` (deadline hasn't passed; null
    deadline counts as open).

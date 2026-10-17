@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
     Assignment,
     InstrumentResponseField,
+    Response,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -462,3 +465,57 @@ def test_validate_value_list_option_membership(db: Session) -> None:
     assert "one of the listed" in (
         responses_service.validate_value(field, "Sometimes") or ""
     )
+
+
+def test_saved_at_and_version_move_on_a_changed_save_only(
+    db: Session,
+) -> None:
+    """Findings R6: ``saved_at`` is when the value last changed and
+    ``version`` counts the changes. An unchanged re-save touches
+    neither; a changed one moves ``saved_at`` and adds 1 to
+    ``version``."""
+    op, reviewer, review_session, assignment = _seed(db)
+
+    def _save(value: str, corr: str) -> None:
+        responses_service.save_draft(
+            db,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=op,
+            upserts=[
+                ResponseUpsert(
+                    assignment_id=assignment.id, field_key="rating", value=value
+                ),
+            ],
+            correlation_id=corr,
+        )
+
+    def _row() -> Response:
+        db.expire_all()
+        return db.execute(
+            select(Response).where(Response.assignment_id == assignment.id)
+        ).scalar_one()
+
+    def _naive(moment: datetime) -> datetime:
+        return moment.replace(tzinfo=None)
+
+    _save("3", "corr-1")
+    old = datetime(2020, 1, 1, 12, 0)
+    row = _row()
+    assert row.version == 1
+    row.saved_at = old
+    db.commit()
+
+    _save("3", "corr-2")
+    row = _row()
+    assert _naive(row.saved_at) == old
+    assert row.version == 1
+
+    _save("5", "corr-3")
+    row = _row()
+    assert row.value == "5"
+    assert _naive(row.saved_at) > old
+    assert row.version == 2
+
+    _save("4", "corr-4")
+    assert _row().version == 3

@@ -44,7 +44,7 @@ draft                    validated                    ready           expired
 | `validated` | Validated | Readiness check passed; setup still open but signals "ready to activate". |
 | `ready` | **Activated** | Reviewer surface accepting writes; setup locked. |
 | `expired` | Closed | Session closed by the operator's Workflow-card **Close session** button (`ready → expired`, `expire_session`). Every instrument is closed; responses (drafts + submitted) are preserved. From `expired` the operator can Revert to draft (`revert_session_to_draft`) to reopen for editing. |
-| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session`. `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired), so the Workflow card's `/workflow/archive` route can fire from any state, though the card renders its Archive button only in `expired` (`archive_visible`); the lobby's **Purge and archive** and the Extract data page's Archive card both go through `session_purge.purge_and_archive`, which skips any session failing `can_archive` (so `draft`, `validated` and `expired` archive, and `ready` does not). `unarchive_session` restores `archived → draft`. |
+| `archived` | Archived | Filed out of the active lobby; deletes no data. Written by `archive_session` / `unarchive_session`. `archive_session` accepts **any non-archived** starting state (draft / validated / ready / expired), so the Workflow card's `/workflow/archive` route can fire from any state, though the card renders its Archive button only in `expired` (`archive_visible`); the lobby's **Purge and archive** and the Extract data page's Archive card both go through `session_purge.purge_and_archive`, which skips any session failing `can_archive` (so `draft`, `validated` and `expired` archive, and `ready` does not). `archive_session` sets `accepting_responses=false` on every instrument in the same transaction, as every other exit from `ready` does, so `unarchive_session`, which restores `archived → draft`, lands with nothing accepting. |
 
 The internal enum is `SessionStatus` in
 `app/services/session_lifecycle.py`. The display-label divergence
@@ -426,7 +426,7 @@ open or every instrument is closed.
 
 | Column | Type | Meaning |
 |---|---|---|
-| `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session and deadline-close. No operator control sets it per instrument. |
+| `accepting_responses` | `Boolean` | Reviewers can save / submit. **Session-wide in practice:** set on every instrument by activate, cleared on every instrument by revert, Close session, archive and deadline-close. No operator control sets it per instrument. |
 | `deadline_closed_at` | `DateTime \| None` | Timestamp the deadline-close fired. Read only by `observe_deadline`, which skips an instrument already stamped; cleared by Activate and by a reopen while live (a `ready` session whose deadline is unset or moved into the future). No surface renders it. |
 
 What a reviewer reads back after close is the visibility policy's call
@@ -438,7 +438,8 @@ What a reviewer reads back after close is the visibility policy's call
   `activate_session` opens every instrument (a group-scoped one
   included, since one with no stored Band 1 rule evaluates as the
   synthetic Full Matrix), and `revert_session_to_draft`,
-  `expire_session` and `observe_deadline` close them all. So once
+  `expire_session`, `archive_session` and `observe_deadline` close
+  them all. So once
   a session is activated, an instrument is never closed while another
   in it accepts (a settings import can set the flag per instrument,
   but only on an editable session, and activation then opens all),
@@ -973,10 +974,21 @@ browsers, and direct POSTs bypass the picker entirely).
 - **Trigger mechanism — lazy observer.**
   Scheduled-event triggers extend the lazy deadline-observer
   pattern (§4) rather than running a separate background worker:
-  each operator GET to a session-related page (Session Home,
-  Operations pages, Sessions lobby) runs the per-anchor sweep
-  for that session, fires anything past its scheduled time, and
-  short-circuits on no-op. No new processes / cron / queue
+  each operator GET to a session-related page runs the per-anchor
+  sweep for that session, fires anything past its scheduled time, and
+  short-circuits on no-op. The pages are Session Home, the four
+  Operations pages of §5 (Validate, Assignments, Invitations,
+  Responses) and the Sessions lobby, which runs it for each session
+  its table lists that can still fire (every one the operator owns
+  that is neither `expired` nor `archived`: an expired session has
+  nothing left to fire, and its past entries would cost a lock on
+  every load). All go
+  through `observe_scheduled_events_on_load`
+  (`app/web/routes_operator/_shared.py`), which runs
+  `scheduled_events.observe_scheduled_events` once per session per
+  request; a session with nothing due returns before any query, and
+  one with a due entry already sent pays a lock and an audit read per
+  trigger. No new processes / cron / queue
   infra. Trade-off: a scheduled event "fires at the next
   operator GET ≥ scheduled time" — which is fine for events
   with reasonable lead time, but constrains *how close to the

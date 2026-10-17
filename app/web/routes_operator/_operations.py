@@ -39,6 +39,7 @@ from app.web.routes_operator._shared import (
     _REVERT_RETURN_TO,
     _require_reviewer_in_session,
     _templates,
+    observe_scheduled_events_on_load,
 )
 
 
@@ -188,6 +189,7 @@ def validate_session(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> Response:
+    observe_scheduled_events_on_load(request, db, [review_session])
     issues = validation.validate_session_setup(db, review_session)
     # A GET writes nothing of its own, so the reconcile verdict the
     # readiness run warmed is committed rather than recomputed on every
@@ -433,6 +435,7 @@ def invitations_index(
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
+    observe_scheduled_events_on_load(request, db, [review_session])
     all_rows = views.build_invitations_rows(db, review_session)
     all_rows = views.apply_cookie_sort(
         all_rows,
@@ -941,6 +944,7 @@ def session_responses(
     (Segment 11C Part 1 follow-up). Filter state is page-local; not
     persisted across navigations.
     """
+    observe_scheduled_events_on_load(request, db, [review_session])
     all_rows = views.build_responses_rows(db, review_session)
     all_rows = views.apply_cookie_sort(
         all_rows,

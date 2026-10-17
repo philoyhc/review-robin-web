@@ -33,6 +33,7 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _templates,
+    observe_scheduled_events_on_load,
     parse_session_deadline,
     session_payload_error,
 )
@@ -47,6 +48,15 @@ def list_sessions(
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     all_sessions = sessions.list_for_user(db, user)
+    # The scheduled-event pass, before the stats and rows read their
+    # status (``spec/lifecycle.md`` §8.3), for every listed session that
+    # can still have something due. An expired one cannot, and would
+    # otherwise take its lock on every load for the past entries.
+    observe_scheduled_events_on_load(
+        request,
+        db,
+        [s for s in all_sessions if s.status not in ("archived", "expired")],
+    )
     lobby_stats = views.session_status_counts(all_sessions)
     # The main lobby table shows only non-archived sessions; archived
     # ones live on their own child page (Segment 18A Part 3). The
