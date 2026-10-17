@@ -2,10 +2,11 @@
 decided under the session-row lock, in the service.
 
 SQLite has one writer, so the race itself can't be run here. Each test
-stands a spy in for ``session_guard.lock_session`` that commits a Close
-(the session to ``expired``) just before the lock is taken — the racer
-that won — and checks the write is refused from what the lock re-read,
-leaving the saved answers as they were.
+stands a spy in for ``session_guard.lock_session`` that, just before the
+lock is taken, writes what the racer that won would have committed (a
+Close, or a deadline now past) in the same transaction, and checks the
+write is refused from what the lock re-read, leaving the saved answers
+as they were.
 """
 
 from __future__ import annotations
@@ -42,9 +43,15 @@ def _action(name: str, assignment_id: int):
     return responses_service.recall
 
 
+_PAST = dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+
+
+@pytest.mark.parametrize(
+    "racer", [{"status": "expired"}, {"deadline": _PAST}], ids=["close", "deadline"]
+)
 @pytest.mark.parametrize("name", ["save", "submit", "clear", "recall"])
 def test_a_close_committed_before_the_lock_refuses_the_write(
-    db: Session, monkeypatch: pytest.MonkeyPatch, name: str
+    db: Session, monkeypatch: pytest.MonkeyPatch, name: str, racer: dict
 ) -> None:
     op, reviewer, review_session, assignment = _seed(db)
     stamped = dt.datetime(2026, 5, 9, tzinfo=dt.timezone.utc)
@@ -65,16 +72,18 @@ def test_a_close_committed_before_the_lock_refuses_the_write(
     assert review_session.status == "ready"
 
     real_lock = session_guard.lock_session
-    calls: list[int] = []
+    calls: list[tuple[int, bool]] = []
 
-    def closing_lock(db_: Session, session: ReviewSession) -> ReviewSession:
-        calls.append(session.id)
+    def closing_lock(
+        db_: Session, session: ReviewSession, *, shared: bool = False
+    ) -> ReviewSession:
+        calls.append((session.id, shared))
         db_.execute(
             update(ReviewSession)
             .where(ReviewSession.id == session.id)
-            .values(status="expired")
+            .values(**racer)
         )
-        return real_lock(db_, session)
+        return real_lock(db_, session, shared=shared)
 
     monkeypatch.setattr(session_guard, "lock_session", closing_lock)
 
@@ -88,7 +97,8 @@ def test_a_close_committed_before_the_lock_refuses_the_write(
         )
     db.rollback()
 
-    assert calls == [review_session.id]
+    # Shared, so reviewers writing at once don't queue behind each other.
+    assert calls == [(review_session.id, True)]
     rows = list(
         db.execute(
             select(Response).where(Response.assignment_id == assignment.id)

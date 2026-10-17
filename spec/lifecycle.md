@@ -314,6 +314,7 @@ KEY UPDATE`, `populate_existing`) and re-reads it:
 | `require_not_ready` | `ready` (Delete Data, Delete session) | `session_ready` |
 | `require_validated_or_ready` | not `validated`/`ready` (bulk invitation Send and Regenerate, §3.3) | `not_prepared` |
 | `require_ready` | not `ready` (per-row invitation actions and reminders, §3.4) | `not_ready` |
+| `require_accepting_responses` | not `ready`, or past the deadline (the reviewer's Save, Submit, Clear and Recall, §8.3) | `not_accepting_responses` |
 
 A refusal raises `SessionStateConflict`, a `LifecycleError`, which an
 app-level handler (`app/web/error_handlers.py`) renders as the same 409
@@ -1027,7 +1028,12 @@ browsers, and direct POSTs bypass the picker entirely).
   send, regenerate or reminder cannot land on one reverted or closed
   since (findings Bc5); and the reviewer's Save, Submit, Clear and
   Recall open with `require_accepting_responses` (`ready`, before the
-  deadline), so none lands after a Close or Revert (findings L3). The gate is
+  deadline), so none lands after a Close or Revert (findings L3). That
+  one lock is shared (`FOR SHARE`): a transition waits for the write,
+  but reviewers writing at once do not wait on each other, since no
+  write updates the session row or locks it again. Its refusal is not
+  the 409 page: the route re-renders the refused write as its own
+  check would (`spec/reviewer-surface.md`, *Lifecycle gating*). The gate is
   `session_guard.require_state`; the route-level `_require_*` checks stay
   as early refusals and the service check can only refuse more. The
   Instruments page's display-field repair

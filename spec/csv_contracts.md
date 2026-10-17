@@ -261,7 +261,8 @@ both the preamble and the data rows, so the file matches the form the
 reviewer saw. Group-scoped instruments collapse the same way
 (one row per (this reviewer, instrument, group, field)), and the
 group identity names only the members this reviewer has an included
-row for, as the surface does.
+row for, the members the surface names (the surface caps a long list;
+the file names every one).
 Builds on the same `_response_row_tuple` as §2.4, so a
 per-cell rename flows through to every file in this family.
 

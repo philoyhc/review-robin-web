@@ -242,14 +242,19 @@ def require_accepting_responses(
     the reviewer's Save, Submit, Clear and Recall gate (findings L3), so
     a write cannot land on a session closed or reverted since the
     route's own check. The instruments' ``accepting_responses`` flags
-    need no re-read: they change only in the transitions that change
-    the status, under this same lock."""
+    are not re-read: every change to them comes with a status change
+    or with the deadline passing, both of which this checks.
+
+    The lock is shared: a transition waits for the write to commit, but
+    reviewers saving at once do not queue behind each other. The writes
+    neither update the session row nor lock it again."""
     return session_guard.require_state(
         db,
         review_session,
         lambda locked: is_ready(locked) and not deadline_has_passed(locked),
         code="not_accepting_responses",
-        message="This review is not accepting responses (session is {status}).",
+        message="This review is no longer accepting responses.",
+        shared=True,
     )
 
 

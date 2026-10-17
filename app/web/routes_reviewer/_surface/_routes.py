@@ -21,6 +21,7 @@ from app.services import invitations as invitations_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
+from app.services.session_guard import SessionStateConflict
 from app.web import views
 from app.web.deps import (
     get_or_create_user,
@@ -36,6 +37,7 @@ from app.web.routes_reviewer._shared import (
 from ._context import (
     _load_assignments_with_relations,
     _pages_for_session,
+    _race_refusal,
     _surface_context,
     _write_refusal,
 )
@@ -380,15 +382,32 @@ async def reviewer_save(
     upserts = [u for u in upserts if u.assignment_id in target_assignment_ids]
     # Off the event loop: the save waits on the session row lock to
     # re-check, under it, that the session still accepts (findings L3).
-    result = await run_in_threadpool(
-        responses_service.save_draft,
-        db,
-        review_session=review_session,
-        reviewer=reviewer,
-        user=user,
-        upserts=upserts,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        result = await run_in_threadpool(
+            responses_service.save_draft,
+            db,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=user,
+            upserts=upserts,
+            correlation_id=request_correlation_id(),
+        )
+    except SessionStateConflict:
+        refusal = await run_in_threadpool(
+            _race_refusal, db, review_session, reviewer
+        )
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            refusal,
+            action="save",
+            page_n=page_n,
+            form=string_form,
+        )
     if result.errors:
         bad_values = {
             (e.assignment_id, e.field_key): e.value for e in result.errors
@@ -460,15 +479,32 @@ async def reviewer_submit(
             form=string_form,
         )
     # Off the event loop, like the save (findings L3).
-    result = await run_in_threadpool(
-        responses_service.submit,
-        db,
-        review_session=review_session,
-        reviewer=reviewer,
-        user=user,
-        upserts=upserts,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        result = await run_in_threadpool(
+            responses_service.submit,
+            db,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=user,
+            upserts=upserts,
+            correlation_id=request_correlation_id(),
+        )
+    except SessionStateConflict:
+        refusal = await run_in_threadpool(
+            _race_refusal, db, review_session, reviewer
+        )
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            refusal,
+            action="submit",
+            page_n=_submitted_from_page(request),
+            form=string_form,
+        )
     if not result.submitted:
         bad_values = {
             (e.assignment_id, e.field_key): e.value for e in result.errors
@@ -522,6 +558,22 @@ async def reviewer_submit(
     )
 
 
+def _recall_refused(review_session: ReviewSession) -> HTTPException:
+    """The 403 a Recall gets when the review no longer allows it."""
+    closed = lifecycle.is_ready(review_session) or lifecycle.is_expired(
+        review_session
+    )
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "This review has closed, so your submission can't be recalled."
+            if closed
+            else "This review is not currently open, so your "
+            "submission can't be recalled."
+        ),
+    )
+
+
 @router.post(
     "/sessions/{session_id}/recall",
     response_class=HTMLResponse,
@@ -552,26 +604,20 @@ def reviewer_recall(
     )
     db.refresh(review_session)
     if not lifecycle.recall_allowed(review_session):
-        closed = lifecycle.is_ready(review_session) or lifecycle.is_expired(
-            review_session
+        raise _recall_refused(review_session)
+    try:
+        responses_service.recall(
+            db,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=user,
+            correlation_id=request_correlation_id(),
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "This review has closed, so your submission can't be "
-                "recalled."
-                if closed
-                else "This review is not currently open, so your "
-                "submission can't be recalled."
-            ),
-        )
-    responses_service.recall(
-        db,
-        review_session=review_session,
-        reviewer=reviewer,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
+    except SessionStateConflict:
+        # Closed or reverted since the check above (findings L3).
+        db.rollback()
+        db.refresh(review_session)
+        raise _recall_refused(review_session) from None
     return RedirectResponse(
         url=f"/me/sessions/{review_session.id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
@@ -617,14 +663,31 @@ async def reviewer_clear(
             detail="Check the box to confirm before clearing your answers.",
         )
     # Off the event loop, like the save (findings L3).
-    await run_in_threadpool(
-        responses_service.clear_all,
-        db,
-        review_session=review_session,
-        reviewer=reviewer,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        await run_in_threadpool(
+            responses_service.clear_all,
+            db,
+            review_session=review_session,
+            reviewer=reviewer,
+            user=user,
+            correlation_id=request_correlation_id(),
+        )
+    except SessionStateConflict:
+        refusal = await run_in_threadpool(
+            _race_refusal, db, review_session, reviewer
+        )
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            refusal,
+            action="clear",
+            page_n=1,
+            form={},
+        )
     return RedirectResponse(
         url=f"/me/sessions/{review_session.id}",
         status_code=status.HTTP_303_SEE_OTHER,

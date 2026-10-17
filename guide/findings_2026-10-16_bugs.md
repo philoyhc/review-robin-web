@@ -88,7 +88,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   are stored raw; data-shape step columns miss them and branching reads `0_5`
   as unanswered, deleting branch answers. *Reproduced.* Code: canonicalize
   with `DECIMAL_PATTERN`.
-- ~~**R5**~~ — **Done in (this PR)**: the reviewer's `summary.csv` names a group by the members that reviewer has an included row for, as the surface does (`_group_export_index(reviewer_id=)`; `tests/unit/test_responses_extract.py`). The reviewer `summary.csv` group name lists members the reviewer is
+- ~~**R5**~~ — **Done in #3110**: the reviewer's `summary.csv` names a group by the members that reviewer has an included row for, as the surface does (`_group_export_index(reviewer_id=)`; `tests/unit/test_responses_extract.py`). The reviewer `summary.csv` group name lists members the reviewer is
   not assigned, excluded ones included (`responses_extract.py:150-170`).
   *Reproduced.* Code.
 - **R6** — `Response.saved_at` never updates and `version` never increments
@@ -98,7 +98,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   Create, `/config`, the lobby edit, activation and release**; a stored year-9999
   deadline breaks the lobby for an owner east of UTC
   (`date_formatting.py:153`). *Reproduced.* Code.
-- ~~**L3**~~ — **Done in (this PR)**: `save_draft`, `submit`, `clear_all` and `recall` open with `lifecycle.require_accepting_responses`, which locks and re-reads the session row and refuses unless `ready` before its deadline, held to the write's commit (`tests/integration/test_reviewer_writes_under_lock.py`). Reviewer Save, Submit, Clear and Recall are not decided under the
+- ~~**L3**~~ — **Done in #3110**: `save_draft`, `submit`, `clear_all` and `recall` open with `lifecycle.require_accepting_responses`, which takes a shared lock on the session row, re-reads it and refuses unless `ready` before its deadline, held to the write's commit; the route re-renders that refusal with what was typed (`tests/integration/test_reviewer_writes_under_lock.py`). Reviewer Save, Submit, Clear and Recall are not decided under the
   session lock, so a write can land after Close or Revert on Postgres
   (`_surface/_context.py:126-158`). `spec/lifecycle.md` §8.3. *Code reading;*
   the race needs Postgres. Code.
@@ -146,7 +146,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **R7** — The surface's status pill and the dashboard disagree on
   all-optional blank rows and on a new answer after Submit
   (`_surface/_status.py:59`). Code.
-- ~~**R8**~~ — **Done in #3106 and (this PR)**: #3106 ignores a form key whose id is past the largest SQL integer; here, at the `name` level a self-review row of the observer download blanks the reviewee email and tags too, since they are the reviewer's, and doesn't sort on that email (`tests/integration/test_reviewer_identity_level.py`). A 20-digit assignment id answers 500 (`_core.py:57`); and, by
+- ~~**R8**~~ — **Done in #3106 and #3110**: #3106 ignores a form key whose id is past the largest SQL integer; here, at the `name` level a self-review row of the observer download blanks the reviewee email and tags too, since they are the reviewer's, and doesn't sort on that email (`tests/integration/test_reviewer_identity_level.py`). The level covers the reviewer's columns, so a row where that person is someone else's reviewee still names them there, as `spec/participant_model.md` §4.2 has it. A 20-digit assignment id answers 500 (`_core.py:57`); and, by
   reading, the observer CSV's self-review rows expose the reviewer through the
   reviewee columns. Code.
 - **L5** — Archiving a `ready` session leaves every instrument's
