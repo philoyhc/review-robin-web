@@ -57,9 +57,9 @@ def pair_context_groups_before(
 def clear_redrawn_groups(
     db: Session, *, session_id: int, before: GroupPartitions
 ) -> dict[str, int] | None:
-    """Clear every group a relationship change redrew: the group a pair
-    left and the group it joined (``responses.clear_changed_groups``),
-    after the change is flushed. Returns the audit ``context`` counting
+    """Clear every group a relationship change added a member to
+    (``responses.clear_changed_groups``); the group a pair left only
+    shrank and keeps its answer. Called after the change is flushed. Returns the audit ``context`` counting
     the answers that went, or ``None``."""
     from app.services import responses as responses_service
 
@@ -136,8 +136,8 @@ def bulk_set_status(
     if model is Relationship:
         # An inactive relationship resolves to empty pair-context tags,
         # so the flip can move a pair to another group: the self-review
-        # flag follows it (findings B33) and the groups it changed are
-        # cleared (B34).
+        # flag follows it (findings B33) and a group it joins that
+        # already had members is cleared (B34).
         context = clear_redrawn_groups(
             db, session_id=review_session.id, before=before
         )
@@ -354,23 +354,14 @@ def bulk_delete(
             reviewers_deleted=True,
         )
     # A deleted relationship takes its pair-context tags with it, moving
-    # its pair to another group (B34); a deleted reviewee takes its rows
-    # out of every group it was in. Either way the groups it changed are
-    # cleared (``responses.clear_changed_groups``).
-    if model is Relationship:
-        before = pair_context_groups_before(db, session_id=review_session.id)
-    elif model is Reviewee:
-        from app.services import responses as responses_service
-
-        before = responses_service.snapshot_group_partitions(
-            db,
-            session_id=review_session.id,
-            instrument_ids=responses_service.session_group_instrument_ids(
-                db, session_id=review_session.id
-            ),
-        )
-    else:
-        before = {}
+    # its pair to another group (B34), which clears that group if it
+    # already had members. A deleted reviewee only shrinks the groups it
+    # was in, which keep their answers, so it needs no snapshot.
+    before = (
+        pair_context_groups_before(db, session_id=review_session.id)
+        if model is Relationship
+        else {}
+    )
     for row in rows:
         db.delete(row)
     db.flush()

@@ -2248,7 +2248,8 @@ a response-loss acknowledgement when the session holds responses.
 Two losses outside regeneration ask for neither. On a group-scoped
 instrument, a reviewee boundary-tag edit or any relationship change
 (create, import, delete, tag edit, re-point, status switch) that
-moves a pair into another group clears the group it joins at once,
+moves a pair into a group that already had members clears that group
+at once,
 and redrawing an instrument's groups on its card clears every group
 that gains a member (`spec/assignments.md` "Group-scoped fan-out"). A
 group that only loses members, by a move, a split or a delete, keeps

@@ -317,14 +317,24 @@ def snapshot_group_partitions(
     }
 
 
+def origins(before: set[frozenset[Pair]]) -> dict[Pair, frozenset[Pair]]:
+    """Each pair's group in ``before``, built once per instrument so
+    :func:`keeps_answer` reads it per member rather than scanning every
+    earlier group for every later one."""
+    return {pair: group for group in before for pair in group}
+
+
 def keeps_answer(
-    group: frozenset[Pair], before: set[frozenset[Pair]]
+    group: frozenset[Pair], origin_of: dict[Pair, frozenset[Pair]]
 ) -> bool:
     """Whether ``group`` may keep its answer: every member came from
-    the same group in ``before``, so it is that group or a subset of it
-    (author's ruling 2026-10-17). A group that gained anyone, a newcomer
-    or a member of another group, is a different subject."""
-    origin = next((old for old in before if next(iter(group)) in old), None)
+    the same group before (``origin_of``, from :func:`origins`), so it
+    is that group or a subset of it (author's ruling 2026-10-17). A
+    group that gained anyone, a newcomer or a member of another group,
+    is a different subject."""
+    if not group:
+        return True
+    origin = origin_of.get(next(iter(group)))
     return origin is not None and group <= origin
 
 
@@ -341,22 +351,24 @@ def clear_changed_groups(
     instrument's boundary tags or unit of review (findings E2), a
     reviewee's boundary tag, any relationship change (a tag edit, a
     re-point, a create, import, delete, or a status switch, since an
-    inactive or missing relationship reads as empty tags), a reviewee
-    deleted, and Generate adding or removing a member. A group is kept
+    inactive or missing relationship reads as empty tags), and Generate
+    adding a member. A group is kept
     when every member came from one group in ``before``
     (:func:`keeps_answer`): an unchanged group, one that shrank, and
-    each half of a split. Otherwise all its rows' answers are deleted,
-    so a member moving clears the group it joined and leaves the one
-    it left, and a new member clears its group. No answer is copied
+    each half of a split; a removal or a delete only shrinks, so it
+    never clears. Otherwise all its rows' answers are deleted, so a
+    member moving into a group that already had members clears it and
+    leaves the one it left, and a new member clears its group. No answer is copied
     onto a row. The caller flushes the change first. Returns the number
     of ``Response`` rows deleted."""
     changed: set[int] = set()
     for instrument_id, groups in before.items():
+        origin_of = origins(groups)
         after, ids = _instrument_groups(
             db, session_id=session_id, instrument_id=instrument_id
         )
         for group in after:
-            if not keeps_answer(group, groups):
+            if not keeps_answer(group, origin_of):
                 changed |= {ids[pair] for pair in group}
     if not changed:
         return 0

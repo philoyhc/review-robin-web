@@ -1991,7 +1991,7 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     assert _response_count("Dan") == 1
 
 
-def test_relationship_repoint_defuncts_both_old_and_new_pair(
+def test_relationship_repoint_clears_the_group_it_joins(
     db: Session,
 ) -> None:
     """Re-pointing a relationship to a different pair — even with no

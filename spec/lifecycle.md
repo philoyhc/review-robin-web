@@ -334,7 +334,7 @@ rather than 400). The Reviewers and Reviewees Setup-page CSV import
 answers its 400 in the upload card's banner rather than an error page
 (`spec/setup_pages.md`).
 **Relationship changes do not call it**, although moving a pair into
-another pair-context group clears the group it joins
+another pair-context group that already had members clears that group
 (`spec/assignments.md` "Group-scoped fan-out"), as a reviewee tag edit
 does. Nor does an Instrument card Save that redraws the instrument's
 groups, though it deletes the answers of every group that gains a

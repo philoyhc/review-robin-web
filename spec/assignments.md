@@ -636,22 +636,26 @@ snapshots the groups first, and after it a group keeps its answer only
 when every member came from one group before — the same group, or a
 subset of it (`responses.keeps_answer`). Every other group has all its
 answers deleted (`responses.clear_changed_groups`). So a member moving
-clears the group it joins and leaves the one it left; a new member
-clears the group it joins; a removed one clears nothing; and a split
-keeps both halves. No answer is copied onto a row. The changes are:
+into a group that already had members clears that group, and the one
+it left keeps its answer; a member moving alone to a group of its own
+clears nothing; a new member clears the group it joins; and a split
+keeps both halves. No answer is copied onto a row. The changes that
+can add a member to a group are:
 
 - the Instrument card's boundary tags or unit of review
   (`set_unit_of_review`; `set_group_boundary` does the same): a merge,
-  and Individual to Grouped, clear; a split, a finer boundary, and
-  Grouped to Individual keep every answer;
+  and Individual to Grouped, clear, one-member groups aside; a split, a
+  finer boundary, and Grouped to Individual keep every answer;
 - a reviewee boundary-tag edit;
 - a relationship's pair-context tag edit or re-point;
 - a relationship created, imported, deleted, or switched active /
   inactive, since an inactive or missing relationship reads as empty
   tags;
-- a reviewee deleted, which takes its rows out of every group;
 - Generate (and Prepare, which runs it) adding a row for a member new
-  to a group, or dropping one the rules no longer produce.
+  to a group.
+
+A reviewee deleted, or a row Generate drops, only shrinks a group, so
+it clears nothing.
 
 So re-importing an unchanged relationships file, re-pointing a
 relationship that has no tags, or retagging every member of a group

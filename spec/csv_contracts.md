@@ -1066,7 +1066,7 @@ while creating the session.
    (`spec/architecture.md` § *Audit-event detail schema*).
    Relationships' own replace has no further cascade — it *is* the
    leaf — except that a pair it moves to another pair-context group
-   clears the group it joins
+   clears the group it joins, if that group already had members
    (`spec/assignments.md` "Group-scoped fan-out").
 
 3. **Two-phase parse + apply (Settings).** Parse everything,

@@ -1,5 +1,5 @@
-"""Relationship changes clear the groups they redraw (findings B34;
-author's ruling 2026-10-17).
+"""Relationship changes clear the groups they add a member to (findings
+B34; author's rulings 2026-10-17).
 
 A group instrument boundaried on pair context (``group_kind="p1"``)
 keeps one answer per group, copied onto every member's assignment. A
@@ -369,7 +369,9 @@ def test_re_pointing_an_untagged_relationship_moves_nothing(
 
 def test_another_reviewers_answers_are_untouched(db: Session) -> None:
     world = _seed(
-        db, tags={"Ann": "A", "Bob": "A"}, answers={"Ann": "4", "Bob": "4"}
+        db,
+        tags={"Ann": "A", "Bob": "A", "Cal": None},
+        answers={"Ann": "4", "Bob": "4", "Cal": "7"},
     )
     other = Reviewer(
         session_id=world.review_session.id,
@@ -419,7 +421,9 @@ def test_another_reviewers_answers_are_untouched(db: Session) -> None:
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": "4", "Bob": "4"}
+    # Bob joins Cal in R's empty-tag group, which is cleared; Ola's
+    # group of the same two reviewees keeps its answer.
+    assert _answers(db, world) == {"Ann": "4", "Bob": None, "Cal": None}
     assert {
         name: db.execute(
             select(Response.value).where(Response.assignment_id == row_id)

@@ -134,3 +134,65 @@ def test_acknowledged_prepare_clears_what_the_dry_run_counted(
     )
 
     assert _answers(db, group_id) == {"Carol": None, "Eve": None, "Fay": "4"}
+
+
+def test_a_team_that_only_loses_a_member_projects_no_clear(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A dropped member only shrinks its group, which keeps its answer.
+    The reviewer is also a member of Team A; excluding self-reviews
+    drops that pair, so Team A shrinks to Carol, while a newcomer in a
+    team of her own makes the dry-run project at all."""
+    operator = make_client(alice)
+    review_session, group_id = _session_with_two_answered_teams(db, operator, "clr-shrink")
+    eve = db.scalar(select(Reviewee).where(Reviewee.email_or_identifier == "eve@example.edu"))
+    eve.tag_1 = "Team D"
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Rae",
+            email_or_identifier="rae@example.edu",
+            tag_1="Team A",
+        )
+    )
+    db.commit()
+    operator.post(
+        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        data={"return_to": "assignments", "acknowledge_response_loss": "true"},
+        follow_redirects=False,
+    )
+    # Rae joined Team A, which was cleared; answer it again.
+    field_id = db.scalar(
+        select(Response.response_field_id)
+        .join(Assignment, Assignment.id == Response.assignment_id)
+        .where(Assignment.instrument_id == group_id)
+    )
+    for row in db.scalars(select(Assignment).where(Assignment.instrument_id == group_id)):
+        if row.reviewee.tag_1 == "Team A":
+            db.add(
+                Response(
+                    assignment_id=row.id,
+                    response_field_id=field_id,
+                    value="3",
+                    saved_at=dt.datetime.now(dt.timezone.utc),
+                )
+            )
+    db.add(
+        Reviewee(
+            session_id=review_session.id,
+            name="Ivy",
+            email_or_identifier="ivy@example.edu",
+            tag_1="Team E",
+        )
+    )
+    db.commit()
+
+    impact = assignments_service.reconcile_impact(
+        db, review_session, instrument_id=group_id, override_exclude_self_reviews=True
+    )
+
+    assert (impact.deleted, impact.new) == (1, 1)
+    assert impact.responses_deleted == 1
+    assert impact.group_responses_cleared == 0
