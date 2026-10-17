@@ -371,3 +371,15 @@ delete them once no remaining section points to them.
 - [ ] **A split or an unchanged Save never asks.** Add a boundary tag
   that splits a group, or Save the card unedited: no banner, and every
   answer stays.
+
+## A reviewee tag edit asks before it clears group answers
+
+- [ ] **A move into an answered group is refused with the count.** On a
+  draft session with answers on a `Group using tags` instrument, edit
+  one reviewee's boundary tag to another answered team and Save: the
+  row editor stays open with what you typed, and its bar reads "This
+  change clears N saved responses on groups whose members it changes."
+  beside an unticked `Yes, clear them`. Nothing was saved.
+- [ ] **Ticked, it goes through.** Tick `Yes, clear them` and Save: the
+  team joined shows unanswered and the team left keeps its answer.
+- [ ] **A rename, or a move to a team of their own, never asks.**

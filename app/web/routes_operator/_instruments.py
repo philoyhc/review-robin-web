@@ -39,6 +39,7 @@ from app.web.deps import (
 )
 from app.web.routes_operator._shared import (
     _instruments_redirect,
+    acknowledged_loss,
     _require_instrument_editable,
     _require_instrument_in_session,
     _templates,
@@ -498,15 +499,6 @@ def instrument_move_display_field(
     )
 
 
-def _acknowledged_loss(form) -> int:
-    """The count the operator's ``Yes, clear them`` tick was shown on a
-    Save refused for clearing group answers, or 0 with no tick. The
-    tick carries the count rather than ``true`` so a tick left on after
-    further edits cannot approve a different clear."""
-    raw = str(form.get("acknowledge_response_loss") or "").strip()
-    return int(raw) if raw.isdigit() else 0
-
-
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/fields/save")
 async def instrument_bulk_save_fields(
     request: Request,
@@ -559,7 +551,7 @@ async def instrument_bulk_save_fields(
                     boundary_pairs=link3_pairs,
                     actor=user,
                     touched=link3_touched,
-                    acknowledged_loss=_acknowledged_loss(form),
+                    acknowledged_loss=acknowledged_loss(form.get("acknowledge_response_loss")),
                 )
             except responses_service.GroupAnswersWouldClear as exc:
                 # The no-JS fallback refuses as its other steps do; the
@@ -839,7 +831,7 @@ async def instrument_consolidated_save(
                     boundary_pairs=link3_pairs,
                     actor=user,
                     touched=link3_touched,
-                    acknowledged_loss=_acknowledged_loss(form),
+                    acknowledged_loss=acknowledged_loss(form.get("acknowledge_response_loss")),
                 )
             except responses_service.GroupAnswersWouldClear as exc:
                 # Refuse, then re-offer (author's ruling 2026-10-17): the

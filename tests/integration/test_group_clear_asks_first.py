@@ -206,3 +206,98 @@ def test_the_card_renders_the_tick_on_its_dfsave_form(
     assert "confirm_group_clear" in page
     assert "acknowledge_response_loss" in page
     assert "Yes, clear them" in page
+
+
+def _reviewee(db: Session, session_id: int, name: str) -> Reviewee:
+    db.expire_all()
+    return db.execute(
+        select(Reviewee).where(Reviewee.session_id == session_id, Reviewee.name == name)
+    ).scalar_one()
+
+
+def _edit(name: str, team: str, acknowledged: int | None = None) -> dict[str, str]:
+    data = {
+        "name": name,
+        "email_or_identifier": f"{name.lower()}@example.edu",
+        "tag_1": team,
+        "status": "active",
+    }
+    if acknowledged is not None:
+        data["acknowledge_response_loss"] = str(acknowledged)
+    return data
+
+
+def test_a_reviewee_tag_edit_into_an_answered_group_is_refused(
+    db: Session, client: TestClient
+) -> None:
+    # Ann moves from red into blue: blue gains her and clears with her
+    # own row (3 responses); red, which only lost her, keeps Bo's.
+    session, _ = _seed(db, client, "gc-reviewee")
+    ann = _reviewee(db, session.id, "Ann")
+    url = f"/operator/sessions/{session.id}/reviewees/{ann.id}/update"
+
+    refused = client.post(url, data=_edit("Ann", "blue"), follow_redirects=False)
+
+    assert refused.status_code == 400
+    assert (
+        "This change clears 3 saved responses on groups whose members it changes."
+        in refused.text
+    )
+    assert 'name="acknowledge_response_loss"' in refused.text
+    assert 'value="3"' in refused.text
+    # The row editor keeps what the operator typed.
+    assert 'value="blue"' in refused.text
+    assert _reviewee(db, session.id, "Ann").tag_1 == "red"
+    assert _responses(db) == 4
+
+
+def test_a_reviewee_tag_edit_with_a_stale_tick_is_refused_again(
+    db: Session, client: TestClient
+) -> None:
+    session, _ = _seed(db, client, "gc-reviewee-stale")
+    ann = _reviewee(db, session.id, "Ann")
+
+    refused = client.post(
+        f"/operator/sessions/{session.id}/reviewees/{ann.id}/update",
+        data=_edit("Ann", "blue", acknowledged=2),
+        follow_redirects=False,
+    )
+
+    assert refused.status_code == 400
+    assert 'value="3"' in refused.text
+    assert _responses(db) == 4
+
+
+def test_an_acknowledged_reviewee_tag_edit_clears_the_group_joined(
+    db: Session, client: TestClient
+) -> None:
+    session, _ = _seed(db, client, "gc-reviewee-ack")
+    ann = _reviewee(db, session.id, "Ann")
+
+    accepted = client.post(
+        f"/operator/sessions/{session.id}/reviewees/{ann.id}/update",
+        data=_edit("Ann", "blue", acknowledged=3),
+        follow_redirects=False,
+    )
+
+    assert accepted.status_code == 303
+    assert _reviewee(db, session.id, "Ann").tag_1 == "blue"
+    assert _responses(db) == 1
+
+
+def test_a_reviewee_edit_that_clears_nothing_never_asks(
+    db: Session, client: TestClient
+) -> None:
+    session, _ = _seed(db, client, "gc-reviewee-noop")
+    ann = _reviewee(db, session.id, "Ann")
+    url = f"/operator/sessions/{session.id}/reviewees/{ann.id}/update"
+
+    # A rename moves nobody. A move into a team of her own leaves Ann in
+    # a one-member group that came out of red, a subset of it, so it
+    # keeps her answer; red, which only lost her, keeps Bo's.
+    renamed = client.post(url, data=_edit("Anne", "red"), follow_redirects=False)
+    assert renamed.status_code == 303
+    moved = client.post(url, data=_edit("Anne", "green"), follow_redirects=False)
+    assert moved.status_code == 303
+    assert _reviewee(db, session.id, "Anne").tag_1 == "green"
+    assert _responses(db) == 4
