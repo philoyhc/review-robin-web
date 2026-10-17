@@ -316,8 +316,8 @@ def _repin_the_instrument(db: Session, ctx) -> None:
 
 
 def _flip_self_reviews(db: Session, ctx) -> None:
-    _, review_session, _, _, _, _ = ctx
-    review_session.self_reviews_active = not review_session.self_reviews_active
+    _, _, instrument, _, _, _ = ctx
+    instrument.self_reviews_active = not instrument.self_reviews_active
     db.flush()
     db.commit()
 
@@ -342,7 +342,7 @@ MISS_CASES: list[
     ("the pinned rule's predicates change", _change_the_rule, (True, 2)),
     ("the instrument is re-pinned", _repin_the_instrument, None),
     ("the instrument is unpinned", _unpin_the_instrument, None),
-    ("the session's self-review toggle flips", _flip_self_reviews, None),
+    ("the instrument's self-review toggle flips", _flip_self_reviews, None),
 ]
 
 

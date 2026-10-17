@@ -28,8 +28,9 @@ Four groups of inputs, and one non-input:
    ``_session_rule_set_to_schema`` reads off the row plus the
    ``exclude_self_reviews`` flag ``_diff_one_instrument`` reads
    directly.
-4. **The instrument and session settings** the diff consults:
-   ``rule_set_id``, ``group_kind``, ``self_reviews_active``, and the
+4. **The instrument settings** the diff consults: ``rule_set_id``,
+   ``group_kind``, ``self_reviews_active`` (the instrument's, since
+   findings E3; the session's only seeds a new instrument's), and the
    caller's ``override_exclude_self_reviews``.
 
 And the non-input: **the materialized rows themselves**. The verdict is
@@ -69,8 +70,9 @@ from app.services.rules.fields import FIELD_MAP
 #: Bump it too when what a stored rule *means* changes with every input
 #: the same — ``v2`` (2026-10-17, ``guide/archive/assignment_rule_clarify.md``
 #: Item 2) for the empty-value rule, so no verdict cached under the old
-#: reading survives.
-STAMP_VERSION = "v2"
+#: reading survives. ``v3`` (2026-10-17, findings E3): the self-review
+#: flag moved from the session to the instrument.
+STAMP_VERSION = "v3"
 
 
 @dataclass(frozen=True)
@@ -266,12 +268,10 @@ def reconcile_stamp(
     read a verdict computed for ``None``.
     """
     payload = {
-        "session": {
-            "self_reviews_active": bool(review_session.self_reviews_active),
-        },
         "instrument": {
             "rule_set_id": instrument.rule_set_id,
             "group_kind": instrument.group_kind,
+            "self_reviews_active": bool(instrument.self_reviews_active),
         },
         "rule_set": _rule_set_digest(session_rule_set),
         "reviewers": _roster_digest(reviewers, side="reviewer"),

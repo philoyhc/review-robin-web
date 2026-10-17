@@ -840,8 +840,9 @@ def _check_instruments_stale_generated(
     but they are not exhaustive: the instrument's own ``group_kind``
     moves the verdict too, whenever the pinned rule set excludes
     self-reviews, because the group boundary decides which pairs that
-    exclusion drops. The session's ``self_reviews_active`` does
-    **not**, despite reading like it would: it sets a pair's
+    exclusion drops. The instrument's ``self_reviews_active`` (the
+    Self review toggle, findings E3) does **not**, despite reading
+    like it would: it sets a pair's
     ``include`` flag, and the diff is a difference of pair *keys*.
 
     The verdict is the engine's own diff

@@ -330,6 +330,10 @@ def test_per_instrument_toggle_on_flips_self_review_rows_to_active(
 ) -> None:
     review_session = _make_session(client, db, code="ops-flip-on")
     review_session.self_reviews_active = False
+    # The session flag only seeds a new instrument's (findings E3), and
+    # the default instrument already exists, so it is set too.
+    for instrument in review_session.instruments:
+        instrument.self_reviews_active = False
     db.commit()
     _seed_population_with_self_review(client, review_session.id)
     _generate_with_self_reviews(client, db, review_session.id)

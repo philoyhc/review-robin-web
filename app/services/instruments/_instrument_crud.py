@@ -352,7 +352,8 @@ def replicate_instrument(
     ``starts_new_page``, the caches and ``deadline_closed_at``: description,
     the response fields (incl. help text, ``visible`` and branches),
     the display fields (incl. each row's ``visible``), ``group_kind``,
-    ``band1_touched_links``, ``band2_state`` and
+    ``band1_touched_links``, ``band2_state``, ``self_reviews_active``
+    (the Self review toggle, findings E3) and
     ``accepting_responses`` as-is. ``starts_new_page`` is not copied: it marks a break
     before the instrument, a fact about position, and the copy
     continues the source's page like any new instrument. The source's Band 1 rule set is
@@ -402,6 +403,7 @@ def replicate_instrument(
         group_kind=source.group_kind,
         band1_touched_links=_copy.deepcopy(source.band1_touched_links),
         band2_state=_copy.deepcopy(source.band2_state),
+        self_reviews_active=source.self_reviews_active,
     )
     db.add(instrument)
     db.flush()

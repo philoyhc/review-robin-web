@@ -450,10 +450,16 @@ def test_self_review_chip_tracks_the_include_state(
     )
     db.add_all([bob_r, bob_e])
     db.flush()
-    _self_review(
+    bob_row = _self_review(
         db, review_session=review_session, instrument=instrument,
         reviewer=bob_r, reviewee=bob_e, include=True,
     )
+    # The recompute switches a new self-review row to the instrument's
+    # stored toggle, here off (findings E3), so the mixed state is made
+    # by hand, as a per-row Activate would make it.
+    assert bob_row.include is False
+    bob_row.include = True
+    db.commit()
     mixed = chip()
     assert 'data-self-review-state="indeterminate"' in mixed
     assert "pill-empty" in mixed

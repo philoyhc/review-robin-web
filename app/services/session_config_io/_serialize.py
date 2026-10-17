@@ -423,6 +423,13 @@ def _instrument_rows(
             _bool(instrument.starts_new_page),
             "boolean",
         ),
+        # Findings E3 — the Assignments page's per-instrument Self
+        # review toggle, which Prepare now reads.
+        Row(
+            f"{prefix}.self_reviews_active",
+            _bool(instrument.self_reviews_active),
+            "boolean",
+        ),
         Row(
             f"{prefix}.band2_state",
             _json(instrument.band2_state or {}),

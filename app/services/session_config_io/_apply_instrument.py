@@ -281,6 +281,10 @@ def _apply_instrument_kv(
         instrument.column_widths = _parse_json(value, default={}) or None
     elif attr == "starts_new_page":
         instrument.starts_new_page = _parse_bool(value)
+    elif attr == "self_reviews_active":
+        instrument.self_reviews_active = (
+            _parse_bool(value) if value else None
+        )
     elif attr == "band2_state":
         state = _parse_json(value, default={})
         # The Instruments page reads this as an object; anything else
@@ -468,6 +472,10 @@ def _apply_instruments(
             band2_state=spec.band2_state,
             band1_touched_links=spec.band1_touched_links,
         )
+        # Findings E3 — absent from an older file, the column's default
+        # seeds it from the session's flag, applied above.
+        if spec.self_reviews_active is not None:
+            instrument.self_reviews_active = spec.self_reviews_active
         db.add(instrument)
         db.flush()  # populate ``instrument.id``
         counts["instruments"] += 1

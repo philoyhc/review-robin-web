@@ -717,6 +717,11 @@ import leaves as stored, on an unchanged anchor, is not checked.
   `observer` blocks emit it; an empty cell is the default (`name_email`).
   A value that is not a level, or a level on a `peer_reviewer` block, is
   refused in the parse phase, before anything is written.
+- **`instruments[n].self_reviews_active` is the Self review toggle**
+  (`spec/assignments.md` "Self-review policy"), a `boolean` row. A file
+  without the row, or with a blank cell, leaves the instrument to seed
+  from `session.self_reviews_active`, as a new instrument does, so an
+  older bundle imports as it did before the row existed.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **the `[n]` number is authoritative**, not the rows' place in
   the file. Each instrument is stored at its 0-based rank among the

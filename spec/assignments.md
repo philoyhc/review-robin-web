@@ -331,11 +331,11 @@ Effects:
 
 - **All pairs survive the filter** (empty rule list = no
   constraint).
-- **Self-reviews are not excluded at generate.** The
-  `Assignment.include` value falls back to
-  `ReviewSession.self_reviews_active` (default True). The
-  per-instrument Self-review toggle on the Assignments page
-  flips `include` after generation.
+- **Self-reviews are not excluded at generate.** A self-review
+  row's `Assignment.include` is the instrument's
+  `self_reviews_active` — the per-instrument Self review toggle on
+  the Assignments page, which a new instrument seeds from
+  `ReviewSession.self_reviews_active` (default True).
 - **`revision_seed=0`** for the engine's deterministic RNG (the
   rule-set id can't serve as seed when no row exists).
 
@@ -429,8 +429,12 @@ Two supported affordances, answering different questions —
   materialised; flip the toggle on the Assignments page to set
   `Assignment.include=False` on every `(R, R)` row in that
   instrument whose two sides are both active (a row with an inactive
-  side stays excluded by status). The session-level `ReviewSession.self_reviews_active`
-  (default True) seeds this on first generation. Reversible
+  side stays excluded by status). The toggle is **stored on the
+  instrument** (`Instrument.self_reviews_active`, findings E3), and
+  Prepare / Generate writes every self-review row from it, so the
+  next Prepare keeps it rather than undoing it. A new instrument
+  seeds the flag from the session-level
+  `ReviewSession.self_reviews_active` (default True). Reversible
   without a re-Generate, and it destroys nothing.
 
 **Prefer the toggle when in doubt**: it is reversible in place and
@@ -461,9 +465,10 @@ Two attributes still drive whether self-review rows appear as
    generator honors it after the fan-out, so a `True` means the
    instrument generates no self-review row at all. Also surfaces
    in the by-instrument extract's *Self-review excluded* cell.
-2. **`ReviewSession.self_reviews_active`** (session level,
-   defaults True). When a self-review pair is materialised, its
-   `Assignment.include` is `True if self_reviews_active else False`.
+2. **`Instrument.self_reviews_active`** (instrument level; seeded
+   from `ReviewSession.self_reviews_active`, which defaults True).
+   When a self-review pair with both sides active is materialized or
+   kept, its `Assignment.include` is this flag.
 
 In other words: unless `exclude_self_reviews` is set, self-review
 rows are always materialised, and whether they're "active" is a
@@ -523,8 +528,8 @@ inactive (pair-context group keys are read off the active relationship
 rows). A row whose flag the recompute flips also moves
 its `include` towards what Generate would write: a row
 that stops being a self-review comes back on unless either side is
-inactive, and a row that becomes one is switched off when
-`self_reviews_active` is off. A manual exclusion on a row that stops
+inactive, and a row that becomes one is switched off when its
+instrument's `self_reviews_active` is off. A manual exclusion on a row that stops
 being a self-review is therefore not kept, as Generate does not keep
 one either. When the recompute changes any `include`, it writes
 `assignments.include_reconciled` with the counts. Every downstream reader (extracts,
@@ -725,9 +730,11 @@ Steps:
    - Individual: one row per surviving pair.
    - Group: one row per pair, the same shape as Individual; the
      group key is derived on read (*Boundary key*).
-   - `include` = `True` for non-self pairs;
-     `session.self_reviews_active` for self pairs; and `False`
-     whenever the reviewer or the reviewee is inactive. A status
+   - `include` = `True` for non-self pairs; the instrument's
+     `self_reviews_active` for self pairs, kept or inserted, so a
+     Self review toggle survives the next Prepare and a reviewer
+     reactivated afterwards rejoins the instrument's state; and
+     `False` whenever the reviewer or the reviewee is inactive. A status
      change reaches the row at the next Prepare, which recomputes
      `include` on every kept row. Until then Validate reads `status`
      directly, so it already reports what that Prepare will leave;
@@ -831,7 +838,7 @@ Columns (left → right):
 | Type | A display pill (`pill pill-count`), "Individual" or "Group" (driven by `Instrument.group_kind`). |
 | Generated | Pill carrying the row count. "Not generated yet" when zero. A `stale` pill rides alongside when the rows have fallen out of step — see "Staleness". |
 | Groups | Group count (distinct `(reviewer, group key)` over the rows, the key derived by `responses.group_keys`) for group instruments; "—" for individual. |
-| Self review | An on/off chip, **"Include N self reviews"** (N the included rows; "review" when N is 1), that bulk-flips `Assignment.include` on those rows in this instrument — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Solid when every counted row is included, faint when none is, amber (`pill-empty`) when some are (`spec/ui_elements.md` §9); a click on a faint or amber chip includes them all, on a solid one excludes them all. The cell reads **"Excluded by rule"** when the instrument's rule excludes self reviews and none remain; otherwise the chip renders only when `self_review_total > 0`, and the cell reads "—" on a session with no roster overlaps or when every self-review row has an inactive side. |
+| Self review | An on/off chip, **"Include N self reviews"** (N the included rows; "review" when N is 1), that bulk-flips `Assignment.include` on those rows in this instrument and stores the choice on the instrument, so the next Prepare keeps it — counting and flipping only rows whose reviewer and reviewee are both active (an inactive side's row stays excluded by status). Solid when every counted row is included, faint when none is, amber (`pill-empty`) when some are (`spec/ui_elements.md` §9); a click on a faint or amber chip includes them all, on a solid one excludes them all. The cell reads **"Excluded by rule"** when the instrument's rule excludes self reviews and none remain; otherwise the chip renders only when `self_review_total > 0`, and the cell reads "—" on a session with no roster overlaps or when every self-review row has an inactive side. |
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
 
@@ -852,7 +859,9 @@ The service helper
    carries the whole-group classification, so no other rows load and
    no group helper runs.
 2. Flips `include` on each of those rows whose current value differs
-   from the target.
+   from the target, and stores the target on
+   `Instrument.self_reviews_active`, which the next Prepare writes
+   every self-review row from (findings E3).
 3. Emits an audit event
    `assignments.instrument_self_reviews_active_set` with
    `counts.flipped` + `context.active` + `refs.instrument_id`.
@@ -1226,9 +1235,9 @@ and does not try to pin a random rule's output across input changes.
 
 ### `include` and `created_by_mode`
 
-`include` is set per pair: `self_reviews_active` for a self-review
-pair, `True` for every other pair, and `False` whenever either side
-is inactive. A self-review is decided by § *Self-review policy*,
+`include` is set per pair: the instrument's `self_reviews_active`
+(the stored Self review toggle) for a self-review pair, `True` for
+every other pair, and `False` whenever either side is inactive. A self-review is decided by § *Self-review policy*,
 which on a group-scoped instrument is the whole-group rule, not a
 pair-level test. An inactive side's pairs are kept rather than
 dropped, so a deactivate → Prepare → reactivate round trip keeps
@@ -1303,8 +1312,8 @@ scale, so the verdict — together with the `eligible` and
 renders — persists on `instruments.cached_reconcile_*` against a content
 stamp. The stamp covers **everything the verdict is derived from**: both
 rosters, the relationships rows behind `pair_context`, the pinned rule,
-the instrument's `rule_set_id` and `group_kind`, the session's
-self-review setting, any caller-supplied self-review override, and a
+the instrument's `rule_set_id`, `group_kind` and self-review
+setting (`self_reviews_active`), any caller-supplied self-review override, and a
 summary of the instrument's own `Assignment` rows. That last one is not an engine input, and it is in the stamp
 because the verdict is a *diff against the materialised rows*: Generate
 changes the answer while every rule and roster holds still. A mismatch
@@ -1430,9 +1439,10 @@ rates their own team's collaboration.
 - For **Peer review**: the 10 × 10 universe leaves 10 × 5 = 50
   surviving pairs, so 50 `Assignment` rows. The 10 self-review rows
   (reviewer == reviewee) materialise with `include=True`, from
-  `self_reviews_active`, until the operator turns off the instrument's
-  Self review chip on the Assignments page, which flips them to
-  `False` and leaves 40 included.
+  the instrument's `self_reviews_active`, until the operator turns off
+  the instrument's Self review chip on the Assignments page, which
+  flips them to `False`, stores the choice on the instrument, and
+  leaves 40 included — through every later Prepare too.
 - For **Team retro**: the same 50 pairs, but the derived group key is
   the team name, so each reviewer's five rows form one group. Every
   group contains its reviewer, so all 50 rows are self-review rows

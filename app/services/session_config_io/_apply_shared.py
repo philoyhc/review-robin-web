@@ -95,6 +95,10 @@ class _InstrumentSpec:
     column_widths: dict[str, Any] | None = None
     starts_new_page: bool = False
     band2_state: dict[str, Any] | None = None
+    # Findings E3 — the per-instrument Self review toggle. ``None`` (a
+    # file from before the row existed) leaves the instrument to seed
+    # from the session's ``self_reviews_active``, as a new one does.
+    self_reviews_active: bool | None = None
     # Segment 18P PR D2 — the Band 1 "set"-pill state, dropped by the
     # pre-D2 settings CSV.
     band1_touched_links: list[str] | None = None
