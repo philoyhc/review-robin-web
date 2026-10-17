@@ -543,6 +543,11 @@ def reviewees_update(
             user=user,
             review_session=review_session,
             edit_id=reviewee_id,
+            # The view the operator was on, so the re-offered Save
+            # carries it too (Codex on #3103).
+            status_filter=filter_status,
+            search=filter_q,
+            offset=filter_offset,
             edit_values=edit_values,
             edit_error=str(exc),
             edit_confirm_group_clear=exc.count,

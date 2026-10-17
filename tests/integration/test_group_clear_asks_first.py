@@ -251,6 +251,21 @@ def test_a_reviewee_tag_edit_into_an_answered_group_is_refused(
     assert _responses(db) == 4
 
 
+def test_a_refused_reviewee_edit_keeps_the_view(db: Session, client: TestClient) -> None:
+    session, _ = _seed(db, client, "gc-reviewee-view")
+    ann = _reviewee(db, session.id, "Ann")
+
+    refused = client.post(
+        f"/operator/sessions/{session.id}/reviewees/{ann.id}/update",
+        data=_edit("Ann", "blue") | {"filter_q": "Ann", "filter_status": "active"},
+        follow_redirects=False,
+    )
+
+    assert refused.status_code == 400
+    assert 'name="filter_q" value="Ann"' in refused.text
+    assert 'name="filter_status" value="active"' in refused.text
+
+
 def test_a_reviewee_tag_edit_with_a_stale_tick_is_refused_again(
     db: Session, client: TestClient
 ) -> None:
