@@ -749,9 +749,11 @@
          "Pair: <label>" (author, 2026-10-17;
          ``guide/assignment_rule_clarify.md`` Item 2); Save decides
          whose tag each one is (``_band1._engine_field``). Link 3 groups
-         by reviewee tags only. ``_stored_only_labels`` names a tag a
-         stored rule holds that the card no longer offers, so its select
-         keeps that option rather than dropping it on the next Save. #}
+         by reviewee tags only. A tag a stored rule holds that the card
+         no longer offers keeps its select option (``data-new-model-stored-only``)
+         rather than dropping on the next Save; ``_stored_only_labels``
+         gives a relationship-tag boundary its label (an emptied slot
+         shows its key). #}
       {% set _pair_ns = namespace(tags=[]) %}
       {% for key, label in new_model_tags.pair_context %}
         {% set _pair_ns.tags = _pair_ns.tags + [(key, "Pair: " ~ label)] %}

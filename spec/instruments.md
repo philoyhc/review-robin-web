@@ -519,7 +519,12 @@ is used (`spec/assignments.md`, Predicate vocabulary):
 | Link 2 operand | `IS THE SAME AS` / `IS DIFFERENT FROM` | `reviewer.pair_tagN` | the reviewer holds it in any active pair |
 
 The card names all three by the relationship tag they read, so a rule
-reloads as it was saved. Link 3 groups by reviewee tags only.
+the card saved reloads as it was saved. A rule stored otherwise, before
+this mapping or by a Settings import, with `pair_context.tagN` in Link 1
+or as a Link 2 operand, shows as that relationship tag and is rewritten
+to the mapping above on its next Save, changing its meaning from the
+pair to the reviewer's tag; pre-Azure sessions are disposable (author,
+2026-10-17). Link 3 groups by reviewee tags only.
 
 A rule or boundary stored with a tag the card does not offer (a roster
 or relationship slot since emptied, or a relationship-tag boundary)
@@ -717,7 +722,8 @@ nothing is stored (`set_band1_assignment_rules`, via
 keeps pairs one by one, so it cannot stand beside a grouped unit of
 review, in an `AND` or an `OR` list alike. While the card holds one,
 the Link 3 pill cycles Not set → Individual → Not set, skipping Group;
-and Save refuses a Group stored or set alongside one, with the banner
+and Save refuses one while the Unit of review it posts is Group (a Group
+already stored posts as Group), with the banner
 (422, or 400 from `/fields/save`), storing nothing. `IS NOT` and the
 person-level operators leave Group available.
 
