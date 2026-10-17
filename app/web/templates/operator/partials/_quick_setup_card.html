@@ -90,7 +90,7 @@
 {% macro quick_setup_slot_banner(slot, form_id) -%}
 <div class="banner banner-error banner-scroll-target"
      id="quick-setup-{{ slot.key }}-error-banner"
-     {% if not slot.error_message %}hidden{% endif %}>
+     {% if slot.error_message %}data-quick-setup-reason="{{ slot.error_reason or '' }}"{% else %}hidden{% endif %}>
   {% if slot.error_message %}
     <p class="banner-lead">{{ slot.error_message }}</p>
     {% if slot.error_details %}

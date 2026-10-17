@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Reviewee, Reviewer, ReviewSession
+from ._quick_setup_refusal import refusal
 
 OBSERVERS = b"ObserverEmail,ObserverName\nola@example.edu,Ola\n"
 OBSERVERS_EMPTY = b"ObserverEmail,ObserverName\n"
@@ -162,7 +163,7 @@ def test_a_refusal_inside_the_save_leaves_the_tab_off(
         client, rs, observers=OBSERVERS, settings=_bad_settings()
     )
 
-    assert "quick_setup_error=settings" in response.headers["location"]
+    assert refusal(response).kind == "settings"
     db.expire_all()
     assert db.get(ReviewSession, rs.id).observers_enabled is False
     assert _toggled(db, rs) == []

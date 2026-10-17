@@ -23,6 +23,7 @@ from app.services import session_lifecycle as lifecycle
 from app.web.routes_operator._shared import _lifecycle_error_response
 
 from .test_scheduled_activation import _make_validated_session
+from ._quick_setup_refusal import refusal
 
 
 def _lands_at_the_lock(
@@ -1353,8 +1354,7 @@ def test_a_quick_setup_slot_reports_the_lifecycle_reason(
         follow_redirects=False,
     )
 
-    assert response.status_code == 303
-    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert refusal(response).reason == "lifecycle"
     assert _reviewer_emails(db, session) == []
 
 
@@ -1453,8 +1453,7 @@ def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
         follow_redirects=False,
     )
 
-    assert response.status_code == 303
-    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert refusal(response).reason == "lifecycle"
 
 
 def test_a_session_home_config_save_is_one_commit(

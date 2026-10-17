@@ -26,6 +26,7 @@ from .test_scheduled_reminders import (
     _ready_session_with_invitations,
     _stub_build_url,
 )
+from ._quick_setup_refusal import refusal
 
 
 def _saved_behind_the_orm(
@@ -348,5 +349,5 @@ def test_the_settings_import_route_gates_editability_under_the_lock(
         follow_redirects=False,
     )
 
-    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert refusal(response).reason == "lifecycle"
     assert _count(db, session, "session.settings_imported") == 0

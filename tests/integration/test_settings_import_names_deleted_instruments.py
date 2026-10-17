@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import csv
 import io
-from urllib.parse import parse_qs, urlsplit
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -23,6 +22,8 @@ from app.services.session_config_io import (
     instruments_deleted_by,
 )
 from app.services.session_config_io._apply_parse import _parse_rows
+
+from ._quick_setup_refusal import refusal
 
 
 def _settings_csv(rows: list[tuple[str, str, str]]) -> bytes:
@@ -69,11 +70,6 @@ def _names(db: Session, review_session: ReviewSession) -> list[str]:
     )
 
 
-def _query(response) -> dict[str, list[str]]:
-    assert response.status_code == 303, response.text
-    return parse_qs(urlsplit(response.headers["location"]).query)
-
-
 def test_a_file_that_drops_an_instrument_names_it_then_applies_on_the_tick(
     client: TestClient, db: Session
 ) -> None:
@@ -87,18 +83,19 @@ def test_a_file_that_drops_an_instrument_names_it_then_applies_on_the_tick(
         files={"file": ("c.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    query = _query(response)
-    assert query["quick_setup_error"] == ["settings"]
-    assert query["quick_setup_reason"] == ["deletes_instruments"]
-    assert query["quick_setup_detail"] == ["Peer review"]
-    assert query["quick_setup_count"] == ["1"]
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "deletes_instruments")
+    assert refused.details == ["Peer review"]
+    assert refused.lead == (
+        "Nothing was imported. This settings file deletes 1 instrument it "
+        "does not name, with its fields:"
+    )
+    assert (
+        'name="acknowledge_instrument_deletion"\n'
+        '                 value="1"\n'
+        '                 form="quick-setup-submit-all-form"'
+    ) in response.text
     assert _names(db, review_session) == ["Default", "peer"]
-
-    page = client.get(response.headers["location"].split("#")[0])
-    assert "deletes 1 instrument it does not name" in page.text
-    assert "<li>Peer review</li>" in page.text
-    assert 'name="acknowledge_instrument_deletion"' in page.text
-    assert 'value="1"' in page.text
 
     response = client.post(
         url,
@@ -127,10 +124,10 @@ def test_a_file_with_no_instrument_rows_names_every_instrument(
         },
         follow_redirects=False,
     )
-    query = _query(response)
-    assert query["quick_setup_reason"] == ["deletes_instruments"]
-    assert query["quick_setup_detail"] == ["Instrument_1", "Peer review"]
-    assert query["quick_setup_count"] == ["2"]
+    refused = refusal(response)
+    assert refused.reason == "deletes_instruments"
+    assert refused.details == ["Instrument_1", "Peer review"]
+    assert 'value="2"' in response.text
     assert _names(db, review_session) == ["Default", "peer"]
 
 
@@ -152,9 +149,9 @@ def test_a_tick_for_another_count_is_refused_again(
         },
         follow_redirects=False,
     )
-    query = _query(response)
-    assert query["quick_setup_reason"] == ["deletes_instruments"]
-    assert query["quick_setup_count"] == ["2"]
+    refused = refusal(response)
+    assert refused.reason == "deletes_instruments"
+    assert "deletes 2 instruments" in refused.lead
     assert _names(db, review_session) == ["Default", "peer"]
 
 
@@ -214,7 +211,7 @@ def test_a_file_with_errors_reports_them_before_asking(
         },
         follow_redirects=False,
     )
-    assert _query(response)["quick_setup_reason"] == ["parse"]
+    assert refusal(response).reason == "parse"
 
 
 def test_instruments_deleted_by_matches_one_row_per_instrument(

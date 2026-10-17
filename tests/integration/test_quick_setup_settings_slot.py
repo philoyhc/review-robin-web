@@ -29,6 +29,7 @@ from app.db.models import (
     ReviewSession,
 )
 from app.web import views
+from ._quick_setup_refusal import refusal
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -208,10 +209,8 @@ def test_submit_all_settings_parse_error_surfaces_in_settings_slot(
         files={"settings_file": ("c.csv", bad_payload, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=settings" in location
-    assert "quick_setup_reason=parse" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "parse")
 
 
 # --------------------------------------------------------------------------- #
@@ -232,10 +231,8 @@ def test_submit_all_settings_with_a_cell_past_the_csv_limit_is_a_parse_error(
         files={"settings_file": ("c.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=settings" in location
-    assert "quick_setup_reason=parse" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "parse")
 
 
 def test_submit_all_settings_with_a_repeated_shape_name_is_a_parse_error(
@@ -260,10 +257,8 @@ def test_submit_all_settings_with_a_repeated_shape_name_is_a_parse_error(
         files={"settings_file": ("c.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=settings" in location
-    assert "quick_setup_reason=parse" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "parse")
     db.expire_all()
     assert not db.execute(
         select(DataShape.id).where(DataShape.session_id == review_session.id)
@@ -366,10 +361,8 @@ def test_submit_all_settings_without_the_tick_is_refused(
         files={"settings_file": ("c.csv", good, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=settings" in location
-    assert "quick_setup_reason=needs_confirm" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "needs_confirm")
     db.expire_all()
     after = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
@@ -383,17 +376,17 @@ def test_submit_all_settings_without_the_tick_is_refused(
         files={"settings_file": ("c.csv", bad, "text/csv")},
         follow_redirects=False,
     )
-    assert "quick_setup_reason=parse" in response.headers["location"]
+    assert refusal(response).reason == "parse"
 
 
-def test_settings_errors_reach_the_slot_from_create_and_submit_all(
+def test_settings_errors_reach_the_slot_from_submit_all_but_not_create(
     client: TestClient, db: Session
 ) -> None:
-    """D31: the create-session and submit-all callers carry the
-    Settings CSV's errors in their redirect too, as ``import-config``
-    does (``tests/integration/test_import_config_route.py``)."""
-    from urllib.parse import parse_qs, urlsplit
-
+    """D31, as O7 rules it: submit-all renders Home again at 422 with the
+    Settings CSV's errors, as ``import-config`` does
+    (``tests/integration/test_import_config_route.py``). Create keeps its
+    redirect and carries only the fixed ``refused`` code, never the
+    file's lines; no link can put lines under the banner."""
     bad = _settings_csv([("instruments[1].short_label", "X", "string")])
 
     response = client.post(
@@ -403,11 +396,13 @@ def test_settings_errors_reach_the_slot_from_create_and_submit_all(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    query = parse_qs(urlsplit(response.headers["location"]).query)
-    assert query["quick_setup_reason"] == ["parse"]
-    assert query["quick_setup_detail"] == [
-        "instruments[1].name: name is required"
-    ]
+    assert response.headers["location"].endswith(
+        "?quick_setup_error=settings&quick_setup_reason=refused"
+        "#quick-setup-settings"
+    )
+    page = client.get(response.headers["location"])
+    assert "The session settings file was refused" in page.text
+    assert "name is required" not in page.text
 
     review_session = _make_session(client, db, code="qsc-detail-all")
     response = client.post(
@@ -416,29 +411,25 @@ def test_settings_errors_reach_the_slot_from_create_and_submit_all(
         files={"settings_file": ("c.csv", bad, "text/csv")},
         follow_redirects=False,
     )
-    query = parse_qs(urlsplit(response.headers["location"]).query)
-    assert query["quick_setup_detail"] == [
-        "instruments[1].name: name is required"
-    ]
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "parse")
+    assert refused.details == ["instruments[1].name: name is required"]
 
-    # A crafted link gets no more than the route would send: seven
-    # lines become six, and a long one is clipped.
+    # A crafted link puts nothing under the banner.
     page = client.get(
         f"/operator/sessions/{review_session.id}",
-        params=[("quick_setup_error", "settings"), ("quick_setup_reason", "parse")]
-        + [("quick_setup_detail", f"qsdmark{n} " + "z" * 500) for n in range(7)],
+        params=[("quick_setup_error", "settings"), ("quick_setup_reason", "refused")]
+        + [("quick_setup_detail", f"qsdmark{n}") for n in range(7)],
     )
-    assert page.text.count("qsdmark") == 6
-    assert "z" * 200 not in page.text
+    assert "The session settings file was refused" in page.text
+    assert "qsdmark" not in page.text
 
 
 def test_settings_error_lines_are_clipped_and_budgeted() -> None:
-    """The lines ride the URL: each is clipped to 200 characters, and
-    they stop once their encoded size passes the budget (a quoted
-    non-ASCII value encodes to nine bytes a character), the rest
-    counted. The view clips what it reads back the same way, so a
-    crafted link cannot put more under the banner than the route
-    would."""
+    """Each line is clipped to 200 characters, and they stop once their
+    encoded size passes the budget (a quoted non-ASCII value encodes to
+    nine bytes a character), the rest counted: caps kept from when the
+    lines rode the redirect, which now keep the banner short."""
     from urllib.parse import quote_plus
 
     from app.services.session_config_io import ApplyError

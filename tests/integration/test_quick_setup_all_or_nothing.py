@@ -29,6 +29,9 @@ from app.db.models import (
 from app.services import csv_imports
 from app.services import session_lifecycle as lifecycle
 
+from ._quick_setup_refusal import refusal
+
+
 BOB = "bob@example.edu"
 
 
@@ -85,6 +88,17 @@ def _submit_all(client: TestClient, rs: ReviewSession, **files: bytes):
 
 
 def _query(response) -> dict[str, list[str]]:
+    """The refusal as the old redirect query spelled it. An existing
+    session's refusal renders Home at 422 and is read off the banner
+    (findings O7); Create's, and every success, still redirect."""
+    if response.status_code == 422:
+        refused = refusal(response)
+        return {
+            "quick_setup_error": [refused.kind],
+            "quick_setup_reason": [refused.reason],
+            "quick_setup_detail": refused.details,
+        }
+    assert response.status_code == 303, response.status_code
     return parse_qs(urlsplit(response.headers["location"]).query)
 
 

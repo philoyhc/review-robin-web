@@ -1,8 +1,8 @@
 """Integration tests for ``POST
 /operator/sessions/{id}/import-config`` — Segment 12A-3 PR 3.
 
-Covers route surface (auth, lifecycle gate, success / error
-redirect shape, audit emission). The parse + apply contract is
+Covers route surface (auth, lifecycle gate, the success redirect and
+the refusal's 422 re-render, audit emission). The parse + apply contract is
 unit-tested in ``tests/unit/test_apply_session_config.py``.
 """
 
@@ -20,6 +20,8 @@ from app.db.models import (
     AuditEvent,
     ReviewSession,
 )
+
+from ._quick_setup_refusal import refusal
 
 
 def _make_session(
@@ -81,13 +83,11 @@ def test_import_config_lifecycle_gate_rejects_ready(
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=settings" in location
-    assert "quick_setup_reason=lifecycle" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "lifecycle")
 
 
-def test_import_config_parse_error_redirects_with_parse_reason(
+def test_import_config_parse_error_is_refused_with_parse_reason(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="ic-parse")
@@ -103,10 +103,8 @@ def test_import_config_parse_error_redirects_with_parse_reason(
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=settings" in location
-    assert "quick_setup_reason=parse" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("settings", "parse")
 
 
 def test_import_config_validation_errors_reach_the_slot(
@@ -114,11 +112,9 @@ def test_import_config_validation_errors_reach_the_slot(
 ) -> None:
     """D31: the slot used to show only "Could not import session
     settings." and drop ``ApplyResult.errors``, though
-    ``spec/csv_contracts.md`` §3.3 has the route surface them. The
-    redirect now carries each error, and Session Home lists them under
-    the Settings slot's banner, five at most plus a count of the rest."""
-    from urllib.parse import parse_qs, urlsplit
-
+    ``spec/csv_contracts.md`` §3.3 has the route surface them. Session
+    Home, rendered again at 422 (findings O7), lists each under the
+    Settings slot's banner, five at most plus a count of the rest."""
     review_session = _make_session(client, db, code="ic-detail")
     url = f"/operator/sessions/{review_session.id}/import-config"
 
@@ -129,14 +125,9 @@ def test_import_config_validation_errors_reach_the_slot(
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    location = response.headers["location"]
-    details = parse_qs(urlsplit(location).query)["quick_setup_detail"]
-    assert details and any("name" in line for line in details), details
-
-    page = client.get(location.split("#")[0])
-    assert page.status_code == 200
-    for line in details:
-        assert line.replace("'", "&#39;").replace('"', "&#34;") in page.text
+    details = refusal(response).details
+    assert details == ["instruments[1].name: name is required"]
+    assert "<li>instruments[1].name: name is required</li>" in response.text
 
     # Seven bad rows: five lines and a count of the other two.
     payload = _build_csv(
@@ -148,9 +139,7 @@ def test_import_config_validation_errors_reach_the_slot(
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
     )
-    details = parse_qs(urlsplit(response.headers["location"]).query)[
-        "quick_setup_detail"
-    ]
+    details = refusal(response).details
     assert len(details) == 6, details
     assert details[-1] == "…and 2 more."
 
@@ -164,8 +153,6 @@ def test_import_config_short_rows_are_reported_by_row_with_other_errors(
     with no detail. Blank lines don't count; later rows keep the numbers
     ``ApplyError`` gives them. The report comes before the replacement
     gates, as for every malformed file, and nothing is written."""
-    from urllib.parse import parse_qs, urlsplit
-
     review_session = _make_session(client, db, code="ic-short")
     url = f"/operator/sessions/{review_session.id}/import-config"
     payload = (
@@ -184,10 +171,9 @@ def test_import_config_short_rows_are_reported_by_row_with_other_errors(
             files={"file": ("config.csv", payload, "text/csv")},
             follow_redirects=False,
         )
-        assert response.status_code == 303
-        query = parse_qs(urlsplit(response.headers["location"]).query)
-        assert query["quick_setup_reason"] == ["parse"]
-        details = query["quick_setup_detail"]
+        refused = refusal(response)
+        assert refused.reason == "parse"
+        details = refused.details
         assert details[:2] == [
             "Row 1, session.name: the row has 2 cells; a Settings row "
             "needs three (field, value, data_type)",
@@ -217,8 +203,7 @@ def test_import_config_bad_header_rejected(
         },
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    assert "quick_setup_reason=parse" in response.headers["location"]
+    assert refusal(response).reason == "parse"
 
 
 def test_import_config_emits_audit_event(
@@ -337,8 +322,7 @@ def test_a_settings_replace_needs_the_tick_and_the_response_loss_ack(
             files={"file": ("config.csv", payload, "text/csv")},
             follow_redirects=False,
         )
-        assert response.status_code == 303
-        assert "quick_setup_reason=needs_confirm" in response.headers["location"]
+        assert refusal(response).reason == "needs_confirm"
         db.expire_all()
         assert db.execute(select(Response)).scalars().all() != []
 

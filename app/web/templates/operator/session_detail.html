@@ -356,11 +356,13 @@
           <button type="submit" form="config-save-{{ session.id }}"
                   class="btn secondary" data-config-save data-edit-only>Save</button>
           <a class="btn secondary" data-config-cancel data-edit-only
-             href="{{ request.url.path }}#session-config"
+             href="/operator/sessions/{{ session.id }}#session-config"
              onclick="return sessionConfig.cancel(this);">Cancel</a>
+          {# Home's own path, not ``request.url.path``: a refused Quick
+             Setup upload renders this page at its POST's URL (O7). #}
           {% if is_draft or is_validated %}
             <a class="btn secondary" data-config-lock-toggle
-               href="{{ request.url.path }}{% if not config_editing %}?editing=1{% endif %}#session-config"
+               href="/operator/sessions/{{ session.id }}{% if not config_editing %}?editing=1{% endif %}#session-config"
                onclick="return sessionConfig.toggle(this);">{{ 'Lock' if config_editing else 'Unlock' }}</a>
           {% else %}
             <a class="btn secondary" data-config-lock-toggle aria-disabled="true"

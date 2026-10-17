@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Relationship, ReviewSession
 from app.web import views
+from ._quick_setup_refusal import refusal
 
 
 REVIEWER_CSV = b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"
@@ -144,10 +145,8 @@ def test_quick_setup_relationships_route_replace_requires_confirm(
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=relationships" in location
-    assert "quick_setup_reason=needs_confirm" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("relationships", "needs_confirm")
 
 
 def test_quick_setup_relationships_route_unknown_email_is_parse_error(
@@ -165,10 +164,8 @@ def test_quick_setup_relationships_route_unknown_email_is_parse_error(
         files={"file": ("rel.csv", bad_csv, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    location = response.headers["location"]
-    assert "quick_setup_error=relationships" in location
-    assert "quick_setup_reason=parse" in location
+    refused = refusal(response)
+    assert (refused.kind, refused.reason) == ("relationships", "parse")
 
 
 def test_quick_setup_relationships_lifecycle_gate_on_ready(
@@ -199,8 +196,7 @@ def test_quick_setup_relationships_lifecycle_gate_on_ready(
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
-    assert response.status_code == 303
-    assert "quick_setup_reason=lifecycle" in response.headers["location"]
+    assert refusal(response).reason == "lifecycle"
 
 
 # ---------------------------------------------------------------------------

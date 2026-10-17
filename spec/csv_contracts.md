@@ -320,8 +320,9 @@ per missing column, no rows. A blocked file saves nothing. The Setup
 page's upload re-renders the page at **400** with an error banner in
 the upload card listing the file's kinds of problem, each with how many
 rows have it, never the rows (`views.upload_problems`); Quick Setup's
-slot 303s back to Session Home with `?quick_setup_error=…` and shows the
-same lines.
+slot renders Session Home again at **422** with the same lines, except
+on the New session page, which redirects with a fixed message and no
+lines (`spec/quick_setup_card_spec.md`, "Result reporting").
 
 **Per-row validation** (every importer):
 
@@ -582,7 +583,15 @@ the keys `display_name`, `email`, `tag_1` and the default `display_name`,
 `email`.
 
 If phase 1 finds errors, phase 2 is **not attempted** — the
-`ApplyResult` carries `errors` and the route surfaces them.
+`ApplyResult` carries `errors` and the route surfaces them. On an
+existing session Quick Setup renders Session Home again at 422 with
+the errors under the Settings banner, never in a URL, so a link cannot
+put text on the page (findings O7, author's ruling). The New session
+page keeps its 303, since its session is committed and a re-render
+would replay the create on a refresh, and shows a fixed sentence
+instead of the lines (`quick_setup_reason=refused`); uploading the
+file again in Quick Setup shows them (`spec/quick_setup_card_spec.md`,
+"Result reporting").
 
 `apply_session_config` is the inverse of `serialize_session_config`.
 

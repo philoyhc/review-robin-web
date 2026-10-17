@@ -58,6 +58,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _require_response_loss_ack,
     acknowledged_loss,
+    render_session_home,
     session_payload_error,
 )
 
@@ -320,9 +321,7 @@ async def create_session(
             skip_refused=True,
         )
 
-    def quick_setup_error_redirect(
-        kind: str, reason: str, details: list[str] | None = None
-    ) -> RedirectResponse:
+    def quick_setup_error_redirect(kind: str) -> RedirectResponse:
         # The typed tags are written here too, so a failed upload does
         # not silently discard something the operator typed on this
         # page. Safe on every slot: a refused upload saved nothing, the
@@ -330,7 +329,12 @@ async def create_session(
         # CSV" in the only sense that matters.
         write_typed_tags()
         write_staged_owners()
-        query = _quick_setup_error_query(kind, reason, details or ())
+        # A redirect, not a re-render: the session is committed, and
+        # rendering Home at this POST's URL would replay the create on a
+        # refresh. So the file's lines are not carried, only the fixed
+        # ``refused`` code; uploading the file again in Quick Setup shows
+        # them (findings O7).
+        query = _quick_setup_error_query(kind, "refused")
         return RedirectResponse(
             url=f"{home_url}?{query}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
@@ -356,9 +360,7 @@ async def create_session(
         correlation_id=correlation_id,
     )
     if refusal is not None:
-        return quick_setup_error_redirect(
-            refusal.kind, refusal.failure.reason, refusal.failure.details
-        )
+        return quick_setup_error_redirect(refusal.kind)
     last_fragment = f"#quick-setup-{list(uploads)[-1]}" if uploads else ""
 
     write_typed_tags()
@@ -383,9 +385,12 @@ async def create_session(
 # checks every attached file, then saves them all in one unit
 # (``guide/quick_setup_update.md`` Item 1). On success the route 303s
 # back to Session Home with no flag (the slot's count indicator is the
-# success signal); on a refusal it 303s with
-# ``?quick_setup_error={kind}&quick_setup_reason=...`` so the GET render
-# places a ``.banner.banner-error`` above the slot that refused.
+# success signal). On a refusal an existing session's route renders
+# Session Home again at 422, with a ``.banner.banner-error`` above the
+# slot that refused listing the file's own lines; the Create page, whose
+# session is already committed, 303s with the fixed
+# ``?quick_setup_error={kind}&quick_setup_reason=refused`` code instead
+# (findings O7).
 
 #: The dispatch order (`spec/quick_setup_card_spec.md` "Per-slot
 #: dispatch"): the order files are checked in, the order a refusal is
@@ -843,36 +848,54 @@ def _save_slot(
         return 0
 
 
-def _slot_redirect(
-    review_session: ReviewSession, kind: str, refusal: _SlotRefusal | None
-) -> RedirectResponse:
-    """Back to the slot on Session Home, with the refusal's flag if any."""
+def _slot_response(
+    request: Request,
+    db: Session,
+    *,
+    user: User,
+    review_session: ReviewSession,
+    kind: str,
+    refusal: _SlotRefusal | None,
+) -> HTMLResponse | RedirectResponse:
+    """Back to the slot on Session Home on success; on a refusal, Session
+    Home rendered again at 422 with the slot's banner and the file's own
+    lines, which a URL therefore never carries (findings O7)."""
 
-    home_url = f"/operator/sessions/{review_session.id}"
     if refusal is None:
-        url = f"{home_url}#quick-setup-{kind}"
-    else:
-        query = _quick_setup_error_query(
-            refusal.kind,
-            refusal.failure.reason,
-            refusal.failure.details,
-            count=refusal.failure.count,
+        return RedirectResponse(
+            url=f"/operator/sessions/{review_session.id}#quick-setup-{kind}",
+            status_code=status.HTTP_303_SEE_OTHER,
         )
-        url = f"{home_url}?{query}#quick-setup-{refusal.kind}"
-    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+    return render_session_home(
+        request,
+        db,
+        user=user,
+        review_session=review_session,
+        quick_setup=views.build_quick_setup_context(
+            db,
+            review_session,
+            user=user,
+            error_kind=refusal.kind,
+            error_reason=refusal.failure.reason,
+            error_details=tuple(refusal.failure.details),
+            error_count=refusal.failure.count,
+        ),
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
 
 
 async def _single_slot(
     kind: str,
     file: UploadFile,
     *,
+    request: Request,
     review_session: ReviewSession,
     user: User,
     db: Session,
     confirm_replace: str | None,
     acknowledge_response_loss: str | None = None,
     acknowledge_instrument_deletion: str | None = None,
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """A per-slot route: the shared pipeline with one file."""
 
     refusal = await _run_quick_setup(
@@ -885,7 +908,14 @@ async def _single_slot(
         replacing=True,
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
-    return _slot_redirect(review_session, kind, refusal)
+    return _slot_response(
+        request,
+        db,
+        user=user,
+        review_session=review_session,
+        kind=kind,
+        refusal=refusal,
+    )
 
 
 @router.post(
@@ -894,16 +924,18 @@ async def _single_slot(
     response_model=None,
 )
 async def quick_setup_reviewers_submit(
+    request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     return await _single_slot(
         "reviewers",
         file,
+        request=request,
         review_session=review_session,
         user=user,
         db=db,
@@ -918,16 +950,18 @@ async def quick_setup_reviewers_submit(
     response_model=None,
 )
 async def quick_setup_reviewees_submit(
+    request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     return await _single_slot(
         "reviewees",
         file,
+        request=request,
         review_session=review_session,
         user=user,
         db=db,
@@ -942,18 +976,20 @@ async def quick_setup_reviewees_submit(
     response_model=None,
 )
 async def quick_setup_relationships_submit(
+    request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """Quick Setup card slot 3 (Relationships). Checked against the
     session's current rosters, since no roster file rides with it."""
 
     return await _single_slot(
         "relationships",
         file,
+        request=request,
         review_session=review_session,
         user=user,
         db=db,
@@ -967,12 +1003,13 @@ async def quick_setup_relationships_submit(
     response_model=None,
 )
 async def quick_setup_observers_submit(
+    request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """Quick Setup card Observers slot. No response-loss acknowledgement:
     observer rows cascade nothing. The cross-roster identity check has
     applied since 19Q Item 7 — one person may hold two roles, never two
@@ -981,6 +1018,7 @@ async def quick_setup_observers_submit(
     return await _single_slot(
         "observers",
         file,
+        request=request,
         review_session=review_session,
         user=user,
         db=db,
@@ -1006,15 +1044,16 @@ async def quick_setup_submit_all(
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """The card's single bottom Submit.
 
     The Submit button is gated client-side on file presence; this
     handler is the source of truth and skips empty slots silently. Every
     attached file is checked first, then all are saved in one unit
     (``_run_quick_setup``): a refusal names its slot and leaves every
-    slot unsaved. Success 303s to Home at the last slot's fragment, or
-    the card root when nothing was attached."""
+    slot unsaved, answered by Session Home rendered again at 422 with
+    the slot's banner (findings O7). Success 303s to Home at the last
+    slot's fragment, or the card root when nothing was attached."""
 
     uploads = _attached(
         reviewers=reviewers_file,
@@ -1034,8 +1073,13 @@ async def quick_setup_submit_all(
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
     if refusal is not None or uploads:
-        return _slot_redirect(
-            review_session, list(uploads)[-1] if uploads else "", refusal
+        return _slot_response(
+            request,
+            db,
+            user=user,
+            review_session=review_session,
+            kind=list(uploads)[-1] if uploads else "",
+            refusal=refusal,
         )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.id}",
@@ -1054,6 +1098,7 @@ async def quick_setup_submit_all(
     response_model=None,
 )
 async def import_session_config(
+    request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
@@ -1061,7 +1106,7 @@ async def import_session_config(
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """Apply a Settings CSV to ``review_session``.
 
     Lifecycle gate: ``status in {"draft", "validated"}``. A settings
@@ -1076,11 +1121,12 @@ async def import_session_config(
     carries their count (findings S4).
 
     Reachable from the Quick Setup Settings slot and as a direct POST
-    endpoint, with the redirect shape the other slots use."""
+    endpoint, answering as the other slots do."""
 
     return await _single_slot(
         "settings",
         file,
+        request=request,
         review_session=review_session,
         user=user,
         db=db,
@@ -1090,22 +1136,12 @@ async def import_session_config(
     )
 
 
-def _quick_setup_error_query(
-    kind: str,
-    reason: str,
-    details: list[str] | tuple[str, ...] = (),
-    *,
-    count: int = 0,
-) -> str:
-    """The ``?quick_setup_error=…`` query a failed slot redirects with;
-    each detail line rides as a ``quick_setup_detail`` value, and the
-    count a re-offered tick carries as ``quick_setup_count``."""
+def _quick_setup_error_query(kind: str, reason: str) -> str:
+    """The ``?quick_setup_error=…&quick_setup_reason=…`` codes the Create
+    page's refusal redirects with: the slot and a fixed reason, never the
+    file's text (findings O7)."""
 
-    pairs = [("quick_setup_error", kind), ("quick_setup_reason", reason)]
-    pairs += [("quick_setup_detail", line) for line in details]
-    if count:
-        pairs.append(("quick_setup_count", str(count)))
-    return urlencode(pairs)
+    return urlencode([("quick_setup_error", kind), ("quick_setup_reason", reason)])
 
 
 def _read_settings_csv(

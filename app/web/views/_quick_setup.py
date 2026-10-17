@@ -95,6 +95,11 @@ class QuickSetupSlot:
     (``roster_problem_details``; the roster's Setup page shows rows), or
     the instruments a Settings file would delete."""
 
+    error_reason: str | None = None
+    """The refusal's reason token (``parse``, ``needs_confirm``, …) when
+    this slot refused, rendered as the banner's
+    ``data-quick-setup-reason`` so the page names it without copy."""
+
     deletion_count: int = 0
     """How many instruments a refused Settings file would delete, when
     that is why it was refused (findings S4): the banner then carries a
@@ -169,12 +174,14 @@ def build_quick_setup_context(
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
 
-    ``error_kind`` + ``error_reason`` come from the
-    ``?quick_setup_error=...&quick_setup_reason=...`` redirect flag set
-    by the slot's POST handler on rejection. The pair drives that
-    slot's ``banner-error``, rendered full-width above the slots.
-    Other slots are unaffected. ``error_count`` is the instrument count
-    a ``deletes_instruments`` refusal re-offers its tick with.
+    ``error_kind`` + ``error_reason`` name the slot that refused and
+    why: from the refusal itself when a Quick Setup route re-renders
+    Session Home, with ``error_details`` (the file's own lines) and
+    ``error_count`` (the instrument count a ``deletes_instruments``
+    refusal re-offers its tick with); or from the Create page's redirect
+    codes, read through :func:`quick_setup_url_failure`, with neither
+    (findings O7). The pair drives that slot's ``banner-error``,
+    rendered full-width above the slots. Other slots are unaffected.
     """
 
     sid = review_session.id
@@ -214,7 +221,7 @@ def build_quick_setup_context(
         f"/operator/sessions/{sid}#quick-setup-{key}"
     )
     # The re-offered tick renders only for the refusal that asks for it,
-    # with a count to carry; the card is never live without one.
+    # and only with a count to carry.
     _deletion_count = (
         error_count
         if error_kind == "settings"
@@ -233,15 +240,12 @@ def build_quick_setup_context(
             count=_deletion_count,
         )
 
+    def _reason_for(slot_key: str) -> str | None:
+        return error_reason if error_kind == slot_key else None
+
     def _details_for(slot_key: str) -> tuple[str, ...]:
-        # The lines arrive in the URL, so no more and no longer than
-        # the route sends are shown, whatever it holds.
-        if error_kind != slot_key:
-            return ()
-        return tuple(
-            _clip(line)
-            for line in tuple(error_details)[: SETTINGS_ERROR_DETAIL_LIMIT + 1]
-        )
+        # The route's own lines, already capped; never read from a URL.
+        return tuple(error_details) if error_kind == slot_key else ()
 
     slots = [
         QuickSetupSlot(
@@ -254,6 +258,7 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("reviewers"),
             error_details=_details_for("reviewers"),
+            error_reason=_reason_for("reviewers"),
             cancel_url=cancel_url_for("reviewers"),
         ),
         QuickSetupSlot(
@@ -266,6 +271,7 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("reviewees"),
             error_details=_details_for("reviewees"),
+            error_reason=_reason_for("reviewees"),
             cancel_url=cancel_url_for("reviewees"),
         ),
         QuickSetupSlot(
@@ -278,6 +284,7 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("relationships"),
             error_details=_details_for("relationships"),
+            error_reason=_reason_for("relationships"),
             cancel_url=cancel_url_for("relationships"),
         ),
     ]
@@ -296,6 +303,7 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("observers"),
             error_details=_details_for("observers"),
+            error_reason=_reason_for("observers"),
             cancel_url=cancel_url_for("observers"),
         )
     )
@@ -310,6 +318,7 @@ def build_quick_setup_context(
             coming_in=None,
             error_message=_error_for("settings"),
             error_details=_details_for("settings"),
+            error_reason=_reason_for("settings"),
             cancel_url=cancel_url_for("settings"),
             deletion_count=_deletion_count,
         )
@@ -350,11 +359,36 @@ def build_quick_setup_context(
     )
 
 
-#: How many error lines travel back in the redirect (a Settings CSV's
-#: errors, a roster file's kinds of problem), how long each may be, and
-#: how many URL-encoded bytes they may take together: the list rides the
-#: URL, so it is capped rather than whole (a value quoted in a message
-#: can be non-ASCII, up to twelve encoded bytes a character). A longer
+#: The slots a refusal names, and the one reason a redirect carries:
+#: the Create page's ``refused`` (findings O7). Every other refusal
+#: re-renders Session Home, so no other code reaches the page by URL.
+_SLOT_KEYS = frozenset(
+    {"reviewers", "reviewees", "relationships", "observers", "settings"}
+)
+URL_REASONS = frozenset({"refused"})
+
+
+def quick_setup_url_failure(
+    kind: str | None, reason: str | None
+) -> dict[str, str]:
+    """The ``error_kind`` / ``error_reason`` keywords for
+    :func:`build_quick_setup_context` from Session Home's
+    ``?quick_setup_error=…&quick_setup_reason=…`` codes, or none for a
+    pair the Create page does not send: an unlisted code shows nothing,
+    as ``super_error`` does (findings O7)."""
+
+    if kind in _SLOT_KEYS and reason in URL_REASONS:
+        return {"error_kind": kind, "error_reason": reason}
+    return {}
+
+
+#: How many error lines a refused slot's banner lists (a Settings CSV's
+#: errors, a roster file's kinds of problem, the instruments a Settings
+#: file deletes), how long each may be, and how many URL-encoded bytes
+#: they may take together, a measure kept from when the lines rode the
+#: redirect (a value quoted in a message can be non-ASCII, up to twelve
+#: encoded bytes a character). They are re-rendered now, never read
+#: from a URL (findings O7); the caps keep the banner short. A longer
 #: list ends with a count of the rest.
 SETTINGS_ERROR_DETAIL_LIMIT = 5
 SETTINGS_ERROR_DETAIL_MAX_CHARS = 200
@@ -388,7 +422,7 @@ def settings_error_details(errors: list) -> list[str]:
 def roster_problem_details(issues: list) -> list[str]:
     """The kinds of problem that refused a roster file in Quick Setup,
     one line each with how many rows have it ("ReviewerEmail is blank
-    (2 rows)"), capped for the redirect. The lines are the Setup pages'
+    (2 rows)"), capped for the banner. The lines are the Setup pages'
     upload cards' too (``problem_kinds``); neither lists rows
     (``guide/quick_setup_update.md`` Item 3)."""
 
@@ -404,7 +438,7 @@ def deleted_instrument_details(labels: list[str]) -> list[str]:
 
 
 def _capped(all_lines: list[str]) -> list[str]:
-    """The lines the redirect carries: at most
+    """The lines a banner lists: at most
     ``SETTINGS_ERROR_DETAIL_LIMIT``, each clipped, within the byte
     budget, then a count of the rest."""
 
@@ -449,6 +483,9 @@ def _quick_setup_error_message(
     - ``"deletes_instruments"`` — a valid Settings file would delete
       ``count`` instruments it does not name (findings S4). The banner
       lists them under this sentence and re-offers the tick.
+    - ``"refused"`` — the Create page's code for a staged file it
+      refused (findings O7): its lines are not carried, so the sentence
+      sends the operator back to Quick Setup to see them.
     """
 
     label_for = {
@@ -468,6 +505,12 @@ def _quick_setup_error_message(
         return (
             "Tick the replacement-confirmation box just above "
             "Submit, then submit again."
+        )
+    if reason == "refused":
+        return (
+            f"The {label.lower()} file was refused, so none of the files "
+            "uploaded with the new session were saved. Upload them again "
+            "in Quick Setup to see why."
         )
     if reason == "deletes_instruments" and slot_key == "settings" and count:
         one = count == 1
