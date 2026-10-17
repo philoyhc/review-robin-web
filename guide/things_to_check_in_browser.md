@@ -346,3 +346,20 @@ delete them once no remaining section points to them.
   row counts `defuncted_group_responses`.
 - [ ] **An unchanged group keeps its answer.** A group the change left
   with the same members still shows its answer.
+
+## A group whose members change is cleared, everywhere (group is the subject)
+
+- [ ] **A tag edit clears both groups.** On a session back in draft with
+  a group instrument answered for two teams, edit one reviewee's team
+  tag to the other team: the reviewer's page shows both teams
+  unanswered, and the `reviewee.updated` audit row counts
+  `defuncted_group_responses`.
+- [ ] **Prepare asks before clearing a joined group.** Add a reviewee
+  to an answered team and click `Prepare session`: the card's banner
+  reads "Preparing will delete N saved responses" with a line that it
+  "also clears" them on groups whose members it changes. `Regenerate &
+  prepare` then shows that team unanswered; a team nobody joined keeps
+  its answer.
+- [ ] **Deleting a reviewee clears their group.** Delete one member of
+  an answered team on Reviewees: the members who remain show the team
+  unanswered.

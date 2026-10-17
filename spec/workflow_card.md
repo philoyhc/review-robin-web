@@ -116,7 +116,8 @@ returns:
   `"release_responses"`, `"stop_release"`), `step`, `error`.
   Drives the workflow-failure signal line.
 - `prepare_confirm` — `dict | None`. Populated
-  (`responses_deleted` / `deleted_pairs` keys) when the builder
+  (`responses_lost` / `responses_deleted` / `group_responses_cleared`
+  / `deleted_pairs` keys) when the builder
   is called with `prepare_confirm="responses"` AND a dry-run
   reconcile shows a Prepare run would delete one or more
   responses. Drives the saved-response confirmation banner in
@@ -418,8 +419,9 @@ The steps:
    `spec/assignments.md` "Reconcile + regenerate") — inserting newly eligible
    pairs, deleting pairs the rule no longer produces along with
    their responses, and leaving matched pairs and their responses
-   untouched. The saved-response confirmation detour below gates
-   this step when it would delete responses.
+   untouched, except that a group-scoped instrument's group whose
+   members it changes is cleared. The saved-response confirmation
+   detour below gates this step when it would delete responses.
 2. **Validate.** `validation.validate_session_setup(...)` →
    `lifecycle.build_readiness_report(...)`. When the report is
    clean and the session is still `draft`,
@@ -455,18 +457,24 @@ The detour is **impact-driven**: it fires only when a run would
 actually delete a response, not whenever responses merely exist.
 When the session has responses and the POST carried no
 `acknowledge_response_loss` field, the route dry-runs the
-reconcile via `assignments.reconcile_impact(...)`. If that
-impact's `responses_deleted` is zero, the run proceeds straight
-through — no confirmation. If it is non-zero, the route 303s
-back to the host page with `?prepare_confirm=responses`.
+reconcile via `assignments.reconcile_impact(...)`. Its
+`responses_lost` is the responses on pairs the run would drop
+(`responses_deleted`) plus the answers it would clear in groups it
+redraws (`group_responses_cleared`). If that is zero, the run
+proceeds straight through — no confirmation. If it is non-zero, the
+route 303s back to the host page with `?prepare_confirm=responses`.
 
 The workflow card decodes that param (via the `prepare_confirm`
 builder kwarg, which re-runs `reconcile_impact` to populate the
-`responses_deleted` / `deleted_pairs` counts) and renders a
-confirmation banner in the card body: *"Preparing will delete N
-saved responses"* over *"Regenerating drops M assignment pairs that
-the current setup no longer produces, along with their saved
-responses. Responses on unchanged pairs are kept."*, then two buttons:
+`responses_lost` / `responses_deleted` / `group_responses_cleared` /
+`deleted_pairs` counts) and renders a confirmation banner in the card
+body: *"Preparing will delete N saved responses"* over, when dropped
+pairs hold responses, *"Regenerating drops M assignment pairs that the
+current setup no longer produces, along with their K saved
+responses."*, when a changed group holds answers, *"J are on groups
+whose members it changes, which it clears: a group with new or fewer
+members is answered again."*, and *"Responses on unchanged pairs and unchanged groups are
+kept."*, then two buttons:
 
 - **Regenerate & prepare** (`.btn.destructive`, since it deletes saved responses) posts back to `/workflow/prepare`
   with `acknowledge_response_loss=true`, which skips the detour

@@ -3,9 +3,9 @@ holds no value.**
 
 ``guide/archive/advanced_instruments.md`` Item 1, Pre-positioning 3: every writer
 of ``Response`` rows ends here, so a governed answer never outlives its
-branch closing. Save and submit (``_apply_upserts``) and the group re-fan
-(``_refan_group_responses``) call :func:`drop_closed_branch_answers` after
-writing; the responses import, which reports each row it can't place,
+branch closing. Save and submit (``_apply_upserts``) call
+:func:`drop_closed_branch_answers` after writing; the responses import,
+which reports each row it can't place,
 filters with :func:`closed_governed_field_ids` before inserting. Both are
 built on :func:`applicable_field_ids`, so they can't disagree with each
 other or with the reviewer surface.

@@ -696,8 +696,8 @@ def _render_relationships_page(
             # Always ``False`` (Segment 19I Item 2). Deleting a
             # relationship cascades to no response — nothing
             # references one, measured from the model graph at PR 2.
-            # A pair it moves to another pair-context group gives up
-            # its group answer copy (findings B34), and the author
+            # A pair it moves to another pair-context group clears the
+            # group it left and the group it joined, and the author
             # ruled 2026-10-03 that this asks for no acknowledgement,
             # as a tag edit asks for none. The route's gate reaches
             # the same answer on its own via ``cascade_counts``.

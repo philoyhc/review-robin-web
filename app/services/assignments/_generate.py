@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, exists, func, insert, select
+from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -513,6 +513,20 @@ def _materialise_one_instrument(
         override_exclude_self_reviews=override_exclude_self_reviews,
     )
 
+    # A member added or removed changes its group, which is cleared once
+    # the rows land (``responses.clear_changed_groups``): the group is
+    # the subject, so a new composition is answered afresh.
+    from app.services import responses as responses_service
+
+    groups_before = (
+        responses_service.snapshot_group_partitions(
+            db, session_id=review_session.id, instrument_ids={instrument.id}
+        )
+        if instrument.group_kind is not None
+        and bool(diff.to_insert or diff.to_delete)
+        else {}
+    )
+
     # Drop pairs the rule no longer produces. Their responses go first
     # so the FK constraint holds (the bulk Core ``delete`` bypasses the
     # ORM ``delete-orphan`` cascade — see PR #1065).
@@ -522,15 +536,6 @@ def _materialise_one_instrument(
             delete(Response).where(Response.assignment_id.in_(delete_ids))
         )
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
-
-    # The highest id before the insert: every row on this instrument
-    # above it is new, which finds them without binding one parameter
-    # per kept row (the group answer copy, below).
-    max_id_before_insert = (
-        db.scalar(select(func.max(Assignment.id))) or 0
-        if diff.to_insert
-        else 0
-    )
 
     # Insert newly eligible pairs. Bulk Core, matching the delete
     # half above: the ORM form built one Python object per pair —
@@ -595,38 +600,9 @@ def _materialise_one_instrument(
         db, session_id=review_session.id
     )
 
-    # A new member of an already-answered group takes the group's
-    # answer, as a member moved into it by a tag or relationship edit
-    # does (findings B13). Only kept rows can hold answers, so with
-    # nothing kept there is nothing to copy.
-    group_responses_copied = 0
-    if (
-        instrument.group_kind is not None
-        and diff.to_insert
-        and diff.to_keep
-        and db.scalar(
-            select(
-                exists().where(
-                    Response.assignment_id == Assignment.id,
-                    Assignment.instrument_id == instrument.id,
-                )
-            )
-        )
-    ):
-        from app.services import responses as responses_service
-
-        new_ids = set(
-            db.execute(
-                select(Assignment.id)
-                .where(Assignment.instrument_id == instrument.id)
-                .where(Assignment.id > max_id_before_insert)
-            ).scalars()
-        )
-        group_responses_copied = (
-            responses_service.copy_group_answers_to_new_assignments(
-                db, session_id=review_session.id, assignment_ids=new_ids
-            )
-        )
+    group_responses_cleared = responses_service.clear_changed_groups(
+        db, session_id=review_session.id, before=groups_before
+    )
 
     counts_kwargs: dict[str, int] = {
         "new": len(diff.to_insert),
@@ -638,8 +614,8 @@ def _materialise_one_instrument(
     }
     for reason, n in diff.excluded_counts.items():
         counts_kwargs[f"excluded_{reason}"] = n
-    if group_responses_copied:
-        counts_kwargs["group_responses_copied"] = group_responses_copied
+    if group_responses_cleared:
+        counts_kwargs["group_responses_cleared"] = group_responses_cleared
     context: dict[str, str | int | bool] = {"mode": mode.value}
     if override_exclude_self_reviews is not None:
         context["exclude_self_reviews"] = override_exclude_self_reviews
@@ -782,6 +758,14 @@ class ReconcileImpact:
     deleted: int
     kept: int
     responses_deleted: int
+    # Answers on kept rows of groups the run would redraw
+    # (``responses.clear_changed_groups``).
+    group_responses_cleared: int = 0
+
+    @property
+    def responses_lost(self) -> int:
+        """Every saved response the run would delete."""
+        return self.responses_deleted + self.group_responses_cleared
 
 
 @dataclass(frozen=True)
@@ -1096,11 +1080,12 @@ def reconcile_impact(
 
     Drives the workflow super-button's saved-response confirmation:
     ``responses_deleted`` is the number of ``Response`` rows a run
-    would delete (responses on pairs the current setup no longer
-    produces); ``deleted`` is how many such pairs there are.
+    would delete on pairs the current setup no longer produces, and
+    ``deleted`` how many such pairs there are; ``group_responses_cleared``
+    is the answers on kept rows of the groups the run would redraw.
     """
     inputs = _load_reconcile_inputs(db, review_session, instrument_id)
-    new = deleted = kept = responses_deleted = 0
+    new = deleted = kept = responses_deleted = group_responses_cleared = 0
     for instrument in inputs.targets:
         diff = _diff_one_instrument(
             db,
@@ -1116,12 +1101,69 @@ def reconcile_impact(
         deleted += len(diff.to_delete)
         kept += len(diff.to_keep)
         responses_deleted += diff.responses_deleted
+        group_responses_cleared += _projected_group_clears(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            diff=diff,
+            pair_context_lookup=inputs.pair_context_lookup,
+        )
     return ReconcileImpact(
         new=new,
         deleted=deleted,
         kept=kept,
         responses_deleted=responses_deleted,
+        group_responses_cleared=group_responses_cleared,
     )
+
+
+def _projected_group_clears(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    diff: _InstrumentDiff,
+    pair_context_lookup: dict[tuple[int, int], Relationship],
+) -> int:
+    """How many answers :func:`_materialise_one_instrument` would clear
+    on this instrument's kept rows, without writing: the groups the
+    diff's kept and new pairs would form, each compared with today's,
+    as ``responses.clear_changed_groups`` compares them after the
+    write, by the ``(reviewer_id, reviewee_id)`` pairs it compares."""
+    if instrument.group_kind is None or not (diff.to_insert or diff.to_delete):
+        return 0
+    from app.services import instruments as instruments_service
+    from app.services import responses as responses_service
+
+    before = responses_service.snapshot_group_partitions(
+        db, session_id=review_session.id, instrument_ids={instrument.id}
+    ).get(instrument.id)
+    if not before:
+        return 0
+    boundary = instruments_service.decode_group_kind(instrument.group_kind)
+    groups: dict[tuple[int, tuple[str, ...]], set[tuple[int, int]]] = {}
+    for key in diff.to_keep | diff.to_insert:
+        reviewer, reviewee, _ = diff.new_pairs[key]
+        group_key = responses_service.group_key_for_pair(
+            reviewee=reviewee,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            boundary=boundary,
+            pair_context_lookup=pair_context_lookup,
+        )
+        groups.setdefault((reviewer.id, group_key), set()).add(key)
+    changed = {
+        diff.existing_rows[key].id
+        for members in groups.values()
+        if frozenset(members) not in before
+        for key in members
+        if key in diff.to_keep
+    }
+    if not changed:
+        return 0
+    return db.scalar(
+        select(func.count(Response.id)).where(Response.assignment_id.in_(changed))
+    ) or 0
 
 
 def replace_assignments(

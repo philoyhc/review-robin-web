@@ -86,8 +86,9 @@ def build_workflow_card_context(
     when set to ``"responses"``, the builder dry-runs the reconcile
     via ``assignments.reconcile_impact`` and — if a run would delete
     one or more responses — returns a ``prepare_confirm`` dict
-    carrying ``responses_deleted`` / ``deleted_pairs`` so the card
-    renders its confirmation block.
+    carrying ``responses_lost`` / ``responses_deleted`` /
+    ``group_responses_cleared`` / ``deleted_pairs`` so the card renders
+    its confirmation block.
     """
     reviewer_count = csv_imports.existing_reviewer_count(
         db, review_session.id
@@ -146,9 +147,11 @@ def build_workflow_card_context(
         db, review_session
     ):
         impact = assignments.reconcile_impact(db, review_session)
-        if impact.responses_deleted > 0:
+        if impact.responses_lost > 0:
             prepare_confirm_ctx = {
+                "responses_lost": impact.responses_lost,
                 "responses_deleted": impact.responses_deleted,
+                "group_responses_cleared": impact.group_responses_cleared,
                 "deleted_pairs": impact.deleted,
             }
 

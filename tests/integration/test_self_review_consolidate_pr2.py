@@ -10,7 +10,7 @@ an Assignment populates / refreshes the column:
 * Reviewer email change (``update_reviewer``).
 * Reviewee identifier change (``update_reviewee``).
 * Reviewee tag change affecting group composition (rides on
-  ``reconcile_group_responses_for_tag_change``).
+  ``update_reviewee``).
 * Instrument ``group_kind`` change
   (``set_group_boundary`` / ``set_unit_of_review``).
 

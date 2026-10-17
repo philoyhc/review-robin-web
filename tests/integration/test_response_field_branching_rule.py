@@ -1,7 +1,7 @@
 """19T Item 10 rung 3 — the save rule: a closed branch holds no value.
 
-Every writer of ``Response`` rows ends in it: save and submit, the group
-re-fan, and the responses import. Each test gives an instrument a branch
+Every writer of ``Response`` rows ends in it: save and submit, and the
+responses import (the group re-fan, which also did, retired 2026-10-17). Each test gives an instrument a branch
 directly (no page authors one yet): an Integer parent with the condition
 ``ge 4``, governing a String field."""
 
@@ -23,7 +23,6 @@ from app.services.extracts.responses_import import (
     load_responses,
     parse_responses_csv,
 )
-from app.services.responses._group_reconciliation import _refan_group_responses
 
 from .test_responses_import import (
     _assignment,
@@ -225,24 +224,3 @@ def test_the_import_drops_and_reports_a_closed_branch_answer(db: Session) -> Non
     ]
     assert _answers(db, d_low.id) == {"q1": "2"}
     assert _answers(db, d_high.id) == {"q1": "5", "q2": "kept"}
-
-
-def test_the_group_refan_holds_to_the_rule(db: Session) -> None:
-    """The re-fan copies a sibling's answers onto a relocated member; a
-    governed answer its branch no longer admits is not carried across."""
-    rs, inst, q1 = _build(db, "br-refan", group=True)
-    q2 = _governed_q2(db, inst, q1, branched=True)
-    rvr = _reviewer(db, rs, "r@e.edu")
-    carol = _assignment(
-        db, rs, rvr, _reviewee(db, rs, "carol@e.edu", "Carol", tag_1="Team A"), inst
-    )
-    eve = _assignment(
-        db, rs, rvr, _reviewee(db, rs, "eve@e.edu", "Eve", tag_1="Team A"), inst
-    )
-    # Carol's row predates the rule: a governed answer under a closed branch.
-    _response(db, carol, q1, "2")
-    _response(db, carol, q2, "stale")
-    written = _refan_group_responses(db, session_id=rs.id, assignment_ids={eve.id})
-    assert written == 2
-    assert _answers(db, eve.id) == {"q1": "2"}
-

@@ -1,13 +1,15 @@
-"""Relationship changes re-derive group answer copies (findings B34).
+"""Relationship changes clear the groups they redraw (findings B34;
+author's ruling 2026-10-17).
 
 A group instrument boundaried on pair context (``group_kind="p1"``)
 keeps one answer per group, copied onto every member's assignment. A
 pair's group key is its active relationship's ``tag_1``; an inactive
-or missing relationship reads as empty. When a change moves a pair to
-another group, the copy it carries belongs to the old group: it is
-deleted, and the pair takes its new group's answer if that group has
-one. A tag edit or a re-point through ``update_relationship`` already
-did this; every other relationship change left the old copy in place.
+or missing relationship reads as empty. The group is the subject, so
+when a change moves a pair to another group, the group it left and the
+group it joined are both different subjects: every answer in both is
+deleted, and none is copied. A group the change left alone keeps its
+answer. Before B34 only a tag edit or a re-point through
+``update_relationship`` touched the copies at all.
 """
 
 from __future__ import annotations
@@ -154,7 +156,7 @@ def _last_context(db: Session, event_type: str) -> dict | None:
     return (event.detail or {}).get("context")
 
 
-def test_creating_a_relationship_moves_the_pair_into_its_group(
+def test_creating_a_relationship_clears_both_groups(
     db: Session,
 ) -> None:
     world = _seed(
@@ -170,13 +172,13 @@ def test_creating_a_relationship_moves_the_pair_into_its_group(
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": "4", "Cal": "4"}
+    assert _answers(db, world) == {"Ann": None, "Cal": None}
     assert _last_context(db, "relationship.created") == {
-        "defuncted_group_responses": 1
+        "defuncted_group_responses": 2
     }
 
 
-def test_inactivating_drops_the_copy_and_reactivating_restores_it(
+def test_inactivating_clears_the_group_and_reactivating_restores_nothing(
     db: Session,
 ) -> None:
     world = _seed(
@@ -190,9 +192,9 @@ def test_inactivating_drops_the_copy_and_reactivating_restores_it(
         relationship_ids=[bob],
         user=world.user,
     )
-    assert _answers(db, world) == {"Ann": "4", "Bob": None}
+    assert _answers(db, world) == {"Ann": None, "Bob": None}
     assert _last_context(db, "relationship.bulk_inactivated") == {
-        "defuncted_group_responses": 1
+        "defuncted_group_responses": 2
     }
 
     relationships_service.bulk_reactivate(
@@ -201,7 +203,7 @@ def test_inactivating_drops_the_copy_and_reactivating_restores_it(
         relationship_ids=[bob],
         user=world.user,
     )
-    assert _answers(db, world) == {"Ann": "4", "Bob": "4"}
+    assert _answers(db, world) == {"Ann": None, "Bob": None}
 
 
 def test_a_status_edit_moves_the_pair_out(db: Session) -> None:
@@ -218,10 +220,11 @@ def test_a_status_edit_moves_the_pair_out(db: Session) -> None:
         user=world.user,
     )
 
-    # Bob now reads as an empty tag, Dan's group: he takes its answer.
-    assert _answers(db, world) == {"Ann": "4", "Bob": "7", "Dan": "7"}
+    # Bob now reads as an empty tag, joining Dan: the group he left and
+    # the group he joined both changed.
+    assert _answers(db, world) == {"Ann": None, "Bob": None, "Dan": None}
     assert _last_context(db, "relationship.updated") == {
-        "defuncted_group_responses": 1
+        "defuncted_group_responses": 3
     }
 
 
@@ -239,9 +242,9 @@ def test_deleting_the_selected_relationship_moves_the_pair_out(
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": "4", "Bob": None}
+    assert _answers(db, world) == {"Ann": None, "Bob": None}
     assert _last_context(db, "relationship.bulk_deleted") == {
-        "defuncted_group_responses": 1
+        "defuncted_group_responses": 2
     }
 
 
@@ -261,10 +264,10 @@ def test_deleting_every_relationship_moves_each_pair_to_the_empty_group(
         correlation_id="b34",
     )
 
-    # Dan never moved; the others join his group and take its answer.
-    assert _answers(db, world) == {"Ann": "7", "Cal": "7", "Dan": "7"}
+    # The others join Dan's group, which changes it too.
+    assert _answers(db, world) == {"Ann": None, "Cal": None, "Dan": None}
     assert _last_context(db, "relationships.deleted_all") == {
-        "defuncted_group_responses": 2
+        "defuncted_group_responses": 3
     }
 
 
@@ -303,17 +306,18 @@ def test_importing_moves_only_the_pairs_whose_group_changed(
     }
 
     _import({"Ann": "A", "Bob": "A", "Cal": "A"})
-    assert _answers(db, world) == {"Ann": "4", "Bob": "4", "Cal": "4"}
+    assert _answers(db, world) == {"Ann": None, "Bob": None, "Cal": None}
     assert _last_context(db, "relationships.imported") == {
         "filename": "relationships.csv",
-        "defuncted_group_responses": 1,
+        "defuncted_group_responses": 3,
     }
 
 
 def test_a_status_edit_with_a_re_point_moves_the_old_pair(db: Session) -> None:
     """One save that inactivates Bob's relationship and re-points it at
     Cal moves Bob out (his tags leave) and leaves Cal where an inactive
-    row puts him, with Dan, so both take the empty-tag group's answer."""
+    row puts him, with Dan: Ann's group lost Bob and the empty-tag group
+    gained him, so both are cleared."""
     world = _seed(
         db,
         tags={"Ann": "A", "Bob": "A", "Cal": None, "Dan": None},
@@ -329,13 +333,13 @@ def test_a_status_edit_with_a_re_point_moves_the_old_pair(db: Session) -> None:
     )
 
     assert _answers(db, world) == {
-        "Ann": "4",
-        "Bob": "7",
-        "Cal": "7",
-        "Dan": "7",
+        "Ann": None,
+        "Bob": None,
+        "Cal": None,
+        "Dan": None,
     }
     assert _last_context(db, "relationship.updated") == {
-        "defuncted_group_responses": 1
+        "defuncted_group_responses": 4
     }
 
 
@@ -413,7 +417,7 @@ def test_another_reviewers_answers_are_untouched(db: Session) -> None:
         user=world.user,
     )
 
-    assert _answers(db, world) == {"Ann": "4", "Bob": None}
+    assert _answers(db, world) == {"Ann": None, "Bob": None}
     assert {
         name: db.execute(
             select(Response.value).where(Response.assignment_id == row_id)

@@ -1066,8 +1066,8 @@ while creating the session.
    (`spec/architecture.md` § *Audit-event detail schema*).
    Relationships' own replace has no further cascade — it *is* the
    leaf — except that a pair it moves to another pair-context group
-   gives up its group answer copy (`spec/assignments.md` "Group-scoped
-   fan-out").
+   clears the group it left and the group it joined
+   (`spec/assignments.md` "Group-scoped fan-out").
 
 3. **Two-phase parse + apply (Settings).** Parse everything,
    collect every error, then apply or rollback, so one submit
