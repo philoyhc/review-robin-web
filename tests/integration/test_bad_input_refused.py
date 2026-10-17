@@ -144,10 +144,16 @@ def test_a_saved_number_is_stored_canonical(db: Session) -> None:
 
 def test_a_form_key_with_an_id_past_a_64_bit_column_is_ignored() -> None:
     upserts = responses_service.parse_form_payload(
-        {"response[99999999999999999999][rating]": "3", "response[7][rating]": "4"}
+        {
+            "response[99999999999999999999][rating]": "3",
+            f"response[{MAX_SQL_INT + 1}][rating]": "2",
+            f"response[{MAX_SQL_INT}][rating]": "5",
+            "response[7][rating]": "4",
+        }
     )
 
-    assert [(u.assignment_id, u.value) for u in upserts] == [(7, "4")]
+    # The largest 64-bit id (19 digits) is kept; one past it is not.
+    assert [(u.assignment_id, u.value) for u in upserts] == [(MAX_SQL_INT, "5"), (7, "4")]
 
 
 @pytest.mark.parametrize(

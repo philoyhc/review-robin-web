@@ -22,7 +22,7 @@ from app.db.models import (
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.text import decimal_text, pluralize
+from app.services.text import MAX_SQL_INT, decimal_text, pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
 from app.services.responses._branching import (
     DECIMAL_PATTERN,
@@ -37,11 +37,11 @@ from app.services.responses._group_reconciliation import (
     group_keys,
 )
 
-# ``aid`` is ASCII and at most 18 digits: a longer id fits no 64-bit
-# column, and SQLite answers 500 binding one (findings R8). Such a key is
-# ignored like any other that doesn't match.
+# ``aid`` is ASCII digits, and ``parse_form_payload`` ignores one past a
+# 64-bit column (``MAX_SQL_INT``), which SQLite answers 500 binding
+# (findings R8), like any other key that doesn't match.
 _FORM_FIELD_PATTERN = re.compile(
-    r"^response\[(?P<aid>[0-9]{1,18})\]\[(?P<key>[^\]]+)\]$"
+    r"^response\[(?P<aid>[0-9]{1,19})\]\[(?P<key>[^\]]+)\]$"
 )
 _DECIMAL = re.compile(DECIMAL_PATTERN)
 _INTEGER = re.compile(r"[+-]?[0-9]+")
@@ -59,7 +59,7 @@ def parse_form_payload(
     out: list[ResponseUpsert] = []
     for key, value in form.items():
         match = _FORM_FIELD_PATTERN.match(key)
-        if match is None:
+        if match is None or int(match["aid"]) > MAX_SQL_INT:
             continue
         out.append(
             ResponseUpsert(
