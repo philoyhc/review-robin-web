@@ -69,9 +69,10 @@ PairContextTag1.Mentor of  → pair_context.1, friendly label "Mentor of"
 ReviewerTag1               → reviewer.tag_1, no suffix (see below)
 ```
 
-- **A column named twice refuses the file**, as a single blocking
-  issue: `ReviewerTag1` beside `ReviewerTag1.Tutor`, or one name
-  repeated, would otherwise keep one column and drop the other.
+- **Any column named twice refuses the file**, as a single blocking
+  issue, tag column or not: `ReviewerTag1` beside
+  `ReviewerTag1.Tutor`, or one name repeated, would otherwise keep one
+  column and drop the other.
 - **First-period split, labelable columns only.** Only those nine
   tag columns are split, and only on the first period — so a label
   may itself contain periods (`RevieweeTag2.Dept. Head`). Every
@@ -582,7 +583,9 @@ operator-typed identity (`name`, `code`, `description`, `deadline`,
 `help_contact`), where the form wins **only where it was filled in**;
 and *force-apply* for every other config key it writes
 (timezone, the schedule anchors and offsets, the two UI toggles and
-the keys the form does not carry), where the CSV wins. `assignment_mode`
+the keys the form does not carry), where the CSV wins, except that a
+UI toggle whose roster has rows stays on (`spec/participant_model.md`
+§2). `assignment_mode`
 and `status` are a third case, **defensively ignored on import** as
 machine-derived. `spec/settings_inventory.md` §10 carries the field
 lists.
@@ -864,8 +867,8 @@ shares. Public surface:
 
 | Helper | Role |
 |---|---|
-| `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the two operator-facing failures — file too large, not valid UTF-8 — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
-| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
+| `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the three operator-facing failures — file too large, not valid UTF-8, a NUL character — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
+| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), a header naming one column twice once the `.label` suffix is stripped, or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |
