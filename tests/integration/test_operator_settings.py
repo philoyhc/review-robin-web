@@ -254,6 +254,81 @@ def test_settings_save_blank_password_keeps_existing_ciphertext(
     assert user.smtp_from_display_name == "Updated name"
 
 
+def test_settings_save_same_password_records_no_change(
+    client: TestClient, db: Session, fernet_key: str
+) -> None:
+    """Re-submitting the saved password is not a password change.
+    Fernet salts each encryption, so the old ciphertext comparison
+    always differed and every Save recorded one (findings O8)."""
+    form = {
+        "smtp_host": "smtp.office365.com",
+        "smtp_port": "587",
+        "smtp_username": "alice@example.edu",
+        "smtp_password": "same-password",
+        "smtp_encryption": "starttls",
+    }
+    client.post("/operator/settings", data=form, follow_redirects=False)
+    db.expire_all()
+    first_ciphertext = _alice_row(db).smtp_password_encrypted
+
+    client.post(
+        "/operator/settings",
+        data={**form, "smtp_from_display_name": "New name"},
+        follow_redirects=False,
+    )
+    db.expire_all()
+    assert _alice_row(db).smtp_password_encrypted == first_ciphertext
+    events = list(
+        db.execute(
+            select(AuditEvent)
+            .where(AuditEvent.event_type == "operator_email_settings.updated")
+            .order_by(AuditEvent.id)
+        ).scalars()
+    )
+    assert len(events) == 2
+    assert "smtp_password_changed" not in events[1].detail["changes"]
+    assert events[1].detail["changes"]["smtp_from_display_name"] == [
+        None,
+        "New name",
+    ]
+
+    # A Save with nothing changed, the password re-typed, writes nothing.
+    client.post(
+        "/operator/settings",
+        data={**form, "smtp_from_display_name": "New name"},
+        follow_redirects=False,
+    )
+    assert (
+        len(
+            db.execute(
+                select(AuditEvent).where(
+                    AuditEvent.event_type == "operator_email_settings.updated"
+                )
+            ).all()
+        )
+        == 2
+    )
+
+    # A different password still records the change.
+    client.post(
+        "/operator/settings",
+        data={**form, "smtp_password": "other-password"},
+        follow_redirects=False,
+    )
+    db.expire_all()
+    latest = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "operator_email_settings.updated")
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    ).scalar_one()
+    assert latest.detail["changes"]["smtp_password_changed"] == [False, True]
+    assert (
+        _secrets.decrypt_password(_alice_row(db).smtp_password_encrypted)
+        == "other-password"
+    )
+
+
 def test_settings_save_invalid_port_returns_422(
     client: TestClient, db: Session, fernet_key: str
 ) -> None:

@@ -412,7 +412,9 @@ def _redirect_url(
     those to operator-facing labels lives in
     ``partials/next_action_card.html``; an unrecognised value
     headlines the generic "Action failed" rather than a named
-    button.
+    button. ``super_error`` is a code, never a sentence: the card maps
+    it to fixed copy and shows nothing for an unlisted one (findings
+    O7).
 
     Lives here (not in ``_workflow.py``) so the Session-Home
     ``/activate`` handler and the Workflow-card ``/workflow/activate``

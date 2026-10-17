@@ -404,3 +404,48 @@ groups by a pair tag:
   card, with the file chosen again) shows the line and the tick; ticked,
   it goes through.
 - [ ] **A change that clears nothing never asks.**
+
+## Invitations after Regenerate all reads pending (O2)
+
+- [ ] **The table and the counter reset.** On an activated session, Send
+  an invitation, then POST `/operator/sessions/{id}/invitations/regenerate-all`
+  (it has no button: `fetch(url, {method: "POST"})` from the console).
+  Reload Invitations: the row's Email Status reads `not sent`, Sent reads
+  `—`, and *Invitations sent* reads 0.
+
+## Error banners show only fixed copy (O7)
+
+- [ ] **Workflow failures still say why.** Prepare a session whose setup
+  has a validation error: the Workflow card reads "Prepare session failed
+  at the Validate setup." over "Validation reported errors. The Validate
+  page lists them." (the count is gone from this line).
+- [ ] **A forged link adds nothing.** Open Session Home with
+  `?super_status=failed&super_button=activate&super_step=activate&super_error=Call+us`,
+  then with `?owners_error=Call+us`: the first shows only the headline,
+  the second no Owners banner, and "Call us" appears nowhere.
+- [ ] **The sort banner keeps its line.** With JavaScript off, Save an
+  instrument card with a sort spec the fallback refuses (e.g. a forged
+  `sort_dir=sideways`): the banner reads "Could not save the sort
+  order: A sort direction is not one of asc or desc."
+
+## Column widths survive the page's own snapshot (O9)
+
+- [ ] **Widths round-trip.** Unlock an instrument card, drag a preview
+  column wider, Save, reload, then unlock and Save again without
+  touching the columns: the widths are still the dragged ones.
+
+## Session Home Save after Close early, Release, Revert (L6)
+
+- [ ] **An untouched schedule saves.** Activate a session whose End is a
+  week out, Close session, Release responses, then Revert to draft. On
+  Session Home unlock the details card, change only the name, and Save:
+  it saves.
+- [ ] **An edited pair is still checked.** Move Release responses from
+  to a moment before End and Save: refused with "Release responses from
+  must be on or after End".
+
+## Purge rosters takes observers too (L7)
+
+- [ ] **Observers are gone.** On a session with observers, Purge and
+  archive with `Rosters` ticked, then Unarchive: the Observers page has
+  no rows.

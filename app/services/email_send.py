@@ -34,6 +34,7 @@ from __future__ import annotations
 import smtplib
 from dataclasses import dataclass, field
 from email.message import EmailMessage as _StdEmailMessage
+from email.utils import formataddr
 from typing import Protocol
 
 from app.services.operator_settings import EmailSettings
@@ -107,6 +108,17 @@ class SmtpEmailTransport:
         self._settings = settings
 
     def send(self, msg: EmailMessage) -> SendResult:
+        if _has_line_break(msg, self._settings):
+            # Refused before anything is built or sent: a CR or LF in a
+            # header value or a recipient would start a new header or
+            # SMTP command (findings O10). The stdlib refuses some of
+            # these with a ``ValueError`` this method would not catch,
+            # and Bcc, which is never a header, not at all.
+            return _failure(
+                "The message has a line break in its sender, subject or "
+                "recipients, so it was not sent.",
+                None,
+            )
         try:
             payload = _build_message(msg, self._settings)
             recipients = [msg.to, *msg.cc, *msg.bcc]
@@ -169,7 +181,9 @@ def _build_message(msg: EmailMessage, settings: EmailSettings) -> _StdEmailMessa
     falls back to the bare username otherwise."""
     payload = _StdEmailMessage()
     if settings.from_display_name:
-        payload["From"] = f"{settings.from_display_name} <{msg.from_addr}>"
+        # ``formataddr`` quotes a name holding ``,`` / ``"`` / ``<`` and
+        # encodes a non-ASCII one, which an f-string does not.
+        payload["From"] = formataddr((settings.from_display_name, msg.from_addr))
     else:
         payload["From"] = msg.from_addr
     payload["To"] = msg.to
@@ -179,6 +193,21 @@ def _build_message(msg: EmailMessage, settings: EmailSettings) -> _StdEmailMessa
     payload["Subject"] = msg.subject
     payload.set_content(msg.body)
     return payload
+
+
+def _has_line_break(msg: EmailMessage, settings: EmailSettings) -> bool:
+    """Whether any value bound for a header or an SMTP envelope carries
+    a CR or LF. The body is exempt: it is content, not a header."""
+    values = [
+        msg.from_addr,
+        msg.from_display_name or "",
+        settings.from_display_name or "",
+        msg.to,
+        msg.subject,
+        *msg.cc,
+        *msg.bcc,
+    ]
+    return any("\r" in value or "\n" in value for value in values)
 
 
 def _failure(error_message: str, raw: str | None) -> SendResult:

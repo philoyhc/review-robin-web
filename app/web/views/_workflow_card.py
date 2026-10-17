@@ -361,6 +361,25 @@ def build_scheduled_activation_caption(
 
 
 
+SUPER_ERROR_MESSAGES: dict[str, str] = {
+    "not_editable": "Session can't be edited from its current state.",
+    "has_errors": "Validation reported errors. The Validate page lists them.",
+    "already_active": "Session is already activated.",
+    "not_validated": "Run Prepare session before activating.",
+    "needs_acknowledge": "Activation requires acknowledging the warnings.",
+    "not_ready": "Session must be activated before it can be closed.",
+    "archived_release": "Archived sessions can't have responses released.",
+    "archived_stop_release": "Archived sessions can't have releases stopped.",
+}
+"""The failure banner's second line, by the ``super_error`` code the
+workflow routes redirect with. The URL carries the code and never the
+sentence, so a link cannot put its own words on the card; an unlisted
+code shows no line (findings O7). The lifecycle refusals reuse their
+``LifecycleError.code``; a failure with no listed code (an unexpected
+``ValueError``) shows the headline alone, and its message stays in the
+run's ``session.workflow_run_failed`` event."""
+
+
 def parse_super_failure(
     super_status: str | None,
     super_step: str | None,
@@ -391,7 +410,7 @@ def parse_super_failure(
     return {
         "button": button,
         "step": step,
-        "error": super_error or "",
+        "error": SUPER_ERROR_MESSAGES.get(super_error or "", ""),
     }
 
 

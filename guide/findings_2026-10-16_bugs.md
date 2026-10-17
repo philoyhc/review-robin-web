@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 18 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
-R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3
-and R8 done).
+**Open:** 11 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
+R8, O2, L6, L7, O5, O8, O9 and O10 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -106,7 +106,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`_session_home.py:124`); `spec/lifecycle.md` §8.3 says the Operations pages
   and the lobby too. `guide/post_azure_todo_checklist.md` item 7 tracks the
   scheduler. Author: say so in the spec, or add the callers.
-- **O2** — After Regenerate all, the Invitations table and counters still say
+- ~~**O2**~~ — **Done in #3111**: the table's Email Status reads `not sent` while the invitation is `pending`, and Sent and the *Invitations sent* counter read `Invitation.sent_at` (`tests/integration/test_invitations.py::test_regenerate_all_resets_the_table_and_the_sent_counter`). After Regenerate all, the Invitations table and counters still say
   "sent" while the rows are pending (`_invitations.py:113-124`;
   `spec/operations_pages.md` "Invitation card"). *Reproduced.* Code.
 - ~~**S3**~~ — **Done in #3107**: phase 1 holds each `field_key` to the card's `_validate_field_key` and refuses a bad one as a row error (`spec/csv_contracts.md` §3.3; `tests/unit/test_settings_import_bug_sweep.py`). **The Settings import accepts any `field_key`; one containing `]` can
@@ -158,10 +158,10 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   `spec/lifecycle.md:47` has `/workflow/archive` accept any non-archived
   state. Codex on #3084.) Author: clear the flag on archive, or say it is
   moot outside `ready`.
-- **L6** — Close early, then Release, then Revert: every Session Home Save is
+- ~~**L6**~~ — **Done in #3111**: a Start ↔ End or End ↔ Release-from pair whose boxes both hold their stored values is not checked, as the import already skips one (`spec/lifecycle.md` §8.2.7; `tests/integration/test_schedule_ordering_routes.py`). Close early, then Release, then Revert: every Session Home Save is
   refused by the ordering check on boxes nobody edited
   (`_session_home.py:483`). *Reproduced.* Code.
-- **L7** — Purge rosters leaves Observers, which are personal data
+- ~~**L7**~~ — **Done in #3111**: Purge rosters deletes observers and counts them in `session.rosters_purged` (`tests/integration/test_session_purge.py`). Purge rosters leaves Observers, which are personal data
   (`session_purge.py:96-170`). *Reproduced* by two reads. Code.
 - **L8** — A timezone change moves stored instants, and the spec contradicts
   itself (`spec/settings_inventory.md:109` against
@@ -171,21 +171,21 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   viewer and the CSV** (`app/services/audit.py:983`, `:990`). Code.
 - ~~**O4**~~ — **Done in #3106**: the port must be 1 to 65535 (`tests/integration/test_bad_input_refused.py`). The SMTP port is unchecked: a 500 or a negative value stored
   (`_settings.py:103`). Code.
-- **O5** — The audit-log CSV's recorded row count is off by one, and the
+- ~~**O5**~~ — **Done in #3111**: the count is taken with the extract's own event in place, so it matches the file, itself included when the filter keeps it (`tests/integration/test_extracts_audit_log_route.py`). The audit-log CSV's recorded row count is off by one, and the
   comment says otherwise (`_extracts.py:796-800`). Code.
 - ~~**O6**~~ — **Done in #3106**: an app-wide dependency answers 404 for an id path or query parameter past a 64-bit column, the answer Postgres gives (`app/web/oversized_ids.py`; `tests/integration/test_bad_input_refused.py`). Oversized integer ids in paths and queries answer 500 on SQLite;
   Postgres compares them. Code.
-- **O7** — Error text taken from the URL is shown on trusted chrome:
+- **O7** — *Partly done in #3111*: `super_error`, `owners_error` and `sort_save_error` now carry codes the page maps to fixed copy, an unlisted code showing nothing, and `rf_save_error`, which nothing produced, retired. Still open: `quick_setup_detail`, whose lines are a refused file's own errors, which no fixed set of codes can carry; author: stash them server-side, re-render instead of redirecting, or drop the lines (`spec/csv_contracts.md` §3.3 requires them). Error text taken from the URL is shown on trusted chrome:
   `super_error`, `quick_setup_detail`, `owners_error`, `rf_save_error`,
   `sort_save_error` (`next_action_card.html:443`,
   `instruments_index.html:135`, `:158`). Escaped, so not XSS, but a link can
   put any sentence on the page; `spec/permissions.md` §4.1 rules that out for
   Accounts. *Reproduced* (also found by the P read). Code: codes, not text.
-- **O8** — The SMTP Save always records "password changed", because the
+- ~~**O8**~~ — **Done in #3111**: the submitted password is compared with the decrypted stored one (`tests/integration/test_operator_settings.py`). The SMTP Save always records "password changed", because the
   encrypted value differs every time (`operator_settings.py:154-157`). Code.
-- **O9** — `instruments_index.html:1433` puts `| tojson` inside a quoted
+- ~~**O9**~~ — **Done in #3111**: the snapshot input's value is single-quoted (`tests/integration/test_instrument_builder_routes.py::test_column_widths_snapshot_value_survives_html_parsing`). `instruments_index.html:1433` puts `| tojson` inside a quoted
   attribute, breaking it (benign today). Code.
-- **O10** — *Latent, no caller yet:* `email_send.py` builds the From display
+- ~~**O10**~~ — **Done in #3111**: From goes through `formataddr`, and a CR or LF in the sender, subject, To, Cc or Bcc is a failed `SendResult` before connecting (`tests/unit/test_email_send.py`). *Latent, no caller yet:* `email_send.py` builds the From display
   name without `formataddr` and doesn't refuse CR/LF in subject, cc or bcc.
   Fix before segment 14B sends mail.
 - ~~**S8**~~ — **Done in #3107**: `field_labels.upsert` returns early on an unchanged label, with no event and no invalidation (`tests/integration/test_field_labels_resolver.py`). **Saving unchanged friendly labels un-validates the session and

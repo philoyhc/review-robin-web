@@ -45,6 +45,9 @@ from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 from app.services._queries import slot_has_data
 from app.services.instruments._field_presets import LIST_PRESETS as _BAND3_LIST_PRESETS
+from app.services.instruments._display_fields import (
+    _MAX_SORT_KEYS as _SORT_KEYS_MAX,
+)
 from app.web import breadcrumbs
 
 from ._setup import session_status_pills
@@ -942,6 +945,21 @@ def new_model_usable_tags(
     return result
 
 
+# The no-JS ``/fields/save`` fallback's sort-spec refusals, by the code
+# its redirect carries: the route's own two checks, then each
+# ``SortSpecError.code``. The URL never carries the sentence, so a link
+# cannot put its own words on the banner, and an unlisted code renders
+# none (findings O7). The ones whose service message names a value say
+# it here without the value, the submitted one being the operator's own.
+SORT_SAVE_ERROR_MESSAGES: dict[str, str] = {
+    "misaligned": "Sort spec arrays misaligned.",
+    "bad_id": "Sort spec ids must be integers.",
+    "duplicate_id": "A display field appears more than once in the sort spec.",
+    "too_many": f"The sort spec has too many entries; the maximum is {_SORT_KEYS_MAX}.",
+    "unknown_dir": "A sort direction is not one of asc or desc.",
+}
+
+
 def build_instruments_context(
     db: Session,
     *,
@@ -949,7 +967,6 @@ def build_instruments_context(
     user: User,
     editing: int | None = None,
     saved: int | None = None,
-    rf_save_error: str | None = None,
     sort_save_error: str | None = None,
     sort_save_error_instrument_id: int | None = None,
 ) -> dict[str, Any]:
@@ -1044,8 +1061,7 @@ def build_instruments_context(
         "instrument_saved_state": instrument_saved_state,
         "is_configured_by_instrument": is_configured_by_instrument,
         "saved_instrument_id": saved,
-        "rf_save_error": rf_save_error,
-        "sort_save_error": sort_save_error,
+        "sort_save_error": SORT_SAVE_ERROR_MESSAGES.get(sort_save_error or ""),
         "sort_save_error_instrument_id": sort_save_error_instrument_id,
         "breadcrumbs": breadcrumbs.operator_session_child(
             review_session, "Instruments"

@@ -34,6 +34,7 @@ import zoneinfo
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from cryptography.fernet import InvalidToken
 from sqlalchemy.orm import Session
 
 from app.db.models import User
@@ -115,6 +116,18 @@ def get_email_settings(user: User) -> EmailSettings | None:
     )
 
 
+def _stored_password(user: User) -> str | None:
+    """The saved SMTP password in plaintext, or ``None`` when there is
+    none or it no longer decrypts (a rotated key), so a submitted one
+    always replaces an unreadable one."""
+    if user.smtp_password_encrypted is None:
+        return None
+    try:
+        return _secrets.decrypt_password(user.smtp_password_encrypted)
+    except InvalidToken:
+        return None
+
+
 def save_email_settings(
     db: Session,
     *,
@@ -152,13 +165,14 @@ def save_email_settings(
     _set("smtp_transport", "smtp")  # only legal transport today
 
     pw_norm = _normalise(plaintext_password)
-    if pw_norm is not None:
-        ciphertext = _secrets.encrypt_password(pw_norm)
-        if ciphertext != user.smtp_password_encrypted:
-            # Don't log the actual ciphertext / plaintext in audit
-            # detail — record only that the password rotated.
-            changes["smtp_password_encrypted"] = ["(unchanged)", "(updated)"]
-            user.smtp_password_encrypted = ciphertext
+    if pw_norm is not None and pw_norm != _stored_password(user):
+        # Compared as plaintext: Fernet salts every encryption, so two
+        # ciphertexts of one password never match and comparing them
+        # recorded a change on every Save (findings O8).
+        # Don't log the actual ciphertext / plaintext in audit
+        # detail — record only that the password rotated.
+        changes["smtp_password_encrypted"] = ["(unchanged)", "(updated)"]
+        user.smtp_password_encrypted = _secrets.encrypt_password(pw_norm)
 
     if changes:
         # Build an audit-safe diff with the password placeholder kept

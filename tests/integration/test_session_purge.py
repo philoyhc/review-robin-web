@@ -13,6 +13,7 @@ from app.db.models import (
     EmailOutbox,
     Instrument,
     Invitation,
+    Observer,
     Reviewee,
     Reviewer,
     ReviewSession,
@@ -116,6 +117,40 @@ def test_purge_rosters_and_archive(
     assert _count(db, Reviewee, review_session.id) == 0
     assert _count(db, Assignment, review_session.id) == 0
     assert _count(db, Instrument, review_session.id) == instruments_before
+
+
+def test_purge_rosters_deletes_observers(
+    client: TestClient, db: Session
+) -> None:
+    """Observers are personal data like the other rosters, so
+    purge=rosters takes them too and counts them (findings L7)."""
+    review_session = _draft_session_with_rosters(client, db, "purge-obs")
+    db.add(
+        Observer(
+            session_id=review_session.id,
+            email="obs@example.edu",
+            display_name="Obs",
+        )
+    )
+    db.commit()
+    assert _count(db, Observer, review_session.id) == 1
+
+    response = client.post(
+        "/operator/sessions/bulk-archive",
+        data={"session_ids": [review_session.id], "purge": ["rosters"]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db.expire_all()
+    assert _count(db, Observer, review_session.id) == 0
+    event = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.session_id == review_session.id,
+            AuditEvent.event_type == "session.rosters_purged",
+        )
+    ).scalar_one()
+    assert event.detail["counts"]["observers"] == 1
 
 
 def test_purge_responses_and_archive(

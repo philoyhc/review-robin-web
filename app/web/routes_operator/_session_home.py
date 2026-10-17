@@ -495,11 +495,28 @@ def _apply_session_config_form(
     # (Release-until > Release-from is checked inside its own
     # parser.) Runs after every individual parse so the operator
     # gets the field-level error before the ordering error.
+    #
+    # A pair whose two boxes both still hold their stored values is not
+    # checked, as the Settings import skips a pair it supplies neither
+    # side of: Close early, then Release, stamps Release-from before
+    # End, and a Save that leaves both alone must not be refused over
+    # them (findings L6). Passing ``None`` for one side skips the pair.
+    def _pair_edited(*fields: str) -> bool:
+        return not all(field in unedited for field in fields)
+
     try:
         scheduled_events.validate_schedule_ordering(
-            scheduled_activate_at=parsed_scheduled_activate_at,
+            scheduled_activate_at=(
+                parsed_scheduled_activate_at
+                if _pair_edited("scheduled_activate_at", "deadline")
+                else None
+            ),
             deadline=parsed_deadline,
-            responses_release_at=parsed_responses_release_at,
+            responses_release_at=(
+                parsed_responses_release_at
+                if _pair_edited("deadline", "responses_release_at")
+                else None
+            ),
         )
     except scheduled_events.ScheduledActivateError as exc:
         raise HTTPException(
@@ -704,7 +721,7 @@ def session_activate(
                 super_status="failed",
                 super_button="activate",
                 super_step="activate",
-                super_error=str(exc),
+                super_error=exc.code,
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )

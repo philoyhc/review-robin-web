@@ -190,7 +190,9 @@ Both Session Home routes redirect to `_owners_redirect_url`:
 refusal — except `last_owner` on remove, a bare 409 (the card disables
 that Remove, so only a direct POST or a concurrent remove reaches it),
 and **removing yourself**, which redirects to `/operator/sessions`
-since Session Home is then a 404 for you.
+since Session Home is then a 404 for you. The card's banner maps each
+code to fixed copy and renders nothing for an unlisted one, so a link
+cannot put its own words on it.
 
 ---
 

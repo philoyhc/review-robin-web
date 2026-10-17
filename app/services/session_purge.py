@@ -18,6 +18,7 @@ from app.db.models import (
     Assignment,
     AuditEvent,
     Invitation,
+    Observer,
     Relationship,
     Response,
     Reviewee,
@@ -103,12 +104,14 @@ def purge_rosters(
     user: User,
     correlation_id: str | None = None,
 ) -> None:
-    """Hard-delete the session's reviewers, reviewees and relationships.
+    """Hard-delete the session's reviewers, reviewees, relationships
+    and observers.
 
     Assignments / responses / invitations carry foreign keys onto the
     rosters, so they cascade out too; instruments, display /
     response fields and settings retain. Reverts the session to a
-    setup skeleton with no people.
+    setup skeleton with no people. Observers are personal data like
+    the other rosters, and nothing references them (findings L7).
     """
     session_id = review_session.id
     responses = db.execute(
@@ -134,6 +137,9 @@ def purge_rosters(
     reviewees = db.execute(
         delete(Reviewee).where(Reviewee.session_id == session_id)
     ).rowcount
+    observers = db.execute(
+        delete(Observer).where(Observer.session_id == session_id)
+    ).rowcount
     db.flush()
     audit.write_event(
         db,
@@ -145,6 +151,7 @@ def purge_rosters(
             reviewers=reviewers,
             reviewees=reviewees,
             relationships=relationships,
+            observers=observers,
             assignments=assignments,
             responses=responses,
             invitations=invitations,
@@ -162,6 +169,7 @@ def purge_rosters(
                 "reviewers": reviewers,
                 "reviewees": reviewees,
                 "relationships": relationships,
+                "observers": observers,
                 "assignments": assignments,
                 "responses": responses,
                 "invitations": invitations,

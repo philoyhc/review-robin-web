@@ -64,8 +64,23 @@ _WORKFLOW_RETURN_TO = _REVERT_RETURN_TO | {"home"}
 
 class _StepFailed(Exception):
     """Internal sentinel for a pre-condition failure inside a workflow
-    chain (e.g. session not editable). Carries the operator-facing
-    message in ``args[0]``."""
+    chain (e.g. session not editable). Carries the audited message in
+    ``args[0]`` and, like ``LifecycleError``, the ``code`` the redirect
+    carries to the failure banner."""
+
+    def __init__(self, message: str, *, code: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def _failure_code(exc: Exception) -> str | None:
+    """The ``super_error`` code for a caught failure: the
+    ``LifecycleError`` / ``_StepFailed`` code, or none for a bare
+    ``ValueError``. Never the message: the URL carries a code the
+    card maps to fixed copy (``SUPER_ERROR_MESSAGES`` in
+    ``app/web/views/_workflow_card.py``, findings O7), and the
+    message stays in the audit event."""
+    return getattr(exc, "code", None)
 
 
 def _warnings_detour_url(session_id: int, return_to: str | None) -> str:
@@ -114,7 +129,7 @@ def workflow_prepare(
                 super_status="failed",
                 super_button="prepare",
                 super_step="precondition",
-                super_error="Session can't be edited from its current state.",
+                super_error="not_editable",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -205,11 +220,7 @@ def workflow_prepare(
                     super_status="failed",
                     super_button="prepare",
                     super_step="validate",
-                    super_error=(
-                        f"Validation reported "
-                        f"{len(report.errors)} error"
-                        f"{'' if len(report.errors) == 1 else 's'}."
-                    ),
+                    super_error="has_errors",
                 ),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
@@ -290,7 +301,7 @@ def workflow_prepare(
                 super_status="failed",
                 super_button="prepare",
                 super_step=step,
-                super_error=message,
+                super_error=_failure_code(exc),
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -361,7 +372,7 @@ def workflow_activate(
                 super_status="failed",
                 super_button="activate",
                 super_step="precondition",
-                super_error="Session is already activated.",
+                super_error="already_active",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -373,7 +384,7 @@ def workflow_activate(
                 super_status="failed",
                 super_button="activate",
                 super_step="precondition",
-                super_error="Run Prepare session before activating.",
+                super_error="not_validated",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -398,7 +409,8 @@ def workflow_activate(
             raise _StepFailed(
                 f"Validation reported "
                 f"{len(report.errors)} error"
-                f"{'' if len(report.errors) == 1 else 's'}."
+                f"{'' if len(report.errors) == 1 else 's'}.",
+                code="has_errors",
             )
         if report.has_non_blocking_findings:
             # Warnings detour. Operator acknowledges inline on the
@@ -453,7 +465,7 @@ def workflow_activate(
                 super_status="failed",
                 super_button="activate",
                 super_step="activate",
-                super_error=message,
+                super_error=_failure_code(exc),
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -490,7 +502,7 @@ def workflow_close(
                 super_status="failed",
                 super_button="close",
                 super_step="precondition",
-                super_error="Session must be activated before it can be closed.",
+                super_error="not_ready",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -509,7 +521,7 @@ def workflow_close(
                 super_status="failed",
                 super_button="close",
                 super_step="close",
-                super_error=str(exc),
+                super_error=exc.code,
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -540,7 +552,7 @@ def workflow_release_responses(
                 super_status="failed",
                 super_button="release_responses",
                 super_step="precondition",
-                super_error="Archived sessions can't have responses released.",
+                super_error="archived_release",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -560,7 +572,7 @@ def workflow_release_responses(
                 super_status="failed",
                 super_button="release_responses",
                 super_step="precondition",
-                super_error="Archived sessions can't have responses released.",
+                super_error="archived_release",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -591,7 +603,7 @@ def workflow_stop_release(
                 super_status="failed",
                 super_button="stop_release",
                 super_step="precondition",
-                super_error="Archived sessions can't have releases stopped.",
+                super_error="archived_stop_release",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -611,7 +623,7 @@ def workflow_stop_release(
                 super_status="failed",
                 super_button="stop_release",
                 super_step="precondition",
-                super_error="Archived sessions can't have releases stopped.",
+                super_error="archived_stop_release",
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )

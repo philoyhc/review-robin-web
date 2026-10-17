@@ -2579,3 +2579,39 @@ def test_an_archived_sessions_invitation_link_answers_404(
     assert response.status_code == 404
     db.refresh(invitation)
     assert invitation.opened_at is None
+
+
+def test_regenerate_all_resets_the_table_and_the_sent_counter(
+    client: TestClient, db: Session
+) -> None:
+    """After **Regenerate all** every row is back at ``pending``, and
+    the table and the info card say so: the old token's outbox row
+    still reads ``sent``, but neither the Email Status pill, the Sent
+    date nor the *Invitations sent* counter reports it (findings O2)."""
+    session = _ready_session(client, db, code="regen-all-table")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    client.post(
+        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+    )
+    sent = client.get(f"/operator/sessions/{session.id}/invitations").text
+    assert ">sent</span>" in sent, "premise: the send shows in the table"
+
+    response = client.post(
+        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    db.refresh(invitation)
+    assert invitation.status == "pending", "premise: the token was rotated"
+
+    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    assert '<span class="pill pill-count">sent</span>' not in body
+    assert _DELIVERY("not sent") in body
+    assert re.search(
+        r"Invitations sent\s*<span class=\"pill pill-count\">0</span>", body
+    ), "the sent counter must not count a rotated token"
+    [row] = views.build_invitations_rows(db, session)
+    assert row.email_status == "not sent"
+    assert row.email_sent_at is None

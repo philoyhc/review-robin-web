@@ -265,6 +265,24 @@ def test_add_owner_unknown_email_303s_with_error(
     assert "owners_error=not_in_workspace" in response.headers["location"]
 
 
+def test_owners_banner_maps_codes_and_ignores_text_from_the_url(
+    db: Session,
+    client: TestClient,
+) -> None:
+    """``owners_error`` is a code mapped to fixed copy; an unlisted one
+    renders no banner rather than echoing itself (findings O7)."""
+    review_session = _make_session(client, db, code="own-banner")
+    base = f"/operator/sessions/{review_session.id}"
+    known = client.get(f"{base}?owners_error=already_owner").text
+    assert "That user is already an owner of this session." in known
+
+    forged = client.get(
+        f"{base}?owners_error=Your+session+is+compromised"
+    ).text
+    assert "compromised" not in forged
+    assert "Couldn't apply that change" not in forged
+
+
 # --- Remove owner -----------------------------------------------------------
 
 
