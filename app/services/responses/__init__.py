@@ -84,15 +84,13 @@ from ._branching import (
     hide_below_hidden_parents,
 )
 from ._group_reconciliation import (
-    copy_group_answers_to_new_assignments,
+    GroupPartitions,
+    clear_changed_groups,
+    group_instrument_ids,
+    snapshot_group_partitions,
     group_key_for_pair,
     GroupKeyable,
     group_keys,
-    reconcile_group_responses_for_tag_change,
-    reconcile_moved_pair_context_groups,
-    reconcile_regrouped_instrument,
-    snapshot_instrument_groups,
-    snapshot_pair_context_group_keys,
 )
 
 
@@ -155,13 +153,11 @@ __all__ = [
     "branch_structure_errors",
     "condition_error",
     # _group_reconciliation
-    "copy_group_answers_to_new_assignments",
+    "GroupPartitions",
+    "clear_changed_groups",
+    "group_instrument_ids",
+    "snapshot_group_partitions",
     "group_key_for_pair",
     "GroupKeyable",
     "group_keys",
-    "reconcile_group_responses_for_tag_change",
-    "reconcile_moved_pair_context_groups",
-    "reconcile_regrouped_instrument",
-    "snapshot_instrument_groups",
-    "snapshot_pair_context_group_keys",
 ]

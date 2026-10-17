@@ -953,26 +953,21 @@ def _drop_sample_group_members(instrument: Instrument) -> None:
         }
 
 
-def _snapshot_groups(db: Session, instrument: Instrument) -> set[frozenset[int]]:
+def _snapshot_groups(db: Session, instrument: Instrument) -> dict:
     from app.services import responses as responses_service
 
-    return responses_service.snapshot_instrument_groups(
-        db, session_id=instrument.session_id, instrument_id=instrument.id
+    return responses_service.snapshot_group_partitions(
+        db, session_id=instrument.session_id, instrument_ids={instrument.id}
     )
 
 
-def _reconcile_regrouped(
-    db: Session, instrument: Instrument, before: set[frozenset[int]]
-) -> int:
+def _reconcile_regrouped(db: Session, instrument: Instrument, before: dict) -> int:
     """Clear the groups the regroup changed (findings E2); the count
     deleted, for the event's ``context``."""
     from app.services import responses as responses_service
 
-    return responses_service.reconcile_regrouped_instrument(
-        db,
-        session_id=instrument.session_id,
-        instrument_id=instrument.id,
-        before=before,
+    return responses_service.clear_changed_groups(
+        db, session_id=instrument.session_id, before=before
     )
 
 

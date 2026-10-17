@@ -870,7 +870,7 @@ and Relationships cascade to nothing** — no table references them — so
 their gate never fires and their expander never offers the
 acknowledgement. An Observers delete loses no response. A
 Relationships delete can: a pair it moves to another pair-context
-group gives up the group answer copy it carried, and this asks for no
+group clears the group it left and the group it joined, and this asks for no
 acknowledgement, as a tag edit asks for none (`spec/assignments.md`
 "Group-scoped fan-out").
 

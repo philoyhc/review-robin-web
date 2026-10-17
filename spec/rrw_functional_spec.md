@@ -2246,10 +2246,10 @@ a response-loss acknowledgement when the session holds responses.
 Two losses outside regeneration ask for neither. On a group-scoped
 instrument, a reviewee boundary-tag edit or any relationship change
 (create, import, delete, tag edit, re-point, status switch) that
-moves a pair to another group deletes the old group's answer copy on
-that row at once; the row takes its new group's answer when one
-exists. And redrawing an instrument's groups on its card clears every
-group it changed (`spec/assignments.md` "Group-scoped fan-out").
+moves a pair to another group clears the group it left and the group
+it joined at once, and redrawing an instrument's groups on its card
+clears every group it changed (`spec/assignments.md` "Group-scoped
+fan-out").
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete
@@ -2449,9 +2449,9 @@ explanatory tooltip) or hidden, depending on the surface.
 Destructive actions require **explicit confirmation** (a
 tick-box gating the destructive submit) and write one or more
 audit events. A tag or relationship change that moves a pair to
-another group on a group-scoped instrument deletes that row's group
-answer copy, and redrawing an instrument's groups deletes the answers
-of every group it changed, without a response-loss acknowledgement
+another group on a group-scoped instrument, or redraws an instrument's
+groups, deletes the answers of every group it changed without a
+response-loss acknowledgement
 ([§14](#14-reconciling-regeneration)).
 
 Per-cell trust: reviewer POST endpoints build the assignment

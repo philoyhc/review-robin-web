@@ -356,24 +356,30 @@ def update_reviewee(
         correlation_id=correlation_id,
     )
 
+    # A boundary-tag change moves this reviewee between groups, which
+    # changes the group it left and the group it joined: both are
+    # cleared (``responses.clear_changed_groups``). Snapshotted before
+    # the edit; a group the move didn't touch keeps its answer.
+    from app.services import responses as responses_service
+
+    groups_before = (
+        responses_service.snapshot_group_partitions(
+            db,
+            session_id=reviewee.session_id,
+            instrument_ids=responses_service.group_instrument_ids(
+                db, session_id=reviewee.session_id, source_type="reviewee"
+            ),
+        )
+        if any(f in changes for f in ("tag_1", "tag_2", "tag_3"))
+        else {}
+    )
+
     for field, (_, new_value) in changes.items():
         setattr(reviewee, field, new_value)
     db.flush()
 
-    # A grouping-tag change moves this reviewee between groups: its
-    # mis-attributed fanned answer copies are deleted, and the
-    # assignment is re-fanned from its new group so a relocated
-    # reviewee surfaces that group's answer rather than a blank row
-    # (Segment 13C PR 5; re-fan Segment 18H). No-op unless a
-    # changed tag is a group boundary.
-    from app.services import responses as responses_service
-
-    defuncted = responses_service.reconcile_group_responses_for_tag_change(
-        db,
-        reviewee=reviewee,
-        changed_tag_fields={
-            f for f in changes if f in ("tag_1", "tag_2", "tag_3")
-        },
+    defuncted = responses_service.clear_changed_groups(
+        db, session_id=reviewee.session_id, before=groups_before
     )
 
     # ``Assignment.is_self_review`` is keyed off

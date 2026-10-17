@@ -280,3 +280,31 @@ def test_another_reviewers_unchanged_group_keeps_its_answer(db: Session) -> None
 
     assert _answers(db, world) == {"Ann": None, "Bo": None, "Sam/Ann": "1"}
     assert _cleared(db, world) == 2
+
+
+def test_a_member_removed_clears_the_group_it_leaves(db: Session) -> None:
+    """Generate dropping a row the rules no longer produce goes through
+    the same rule: the group it left is a different subject."""
+    from app.services import responses as responses_service
+
+    world = _seed(
+        db,
+        group_kind=instruments_service.encode_group_kind([_TEAM]),
+        tags=_TEAMS,
+        answers={"Ann": "2", "Bo": "2", "Cy": "5", "Di": "5"},
+    )
+    session_id = world.instrument.session_id
+    before = responses_service.snapshot_group_partitions(
+        db, session_id=session_id, instrument_ids={world.instrument.id}
+    )
+    bo = world.rows.pop("Bo")
+    db.query(Response).filter(Response.assignment_id == bo.id).delete()
+    db.delete(bo)
+    db.flush()
+
+    cleared = responses_service.clear_changed_groups(
+        db, session_id=session_id, before=before
+    )
+
+    assert cleared == 1
+    assert _answers(db, world) == {"Ann": None, "Cy": "5", "Di": "5"}

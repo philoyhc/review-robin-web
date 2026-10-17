@@ -33,27 +33,31 @@ from app.services import session_lifecycle as lifecycle
 
 def relationship_group_keys_before(
     db: Session, *, session_id: int
-) -> dict[int, tuple[str, ...]]:
-    """The pair-context group keys a relationship change could move,
-    snapshotted before it (findings B34). Empty when no pair-context
-    group instrument has an answer yet."""
+) -> dict[int, set[frozenset[int]]]:
+    """The groups of every pair-context group instrument a relationship
+    change could redraw, snapshotted before it (findings B34). Empty
+    when none of them has an answer yet."""
     from app.services import responses as responses_service
 
-    return responses_service.snapshot_pair_context_group_keys(
-        db, session_id=session_id
+    return responses_service.snapshot_group_partitions(
+        db,
+        session_id=session_id,
+        instrument_ids=responses_service.group_instrument_ids(
+            db, session_id=session_id, source_type="pair_context"
+        ),
     )
 
 
 def reconcile_relationship_groups(
-    db: Session, *, session_id: int, before: dict[int, tuple[str, ...]]
+    db: Session, *, session_id: int, before: dict[int, set[frozenset[int]]]
 ) -> dict[str, int] | None:
-    """Re-derive the group answer copies of every assignment a
-    relationship change moved to another pair-context group (findings
-    B34), after the change is flushed. Returns the audit ``context``
-    counting the copies that went, or ``None``."""
+    """Clear every group a relationship change redrew: the group a pair
+    left and the group it joined (``responses.clear_changed_groups``),
+    after the change is flushed. Returns the audit ``context`` counting
+    the answers that went, or ``None``."""
     from app.services import responses as responses_service
 
-    defuncted = responses_service.reconcile_moved_pair_context_groups(
+    defuncted = responses_service.clear_changed_groups(
         db, session_id=session_id, before=before
     )
     return {"defuncted_group_responses": defuncted} if defuncted else None

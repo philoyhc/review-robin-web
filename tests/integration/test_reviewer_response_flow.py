@@ -1607,16 +1607,16 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     assert _rating(by_reviewee["Eve"]) == "5"
 
 
-def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
+def test_group_boundary_tag_change_clears_the_group_it_left(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Editing a reviewee's group-boundary tag deletes the
-    group-scoped Response rows that point at them — the now
-    mis-attributed fan-out copies — while the other group members'
-    rows survive (Segment 13C PR 5)."""
+    """Editing a reviewee's group-boundary tag changes the group they
+    left, so every answer in it is deleted, the members who stayed
+    included (author's ruling 2026-10-17: the group is the subject;
+    before it, Segment 13C PR 5 deleted only the mover's copies)."""
     from app.db.models import User
     from app.services import reviewees as reviewees_service
 
@@ -1721,23 +1721,23 @@ def test_group_boundary_tag_change_defuncts_that_reviewees_responses(
         db, reviewee=carol, tag_1="Team B", user=operator_user
     )
 
-    # Carol's group-scoped Response rows are defuncted; Eve — a
-    # retained Team A member — keeps the reviewer's answer.
+    # Team A lost Carol, so it is a different subject: Eve's copy goes
+    # with Carol's.
     assert _rating(by_reviewee["Carol"]) is None
-    assert _rating(by_reviewee["Eve"]) == "5"
+    assert _rating(by_reviewee["Eve"]) is None
 
 
-def test_tag_change_into_answered_group_refans_the_answer(
+def test_tag_change_into_answered_group_clears_it(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     """A reviewee moved by a boundary-tag change into an
-    already-answered group is re-fanned that group's answer — so
-    the group keeps surfacing it even when the relocated reviewee
-    (with no fanned copy) would otherwise be the collapse
-    representative (Segment 18H)."""
+    already-answered group makes it a different subject, so its answer
+    is deleted rather than copied onto the newcomer, and the reviewer
+    sees the group unanswered (author's ruling 2026-10-17, which
+    retired the Segment 18H re-fan)."""
     from app.db.models import User
     from app.services import reviewees as reviewees_service
 
@@ -1796,15 +1796,6 @@ def test_tag_change_into_answered_group_refans_the_answer(
             .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         ).scalars()
     }
-    # The re-fan copies the group's answer to *every* member that
-    # lands without one (``_refan_group_responses``), so the
-    # downstream assertions (Carol's row carries "3", the surface
-    # displays "3") hold regardless of which assignment ended up
-    # with the lower id. A previous ``Carol.id < Dan.id`` preamble
-    # here tripped CI flakes on Postgres when pytest-xdist parallel
-    # workers interleaved the sequence allocation — dropped, since
-    # the id ordering isn't load-bearing for the behavior under
-    # test.
     # Segment 18L: single-page-default session — every instrument
     # lives on page 1.
     rae_client = make_client(rae)
@@ -1836,23 +1827,16 @@ def test_tag_change_into_answered_group_refans_the_answer(
         db, reviewee=carol, tag_1="Team B", user=operator_user
     )
 
-    # Carol's assignment is re-fanned with Team B's answer ("3"),
-    # not left blank by the defunct.
-    carol_rows = (
-        db.execute(
+    # Team B gained Carol, so neither she nor Dan holds Team B's "3".
+    for name in ("Carol", "Dan"):
+        assert db.execute(
             select(Response).where(
-                Response.assignment_id == by_reviewee["Carol"].id
+                Response.assignment_id == by_reviewee[name].id
             )
-        )
-        .scalars()
-        .all()
-    )
-    assert {
-        r.response_field.field_key: r.value for r in carol_rows
-    }.get("rating") == "3"
+        ).first() is None
 
-    # The surface still surfaces Team B's answer once the session is
-    # live again (set directly: re-activation is not what this tests).
+    # The surface shows Team B unanswered once the session is live
+    # again (set directly: re-activation is not what this tests).
     review_session.status = "ready"
     db.commit()
     page = rae_client.get(
@@ -1864,15 +1848,18 @@ def test_tag_change_into_answered_group_refans_the_answer(
             "</table>", page.text.index(marker)
         )
     ]
-    assert 'value="3"' in table
+    assert 'value="3"' not in table
 
 
 def test_relationship_pair_context_tag_change_defuncts_pair_responses(
     db: Session,
 ) -> None:
-    """Editing a relationship's grouping pair-context tag deletes
-    the group-scoped Response rows for exactly that (reviewer,
-    reviewee) pair (Segment 13C PR 5 — pair-context variant)."""
+    """Editing a relationship's grouping pair-context tag moves the
+    pair out of its group, which changes that group: every answer in it
+    is deleted, the pair's and the member who stayed alike (author's
+    ruling 2026-10-17; before it, Segment 13C PR 5 deleted the pair's
+    only). Renaming the tag of a group whose members all keep it moves
+    nobody, so that group keeps its answer."""
     import datetime as _dt
 
     from app.db.models import (
@@ -1929,57 +1916,76 @@ def test_relationship_pair_context_tag_change_defuncts_pair_responses(
         status="active",
     )
     db.add(relationship)
-    assignment = Assignment(
+    dan = Reviewee(
         session_id=review_session.id,
-        reviewer_id=reviewer.id,
-        reviewee_id=carol.id,
-        instrument_id=instrument.id,
-        include=True,
-        created_by_mode="rule_based",
+        name="Dan",
+        email_or_identifier="dan@example.edu",
     )
-    db.add(assignment)
+    db.add(dan)
     db.flush()
     db.add(
-        Response(
-            assignment_id=assignment.id,
-            response_field_id=field.id,
-            value="4",
-            saved_at=_dt.datetime(2026, 5, 9, tzinfo=_dt.timezone.utc),
-            version=1,
+        Relationship(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=dan.id,
+            tag_1="Cohort A",
+            status="active",
         )
     )
+    rows = {}
+    for name, reviewee in (("Carol", carol), ("Dan", dan)):
+        rows[name] = Assignment(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            instrument_id=instrument.id,
+            include=True,
+            created_by_mode="rule_based",
+        )
+        db.add(rows[name])
+        db.flush()
+        db.add(
+            Response(
+                assignment_id=rows[name].id,
+                response_field_id=field.id,
+                value="4",
+                saved_at=_dt.datetime(2026, 5, 9, tzinfo=_dt.timezone.utc),
+                version=1,
+            )
+        )
     db.commit()
 
-    def _response_count() -> int:
+    def _response_count(name: str) -> int:
         return len(
             db.execute(
                 select(Response).where(
-                    Response.assignment_id == assignment.id
+                    Response.assignment_id == rows[name].id
                 )
             )
             .scalars()
             .all()
         )
 
-    assert _response_count() == 1
+    assert _response_count("Carol") == _response_count("Dan") == 1
 
-    # Editing the relationship's grouping pair-context tag defuncts
-    # the pair's group-scoped responses.
+    # Carol's relationship moves to Cohort B: Cohort A loses her, so
+    # Dan's copy goes too.
     relationships_service.update_relationship(
         db, relationship=relationship, tag_1="Cohort B", user=user
     )
-    assert _response_count() == 0
+    assert _response_count("Carol") == _response_count("Dan") == 0
 
 
 def test_relationship_repoint_defuncts_both_old_and_new_pair(
     db: Session,
 ) -> None:
     """Re-pointing a relationship to a different pair — even with no
-    tag value change — mis-attributes the group-scoped Response
-    rows of *both* the old and the new pair: the relationship's
-    pair-context tags move off the old pair and onto the new one.
-    Both pairs are defuncted; an unrelated pair on the same group
-    instrument is untouched (Segment 18H — re-point handling)."""
+    tag value change — moves its pair-context tags off the old pair
+    and onto the new one, so both pairs change group: Cohort A swaps
+    Carol for Dave and the untagged group swaps Dave for Carol, and
+    every answer in both is deleted (author's ruling 2026-10-17). An
+    unrelated reviewer's pair on the same group instrument is untouched
+    (Segment 18H — re-point handling)."""
     import datetime as _dt
 
     from app.db.models import (
@@ -2050,6 +2056,23 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
         status="active",
     )
     db.add(relationship)
+    fay = Reviewee(
+        session_id=review_session.id,
+        name="Fay",
+        email_or_identifier="fay@example.edu",
+    )
+    db.add(fay)
+    db.flush()
+    # Fay keeps Cohort A throughout, so Cohort A is not one row.
+    db.add(
+        Relationship(
+            session_id=review_session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=fay.id,
+            tag_1="Cohort A",
+            status="active",
+        )
+    )
 
     def _assignment(reviewer_id: int, reviewee_id: int) -> Assignment:
         a = Assignment(
@@ -2078,6 +2101,7 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
     a_old = _assignment(reviewer.id, carol.id)  # the old pair
     a_new = _assignment(reviewer.id, dave.id)  # the re-point target
     a_other = _assignment(reviewer2.id, eve.id)  # unrelated control
+    a_stays = _assignment(reviewer.id, fay.id)  # Cohort A's other member
     db.commit()
 
     def _has_response(assignment: Assignment) -> bool:
@@ -2100,9 +2124,11 @@ def test_relationship_repoint_defuncts_both_old_and_new_pair(
         db, relationship=relationship, reviewee_id=dave.id, user=user
     )
 
-    # Both the old pair and the new pair are defuncted.
+    # Both the old pair and the new pair are defuncted, and with them
+    # the member of Cohort A who stayed.
     assert not _has_response(a_old)
     assert not _has_response(a_new)
+    assert not _has_response(a_stays)
     # The unrelated pair on the same group instrument survives.
     assert _has_response(a_other)
 
@@ -2821,15 +2847,16 @@ def test_page_save_emits_audit_row_with_counts_keys(
     assert "validation_errors" not in counts
 
 
-def test_generate_gives_a_new_group_member_the_groups_answer(
+def test_generate_clears_a_group_a_new_member_joins(
     db: Session,
     alice: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Findings B13 (2026-10-03): a reviewee added to an already-answered
-    group gets that group's answer on the next Generate, as a member
-    moved in by a tag edit does, so per-row readers agree with the
-    surface."""
+    """A reviewee added to an already-answered group makes it a
+    different subject, so the next Generate deletes the group's answer
+    rather than copying it to the newcomer, and per-row readers agree
+    with the surface that the group is unanswered (author's ruling
+    2026-10-17, which reversed findings B13's copy)."""
     import datetime as dt
 
     from app.services import assignments as assignments_service
@@ -2918,11 +2945,12 @@ def test_generate_gives_a_new_group_member_the_groups_answer(
         .join(Reviewee, Assignment.reviewee_id == Reviewee.id)
         .where(Reviewee.name == "Eve")
     ).scalar_one()
-    copied = db.execute(
+    assert db.execute(
         select(Response).where(Response.assignment_id == eve_row.id)
-    ).scalar_one()
-    assert copied.value == "4"
-    assert copied.submitted_at is not None
+    ).first() is None
+    assert db.execute(
+        select(Response).where(Response.assignment_id == carol_row.id)
+    ).first() is None
 
     dan_row = db.execute(
         select(Assignment)
@@ -2942,4 +2970,4 @@ def test_generate_gives_a_new_group_member_the_groups_answer(
     [group_event] = [
         e for e in event if e.detail["refs"]["instrument_id"] == group.id
     ]
-    assert group_event.detail["counts"]["group_responses_copied"] == 1
+    assert group_event.detail["counts"]["group_responses_cleared"] == 1

@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, exists, func, insert, select
+from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -513,6 +513,20 @@ def _materialise_one_instrument(
         override_exclude_self_reviews=override_exclude_self_reviews,
     )
 
+    # A member added or removed changes its group, which is cleared once
+    # the rows land (``responses.clear_changed_groups``): the group is
+    # the subject, so a new composition is answered afresh.
+    from app.services import responses as responses_service
+
+    groups_before = (
+        responses_service.snapshot_group_partitions(
+            db, session_id=review_session.id, instrument_ids={instrument.id}
+        )
+        if instrument.group_kind is not None
+        and bool(diff.to_insert or diff.to_delete)
+        else {}
+    )
+
     # Drop pairs the rule no longer produces. Their responses go first
     # so the FK constraint holds (the bulk Core ``delete`` bypasses the
     # ORM ``delete-orphan`` cascade — see PR #1065).
@@ -522,15 +536,6 @@ def _materialise_one_instrument(
             delete(Response).where(Response.assignment_id.in_(delete_ids))
         )
         db.execute(delete(Assignment).where(Assignment.id.in_(delete_ids)))
-
-    # The highest id before the insert: every row on this instrument
-    # above it is new, which finds them without binding one parameter
-    # per kept row (the group answer copy, below).
-    max_id_before_insert = (
-        db.scalar(select(func.max(Assignment.id))) or 0
-        if diff.to_insert
-        else 0
-    )
 
     # Insert newly eligible pairs. Bulk Core, matching the delete
     # half above: the ORM form built one Python object per pair —
@@ -595,38 +600,9 @@ def _materialise_one_instrument(
         db, session_id=review_session.id
     )
 
-    # A new member of an already-answered group takes the group's
-    # answer, as a member moved into it by a tag or relationship edit
-    # does (findings B13). Only kept rows can hold answers, so with
-    # nothing kept there is nothing to copy.
-    group_responses_copied = 0
-    if (
-        instrument.group_kind is not None
-        and diff.to_insert
-        and diff.to_keep
-        and db.scalar(
-            select(
-                exists().where(
-                    Response.assignment_id == Assignment.id,
-                    Assignment.instrument_id == instrument.id,
-                )
-            )
-        )
-    ):
-        from app.services import responses as responses_service
-
-        new_ids = set(
-            db.execute(
-                select(Assignment.id)
-                .where(Assignment.instrument_id == instrument.id)
-                .where(Assignment.id > max_id_before_insert)
-            ).scalars()
-        )
-        group_responses_copied = (
-            responses_service.copy_group_answers_to_new_assignments(
-                db, session_id=review_session.id, assignment_ids=new_ids
-            )
-        )
+    group_responses_cleared = responses_service.clear_changed_groups(
+        db, session_id=review_session.id, before=groups_before
+    )
 
     counts_kwargs: dict[str, int] = {
         "new": len(diff.to_insert),
@@ -638,8 +614,8 @@ def _materialise_one_instrument(
     }
     for reason, n in diff.excluded_counts.items():
         counts_kwargs[f"excluded_{reason}"] = n
-    if group_responses_copied:
-        counts_kwargs["group_responses_copied"] = group_responses_copied
+    if group_responses_cleared:
+        counts_kwargs["group_responses_cleared"] = group_responses_cleared
     context: dict[str, str | int | bool] = {"mode": mode.value}
     if override_exclude_self_reviews is not None:
         context["exclude_self_reviews"] = override_exclude_self_reviews
