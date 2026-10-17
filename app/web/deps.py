@@ -112,6 +112,9 @@ def _stash_display_timezone(request: Request, user: User) -> None:
     )
 
 
+_ASCII_WHITESPACE = " \t\n\r\f\v"
+
+
 def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
     """The persisted ``users`` row for this identity, or ``None``;
     never creates one.
@@ -128,7 +131,15 @@ def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
         return None
     return db.execute(
         select(User)
-        .where(func.lower(User.email) == normalize_email(current_user.email))
+        # Trimmed on both sides: a row stored padded before
+        # ``get_or_create_user`` stripped on write still finds its owner
+        # rather than gaining a duplicate (findings P3). SQL ``trim``
+        # alone strips only spaces, so name the whitespace ``str.strip``
+        # also takes.
+        .where(
+            func.lower(func.trim(User.email, _ASCII_WHITESPACE))
+            == normalize_email(current_user.email)
+        )
         .order_by(User.id)
         .limit(1)
     ).scalar_one_or_none()
@@ -175,8 +186,11 @@ def get_or_create_user(
         is_operator = True
         is_sys_admin = True
 
+    # Stored stripped, as ``find_user`` compares it (findings P3): a
+    # padded row would miss its own lookup on the next request, and the
+    # second insert would collide with it.
     user = User(
-        email=current_user.email,
+        email=current_user.email.strip(),
         display_name=current_user.name,
         external_principal_id=current_user.principal_id,
         is_operator=is_operator,

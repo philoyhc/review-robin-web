@@ -104,6 +104,32 @@ def test_single_row_revoke_takes_the_batch_lock_before_counting(
     assert not bob.is_operator
 
 
+def test_single_row_demote_takes_the_batch_lock_before_counting(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Demote's owner refusal (findings P1) counts under the same lock,
+    for the same reason as Revoke's."""
+    actor = _seed(db, "admin@example.edu", is_operator=True, is_sys_admin=True)
+    dee = _seed(db, "dee@example.edu", is_sys_admin=True)
+    steps: list[str] = []
+    real_lock = users_service._batch_lock
+    real_count = users_service._guard_demote_not_owner
+
+    def lock(action: str, ids: list[int]):
+        steps.append(f"lock {action} {ids == [dee.id]}")
+        return real_lock(action, ids)
+
+    def count(db: Session, target: User) -> None:
+        steps.append("count")
+        real_count(db, target)
+
+    monkeypatch.setattr(users_service, "_batch_lock", lock)
+    monkeypatch.setattr(users_service, "_guard_demote_not_owner", count)
+    users_service.demote(db, actor=actor, target=dee)
+    assert steps == ["lock demote True", "count"]
+    assert not dee.is_sys_admin
+
+
 def test_create_bounces_a_creator_revoked_since_the_gate(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

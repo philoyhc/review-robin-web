@@ -112,9 +112,13 @@ widening, stated rather than absorbed: these identities arrive from
 Easy Auth headers and a roster whose emails are stripped on write, so
 the case is not expected, but the semantics changed and the change was
 not the point of the item. `get_or_create_user` is the sharpest of the
-four, because `auth/identity.py` never strips the parsed claim and the
-row it creates keeps the untrimmed address: before this, a padded
-claim would have missed its own row and created a second one. It is also the one site here the fail-open paragraph
+four, because `auth/identity.py` never strips the parsed claim: before
+this, a padded claim would have missed its own row and created a
+second one. The row it creates now stores the address stripped too,
+and `find_user` trims the stored side as well, so a row stored padded
+before that still finds its owner; stored padded, it missed its own
+stripped lookup on the next request, and the second insert answered
+500 (findings P3). It is also the one site here the fail-open paragraph
 above does not name, which is not an inconsistency: it always folded
 with `.lower()`, never `.casefold()`, so it was exposed to the
 whitespace gap but never to the merge.
@@ -350,8 +354,11 @@ injects.*
   `X-MS-CLIENT-PRINCIPAL-NAME` (UPN/email),
   `X-MS-CLIENT-PRINCIPAL-ID` (Entra object id),
   `X-MS-CLIENT-PRINCIPAL-IDP` (provider, e.g. `aad`), and
-  `X-MS-CLIENT-PRINCIPAL` (base64 JSON claim set, used when the simple
-  headers don't supply email / name / object id). The parser is
+  `X-MS-CLIENT-PRINCIPAL` (base64 JSON claim set). Its claims are read
+  first: `X-MS-CLIENT-PRINCIPAL-NAME` supplies the email only when the
+  claim set has none, and only the object id and the provider prefer
+  the simple headers. The email claim is the first of `emailaddress`,
+  `preferred_username` and `email` in the token's own claim order. The parser is
   defensive: a malformed `X-MS-CLIENT-PRINCIPAL` falls back to the
   simple headers rather than raising.
 - **Fake auth** (local only): with `ALLOW_FAKE_AUTH=true`,

@@ -205,7 +205,9 @@ def _apply_pair_search(
     reviewee individually — which is why this page needs no separate
     tag control.
     """
-    term = f"%{search.strip()}%"
+    # ``autoescape`` makes ``%`` and ``_`` literal, as they are in the
+    # Python matcher this mirrors (findings E5).
+    term = search.strip()
     stmt = stmt.join(
         Reviewer, Assignment.reviewer_id == Reviewer.id
     ).join(Reviewee, Assignment.reviewee_id == Reviewee.id)
@@ -246,15 +248,15 @@ def _apply_pair_search(
         return stmt.where(or_(*allowed))
 
     reviewer_match = or_(
-        Reviewer.name.ilike(term),
-        Reviewer.email.ilike(term),
+        Reviewer.name.icontains(term, autoescape=True),
+        Reviewer.email.icontains(term, autoescape=True),
         *_tag_matches(
             search, Reviewer.tag_1, Reviewer.tag_2, Reviewer.tag_3
         ),
     )
     reviewee_match = or_(
-        Reviewee.name.ilike(term),
-        Reviewee.email_or_identifier.ilike(term),
+        Reviewee.name.icontains(term, autoescape=True),
+        Reviewee.email_or_identifier.icontains(term, autoescape=True),
         *_tag_matches(
             search, Reviewee.tag_1, Reviewee.tag_2, Reviewee.tag_3
         ),

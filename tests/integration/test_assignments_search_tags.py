@@ -45,6 +45,8 @@ CASES: tuple[tuple[str, bool, str], ...] = (
     ("Team A2", False, "tag, near-miss must NOT match"),
     ("eam A", False, "tag, infix must NOT match"),
     ("zzz", False, "no column matches"),
+    ("An_", False, "an underscore is literal, not a wildcard (findings E5)"),
+    ("a%m", False, "a percent sign is literal, not a wildcard (findings E5)"),
 )
 
 

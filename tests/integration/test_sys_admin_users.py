@@ -349,6 +349,61 @@ def test_demote_last_sys_admin_at_service_layer(
     assert solo_admin.is_sys_admin is False
 
 
+def test_demote_refuses_an_owner_left_with_no_operator_flag(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Findings P1: a sys-admin with no Operator flag is an operator only
+    through the admin flag, so demoting one who owns a session would
+    orphan it (``require_operator`` bounces them, and every owner
+    action refuses). Demote takes Revoke's ``still_owner``, single-row
+    and in a batch; an owner who keeps the Operator flag demotes fine."""
+    from app.db.models import ReviewSession
+    from app.services import users as users_service
+
+    _bootstrap_super_admin(monkeypatch, email="super@example.edu")
+    super_actor = _seed_target(db, email="super@example.edu", is_operator=True)
+    _seed_target(db, email="other@example.edu", is_operator=True, is_sys_admin=True)
+    admin_only = _seed_target(db, email="solo@example.edu", is_sys_admin=True)
+    both = _seed_target(
+        db, email="both@example.edu", is_operator=True, is_sys_admin=True
+    )
+    for code, owner in (("p1-solo", admin_only), ("p1-both", both)):
+        review_session = ReviewSession(
+            name=code, code=code, created_by_user_id=owner.id
+        )
+        db.add(review_session)
+        db.flush()
+        db.add(SessionOperator(session_id=review_session.id, user_id=owner.id))
+    db.commit()
+
+    with pytest.raises(users_service.UserOperationError) as excinfo:
+        users_service.demote(
+            db, actor=super_actor, target=admin_only, correlation_id="c1"
+        )
+    assert excinfo.value.code == "still_owner"
+    with pytest.raises(users_service.UserOperationError) as excinfo:
+        users_service.apply_batch(
+            db,
+            actor=super_actor,
+            action="demote",
+            user_ids=[admin_only.id, both.id],
+            correlation_id="c2",
+        )
+    assert (excinfo.value.code, excinfo.value.user_id) == (
+        "still_owner",
+        admin_only.id,
+    )
+    db.rollback()
+    db.refresh(admin_only)
+    db.refresh(both)
+    assert admin_only.is_sys_admin is True and both.is_sys_admin is True
+
+    users_service.demote(db, actor=super_actor, target=both, correlation_id="c3")
+    db.refresh(both)
+    assert both.is_sys_admin is False and both.is_operator is True
+
+
 # --- Self-actions blocked (F6/F7) ------------------------------------------
 
 

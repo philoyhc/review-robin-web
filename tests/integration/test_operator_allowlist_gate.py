@@ -594,3 +594,51 @@ def test_get_or_create_user_matches_existing_row_reverse_casing(
         request=Request({"type": "http"}), current_user=auth, db=db
     )
     assert returned.id == existing.id
+
+
+def test_get_or_create_user_stores_a_padded_claim_trimmed(
+    db: Session,
+) -> None:
+    """Findings P3: ``find_user`` compares the claim stripped
+    (``normalize_email``), so the row must be stored stripped too.
+    Stored padded, the second request missed its own row and the
+    second insert collided with the first."""
+    auth = AuthenticatedUser(
+        principal_id="pad-oid",
+        email="  Pad@example.edu ",
+        name="Pad",
+        provider="aad",
+    )
+    first = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert first.email == "Pad@example.edu"
+    second = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert second.id == first.id
+
+
+@pytest.mark.parametrize("stored", [" Old@example.edu ", "\tOld@example.edu\r\n"])
+def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(
+    db: Session, stored: str
+) -> None:
+    """Findings P3, the read of #3108: a row an older build stored
+    padded is found by the trimmed lookup, not shadowed by a second row
+    that would lose its flags."""
+    padded = User(email=stored, display_name="Old", is_operator=True)
+    db.add(padded)
+    db.commit()
+    auth = AuthenticatedUser(
+        principal_id="old-oid",
+        email="old@example.edu",
+        name="Old",
+        provider="aad",
+    )
+
+    found = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+
+    assert found.id == padded.id
+    assert found.is_operator
