@@ -19,8 +19,9 @@ Edit cards instead, via a worked sample.
 The token is not gone — it is behind one internal switch,
 ``SHOW_ZONE_TOKEN`` below. Flip that constant to ``True`` and
 restart the app: every display site (the filter reads it on each
-call) and the two card previews (the operator Jinja env exposes
-it as the ``show_zone_token`` global) append the token again. No
+call) and the ``/operator/settings`` card preview (the operator
+Jinja env exposes it as the ``show_zone_token`` global) append the
+token again. No
 env var, no database migration.
 
 The per-render zone is resolved upstream (``app/web/date_filters.py``

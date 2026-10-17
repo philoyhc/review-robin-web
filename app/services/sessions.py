@@ -237,6 +237,38 @@ def datetime_box_unedited(
     return submitted == date_formatting.format_datetime_local(stored, tz_name)
 
 
+def converted_box_names(tz_converted: str) -> frozenset[str]:
+    """The box names a details-card form says its script re-rendered
+    in a new zone (the ``tz_converted`` field, comma-separated)."""
+    return frozenset(
+        name.strip() for name in tz_converted.split(",") if name.strip()
+    )
+
+
+def datetime_box_kept(
+    stored: datetime | None,
+    submitted: str | None,
+    *,
+    seeded_zone: str,
+    submitted_zone: str,
+    converted: bool,
+) -> bool:
+    """Whether a Save keeps a box's stored instant rather than reading
+    its text as an edit.
+
+    A timezone change keeps the stored instants (findings L8, author's
+    ruling): a box is kept when it holds the stored value rendered in the
+    seeded zone (the page without script, which leaves the text alone)
+    or in the submitted zone (the page's script, which re-renders a box
+    as the zone changes). A box the script re-rendered (``converted``)
+    no longer shows its seeded text, so that text typed back into it is
+    an edit. Any other text is an edit, read as wall-clock in the
+    submitted zone. With the zone unchanged the two renderings are one."""
+    if not converted and datetime_box_unedited(stored, submitted, seeded_zone):
+        return True
+    return datetime_box_unedited(stored, submitted, submitted_zone)
+
+
 def payload_changes_session(
     review_session: ReviewSession, payload: SessionCreate
 ) -> bool:

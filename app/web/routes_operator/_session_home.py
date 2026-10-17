@@ -287,6 +287,7 @@ def _apply_session_config_form(
     responses_release_at: str | None,
     responses_release_until: str | None,
     correlation_id: str,
+    tz_converted: str = "",
 ) -> None:
     """Parse + validate + persist the session-config form fields.
 
@@ -317,8 +318,8 @@ def _apply_session_config_form(
         ) from exc
 
     # 18B PR 5: the display timezone is a field of this form. Blank ⇒
-    # leave the session's current zone unchanged. The deadline picker is
-    # wall-clock in this zone.
+    # leave the session's current zone unchanged. An edited datetime box
+    # is wall-clock in this zone.
     timezone_name = (
         operator_settings.parse_display_timezone_input(display_timezone)
         or sessions.resolve_session_timezone(review_session)
@@ -330,22 +331,30 @@ def _apply_session_config_form(
         )
 
     # Each datetime box was seeded with its stored value rendered in the
-    # session's current zone. While that zone is unchanged, a box still
-    # holding that text is read as its stored instant rather than as
-    # wall-clock: in the repeated hour after a DST fall-back the text
-    # names two instants and the parse picks the first, so every Save
-    # would move the value an hour early (findings Cc6). It is re-read
-    # from its UTC rendering, so each parser below validates the instant
-    # that will be stored, then the stored value itself is kept (seconds
-    # included). A changed zone re-reads every box in the new zone.
+    # session's current zone. A box still holding that text is read as
+    # its stored instant rather than as wall-clock: in the repeated hour
+    # after a DST fall-back the text names two instants and the parse
+    # picks the first, so every Save would move the value an hour early
+    # (findings Cc6). It is re-read from its UTC rendering, so each
+    # parser below validates the instant that will be stored, then the
+    # stored value itself is kept (seconds included).
+    #
+    # A zone change keeps the stored instants, and a box the script
+    # re-rendered reads its old-zone text as an edit
+    # (``sessions.datetime_box_kept``, findings L8).
     seeded_zone = sessions.resolve_session_timezone(review_session)
+    converted = sessions.converted_box_names(tz_converted)
     unedited: set[str] = set()
 
     def _read_as(
         field: str, raw: str | None, stored: datetime | None
     ) -> tuple[str | None, str]:
-        if timezone_name == seeded_zone and sessions.datetime_box_unedited(
-            stored, raw, seeded_zone
+        if sessions.datetime_box_kept(
+            stored,
+            raw,
+            seeded_zone=seeded_zone,
+            submitted_zone=timezone_name,
+            converted=field in converted,
         ):
             unedited.add(field)
             if stored is not None and not date_formatting.in_entry_range(stored):
@@ -579,6 +588,7 @@ def session_config_submit(
     responses_release_until: str | None = Form(default=None),
     tags: str = Form(default=""),
     tags_present: str = Form(default=""),
+    tz_converted: str = Form(default=""),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -613,6 +623,7 @@ def session_config_submit(
         responses_release_at=responses_release_at,
         responses_release_until=responses_release_until,
         correlation_id=correlation_id,
+        tz_converted=tz_converted,
     )
     # 19S Item 9 Part B — the card's Tags field, written after the config
     # apply so a rejected save writes no tags either. An emptied box

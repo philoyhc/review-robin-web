@@ -2,9 +2,9 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 11 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+**Open:** 10 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
 R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3, L2, O3, R5, L3,
-R8, O2, L6, L7, O5, O8, O9 and O10 done).
+R8, O2, L6, L7, O5, O8, O9, O10 and L8 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -163,7 +163,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`_session_home.py:483`). *Reproduced.* Code.
 - ~~**L7**~~ — **Done in #3111**: Purge rosters deletes observers and counts them in `session.rosters_purged` (`tests/integration/test_session_purge.py`). Purge rosters leaves Observers, which are personal data
   (`session_purge.py:96-170`). *Reproduced* by two reads. Code.
-- **L8** — **Ruled 2026-10-17**: the instant stays: changing the zone converts every date box's text to the new zone, on Create and on Session Home, so the stored instants don't move; `spec/session_home.md` is corrected. A timezone change moves stored instants, and the spec contradicts
+- ~~**L8**~~ — **Done in #3113** (ruled 2026-10-17, the instant stays): changing the zone re-renders every date box as the same instant, on Create and on Session Home; without script, Session Home's Save keeps a box whose text is its stored value in the seeded or the submitted zone (`spec/session_home.md`; `tests/integration/test_display_timezone.py`, `tests/browser/test_timezone_keeps_instants.py`). A timezone change moves stored instants, and the spec contradicts
   itself (`spec/settings_inventory.md:109` against
   `spec/session_home.md:368`); Create's preview re-renders only `#deadline`.
   Author.

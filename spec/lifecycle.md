@@ -938,8 +938,9 @@ translate to HTTP 422 with the per-pair error message:
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 
 On Session Home's details card a Start ↔ End or End ↔ Release-from
-pair whose two boxes both still hold their stored values, in an
-unchanged session timezone, is not checked, as the import below skips a pair
+pair whose two boxes both still hold their stored values (in the seeded
+or, after a Timezone change, the submitted zone: `spec/session_home.md`
+§4) is not checked, as the import below skips a pair
 it leaves alone, so a Save is never refused over a stored pair nobody
 edited (the closed-then-released session below holds one).
 
