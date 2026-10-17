@@ -188,24 +188,31 @@
         var rowCheckboxes = document.querySelectorAll(".archived-list-select-row");
         var selectAll = document.querySelector(".archived-list-select-all");
         if (!rowCheckboxes.length || !selectAll) return;
-        function refresh() {
-          var checkedCount = 0;
-          rowCheckboxes.forEach(function (cb) {
-            if (cb.checked) checkedCount++;
+        // Select all covers the rows the filter shows, and the header
+        // reads them alone (findings O1; ``spec/ui_elements.md`` §10):
+        // a hidden row is never ticked, so no bulk action reaches it.
+        function shown() {
+          return Array.prototype.filter.call(rowCheckboxes, function (cb) {
+            return cb.closest("tr").style.display !== "none";
           });
-          selectAll.checked = checkedCount === rowCheckboxes.length;
+        }
+        function refresh() {
+          var boxes = shown();
+          var checkedCount = boxes.filter(function (cb) { return cb.checked; }).length;
+          selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
           selectAll.indeterminate =
-            checkedCount > 0 && checkedCount < rowCheckboxes.length;
+            checkedCount > 0 && checkedCount < boxes.length;
         }
         rowCheckboxes.forEach(function (cb) {
           cb.addEventListener("change", refresh);
         });
         selectAll.addEventListener("change", function () {
-          rowCheckboxes.forEach(function (cb) {
+          shown().forEach(function (cb) {
             cb.checked = selectAll.checked;
           });
           refresh();
         });
+        document.addEventListener("rrw:session-rows-filtered", refresh);
         refresh();
       })();
     </script>
@@ -278,7 +285,13 @@
             var show = matchesTags(row) && matchesFilter(row);
             row.style.display = show ? "" : "none";
             if (show) visible++;
+            // A row the filter hides leaves the selection (findings O1).
+            var box = show ? null : row.querySelector(".archived-list-select-row");
+            if (box) box.checked = false;
           });
+          // The select-all and expander scripts listen rather than being
+          // called: each lives in its own IIFE (as Assignments does it).
+          document.dispatchEvent(new CustomEvent("rrw:session-rows-filtered"));
           if (noMatch) {
             noMatch.style.display = visible === 0 ? "" : "none";
           }
@@ -451,10 +464,15 @@
         });
         if (selectAll) {
           selectAll.addEventListener("change", function () {
-            tickOrder = selectAll.checked ? rowCheckboxes.slice() : [];
+            tickOrder = rowCheckboxes.filter(function (cb) { return cb.checked; });
             refreshExpander();
           });
         }
+        // The filter unticked what it hid (findings O1).
+        document.addEventListener("rrw:session-rows-filtered", function () {
+          tickOrder = tickOrder.filter(function (cb) { return cb.checked; });
+          refreshExpander();
+        });
       })();
     </script>
   {% else %}

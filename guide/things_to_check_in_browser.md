@@ -309,3 +309,13 @@ delete them once no remaining section points to them.
 - [ ] **An old schedule still imports.** Import the settings of a
   session whose End has passed, reminders included: it applies, since
   only the lead-time floor is waived.
+
+## Lobby and Archived Select all follows the filter (O1)
+
+- [ ] **Select all ticks only what is shown.** On the lobby, filter to
+  a few sessions (a tag chip or the filter box), then tick Select all:
+  only the rows shown are ticked, and the bulk panel counts them alone.
+  Clear the filter: the other rows are unticked and the header reads
+  partial. Same on Archived.
+- [ ] **Hiding a ticked row unticks it.** Tick a session, then filter it
+  out: it is no longer selected, and the panel drops it.
