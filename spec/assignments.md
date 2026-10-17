@@ -170,8 +170,9 @@ The engine accepts every field above (`ALLOWED_PREDICATE_FIELDS` in
 tag slots, and of those only namespace + slot combinations with at
 least one populated roster row appear in its dropdowns
 (`views._instruments.new_model_usable_tags`). It does not offer
-`pair_context.tagN` (`spec/instruments.md`, Band 1); the engine still
-evaluates a stored rule that holds one.
+`pair_context.tagN`, `reviewer.pair_tagN` or `reviewee.pair_tagN`
+(`spec/instruments.md`, Band 1); the engine still evaluates a stored
+rule that holds one.
 
 **Operators** (UI → engine internal):
 
@@ -199,12 +200,14 @@ both sides before comparison.
 
 **Values and empty values** (author, 2026-10-17). A field holds a set
 of values: at most one for a roster tag, an email or `pair_context.tagN`,
-any number for a person's pair tag. An empty string is no value, and
+any number for a person's pair tag. A blank (empty or whitespace-only)
+string is no value, and
 an inactive or missing relationship gives none. Over that set:
 
 - `equals` / `in` / `matches` pass when some value matches, so no value
   fails them; `not_equals` / `not_in` are their negation, so **no value
-  passes `IS NOT`**. `not_matches` fails no value.
+  passes `IS NOT`**. `not_matches` passes when there is some value and
+  none matches, so it too fails no value.
 - `same_as` passes when the two sides share a value, or when both have
   none; `different_from` is its negation. So `Friend` against no value
   passes `IS DIFFERENT FROM`, and no value against no value fails it.
