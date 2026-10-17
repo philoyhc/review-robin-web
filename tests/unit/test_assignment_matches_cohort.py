@@ -15,6 +15,7 @@ in the cases that matter for the CSV download:
 
 from __future__ import annotations
 
+import pytest
 from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession, User
@@ -284,27 +285,66 @@ def test_does_not_contain_negates_substring(db: Session) -> None:
     )
 
 
-def test_observer_attribute_missing_yields_false(db: Session) -> None:
-    """``IS THE SAME AS observer.tag1`` against an observer
-    whose tag1 is null has no meaningful operand → False."""
-    sess = _session(db, code="amr-missing-obs")
-    obs = _observer(db, sess, tag_1=None)
-    r = _reviewer(db, sess, tag_1="x")
-    e = _reviewee(db, sess)
-    rule_set = {
+def _same_as_rule(op: str) -> dict:
+    return {
         "combinator": "AND",
         "rules": [
             {
                 "field": "reviewer.tag1",
-                "op": "IS THE SAME AS",
+                "op": op,
                 "operand_tag": "observer.tag1",
                 "operand_value": "",
             }
         ],
     }
-    assert not assignment_matches_cohort(
-        rule_set, observer=obs, reviewer=r, reviewee=e
-    )
+
+
+@pytest.mark.parametrize(
+    ("reviewer_tag", "observer_tag", "same"),
+    [
+        ("x", "X", True),
+        ("x", "y", False),
+        ("x", None, False),
+        (None, "x", False),
+        (None, None, True),
+        ("  ", None, True),
+    ],
+)
+def test_empty_counts_as_a_value_for_the_cross_attribute_ops(
+    db: Session, reviewer_tag, observer_tag, same
+) -> None:
+    """The rule engine's empty-value rule (author, 2026-10-17): IS THE
+    SAME AS passes when both sides are the same, no value included; IS
+    DIFFERENT FROM is its negation, so a value against no value passes
+    and no value against no value fails."""
+    sess = _session(db, code=f"amr-empty-{reviewer_tag}-{observer_tag}".replace(" ", "_"))
+    obs = _observer(db, sess, tag_1=observer_tag)
+    r = _reviewer(db, sess, tag_1=reviewer_tag)
+    e = _reviewee(db, sess)
+    for op, expected in (("IS THE SAME AS", same), ("IS DIFFERENT FROM", not same)):
+        assert (
+            assignment_matches_cohort(_same_as_rule(op), observer=obs, reviewer=r, reviewee=e)
+            is expected
+        ), op
+
+
+@pytest.mark.parametrize(
+    ("op", "expected"),
+    [("IS", False), ("IS NOT", True), ("CONTAINS", False), ("DOES NOT CONTAIN", True)],
+)
+def test_the_literal_ops_on_no_value(db: Session, op: str, expected: bool) -> None:
+    """``IS`` and ``CONTAINS`` fail no value; their negations pass it."""
+    sess = _session(db, code=f"amr-empty-{op.replace(' ', '-').lower()}")
+    obs = _observer(db, sess)
+    r = _reviewer(db, sess, tag_1=None)
+    e = _reviewee(db, sess)
+    rule_set = {
+        "combinator": "AND",
+        "rules": [
+            {"field": "reviewer.tag1", "op": op, "operand_tag": "", "operand_value": "math"}
+        ],
+    }
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e) is expected
 
 
 def test_pair_context_rule_returns_false_for_now(db: Session) -> None:
@@ -349,3 +389,19 @@ def test_cross_roster_operand_tag_returns_false_for_now(
     assert not assignment_matches_cohort(
         rule_set, observer=obs, reviewer=r, reviewee=e
     )
+
+
+def test_a_padded_value_matches_like_the_tag_it_names(db: Session) -> None:
+    """Both sides strip, as the assignment engine's do: a value typed
+    with stray spaces still matches the tag."""
+    sess = _session(db, code="amr-padded-value")
+    obs = _observer(db, sess)
+    r = _reviewer(db, sess, tag_1="math")
+    e = _reviewee(db, sess)
+    rule_set = {
+        "combinator": "AND",
+        "rules": [
+            {"field": "reviewer.tag1", "op": "IS", "operand_tag": "", "operand_value": " math "}
+        ],
+    }
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e)

@@ -206,8 +206,9 @@ def get_field_values(
 ) -> tuple[str, ...]:
     """Every value of ``dotted`` for the pair, empty when it has none.
 
-    A single-valued field gives at most one value (that of
-    :func:`get_field_value`). A person-level pair tag
+    A single-valued field gives at most one value, the raw column
+    value: unlike :func:`get_field_value` it leaves a blank string for
+    the caller's normalisation to drop. A person-level pair tag
     (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``) gives every value
     that person holds in slot N across their active relationships, in
     no particular order; a person with no such pair gives none.
@@ -215,7 +216,15 @@ def get_field_values(
 
     side, attribute = parse_field(dotted)
     if side not in _PERSON_SIDES:
-        value = get_field_value(dotted, reviewer=reviewer, reviewee=reviewee)
+        # Resolved inline rather than through get_field_value, which
+        # would parse the field a second time on this per-pair path.
+        if side == "pair_context":
+            value = _resolve_pair_context(reviewer, reviewee, attribute)
+        else:
+            target = reviewer if side == "reviewer" else reviewee
+            value = getattr(target, attribute, None)
+        # A blank string comes back as a value; the predicates'
+        # normalisation drops it, once, for every operator.
         return () if value is None else (value,)
     person = reviewer if side == "reviewer_pairs" else reviewee
     person_id = getattr(person, "id", None)

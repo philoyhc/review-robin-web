@@ -520,11 +520,13 @@ is used (`spec/assignments.md`, Predicate vocabulary):
 
 The card names all three by the relationship tag they read, so a rule
 the card saved reloads as it was saved. A rule stored otherwise, before
-this mapping or by a Settings import, with `pair_context.tagN` in Link 1
-or as a Link 2 operand, shows as that relationship tag and is rewritten
-to the mapping above on its next Save, changing its meaning from the
-pair to the reviewer's tag; pre-Azure sessions are disposable (author,
-2026-10-17). Link 3 groups by reviewee tags only.
+this mapping or by a Settings import, with `pair_context.tagN` in Link 1,
+as a Link 2 operand, or as a Link 2 field under any operator but `IS` /
+`IS NOT`, shows as that relationship tag and is rewritten to the mapping
+above on its next Save, changing its meaning from the pair to the
+reviewer's (or, for the Link 2 field, the reviewee's) tag; pre-Azure
+sessions are disposable (author, 2026-10-17). Link 3 groups by reviewee
+tags only.
 
 A rule or boundary stored with a tag the card does not offer (a roster
 or relationship slot since emptied, or a relationship-tag boundary)
@@ -724,8 +726,10 @@ review, in an `AND` or an `OR` list alike. While the card holds one,
 the Link 3 pill cycles Not set → Individual → Not set, skipping Group;
 and Save refuses one while the Unit of review it posts is Group (a Group
 already stored posts as Group), with the banner
-(422, or 400 from `/fields/save`), storing nothing. `IS NOT` and the
-person-level operators leave Group available.
+(422, or 400 from `/fields/save`), storing nothing; a Settings import
+refuses the same combination. `IS NOT` and the person-level operators
+leave Group available: on a Group instrument a pair-tag `IS NOT` drops
+only the ruled-out member's row, not the rest of that reviewer's group.
 
 Above the cells, a `+` button adds another cell (none when the Link
 offers no tag, as when only a stored rule keeps it live) and a combinator

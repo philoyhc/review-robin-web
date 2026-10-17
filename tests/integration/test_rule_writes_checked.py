@@ -272,3 +272,36 @@ def test_settings_import_refuses_a_band2_state_that_is_not_an_object(
         error.field.endswith(".band2_state") and "JSON object" in error.message
         for error in result.errors
     )
+
+
+_LINK2_PAIR_IS = (
+    '[{"id": "link2", "enabled": true, "kind": "COMPOSITE", "op": "AND", "rules": ['
+    '{"id": "link2-r0", "enabled": true, "kind": "MATCH", "predicate": {"field":'
+    ' "pair_context.tag1", "operator": "equals", "operand": "Friend"}}]}]'
+)
+
+
+def test_settings_import_refuses_group_beside_a_link2_pair_tag_is(db: Session) -> None:
+    """Band 1's Save refuses the combination (Item 2, author 2026-10-17);
+    an import must not store it either."""
+    operator, session = _seed_for_import(db, "item2-group")
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", _LINK2_PAIR_IS)
+    rows = _with_cell(rows, ".group_kind", "r1")
+
+    result = apply_session_config(db, session, rows, user=operator)
+
+    assert any(
+        error.field.endswith(".group_kind") and "relationship tag" in error.message
+        for error in result.errors
+    )
+
+
+def test_settings_import_keeps_a_link2_pair_tag_is_on_an_individual_instrument(
+    db: Session,
+) -> None:
+    operator, session = _seed_for_import(db, "item2-indiv")
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", _LINK2_PAIR_IS)
+
+    result = apply_session_config(db, session, rows, user=operator)
+
+    assert not result.errors
