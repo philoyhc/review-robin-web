@@ -235,6 +235,24 @@ def require_ready(db: Session, review_session: ReviewSession) -> ReviewSession:
     )
 
 
+def require_accepting_responses(
+    db: Session, review_session: ReviewSession
+) -> ReviewSession:
+    """Lock + re-read, refuse unless ``ready`` and before its deadline —
+    the reviewer's Save, Submit, Clear and Recall gate (findings L3), so
+    a write cannot land on a session closed or reverted since the
+    route's own check. The instruments' ``accepting_responses`` flags
+    need no re-read: they change only in the transitions that change
+    the status, under this same lock."""
+    return session_guard.require_state(
+        db,
+        review_session,
+        lambda locked: is_ready(locked) and not deadline_has_passed(locked),
+        code="not_accepting_responses",
+        message="This review is not accepting responses (session is {status}).",
+    )
+
+
 @dataclass
 class ReadinessReport:
     """Activation gate input split by severity."""

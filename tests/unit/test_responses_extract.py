@@ -28,6 +28,7 @@ from app.db.models import (
 from app.services.extracts.responses_extract import (
     HEADER,
     serialize_responses,
+    serialize_reviewer_session_summary,
 )
 
 
@@ -885,3 +886,53 @@ def test_group_identity_includes_member_names_whatever_the_name_flag(
     body = _data(list(serialize_responses(db, review_session)))
     assert len(body) == 1
     assert body[0][5] == "Team A (Carol, Eve)"
+
+
+def test_reviewer_summary_group_names_only_the_reviewers_included_members(
+    db: Session,
+) -> None:
+    """Findings R5: a reviewer's own ``summary.csv`` names a group by
+    the members that reviewer is assigned with an included row — what
+    the review surface shows them — not by another reviewer's members
+    or an excluded row's reviewee. The operator file still names the
+    whole group."""
+    review_session = _session(db, code="grp-own")
+    review_session.status = "ready"
+    likert = _likert(db, review_session)
+    rae = _add_reviewer(db, review_session, email="rae@example.edu", name="Rae")
+    sam = _add_reviewer(db, review_session, email="sam@example.edu", name="Sam")
+    carol = _add_reviewee(
+        db, review_session, identifier="carol@example.edu",
+        name="Carol", tag_1="Team A",
+    )
+    eve = _add_reviewee(
+        db, review_session, identifier="eve@example.edu",
+        name="Eve", tag_1="Team A",
+    )
+    dan = _add_reviewee(
+        db, review_session, identifier="dan@example.edu",
+        name="Dan", tag_1="Team A",
+    )
+    instr = _add_instrument(db, review_session, name="Grp")
+    instr.group_kind = "r1"
+    db.flush()
+    field = _add_field(db, instr, field_key="q", label="Q", rtd=likert)
+    rae_carol = _add_assignment(
+        db, review_session, reviewer=rae, reviewee=carol, instrument=instr
+    )
+    _add_response(db, assignment=rae_carol, field=field, value="4")
+    rae_eve = _add_assignment(
+        db, review_session, reviewer=rae, reviewee=eve, instrument=instr
+    )
+    rae_eve.include = False
+    _add_assignment(
+        db, review_session, reviewer=sam, reviewee=dan, instrument=instr
+    )
+    db.flush()
+
+    own = _data(
+        list(serialize_reviewer_session_summary(db, review_session, rae))
+    )
+    assert [r[5] for r in own] == ["Team A (Carol)"]
+    operator = _data(list(serialize_responses(db, review_session)))
+    assert [r[5] for r in operator] == ["Team A (Carol, Dan, Eve)"]

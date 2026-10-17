@@ -125,7 +125,10 @@ def _compose_group_identity(
 
 
 def _group_export_index(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    reviewer_id: int | None = None,
 ) -> tuple[
     dict[int, tuple[str, ...]],
     dict[tuple[int, tuple[str, ...]], str],
@@ -138,6 +141,11 @@ def _group_export_index(
     - ``identity`` — the composed group-identity string per
       ``(instrument_id, group_key)``, used as the collapsed row's
       ``RevieweeName``.
+
+    With ``reviewer_id`` (the reviewer's own record) a group's member
+    names are only that reviewer's included assignments — the members
+    the review surface shows them (findings R5) — rather than every
+    reviewer's.
     """
     assignments = list(
         db.execute(
@@ -156,9 +164,13 @@ def _group_export_index(
         group_key = key_by_assignment.get(assignment.id)
         if group_key is None:
             continue
-        members.setdefault(
+        if reviewer_id is not None and assignment.reviewer_id != reviewer_id:
+            continue
+        names = members.setdefault(
             (assignment.instrument_id, group_key), set()
-        ).add(assignment.reviewee.name)
+        )
+        if reviewer_id is None or assignment.include:
+            names.add(assignment.reviewee.name)
     identity = {
         (instrument_id, group_key): _compose_group_identity(
             group_key,
@@ -454,7 +466,7 @@ def serialize_reviewer_session_summary(
 
     if any(i.group_kind is not None for i in instruments):
         group_key_by_assignment, group_identity = _group_export_index(
-            db, review_session
+            db, review_session, reviewer_id=reviewer.id
         )
     else:
         group_key_by_assignment, group_identity = {}, {}

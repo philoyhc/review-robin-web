@@ -46,7 +46,11 @@ def _seed(db: Session):
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
     db.flush()
-    review_session = ReviewSession(name="Spring", code="req-gov", created_by_user_id=op.id)
+    # ``ready``: the reviewer write services re-check it under the
+    # session lock (findings L3).
+    review_session = ReviewSession(
+        name="Spring", code="req-gov", created_by_user_id=op.id, status="ready"
+    )
     db.add(review_session)
     db.flush()
     db.add(SessionOperator(session_id=review_session.id, user_id=op.id, role="owner"))

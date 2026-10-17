@@ -271,6 +271,58 @@ def test_name_only_does_not_sort_namesakes_by_their_hidden_emails(
     assert [row[rating] for row in hidden] == ["4", "9"]
 
 
+def _a_self_review(db: Session, seeded: dict) -> None:
+    """Rev reviews themself: a reviewee row with Rev's email and tag."""
+    from app.db.models import Assignment, Response, Reviewee
+
+    me = Reviewee(
+        session_id=seeded["instrument"].session_id,
+        name="Rev",
+        email_or_identifier="rev@x",
+        tag_1="mathcohort",
+    )
+    db.add(me)
+    db.flush()
+    assignment = Assignment(
+        session_id=seeded["instrument"].session_id,
+        instrument_id=seeded["instrument"].id,
+        reviewer_id=seeded["reviewer"].id,
+        reviewee_id=me.id,
+        is_self_review=True,
+    )
+    db.add(assignment)
+    db.flush()
+    db.add(
+        Response(
+            assignment_id=assignment.id,
+            response_field_id=seeded["field"].id,
+            value="7",
+            submitted_at=datetime.now(timezone.utc),
+        )
+    )
+
+
+def test_name_only_blanks_a_self_reviews_reviewee_identity_too(
+    client: TestClient, db: Session
+) -> None:
+    """Findings R8: on a self-review row the reviewee is the reviewer, so
+    at the `name` level its email and tags would name the reviewer the
+    level hides. They are blanked there; another row's reviewee stays."""
+    header, *rows = _download(
+        client, db, code="rid-csv-self", level="name", extra=_a_self_review
+    )
+    flag = header.index("SelfReview")
+    self_row = next(row for row in rows if row[flag] == "TRUE")
+    assert self_row[:10] == ["Rev", "", "", "", "", "Rev", "", "", "", ""]
+    other = next(row for row in rows if row[flag] == "FALSE")
+    assert other[5:8] == ["Ree", "ree@x", "mathcohort"]
+    _, *shown = _download(
+        client, db, code="rid-csv-self-shown", level="name_email",
+        extra=_a_self_review,
+    )
+    assert ["Rev", "rev@x", "mathcohort"] in [row[5:8] for row in shown]
+
+
 @pytest.mark.parametrize("level", [None, "name_email"])
 def test_name_and_email_is_raw_as_it_was(
     client: TestClient, db: Session, level: str | None

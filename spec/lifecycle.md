@@ -1025,7 +1025,9 @@ browsers, and direct POSTs bypass the picker entirely).
   went `ready` after the request loaded it; each operator invitation
   action opens with `require_validated_or_ready` / `require_ready`, so a
   send, regenerate or reminder cannot land on one reverted or closed
-  since (findings Bc5). The gate is
+  since (findings Bc5); and the reviewer's Save, Submit, Clear and
+  Recall open with `require_accepting_responses` (`ready`, before the
+  deadline), so none lands after a Close or Revert (findings L3). The gate is
   `session_guard.require_state`; the route-level `_require_*` checks stay
   as early refusals and the service check can only refuse more. The
   Instruments page's display-field repair

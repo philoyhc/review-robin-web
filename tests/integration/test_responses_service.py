@@ -21,8 +21,11 @@ def _seed(db: Session) -> tuple[User, Reviewer, ReviewSession, Assignment]:
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
     db.flush()
+    # ``ready``: the reviewer write services re-check it under the
+    # session lock (findings L3).
     review_session = ReviewSession(
-        name="Spring", code="spring-2026", created_by_user_id=op.id
+        name="Spring", code="spring-2026", created_by_user_id=op.id,
+        status="ready",
     )
     db.add(review_session)
     db.flush()

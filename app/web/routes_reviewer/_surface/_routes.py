@@ -378,7 +378,10 @@ async def reviewer_save(
         if a.instrument_id in target_instrument_ids
     }
     upserts = [u for u in upserts if u.assignment_id in target_assignment_ids]
-    result = responses_service.save_draft(
+    # Off the event loop: the save waits on the session row lock to
+    # re-check, under it, that the session still accepts (findings L3).
+    result = await run_in_threadpool(
+        responses_service.save_draft,
         db,
         review_session=review_session,
         reviewer=reviewer,
@@ -456,7 +459,9 @@ async def reviewer_submit(
             page_n=_submitted_from_page(request),
             form=string_form,
         )
-    result = responses_service.submit(
+    # Off the event loop, like the save (findings L3).
+    result = await run_in_threadpool(
+        responses_service.submit,
         db,
         review_session=review_session,
         reviewer=reviewer,
@@ -611,7 +616,9 @@ async def reviewer_clear(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Check the box to confirm before clearing your answers.",
         )
-    responses_service.clear_all(
+    # Off the event loop, like the save (findings L3).
+    await run_in_threadpool(
+        responses_service.clear_all,
         db,
         review_session=review_session,
         reviewer=reviewer,
