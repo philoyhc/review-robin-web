@@ -328,18 +328,23 @@ def test_empty_counts_as_a_value_for_the_cross_attribute_ops(
         ), op
 
 
-def test_is_not_passes_no_value(db: Session) -> None:
-    sess = _session(db, code="amr-isnot-empty")
+@pytest.mark.parametrize(
+    ("op", "expected"),
+    [("IS", False), ("IS NOT", True), ("CONTAINS", False), ("DOES NOT CONTAIN", True)],
+)
+def test_the_literal_ops_on_no_value(db: Session, op: str, expected: bool) -> None:
+    """``IS`` and ``CONTAINS`` fail no value; their negations pass it."""
+    sess = _session(db, code=f"amr-empty-{op.replace(' ', '-').lower()}")
     obs = _observer(db, sess)
     r = _reviewer(db, sess, tag_1=None)
     e = _reviewee(db, sess)
     rule_set = {
         "combinator": "AND",
         "rules": [
-            {"field": "reviewer.tag1", "op": "IS NOT", "operand_tag": "", "operand_value": "math"}
+            {"field": "reviewer.tag1", "op": op, "operand_tag": "", "operand_value": "math"}
         ],
     }
-    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e)
+    assert assignment_matches_cohort(rule_set, observer=obs, reviewer=r, reviewee=e) is expected
 
 
 def test_pair_context_rule_returns_false_for_now(db: Session) -> None:

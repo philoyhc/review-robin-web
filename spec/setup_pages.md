@@ -1664,7 +1664,8 @@ Instruments page (`new_model_rule_list("link2", …)` in
 
 **Empty values** follow the assignment rule's (`spec/assignments.md`,
 Predicate vocabulary; author, 2026-10-17): a blank value is no value,
-`IS NOT` passes no value, `IS THE SAME AS` passes when the two sides
+`IS` and `CONTAINS` fail no value while `IS NOT` and `DOES NOT CONTAIN`
+pass it, `IS THE SAME AS` passes when the two sides
 hold the same value with no value counting as one, and `IS DIFFERENT
 FROM` is its negation — so a tag against an observer with none passes
 `IS DIFFERENT FROM`, and no value against no value passes `IS THE SAME
