@@ -266,6 +266,11 @@ with the last section it covers.
   Unit of review pill goes Individual → Not set, never Group; with `IS
   NOT` it reaches Group again. An instrument already grouped refuses a
   Save that adds the `IS` rule, with a banner saying why.
+- [ ] **An observer with no tag.** On the Observers page, give an
+  observer the rule "Reviewer: <tag> IS DIFFERENT FROM Observer: Tag" and
+  leave their tag empty: their collation shows every response whose
+  reviewer has that tag set. With IS THE SAME AS it shows the responses
+  whose reviewer has none.
 - [ ] **A rule from an emptied slot is kept.** Empty a roster tag column
   a saved rule uses: the card still shows that tag selected, and Save
   keeps it. `+` adds a cell without it.

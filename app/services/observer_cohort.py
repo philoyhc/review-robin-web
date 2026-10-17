@@ -25,6 +25,11 @@ Per-rule semantics:
     treats them as unmatched (same pair-level deferral — item 14).
 - Comparisons are case-insensitive. ``CONTAINS`` /
   ``DOES NOT CONTAIN`` use substring (not regex).
+- Empty values follow the rule engine's rule (author, 2026-10-17;
+  ``guide/assignment_rule_clarify.md`` Item 2): a blank value is no
+  value; ``IS NOT`` passes no value; ``IS THE SAME AS`` passes when
+  both sides hold the same value, no value included, and
+  ``IS DIFFERENT FROM`` is its negation.
 - Per-rule pass/fail bits combine via the rule set's combinator
   (``AND`` → all must pass, ``OR`` → at least one must pass).
 - An observer with no saved rule (or an empty ``rules`` list)
@@ -161,8 +166,6 @@ def _rule_matches_row(
             return False
         observer_attr = operand_tag.split(".", 1)[1]
         right = _observer_attr_value(observer, observer_attr)
-        if right is None:
-            return False
         # not-identity: ``right`` can be the observer's own email, but
         # ``left`` never can — ``ALLOWED_LEFT_FIELDS`` admits only
         # ``tag1``/``tag2``/``tag3``, and the tag-attr maps above don't
@@ -170,13 +173,15 @@ def _rule_matches_row(
         # against someone's *tag*, never against another person's
         # email; there is no ß-style merge to engineer against. Checked
         # 2026-09-13 while auditing the fold.
-        left_cmp = (left or "").lower()
-        right_cmp = right.lower()
+        # No value on either side compares as the empty string, so two
+        # empties are the same and one empty side differs.
+        left_cmp = (left or "").strip().lower()
+        right_cmp = (right or "").strip().lower()
         if op == "IS THE SAME AS":
             return left_cmp == right_cmp
         return left_cmp != right_cmp
 
-    left_cmp = (left or "").lower()
+    left_cmp = (left or "").strip().lower()
     value_cmp = operand_value.lower()
     if op == "IS":
         return left_cmp == value_cmp

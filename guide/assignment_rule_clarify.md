@@ -282,3 +282,6 @@ cumulative diff read: `cc7e1ac0` (main before rung 1).
   skips Group while one is on the card. The stored-only option stays,
   now for emptied slots and relationship-tag boundaries.
   `spec/instruments.md` and `spec/setup_pages.md` updated in this rung.
+- **Rung 3 (observer rule), 2026-10-17.** The cohort rule's cross-
+  attribute operators treat no value as a value; `IS NOT` already passed
+  one. Last build rung: the cumulative diff read covers `cc7e1ac0..` here.
