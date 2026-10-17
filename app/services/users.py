@@ -124,12 +124,21 @@ def find_signed_in_user(
     new_email = (identity.email or "").strip()
 
     if usable_principal:
-        by_principal = db.execute(
-            select(User)
-            .where(User.external_principal_id == principal_id)
-            .order_by(User.id)
-            .limit(1)
-        ).scalar_one_or_none()
+        # A build before P5 gave a principal whose email changed a second
+        # row with the same principal id; the one holding the resolved
+        # email is the account in use, so it wins over the oldest (the
+        # read of the P5 PR).
+        rows = list(
+            db.execute(
+                select(User)
+                .where(User.external_principal_id == principal_id)
+                .order_by(User.id)
+            ).scalars()
+        )
+        for row in rows:
+            if new_email and normalize_email(row.email) == normalize_email(new_email):
+                return row
+        by_principal = rows[0] if rows else None
         if by_principal is not None:
             if (
                 move_email
@@ -147,6 +156,14 @@ def find_signed_in_user(
     stored = by_email.external_principal_id
     if move_email and usable_principal and not (stored and stored.strip()):
         by_email.external_principal_id = principal_id
+        # The moment an invited row is claimed by an identity, which then
+        # decides it: audited, with no actor, like the email change.
+        audit.write_event(
+            db,
+            event_type="workspace.user_principal_recorded",
+            summary=f"Sign-in recorded the principal id for {by_email.email}",
+            refs={"target_user_id": by_email.id},
+        )
         db.commit()
         db.refresh(by_email)
     return by_email
@@ -183,12 +200,13 @@ def _move_to_email(db: Session, target: User, new_email: str) -> None:
 def _absorbable(db: Session, holder: User, principal_id: str | None) -> bool:
     """Whether ``holder`` — the row already holding the signed-in
     identity's new email — can fold into the principal-id row: it
-    carries no principal id of its own (or the same one), and nothing
+    carries no principal id, and nothing
     but flags and session memberships, so it has never been signed in
-    to. Anything a sign-in leaves behind (an audit row it acted in, a
-    session it created, a rehydrate stash, a data shape) refuses."""
-    stored = (holder.external_principal_id or "").strip()
-    if stored and holder.external_principal_id != principal_id:
+    to. Anything a sign-in leaves behind (a principal id, an audit row
+    it acted in, a session it created, a rehydrate stash, a data shape)
+    refuses. A holder with this same principal id never reaches here:
+    step one returns it."""
+    if (holder.external_principal_id or "").strip():
         return False
     if _has_history(db, holder.id):
         return False

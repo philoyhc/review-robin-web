@@ -357,3 +357,51 @@ def test_a_fake_identity_never_matches_or_records_its_principal_id(
     db.refresh(invited)
     assert dev.email == "operator@example.edu"
     assert invited.external_principal_id is None
+
+
+def test_a_duplicate_row_holding_the_email_wins_over_the_oldest(
+    db: Session,
+) -> None:
+    """A build before P5 gave a principal whose email changed a second row
+    with the same principal id; that newer row is the account in use, so
+    it is the one returned, and nothing is renamed (the read of the P5
+    PR)."""
+    stale = User(
+        email="pat.old@example.edu",
+        display_name="Pat",
+        external_principal_id="pat-oid",
+    )
+    current = User(
+        email="pat.new@example.edu",
+        display_name="Pat",
+        external_principal_id="pat-oid",
+        is_operator=True,
+    )
+    db.add_all([stale, current])
+    db.commit()
+
+    returned = _sign_in(db, _identity("Pat.New@example.edu", "pat-oid"))
+
+    assert returned.id == current.id
+    assert returned.is_operator
+    db.expire_all()
+    assert db.get(User, stale.id).email == "pat.old@example.edu"
+    assert _email_changes(db) == []
+
+
+def test_recording_a_principal_id_on_an_invite_is_audited(db: Session) -> None:
+    invited = User(email="invitee@example.edu", display_name="Invitee")
+    db.add(invited)
+    db.commit()
+
+    returned = _sign_in(db, _identity("invitee@example.edu", "invitee-oid"))
+
+    assert returned.id == invited.id
+    assert returned.external_principal_id == "invitee-oid"
+    (event,) = db.execute(
+        select(AuditEvent).where(
+            AuditEvent.event_type == "workspace.user_principal_recorded"
+        )
+    ).scalars()
+    assert event.actor_user_id is None
+    assert event.detail["refs"] == {"target_user_id": invited.id}
