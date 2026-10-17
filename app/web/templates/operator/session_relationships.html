@@ -62,6 +62,18 @@
           {% if edit_error %}
             <span class="row-editor-error">{{ edit_error }}</span>
           {% endif %}
+          {# A save refused for clearing group answers offers itself again
+             (warnings_updates.md Item 1). The tick carries the count it
+             shows, so a Save after edits that change it is refused afresh. #}
+          {% if group_clear and group_clear.surface == "editor" %}
+            <span class="row-editor-error">{{ group_clear.message }}</span>
+            <label class="row-editor-error">
+              <input type="checkbox" form="relationship-edit-form"
+                     name="acknowledge_response_loss"
+                     value="{{ group_clear.count }}">
+              Yes, clear them
+            </label>
+          {% endif %}
           {# Save then Cancel, the order the card rendered and the order
              Reviewers and Observers settled on. All four roster pages
              agree from this rung. #}
@@ -220,6 +232,19 @@
                 </p>
               {% endif %}
 
+              {# A replace refused for clearing group answers: the count and
+                 a tick beside `confirm_replace`; the file is chosen again. #}
+              {% if group_clear and group_clear.surface == "import" %}
+                <p class="banner banner-error" role="alert">{{ group_clear.message }}</p>
+                <p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="acknowledge_response_loss"
+                           value="{{ group_clear.count }}">
+                    <span>Yes, clear them</span>
+                  </label>
+                </p>
+              {% endif %}
+
               <div class="unlock-col-actions">
                 {% if existing_count and existing_count > 0 %}
                   <button class="btn secondary" type="submit"
@@ -256,6 +281,16 @@
                     <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.</span>
                   </label>
                 </p>
+                {% if group_clear and group_clear.surface == "delete_all" %}
+                  <p class="banner banner-error" role="alert">{{ group_clear.message }}</p>
+                  <p>
+                    <label class="confirm-label">
+                      <input type="checkbox" name="acknowledge_response_loss"
+                             value="{{ group_clear.count }}">
+                      <span>Yes, clear them</span>
+                    </label>
+                  </p>
+                {% endif %}
                 <div class="unlock-col-actions">
                   <button class="btn destructive" type="submit"
                           data-delete-btn="delete-all"
@@ -924,6 +959,25 @@
         var tickOrder = [];
         var panel = null;
         var BULK_BASE = {{ relationships_base_url | tojson }};
+        // A bulk action refused for clearing group answers re-renders with
+        // its selection, and the panel offers the count and a
+        // ``Yes, clear them`` tick that carries it (warnings_updates.md).
+        var GROUP_CLEAR = {{ ({"count": group_clear.count, "message": group_clear.message}
+                              if group_clear and group_clear.surface == "bulk"
+                              else None) | tojson }};
+        var GROUP_CLEAR_HTML = "";
+        if (GROUP_CLEAR) {
+          var groupClearText = document.createElement("span");
+          groupClearText.textContent = GROUP_CLEAR.message;
+          GROUP_CLEAR_HTML =
+            '<span class="row-editor-error">' + groupClearText.innerHTML +
+            "</span>" +
+            '<label class="confirm-label exp-confirm-label">' +
+              '<input type="checkbox" form="relationships-bulk-form"' +
+              ' name="acknowledge_response_loss" value="' +
+              String(Number(GROUP_CLEAR.count)) + '"> Yes, clear them' +
+            "</label>";
+        }
 
         function rows() {
           return Array.prototype.slice.call(
@@ -1007,6 +1061,7 @@
                     ' name="acknowledge_response_loss" value="true">'
                     if delete_discards_responses else "") | tojson }} +
               "</label>" +
+              GROUP_CLEAR_HTML +
               '<span class="row-expander-actions">';
           // `Edit` acts on exactly one row, which is the arity the card's
           // script expressed by disabling the button unless `n === 1`.

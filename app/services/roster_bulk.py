@@ -55,16 +55,25 @@ def pair_context_groups_before(
 
 
 def clear_redrawn_groups(
-    db: Session, *, session_id: int, before: GroupPartitions
+    db: Session,
+    *,
+    session_id: int,
+    before: GroupPartitions,
+    acknowledged_loss: int | None = None,
 ) -> dict[str, int] | None:
     """Clear every group a relationship change added a member to
     (``responses.clear_changed_groups``); the group a pair left only
-    shrank and keeps its answer. Called after the change is flushed. Returns the audit ``context`` counting
-    the answers that went, or ``None``."""
+    shrank and keeps its answer. Called after the change is flushed.
+    Returns the audit ``context`` counting the answers that went, or
+    ``None``. ``acknowledged_loss`` is the route's ``Yes, clear them``
+    count; a different count raises ``GroupAnswersWouldClear``."""
     from app.services import responses as responses_service
 
     defuncted = responses_service.clear_changed_groups(
-        db, session_id=session_id, before=before
+        db,
+        session_id=session_id,
+        before=before,
+        acknowledged_loss=acknowledged_loss,
     )
     return {"defuncted_group_responses": defuncted} if defuncted else None
 
@@ -82,6 +91,7 @@ def bulk_set_status(
     entity_noun: str,
     user: User,
     correlation_id: str | None,
+    acknowledged_loss: int | None = None,
 ) -> list[int]:
     """Flip ``status`` to ``target_status`` on every ``model`` row in
     ``ids`` that isn't already there, scoped to ``review_session``.
@@ -139,7 +149,10 @@ def bulk_set_status(
         # flag follows it (findings B33) and a group it joins that
         # already had members is cleared (B34).
         context = clear_redrawn_groups(
-            db, session_id=review_session.id, before=before
+            db,
+            session_id=review_session.id,
+            before=before,
+            acknowledged_loss=acknowledged_loss,
         )
         from app.services.assignments import (
             recompute_self_review_classification,
@@ -293,6 +306,7 @@ def bulk_delete(
     entity_noun: str,
     user: User,
     correlation_id: str | None,
+    acknowledged_loss: int | None = None,
 ) -> tuple[int, int, int]:
     """Delete every ``model`` row in ``ids``, scoped to
     ``review_session``. Returns ``(deleted, assignments, responses)``.
@@ -366,7 +380,12 @@ def bulk_delete(
         db.delete(row)
     db.flush()
     context = (
-        clear_redrawn_groups(db, session_id=review_session.id, before=before)
+        clear_redrawn_groups(
+            db,
+            session_id=review_session.id,
+            before=before,
+            acknowledged_loss=acknowledged_loss,
+        )
         if before
         else None
     )
