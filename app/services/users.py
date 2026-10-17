@@ -13,7 +13,9 @@ and apply the invariants:
   admin demote risks are sidestepped by routing all such cases
   through "ask another admin".
 - ``demote`` refuses if the target is the only remaining sys-
-  admin (``UserOperationError`` with code ``last_admin``).
+  admin (``UserOperationError`` with code ``last_admin``), and, like
+  ``revoke``, if a target with no Operator flag still owns sessions
+  (``still_owner``): the demote would take their operator access.
 - ``revoke`` refuses if the target still owns sessions
   (``still_owner``) — operator clears the session memberships
   via ``remove_from_all_sessions`` first.
@@ -235,6 +237,26 @@ def _guard_not_owner(db: Session, target: User) -> None:
         )
 
 
+def _guard_demote_not_owner(db: Session, target: User) -> None:
+    """``still_owner`` for a Demote (findings P1): a sys-admin with no
+    Operator flag is an operator only through the admin flag, so
+    demoting one who owns a session would leave an owner who is no
+    operator, as a Revoke would."""
+    if target.is_operator:
+        return
+    owned = _owned_count(db, target)
+    if owned > 0:
+        raise UserOperationError(
+            code="still_owner",
+            message=(
+                f"Refusing to demote {target.email} while they own "
+                f"{owned} session{'s' if owned != 1 else ''}: without the "
+                "Operator flag they would lose access to them. Admit them "
+                "as an operator, or use 'Remove from all sessions', first."
+            ),
+        )
+
+
 def _write_revoke(
     db: Session, actor: User, target: User, correlation_id: str | None
 ) -> None:
@@ -289,6 +311,9 @@ def demote(
 ) -> None:
     _guard_self(actor, target)
     _guard_actor_super_admin(actor)
+    # Locked before the owner count, as ``revoke`` is, so a concurrent
+    # owner add either commits first and is counted, or waits.
+    db.execute(_batch_lock("demote", [target.id]))
     _guard_target_not_super_admin(target, "demoted")
     if sys_admin_count(db) <= 1 and target.is_sys_admin:
         raise UserOperationError(
@@ -298,6 +323,7 @@ def demote(
                 "Promote another user to sys-admin before demoting this one."
             ),
         )
+    _guard_demote_not_owner(db, target)
     _write_demote(db, actor, target, correlation_id)
     db.commit()
 
@@ -635,6 +661,8 @@ def _guard_row(db: Session, actor: User, action: str, target: User) -> None:
         _guard_target_not_super_admin(target, _SUPER_ADMIN_VERBS[action])
     if action == "revoke":
         _guard_not_owner(db, target)
+    elif action == "demote":
+        _guard_demote_not_owner(db, target)
     elif action == "promote" and not (target.is_operator or target.is_sys_admin):
         raise UserOperationError(
             code="not_operator",

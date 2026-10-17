@@ -576,18 +576,45 @@ def _materialise_one_instrument(
         )
 
     # Matched pairs keep their row + responses. ``include`` is
-    # recomputed, not preserved: the expected value is
-    # ``self_reviews_active`` for a self-review pair and ``True`` for
-    # every other, and ``False`` whenever either side is inactive, so
-    # this also resets a row an operator inactivated by hand.
-    # Deliberate for now — assignment-row status round-trips
-    # through nothing, and restoring it is future work (19N Item 1,
-    # Semantics 6 / ``spec/roundtrip_coverage.md``).
+    # recomputed, not preserved: ``True`` for a non-self pair and
+    # ``False`` whenever either side is inactive, so this also resets a
+    # non-self row an operator inactivated by hand. Deliberate for now
+    # — assignment-row status round-trips through nothing, and
+    # restoring it is future work (19N Item 1, Semantics 6 /
+    # ``spec/roundtrip_coverage.md``).
+    #
+    # **Except a self-review row with both sides active**, which takes
+    # the instrument's Self review toggle state rather than
+    # ``self_reviews_active``, which only seeds it on first generation
+    # (findings E3). The toggle flips every such row at once, so its
+    # state is what most of them hold; a row that disagrees was reset
+    # while someone in it was inactive, and rejoins the rest. A tie
+    # leaves the session default. The selection mirrors the toggle's own
+    # (``is_self_review`` and both sides active).
+    toggled: list[Assignment] = []
     for key in diff.to_keep:
-        _, _, pair_include = diff.new_pairs[key]
+        reviewer, reviewee, pair_include = diff.new_pairs[key]
         row = diff.existing_rows[key]
+        if (
+            row.is_self_review
+            and _is_active(reviewer)
+            and _is_active(reviewee)
+        ):
+            toggled.append(row)
+            continue
         if row.include != pair_include:
             row.include = pair_include
+    if toggled:
+        on = sum(1 for row in toggled if row.include)
+        off = len(toggled) - on
+        state = (
+            on > off
+            if on != off
+            else bool(review_session.self_reviews_active)
+        )
+        for row in toggled:
+            if row.include != state:
+                row.include = state
     db.flush()
 
     # ``Assignment.is_self_review`` is derived from (reviewer / reviewee

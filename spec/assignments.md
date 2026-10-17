@@ -729,7 +729,10 @@ Steps:
      `session.self_reviews_active` for self pairs; and `False`
      whenever the reviewer or the reviewee is inactive. A status
      change reaches the row at the next Prepare, which recomputes
-     `include` on every kept row. Until then Validate reads `status`
+     `include` on every kept row but a self-review row with both
+     sides active: that row takes its instrument's Self review toggle
+     state, the value most such rows hold, so one reset while someone
+     was inactive rejoins the rest (findings E3). Until then Validate reads `status`
      directly, so it already reports what that Prepare will leave;
      invitations and the reviewer's surface read `include` (and the
      reviewer's own status). A roster status change returns the
@@ -1196,7 +1199,8 @@ instrument `_materialise_one_instrument`
    - **To-keep.** Pairs surviving both passes. Their responses
      are untouched, except on a group-scoped instrument whose group
      the run redraws (§ *Group-scoped fan-out*), and so is the row,
-     except that `include` is **recomputed, not preserved** (below).
+     except that `include` is **recomputed, not preserved**, bar a
+     self-review row with both sides active (below).
 3. Runs `recompute_self_review_classification` over the session
    (§ *Self-review policy*), which keeps `is_self_review` current.
 4. Emits `assignments.generated` (§ *Audit* below).
@@ -1240,7 +1244,12 @@ stored one — a single-column update that never touches responses. So
 an operator's manual Inactivate on a non-self pair between two active
 people is reset to `True` on the next Generate. The reset is
 deliberate: assignment-row status carries through no export and no
-clone (`spec/roundtrip_coverage.md` records the gap).
+clone (`spec/roundtrip_coverage.md` records the gap). A self-review
+row with both sides active is the exception: it takes the
+per-instrument Self review toggle's state, which is the `include` most
+of the instrument's such rows hold (a tie leaves
+`self_reviews_active`), so `self_reviews_active` otherwise seeds it on
+first generation only.
 
 `created_by_mode` is the run's `mode` on to-insert rows and the
 original value on to-keep rows. The engine is the only writer and

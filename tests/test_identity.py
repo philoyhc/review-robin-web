@@ -124,6 +124,32 @@ def test_simple_id_overrides_rich_when_both_present() -> None:
     assert user.name == "Carol Example"
 
 
+def test_rich_claims_follow_the_stated_priority_not_token_order() -> None:
+    """Findings P5: ``_claim`` returns the first listed type present,
+    whatever order the token carries its claims in."""
+    rich = _encode_principal(
+        {
+            "auth_typ": "aad",
+            "claims": [
+                {"typ": "preferred_username", "val": "upn@example.edu"},
+                {"typ": "sub", "val": "sub-1"},
+                {
+                    "typ": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                    "val": "mail@example.edu",
+                },
+                {"typ": "oid", "val": "oid-1"},
+            ],
+        }
+    )
+
+    user = resolve_current_user(
+        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
+    )
+
+    assert user.email == "mail@example.edu"
+    assert user.principal_id == "oid-1"
+
+
 def test_malformed_rich_header_falls_back_gracefully() -> None:
     request = _request(
         {

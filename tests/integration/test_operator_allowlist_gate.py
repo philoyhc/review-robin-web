@@ -594,3 +594,26 @@ def test_get_or_create_user_matches_existing_row_reverse_casing(
         request=Request({"type": "http"}), current_user=auth, db=db
     )
     assert returned.id == existing.id
+
+
+def test_get_or_create_user_stores_a_padded_claim_trimmed(
+    db: Session,
+) -> None:
+    """Findings P3: ``find_user`` compares the claim stripped
+    (``normalize_email``), so the row must be stored stripped too.
+    Stored padded, the second request missed its own row and the
+    second insert collided with the first."""
+    auth = AuthenticatedUser(
+        principal_id="pad-oid",
+        email="  Pad@example.edu ",
+        name="Pad",
+        provider="aad",
+    )
+    first = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert first.email == "Pad@example.edu"
+    second = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+    assert second.id == first.id

@@ -175,8 +175,11 @@ def get_or_create_user(
         is_operator = True
         is_sys_admin = True
 
+    # Stored stripped, as ``find_user`` compares it (findings P3): a
+    # padded row would miss its own lookup on the next request, and the
+    # second insert would collide with it.
     user = User(
-        email=current_user.email,
+        email=current_user.email.strip(),
         display_name=current_user.name,
         external_principal_id=current_user.principal_id,
         is_operator=is_operator,

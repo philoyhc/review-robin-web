@@ -43,16 +43,20 @@ def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
 
 
 def _claim(payload: dict[str, Any], *types: str) -> str | None:
+    """The value of the first of ``types``, in the order given, that the
+    token carries with a non-empty string value. The argument order is
+    the priority; the token's own claim order is not (findings P5)."""
     claims = payload.get("claims")
     if not isinstance(claims, list):
         return None
-    for claim in claims:
-        if not isinstance(claim, dict):
-            continue
-        if claim.get("typ") in types:
-            value = claim.get("val")
-            if isinstance(value, str) and value:
-                return value
+    for typ in types:
+        for claim in claims:
+            if not isinstance(claim, dict):
+                continue
+            if claim.get("typ") == typ:
+                value = claim.get("val")
+                if isinstance(value, str) and value:
+                    return value
     return None
 
 
