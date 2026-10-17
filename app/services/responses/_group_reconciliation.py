@@ -541,6 +541,86 @@ def reconcile_moved_pair_context_groups(
     return defuncted or 0
 
 
+def _instrument_groups(
+    db: Session, *, session_id: int, instrument_id: int
+) -> list[frozenset[int]]:
+    """The instrument's groups as sets of assignment ids; on an
+    Individual instrument each row is a group of its own."""
+    members = list(
+        db.execute(
+            select(Assignment).where(Assignment.instrument_id == instrument_id)
+        ).scalars()
+    )
+    keys = group_keys(db, assignments=members, session_id=session_id)
+    if not keys:
+        return [frozenset({member.id}) for member in members]
+    groups: dict[tuple[int, tuple[str, ...]], set[int]] = {}
+    for member in members:
+        groups.setdefault((member.reviewer_id, keys[member.id]), set()).add(
+            member.id
+        )
+    return [frozenset(ids) for ids in groups.values()]
+
+
+def snapshot_instrument_groups(
+    db: Session, *, session_id: int, instrument_id: int
+) -> set[frozenset[int]]:
+    """The instrument's groups **before** its boundary tags or unit of
+    review change, for :func:`reconcile_regrouped_instrument`. Empty
+    when nothing on the instrument is answered, since a regroup then
+    has nothing to clear."""
+    answered = db.execute(
+        select(Response.id)
+        .join(Assignment, Assignment.id == Response.assignment_id)
+        .where(Assignment.instrument_id == instrument_id)
+        .limit(1)
+    ).first()
+    if answered is None:
+        return set()
+    return set(
+        _instrument_groups(db, session_id=session_id, instrument_id=instrument_id)
+    )
+
+
+def reconcile_regrouped_instrument(
+    db: Session,
+    *,
+    session_id: int,
+    instrument_id: int,
+    before: set[frozenset[int]],
+) -> int:
+    """Clear the answers of every group an instrument regroup changed
+    (findings E2, 2026-10-16).
+
+    A group instrument's subject is the group, so a group whose members
+    changed is a different subject and its reviewer answers it afresh
+    (author's ruling 2026-10-17). After the boundary tags or the unit
+    of review change, every group whose set of rows is not exactly one
+    of the groups in ``before`` has all its rows' answers deleted: a
+    split, a merge, Individual to Grouped and Grouped to Individual
+    alike. A group that came through with the same rows keeps its
+    answer, so a change that redraws no group deletes nothing. The
+    caller flushes the change first. Returns the number of
+    ``Response`` rows deleted."""
+    if not before:
+        return 0
+    changed = {
+        assignment_id
+        for group in _instrument_groups(
+            db, session_id=session_id, instrument_id=instrument_id
+        )
+        if group not in before
+        for assignment_id in group
+    }
+    if not changed:
+        return 0
+    # Deleted by assignment, not by response id: one bound parameter per
+    # row rather than one per row and field.
+    return db.execute(
+        delete(Response).where(Response.assignment_id.in_(changed))
+    ).rowcount or 0
+
+
 def _expand_group_upserts(
     upserts: list[ResponseUpsert],
     *,

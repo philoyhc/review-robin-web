@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 39 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1, S1
-and R2 done).
+**Open:** 38 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1, S1,
+R2 and E2 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -69,7 +69,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   Prepare fails (`app/schemas/rules.py:183`). `spec/assignments.md:174-179`
   says the operand is a reviewer-side namespace. *Reproduced.* Code: validate
   on save, filter the operand list.
-- **E2** — **Changing an instrument's group boundary or unit of review leaves
+- ~~**E2**~~ — **Done in #3098**: a regroup clears every group whose rows changed, and a group with the same rows keeps its answer (author's ruling 2026-10-17: the group is the subject; `spec/assignments.md`; `tests/integration/test_regroup_clears_changed_groups.py`). **Changing an instrument's group boundary or unit of review leaves
   one group holding different answers** (`_instrument_crud.py:990`
   `set_group_boundary`, `:1069` `set_unit_of_review`): both rewrite
   `group_kind` but never reconcile the copies, and the next Save overwrites one

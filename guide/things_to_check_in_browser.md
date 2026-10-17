@@ -336,3 +336,13 @@ delete them once no remaining section points to them.
   `Café-日本`, then on Extract data download its Reviewers CSV and the
   setup card's Zip all: both download (no error page), and the saved
   files are named `Café-日本_reviewers.csv` and `Café-日本_setup.zip`.
+
+## Redrawing an instrument's groups clears the groups it changed (E2)
+
+- [ ] **A split clears.** On a session back in draft with answers saved
+  on a group instrument, add a Group-by tag on the Instrument card that
+  splits a group, and Save: that group's members show no answer on the
+  reviewer's page, and the audit log's `instrument.group_boundary_updated`
+  row counts `defuncted_group_responses`.
+- [ ] **An unchanged group keeps its answer.** A group the change left
+  with the same members still shows its answer.
