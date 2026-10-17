@@ -1827,8 +1827,13 @@ every page. On click:
 After submission, the reviewer **may continue to edit** — the
 session is not locked. Re-editing a previously-submitted
 required field back to empty deletes the row and flips the
-operator's monitoring view back to "in progress". Submission
-in RRW is a status marker, not an enforcement gate.
+operator's monitoring view back to "in progress". Changing a
+submitted value clears that answer's submitted-at timestamp, as a
+new answer has none, and blanking any submitted answer clears the
+timestamps on that assignment's remaining answers, so each reads "in progress" on the monitoring
+view, and is no longer "submitted" on the reviewer's own pills, until
+the reviewer submits again (`spec/reviewer-surface.md` "Persistence semantics").
+Submission in RRW is a status marker, not an enforcement gate.
 
 ### 10.7 Clear all
 

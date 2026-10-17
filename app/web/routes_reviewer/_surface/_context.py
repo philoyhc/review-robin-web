@@ -431,6 +431,10 @@ def _surface_context(
                 "missing_count": missing_count,
                 "required_count": completion.required_count,
                 "submitted_at": latest_submitted,
+                # Saved answers, and those not yet submitted: the pills'
+                # answers-based rule (findings R7, ``_status.py``).
+                "answer_count": completion.answer_count,
+                "unsubmitted_count": completion.unsubmitted_count,
                 "display_cells": display_cells,
                 "sort_values": sort_values,
                 "accepting": accepting,
@@ -703,7 +707,7 @@ def _surface_context(
         "instrument_label_by_position": {
             ps.position: ps.label for ps in page_statuses
         },
-        "session_status": _session_status(page_statuses),
+        "session_status": _session_status(page_statuses, flat_rows),
         "current_page_n": safe_page_n,
         "page_count": page_count,
         "prev_page_url": prev_page_url,

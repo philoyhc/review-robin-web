@@ -318,15 +318,46 @@ def _instrument_fields_by_id(
     return by_instrument
 
 
+@dataclass(frozen=True)
+class _UpsertOutcome:
+    """What :func:`_apply_upserts` wrote: ``written`` rows upserted, and
+    ``stamps_cleared`` submitted rows whose value changed (findings R1)."""
+
+    written: int
+    stamps_cleared: int
+
+
 def _apply_upserts(
     db: Session,
     *,
     upserts: list[ResponseUpsert],
     assignment_index: dict[int, Assignment],
     field_index: dict[tuple[int, str], InstrumentResponseField],
-) -> int:
-    """Upsert / delete Response rows. Returns number of upserts that wrote a row."""
+    group_key_by_assignment: dict[int, tuple[str, ...]] | None = None,
+) -> _UpsertOutcome:
+    """Upsert / delete Response rows.
+
+    A changed value clears its row's ``submitted_at`` (findings R1,
+    author's ruling 2026-10-17), as a new answer after Submit is
+    unstamped already, so the edit is not released as submitted until
+    the reviewer submits again. An unchanged value keeps its stamp. On a
+    group-scoped instrument a change to any member's copy of a field
+    clears the stamp on every copy of it in that group, so the copies
+    never disagree about whether the group's answer is submitted.
+
+    Blanking a submitted answer is a change too, but deletes the row
+    that held its stamp, so it clears the stamps on the assignment's
+    remaining rows instead — and on a group-scoped instrument on every
+    member's copy in the group — so the rest is not still released as
+    submitted without the answer (Codex on the R1 ruling)."""
+    group_key_by_assignment = group_key_by_assignment or {}
     written = 0
+    cleared = 0
+    changed_group_cells: set[tuple[int, tuple[str, ...], int]] = set()
+    unchanged_group_rows: list[tuple[tuple[int, tuple[str, ...], int], Response]] = []
+    blanked_assignment_ids: set[int] = set()
+    blanked_groups: set[tuple[int, tuple[str, ...]]] = set()
+    group_by_assignment: dict[int, tuple[int, tuple[str, ...]]] = {}
     for u in upserts:
         assignment = assignment_index.get(u.assignment_id)
         if assignment is None:
@@ -334,6 +365,12 @@ def _apply_upserts(
         field = field_index.get((assignment.instrument_id, u.field_key))
         if field is None:
             continue
+        group_key = group_key_by_assignment.get(assignment.id)
+        if group_key is not None:
+            group_by_assignment[assignment.id] = (
+                assignment.instrument_id,
+                group_key,
+            )
         existing = db.execute(
             select(Response).where(
                 Response.assignment_id == assignment.id,
@@ -342,8 +379,17 @@ def _apply_upserts(
         ).scalar_one_or_none()
         if u.value == "":
             if existing is not None:
+                if existing.submitted_at is not None:
+                    blanked_assignment_ids.add(assignment.id)
+                    if group_key is not None:
+                        blanked_groups.add((assignment.instrument_id, group_key))
                 db.delete(existing)
             continue
+        cell = (
+            (assignment.instrument_id, group_key, field.id)
+            if group_key is not None
+            else None
+        )
         if existing is None:
             db.add(
                 Response(
@@ -352,11 +398,37 @@ def _apply_upserts(
                     value=u.value,
                 )
             )
-        else:
+        elif existing.value != u.value:
             existing.value = u.value
+            if existing.submitted_at is not None:
+                existing.submitted_at = None
+                cleared += 1
+            if cell is not None:
+                changed_group_cells.add(cell)
+        elif cell is not None:
+            unchanged_group_rows.append((cell, existing))
         written += 1
+    for cell, row in unchanged_group_rows:
+        if cell in changed_group_cells and row.submitted_at is not None:
+            row.submitted_at = None
+            cleared += 1
     db.flush()
-    return written
+    unstamp_ids = blanked_assignment_ids | {
+        assignment_id
+        for assignment_id, group in group_by_assignment.items()
+        if group in blanked_groups
+    }
+    if unstamp_ids:
+        for row in db.execute(
+            select(Response).where(
+                Response.assignment_id.in_(unstamp_ids),
+                Response.submitted_at.is_not(None),
+            )
+        ).scalars():
+            row.submitted_at = None
+            cleared += 1
+        db.flush()
+    return _UpsertOutcome(written=written, stamps_cleared=cleared)
 
 
 def _compute_missing_required(
@@ -436,12 +508,19 @@ class RowCompletion:
 
     ``required_count`` is the fields this row must answer, which varies
     per row once a required field can sit behind a branch; the reviewer
-    page's "*Required items completed" total sums it."""
+    page's "*Required items completed" total sums it.
+
+    ``answer_count`` and ``unsubmitted_count`` are the row's saved
+    Response rows, and those of them without a ``submitted_at`` — the
+    two facts the reviewer-surface pills share with the dashboard's
+    rollup (findings R7), which reads the same rows."""
 
     is_complete: bool
     missing_count: int
     required_count: int
     latest_submitted_at: datetime | None
+    answer_count: int = 0
+    unsubmitted_count: int = 0
 
 
 def row_completion(db: Session, assignment: Assignment) -> RowCompletion:
@@ -474,6 +553,8 @@ def row_completion(db: Session, assignment: Assignment) -> RowCompletion:
         missing_count=missing,
         required_count=len(required_ids),
         latest_submitted_at=max(submitted_ats) if submitted_ats else None,
+        answer_count=len(rows),
+        unsubmitted_count=sum(1 for r in rows if r.submitted_at is None),
     )
 
 
@@ -629,7 +710,9 @@ def save_draft(
     upserts: list[ResponseUpsert],
     correlation_id: str,
 ) -> SaveResult:
-    """Upsert response rows; empty values delete. Never touches submitted_at.
+    """Upsert response rows; empty values delete. A changed value clears
+    its row's ``submitted_at`` and an unchanged one keeps it
+    (``_apply_upserts``, findings R1).
 
     Values that fail the field's own validation (Integer / Decimal
     range and step) are skipped — only valid upserts are persisted. The caller
@@ -689,7 +772,7 @@ def save_draft(
         group_key_by_assignment=group_key_by_assignment,
     )
 
-    written = _apply_upserts(
+    outcome = _apply_upserts(
         db,
         upserts=valid_upserts,
         assignment_index={
@@ -697,7 +780,9 @@ def save_draft(
             **{a.id: a for a in excluded},
         },
         field_index=field_index,
+        group_key_by_assignment=group_key_by_assignment,
     )
+    written = outcome.written
     # 19T Item 10 — a closed branch holds no value, judged on the answers
     # as this save leaves them.
     removed = drop_closed_branch_answers(
@@ -710,6 +795,8 @@ def save_draft(
     }
     if removed:
         counts["branch_answers_removed"] = removed
+    if outcome.stamps_cleared:
+        counts["submissions_cleared"] = outcome.stamps_cleared
     audit.write_event(
         db,
         event_type="responses.saved",
@@ -810,7 +897,7 @@ def submit(
         group_key_by_assignment=group_key_by_assignment,
     )
 
-    written = _apply_upserts(
+    outcome = _apply_upserts(
         db,
         upserts=valid_upserts,
         assignment_index={
@@ -818,7 +905,9 @@ def submit(
             **{a.id: a for a in excluded},
         },
         field_index=field_index,
+        group_key_by_assignment=group_key_by_assignment,
     )
+    written = outcome.written
     # 19T Item 10 — a closed branch holds no value, judged on the answers
     # as this submit leaves them, before anything is stamped submitted.
     removed = drop_closed_branch_answers(
@@ -828,9 +917,19 @@ def submit(
     def _audit_blocked_drafts() -> None:
         """A blocked submit still commits its draft writes. When they
         deleted a closed branch's answer, record it as the draft save it
-        amounts to, so the deletion is never unaudited (Codex on #2640)."""
-        if not removed:
+        amounts to, so the deletion is never unaudited (Codex on #2640).
+        A changed value that cleared a submission stamp (findings R1) is
+        recorded the same way."""
+        if not removed and not outcome.stamps_cleared:
             return
+        counts: dict[str, int] = {
+            "assignments_touched": len({u.assignment_id for u in upserts}),
+            "responses_saved": written,
+        }
+        if removed:
+            counts["branch_answers_removed"] = removed
+        if outcome.stamps_cleared:
+            counts["submissions_cleared"] = outcome.stamps_cleared
         audit.write_event(
             db,
             event_type="responses.saved",
@@ -840,11 +939,7 @@ def submit(
             ),
             actor_user_id=user.id,
             session=review_session,
-            payload=audit.counts(
-                assignments_touched=len({u.assignment_id for u in upserts}),
-                responses_saved=written,
-                branch_answers_removed=removed,
-            ),
+            payload=audit.counts(**counts),
             refs={"reviewer_id": reviewer.id},
             correlation_id=correlation_id,
         )

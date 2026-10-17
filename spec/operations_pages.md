@@ -297,7 +297,7 @@ excluded nothing is worth saying.
 | 4 | Tag3 | ✓ | `tag_3` | `data-col-toggle="tag-3"` / `class="tag-col tag-col-3"` |
 | 5 | Email Status | — | `email_status` | Pill: the latest invitation outbox row's status, or the literal `not sent` when there is none or the invitation is back at `pending` (a regenerate rotated its token), the same gate as the Invitation card's delivery pill. **Rendered, not enumerated**, so the model's `EMAIL_OUTBOX_STATUSES` can widen without a template edit; `sent` takes `pill-count`, everything else `pill-empty` |
 | 6 | Sent | — | `email_sent_at` | Timestamp pill from `Invitation.sent_at`, or `—`; the *Invitations sent* counter counts these |
-| 7 | Progress | — | `review_progress` | Pill: `submitted (D/T)` or `<state> (D/T)` where state is a per-invitation lifecycle label |
+| 7 | Progress | — | `review_progress` | Pill: `<state> (D/T)`, where state is the reviewer's `not started` / `in progress` / `submitted`, the rule the reviewer's own pills follow (`spec/reviewer-surface.md` "Reviewer-status pill vocabulary"), so a new or changed answer after Submit reads `in progress` here too |
 | 8 | Required<br>Fields | — | `required_fields` | Pill: `(D/T)` |
 | 9 | Reminder | — | `last_reminder_at` | Timestamp pill, or `—` |
 | 10 | (actions) | — | — | Per-row buttons — see below |
