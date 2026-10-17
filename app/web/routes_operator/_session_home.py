@@ -339,26 +339,23 @@ def _apply_session_config_form(
     # parser below validates the instant that will be stored, then the
     # stored value itself is kept (seconds included).
     #
-    # A zone change keeps the stored instants (findings L8, author's
-    # ruling): a box is unedited when it holds the stored value rendered
-    # in the seeded zone (the page without script, which leaves the text
-    # alone) or in the submitted zone (the page's script, which re-renders
-    # every box as the zone changes). Any other text is an edit, read as
-    # wall-clock in the submitted zone. With the zone unchanged the two
-    # renderings are one, the check before the ruling. A box the script
-    # re-rendered (``tz_converted``, its names) no longer shows its
-    # seeded text, so that text typed back into it is an edit.
+    # A zone change keeps the stored instants, and a box the script
+    # re-rendered reads its old-zone text as an edit
+    # (``sessions.datetime_box_kept``, findings L8).
     seeded_zone = sessions.resolve_session_timezone(review_session)
-    converted = {name.strip() for name in tz_converted.split(",")}
+    converted = sessions.converted_box_names(tz_converted)
     unedited: set[str] = set()
 
     def _read_as(
         field: str, raw: str | None, stored: datetime | None
     ) -> tuple[str | None, str]:
-        if (
-            field not in converted
-            and sessions.datetime_box_unedited(stored, raw, seeded_zone)
-        ) or sessions.datetime_box_unedited(stored, raw, timezone_name):
+        if sessions.datetime_box_kept(
+            stored,
+            raw,
+            seeded_zone=seeded_zone,
+            submitted_zone=timezone_name,
+            converted=field in converted,
+        ):
             unedited.add(field)
             if stored is not None and not date_formatting.in_entry_range(stored):
                 # A stored instant nearer the calendar's edge than a box

@@ -372,7 +372,7 @@ plain `<label>` above its value:
   Create shares). On Save a box still holding its stored value, rendered
   in the seeded zone (a page without script leaves it so) or in the
   submitted zone (as the script re-renders it), keeps the stored instant,
-  seconds included (`sessions.datetime_box_unedited`); any other text is
+  seconds included (`sessions.datetime_box_kept`); any other text is
   an edit, read as wall-clock in the submitted zone. The script posts
   `tz_converted`, the boxes it re-rendered, and for those only the
   submitted-zone match counts: old-zone text typed back into one is an

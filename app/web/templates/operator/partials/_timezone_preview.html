@@ -88,9 +88,12 @@
     function instantOf(text, zone) {
       var want = parse(text);
       if (want === null) return null;
-      var HALF_DAY = 12 * 3600 * 1000;
-      var before = offsetAt(want - HALF_DAY, zone);
-      var after = offsetAt(want + HALF_DAY, zone);
+      // Probes a day and more either side: the largest IANA jump is a
+      // whole day (Pacific/Apia, 2011), and a nearer probe can land on
+      // the far side of it.
+      var REACH = 26 * 3600 * 1000;
+      var before = offsetAt(want - REACH, zone);
+      var after = offsetAt(want + REACH, zone);
       if (before === null || after === null) return null;
       if (wallMs(want - before, zone) === want) return want - before;
       if (wallMs(want - after, zone) === want) return want - after;

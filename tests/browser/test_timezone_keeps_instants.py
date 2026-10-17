@@ -117,3 +117,14 @@ def test_session_home_re_renders_from_the_stored_instant(
     page.wait_for_load_state("load")
     expect(end).to_have_attribute("data-tz-utc", in_utc)
     expect(end).to_have_value(tokyo)
+
+
+def test_create_reads_a_skipped_day_as_the_server_does(page: Page) -> None:
+    """Pacific/Apia skipped 2011-12-30 whole; a box naming a time on it
+    reads, as ``parse_local_datetime`` does, at the offset before the
+    jump (08:00 UTC on the 31st), not a day off (the read of #3113)."""
+    page.goto("/operator/sessions/new")
+    page.locator("#display_timezone").fill("Pacific/Apia")
+    page.locator("#responses_release_at").fill("2011-12-30T22:00")
+    page.locator("#display_timezone").fill("UTC")
+    expect(page.locator("#responses_release_at")).to_have_value("2011-12-31T08:00")
