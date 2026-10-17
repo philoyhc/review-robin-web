@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.services import date_formatting
 from app.services import operator_settings
 from app.services._secrets import MissingEncryptionKey
+from app.services.text import parse_id
 from app.web import breadcrumbs
 from app.web.deps import get_or_create_user, request_correlation_id
 from app.web.return_to import resolve_return_to
@@ -99,13 +100,14 @@ def operator_settings_save(
 ) -> RedirectResponse:
     parsed_port: int | None = None
     if smtp_port and smtp_port.strip():
-        try:
-            parsed_port = int(smtp_port)
-        except ValueError as exc:
+        parsed_port = parse_id(smtp_port)
+        # A TCP port, 1 to 65535: a value outside it was stored, or
+        # answered 500 past a 64-bit column (findings O4).
+        if parsed_port is None or not 1 <= parsed_port <= 65535:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="smtp_port must be an integer",
-            ) from exc
+                detail="smtp_port must be a whole number from 1 to 65535",
+            )
     if smtp_encryption and smtp_encryption not in operator_settings.SMTP_ENCRYPTION_MODES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

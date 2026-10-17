@@ -40,8 +40,10 @@ the count of in-scope responses matching that value.
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass, field as dc_field
+from decimal import Decimal
 from statistics import mean, median
 
 from sqlalchemy import select
@@ -62,7 +64,7 @@ from app.services import responses as responses_service
 from app.services.extracts.entity_metadata_extract import (
     self_review_handling_filename_suffix,
 )
-
+from app.services.text import decimal_text
 
 __all__ = [
     "DISCRETE_STEPS_THRESHOLD",
@@ -124,8 +126,14 @@ def _ingest(
     data_type = field._inline_data_type if field is not None else None
     if data_type in _NUMERIC:
         try:
-            acc.numeric_values.append(float(value))
+            number = float(value)
         except (TypeError, ValueError):
+            number = math.nan
+        # A non-finite value (one stored before findings R3) counts as
+        # other, so it can't reach ``_format_number``.
+        if math.isfinite(number):
+            acc.numeric_values.append(number)
+        else:
             acc.other_count += 1
     elif data_type == "String":
         acc.string_count += 1
@@ -247,13 +255,17 @@ def discrete_step_values(
     if count <= 0 or count > DISCRETE_STEPS_THRESHOLD:
         return []
     is_int = data_type == "Integer"
+    # Decimal arithmetic and the answers' own formatter, so a column is
+    # labelled exactly as an answer on that step is stored: ``0.00001``,
+    # not ``1e-05``, and ``0.3``, not ``0.30000000000000004`` (findings
+    # R4).
+    first, increment = Decimal(repr(mn)), Decimal(repr(step))
     values: list[str] = []
     for i in range(count):
-        v = mn + i * step
-        if is_int or v == int(v):
-            values.append(str(int(round(v))))
-        else:
-            values.append(f"{v:g}")
+        v = first + i * increment
+        values.append(
+            str(int(v.to_integral_value())) if is_int else decimal_text(v)
+        )
     return values
 
 

@@ -50,6 +50,7 @@ from app.services.instruments._state import (
     _instrument_label,
     _response_count_for_field,
 )
+from app.services.text import parse_id
 
 
 _BAND2_ALLOWED_DISPLAY_KEYS: frozenset[str] = frozenset(
@@ -208,10 +209,9 @@ def set_band2_state(
                     data_type = "string"
                 rf: dict[str, Any] = {"name": name, "data_type": data_type}
                 raw_id = raw.get("id")
-                if isinstance(raw_id, int) and raw_id > 0:
-                    rf["id"] = raw_id
-                elif isinstance(raw_id, str) and raw_id.strip().isdigit():
-                    rf["id"] = int(raw_id)
+                parsed_id = parse_id(raw_id)
+                if parsed_id:
+                    rf["id"] = parsed_id
                 for bound_key in _BAND2_RF_BOUND_KEYS:
                     value = raw.get(bound_key)
                     rf[bound_key] = str(value).strip()[:255] if value is not None else ""
@@ -513,12 +513,7 @@ def _is_whole_or_blank(value: float | None) -> bool:
 def _band2_rf_id(rf: dict[str, Any]) -> int | None:
     """The stored row id a band2_state entry names, or None for a new
     row. The id arrives as an int or a digit string."""
-    rf_id_raw = rf.get("id")
-    if isinstance(rf_id_raw, int):
-        return rf_id_raw
-    if isinstance(rf_id_raw, str) and rf_id_raw.strip().isdigit():
-        return int(rf_id_raw)
-    return None
+    return parse_id(rf.get("id"))
 
 
 def _integer_bounds_error(

@@ -50,6 +50,7 @@ differently:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field as dc_field
 from statistics import mean, median
 
@@ -300,8 +301,14 @@ def _ingest_value(
     data_type = field._inline_data_type if field is not None else None
     if data_type in _NUMERIC:
         try:
-            acc.numeric_values.append(float(value))
+            number = float(value)
         except (TypeError, ValueError):
+            number = math.nan
+        # A non-finite value (one stored before findings R3) counts as
+        # other, so it can't reach ``_format_number``.
+        if math.isfinite(number):
+            acc.numeric_values.append(number)
+        else:
             acc.other_count += 1
     elif data_type == "String":
         acc.string_count += 1

@@ -42,6 +42,7 @@ from app.services import csv_imports, participant_info
 from app.services import observers as observers_service
 from app.services import session_lifecycle as lifecycle
 from app.services.observers import ObserverOperationError
+from app.services.text import parse_id
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -717,9 +718,9 @@ async def observers_cohort_rule_save(
     _require_not_archived(review_session)
     form = await request.form()
     observer_ids = [
-        int(v)
-        for v in form.getlist("observer_ids")
-        if str(v).isdigit()
+        parsed
+        for parsed in (parse_id(v) for v in form.getlist("observer_ids"))
+        if parsed is not None
     ]
     # operator pages Item 4 rung 4 — the builder now opens from `Edit` on
     # several rows (the selection expander lost it), and reads as the row
