@@ -22,7 +22,7 @@ from app.db.models import (
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.text import pluralize
+from app.services.text import decimal_text, pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
 from app.services.responses._branching import (
     DECIMAL_PATTERN,
@@ -107,29 +107,26 @@ def canonical_number(data_type: str | None, value: str) -> str | None:
     ``inf``, ``1_000`` and full-width digits, which the builder's and the
     reviewer surface's scripts refuse (``DECIMAL_PATTERN``). A value past
     a float's range is refused too, since min, max and step compare as
-    floats. The stored form is canonical, so ``04`` and ``+4`` read as
-    ``4`` to the data-shape step columns and to branching: an Integer
-    as its ``int``, a Decimal as the shortest decimal that round-trips,
-    with no exponent and no trailing ``.0``.
+    floats, and so is an Integer longer than ``int`` will read. The
+    stored form is canonical, so ``04`` and ``+4`` read as ``4`` to the
+    data-shape step columns and to branching. It keeps the digits as
+    typed (``Decimal``, not ``float``, so ``1e23`` stays exact):
+    :func:`app.services.text.decimal_text`, with no exponent and no
+    trailing zeros.
     """
     text = value.strip()
     if data_type == "Integer":
         if not _INTEGER.fullmatch(text):
             return None
-        number = int(text)
         try:
+            number = int(text)
             float(number)
-        except OverflowError:
+        except (ValueError, OverflowError):
             return None
         return str(number)
-    if not _DECIMAL.fullmatch(text):
+    if not _DECIMAL.fullmatch(text) or not math.isfinite(float(text)):
         return None
-    number = float(text)
-    if not math.isfinite(number):
-        return None
-    if number == int(number):
-        return str(int(number))
-    return format(Decimal(repr(number)), "f")
+    return decimal_text(Decimal(text))
 
 
 def _format_number(v: float, *, integer: bool) -> str:
@@ -177,7 +174,11 @@ def validate_value(
         if step is not None and step > 0:
             anchor = min_ if min_ is not None else 0
             offset = (v - anchor) / step
-            if abs(offset - round(offset)) > _STEP_TOLERANCE:
+            # A value near a float's limit can overflow the division
+            # even though it is finite itself (findings R3).
+            if not math.isfinite(offset) or (
+                abs(offset - round(offset)) > _STEP_TOLERANCE
+            ):
                 return (
                     "Must be in increments of "
                     f"{_format_number(step, integer=integer)}."

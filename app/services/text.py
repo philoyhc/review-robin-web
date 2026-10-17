@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 
 def pluralize(count: int, singular: str, plural: str | None = None) -> str:
     """Return the count-agreed noun: ``singular`` when ``count == 1``,
@@ -39,3 +41,13 @@ def parse_id(raw: object) -> int | None:
         return None
     value = int(text)
     return value if value <= MAX_SQL_INT else None
+
+
+def decimal_text(number: Decimal) -> str:
+    """``number`` written plainly: no exponent, no trailing zeros, ``0``
+    for any zero. One formatter for a stored numeric answer and for the
+    data-shape step column it is counted under, so the two match
+    (findings R4)."""
+    if number.is_zero():
+        return "0"
+    return format(number.normalize(), "f")

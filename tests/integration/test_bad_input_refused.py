@@ -3,7 +3,6 @@ R3, R4, R8, O4, O6, P4; ``guide/findings_2026-10-16_bugs.md``)."""
 
 from __future__ import annotations
 
-import math
 
 import pytest
 from fastapi.testclient import TestClient
@@ -190,8 +189,80 @@ def test_an_out_of_range_smtp_port_is_refused(client: TestClient, port: str) -> 
     assert response.status_code == 422
 
 
-def test_math_isfinite_guard_is_what_refuses_nan() -> None:
-    # The pattern alone would refuse "nan"; ``1e400`` is what reaches the
-    # finiteness check, since it is a plain decimal that overflows.
-    assert math.isinf(float("1e400"))
+def test_a_plain_decimal_past_a_float_is_refused() -> None:
+    # The pattern takes ``1e400``; the finiteness check is what refuses it.
     assert canonical_number("Decimal", "1e400") is None
+
+
+@pytest.mark.parametrize(
+    ("data_type", "value", "step"),
+    [("Decimal", "1e308", 0.5), ("Decimal", "1.5e308", 0.25), ("Integer", "9" * 308, 0.5)],
+)
+def test_a_finite_number_whose_step_offset_overflows_is_refused(
+    db: Session, data_type: str, value: str, step: float
+) -> None:
+    _, _, _, assignment = _seed(db)
+    field = _field(db, assignment, data_type)
+    field._inline_min, field._inline_max, field._inline_step = None, None, step
+
+    assert responses_service.validate_value(field, value) is not None
+
+
+def test_an_integer_longer_than_int_reads_is_refused(db: Session) -> None:
+    _, _, _, assignment = _seed(db)
+    field = _field(db, assignment, "Integer")
+    field._inline_min, field._inline_max, field._inline_step = None, None, None
+
+    assert responses_service.validate_value(field, "9" * 5000) == "Must be a whole number."
+
+
+@pytest.mark.parametrize(
+    ("value", "stored"),
+    [("1e23", "100000000000000000000000"), ("12345678901234567890", "12345678901234567890"),
+     ("0.1000000000000000000001", "0.1000000000000000000001"), ("-0.0", "0"), ("100", "100")],
+)
+def test_a_decimal_keeps_its_typed_digits(value: str, stored: str) -> None:
+    assert canonical_number("Decimal", value) == stored
+
+
+@pytest.mark.parametrize(
+    ("mn", "mx", "step", "typed"),
+    [(0, 0.0001, 0.00001, "0.00002"), (1000000, 1000002, 0.5, "1000000.5"), (0, 1, 0.1, "0.3")],
+)
+def test_a_step_column_is_labelled_as_its_answers_are_stored(
+    mn: float, mx: float, step: float, typed: str
+) -> None:
+    field = InstrumentResponseField(
+        _inline_data_type="Decimal", _inline_min=mn, _inline_max=mx, _inline_step=step
+    )
+
+    assert canonical_number("Decimal", typed) in data_shape_extract.discrete_step_values(field)
+
+
+def test_a_band2_response_field_id_in_unicode_digits_is_a_new_field(db: Session) -> None:
+    """P4 at its call site: ``"²"`` once passed ``isdigit()`` and failed
+    ``int()``; it now reads as no id, which is a new field."""
+    from app.services import instruments as instruments_service
+
+    op, _, _, assignment = _seed(db)
+    instrument = assignment.instrument
+    instruments_service.set_band2_state(
+        db,
+        instrument=instrument,
+        state={
+            "response_fields": [
+                {"id": "²", "name": "Score", "data_type": "string"},
+            ]
+        },
+        actor=op,
+        acknowledged_drop=True,
+    )
+
+    names = set(
+        db.execute(
+            select(InstrumentResponseField.label).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    assert "Score" in names
