@@ -340,8 +340,8 @@ delete them once no remaining section points to them.
 ## Redrawing an instrument's groups clears the groups it changed (E2)
 
 - [ ] **A split clears.** On a session back in draft with answers saved
-  on a group instrument, add a Group-by tag on the Instrument card that
-  splits a group, and Save: that group's members show no answer on the
+  on a `Group using tags` instrument, add a boundary tag with its `+`
+  cell that splits a group, and Save: that group's members show no answer on the
   reviewer's page, and the audit log's `instrument.group_boundary_updated`
   row counts `defuncted_group_responses`.
 - [ ] **An unchanged group keeps its answer.** A group the change left

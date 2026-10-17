@@ -652,13 +652,15 @@ group instrument's subject is the group, so a group whose members
 changed is a different subject, and its reviewer answers it again
 (author's ruling 2026-10-17, findings E2). When the Instrument card
 changes the boundary tags or the unit of review
-(`set_group_boundary` / `set_unit_of_review`), every group whose rows
-are not exactly one group's rows before the change has all its answers
-deleted: a split, a merge, Individual to Grouped and Grouped to
-Individual alike. A group that comes through with the same rows keeps
-its answer, so a change that redraws no group deletes nothing.
+(`set_unit_of_review`; `set_group_boundary` does the same), every group
+whose rows are not exactly one group's rows before the change has all
+its answers deleted: a split, a merge, Individual to Grouped and
+Grouped to Individual, wherever a group's rows differ. A group that
+comes through with the same rows keeps its answer, so a change that
+redraws no group deletes nothing.
 `instrument.group_boundary_updated`'s `context` counts the deletions
-as `defuncted_group_responses`.
+as `defuncted_group_responses`. It asks for no response-loss
+acknowledgement.
 
 **A new member takes its group's answer.** Generate (and Prepare, which
 runs it) inserts a row for a member new to a group — a reviewee added

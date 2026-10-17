@@ -221,3 +221,62 @@ def test_an_unanswered_instrument_regroups_without_a_count(db: Session) -> None:
     )
     _boundary(db, world, [])
     assert _cleared(db, world) is None
+
+
+def test_an_excluded_member_is_cleared_with_its_group(db: Session) -> None:
+    world = _seed(
+        db,
+        group_kind=instruments_service.encode_group_kind([]),
+        tags=_TEAMS,
+        answers={"Ann": "4", "Bo": "4", "Cy": "4", "Di": "4"},
+    )
+    world.rows["Bo"].include = False
+    db.commit()
+    _boundary(db, world, [_TEAM])
+    assert _answers(db, world)["Bo"] is None
+    assert _cleared(db, world) == 4
+
+
+def test_another_reviewers_unchanged_group_keeps_its_answer(db: Session) -> None:
+    """Groups are per reviewer: a split in one reviewer's universe is
+    not a change to another's group that keeps its rows."""
+    world = _seed(
+        db,
+        group_kind=instruments_service.encode_group_kind([]),
+        tags={"Ann": ("red", "x"), "Bo": ("blue", "x")},
+        answers={"Ann": "4", "Bo": "4"},
+    )
+    review_session = world.instrument.session
+    other = Reviewer(session_id=review_session.id, name="Sam", email="sam@example.edu")
+    db.add(other)
+    db.flush()
+    ann = world.rows["Ann"]
+    sams = Assignment(
+        session_id=review_session.id,
+        reviewer_id=other.id,
+        reviewee_id=ann.reviewee_id,
+        instrument_id=world.instrument.id,
+    )
+    db.add(sams)
+    db.flush()
+    field_id = db.execute(
+        select(InstrumentResponseField.id).where(
+            InstrumentResponseField.instrument_id == world.instrument.id
+        )
+    ).scalar_one()
+    db.add(
+        Response(
+            assignment_id=sams.id,
+            response_field_id=field_id,
+            value="1",
+            saved_at=_SAVED,
+            version=1,
+        )
+    )
+    db.commit()
+    world.rows["Sam/Ann"] = sams
+
+    _boundary(db, world, [_TEAM])
+
+    assert _answers(db, world) == {"Ann": None, "Bo": None, "Sam/Ann": "1"}
+    assert _cleared(db, world) == 2

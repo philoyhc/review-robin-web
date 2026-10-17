@@ -336,7 +336,8 @@ answers its 400 in the upload card's banner rather than an error page
 **Relationship changes do not call it**, although moving a pair to
 another pair-context group deletes the group answer copy it carried
 (`spec/assignments.md` "Group-scoped fan-out"), as a reviewee tag edit
-does.
+does. Nor does an Instrument card Save that redraws the instrument's
+groups, though it deletes the answers of every group it changed.
 **Delete Data does not call it**: its own confirm tick names the loss
 ("Yes, delete every reviewer response on …") and is the
 acknowledgement. Delete session does not
