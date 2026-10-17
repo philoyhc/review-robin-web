@@ -29,6 +29,7 @@ from app.db.models import Relationship, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments
 from app.services import relationships as relationships_service
+from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services.relationships import RelationshipOperationError
 from app.web import breadcrumbs, views
@@ -39,6 +40,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _setup_row_window,
     _redirect_keeping_selection,
+    acknowledged_loss,
     _row_action_anchor,
     _require_delete_confirm,
     _require_editable,
@@ -103,6 +105,7 @@ async def relationships_import_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -155,16 +158,27 @@ async def relationships_import_submit(
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    await run_in_threadpool(
-        relationships_service.save_relationships,
-        db,
-        session=review_session,
-        user=user,
-        rows=result.rows,
-        filename=file.filename or "",
-        correlation_id=request_correlation_id(),
-        field_labels_captured=result.field_labels,
-    )
+    try:
+        await run_in_threadpool(
+            relationships_service.save_relationships,
+            db,
+            session=review_session,
+            user=user,
+            rows=result.rows,
+            filename=file.filename or "",
+            correlation_id=request_correlation_id(),
+            field_labels_captured=result.field_labels,
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
+        )
+    except responses_service.GroupAnswersWouldClear as exc:
+        # The replace rolled back in its own unit; the upload card offers
+        # the count and a tick beside ``confirm_replace``, and the file
+        # is chosen again, as on every refused upload.
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="import", panel_open=True,
+            issues=result.issues, filename=file.filename,
+        )
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
     # the Unlock panel now, and a bare redirect closes the panel the
     # operator was working in: a Save does not close the card, the Lock
@@ -179,25 +193,38 @@ async def relationships_import_submit(
     )
 
 
-@router.post("/sessions/{session_id}/relationships/delete-all")
+@router.post(
+    "/sessions/{session_id}/relationships/delete-all",
+    response_class=HTMLResponse,
+    response_model=None,
+)
 def relationships_delete_all(
+    request: Request,
     confirm: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     if confirm != "true":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="confirm checkbox required",
         )
-    relationships_service.delete_all_relationships(
-        db,
-        review_session=review_session,
-        user=user,
-        correlation_id=request_correlation_id(),
-    )
+    try:
+        relationships_service.delete_all_relationships(
+            db,
+            review_session=review_session,
+            user=user,
+            correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
+        )
+    except responses_service.GroupAnswersWouldClear as exc:
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="delete_all", panel_open=True,
+        )
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
     # the Unlock panel now, and a bare redirect closes the panel the
     # operator was working in: a Save does not close the card, the Lock
@@ -239,6 +266,7 @@ def relationships_create(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    acknowledge_response_loss: str | None = Form(default=None),
     # 19P.3 rung 1 — the filter round-trip the other four row
     # actions already had. Create never carried it, so a create
     # from a filtered view answered unfiltered.
@@ -297,6 +325,7 @@ def relationships_create(
             status=status_value,
             user=user,
             correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
         return _render_relationships_page(
@@ -310,6 +339,12 @@ def relationships_create(
             edit_values=edit_values,
             edit_error=exc.message,
             status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    except responses_service.GroupAnswersWouldClear as exc:
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="editor", add_mode=True, edit_values=edit_values,
+            status=filter_status, search=filter_q, offset=filter_offset,
         )
     # 19P.3 rung 1 — this route answered with a BARE redirect: no
     # selection, no filter, no offset, no fragment. So a create from a
@@ -348,6 +383,7 @@ def relationships_update(
     tag_2: str = Form(default=""),
     tag_3: str = Form(default=""),
     status_value: str = Form(default="active", alias="status"),
+    acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -409,6 +445,7 @@ def relationships_update(
             status=status_value,
             user=user,
             correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
         return _render_relationships_page(
@@ -423,6 +460,12 @@ def relationships_update(
             edit_error=exc.message,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+    except responses_service.GroupAnswersWouldClear as exc:
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="editor", edit_id=relationship_id, edit_values=edit_values,
+            status=filter_status, search=filter_q, offset=filter_offset,
+        )
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         [relationship_id],
@@ -432,16 +475,22 @@ def relationships_update(
     )
 
 
-@router.post("/sessions/{session_id}/relationships/bulk-inactivate")
+@router.post(
+    "/sessions/{session_id}/relationships/bulk-inactivate",
+    response_class=HTMLResponse,
+    response_model=None,
+)
 def relationships_bulk_inactivate(
+    request: Request,
     relationship_ids: list[int] = Form(default=[]),
+    acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     try:
         relationships_service.bulk_inactivate(
@@ -450,11 +499,18 @@ def relationships_bulk_inactivate(
             relationship_ids=relationship_ids,
             user=user,
             correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
+    except responses_service.GroupAnswersWouldClear as exc:
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="bulk", selected_ids=set(relationship_ids),
+            status=filter_status, search=filter_q, offset=filter_offset,
+        )
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         relationship_ids,
@@ -464,16 +520,22 @@ def relationships_bulk_inactivate(
     )
 
 
-@router.post("/sessions/{session_id}/relationships/bulk-reactivate")
+@router.post(
+    "/sessions/{session_id}/relationships/bulk-reactivate",
+    response_class=HTMLResponse,
+    response_model=None,
+)
 def relationships_bulk_reactivate(
+    request: Request,
     relationship_ids: list[int] = Form(default=[]),
+    acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
     try:
         relationships_service.bulk_reactivate(
@@ -482,11 +544,18 @@ def relationships_bulk_reactivate(
             relationship_ids=relationship_ids,
             user=user,
             correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
+    except responses_service.GroupAnswersWouldClear as exc:
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="bulk", selected_ids=set(relationship_ids),
+            status=filter_status, search=filter_q, offset=filter_offset,
+        )
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         relationship_ids,
@@ -535,6 +604,38 @@ def _resolve_picker_label(
     return None
 
 
+def _refuse_group_clear(
+    request: Request,
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    exc: responses_service.GroupAnswersWouldClear,
+    *,
+    surface: str,
+    **render: object,
+) -> HTMLResponse:
+    """Refuse, then re-offer (author's ruling 2026-10-17): roll back the
+    flushed change and re-render the page with the count and a
+    ``Yes, clear them`` tick on the control that was used (``surface``).
+    The tick carries the count, so it cannot approve a different clear."""
+    db.rollback()
+    render.setdefault("issues", [])
+    render.setdefault("filename", None)
+    return _render_relationships_page(
+        request=request,
+        review_session=review_session,
+        user=user,
+        db=db,
+        group_clear={
+            "count": exc.count,
+            "message": str(exc),
+            "surface": surface,
+        },
+        status_code=status.HTTP_400_BAD_REQUEST,
+        **render,
+    )
+
+
 def _render_relationships_page(
     *,
     request: Request,
@@ -554,6 +655,10 @@ def _render_relationships_page(
     add_mode: bool = False,
     edit_values: dict[str, object] | None = None,
     edit_error: str | None = None,
+    # A refused group clear (warnings_updates.md Item 1): its count and
+    # line, and ``surface`` — "editor", "import", "delete_all" or
+    # "bulk" — the control that offers it back with a tick.
+    group_clear: dict[str, object] | None = None,
     selected_ids: set[int] | None = None,
     # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
     # open. Server state, not a second source of truth for the JS
@@ -697,10 +802,10 @@ def _render_relationships_page(
             # relationship cascades to no response — nothing
             # references one, measured from the model graph at PR 2.
             # A pair it moves into another pair-context group clears
-            # the group it joins, and the author
-            # ruled 2026-10-03 that this asks for no acknowledgement,
-            # as a tag edit asks for none. The route's gate reaches
-            # the same answer on its own via ``cascade_counts``.
+            # the group it joins; that asks through the group-clear
+            # refusal and its own tick (``group_clear``), not this
+            # cascade gate, which reaches ``False`` on its own via
+            # ``cascade_counts``.
             "delete_discards_assignments": False,
             "roster_response_count": 0,
             "delete_discards_responses": False,
@@ -779,6 +884,7 @@ def _render_relationships_page(
             "relationship_prereqs": relationship_prereqs,
             "edit_values": edit_values,
             "edit_error": edit_error,
+            "group_clear": group_clear,
             "reviewer_picker_options": _relationship_picker_options(
                 reviewers, handle_attr="email"
             ),
@@ -878,8 +984,13 @@ async def relationships_save_field_labels(
     )
 
 
-@router.post("/sessions/{session_id}/relationships/bulk-delete")
+@router.post(
+    "/sessions/{session_id}/relationships/bulk-delete",
+    response_class=HTMLResponse,
+    response_model=None,
+)
 def relationships_bulk_delete(
+    request: Request,
     relationship_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
@@ -889,7 +1000,7 @@ def relationships_bulk_delete(
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
-) -> RedirectResponse:
+) -> HTMLResponse | RedirectResponse:
     """Delete the checkbox-selected rows (Segment 19I Item 2).
 
     Sibling of ``bulk-inactivate`` — same id list, same filter
@@ -913,11 +1024,18 @@ def relationships_bulk_delete(
             relationship_ids=relationship_ids,
             user=user,
             correlation_id=request_correlation_id(),
+            acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except RelationshipOperationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
+    except responses_service.GroupAnswersWouldClear as exc:
+        return _refuse_group_clear(
+            request, review_session, user, db, exc,
+            surface="bulk", selected_ids=set(relationship_ids),
+            status=filter_status, search=filter_q, offset=filter_offset,
+        )
     return _redirect_keeping_selection(
         f"/operator/sessions/{review_session.id}/relationships",
         [],

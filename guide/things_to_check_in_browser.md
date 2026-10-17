@@ -383,3 +383,24 @@ delete them once no remaining section points to them.
 - [ ] **Ticked, it goes through.** Tick `Yes, clear them` and Save: the
   team joined shows unanswered and the team left keeps its answer.
 - [ ] **A rename, or a move to a team of their own, never asks.**
+
+## Relationships changes ask before they clear group answers
+
+On a draft session with answers on a `Group using tags` instrument that
+groups by a pair tag:
+
+- [ ] **Edit and add.** Edit a relationship's tag into another answered
+  group, or add one into it, and Save: the row editor stays open with
+  what you typed, reads "This change clears N saved responses on groups
+  whose members it changes." and offers an unticked `Yes, clear them`.
+  Tick it and Save: it goes through.
+- [ ] **Inactivate, Activate and Delete.** Select a relationship whose
+  change moves its pair into an answered group, and click `Inactivate`
+  (or `Activate`, or tick and `Delete`): the page comes back with the
+  same rows selected, and the panel shows the line and the tick. Tick it
+  and click the same button again: it goes through.
+- [ ] **Delete all and Upload.** Delete all relationships, or upload a
+  replacement CSV that moves a pair: the Danger Zone (or the upload
+  card, with the file chosen again) shows the line and the tick; ticked,
+  it goes through.
+- [ ] **A change that clears nothing never asks.**

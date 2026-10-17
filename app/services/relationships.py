@@ -385,6 +385,7 @@ def save_relationships(
     filename: str,
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
+    acknowledged_loss: int | None = None,
 ) -> tuple[int, int]:
     """Wipe-and-replace the session's relationships table from the
     parsed rows. Returns ``(replaced, new)``.
@@ -425,7 +426,10 @@ def save_relationships(
         context = {"filename": filename} if filename else {}
         context.update(
             clear_redrawn_groups(
-                db, session_id=session.id, before=before
+                db,
+                session_id=session.id,
+                before=before,
+                acknowledged_loss=acknowledged_loss,
             )
             or {}
         )
@@ -497,6 +501,7 @@ def delete_all_relationships(
     review_session: ReviewSession,
     user: User,
     correlation_id: str,
+    acknowledged_loss: int | None = None,
 ) -> int:
     """Wipe every relationships row for the session. Returns the
     deleted row count. Mirrors ``csv_imports.delete_all_reviewers``
@@ -525,7 +530,10 @@ def delete_all_relationships(
         db.delete(row)
     db.flush()
     context = clear_redrawn_groups(
-        db, session_id=review_session.id, before=before
+        db,
+        session_id=review_session.id,
+        before=before,
+        acknowledged_loss=acknowledged_loss,
     )
     _recompute_self_review(db, session_id=review_session.id)
 
@@ -653,6 +661,7 @@ def create_relationship(
     status: str = "active",
     user: User,
     correlation_id: str | None = None,
+    acknowledged_loss: int | None = None,
 ) -> Relationship:
     """Insert a new Relationship row (Segment 15F PR 5 stage 3 — Add
     a new row). Validates that the reviewer and reviewee belong to
@@ -715,7 +724,10 @@ def create_relationship(
     db.add(relationship)
     db.flush()
     context = clear_redrawn_groups(
-        db, session_id=review_session.id, before=before
+        db,
+        session_id=review_session.id,
+        before=before,
+        acknowledged_loss=acknowledged_loss,
     )
     _recompute_self_review(db, session_id=review_session.id)
 
@@ -755,6 +767,7 @@ def update_relationship(
     status: str | object = _UNSET,
     user: User,
     correlation_id: str | None = None,
+    acknowledged_loss: int | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update — reviewer / reviewee included (full-row
     edit). Re-points are validated against the session roster and
@@ -841,7 +854,10 @@ def update_relationship(
     db.flush()
 
     context = clear_redrawn_groups(
-        db, session_id=session_id, before=before
+        db,
+        session_id=session_id,
+        before=before,
+        acknowledged_loss=acknowledged_loss,
     )
     _recompute_self_review(db, session_id=session_id)
 
@@ -867,6 +883,7 @@ def bulk_inactivate(
     relationship_ids: list[int],
     user: User,
     correlation_id: str | None = None,
+    acknowledged_loss: int | None = None,
 ) -> list[int]:
     """Flip ``status="inactive"`` on every relationship in
     ``relationship_ids`` not already inactive. Returns the flipped
@@ -884,6 +901,7 @@ def bulk_inactivate(
         entity_noun="relationship",
         user=user,
         correlation_id=correlation_id,
+        acknowledged_loss=acknowledged_loss,
     )
 
 
@@ -894,6 +912,7 @@ def bulk_reactivate(
     relationship_ids: list[int],
     user: User,
     correlation_id: str | None = None,
+    acknowledged_loss: int | None = None,
 ) -> list[int]:
     """Flip ``status="active"`` on every relationship in
     ``relationship_ids`` not already active. Returns the flipped
@@ -911,6 +930,7 @@ def bulk_reactivate(
         entity_noun="relationship",
         user=user,
         correlation_id=correlation_id,
+        acknowledged_loss=acknowledged_loss,
     )
 
 
@@ -936,6 +956,7 @@ def delete_selected(
     relationship_ids: list[int],
     user: User,
     correlation_id: str | None = None,
+    acknowledged_loss: int | None = None,
 ) -> tuple[int, int, int]:
     """Delete the selected relationships. Returns
     ``(deleted, cascaded_assignments, cascaded_responses)``.
@@ -956,4 +977,5 @@ def delete_selected(
         entity_noun="relationship",
         user=user,
         correlation_id=correlation_id,
+        acknowledged_loss=acknowledged_loss,
     )

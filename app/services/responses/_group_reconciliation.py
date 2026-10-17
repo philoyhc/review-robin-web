@@ -299,8 +299,9 @@ class GroupAnswersWouldClear(Exception):
 
     def __init__(self, count: int) -> None:
         super().__init__(
-            f"This change clears {count} saved responses on groups whose "
-            "members it changes."
+            f"This change clears {count} saved "
+            f"response{'' if count == 1 else 's'} on groups whose members "
+            "it changes."
         )
         self.count = count
 
