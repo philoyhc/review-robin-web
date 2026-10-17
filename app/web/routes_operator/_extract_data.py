@@ -34,6 +34,7 @@ from app.services.extracts.data_shape_extract import (
 from app.web import breadcrumbs, views
 from app.web.deps import get_or_create_user, require_session_operator
 from app.web.routes_operator._shared import _templates
+from app.web.downloads import content_disposition
 
 router = APIRouter()
 
@@ -387,8 +388,6 @@ def download_data_shape(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": (
-                f'attachment; filename="{download_name}"'
-            ),
+            "Content-Disposition": content_disposition(download_name),
         },
     )

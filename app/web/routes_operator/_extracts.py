@@ -77,6 +77,7 @@ from app.web.deps import (
     require_session_operator,
     require_sys_admin,
 )
+from app.web.downloads import content_disposition
 
 router = APIRouter()
 
@@ -109,7 +110,7 @@ def export_settings_csv(
         stream_csv(payload_rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -142,7 +143,7 @@ def export_reviewers_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -174,7 +175,7 @@ def export_reviewees_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -206,7 +207,7 @@ def export_relationships_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -238,7 +239,7 @@ def export_observers_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -281,7 +282,7 @@ def export_participant_tokens_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -321,7 +322,7 @@ def export_responses_csv(
         stream_csv(serialize_responses(db, review_session)),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -359,7 +360,7 @@ def export_bundle_zip(
         content=zip_bytes,
         media_type="application/zip",
         headers={
-            "Content-Disposition": f'attachment; filename="{code}_setup.zip"',
+            "Content-Disposition": content_disposition(f"{code}_setup.zip"),
         },
     )
 
@@ -499,9 +500,7 @@ def export_responses_bundle_zip(
         content=zip_bytes,
         media_type="application/zip",
         headers={
-            "Content-Disposition": (
-                f'attachment; filename="{code}_responses.zip"'
-            ),
+            "Content-Disposition": content_disposition(f"{code}_responses.zip"),
         },
     )
 
@@ -560,9 +559,7 @@ def export_by_instrument_bundle_zip(
         content=zip_bytes,
         media_type="application/zip",
         headers={
-            "Content-Disposition": (
-                f'attachment; filename="{code}_by_instrument.zip"'
-            ),
+            "Content-Disposition": content_disposition(f"{code}_by_instrument.zip"),
         },
     )
 
@@ -602,9 +599,7 @@ def export_data_shapes_bundle_zip(
         content=zip_bytes,
         media_type="application/zip",
         headers={
-            "Content-Disposition": (
-                f'attachment; filename="{code}_data_shapes.zip"'
-            ),
+            "Content-Disposition": content_disposition(f"{code}_data_shapes.zip"),
         },
     )
 
@@ -682,7 +677,7 @@ def export_reviewer_metadata_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -738,7 +733,7 @@ def export_reviewee_metadata_csv(
         stream_csv(rows),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )
 
@@ -825,6 +820,6 @@ def export_audit_log_csv(
         stream_csv(serialize_audit_events(db, review_session, filters=filters)),
         media_type="text/csv",
         headers={
-            "Content-Disposition": f'attachment; filename="{download_name}"',
+            "Content-Disposition": content_disposition(download_name),
         },
     )

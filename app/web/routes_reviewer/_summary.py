@@ -35,6 +35,7 @@ from app.web.routes_reviewer._shared import (
     build_role_chips,
 )
 from app.web.views._reviewer_summary import build_reviewer_summary_context
+from app.web.downloads import content_disposition
 
 router = APIRouter(prefix="/me")
 
@@ -150,8 +151,6 @@ def reviewer_session_summary_csv(
         ),
         media_type="text/csv",
         headers={
-            "Content-Disposition": (
-                f'attachment; filename="{download_name}"'
-            )
+            "Content-Disposition": content_disposition(download_name)
         },
     )

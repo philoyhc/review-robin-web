@@ -53,6 +53,7 @@ from app.web.routes_reviewer._shared import (
     _templates,
     build_role_chips,
 )
+from app.web.downloads import content_disposition
 
 router = APIRouter(prefix="/me")
 
@@ -206,6 +207,6 @@ def observer_collation_instrument_csv(
         _stream(),
         media_type="text/csv; charset=utf-8",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": content_disposition(filename),
         },
     )
