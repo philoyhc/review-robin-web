@@ -1,110 +1,145 @@
-{# Live timezone preview + deadline re-render — progressive
-   enhancement, shared by the Create Session / Edit Session
-   Details forms (Segment 18B PR 5) and the Operator Settings
-   page. Requires a `display_timezone` input; the `tz-sample`
-   / `tz-sample-zone` spans (still rendered on Operator
-   Settings; dropped from the session forms when the timezone
-   picker grew the GMT-prefixed datalist) and the `deadline`
-   input / `deadline-zone` span are optional. As the operator
-   picks a zone it updates the worked sample + zone label
-   where present, and re-renders the deadline input so its
-   wall-clock tracks the picked zone — the instant stays
-   fixed, only the display moves. The no-JS fallback is the
-   server-rendered sample + zone label. #}
+{# A timezone change keeps the instants — progressive enhancement,
+   shared by the Create Session form and Session Home's details card
+   (findings L8, author's ruling). As the operator picks a zone, every
+   `datetime-local` box that holds a value is re-rendered as the same
+   instant's wall-clock in the new zone, so a Save stores the instants
+   the boxes showed before the change.
+
+   Context (all optional, Create's ids by default):
+   - `tz_input_id` — the Timezone field (a GMT-prefixed label, e.g.
+     "GMT+8 Asia/Singapore", or a bare IANA name).
+   - `tz_box_ids` — the date boxes it governs. A box may carry
+     `data-tz-utc`, its stored instant as UTC wall-clock, so a seeded
+     value in the repeated hour after a DST fall-back converts as the
+     instant it is rather than the first reading of its text.
+
+   Without script the boxes keep their text and the server keeps each
+   box still holding its seeded text (`_apply_session_config_form`). #}
 <script>
   (function () {
-    var input = document.getElementById("display_timezone");
-    var sample = document.getElementById("tz-sample");
-    var zoneLabel = document.getElementById("tz-sample-zone");
-    var deadline = document.getElementById("deadline");
-    var deadlineZone = document.getElementById("deadline-zone");
+    var input = document.getElementById({{ tz_input_id | default("display_timezone") | tojson }});
     if (!input) return;
-    var showToken = {{ show_zone_token | tojson }};
-    // The session-form timezone picker shows the GMT-prefixed
-    // form (e.g. "GMT+8 Asia/Singapore"); the Operator Settings
-    // picker still uses the raw IANA name. Both round-trip
-    // through the same script — extract the IANA portion as the
-    // last whitespace-separated token.
-    function ianaFromValue(value) {
-      var trimmed = (value || "").trim();
-      if (!trimmed) return "UTC";
-      var parts = trimmed.split(/\s+/);
-      return parts[parts.length - 1];
-    }
-    var prevZone = ianaFromValue(input.value);
+    var boxes = {{ tz_box_ids | default(["scheduled_activate_at", "deadline", "responses_release_at", "responses_release_until"]) | tojson }}
+      .map(function (id) { return document.getElementById(id); })
+      .filter(function (box) { return box; });
+    var WALL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 
-    function partsInZone(instant, zone) {
+    // The IANA id is the label's last whitespace-separated token.
+    function ianaFromValue(value) {
+      var parts = (value || "").trim().split(/\s+/);
+      return parts[parts.length - 1] || "UTC";
+    }
+    function validZone(zone) {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: zone });
+        return true;
+      } catch (e) { return false; }
+    }
+    function utcMs(y, mo, d, h, mi) {
+      // Not Date.UTC, which reads a year below 100 as 19xx.
+      var t = new Date(0);
+      t.setUTCFullYear(y, mo - 1, d);
+      t.setUTCHours(h, mi, 0, 0);
+      return t.getTime();
+    }
+    // Wall-clock (y, mo, d, h, mi) of an instant in a zone, or null
+    // when the year is too near the calendar's edge for a box: such a
+    // box is left as the server rendered it.
+    function wallParts(ms, zone) {
       var p = {};
       new Intl.DateTimeFormat("en-US", {
-        timeZone: zone, year: "numeric", month: "2-digit",
-        day: "2-digit", hour: "2-digit", minute: "2-digit",
-        hour12: false,
-      }).formatToParts(new Date(instant)).forEach(function (x) {
+        timeZone: zone, era: "short", year: "numeric", month: "2-digit",
+        day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+      }).formatToParts(new Date(ms)).forEach(function (x) {
         if (x.type !== "literal") p[x.type] = x.value;
       });
-      if (p.hour === "24") p.hour = "00";
-      return p;
+      var y = +p.year;
+      if (p.era !== "AD" || y < 2 || y > 9998) return null;
+      return [y, +p.month, +p.day, +p.hour % 24, +p.minute];
     }
-    function sampleText(zone) {
-      try {
-        var p = partsInZone(Date.now(), zone);
-        var out = p.year + "-" + p.month + "-" + p.day
-          + " " + p.hour + ":" + p.minute;
-        if (showToken) {
-          new Intl.DateTimeFormat("en-US", {
-            timeZone: zone, timeZoneName: "short", year: "numeric",
-          }).formatToParts(new Date()).forEach(function (x) {
-            if (x.type === "timeZoneName") out += " " + x.value;
-          });
-        }
-        return out;
-      } catch (e) { return null; }
+    function wallMs(ms, zone) {
+      var w = wallParts(ms, zone);
+      return w ? utcMs(w[0], w[1], w[2], w[3], w[4]) : null;
     }
-    function offsetLabel(zone) {
-      try {
-        var parts = new Intl.DateTimeFormat("en", {
-          timeZone: zone, year: "numeric", timeZoneName: "shortOffset",
-        }).formatToParts(new Date());
-        for (var i = 0; i < parts.length; i++) {
-          if (parts[i].type === "timeZoneName") {
-            return parts[i].value === "GMT" ? "UTC" : parts[i].value;
-          }
-        }
-      } catch (e) { /* fall through to "" */ }
-      return "";
+    function textOf(ms, zone) {
+      var w = wallParts(ms, zone);
+      if (!w) return null;
+      function pad(n, size) { return ("000" + n).slice(-size); }
+      return pad(w[0], 4) + "-" + pad(w[1], 2) + "-" + pad(w[2], 2)
+        + "T" + pad(w[3], 2) + ":" + pad(w[4], 2);
     }
-    function zoneText(zone) {
-      var off = offsetLabel(zone);
-      return (off && off !== zone) ? off + " " + zone : zone;
+    function parse(text) {
+      var m = WALL.exec(text || "");
+      if (!m || +m[1] < 2 || +m[1] > 9998) return null;
+      return utcMs(+m[1], +m[2], +m[3], +m[4], +m[5]);
     }
-    function instantOf(str, zone) {
-      var m = str.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-      if (!m) return null;
-      var want = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
-      var p = partsInZone(want, zone);
-      var got = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
-      return want + (want - got);
+    // The instant a box's text names in a zone, read as the server
+    // reads it (`parse_local_datetime`, fold 0): the wall-clock less the
+    // offset in force before any transition near it, or less the one
+    // after when only that reproduces the text. So a repeated hour reads
+    // as its first instant and a skipped one at the earlier offset.
+    function offsetAt(ms, zone) {
+      var seen = wallMs(ms, zone);
+      return seen === null ? null : seen - ms;
     }
-    function wallClock(ms, zone) {
-      var p = partsInZone(ms, zone);
-      return p.year + "-" + p.month + "-" + p.day
-        + "T" + p.hour + ":" + p.minute;
+    function instantOf(text, zone) {
+      var want = parse(text);
+      if (want === null) return null;
+      var HALF_DAY = 12 * 3600 * 1000;
+      var before = offsetAt(want - HALF_DAY, zone);
+      var after = offsetAt(want + HALF_DAY, zone);
+      if (before === null || after === null) return null;
+      if (wallMs(want - before, zone) === want) return want - before;
+      if (wallMs(want - after, zone) === want) return want - after;
+      return want - before;
+    }
+
+    // Each box's last known instant, with the text it was shown as: a
+    // box whose text is unchanged since converts from that instant, not
+    // from its text, so passing through other zones (a half-typed name
+    // that happens to be one) never drifts it.
+    var zone, known;
+    function seed() {
+      zone = validZone(ianaFromValue(input.value))
+        ? ianaFromValue(input.value) : "UTC";
+      known = boxes.map(function (box) {
+        var ms = parse(box.getAttribute("data-tz-utc"));
+        return (ms !== null && box.value === box.defaultValue)
+          ? { text: box.value, ms: ms } : null;
+      });
     }
     function update() {
-      var zone = ianaFromValue(input.value);
-      var text = sampleText(zone);
-      if (text === null) return;  // invalid zone mid-type — keep prevZone
-      if (deadline && deadline.value && zone !== prevZone) {
-        var inst = instantOf(deadline.value, prevZone);
-        if (inst !== null) deadline.value = wallClock(inst, zone);
-      }
-      prevZone = zone;
-      if (sample) sample.textContent = text;
-      var name = zoneText(zone);
-      if (zoneLabel) zoneLabel.textContent = name;
-      if (deadlineZone) deadlineZone.textContent = name;
+      var next = ianaFromValue(input.value);
+      if (next === zone || !validZone(next)) return;  // mid-type: wait
+      var moved = [];
+      boxes.forEach(function (box, i) {
+        if (!box.value) return;
+        var ms = (known[i] && known[i].text === box.value)
+          ? known[i].ms : instantOf(box.value, zone);
+        var text = ms === null ? null : textOf(ms, next);
+        if (text === null) { known[i] = null; return; }
+        if (box.value !== text) moved.push(box);
+        box.value = text;
+        known[i] = { text: text, ms: ms };
+      });
+      zone = next;
+      // Once every box has moved, so listeners read them together:
+      // Create's ordering script re-takes each box's min / max from
+      // its neighbors, which would otherwise still bound it in the
+      // old zone's text and block the submit.
+      moved.forEach(function (box) {
+        box.dispatchEvent(new Event("change", { bubbles: true }));
+      });
     }
+    seed();
     input.addEventListener("input", update);
     input.addEventListener("change", update);
+    // Session Home's Cancel and Lock reset the form: the boxes and the
+    // zone go back to their seeds, and so does what this knows.
+    if (input.form) {
+      input.form.addEventListener("reset", function () {
+        setTimeout(seed, 0);
+      });
+    }
   })();
 </script>

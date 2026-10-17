@@ -16,8 +16,10 @@ dependencies stamp ``request.state.display_timezone``; the
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -460,10 +462,11 @@ def test_config_card_timezone_field_uses_gmt_offset_datalist(
     """On the Session Home config card the timezone edit affordance
     is a text input wired to a GMT-prefixed datalist so the operator
     can search by offset (GMT+8) or name (Singapore). The Edit page's
-    worked-sample line and its live-preview JS partial
-    (`_timezone_preview.html`) are not carried by the in-place config
-    card — the Operator Settings page is the canonical home for the
-    live worked-sample readout."""
+    worked-sample line is not carried by the in-place config card —
+    the Operator Settings page is the canonical home for the live
+    worked-sample readout. (The card does carry
+    `_timezone_preview.html`, which re-renders its date boxes as the
+    zone changes: findings L8.)"""
     session = _create_session(client, db, code="tz-sample")
     body = client.get(f"/operator/sessions/{session.id}?editing=1").text
     # The worked-sample line is absent here.
@@ -802,3 +805,98 @@ def test_config_refuses_reordered_aged_reminder_offsets(
     response = _save("-P1D, -P2D")
     assert response.status_code == 422
     assert "leave more lead time" in response.text
+
+
+# findings L8 (author's ruling): a timezone change keeps the stored
+# instants. Without script the boxes still hold their text in the old
+# zone, and a box still holding it is kept; with script every box is
+# re-rendered in the new zone, and a box holding that rendering is kept.
+# Any other text is an edit, read as wall-clock in the new zone.
+
+
+def _l8_session(
+    client: TestClient, db: Session, code: str
+) -> tuple[ReviewSession, dict[str, datetime]]:
+    """A Singapore session with all four boxes stored: Start aged a day
+    into the past, Release-from before End (Close early, then Release,
+    stamps that), and seconds on End, which no box can carry."""
+    session = _create_session(client, db, code=code)
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    stored = {
+        "scheduled_activate_at": now - timedelta(days=1),
+        "deadline": now + timedelta(days=9, seconds=45),
+        "responses_release_at": now + timedelta(days=8),
+        "responses_release_until": now + timedelta(days=20),
+    }
+    session.display_timezone = "Asia/Singapore"
+    for field, value in stored.items():
+        setattr(session, field, value)
+    db.commit()
+    return session, stored
+
+
+def _l8_save(client: TestClient, session: ReviewSession, boxes: dict[str, str]):
+    return client.post(
+        f"/operator/sessions/{session.id}/config",
+        data={
+            "name": session.name,
+            "code": session.code,
+            "display_timezone": "GMT-4 America/New_York",
+            **boxes,
+        },
+        follow_redirects=False,
+    )
+
+
+def _l8_stored(db: Session, session: ReviewSession, field: str) -> datetime:
+    db.expire_all()
+    value = getattr(db.get(ReviewSession, session.id), field)
+    return value.replace(tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize(
+    "rendered_in",
+    ["Asia/Singapore", "America/New_York"],
+    ids=["no-script-old-zone-text", "script-new-zone-text"],
+)
+def test_config_zone_change_keeps_every_stored_instant(
+    client: TestClient, db: Session, rendered_in: str
+) -> None:
+    from app.services.date_formatting import format_datetime_local
+
+    session, stored = _l8_session(client, db, f"tz-l8-{rendered_in[:4].lower()}")
+    response = _l8_save(
+        client,
+        session,
+        {f: format_datetime_local(v, rendered_in) for f, v in stored.items()},
+    )
+
+    # Not refused over the aged Start's floor, nor over the stored
+    # Release-from before End (findings L6): every box is untouched.
+    assert response.status_code == 303, response.text
+    for field, value in stored.items():
+        assert _l8_stored(db, session, field) == value, field
+    assert db.get(ReviewSession, session.id).display_timezone == "America/New_York"
+
+
+def test_config_zone_change_reads_an_edited_box_in_the_new_zone(
+    client: TestClient, db: Session
+) -> None:
+    from app.services.date_formatting import format_datetime_local
+
+    session, stored = _l8_session(client, db, "tz-l8-edit")
+    boxes = {f: format_datetime_local(v, "Asia/Singapore") for f, v in stored.items()}
+    # Release-until typed afresh: 18:00 New York wall-clock, a day later.
+    typed = (
+        (stored["responses_release_until"] + timedelta(days=1))
+        .astimezone(ZoneInfo("America/New_York"))
+        .replace(hour=18, minute=0)
+    )
+    boxes["responses_release_until"] = typed.strftime("%Y-%m-%dT%H:%M")
+
+    response = _l8_save(client, session, boxes)
+
+    assert response.status_code == 303, response.text
+    assert _l8_stored(db, session, "responses_release_until") == typed
+    for field in ("scheduled_activate_at", "deadline", "responses_release_at"):
+        assert _l8_stored(db, session, field) == stored[field], field

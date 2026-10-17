@@ -174,13 +174,16 @@ def test_display_helpers_leave_an_edge_instant_unconverted() -> None:
     assert date_formatting.gmt_offset_zone_label("Asia/Tokyo", safe) == "GMT+9 Asia/Tokyo"
 
 
+@pytest.mark.parametrize(
+    "submitted_zone", ["America/New_York", "Asia/Tokyo"], ids=["same", "changed"]
+)
 @pytest.mark.parametrize(("box", "_message"), _BOXES)
 def test_config_save_keeps_an_untouched_stored_edge_value(
-    client: TestClient, db: Session, box: str, _message: str
+    client: TestClient, db: Session, box: str, _message: str, submitted_zone: str
 ) -> None:
     """A value an older import stored nearer the edge than a box accepts
     does not stop the card saving when the box is left alone (the read
-    of #3109)."""
+    of #3109), with the zone unchanged or changed (findings L8)."""
     zone = "America/New_York"
     assert _create(client, "EDGE-KEEP", display_timezone=zone).status_code == 303
     review_session = _session(db, "EDGE-KEEP")
@@ -193,7 +196,7 @@ def test_config_save_keeps_an_untouched_stored_edge_value(
             "name": "S",
             "code": "EDGE-KEEP",
             "description": "Renamed",
-            "display_timezone": zone,
+            "display_timezone": submitted_zone,
             box: date_formatting.format_datetime_local(stored, zone),
         },
         follow_redirects=False,
@@ -201,6 +204,7 @@ def test_config_save_keeps_an_untouched_stored_edge_value(
     assert response.status_code == 303, response.text
     db.refresh(review_session)
     assert getattr(review_session, box).replace(tzinfo=None) == stored
+    assert review_session.display_timezone == submitted_zone
 
 
 @pytest.mark.parametrize(

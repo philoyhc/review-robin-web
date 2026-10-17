@@ -365,11 +365,18 @@ plain `<label>` above its value:
   (`views.build_offset_display_rows`). Resolved fire-moments read
   inline beside their offset; there is no separate
   Schedule-timeline card. Each box is seeded with its stored value in
-  the session's zone and read back as wall-clock in the submitted zone,
-  except that while the zone is unchanged a box still holding its seeded
-  text keeps the stored instant (`sessions.datetime_box_unedited`): in
-  the repeated hour after a DST fall-back the text names two instants,
-  and re-reading it would move the value an hour early on every Save.
+  the session's zone. **A timezone change keeps the stored instants**
+  (findings L8): as the Timezone field changes, the card's script
+  re-renders every box as the same instant in the new zone
+  (`app/web/templates/operator/partials/_timezone_preview.html`, which
+  Create shares). On Save a box still holding its stored value, rendered
+  in the seeded zone (a page without script leaves it so) or in the
+  submitted zone (as the script re-renders it), keeps the stored instant,
+  seconds included (`sessions.datetime_box_unedited`); any other text is
+  an edit, read as wall-clock in the submitted zone. The check compares
+  text, not a re-parse: in the repeated hour after a DST fall-back the
+  text names two instants, and re-reading it would move the value an
+  hour early on every Save.
   A kept Start, and the stored offsets on a kept Start or End, skip
   only the lead-time floor: a schedule that aged past it after saving
   stays put (`spec/lifecycle.md` §8.3), so a rename is never refused

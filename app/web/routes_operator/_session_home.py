@@ -317,8 +317,8 @@ def _apply_session_config_form(
         ) from exc
 
     # 18B PR 5: the display timezone is a field of this form. Blank ⇒
-    # leave the session's current zone unchanged. The deadline picker is
-    # wall-clock in this zone.
+    # leave the session's current zone unchanged. An edited datetime box
+    # is wall-clock in this zone.
     timezone_name = (
         operator_settings.parse_display_timezone_input(display_timezone)
         or sessions.resolve_session_timezone(review_session)
@@ -330,23 +330,30 @@ def _apply_session_config_form(
         )
 
     # Each datetime box was seeded with its stored value rendered in the
-    # session's current zone. While that zone is unchanged, a box still
-    # holding that text is read as its stored instant rather than as
-    # wall-clock: in the repeated hour after a DST fall-back the text
-    # names two instants and the parse picks the first, so every Save
-    # would move the value an hour early (findings Cc6). It is re-read
-    # from its UTC rendering, so each parser below validates the instant
-    # that will be stored, then the stored value itself is kept (seconds
-    # included). A changed zone re-reads every box in the new zone.
+    # session's current zone. A box still holding that text is read as
+    # its stored instant rather than as wall-clock: in the repeated hour
+    # after a DST fall-back the text names two instants and the parse
+    # picks the first, so every Save would move the value an hour early
+    # (findings Cc6). It is re-read from its UTC rendering, so each
+    # parser below validates the instant that will be stored, then the
+    # stored value itself is kept (seconds included).
+    #
+    # A zone change keeps the stored instants (findings L8, author's
+    # ruling): a box is unedited when it holds the stored value rendered
+    # in the seeded zone (the page without script, which leaves the text
+    # alone) or in the submitted zone (the page's script, which re-renders
+    # every box as the zone changes). Any other text is an edit, read as
+    # wall-clock in the submitted zone. With the zone unchanged the two
+    # renderings are one, the check before the ruling.
     seeded_zone = sessions.resolve_session_timezone(review_session)
     unedited: set[str] = set()
 
     def _read_as(
         field: str, raw: str | None, stored: datetime | None
     ) -> tuple[str | None, str]:
-        if timezone_name == seeded_zone and sessions.datetime_box_unedited(
+        if sessions.datetime_box_unedited(
             stored, raw, seeded_zone
-        ):
+        ) or sessions.datetime_box_unedited(stored, raw, timezone_name):
             unedited.add(field)
             if stored is not None and not date_formatting.in_entry_range(stored):
                 # A stored instant nearer the calendar's edge than a box
