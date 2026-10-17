@@ -292,7 +292,7 @@ GroupPartitions = dict[int, set[frozenset[Pair]]]
 
 class GroupAnswersWouldClear(Exception):
     """Raised by :func:`clear_changed_groups` instead of deleting, when
-    the caller has not acknowledged the loss (author's ruling
+    the caller has not acknowledged this many lost (author's ruling
     2026-10-17: refuse, then re-offer). ``count`` is the ``Response``
     rows the change would delete. The route catches it, rolls the
     transaction back and re-offers the Save with a tick."""
@@ -358,7 +358,7 @@ def clear_changed_groups(
     *,
     session_id: int,
     before: GroupPartitions,
-    acknowledged: bool = True,
+    acknowledged_loss: int | None = None,
 ) -> int:
     """Delete the answers of every group that gained a member since
     ``before`` (author's rulings 2026-10-17: a group instrument's
@@ -381,9 +381,12 @@ def clear_changed_groups(
     onto a row. The caller flushes the change first. Returns the number
     of ``Response`` rows deleted.
 
-    ``acknowledged=False`` (a route whose operator has not ticked
-    ``acknowledge_response_loss``) raises :class:`GroupAnswersWouldClear`
-    with that number instead of deleting, when it is above zero."""
+    ``acknowledged_loss`` is for a route that asks first: the count the
+    operator's ``Yes, clear them`` tick was shown, or 0 when unticked.
+    Unless it equals the number the change would delete, this raises
+    :class:`GroupAnswersWouldClear` with that number instead of
+    deleting, so a tick from an earlier refusal never approves a
+    different clear. ``None``, the default, deletes without asking."""
     changed: set[int] = set()
     for instrument_id, groups in before.items():
         origin_of = origins(groups)
@@ -395,15 +398,14 @@ def clear_changed_groups(
                 changed |= {ids[pair] for pair in group}
     if not changed:
         return 0
-    if not acknowledged:
+    if acknowledged_loss is not None:
         count = db.execute(
             select(func.count())
             .select_from(Response)
             .where(Response.assignment_id.in_(changed))
         ).scalar_one()
-        if count:
+        if count and count != acknowledged_loss:
             raise GroupAnswersWouldClear(count)
-        return 0
     # Deleted by assignment, not by response id: one bound parameter per
     # row rather than one per row and field.
     return db.execute(

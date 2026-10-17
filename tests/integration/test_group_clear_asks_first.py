@@ -88,7 +88,7 @@ def _seed(db: Session, client: TestClient, code: str) -> tuple[ReviewSession, In
     return session, instrument
 
 
-def _form(*boundary: str, acknowledged: bool = False) -> dict[str, object]:
+def _form(*boundary: str, acknowledged: int | None = None) -> dict[str, object]:
     data: dict[str, object] = {
         "link3_mode": "grouped",
         "link3_touched": "true",
@@ -98,8 +98,8 @@ def _form(*boundary: str, acknowledged: bool = False) -> dict[str, object]:
         data[f"{link}_touched"] = "true"
         data[f"{link}_combinator"] = "AND"
         data[f"{link}_mode"] = "all"
-    if acknowledged:
-        data["acknowledge_response_loss"] = "true"
+    if acknowledged is not None:
+        data["acknowledge_response_loss"] = str(acknowledged)
     return data
 
 
@@ -136,13 +136,30 @@ def test_an_acknowledged_merge_clears(db: Session, client: TestClient) -> None:
 
     resp = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_form(acknowledged=True),
+        data=_form(acknowledged=4),
     )
 
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
     assert _responses(db) == 0
     assert _group_kind(db, instrument.id) == instruments_service.encode_group_kind([])
+
+
+def test_a_tick_for_another_count_is_refused_again(
+    db: Session, client: TestClient
+) -> None:
+    """A tick left on after further edits carries the count it was shown,
+    so it cannot approve a clear of a different size."""
+    session, instrument = _seed(db, client, "gc-stale")
+
+    resp = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        data=_form(acknowledged=2),
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["confirm_group_clear"] == 4
+    assert _responses(db) == 4
 
 
 def test_the_no_js_fallback_refuses_then_goes_through(
@@ -157,7 +174,7 @@ def test_the_no_js_fallback_refuses_then_goes_through(
     assert _responses(db) == 4
     assert _group_kind(db, instrument.id) == _BY_TEAM
 
-    accepted = client.post(url, data=_form(acknowledged=True), follow_redirects=False)
+    accepted = client.post(url, data=_form(acknowledged=4), follow_redirects=False)
     assert accepted.status_code == 303
     assert _responses(db) == 0
 

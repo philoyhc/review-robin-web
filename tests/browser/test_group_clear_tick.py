@@ -3,8 +3,9 @@
 
 The server's refusal is stubbed: what is under test is the card, which
 shows the count and a ``Yes, clear them`` tick, keeps its edits, and
-sends ``acknowledge_response_loss`` with the next Save. The refusal
-itself is ``tests/integration/test_group_clear_asks_first.py``'s.
+sends the count it showed as ``acknowledge_response_loss`` with the
+next Save. The refusal itself is
+``tests/integration/test_group_clear_asks_first.py``'s.
 """
 
 from __future__ import annotations
@@ -56,5 +57,6 @@ def test_a_refused_save_offers_the_tick_and_the_next_save_sends_it(
     _builder.save(page, card)
 
     assert len(bodies) == 2
-    assert 'name="acknowledge_response_loss"' in bodies[1]
+    # The tick carries the count it was shown, not ``true``.
+    assert 'name="acknowledge_response_loss"\r\n\r\n3\r\n' in bodies[1]
     expect(banner).to_be_hidden()

@@ -3995,8 +3995,9 @@
           // A Save that would clear group answers is refused with
           // ``confirm_group_clear`` (author's ruling 2026-10-17): the
           // banner adds a ``Yes, clear them`` tick on the dfsave form,
-          // so the next Save sends ``acknowledge_response_loss``. A
-          // rebuilt banner starts unticked.
+          // so the next Save sends the count shown as
+          // ``acknowledge_response_loss``; the server refuses again if
+          // later edits changed it. A rebuilt banner starts unticked.
           window.newModelShowSaveErrors = window.newModelShowSaveErrors || function (card, errors, confirmGroupClear, formId) {
             if (!card) { return; }
             var banner = card.querySelector('[data-save-error-banner]');
@@ -4017,7 +4018,7 @@
               var tick = document.createElement('input');
               tick.type = 'checkbox';
               tick.name = 'acknowledge_response_loss';
-              tick.value = 'true';
+              tick.value = String(confirmGroupClear);
               tick.setAttribute('form', formId);
               tick.setAttribute('data-acknowledge-response-loss', '');
               tickLabel.appendChild(tick);
