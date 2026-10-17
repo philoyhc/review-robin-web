@@ -348,6 +348,11 @@ def _apply_session_config_form(
             stored, raw, seeded_zone
         ):
             unedited.add(field)
+            if stored is not None and not date_formatting.in_entry_range(stored):
+                # A stored instant nearer the calendar's edge than a box
+                # accepts (an older import): kept as it is, not re-read
+                # and refused (findings L2, the read of #3109).
+                return None, "UTC"
             return date_formatting.format_datetime_local(stored, "UTC"), "UTC"
         return raw, timezone_name
 

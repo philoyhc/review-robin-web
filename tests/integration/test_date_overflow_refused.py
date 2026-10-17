@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession, User
 from app.services import audit, date_formatting
+from app.services.session_config_io._apply_shared import _parse_datetime, _ParseError
 
 # Each datetime box on the details form, with the refusal it gives a
 # malformed value today.
@@ -166,7 +167,51 @@ def test_display_helpers_leave_an_edge_instant_unconverted() -> None:
     assert date_formatting.format_date(edge, "Asia/Tokyo") == "9999-12-31"
     assert date_formatting.format_datetime_local(edge, "Asia/Tokyo") == "9999-12-31T23:59"
     assert date_formatting.iso_in_zone(edge, "Asia/Tokyo").endswith("+00:00")
-    assert date_formatting.gmt_offset_label("Asia/Tokyo", edge) == "GMT+9"
+    # Shown in UTC, so labelled UTC rather than with the session's zone.
+    assert date_formatting.gmt_offset_label("Asia/Tokyo", edge) == "UTC"
+    assert date_formatting.gmt_offset_zone_label("Asia/Tokyo", edge) == "UTC"
+    safe = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert date_formatting.gmt_offset_zone_label("Asia/Tokyo", safe) == "GMT+9 Asia/Tokyo"
+
+
+@pytest.mark.parametrize(("box", "_message"), _BOXES)
+def test_config_save_keeps_an_untouched_stored_edge_value(
+    client: TestClient, db: Session, box: str, _message: str
+) -> None:
+    """A value an older import stored nearer the edge than a box accepts
+    does not stop the card saving when the box is left alone (the read
+    of #3109)."""
+    zone = "America/New_York"
+    assert _create(client, "EDGE-KEEP", display_timezone=zone).status_code == 303
+    review_session = _session(db, "EDGE-KEEP")
+    stored = datetime(9999, 12, 31)
+    setattr(review_session, box, stored)
+    db.commit()
+    response = client.post(
+        f"/operator/sessions/{review_session.id}/config",
+        data={
+            "name": "S",
+            "code": "EDGE-KEEP",
+            "description": "Renamed",
+            "display_timezone": zone,
+            box: date_formatting.format_datetime_local(stored, zone),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    db.refresh(review_session)
+    assert getattr(review_session, box).replace(tzinfo=None) == stored
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["9999-12-31T23:59:00", "9999-12-31T23:00:00-05:00", "0001-01-01T00:00:00"],
+)
+def test_settings_import_refuses_an_edge_datetime(value: str) -> None:
+    """The Settings CSV import holds its dates to the boxes' range."""
+    with pytest.raises(_ParseError, match="out of range"):
+        _parse_datetime(value)
+    assert _parse_datetime("9998-12-31T23:59:00") is not None
 
 
 # ── O3: the audit log's date filter ──────────────────────────────────

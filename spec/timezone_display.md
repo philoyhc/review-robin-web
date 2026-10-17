@@ -131,9 +131,15 @@ To days match the page's.
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
 - **The calendar's edge.** `parse_local_datetime` refuses a moment
   within a day of the first or last instant Python's `datetime` can
-  hold, as it refuses a malformed one, so every entered instant
-  converts into any zone. An instant stored nearer the edge than that
-  renders in UTC, unconverted, rather than failing the page.
+  hold, as it refuses a malformed one, and the Settings CSV import
+  refuses its four schedule datetimes the same way
+  (`date_formatting.in_entry_range`), so an instant entered either way
+  converts into any zone. An instant stored nearer the edge than that,
+  by an older build, renders in UTC, unconverted and labelled `UTC`,
+  rather than failing the page, and the details card keeps it when its
+  box is left untouched. The audit log's From / To on such a day
+  bounds nothing: no instant falls before the first day's midnight or
+  after the last day's end.
 - **No surface shows the CLDR long display name** (e.g.
   `Australian Eastern Standard Time`) — the offset-plus-IANA forms
   above are the only zone renderings, and the app carries no helper

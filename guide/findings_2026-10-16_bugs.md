@@ -93,7 +93,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - **R6** — `Response.saved_at` never updates and `version` never increments
   (`app/db/models/response.py:32-36`). *Reproduced.* Author: maintain them or
   retire them.
-- ~~**L2**~~ — **Done in (this PR)**: `parse_local_datetime` refuses a moment within a day of `datetime`'s range, so Create, `/config` and the lobby edit give the box's usual refusal on End, Start and both Release boxes; a stored edge instant renders unconverted (`tests/integration/test_date_overflow_refused.py`). Durations already refused since L1. **Far-future dates and durations answer 500 (`OverflowError`) on
+- ~~**L2**~~ — **Done in #3109**: `parse_local_datetime` refuses a moment within a day of `datetime`'s range, so Create, `/config` and the lobby edit give the box's usual refusal on End, Start and both Release boxes, and the Settings CSV import refuses its schedule datetimes the same way; a stored edge instant renders unconverted, labelled `UTC`, and `/config` keeps it when its box is untouched (`tests/integration/test_date_overflow_refused.py`). Durations already refused since L1. **Far-future dates and durations answer 500 (`OverflowError`) on
   Create, `/config`, the lobby edit, activation and release**; a stored year-9999
   deadline breaks the lobby for an owner east of UTC
   (`date_formatting.py:153`). *Reproduced.* Code.
@@ -166,7 +166,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   itself (`spec/settings_inventory.md:109` against
   `spec/session_home.md:368`); Create's preview re-renders only `#deadline`.
   Author.
-- ~~**O3**~~ — **Done in (this PR)**: a From or To whose day boundary falls outside `datetime`'s range bounds nothing, so 0001-01-01 and 9999-12-31 filter in the viewer and the CSV (`tests/integration/test_date_overflow_refused.py`). **The audit log's date filter answers 500 at calendar edges, in the
+- ~~**O3**~~ — **Done in #3109**: a From or To whose day boundary falls outside `datetime`'s range bounds nothing, so 0001-01-01 and 9999-12-31 filter in the viewer and the CSV (`tests/integration/test_date_overflow_refused.py`). **The audit log's date filter answers 500 at calendar edges, in the
   viewer and the CSV** (`app/services/audit.py:983`, `:990`). Code.
 - ~~**O4**~~ — **Done in #3106**: the port must be 1 to 65535 (`tests/integration/test_bad_input_refused.py`). The SMTP port is unchecked: a 500 or a negative value stored
   (`_settings.py:103`). Code.

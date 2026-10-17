@@ -1771,14 +1771,15 @@ def test_an_offset_beside_a_calendar_edge_anchor_is_refused_not_raised(
     db: Session,
 ) -> None:
     """A Start in year 1 put ``anchor + offset`` past ``datetime``'s range,
-    so the check itself raised; it is refused like any card rule."""
+    so the check itself raised; it is refused like any card rule. The
+    Start sits just inside the range the import accepts (findings L2)."""
     dst = _bare_session(db, code="l1-edge")
     result = apply_session_config(
         db,
         dst,
         [
-            Row("session.scheduled_activate_at", "0001-01-01T12:00:00+00:00", "datetime"),
-            Row("session.invite_offsets", "-P1D", "string"),
+            Row("session.scheduled_activate_at", "0001-01-02T12:00:00+00:00", "datetime"),
+            Row("session.invite_offsets", "-P2D", "string"),
         ],
     )
     assert [e.field for e in result.errors] == ["session.invite_offsets"]
@@ -1788,7 +1789,7 @@ def test_an_offset_beside_a_calendar_edge_anchor_is_refused_not_raised(
 @pytest.mark.parametrize(
     ("stored", "start", "message"),
     [
-        (["-P1D"], "0001-01-01T12:00:00+00:00", "outside the dates"),
+        (["-P2D"], "0001-01-02T12:00:00+00:00", "outside the dates"),
         (["P1D"], "2026-05-01T09:00:00+00:00", "fires at or after Start"),
     ],
     ids=["calendar-edge", "now-anchored"],

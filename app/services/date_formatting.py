@@ -53,6 +53,17 @@ _EARLIEST_INSTANT = datetime.min + _CALENDAR_MARGIN
 _LATEST_INSTANT = datetime.max - _CALENDAR_MARGIN
 
 
+def in_entry_range(value: datetime) -> bool:
+    """Whether ``value`` sits inside the range an entered instant may
+    take: a day clear of either edge of ``datetime``'s range, so it
+    converts into any zone (findings L2). Naive values are UTC."""
+    try:
+        instant = _as_utc(value).replace(tzinfo=None)
+    except OverflowError:
+        return False
+    return _EARLIEST_INSTANT <= instant <= _LATEST_INSTANT
+
+
 def _as_utc(value: datetime) -> datetime:
     """Normalise a datetime to tz-aware UTC.
 
@@ -62,6 +73,16 @@ def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
+
+
+def _converts(value: datetime, tz_name: str | None) -> bool:
+    """Whether ``value`` converts into ``tz_name``'s zone without leaving
+    ``datetime``'s range."""
+    try:
+        _as_utc(value).astimezone(resolve_zone(tz_name))
+    except OverflowError:
+        return False
+    return True
 
 
 def _in_zone(value: datetime, tz_name: str | None) -> datetime:
@@ -136,9 +157,9 @@ def gmt_offset_label(tz_name: str | None, at: datetime | None = None) -> str:
         try:
             reference = _as_utc(at).astimezone(zone)
         except OverflowError:
-            # An instant at the calendar's edge (findings L2): today's
-            # offset names the zone as well as any.
-            pass
+            # An instant at the calendar's edge renders in UTC, so its
+            # label says UTC (findings L2).
+            return "UTC"
     offset = reference.utcoffset()
     if offset is None or offset == timedelta(0):
         return "UTC"
@@ -161,6 +182,9 @@ def gmt_offset_zone_label(tz_name: str | None, at: datetime | None = None) -> st
     """
     zone = tz_name or DEFAULT_TIMEZONE
     offset = gmt_offset_label(tz_name, at)
+    if at is not None and not _converts(at, tz_name):
+        # Rendered in UTC (findings L2), so labelled UTC alone.
+        return "UTC"
     if offset == zone:
         return zone
     return f"{offset} {zone}"
@@ -179,13 +203,9 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     """
     naive = datetime.fromisoformat(value)
     local = naive.replace(tzinfo=resolve_zone(tz_name))
-    try:
-        instant = local.astimezone(timezone.utc).replace(tzinfo=None)
-    except OverflowError as exc:
-        raise ValueError(f"datetime out of range: {value!r}") from exc
-    if not _EARLIEST_INSTANT <= instant <= _LATEST_INSTANT:
+    if not in_entry_range(local):
         raise ValueError(f"datetime out of range: {value!r}")
-    return instant
+    return local.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def iso_in_zone(
