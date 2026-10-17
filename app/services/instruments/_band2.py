@@ -286,6 +286,7 @@ def set_band2_state(
     # surprises the delete check.
     if incoming_rfs is not None:
         previous_ids: set[int] = {f.id for f in instrument.response_fields}
+        fields_before = _response_field_snapshot(instrument)
         _sync_response_fields_to_db(
             db,
             instrument=instrument,
@@ -326,6 +327,14 @@ def set_band2_state(
                 widths=existing_widths,
                 actor=actor,
             )
+        db.refresh(instrument, attribute_names=["response_fields"])
+        _record_response_field_changes(
+            db,
+            instrument=instrument,
+            before=fields_before,
+            after=_response_field_snapshot(instrument),
+            actor=actor,
+        )
 
     new_value: dict[str, Any] | None = sanitised or None
     if (instrument.band2_state or None) == new_value:
@@ -348,6 +357,120 @@ def set_band2_state(
         refs={"instrument_id": instrument.id},
     )
     return instrument
+
+
+# What a response field is, as the readiness check and the reviewer
+# surface read it: everything the card's Save can write but the row's
+# id, its raw ``order`` (compared as a rank) and the column widths,
+# which live on the instrument.
+_RESPONSE_FIELD_ATTRS: tuple[str, ...] = (
+    "field_key",
+    "label",
+    "required",
+    "visible",
+    "help_text",
+    "help_text_visible",
+    "branch_parent_id",
+    "branch_op",
+    "branch_value",
+    "branch_mode",
+    "_inline_data_type",
+    "_inline_response_type",
+    "_inline_min",
+    "_inline_max",
+    "_inline_step",
+    "_inline_list_csv",
+    "validation",
+)
+
+
+def _response_field_snapshot(instrument: Instrument) -> dict[int, dict[str, Any]]:
+    snapshot: dict[int, dict[str, Any]] = {}
+    for field in instrument.response_fields:
+        values = {attr: getattr(field, attr) for attr in _RESPONSE_FIELD_ATTRS}
+        values["order"] = field.order
+        if (
+            values["_inline_step"] is None
+            and values["_inline_data_type"] == "Integer"
+            and _is_whole_or_blank(values["_inline_min"])
+        ):
+            # The sync fills this blank in with the 1 it already meant
+            # (``_sync_response_fields_to_db``), which is no change.
+            values["_inline_step"] = INTEGER_DEFAULT_STEP
+        snapshot[field.id] = values
+    return snapshot
+
+
+def _ranks(snapshot: dict[int, dict[str, Any]], ids: set[int]) -> dict[int, int]:
+    ordered = sorted(ids, key=lambda i: (snapshot[i]["order"], i))
+    return {field_id: rank for rank, field_id in enumerate(ordered)}
+
+
+def _record_response_field_changes(
+    db: Session,
+    *,
+    instrument: Instrument,
+    before: dict[int, dict[str, Any]],
+    after: dict[int, dict[str, Any]],
+    actor: User,
+) -> None:
+    """The card's Save rewrites response fields through
+    ``_sync_response_fields_to_db``, so the edit, not the request,
+    un-validates the session and records what changed (findings S1,
+    2026-10-16; ``spec/lifecycle.md`` §2.3), in the ``set_changes``
+    shape ``bulk_save_fields`` writes. A Save that changes no field
+    does neither. Order is compared as a rank among the fields both
+    sides hold, as ``bulk_save_fields`` does, since the sync renumbers
+    a seeded 1, 2 to 0, 1. A branch edit un-validates here but is left
+    out of the event: ``_apply_branch_rules`` audits it per field."""
+    added = [
+        {"field_key": after[i]["field_key"], "label": after[i]["label"]}
+        for i in after.keys() - before.keys()
+    ]
+    removed = [
+        {"field_key": before[i]["field_key"], "label": before[i]["label"]}
+        for i in before.keys() - after.keys()
+    ]
+    kept = before.keys() & after.keys()
+    old_rank, new_rank = _ranks(before, kept), _ranks(after, kept)
+    branch_changed = False
+    updated = []
+    for i in sorted(kept):
+        changes = {}
+        for attr in _RESPONSE_FIELD_ATTRS:
+            if before[i][attr] == after[i][attr]:
+                continue
+            if attr in _BRANCH_ATTRS:
+                branch_changed = True
+            else:
+                changes[attr.lstrip("_")] = [before[i][attr], after[i][attr]]
+        if old_rank[i] != new_rank[i]:
+            changes["order"] = [before[i]["order"], after[i]["order"]]
+        if changes:
+            updated.append({"field_key": after[i]["field_key"], "changes": changes})
+    if not (added or removed or updated or branch_changed):
+        return
+    lifecycle.invalidate_if_validated(
+        db,
+        review_session=instrument.session,
+        user=actor,
+        reason="instrument_response_fields_saved",
+    )
+    if not (added or removed or updated):
+        return
+    audit.write_event(
+        db,
+        event_type="instrument.response_fields_saved",
+        summary=f"Saved response fields on instrument {_instrument_label(instrument)}",
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.set_changes(
+            added=sorted(added, key=lambda e: e["field_key"]),
+            removed=sorted(removed, key=lambda e: e["field_key"]),
+            updated=updated,
+        ),
+        refs={"instrument_id": instrument.id},
+    )
 
 
 _BAND2_DATA_TYPE_TO_INLINE: dict[str, str] = {

@@ -319,3 +319,13 @@ delete them once no remaining section points to them.
   partial. Same on Archived.
 - [ ] **Hiding a ticked row unticks it.** Tick a session, then filter it
   out: it is no longer selected, and the panel drops it.
+
+## An instrument's response-field Save un-validates the session (S1)
+
+- [ ] **A changed field demotes.** Validate a session, then on
+  Instruments rename a response field (or delete one) and Save: the
+  session is back in draft, and the audit log has an
+  `instrument.response_fields_saved` row naming the field.
+- [ ] **An unchanged Save does not.** Validate again and Save the card
+  without editing anything: the session stays validated and no new row
+  is logged.
