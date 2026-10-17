@@ -951,11 +951,16 @@ a rewrite.
   marking the selected set: `refreshExpander()` on the two lobby pages,
   `render()` on Reviewers, Reviewees, Relationships and Assignments,
   `renderPanel()` on Observers, `refresh()` on Accounts. The contract is the funnel, not its
-  name. **Assignments' funnel counts only visible rows**, because it is
-  the one page with a client-side filter: its instrument-name chips
-  hide rows with `display: none`, and an expander anchored
-  after a hidden row, or a `colSpan` counted before a chip toggle, both
-  follow from treating a selectable row as a visible one.
+  name. **A page with a client-side filter counts only visible rows**:
+  Assignments, whose instrument-name chips hide rows with
+  `display: none`, and the two lobby pages, whose tag chips and filter
+  box do the same. The header select-all checkbox ticks the rows shown
+  and reads them alone, and a row the filter hides is unticked, so no
+  bulk action reaches a session nobody can see. (The lobby's Select all
+  / Clear all chip, above, picks filter tags; it ticks no row.) An
+  expander anchored after a hidden row, or a `colSpan` counted before a
+  chip toggle, both follow from treating a selectable row as a visible
+  one.
 - **A sort drops the panel and re-anchors it.** `_rrwApplySort` removes
   every `.session-expander` child of `tbody.rrw-rows` **before** it
   collects rows or stamps `rrwOriginalIndex`, on every sortable table,

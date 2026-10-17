@@ -385,15 +385,19 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
   The class is applied in `refreshExpander()`, which is the one funnel
   every selection path meets: a row tick, a select-all (which sets
-  `checked` programmatically and fires no row events), and the
+  `checked` programmatically and fires no row events), the
   expander's own Unselect-all / Unselect-others buttons (which fire
-  synthetic ones). Each pass clears the class from every row before
+  synthetic ones), and a filter change that unticks a hidden row. Each pass clears the class from every row before
   applying it to the selected set, so no un-tick can leave a stale mark.
 
   **No hydration is needed, which is a property of the page rather than
   an omission.** The tag filter and search hide rows with
-  `style.display` rather than re-rendering them, so a filtered row keeps
-  its checkbox state and its marking; and selection is not persisted
+  `style.display` rather than re-rendering them; a row they hide is
+  unticked, and the filter announces `rrw:session-rows-filtered` with
+  how many it unticked. The header checkbox re-derives on every one;
+  the expander rebuilds through `refreshExpander()` only when a row was
+  unticked, since a rebuild re-seeds the editable panel and would drop
+  unsaved edits. Selection is not persisted
   (the lobby's only `localStorage` key is `rrw-lobby-tag-filter`), so a
   server re-render returns unchecked boxes and an unmarked table. If
   selection ever becomes restorable, the marking has to be restored with
@@ -410,10 +414,13 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 
 - **Select-all checkbox** sits in the select column's `<th>`
   header (`class="sessions-list-select-all"`, no `name` — it never
-  submits). Clicking it toggles every row checkbox at once. Inline
-  JS keeps it in sync with the rows: `checked` when every row is
-  ticked, `indeterminate` on a partial selection, clear when none
-  are — and any row-checkbox change re-derives that state.
+  submits). Clicking it toggles every row the filter shows, never a
+  hidden one, so no bulk action reaches a session the operator cannot
+  see. Inline JS keeps it in sync with the shown rows: `checked` when
+  every shown row is ticked, `indeterminate` on a partial selection,
+  clear when none are or none is shown — and any row-checkbox change,
+  or a filter change, re-derives that state. Archived's works the same
+  way.
 
 ### Sort / filter / search
 

@@ -2,7 +2,7 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 42 of 46 rows (refreshed 2026-10-17: S2, E1, E4 and L1
+**Open:** 41 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1 and O1
 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
@@ -42,7 +42,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`app/services/session_config_io/_apply_session.py:75-85`, raised from
   `_duration.py:51` via `_workflow_card.py:506`). *Reproduced.* Code: run the
   same checks as `/config` in phase 1.
-- **O1** — **The lobby's and Archive's Select all tick rows the filter has
+- ~~**O1**~~ — **Done in #3095**: Select all ticks only the rows shown and the header reads them alone; a row the filter hides is unticked (`tests/browser/test_lobby_select_all_filter.py`). **The lobby's and Archive's Select all tick rows the filter has
   hidden**, so bulk Delete, Purge, Unarchive and tag edits act on sessions the
   operator cannot see, and hidden rows stay ticked
   (`app/web/templates/operator/sessions_list.html:388-392,794`,

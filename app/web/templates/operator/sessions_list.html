@@ -373,24 +373,31 @@
         if (!rowCheckboxes.length || !selectAll) return;
         // Header checkbox reflects the rows: all → checked, none →
         // clear, a partial selection → indeterminate.
-        function refresh() {
-          var checkedCount = 0;
-          rowCheckboxes.forEach(function (cb) {
-            if (cb.checked) checkedCount++;
+        // Select all covers the rows the filter shows, and the header
+        // reads them alone (findings O1; ``spec/ui_elements.md`` §10):
+        // a hidden row is never ticked, so no bulk action reaches it.
+        function shown() {
+          return Array.prototype.filter.call(rowCheckboxes, function (cb) {
+            return cb.closest("tr").style.display !== "none";
           });
-          selectAll.checked = checkedCount === rowCheckboxes.length;
+        }
+        function refresh() {
+          var boxes = shown();
+          var checkedCount = boxes.filter(function (cb) { return cb.checked; }).length;
+          selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
           selectAll.indeterminate =
-            checkedCount > 0 && checkedCount < rowCheckboxes.length;
+            checkedCount > 0 && checkedCount < boxes.length;
         }
         rowCheckboxes.forEach(function (cb) {
           cb.addEventListener("change", refresh);
         });
         selectAll.addEventListener("change", function () {
-          rowCheckboxes.forEach(function (cb) {
+          shown().forEach(function (cb) {
             cb.checked = selectAll.checked;
           });
           refresh();
         });
+        document.addEventListener("rrw:session-rows-filtered", refresh);
         refresh();
       })();
     </script>
@@ -792,10 +799,17 @@
           // Select-all sets row .checked programmatically — no row
           // change events fire — so rebuild the tick order here.
           selectAll.addEventListener("change", function () {
-            tickOrder = selectAll.checked ? rowCheckboxes.slice() : [];
+            tickOrder = rowCheckboxes.filter(function (cb) { return cb.checked; });
             refreshExpander();
           });
         }
+        // The filter unticked what it hid (findings O1). Only then: a
+        // rebuild re-seeds the panel and would drop unsaved edits.
+        document.addEventListener("rrw:session-rows-filtered", function (event) {
+          if (!event.detail || !event.detail.unticked) return;
+          tickOrder = tickOrder.filter(function (cb) { return cb.checked; });
+          refreshExpander();
+        });
       })();
     </script>
     <script>
@@ -878,11 +892,25 @@
 
         function apply() {
           var visible = 0;
+          var unticked = 0;
           rows.forEach(function (row) {
             var show = matchesTags(row) && matchesFilter(row);
             row.style.display = show ? "" : "none";
             if (show) visible++;
+            // A row the filter hides leaves the selection (findings O1).
+            var box = show ? null : row.querySelector(".sessions-list-select-row");
+            if (box && box.checked) {
+              box.checked = false;
+              unticked++;
+            }
           });
+          // The select-all and expander scripts listen rather than being
+          // called: each lives in its own IIFE (as Assignments does it).
+          // ``unticked`` tells the expander whether the selection moved:
+          // its panel is editable, so it rebuilds only then.
+          document.dispatchEvent(new CustomEvent("rrw:session-rows-filtered", {
+            detail: { unticked: unticked },
+          }));
           if (noMatch) {
             noMatch.style.display = visible === 0 ? "" : "none";
           }
