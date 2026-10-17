@@ -367,7 +367,7 @@ plain `<label>` above its value:
   Schedule-timeline card. Each box is seeded with its stored value in
   the session's zone. **A timezone change keeps the stored instants**
   (findings L8): as the Timezone field changes, the card's script
-  re-renders every box as the same instant in the new zone
+  re-renders every filled box as the same instant in the new zone
   (`app/web/templates/operator/partials/_timezone_preview.html`, which
   Create shares). On Save a box still holding its stored value, rendered
   in the seeded zone (a page without script leaves it so) or in the
