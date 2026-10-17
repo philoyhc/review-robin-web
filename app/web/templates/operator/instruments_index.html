@@ -538,7 +538,7 @@
          cross-side IS THE SAME AS / IS DIFFERENT FROM operators).
          Hydrated from ``state`` (a dict with mode / combinator /
          rules — see views._instruments.build_band1_state). #}
-      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None, stored_only_labels=None) %}
+      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None, stored_only_labels=None, pair_field_helper=None) %}
         {% set _ops = operator_cycle or ["IS", "IS NOT", "IS FILLED", "IS EMPTY"] %}
         {% set _stored_only = stored_only_labels or {} %}
         {% set _field_keys = tag_options | map('first') | list %}
@@ -651,13 +651,21 @@
                      inside the rule cell so ``newModelAddRule``'s
                      ``cloneNode(true)`` carries it onto every new
                      cell added via the ``+`` button. #}
+                  {# ``pair_field_helper`` (Link 2): a relationship tag
+                     under IS / IS NOT judges the pair itself, so the
+                     caption says so (author, 2026-10-17);
+                     ``newModelSyncFieldHelper`` keeps it current. #}
+                  {% set _pairwise = pair_field_helper and (_r.field or "").startswith("pair_context.")
+                     and (_r.op if _r.op in _cell_ops else _cell_ops[0]) in ("IS", "IS NOT") %}
                   {% if field_helper %}
                     <div style="display: flex; align-items: center; gap: 4px;">
                       <span data-new-model-rule-field-helper
+                            {% if pair_field_helper %}data-new-model-field-helper-default="{{ field_helper }}"
+                            data-new-model-field-helper-pair="{{ pair_field_helper }}"{% endif %}
                             style="flex: 0 0 50%; min-width: 0;
                                    font-size: 0.75rem;
                                    color: var(--text-body);
-                                   padding-left: 2px;">{{ field_helper }}</span>
+                                   padding-left: 2px;">{{ pair_field_helper if _pairwise else field_helper }}</span>
                     </div>
                   {% endif %}
                   <div style="display: flex; align-items: center; gap: 4px;">
@@ -666,7 +674,8 @@
                        spill past the column's divider. #}
                     <select style="flex: 0 1 50%; min-width: 0; padding: 4px;"
                             form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"
-                            data-new-model-rule-field>
+                            data-new-model-rule-field
+                            {% if pair_field_helper %}onchange="newModelSyncFieldHelper(this)"{% endif %}>
                       {% for key, label in tag_options %}
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
@@ -810,6 +819,7 @@
               operand_tag_options=_link2_operand,
               on_label="Filter using tags",
               field_helper="Reviewee's tag",
+              pair_field_helper="Pairwise tag",
               operand_tag_helper="Reviewer's tag",
               stored_only_labels=_stored_only_labels) }}
         </div>
@@ -1099,6 +1109,7 @@
           if (operandHelperRow) {
             operandHelperRow.style.display = defaultUseTag ? 'flex' : 'none';
           }
+          window.newModelSyncFieldHelper(clone);
           // New cell's X is active (only the first cell's X stays disabled).
           clone.querySelectorAll('button[title^="Cannot remove"], button[title^="Remove rule"]').forEach(function (b) {
             b.disabled = false;
@@ -1106,6 +1117,22 @@
             b.setAttribute('title', 'Remove rule');
           });
           container.appendChild(clone);
+        };
+        // Link 2's caption reads "Pairwise tag" while the cell holds a
+        // relationship tag under IS / IS NOT, which judge the pair
+        // itself; otherwise the default ("Reviewee's tag").
+        window.newModelSyncFieldHelper =
+          window.newModelSyncFieldHelper || function (el) {
+          var cell = el.closest('[data-new-model-rule-cell]');
+          var helper = cell && cell.querySelector('[data-new-model-field-helper-pair]');
+          if (!helper) { return; }
+          var field = cell.querySelector('[data-new-model-rule-field]');
+          var op = cell.querySelector('[data-new-model-op-input]');
+          var pairwise = field && field.value.indexOf('pair_context.') === 0 &&
+            op && (op.value === 'IS' || op.value === 'IS NOT');
+          helper.textContent = helper.getAttribute(
+            pairwise ? 'data-new-model-field-helper-pair' : 'data-new-model-field-helper-default'
+          );
         };
         // IS FILLED / IS EMPTY test the field alone, so the value box
         // goes inactive: read-only and dimmed, but still submitted, so
@@ -1152,6 +1179,7 @@
               operandHelperRow.style.display = useTag ? 'flex' : 'none';
             }
           }
+          window.newModelSyncFieldHelper(btn);
         };
         window.newModelRemoveRule = window.newModelRemoveRule || function (btn) {
           var cell = btn.closest('[data-new-model-rule-cell]');

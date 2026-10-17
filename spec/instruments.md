@@ -689,7 +689,11 @@ stacked list of MATCH-rule cells. Each cell has:
 
 - A field dropdown — the column's tag namespace plus the relationship
   tags (e.g. Link 1: `reviewer.tag1 / tag2 / tag3`, "Pair: …"), under a
-  caption: "Reviewer's tag" in Link 1, "Reviewee's tag" in Link 2.
+  caption: "Reviewer's tag" in Link 1, "Reviewee's tag" in Link 2 —
+  except "Pairwise tag" while a Link 2 cell holds a relationship tag
+  under `IS` / `IS NOT`, since those operators judge the pair itself (author,
+  2026-10-17). The caption follows the cell's field and operator as
+  they change.
   Only namespaces with at least one populated row in the
   session appear — the dropdown's options come from
   `views._instruments.new_model_usable_tags`.
