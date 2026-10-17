@@ -617,3 +617,27 @@ def test_get_or_create_user_stores_a_padded_claim_trimmed(
         request=Request({"type": "http"}), current_user=auth, db=db
     )
     assert second.id == first.id
+
+
+def test_a_row_stored_padded_before_the_fix_still_finds_its_owner(
+    db: Session,
+) -> None:
+    """Findings P3, the read of #3108: a row an older build stored
+    padded is found by the trimmed lookup, not shadowed by a second row
+    that would lose its flags."""
+    padded = User(email=" Old@example.edu ", display_name="Old", is_operator=True)
+    db.add(padded)
+    db.commit()
+    auth = AuthenticatedUser(
+        principal_id="old-oid",
+        email="old@example.edu",
+        name="Old",
+        provider="aad",
+    )
+
+    found = get_or_create_user(
+        request=Request({"type": "http"}), current_user=auth, db=db
+    )
+
+    assert found.id == padded.id
+    assert found.is_operator

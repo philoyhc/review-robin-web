@@ -128,7 +128,12 @@ def find_user(db: Session, current_user: AuthenticatedUser) -> User | None:
         return None
     return db.execute(
         select(User)
-        .where(func.lower(User.email) == normalize_email(current_user.email))
+        # Trimmed on both sides: a row stored padded before
+        # ``get_or_create_user`` stripped on write still finds its owner
+        # rather than gaining a duplicate (findings P3).
+        .where(
+            func.lower(func.trim(User.email)) == normalize_email(current_user.email)
+        )
         .order_by(User.id)
         .limit(1)
     ).scalar_one_or_none()

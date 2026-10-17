@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 21 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
-R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E3, E5, P1, P3 and P5 done).
+**Open:** 22 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3 and P5 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -124,7 +124,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**S7**~~ — **Done in #3107**: `decode_csv` refuses a roster file holding a NUL, and `split_rows` refuses a Settings row holding one, so the Setup pages and Quick Setup report it; Rehydrate, gated off and incomplete (`spec/rehydrate.md`), is not covered and needs this check before it ships (`tests/unit/test_roster_csv_bug_sweep.py`, `tests/unit/test_settings_import_bug_sweep.py`). **A NUL byte in a roster or Settings CSV is accepted**
   (`csv_imports.py:90`); Postgres refuses it with a 500. *Reproduced* to the
   driver; not run against a live Postgres. Code.
-- ~~**P1**~~ — **Done in (this PR)**: Demote, single-row and in a batch, takes Revoke's `still_owner` when the target has no Operator flag, after locking the row as Revoke does (`spec/permissions.md` §4.1; `tests/integration/test_sys_admin_users.py::test_demote_refuses_an_owner_left_with_no_operator_flag`). Demoting a sys-admin who is a session's only owner orphans it: the
+- ~~**P1**~~ — **Done in #3108**: Demote, single-row and in a batch, takes Revoke's `still_owner` when the target has no Operator flag, after locking the row as Revoke does (`spec/permissions.md` §4.1; `tests/integration/test_sys_admin_users.py::test_demote_refuses_an_owner_left_with_no_operator_flag`, `tests/integration/test_owner_add_lock.py::test_single_row_demote_takes_the_batch_lock_before_counting`). Demoting a sys-admin who is a session's only owner orphans it: the
   owner is bounced by `require_operator`, and Revoke, Delete and Remove all
   refuse (`app/services/users.py:283`, `:305`, batch at `:598`).
   `spec/permissions.md` §4.2 holds owners to be operators; `revoke` guards
@@ -135,7 +135,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`routes_operator/_lobby.py:343-372`, `session_clone.py:396-404`).
   `spec/permissions.md` §3 lists clone as a deliberate relaxation.
   *Reproduced.* Author: gate it on ownership, or at least audit the source.
-- ~~**E3**~~ — **Done in (this PR)**: Prepare gives a kept self-review row with both sides active its instrument's toggle state (the value most such rows hold), so a toggled-off instrument stays off and a reactivated reviewer's row rejoins the rest (`spec/assignments.md`; `tests/unit/test_replace_assignments_self_reviews_active.py::test_a_kept_self_review_row_keeps_its_toggled_include`). The next Prepare turns a per-instrument self-review "off" back on:
+- **E3** — **Needs a ruling** (2026-10-17): the toggle is stored nowhere but in the rows' `include`, so Prepare cannot recover it reliably; a majority vote over the rows was tried in #3108 and its reads showed reset rows outvoting untouched ones and inserted rows still seeding from `self_reviews_active`. A fix stores the toggle per instrument. The next Prepare turns a per-instrument self-review "off" back on:
   `replace_assignments` resets `include` on kept self-review rows
   (`_generate.py:582-586`), and any roster edit sends the session back
   through Prepare. `spec/assignments.md:406`, `:443`. *Reproduced.* Code.
@@ -194,13 +194,13 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   Code.
 - ~~**S10**~~ — **Done in #3107**: `observers.imported` and `observers.deleted_all` omit `cascaded_assignments`, as they omit `cascaded_relationships` (`spec/architecture.md`; `tests/integration/test_relationship_cascade_accounting.py`). **Observer audit events report `cascaded_assignments` that were never
   deleted** (`csv_imports.py:1380`, `:1566`). Code.
-- ~~**P3**~~ — **Done in (this PR)**: `get_or_create_user` stores the claim stripped, as `find_user` compares it (`docs/security_posture.md` §5.5a; `tests/integration/test_operator_allowlist_gate.py::test_get_or_create_user_stores_a_padded_claim_trimmed`). An email claim with surrounding spaces works once, then answers 500
+- ~~**P3**~~ — **Done in #3108**: `get_or_create_user` stores the claim stripped, as `find_user` compares it, and `find_user` trims the stored side too, so a row stored padded earlier is found rather than duplicated (`docs/security_posture.md` §5.5a; `tests/integration/test_operator_allowlist_gate.py::test_get_or_create_user_stores_a_padded_claim_trimmed`, `::test_a_row_stored_padded_before_the_fix_still_finds_its_owner`). An email claim with surrounding spaces works once, then answers 500
   on every request: `deps.py:179` stores it untrimmed and `find_user` (`:131`)
   compares trimmed. `docs/security_posture.md` §5.5a. Code.
 - ~~**P4**~~ — **Done in #3106**: ids typed as text go through `app.services.text.parse_id`, ASCII digits only (`tests/integration/test_bad_input_refused.py`). Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
   (`_setup_observers.py:722`, `_band2.py:213`, `:396`);
   `app/web/return_to.py` already documents the trap. Code.
-- ~~**P5**~~ — **Done in (this PR)**: `_claim` walks the types in the order given, then the token's claims (`tests/test_identity.py::test_rich_claims_follow_the_stated_priority_not_token_order`). `app/auth/identity.py` `_claim` returns the first claim in token
+- ~~**P5**~~ — **Done in #3108**: `_claim` walks the types in the order given, then the token's claims (`tests/test_identity.py::test_rich_claims_follow_the_stated_priority_not_token_order`). `app/auth/identity.py` `_claim` returns the first claim in token
   order, not the stated priority, so `preferred_username` can win over
   `emailaddress` (`:45-56`, `:76-81`). Fails closed. Code.
 - ~~**E4**~~ — **Done in #3086**: a rule or boundary stored with a tag the card no longer offers keeps its option (`data-new-model-stored-only`), so a Save keeps it, and `+` adds a cell without it (`spec/instruments.md`, Band 1; `tests/integration/test_band1_filled_empty.py`). **A Band 1 rule on a tag column now empty has no `<option>`, so the
@@ -208,7 +208,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   (`instruments_index.html:647-650`); Link 3's boundary boxes look the same
   and would trigger E2. Template shape *reproduced*; what the browser posts
   needs the author's check. Code.
-- ~~**E5**~~ — **Done in (this PR)**: the name and handle predicates use `icontains(..., autoescape=True)` (`tests/integration/test_assignments_search_tags.py`, two cases added to the conformance table). `_` and `%` act as wildcards in the Assignments search
+- ~~**E5**~~ — **Done in #3108**: the name and handle predicates use `icontains(..., autoescape=True)` (`tests/integration/test_assignments_search_tags.py`, two cases added to the conformance table). `_` and `%` act as wildcards in the Assignments search
   (`app/services/assignments/_coverage.py:208`, `:249`), which the Python
   matcher it must mirror doesn't do. Code: `contains(..., autoescape=True)`.
 

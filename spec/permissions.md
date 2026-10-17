@@ -30,7 +30,7 @@ membership:
 | Role | Stored as | Granted by | Revoked by |
 |---|---|---|---|
 | **Operator** | `users.is_operator` | env bootstrap on first sign-in (`OPERATOR_EMAILS`), or an admin's *Admit* | an admin's *Revoke* (refused while the user still owns any session) |
-| **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* or *Invite* with the chip on `Invite as sys-admin` | a super-admin's *Demote* (refused for the last admin) |
+| **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* or *Invite* with the chip on `Invite as sys-admin` | a super-admin's *Demote* (refused for the last admin, and while a user with no Operator flag still owns any session) |
 | **Super-admin** | *derived*, never stored — email ∈ `SUPER_ADMIN_EMAILS` (`app/auth/roles.py::is_super_admin`, case-insensitive) | deployer config only | deployer config only; no in-app path may demote, revoke or remove one |
 | **Session owner** | a `session_operators` row (`role="owner"`) | session create (the creator, plus any co-owners named on Create's Owners card), clone (the cloner), an owner's *Add owner*, or a sys-admin's audited self-add | an owner's *Remove owner* (refused for the last owner) |
 
@@ -257,6 +257,7 @@ a revoke's lock, so every owner-row write first re-reads the user
 Create's owners and Adopt; and the creator on Create, Duplicate and
 Rehydrate, who bounce to `/me` as `require_operator` would. A revoke,
 single-row or bulk, and a Demote, locks the user row `FOR NO KEY UPDATE`
+(a Demote locks every admin row with it, for its `last_admin` count)
 before it counts owned sessions, so either the add commits first and `still_owner` counts it,
 or it waits and sees the flag cleared. A Create owner revoked, demoted
 or deleted between the 422 check and the write is skipped, silently;
