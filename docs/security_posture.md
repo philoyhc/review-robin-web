@@ -357,9 +357,8 @@ injects.*
   `X-MS-CLIENT-PRINCIPAL` (base64 JSON claim set). Its claims are read
   first: `X-MS-CLIENT-PRINCIPAL-NAME` supplies the email only when the
   claim set has none, and only the object id and the provider prefer
-  the simple headers. The email claim is the `emailaddress` claim, then
-  `preferred_username`, then `email`, in that order whatever order the
-  token lists them (findings P5). The parser is
+  the simple headers. The email claim is the first of `emailaddress`,
+  `preferred_username` and `email` in the token's own claim order. The parser is
   defensive: a malformed `X-MS-CLIENT-PRINCIPAL` falls back to the
   simple headers rather than raising.
 - **Fake auth** (local only): with `ALLOW_FAKE_AUTH=true`,

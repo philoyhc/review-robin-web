@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 22 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
-R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1, P3 and P5 done).
+**Open:** 23 of 46 rows (refreshed 2026-10-17: R2, L1, O1, S1, S2, E1, E2, R3,
+R4, S3, S5, S6, S7, O4, O6, S8, S9, S10, P4, E4, E5, P1 and P3 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -200,7 +200,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**P4**~~ — **Done in #3106**: ids typed as text go through `app.services.text.parse_id`, ASCII digits only (`tests/integration/test_bad_input_refused.py`). Unicode digits such as `²` pass `isdigit()` and fail `int()`: 500
   (`_setup_observers.py:722`, `_band2.py:213`, `:396`);
   `app/web/return_to.py` already documents the trap. Code.
-- ~~**P5**~~ — **Done in #3108**: `_claim` walks the types in the order given, then the token's claims (`tests/test_identity.py::test_rich_claims_follow_the_stated_priority_not_token_order`). `app/auth/identity.py` `_claim` returns the first claim in token
+- **P5** — **Needs a ruling** (2026-10-17): honoring the stated priority, tried in #3108, moves a user whose token lists a differing `preferred_username` first to a new email, and `find_user` matches on email only, so they would get a fresh row without their flags or ownership (Codex on #3108). A fix either matches existing rows by principal id or migrates them first. `app/auth/identity.py` `_claim` returns the first claim in token
   order, not the stated priority, so `preferred_username` can win over
   `emailaddress` (`:45-56`, `:76-81`). Fails closed. Code.
 - ~~**E4**~~ — **Done in #3086**: a rule or boundary stored with a tag the card no longer offers keeps its option (`data-new-model-stored-only`), so a Save keeps it, and `+` adds a cell without it (`spec/instruments.md`, Band 1; `tests/integration/test_band1_filled_empty.py`). **A Band 1 rule on a tag column now empty has no `<option>`, so the
