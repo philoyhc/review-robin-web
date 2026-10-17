@@ -73,7 +73,7 @@ ReviewerTag1               → reviewer.tag_1, no suffix (see below)
   blocking issue, tag column or not: `ReviewerTag1` beside
   `ReviewerTag1.Tutor`, or one name repeated, would otherwise keep one
   column and drop the other. A column the file does not define is
-  ignored, so a repeat of it is too.
+  ignored, another roster file's included, so a repeat of it is too.
 - **First-period split, labelable columns only.** Only those nine
   tag columns are split, and only on the first period — so a label
   may itself contain periods (`RevieweeTag2.Dept. Head`). Every

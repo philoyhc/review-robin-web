@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from functools import partial
+
 import pytest
 
 from app.services import csv_imports, relationships
@@ -85,3 +88,38 @@ def test_a_repeated_column_the_file_does_not_define_is_ignored() -> None:
 
     assert not result.is_blocked, result.issues
     assert len(result.rows) == 1
+
+
+def test_another_roster_files_column_repeated_is_ignored() -> None:
+    """Only the columns this file reads count: two ``ObserverEmail``
+    columns on a Reviewers CSV are ignored like any other extra (Codex
+    on #3107)."""
+    content = (
+        b"ReviewerName,ReviewerEmail,ObserverEmail,ObserverEmail\n"
+        b"Ada,ada@example.org,a@example.org,b@example.org\n"
+    )
+
+    result = csv_imports.parse_reviewer_csv(content)
+
+    assert not result.is_blocked, result.issues
+    assert len(result.rows) == 1
+
+
+@pytest.mark.parametrize(
+    ("parse", "header"),
+    [
+        (csv_imports.parse_reviewee_csv, "RevieweeEmail,RevieweeTag2,RevieweeTag2"),
+        (csv_imports.parse_observer_csv, "ObserverEmail,CohortRule,CohortRule"),
+        (
+            partial(relationships.parse_relationship_csv, reviewers=[], reviewees=[]),
+            "ReviewerEmail,RevieweeEmail,Status,Status",
+        ),
+    ],
+)
+def test_each_roster_file_refuses_its_own_column_twice(
+    parse: Callable[[bytes], csv_imports.ParseResult], header: str
+) -> None:
+    result = parse(f"{header}\n".encode())
+
+    assert result.is_blocked
+    assert result.issues[0].message.endswith("column appears more than once")
