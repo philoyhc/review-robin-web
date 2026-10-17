@@ -2,7 +2,7 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 44 of 47 rows (refreshed 2026-10-17 at `b9efe5e8`: S2, E1 and
+**Open:** 43 of 46 rows (refreshed 2026-10-17 at `b9efe5e8`: S2, E1 and
 E4 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the

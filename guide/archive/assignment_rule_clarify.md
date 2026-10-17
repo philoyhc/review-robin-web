@@ -238,7 +238,25 @@ Taken 2026-10-17 at `9dc78ae3`.
   `spec/instruments.md` (Band 1) state the table and the empty-value
   rule; `spec/setup_pages.md` (Observers, cohort rule) states the
   cohort rule's.
-- `### Doc impact` honored; `### Status
+- `### Doc impact` honored; `### Status` compacted at close.
+
+### Open questions
+
+None open (author, 2026-10-17).
+
+### Out of scope
+
+Pair tags as Link 3 boundaries (Item 1). Pair-context display fields on
+the reviewer surface.
+
+### Doc impact
+
+- `spec/assignments.md` — Predicate vocabulary: person-level pair-tag fields; Operators: the empty-value rule.
+- `spec/instruments.md` — Band 1: pair tags by Link and operator, captions, Link 3 Group rule.
+- `spec/setup_pages.md` — Relationships row: Band 1 offers pair tags again; Observers cohort rule: the empty-value rule.
+- `spec/csv_contracts.md` — §3 Phase 1: a Settings import refuses a grouped instrument beside a Link 2 pair-tag `IS` (added at close).
+
+### Status
 
 Closed 2026-10-17. Item base for the cumulative read: `cc7e1ac0`.
 

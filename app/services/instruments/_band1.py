@@ -9,7 +9,7 @@ The new-model instrument card surfaces three Links in Band 1:
   ``different_from`` operators that take a reviewer tag as operand.
 - Both Links also offer ``is_not_empty`` / ``is_empty`` (``IS FILLED``
   / ``IS EMPTY``), which take no operand.
-- **Pair tags** (author, 2026-10-17; ``guide/assignment_rule_clarify.md``
+- **Pair tags** (author, 2026-10-17; ``guide/archive/assignment_rule_clarify.md``
   Item 2). The card names a relationship tag ``pair_context.tagN``
   wherever it offers one; what is stored depends on where it is used
   (:func:`_engine_field`). In Link 1 it is the reviewer's pair tag

@@ -26,7 +26,7 @@ Per-rule semantics:
 - Comparisons are case-insensitive. ``CONTAINS`` /
   ``DOES NOT CONTAIN`` use substring (not regex).
 - Empty values follow the rule engine's rule (author, 2026-10-17;
-  ``guide/assignment_rule_clarify.md`` Item 2): a blank value is no
+  ``guide/archive/assignment_rule_clarify.md`` Item 2): a blank value is no
   value; ``IS NOT`` passes no value; ``IS THE SAME AS`` passes when
   both sides hold the same value, no value included, and
   ``IS DIFFERENT FROM`` is its negation.

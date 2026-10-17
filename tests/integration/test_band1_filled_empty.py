@@ -1,6 +1,6 @@
 """Band 1 offers IS FILLED / IS EMPTY and no pair-context tags.
 
-Author, 2026-10-16 (``guide/assignment_rule_clarify.md``, stage 1):
+Author, 2026-10-16 (``guide/archive/assignment_rule_clarify.md``, stage 1):
 Link 1 and Link 2 gain IS FILLED and IS EMPTY, which take no value, and
 the card stops offering pair-context tags while their meaning is
 reworked. A rule already stored with one keeps its option, so a Save

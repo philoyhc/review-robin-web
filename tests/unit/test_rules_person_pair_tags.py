@@ -1,5 +1,5 @@
 """A pair tag as the pair's, or as a person's (author, 2026-10-17;
-``guide/assignment_rule_clarify.md`` Item 2).
+``guide/archive/assignment_rule_clarify.md`` Item 2).
 
 ``pair_context.tagN`` reads the one pair being judged: the operator's
 "Link 2 pair tag IS Friend" keeps exactly the Friend pairs, and "IS NOT

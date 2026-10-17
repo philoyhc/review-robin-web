@@ -1,5 +1,5 @@
 """Pair tags through Generate, on real ``Relationship`` rows (author,
-2026-10-17; ``guide/assignment_rule_clarify.md`` Item 2).
+2026-10-17; ``guide/archive/assignment_rule_clarify.md`` Item 2).
 
 A relationship is a pair of individuals: on a Group instrument a Link 2
 pair-tag IS NOT drops only the ruled-out member's row, not the group;
