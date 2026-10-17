@@ -231,26 +231,34 @@ def group_keys(
     )
 
 
+Pair = tuple[int, int]
+
+
 def _instrument_groups(
     db: Session, *, session_id: int, instrument_id: int
-) -> list[frozenset[int]]:
-    """The instrument's groups as sets of assignment ids, one set per
-    reviewer and group key; on an Individual instrument each row is a
-    group of its own."""
+) -> tuple[list[frozenset[Pair]], dict[Pair, int]]:
+    """The instrument's groups, one set per reviewer and group key; on
+    an Individual instrument each row is a group of its own. A member
+    is its ``(reviewer_id, reviewee_id)`` pair, unique on an instrument,
+    rather than its assignment id: SQLite reuses the highest id once
+    it is deleted, so a reconcile that drops one row and inserts
+    another could otherwise present a changed group as the same rows.
+    Also returns each pair's assignment id, for the delete."""
     members = list(
         db.execute(
             select(Assignment).where(Assignment.instrument_id == instrument_id)
         ).scalars()
     )
+    ids = {(m.reviewer_id, m.reviewee_id): m.id for m in members}
     keys = group_keys(db, assignments=members, session_id=session_id)
     if not keys:
-        return [frozenset({member.id}) for member in members]
-    groups: dict[tuple[int, tuple[str, ...]], set[int]] = {}
+        return [frozenset({pair}) for pair in ids], ids
+    groups: dict[tuple[int, tuple[str, ...]], set[Pair]] = {}
     for member in members:
         groups.setdefault((member.reviewer_id, keys[member.id]), set()).add(
-            member.id
+            (member.reviewer_id, member.reviewee_id)
         )
-    return [frozenset(ids) for ids in groups.values()]
+    return [frozenset(pairs) for pairs in groups.values()], ids
 
 
 def session_group_instrument_ids(
@@ -279,7 +287,7 @@ def session_group_instrument_ids(
     }
 
 
-GroupPartitions = dict[int, set[frozenset[int]]]
+GroupPartitions = dict[int, set[frozenset[Pair]]]
 
 
 def snapshot_group_partitions(
@@ -303,7 +311,7 @@ def snapshot_group_partitions(
         instrument_id: set(
             _instrument_groups(
                 db, session_id=session_id, instrument_id=instrument_id
-            )
+            )[0]
         )
         for instrument_id in answered
     }
@@ -333,11 +341,12 @@ def clear_changed_groups(
     deleted."""
     changed: set[int] = set()
     for instrument_id, groups in before.items():
-        for group in _instrument_groups(
+        after, ids = _instrument_groups(
             db, session_id=session_id, instrument_id=instrument_id
-        ):
+        )
+        for group in after:
             if group not in groups:
-                changed |= group
+                changed |= {ids[pair] for pair in group}
     if not changed:
         return 0
     # Deleted by assignment, not by response id: one bound parameter per

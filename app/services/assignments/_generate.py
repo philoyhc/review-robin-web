@@ -1129,7 +1129,7 @@ def _projected_group_clears(
     on this instrument's kept rows, without writing: the groups the
     diff's kept and new pairs would form, each compared with today's,
     as ``responses.clear_changed_groups`` compares them after the
-    write. A new pair stands in under its key, since it has no id yet."""
+    write, by the ``(reviewer_id, reviewee_id)`` pairs it compares."""
     if instrument.group_kind is None or not (diff.to_insert or diff.to_delete):
         return 0
     from app.services import instruments as instruments_service
@@ -1141,7 +1141,7 @@ def _projected_group_clears(
     if not before:
         return 0
     boundary = instruments_service.decode_group_kind(instrument.group_kind)
-    groups: dict[tuple[int, tuple[str, ...]], set[object]] = {}
+    groups: dict[tuple[int, tuple[str, ...]], set[tuple[int, int]]] = {}
     for key in diff.to_keep | diff.to_insert:
         reviewer, reviewee, _ = diff.new_pairs[key]
         group_key = responses_service.group_key_for_pair(
@@ -1151,14 +1151,13 @@ def _projected_group_clears(
             boundary=boundary,
             pair_context_lookup=pair_context_lookup,
         )
-        member = diff.existing_rows[key].id if key in diff.to_keep else key
-        groups.setdefault((reviewer.id, group_key), set()).add(member)
+        groups.setdefault((reviewer.id, group_key), set()).add(key)
     changed = {
-        member
+        diff.existing_rows[key].id
         for members in groups.values()
         if frozenset(members) not in before
-        for member in members
-        if isinstance(member, int)
+        for key in members
+        if key in diff.to_keep
     }
     if not changed:
         return 0

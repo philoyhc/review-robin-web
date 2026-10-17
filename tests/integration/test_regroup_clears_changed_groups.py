@@ -335,3 +335,51 @@ def test_deleting_a_reviewee_clears_the_group_it_leaves(db: Session) -> None:
         .order_by(AuditEvent.id.desc())
     ).scalars().first()
     assert event.detail["context"] == {"defuncted_group_responses": 1}
+
+
+def test_a_reused_assignment_id_still_reads_as_a_new_member(db: Session) -> None:
+    """SQLite reuses the highest id once it is deleted, so a reconcile
+    that drops one member and inserts another can hand the newcomer the
+    leaver's id. Groups compare by pair, so the swap still clears."""
+    from app.services import responses as responses_service
+
+    world = _seed(
+        db,
+        group_kind=instruments_service.encode_group_kind([_TEAM]),
+        tags=_TEAMS,
+        answers={"Ann": "2", "Bo": "2", "Cy": "5", "Di": "5"},
+    )
+    session_id = world.instrument.session_id
+    before = responses_service.snapshot_group_partitions(
+        db, session_id=session_id, instrument_ids={world.instrument.id}
+    )
+    di = world.rows.pop("Di")
+    reused_id, reviewer_id = di.id, di.reviewer_id
+    db.query(Response).filter(Response.assignment_id == di.id).delete()
+    db.delete(di)
+    db.flush()
+    eve = Reviewee(
+        session_id=session_id,
+        name="Eve",
+        email_or_identifier="eve@example.edu",
+        tag_1="blue",
+        tag_2="x",
+    )
+    db.add(eve)
+    db.flush()
+    world.rows["Eve"] = Assignment(
+        id=reused_id,
+        session_id=session_id,
+        reviewer_id=reviewer_id,
+        reviewee_id=eve.id,
+        instrument_id=world.instrument.id,
+    )
+    db.add(world.rows["Eve"])
+    db.flush()
+
+    cleared = responses_service.clear_changed_groups(
+        db, session_id=session_id, before=before
+    )
+
+    assert cleared == 1
+    assert _answers(db, world) == {"Ann": "2", "Bo": "2", "Cy": None, "Eve": None}
