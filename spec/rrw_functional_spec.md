@@ -2233,7 +2233,9 @@ and rebuild from scratch. Instead it **reconciles**:
 3. Drop pairs that are in the old set but not the new — and
    cascade-delete their response rows.
 4. Keep pairs that are in both — preserving their existing
-   responses.
+   responses, except on a group-scoped instrument whose group the
+   run redraws, which is cleared (a group with new or fewer members
+   is answered again).
 
 This means a small rule edit or a single reviewer renaming
 does not destroy mid-cycle reviewer work.
@@ -2253,8 +2255,9 @@ fan-out").
 
 **Prepare session**, which runs the regeneration, dry-runs the
 reconcile first on a session that has responses; if it would delete
-any, the Workflow card asks the operator to confirm, naming how many
-responses and pairs would go, before the actual reconcile runs.
+any, on dropped pairs or in groups it redraws, the Workflow card asks
+the operator to confirm, naming how many responses and pairs would
+go, before the actual reconcile runs.
 Activate does not regenerate.
 
 Full contract: `spec/assignments.md` "Reconcile + regenerate".

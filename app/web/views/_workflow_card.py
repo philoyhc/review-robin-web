@@ -146,9 +146,11 @@ def build_workflow_card_context(
         db, review_session
     ):
         impact = assignments.reconcile_impact(db, review_session)
-        if impact.responses_deleted > 0:
+        if impact.responses_lost > 0:
             prepare_confirm_ctx = {
+                "responses_lost": impact.responses_lost,
                 "responses_deleted": impact.responses_deleted,
+                "group_responses_cleared": impact.group_responses_cleared,
                 "deleted_pairs": impact.deleted,
             }
 

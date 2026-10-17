@@ -24,6 +24,8 @@ Saves emit ``instrument.created`` / ``.deleted`` /
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import copy as _copy
 
 from sqlalchemy import func, select
@@ -46,6 +48,10 @@ from app.services.instruments._band1 import _band1_rule_set_name
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments._response_fields import DEFAULT_RESPONSE_FIELDS
 from app.services.instruments._state import _instrument_label
+
+if TYPE_CHECKING:
+    from app.services.responses import GroupPartitions
+
 
 DEFAULT_INSTRUMENT_NAME = "Default"
 
@@ -953,7 +959,7 @@ def _drop_sample_group_members(instrument: Instrument) -> None:
         }
 
 
-def _snapshot_groups(db: Session, instrument: Instrument) -> dict:
+def _snapshot_groups(db: Session, instrument: Instrument) -> GroupPartitions:
     from app.services import responses as responses_service
 
     return responses_service.snapshot_group_partitions(
@@ -961,7 +967,9 @@ def _snapshot_groups(db: Session, instrument: Instrument) -> dict:
     )
 
 
-def _reconcile_regrouped(db: Session, instrument: Instrument, before: dict) -> int:
+def _reconcile_regrouped(
+    db: Session, instrument: Instrument, before: GroupPartitions
+) -> int:
     """Clear the groups the regroup changed (findings E2); the count
     deleted, for the event's ``context``."""
     from app.services import responses as responses_service

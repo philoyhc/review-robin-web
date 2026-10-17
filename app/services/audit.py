@@ -678,7 +678,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
     # auditable facts are how many rows went and what went with them
     # (assignments and responses, counted for *these* rows).
     "reviewer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
-    "reviewee.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
+    "reviewee.bulk_deleted": EventSchema(_IDENTITY | {"counts", "context"}),
     "observer.bulk_deleted": EventSchema(_IDENTITY | {"counts"}),
     "relationship.bulk_deleted": EventSchema(_IDENTITY | {"counts", "context"}),
     "instrument.view_policy_set": EventSchema(

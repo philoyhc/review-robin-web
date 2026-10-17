@@ -354,6 +354,12 @@ delete them once no remaining section points to them.
   tag to the other team: the reviewer's page shows both teams
   unanswered, and the `reviewee.updated` audit row counts
   `defuncted_group_responses`.
-- [ ] **Generate clears a joined group.** Add a reviewee to an answered
-  team and Generate (ticking the response-loss acknowledgement): that
-  team shows unanswered; a team nobody joined keeps its answer.
+- [ ] **Prepare asks before clearing a joined group.** Add a reviewee
+  to an answered team and click `Prepare session`: the card's banner
+  reads "Preparing will delete N saved responses" with a line that it
+  "also clears" them on groups whose members it changes. `Regenerate &
+  prepare` then shows that team unanswered; a team nobody joined keeps
+  its answer.
+- [ ] **Deleting a reviewee clears their group.** Delete one member of
+  an answered team on Reviewees: the members who remain show the team
+  unanswered.

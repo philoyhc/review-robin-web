@@ -86,7 +86,7 @@ from ._branching import (
 from ._group_reconciliation import (
     GroupPartitions,
     clear_changed_groups,
-    group_instrument_ids,
+    session_group_instrument_ids,
     snapshot_group_partitions,
     group_key_for_pair,
     GroupKeyable,
@@ -155,7 +155,7 @@ __all__ = [
     # _group_reconciliation
     "GroupPartitions",
     "clear_changed_groups",
-    "group_instrument_ids",
+    "session_group_instrument_ids",
     "snapshot_group_partitions",
     "group_key_for_pair",
     "GroupKeyable",

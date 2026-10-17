@@ -79,21 +79,36 @@
     {% if prepare_confirm %}
       {# Saved-response confirmation. Preparing the session runs the
          reconcile, which would delete responses on pairs the current
-         setup no longer produces. The operator confirms before the
-         run proceeds. #}
+         setup no longer produces, and clear the answers of any group
+         whose members it changes (a group is the subject, so a new
+         composition is answered again). The operator confirms before
+         the run proceeds. #}
       <div class="banner banner-warning banner-scroll-target"
            id="next-action-prepare-confirm-banner">
         <p class="banner-headline">
-          Preparing will delete {{ prepare_confirm.responses_deleted }}
-          saved response{{ "" if prepare_confirm.responses_deleted == 1 else "s" }}.
+          Preparing will delete {{ prepare_confirm.responses_lost }}
+          saved response{{ "" if prepare_confirm.responses_lost == 1 else "s" }}.
         </p>
+        {% if prepare_confirm.responses_deleted %}
         <p style="margin: var(--space-2) 0 0 0;">
           Regenerating drops {{ prepare_confirm.deleted_pairs }}
           assignment pair{{ "" if prepare_confirm.deleted_pairs == 1 else "s" }}
           that the current setup no longer produces, along with
           {{ "its" if prepare_confirm.responses_deleted == 1 else "their" }}
+          {{ prepare_confirm.responses_deleted }}
           saved response{{ "" if prepare_confirm.responses_deleted == 1 else "s" }}.
-          Responses on unchanged pairs are kept.
+        </p>
+        {% endif %}
+        {% if prepare_confirm.group_responses_cleared %}
+        <p style="margin: var(--space-2) 0 0 0;">
+          It also clears {{ prepare_confirm.group_responses_cleared }}
+          saved response{{ "" if prepare_confirm.group_responses_cleared == 1 else "s" }}
+          on groups whose members it changes: a group with new or fewer
+          members is answered again.
+        </p>
+        {% endif %}
+        <p style="margin: var(--space-2) 0 0 0;">
+          Responses on unchanged pairs and unchanged groups are kept.
         </p>
         <div class="next-action-buttons" style="margin-top: var(--space-3);">
           <button class="btn destructive" type="submit"

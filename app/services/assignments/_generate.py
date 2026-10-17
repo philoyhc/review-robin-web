@@ -758,6 +758,14 @@ class ReconcileImpact:
     deleted: int
     kept: int
     responses_deleted: int
+    # Answers on kept rows of groups the run would redraw
+    # (``responses.clear_changed_groups``).
+    group_responses_cleared: int = 0
+
+    @property
+    def responses_lost(self) -> int:
+        """Every saved response the run would delete."""
+        return self.responses_deleted + self.group_responses_cleared
 
 
 @dataclass(frozen=True)
@@ -1072,11 +1080,12 @@ def reconcile_impact(
 
     Drives the workflow super-button's saved-response confirmation:
     ``responses_deleted`` is the number of ``Response`` rows a run
-    would delete (responses on pairs the current setup no longer
-    produces); ``deleted`` is how many such pairs there are.
+    would delete on pairs the current setup no longer produces, and
+    ``deleted`` how many such pairs there are; ``group_responses_cleared``
+    is the answers on kept rows of the groups the run would redraw.
     """
     inputs = _load_reconcile_inputs(db, review_session, instrument_id)
-    new = deleted = kept = responses_deleted = 0
+    new = deleted = kept = responses_deleted = group_responses_cleared = 0
     for instrument in inputs.targets:
         diff = _diff_one_instrument(
             db,
@@ -1092,12 +1101,70 @@ def reconcile_impact(
         deleted += len(diff.to_delete)
         kept += len(diff.to_keep)
         responses_deleted += diff.responses_deleted
+        group_responses_cleared += _projected_group_clears(
+            db,
+            review_session=review_session,
+            instrument=instrument,
+            diff=diff,
+            pair_context_lookup=inputs.pair_context_lookup,
+        )
     return ReconcileImpact(
         new=new,
         deleted=deleted,
         kept=kept,
         responses_deleted=responses_deleted,
+        group_responses_cleared=group_responses_cleared,
     )
+
+
+def _projected_group_clears(
+    db: Session,
+    *,
+    review_session: ReviewSession,
+    instrument: Instrument,
+    diff: _InstrumentDiff,
+    pair_context_lookup: dict[tuple[int, int], Relationship],
+) -> int:
+    """How many answers :func:`_materialise_one_instrument` would clear
+    on this instrument's kept rows, without writing: the groups the
+    diff's kept and new pairs would form, each compared with today's,
+    as ``responses.clear_changed_groups`` compares them after the
+    write. A new pair stands in under its key, since it has no id yet."""
+    if instrument.group_kind is None or not (diff.to_insert or diff.to_delete):
+        return 0
+    from app.services import instruments as instruments_service
+    from app.services import responses as responses_service
+
+    before = responses_service.snapshot_group_partitions(
+        db, session_id=review_session.id, instrument_ids={instrument.id}
+    ).get(instrument.id)
+    if not before:
+        return 0
+    boundary = instruments_service.decode_group_kind(instrument.group_kind)
+    groups: dict[tuple[int, tuple[str, ...]], set[object]] = {}
+    for key in diff.to_keep | diff.to_insert:
+        reviewer, reviewee, _ = diff.new_pairs[key]
+        group_key = responses_service.group_key_for_pair(
+            reviewee=reviewee,
+            reviewer_id=reviewer.id,
+            reviewee_id=reviewee.id,
+            boundary=boundary,
+            pair_context_lookup=pair_context_lookup,
+        )
+        member = diff.existing_rows[key].id if key in diff.to_keep else key
+        groups.setdefault((reviewer.id, group_key), set()).add(member)
+    changed = {
+        member
+        for members in groups.values()
+        if frozenset(members) not in before
+        for member in members
+        if isinstance(member, int)
+    }
+    if not changed:
+        return 0
+    return db.scalar(
+        select(func.count(Response.id)).where(Response.assignment_id.in_(changed))
+    ) or 0
 
 
 def replace_assignments(

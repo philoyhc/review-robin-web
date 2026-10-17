@@ -129,7 +129,7 @@ def workflow_prepare(
         and lifecycle.session_has_responses(db, review_session)
     ):
         impact = assignments.reconcile_impact(db, review_session)
-        if impact.responses_deleted > 0:
+        if impact.responses_lost > 0:
             return RedirectResponse(
                 url=_redirect_url(
                     review_session.id, return_to, prepare_confirm=True

@@ -253,7 +253,7 @@ def _instrument_groups(
     return [frozenset(ids) for ids in groups.values()]
 
 
-def group_instrument_ids(
+def session_group_instrument_ids(
     db: Session, *, session_id: int, source_type: str | None = None
 ) -> set[int]:
     """The session's group-scoped instruments, or only those whose

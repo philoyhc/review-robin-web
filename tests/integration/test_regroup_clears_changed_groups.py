@@ -308,3 +308,30 @@ def test_a_member_removed_clears_the_group_it_leaves(db: Session) -> None:
 
     assert cleared == 1
     assert _answers(db, world) == {"Ann": None, "Cy": "5", "Di": "5"}
+
+
+def test_deleting_a_reviewee_clears_the_group_it_leaves(db: Session) -> None:
+    from app.services import reviewees as reviewees_service
+
+    world = _seed(
+        db,
+        group_kind=instruments_service.encode_group_kind([_TEAM]),
+        tags=_TEAMS,
+        answers={"Ann": "2", "Bo": "2", "Cy": "5", "Di": "5"},
+    )
+    bo = world.rows.pop("Bo")
+
+    reviewees_service.delete_selected(
+        db,
+        review_session=world.instrument.session,
+        reviewee_ids=[bo.reviewee_id],
+        user=world.user,
+    )
+
+    assert _answers(db, world) == {"Ann": None, "Cy": "5", "Di": "5"}
+    event = db.execute(
+        select(AuditEvent)
+        .where(AuditEvent.event_type == "reviewee.bulk_deleted")
+        .order_by(AuditEvent.id.desc())
+    ).scalars().first()
+    assert event.detail["context"] == {"defuncted_group_responses": 1}

@@ -366,7 +366,7 @@ def update_reviewee(
         responses_service.snapshot_group_partitions(
             db,
             session_id=reviewee.session_id,
-            instrument_ids=responses_service.group_instrument_ids(
+            instrument_ids=responses_service.session_group_instrument_ids(
                 db, session_id=reviewee.session_id, source_type="reviewee"
             ),
         )

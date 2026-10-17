@@ -57,8 +57,8 @@ from app.services.email_identity import normalize_email
 from app.services.roster_bulk import (
     bulk_delete,
     bulk_set_status,
-    reconcile_relationship_groups,
-    relationship_group_keys_before,
+    clear_redrawn_groups,
+    pair_context_groups_before,
 )
 from app.services.roster_status import ROSTER_STATUSES, normalise_status
 
@@ -413,7 +413,7 @@ def save_relationships(
                 select(Relationship).where(Relationship.session_id == session.id)
             ).scalars()
         )
-        before = relationship_group_keys_before(db, session_id=session.id)
+        before = pair_context_groups_before(db, session_id=session.id)
         replaced = len(existing_rows)
         for row in existing_rows:
             db.delete(row)
@@ -424,7 +424,7 @@ def save_relationships(
         db.flush()
         context = {"filename": filename} if filename else {}
         context.update(
-            reconcile_relationship_groups(
+            clear_redrawn_groups(
                 db, session_id=session.id, before=before
             )
             or {}
@@ -519,12 +519,12 @@ def delete_all_relationships(
             )
         ).scalars()
     )
-    before = relationship_group_keys_before(db, session_id=review_session.id)
+    before = pair_context_groups_before(db, session_id=review_session.id)
     deleted = len(existing_rows)
     for row in existing_rows:
         db.delete(row)
     db.flush()
-    context = reconcile_relationship_groups(
+    context = clear_redrawn_groups(
         db, session_id=review_session.id, before=before
     )
     _recompute_self_review(db, session_id=review_session.id)
@@ -702,7 +702,7 @@ def create_relationship(
         correlation_id=correlation_id,
     )
 
-    before = relationship_group_keys_before(db, session_id=review_session.id)
+    before = pair_context_groups_before(db, session_id=review_session.id)
     relationship = Relationship(
         session_id=review_session.id,
         reviewer_id=reviewer_id,
@@ -714,7 +714,7 @@ def create_relationship(
     )
     db.add(relationship)
     db.flush()
-    context = reconcile_relationship_groups(
+    context = clear_redrawn_groups(
         db, session_id=review_session.id, before=before
     )
     _recompute_self_review(db, session_id=review_session.id)
@@ -831,17 +831,16 @@ def update_relationship(
     # re-pointed off, to another pair-context group: a grouping tag
     # value changes, the row is re-pointed (its tags leave the old pair
     # for the new one), or its status flips (an inactive relationship
-    # reads as empty tags). Each assignment whose group key moved gives
-    # up the answer copy it carried and is re-fanned from its new group
-    # (Segment 13C PR 5; re-point handling Segment 18H; status and the
-    # key comparison findings B34).
-    before = relationship_group_keys_before(db, session_id=session_id)
+    # reads as empty tags). Every group the move changed, the one a pair
+    # left and the one it joined, is cleared (author's ruling
+    # 2026-10-17: the group is the subject; findings B34 for status).
+    before = pair_context_groups_before(db, session_id=session_id)
 
     for field, (_, new_value) in changes.items():
         setattr(relationship, field, new_value)
     db.flush()
 
-    context = reconcile_relationship_groups(
+    context = clear_redrawn_groups(
         db, session_id=session_id, before=before
     )
     _recompute_self_review(db, session_id=session_id)

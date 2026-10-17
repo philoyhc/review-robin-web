@@ -630,8 +630,7 @@ copy, as they always saw the row.
 **A group whose members change is cleared.** A group instrument's
 subject is the group, so a group whose members changed is a different
 subject, and its reviewer answers it again (author's ruling 2026-10-17,
-findings E2; it replaced the 18H re-fan and the B13 copy, which gave a
-newcomer the group's answer). Every change that can redraw a group
+findings E2). Every change that can redraw a group
 snapshots the groups first, and after it every group whose rows are not
 exactly one group's rows before has all its answers deleted
 (`responses.clear_changed_groups`). A member moving clears the group it
@@ -648,6 +647,7 @@ The changes are:
 - a relationship created, imported, deleted, or switched active /
   inactive, since an inactive or missing relationship reads as empty
   tags;
+- a reviewee deleted, which takes its rows out of every group;
 - Generate (and Prepare, which runs it) adding a row for a member new
   to a group, or dropping one the rules no longer produce.
 
@@ -657,10 +657,12 @@ that has no tags, or retagging every member of a group alike deletes
 nothing. Group identity is its rows, not its tag value: a one-member
 group whose tag changes is still that member. The triggering audit
 event's `context` counts the deletions as `defuncted_group_responses`;
-`assignments.generated` counts them as `group_responses_cleared`. None
-of these asks for the response-loss acknowledgement, except Generate,
-which asks whenever the session holds responses ("Reconcile +
-regenerate").
+`assignments.generated` counts them as `group_responses_cleared`. The
+roster delete and Generate ask for the response-loss acknowledgement as
+they always did; Prepare's dry-run counts the answers a run would clear
+with those it deletes (`reconcile_impact`'s `responses_lost`), so a
+clear alone detours it ("Reconcile + regenerate"). The other changes
+ask for none.
 
 ### Self-review interaction
 
@@ -1162,21 +1164,24 @@ instrument `_materialise_one_instrument`
    enforces.
    - **To-insert.** New pairs the engine produced. Each gets
      `include` and `created_by_mode` as set out below. On a
-     group-scoped instrument, a new row whose group already holds
-     an answer takes a copy of it (§ *Group-scoped fan-out*).
+     group-scoped instrument, a new row clears the group it joins
+     (§ *Group-scoped fan-out*).
    - **To-delete.** Existing pairs no longer surviving the
      rule. **Their responses are deleted too** — this is the
      destructive part. The Workflow card's **Prepare session**
      button detours through a `prepare_confirm` banner naming
-     both counts first, so the operator acknowledges the loss
-     before it happens (`spec/workflow_card.md`). The `Response`
+     the counts first, so the operator acknowledges the loss
+     before it happens (`spec/workflow_card.md`); the dry-run
+     (`reconcile_impact`) also counts the answers the run would
+     clear on kept rows of groups it redraws. The `Response`
      rows go before the `Assignment` rows, and the order is
      load-bearing: these are bulk Core deletes, which bypass the
      ORM cascade, so the other order leaves the responses behind
      and breaks the foreign key.
    - **To-keep.** Pairs surviving both passes. Their responses
-     are untouched, and so is the row, except that `include` is
-     **recomputed, not preserved** (below).
+     are untouched, except on a group-scoped instrument whose group
+     the run redraws (§ *Group-scoped fan-out*), and so is the row,
+     except that `include` is **recomputed, not preserved** (below).
 3. Runs `recompute_self_review_classification` over the session
    (§ *Self-review policy*), which keeps `is_self_review` current.
 4. Emits `assignments.generated` (§ *Audit* below).
@@ -1234,7 +1239,8 @@ name a mechanism that cannot write.
 (`refs.instrument_id`), with a `counts` payload in reconcile terms:
 `new`, `deleted` and `kept` pairs; `responses_deleted`, the `Response`
 rows removed with the deleted pairs; `group_responses_cleared`, the
-answers of groups the reconcile redrew, present only when non-zero; and `pairs` / `instruments` / `excluded_*`.
+answers of groups the reconcile redrew, present only when non-zero;
+and `pairs` / `instruments` / `excluded_*`.
 `counts` is freeform, so a new key needs no `EVENT_SCHEMAS` change.
 `replace_assignments` returns a `(replaced, new)` 2-tuple, where
 `replaced` counts the pairs the reconcile deleted.
