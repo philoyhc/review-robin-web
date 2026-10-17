@@ -28,6 +28,7 @@ from app.db.session import get_db
 from app.services import (
     instruments as instruments_service,
 )
+from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import unit_of_work, visibility_policies
 from app.web import views
@@ -497,6 +498,15 @@ def instrument_move_display_field(
     )
 
 
+def _acknowledged_loss(form) -> int:
+    """The count the operator's ``Yes, clear them`` tick was shown on a
+    Save refused for clearing group answers, or 0 with no tick. The
+    tick carries the count rather than ``true`` so a tick left on after
+    further edits cannot approve a different clear."""
+    raw = str(form.get("acknowledge_response_loss") or "").strip()
+    return int(raw) if raw.isdigit() else 0
+
+
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/fields/save")
 async def instrument_bulk_save_fields(
     request: Request,
@@ -541,14 +551,24 @@ async def instrument_bulk_save_fields(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=str(exc),
                 ) from exc
-            instruments_service.set_unit_of_review(
-                db,
-                instrument=instrument,
-                mode=link3_mode,
-                boundary_pairs=link3_pairs,
-                actor=user,
-                touched=link3_touched,
-            )
+            try:
+                instruments_service.set_unit_of_review(
+                    db,
+                    instrument=instrument,
+                    mode=link3_mode,
+                    boundary_pairs=link3_pairs,
+                    actor=user,
+                    touched=link3_touched,
+                    acknowledged_loss=_acknowledged_loss(form),
+                )
+            except responses_service.GroupAnswersWouldClear as exc:
+                # The no-JS fallback refuses as its other steps do; the
+                # card's tick rides this form too (``form="dfsave-<id>"``).
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=str(exc),
+                ) from exc
             instruments_service.set_exclude_self_reviews(
                 db,
                 instrument=instrument,
@@ -811,14 +831,29 @@ async def instrument_consolidated_save(
                 )
             except instruments_service.Band1ParseError as exc:
                 return _fail(str(exc))
-            instruments_service.set_unit_of_review(
-                db,
-                instrument=instrument,
-                mode=link3_mode,
-                boundary_pairs=link3_pairs,
-                actor=user,
-                touched=link3_touched,
-            )
+            try:
+                instruments_service.set_unit_of_review(
+                    db,
+                    instrument=instrument,
+                    mode=link3_mode,
+                    boundary_pairs=link3_pairs,
+                    actor=user,
+                    touched=link3_touched,
+                    acknowledged_loss=_acknowledged_loss(form),
+                )
+            except responses_service.GroupAnswersWouldClear as exc:
+                # Refuse, then re-offer (author's ruling 2026-10-17): the
+                # card shows the count with a ``Yes, clear them`` tick and
+                # its next Save sends that count as ``acknowledge_response_loss``.
+                db.rollback()
+                return JSONResponse(
+                    {
+                        "ok": False,
+                        "errors": [str(exc)],
+                        "confirm_group_clear": exc.count,
+                    },
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
             instruments_service.set_exclude_self_reviews(
                 db,
                 instrument=instrument,
