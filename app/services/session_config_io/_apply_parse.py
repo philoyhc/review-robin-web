@@ -267,6 +267,20 @@ _SCHEDULE_PAIRS = (
 )
 
 
+def _post_apply_value(
+    plan: _ParsedConfig, review_session: ReviewSession, key: str
+) -> tuple[object, bool]:
+    """``(value, supplied)``: what ``session.<key>`` holds after the
+    apply, and whether it is the file's. A force-applied key takes the
+    file's value whenever the file carries it; a fill-blanks key
+    (``SESSION_FALLBACK_KEYS``) only where the destination is blank."""
+    existing = getattr(review_session, key, None)
+    overrides = plan.session_overrides
+    if key in overrides and (key not in SESSION_FALLBACK_KEYS or existing is None):
+        return overrides[key], True
+    return existing, False
+
+
 def session_schedule_order_errors(
     plan: _ParsedConfig, review_session: ReviewSession
 ) -> list[ApplyError]:
@@ -287,19 +301,13 @@ def session_schedule_order_errors(
         validate_schedule_ordering,
     )
 
-    overrides = plan.session_overrides
     anchors = dict.fromkeys(key for pair in _SCHEDULE_PAIRS for key in pair)
     supplied: set[str] = set()
     effective: dict[str, object] = {}
     for key in anchors:
-        existing = getattr(review_session, key, None)
-        if key in overrides and (
-            key not in SESSION_FALLBACK_KEYS or existing is None
-        ):
-            effective[key] = overrides[key]
+        effective[key], from_file = _post_apply_value(plan, review_session, key)
+        if from_file:
             supplied.add(key)
-        else:
-            effective[key] = existing
     errors: list[ApplyError] = []
     for earlier, later in _SCHEDULE_PAIRS:
         if earlier not in supplied and later not in supplied:
@@ -329,30 +337,22 @@ def session_offset_errors(
     """Refuse auto-send invite and reminder offsets the details card
     would refuse (findings L1, 2026-10-16): each entry a valid ISO 8601
     duration within the 10-day cap, and, while its anchor is set, at
-    least the reviewer notice and before the anchor. An out-of-range
-    entry stored unchecked made Session Home answer 500 on every load.
+    least the reviewer notice, before the anchor, and resolving to a
+    representable moment. An out-of-range entry stored unchecked made
+    Session Home answer 500 on every load.
 
-    The card's rules run through its own validators, on the anchors the
-    session would hold after the apply (as
-    ``session_schedule_order_errors`` reads them), with one exception:
-    the lead-time floor, which measures from now, is waived for every
-    entry, since a file carries a schedule that met it when it was set.
-    One error per list, naming the column."""
+    The card's rules run through its own validators, on the values the
+    session would hold after the apply: a list the file carries, or the
+    stored list when the file moves its anchor, since the card checks
+    the stored list again on every Save. The lead-time floor, which
+    measures from now, is waived for every entry, so an exported
+    schedule whose moments have since passed still imports. One error
+    per list, naming the column."""
     from app.services.scheduled_events import (
         ScheduledActivateError,
         parse_and_validate_invite_offsets,
         parse_and_validate_reminder_offsets,
     )
-
-    overrides = plan.session_overrides
-
-    def effective(key: str):
-        existing = getattr(review_session, key, None)
-        if key in overrides and (
-            key not in SESSION_FALLBACK_KEYS or existing is None
-        ):
-            return overrides[key]
-        return existing
 
     checks = (
         ("invite_offsets", parse_and_validate_invite_offsets, "scheduled_activate_at"),
@@ -360,13 +360,14 @@ def session_offset_errors(
     )
     errors: list[ApplyError] = []
     for column, validate, anchor in checks:
-        entries = overrides.get(column)
-        if not entries:
+        entries, list_from_file = _post_apply_value(plan, review_session, column)
+        anchor_value, anchor_from_file = _post_apply_value(plan, review_session, anchor)
+        if not entries or not (list_from_file or anchor_from_file):
             continue
         try:
             validate(
                 ",".join(entries),
-                **{anchor: effective(anchor)},
+                **{anchor: anchor_value},
                 aged_exempt=[frozenset({entry}) for entry in entries],
             )
         except ScheduledActivateError as exc:
@@ -396,15 +397,9 @@ def session_fired_offset_errors(
     # Under the session lock before reading the stored values the check
     # compares against (findings Bc3).
     lock_session(db, review_session)
-    overrides = plan.session_overrides
 
     def effective(key: str):
-        existing = getattr(review_session, key, None)
-        if key in overrides and (
-            key not in SESSION_FALLBACK_KEYS or existing is None
-        ):
-            return overrides[key]
-        return existing
+        return _post_apply_value(plan, review_session, key)[0]
 
     return [
         ApplyError(row_number=0, field=f"session.{column}", message=message)

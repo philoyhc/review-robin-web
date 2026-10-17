@@ -67,10 +67,10 @@ def _apply_session_kv(
     # retention columns. Round-trip uses typed-cell parses; the
     # ``parse_and_validate_*`` editor-side helpers in
     # ``scheduled_events`` enforce save-time constraints (lead
-    # time, format) the operator gets on a direct edit. A round-
-    # tripped value already met the lead time when it was set, so
-    # only that floor is waived: the parse phase runs the offsets'
-    # other rules (``session_offset_errors``, findings L1) and the
+    # time, format) the operator gets on a direct edit. The parse
+    # phase runs those rules but the lead-time floor, so an exported
+    # schedule whose moments have since passed still imports
+    # (``session_offset_errors``, findings L1), and the
     # cross-field ordering chain (``session_schedule_order_errors``,
     # findings G22).
     if key in {"invite_offsets", "reminder_offsets"}:

@@ -383,7 +383,14 @@ def parse_and_validate_reminder_offsets(
 
         if deadline is not None:
             anchor = _ensure_aware_utc(deadline)
-            fire_at = anchor + delta
+            try:
+                fire_at = anchor + delta
+            except OverflowError as exc:
+                # An anchor at the edge of the calendar (findings L1).
+                raise ScheduledActivateError(
+                    f"Auto-send reminder {entry} resolves outside the dates "
+                    f"this app can hold; check End."
+                ) from exc
             exempt = (
                 index < len(aged_exempt) and entry in aged_exempt[index]
             )

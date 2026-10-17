@@ -370,7 +370,14 @@ def parse_and_validate_invite_offsets(
 
         if scheduled_activate_at is not None:
             anchor = _ensure_aware_utc(scheduled_activate_at)
-            fire_at = anchor + delta
+            try:
+                fire_at = anchor + delta
+            except OverflowError as exc:
+                # An anchor at the edge of the calendar (findings L1).
+                raise ScheduledActivateError(
+                    f"Auto-send invite {entry} resolves outside the dates "
+                    f"this app can hold; check Start."
+                ) from exc
             exempt = (
                 index < len(aged_exempt) and entry in aged_exempt[index]
             )
