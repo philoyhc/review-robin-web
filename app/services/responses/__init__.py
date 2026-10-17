@@ -84,6 +84,7 @@ from ._branching import (
     hide_below_hidden_parents,
 )
 from ._group_reconciliation import (
+    GroupAnswersWouldClear,
     GroupPartitions,
     clear_changed_groups,
     keeps_answer,
@@ -155,6 +156,7 @@ __all__ = [
     "branch_structure_errors",
     "condition_error",
     # _group_reconciliation
+    "GroupAnswersWouldClear",
     "GroupPartitions",
     "clear_changed_groups",
     "keeps_answer",

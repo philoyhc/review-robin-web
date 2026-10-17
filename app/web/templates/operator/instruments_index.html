@@ -3992,7 +3992,12 @@
           // of the still-unlocked card; edits stay intact (dirty stays
           // set so the operator can fix + retry). textContent avoids
           // any markup injection from server messages.
-          window.newModelShowSaveErrors = window.newModelShowSaveErrors || function (card, errors) {
+          // A Save that would clear group answers is refused with
+          // ``confirm_group_clear`` (author's ruling 2026-10-17): the
+          // banner adds a ``Yes, clear them`` tick on the dfsave form,
+          // so the next Save sends ``acknowledge_response_loss``. A
+          // rebuilt banner starts unticked.
+          window.newModelShowSaveErrors = window.newModelShowSaveErrors || function (card, errors, confirmGroupClear, formId) {
             if (!card) { return; }
             var banner = card.querySelector('[data-save-error-banner]');
             if (!banner) { return; }
@@ -4007,6 +4012,18 @@
               ul.appendChild(li);
             });
             banner.appendChild(ul);
+            if (confirmGroupClear && formId) {
+              var tickLabel = document.createElement('label');
+              var tick = document.createElement('input');
+              tick.type = 'checkbox';
+              tick.name = 'acknowledge_response_loss';
+              tick.value = 'true';
+              tick.setAttribute('form', formId);
+              tick.setAttribute('data-acknowledge-response-loss', '');
+              tickLabel.appendChild(tick);
+              tickLabel.appendChild(document.createTextNode(' Yes, clear them'));
+              banner.appendChild(tickLabel);
+            }
             banner.hidden = false;
             if (banner.scrollIntoView) { banner.scrollIntoView({ block: 'nearest' }); }
           };
@@ -4047,7 +4064,9 @@
                     } else {
                       window.newModelShowSaveErrors(
                         instrumentCard,
-                        (data && data.errors) || ['Save failed — please retry.']
+                        (data && data.errors) || ['Save failed — please retry.'],
+                        data && data.confirm_group_clear,
+                        form.id
                       );
                     }
                   });

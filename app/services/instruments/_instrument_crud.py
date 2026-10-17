@@ -968,14 +968,22 @@ def _snapshot_groups(db: Session, instrument: Instrument) -> GroupPartitions:
 
 
 def _reconcile_regrouped(
-    db: Session, instrument: Instrument, before: GroupPartitions
+    db: Session,
+    instrument: Instrument,
+    before: GroupPartitions,
+    *,
+    acknowledged: bool,
 ) -> int:
     """Clear the groups the regroup changed (findings E2); the count
-    deleted, for the event's ``context``."""
+    deleted, for the event's ``context``. Unacknowledged, raises
+    ``GroupAnswersWouldClear`` rather than clearing any."""
     from app.services import responses as responses_service
 
     return responses_service.clear_changed_groups(
-        db, session_id=instrument.session_id, before=before
+        db,
+        session_id=instrument.session_id,
+        before=before,
+        acknowledged=acknowledged,
     )
 
 
@@ -985,6 +993,7 @@ def set_group_boundary(
     instrument: Instrument,
     boundary_pairs: list[tuple[str, str]],
     actor: User,
+    acknowledged: bool = True,
 ) -> Instrument:
     """Persist a group-scoped instrument's group-boundary spec.
 
@@ -997,6 +1006,8 @@ def set_group_boundary(
 
     Only valid on a group-scoped instrument (``group_kind`` already
     non-null); raises ``ValueError`` on a per-reviewee instrument.
+    ``acknowledged=False`` raises ``GroupAnswersWouldClear`` when the
+    regroup would clear an answer; the caller rolls back.
     """
     lifecycle.require_editable(db, instrument.session)
     if instrument.group_kind is None:
@@ -1028,7 +1039,9 @@ def set_group_boundary(
     recompute_self_review_classification(
         db, session_id=instrument.session_id
     )
-    defuncted = _reconcile_regrouped(db, instrument, groups_before)
+    defuncted = _reconcile_regrouped(
+        db, instrument, groups_before, acknowledged=acknowledged
+    )
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",
@@ -1056,6 +1069,7 @@ def set_unit_of_review(
     boundary_pairs: list[tuple[str, str]],
     actor: User,
     touched: bool = False,
+    acknowledged: bool = True,
 ) -> Instrument:
     """Set the instrument's unit-of-review (Link 3 of the new-model
     instrument builder).
@@ -1069,6 +1083,8 @@ def set_unit_of_review(
     transitions (``individual ⇄ grouped``); it is the Band 1 writer
     for new-model instruments where the operator picks the unit
     inline. No-op saves skip the audit + lifecycle side effects.
+    ``acknowledged=False`` raises ``GroupAnswersWouldClear`` when the
+    change would clear an answer; the caller rolls back.
     """
     lifecycle.require_editable(db, instrument.session)
     if mode == "individual":
@@ -1111,7 +1127,9 @@ def set_unit_of_review(
     recompute_self_review_classification(
         db, session_id=instrument.session_id
     )
-    defuncted = _reconcile_regrouped(db, instrument, groups_before)
+    defuncted = _reconcile_regrouped(
+        db, instrument, groups_before, acknowledged=acknowledged
+    )
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",

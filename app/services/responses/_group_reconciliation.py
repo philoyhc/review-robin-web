@@ -33,7 +33,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -290,6 +290,21 @@ def session_group_instrument_ids(
 GroupPartitions = dict[int, set[frozenset[Pair]]]
 
 
+class GroupAnswersWouldClear(Exception):
+    """Raised by :func:`clear_changed_groups` instead of deleting, when
+    the caller has not acknowledged the loss (author's ruling
+    2026-10-17: refuse, then re-offer). ``count`` is the ``Response``
+    rows the change would delete. The route catches it, rolls the
+    transaction back and re-offers the Save with a tick."""
+
+    def __init__(self, count: int) -> None:
+        super().__init__(
+            f"This change clears {count} saved responses on groups whose "
+            "members it changes."
+        )
+        self.count = count
+
+
 def snapshot_group_partitions(
     db: Session, *, session_id: int, instrument_ids: set[int]
 ) -> GroupPartitions:
@@ -339,7 +354,11 @@ def keeps_answer(
 
 
 def clear_changed_groups(
-    db: Session, *, session_id: int, before: GroupPartitions
+    db: Session,
+    *,
+    session_id: int,
+    before: GroupPartitions,
+    acknowledged: bool = True,
 ) -> int:
     """Delete the answers of every group that gained a member since
     ``before`` (author's rulings 2026-10-17: a group instrument's
@@ -360,7 +379,11 @@ def clear_changed_groups(
     member moving into a group that already had members clears it and
     leaves the one it left, and a new member clears its group. No answer is copied
     onto a row. The caller flushes the change first. Returns the number
-    of ``Response`` rows deleted."""
+    of ``Response`` rows deleted.
+
+    ``acknowledged=False`` (a route whose operator has not ticked
+    ``acknowledge_response_loss``) raises :class:`GroupAnswersWouldClear`
+    with that number instead of deleting, when it is above zero."""
     changed: set[int] = set()
     for instrument_id, groups in before.items():
         origin_of = origins(groups)
@@ -371,6 +394,15 @@ def clear_changed_groups(
             if not keeps_answer(group, origin_of):
                 changed |= {ids[pair] for pair in group}
     if not changed:
+        return 0
+    if not acknowledged:
+        count = db.execute(
+            select(func.count())
+            .select_from(Response)
+            .where(Response.assignment_id.in_(changed))
+        ).scalar_one()
+        if count:
+            raise GroupAnswersWouldClear(count)
         return 0
     # Deleted by assignment, not by response id: one bound parameter per
     # row rather than one per row and field.

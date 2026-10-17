@@ -341,8 +341,8 @@ delete them once no remaining section points to them.
 
 - [ ] **A merge clears, a split keeps.** On a session back in draft with
   answers saved on a `Group using tags` instrument, remove a boundary
-  tag so two answered groups merge, and Save: the merged group shows no
-  answer, and the audit log's `instrument.group_boundary_updated` row
+  tag so two answered groups merge, and Save (ticking `Yes, clear them`
+  when asked, below): the merged group shows no answer, and the audit log's `instrument.group_boundary_updated` row
   counts `defuncted_group_responses`. Add a boundary tag that splits a
   group: both halves still show its answer.
 - [ ] **A tag edit clears only the group joined.** Edit one reviewee's
@@ -356,3 +356,18 @@ delete them once no remaining section points to them.
 - [ ] **Deleting a reviewee keeps their group's answer.** Delete one
   member of an answered team on Reviewees: the members who remain still
   show the team's answer.
+
+## The Instrument card asks before its Save clears group answers
+
+- [ ] **A merge is refused with the count.** On a draft session with
+  answers on a `Group using tags` instrument, remove a boundary tag so
+  two answered groups merge, and Save: the card stays unlocked with your
+  edits, and its red banner reads "This change clears N saved responses
+  on groups whose members it changes." above an unticked
+  `Yes, clear them`. Reload: nothing was saved.
+- [ ] **Ticked, the same Save goes through.** Repeat, tick
+  `Yes, clear them` and Save again: the banner goes, and the merged
+  group shows no answer.
+- [ ] **A split or an unchanged Save never asks.** Add a boundary tag
+  that splits a group, or Save the card unedited: no banner, and every
+  answer stays.
