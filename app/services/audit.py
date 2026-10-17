@@ -507,7 +507,7 @@ EVENT_SCHEMAS: dict[str, EventSchema] = {
         _IDENTITY | {"changes", "refs"}
     ),
     "instrument.group_boundary_updated": EventSchema(
-        _IDENTITY | {"changes", "refs"}
+        _IDENTITY | {"changes", "refs", "context"}
     ),
     "instrument.column_widths_updated": EventSchema(
         _IDENTITY | {"changes", "refs"}

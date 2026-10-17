@@ -953,6 +953,29 @@ def _drop_sample_group_members(instrument: Instrument) -> None:
         }
 
 
+def _snapshot_groups(db: Session, instrument: Instrument) -> set[frozenset[int]]:
+    from app.services import responses as responses_service
+
+    return responses_service.snapshot_instrument_groups(
+        db, session_id=instrument.session_id, instrument_id=instrument.id
+    )
+
+
+def _reconcile_regrouped(
+    db: Session, instrument: Instrument, before: set[frozenset[int]]
+) -> int:
+    """Clear the groups the regroup changed (findings E2); the count
+    deleted, for the event's ``context``."""
+    from app.services import responses as responses_service
+
+    return responses_service.reconcile_regrouped_instrument(
+        db,
+        session_id=instrument.session_id,
+        instrument_id=instrument.id,
+        before=before,
+    )
+
+
 def set_group_boundary(
     db: Session,
     *,
@@ -986,6 +1009,7 @@ def set_group_boundary(
         user=actor,
         reason="instrument_group_boundary_updated",
     )
+    groups_before = _snapshot_groups(db, instrument)
     old_value = instrument.group_kind
     instrument.group_kind = new_value
     _drop_sample_group_members(instrument)
@@ -1001,6 +1025,7 @@ def set_group_boundary(
     recompute_self_review_classification(
         db, session_id=instrument.session_id
     )
+    defuncted = _reconcile_regrouped(db, instrument, groups_before)
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",
@@ -1012,6 +1037,9 @@ def set_group_boundary(
         session=instrument.session,
         payload=audit.changes({"group_kind": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
+        context=(
+            {"defuncted_group_responses": defuncted} if defuncted else None
+        ),
     )
     db.commit()
     return instrument
@@ -1065,6 +1093,7 @@ def set_unit_of_review(
         user=actor,
         reason="instrument_unit_of_review_updated",
     )
+    groups_before = _snapshot_groups(db, instrument)
     old_value = instrument.group_kind
     instrument.group_kind = new_value
     _drop_sample_group_members(instrument)
@@ -1079,6 +1108,7 @@ def set_unit_of_review(
     recompute_self_review_classification(
         db, session_id=instrument.session_id
     )
+    defuncted = _reconcile_regrouped(db, instrument, groups_before)
     audit.write_event(
         db,
         event_type="instrument.group_boundary_updated",
@@ -1091,6 +1121,9 @@ def set_unit_of_review(
         session=instrument.session,
         payload=audit.changes({"group_kind": [old_value, new_value]}),
         refs={"instrument_id": instrument.id},
+        context=(
+            {"defuncted_group_responses": defuncted} if defuncted else None
+        ),
     )
     return instrument
 
