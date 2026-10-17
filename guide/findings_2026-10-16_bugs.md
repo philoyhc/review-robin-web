@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 41 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1 and O1
-done).
+**Open:** 40 of 46 rows (refreshed 2026-10-17: S2, E1, E4, L1, O1 and
+S1 done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -49,7 +49,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   `sessions_archived.html:203-206`). `spec/ui_elements.md` §10's funnel says
   Select all covers the visible rows; Assignments already does it.
   *Reproduced* in Chromium. Code.
-- **S1** — **The instrument card's Save can change or delete response fields
+- ~~**S1**~~ — **Done in #3096**: a Save that adds, removes, reorders or changes a response field un-validates the session and writes `instrument.response_fields_saved`; an identical re-save, a seeded instrument's included, does neither (`tests/integration/test_band2_save_invalidates.py`). **The instrument card's Save can change or delete response fields
   without un-validating the session or writing an audit row**
   (`app/services/instruments/_band2.py:110-353`; the no-op check at `:331`
   returns early, the sync at `:289` writes). An empty field list is accepted,

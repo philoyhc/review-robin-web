@@ -1718,8 +1718,9 @@ The page-wide invariants the lock model enforces:
    Unarchive and offers no control, because `/revert` answers
    409 from `archived`. The lifecycle spec carries the state
    machine (`spec/lifecycle.md` §2.5, §5).
-3. **Save invalidates validation.** Any successful Save on
-   Bands 1 / 3 calls `lifecycle.invalidate_if_validated`. If
+3. **Save invalidates validation.** A successful Save on
+   Bands 1 / 3 that changes what it saves calls
+   `lifecycle.invalidate_if_validated`. If
    the session was `validated`, it flips back to `draft` and
    the workflow card surfaces the next-action stepper from
    State 2. A Band 1 Save emits an event only for the part that
@@ -1727,7 +1728,11 @@ The page-wide invariants the lock model enforces:
    for the rules, `session_rule_set.exclude_self_reviews_set` for
    the self-review chip, `instrument.group_boundary_updated` for the unit of
    review or its boundary tags; the invalidation records why in its
-   reason.
+   reason. A Band 3 Save that adds, removes, reorders or changes a
+   response field invalidates and emits
+   `instrument.response_fields_saved` listing them (a branch edit is
+   left to its own `instrument.field_updated`), so an identical
+   re-save leaves a `validated` session `validated`.
 4. **Save and Lock are independent.** Save persists. Lock toggles
    view mode. Lock-with-dirty fires the `confirm()` prompt.
 
