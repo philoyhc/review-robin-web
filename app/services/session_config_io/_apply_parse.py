@@ -77,7 +77,8 @@ def split_rows(
     placeholder (which ``_parse_rows`` skips) so every later row keeps
     its number. The caller refuses the file when any come back, but
     reports them alongside the rest of the file's errors rather than
-    alone (findings D10)."""
+    alone (findings D10). A row holding a NUL character is refused the
+    same way (findings S7)."""
     rows: list[Row] = []
     errors: list[ApplyError] = []
     for raw in raw_rows:
@@ -93,6 +94,18 @@ def split_rows(
                         f"the row has {len(raw)} {cells}; a Settings row "
                         "needs three (field, value, data_type)"
                     ),
+                )
+            )
+            rows.append(Row(field="", value="", data_type=""))
+            continue
+        if any("\x00" in cell for cell in raw):
+            # Postgres refuses a NUL in a text column at flush, a 500
+            # rather than a report (findings S7, 2026-10-16).
+            errors.append(
+                ApplyError(
+                    row_number=len(rows) + 1,
+                    field=raw[0].replace("\x00", "").strip(),
+                    message="the row contains a NUL character, which cannot be stored",
                 )
             )
             rows.append(Row(field="", value="", data_type=""))

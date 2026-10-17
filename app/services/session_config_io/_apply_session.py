@@ -7,7 +7,10 @@ apply phase.
 """
 from __future__ import annotations
 
+from sqlalchemy.orm import object_session
+
 from app.db.models import ReviewSession
+from app.services import sessions
 
 from app.services.participant_info import (
     SelfFieldsError,
@@ -58,9 +61,9 @@ def _apply_session_kv(
     if key in {"relationships_enabled", "observers_enabled"}:
         # Segment 18P PR A1 — per-session feature toggles. Config,
         # not operator-typed identity, so force-applied (below) to
-        # mirror the source exactly. The lock-on-data guard is an
-        # interactive-toggle concern; the settings round-trip is a
-        # wholesale config replace on a draft/validated target.
+        # mirror the source — except that the lock-on-data rule holds
+        # here as on Session Home: a roster with rows keeps its flag on
+        # (findings S6, 2026-10-16).
         plan.session_overrides[key] = _parse_bool(value, default=False)
         return
     # Segment 18N PR 5 — the 18G scheduled-event offset / list /
@@ -177,7 +180,27 @@ def _apply_session_metadata(
         "retention_exception",
         "retention_overrides",
     ):
-        if key in overrides:
-            setattr(review_session, key, overrides[key])
-            written += 1
+        if key not in overrides:
+            continue
+        if _locked_on(review_session, key, overrides[key]):
+            continue
+        setattr(review_session, key, overrides[key])
+        written += 1
     return written
+
+
+def _locked_on(review_session: ReviewSession, key: str, new: object) -> bool:
+    """Whether turning ``key`` off would orphan roster rows, so the
+    import leaves it on: the lock-on-data rule
+    ``sessions.update_session`` applies to the Session Home toggle
+    (``spec/participant_model.md`` §2)."""
+    if new is not False or getattr(review_session, key) is not True:
+        return False
+    db = object_session(review_session)
+    if db is None:
+        return False
+    if key == "relationships_enabled":
+        return sessions._has_relationships(db, review_session.id)
+    if key == "observers_enabled":
+        return sessions._has_observers(db, review_session.id)
+    return False

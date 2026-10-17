@@ -257,6 +257,8 @@ below describe what that panel holds.
    carries the way out for that state. A label longer than
    `session_field_labels.label` (255) answers 422, and every slot is
    checked before any is written, so the save lands whole or not at all.
+   A slot saved with the label it already has is a no-op: no event, and
+   a validated session stays validated.
 
    **On the roster pages it lives only in the Unlock panel** — §
    *The roster card and the Unlock panel*.

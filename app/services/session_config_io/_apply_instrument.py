@@ -7,6 +7,8 @@ transaction.
 """
 from __future__ import annotations
 
+import copy
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,9 +28,12 @@ from app.services.instruments._field_refs import (
     sort_from_positions,
     widths_from_positions,
 )
+from app.services.instruments._band1 import _band1_rule_set_name
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
+    FieldKeyError,
     _inline_kwargs_from_default_spec,
+    _validate_field_key,
     _validation_block_from_default_spec,
     validation_block_from_inline,
 )
@@ -113,7 +118,17 @@ def _apply_instrument_kv(
         instrument = plan.instruments.setdefault(n, _InstrumentSpec())
         rf = instrument.response_fields.setdefault(m, _ResponseFieldSpec())
         if attr == "field_key":
+            # Held to the card's rule: a key the reviewer surface cannot
+            # name (one holding ``]``, say) could never be answered, so a
+            # required one blocked Submit (findings S3, 2026-10-16). A
+            # blank is the cross-row "field_key is required" error, so
+            # the key is kept first: the row is reported once.
             rf.field_key = value or None
+            if value:
+                try:
+                    _validate_field_key(value)
+                except FieldKeyError as exc:
+                    raise _ParseError(str(exc)) from exc
         elif attr == "label":
             rf.label = value or None
         elif attr == "response_type":
@@ -368,6 +383,27 @@ def _wipe_instruments_and_dependents(
     db.flush()
 
 
+def _copy_rule_set(
+    db: Session, rule_set_id: int, instrument: Instrument
+) -> int:
+    """A copy of rule set ``rule_set_id`` for ``instrument`` to own,
+    named as Band 1 names an instrument's own row."""
+    original = db.get(SessionRuleSet, rule_set_id)
+    assert original is not None  # resolved from this session's pool
+    clone = SessionRuleSet(
+        session_id=instrument.session_id,
+        name=_band1_rule_set_name(db, instrument),
+        description=original.description,
+        combinator=original.combinator,
+        exclude_self_reviews=original.exclude_self_reviews,
+        seed=original.seed,
+        rules_json=copy.deepcopy(original.rules_json),
+    )
+    db.add(clone)
+    db.flush()
+    return clone.id
+
+
 def _apply_instruments(
     db: Session, review_session: ReviewSession, plan: _ParsedConfig
 ) -> dict[str, int]:
@@ -395,6 +431,10 @@ def _apply_instruments(
             )
         ).scalars()
     }
+
+    # Rule sets already pinned to an earlier instrument of this file.
+    pinned_rule_set_ids: set[int] = set()
+    rule_set_copies = 0
 
     for position, n in enumerate(sorted(plan.instruments.keys())):
         spec = plan.instruments[n]
@@ -431,6 +471,18 @@ def _apply_instruments(
         db.add(instrument)
         db.flush()  # populate ``instrument.id``
         counts["instruments"] += 1
+        # A rule set is per instrument: Band 1 edits the pinned row in
+        # place, so two instruments sharing one would carry an edit to
+        # either into the other. A second instrument naming a rule set
+        # gets its own copy, as Replicate does (findings S5, 2026-10-16).
+        if resolved_rule_set_id is not None:
+            if resolved_rule_set_id in pinned_rule_set_ids:
+                instrument.rule_set_id = _copy_rule_set(
+                    db, resolved_rule_set_id, instrument
+                )
+                rule_set_copies += 1
+            else:
+                pinned_rule_set_ids.add(resolved_rule_set_id)
 
         created_displays: dict[int, InstrumentDisplayField] = {}
         for m in sorted(spec.display_fields.keys()):
@@ -569,4 +621,9 @@ def _apply_instruments(
             )
             counts["view_policies"] += 1
 
+    # The copies are rows the file did not name; the import's own event
+    # counts them, as Replicate's ``session_rule_set.created`` does its one
+    # (findings S5's read). Absent when there are none.
+    if rule_set_copies:
+        counts["rule_set_copies"] = rule_set_copies
     return counts

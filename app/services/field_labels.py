@@ -223,7 +223,8 @@ def upsert(
     Invalidates ``validated`` via
     ``lifecycle.invalidate_if_validated`` and emits a
     ``session_field_label.set`` audit event carrying the
-    ``[old, new]`` change pair.
+    ``[old, new]`` change pair. Setting the label the slot already
+    has is a no-op: no event, no invalidation.
     """
     lifecycle.require_editable(db, session)
     _require_known_source(source_type, source_field)
@@ -244,6 +245,10 @@ def upsert(
             SessionFieldLabel.source_field == source_field,
         )
     ).scalar_one_or_none()
+    if existing is not None and existing.label == normalised:
+        # Unchanged: no event and no invalidation, as ``clear`` on an
+        # unset slot (findings S8, 2026-10-16).
+        return existing
 
     lifecycle.invalidate_if_validated(
         db,

@@ -39,7 +39,7 @@ The envelope is the same shape on both sides — Python `csv.reader`
 
 | Concern | Choice |
 |---|---|
-| Encoding | UTF-8. Files with a BOM are tolerated by `decode_csv` (BOM stripped on read). |
+| Encoding | UTF-8. Files with a BOM are tolerated by `decode_csv` (BOM stripped on read). A NUL character refuses a roster file as a single blocking issue, since Postgres cannot store one; the Settings import refuses its row (§3.3). |
 | Delimiter | Comma. |
 | Quoting | Python `csv.QUOTE_MINIMAL` — values containing comma, quote, or newline are double-quoted. |
 | Line endings | `\r\n` on write (Python `csv` default); `\r\n` or `\n` accepted on read. |
@@ -69,6 +69,11 @@ PairContextTag1.Mentor of  → pair_context.1, friendly label "Mentor of"
 ReviewerTag1               → reviewer.tag_1, no suffix (see below)
 ```
 
+- **A roster column named twice refuses the file**, as a single
+  blocking issue, tag column or not: `ReviewerTag1` beside
+  `ReviewerTag1.Tutor`, or one name repeated, would otherwise keep one
+  column and drop the other. A column the file does not define is
+  ignored, another roster file's included, so a repeat of it is too.
 - **First-period split, labelable columns only.** Only those nine
   tag columns are split, and only on the first period — so a label
   may itself contain periods (`RevieweeTag2.Dept. Head`). Every
@@ -84,7 +89,8 @@ ReviewerTag1               → reviewer.tag_1, no suffix (see below)
   of a NULL tag value, and clears any existing override (resolving
   back to the built-in default — `Tag N`, or `Pair context N` for a
   pair-context slot). Clearing an already-unset
-  slot is a no-op.
+  slot is a no-op, and so is setting a slot to the label it already
+  has (no `session_field_label.set` event).
 - **Export emits the suffix** when an override exists, bare
   otherwise (a slot on its default is never given a fabricated
   default-label suffix) — so download → edit → re-import is symmetric.
@@ -475,12 +481,18 @@ the round-trip notes below.
    file, but as an error on its row like the others
    (`session_config_io.split_rows`): the rest of the file is still
    validated (`validate_session_config`), so the report names every
-   short row beside every other error. Quick Setup reports it
-   before the replacement gates, as it does any malformed file, and
-   Rehydrate fails its settings step with it. A blank or absent
+   short row beside every other error. A row holding a NUL character
+   is refused the same way, since Postgres cannot store one. Quick Setup reports it
+   before the replacement gates, as it does any malformed file.
+   Rehydrate, gated off and incomplete (`spec/rehydrate.md`), is not
+   covered: it reads the session's name and code before this check. A blank or absent
    required value is an error naming its path: a `session_rule_sets`
    `name`, an instrument's `name`, a display field's `source_type`,
    and a response field's `field_key`, `label` and `response_type`.
+   A `field_key` the instrument card would refuse (not a lowercase
+   letter followed by lowercase letters, digits or underscores, or over
+   64 characters) is an error naming its path, since the reviewer
+   surface cannot answer it.
    Three keys phase 2 writes as unique are errors when repeated: a `session_rule_sets` name (§4 item 7), a
    `data_shapes` name among the shapes phase 2 writes (those with a
    name and a known axis), and a response field's `field_key` within
@@ -520,7 +532,9 @@ the round-trip notes below.
    the affected section (e.g. all instruments for a session, which
    also deletes every assignment and response in it).
    `session_rule_sets` is the exception: an upsert by name that
-   deletes the rows the CSV omits (§4 item 7).
+   deletes the rows the CSV omits (§4 item 7). A rule set is per
+   instrument, so a second instrument naming one gets its own copy
+   (`spec/instruments.md`, `Delete` semantics).
    Atomic transaction. On any apply error, raise; the caller's
    transaction handler rolls back.
 
@@ -571,7 +585,9 @@ operator-typed identity (`name`, `code`, `description`, `deadline`,
 `help_contact`), where the form wins **only where it was filled in**;
 and *force-apply* for every other config key it writes
 (timezone, the schedule anchors and offsets, the two UI toggles and
-the keys the form does not carry), where the CSV wins. `assignment_mode`
+the keys the form does not carry), where the CSV wins, except that a
+UI toggle whose roster has rows stays on (`spec/participant_model.md`
+§2). `assignment_mode`
 and `status` are a third case, **defensively ignored on import** as
 machine-derived. `spec/settings_inventory.md` §10 carries the field
 lists.
@@ -853,8 +869,8 @@ shares. Public surface:
 
 | Helper | Role |
 |---|---|
-| `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the two operator-facing failures — file too large, not valid UTF-8 — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
-| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
+| `decode_csv(content, source, *, max_bytes=MAX_BYTES) -> tuple[str \| None, ValidationIssue \| None]` | UTF-8 decode + BOM strip. Single function so every importer gets identical encoding behaviour. Returns a structured issue rather than raising on the three operator-facing failures — file too large, not valid UTF-8, a NUL character — so a caller renders them like any other validation problem; `source` names the import for the message and the log line. `max_bytes` is overridable so a caller with a different ceiling need not fork the helper. |
+| `_read_dict_rows(text, source) -> tuple[rows \| None, fieldnames, field_labels, ValidationIssue \| None]` | `csv.DictReader` wrapper (blank lines skipped). Normalizes the header first — a labelable tag column's `.label` suffix (§1a) is stripped to its canonical name, and the captured `(source_type, source_field) → label` map comes back as `field_labels` — so rows key by the bare column name. A file with no header row, more than `MAX_ROWS` data rows, a header friendly label longer than `session_field_labels.label` (255; the issue names the column, e.g. `ReviewerTag1`), a header naming one roster column twice once the `.label` suffix is stripped, or a file the `csv` module refuses to parse (chiefly a cell past its 131,072-character field limit, which a file under `MAX_BYTES` can carry) returns `rows=None` and one blocking issue. |
 | `_missing_columns_issues(fieldnames, required, source)` | Returns one `ValidationIssue` per missing required column. Called at parse time, before per-row iteration. |
 | `_cell(row, key)` | Stripped string read; returns `""` when key absent. |
 | `_none_if_blank(row, key)` | `None` when cell is empty / whitespace-only, else the stripped string. The canonical "optional cell" reader. |

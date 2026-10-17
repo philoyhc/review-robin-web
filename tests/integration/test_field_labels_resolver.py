@@ -443,3 +443,43 @@ def test_clear_emits_audit_cleared_event(db: Session) -> None:
         "source_field": "2",
         "label": "Module",
     }
+
+
+def test_upsert_with_the_label_already_stored_is_a_no_op(db: Session) -> None:
+    """Findings S8 (2026-10-16): saving unchanged labels un-validated the
+    session and wrote a same-to-same ``session_field_label.set``. An
+    unchanged label now does neither, as ``clear`` on an unset slot."""
+    review_session, op = _make_session(db, "fl-same")
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="Cohort",
+        user=op,
+    )
+    review_session.status = "validated"
+    db.flush()
+
+    def events() -> int:
+        return len(
+            db.execute(
+                select(audit.AuditEvent).where(
+                    audit.AuditEvent.session_id == review_session.id
+                )
+            ).all()
+        )
+
+    before = events()
+    field_labels.upsert(
+        db,
+        review_session,
+        source_type="reviewer",
+        source_field="tag_1",
+        label="  Cohort ",
+        user=op,
+    )
+
+    assert review_session.status == "validated"
+    assert events() == before
+    assert field_labels.resolve(review_session, "reviewer", "tag_1") == "Cohort"
