@@ -2,8 +2,8 @@
 
 **Found by:** six bug-hunting reads run beside
 `guide/codebase_assessment_16oct.md` · **Read at:** `3d8adb38` (#3081) ·
-**Open:** 43 of 46 rows (refreshed 2026-10-17 at `b9efe5e8`: S2, E1 and
-E4 done).
+**Open:** 42 of 46 rows (refreshed 2026-10-17: S2, E1, E4 and L1
+done).
 
 Unlike the corpus sweeps, this one read the code for defects rather than the
 specs for drift. Each read took one area, wrote scratch tests against the
@@ -36,7 +36,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
   code corrupts the header too. The extract's audit event is committed before
   the failure. *Reproduced* (also found by the O read). Code: one helper with
   an ASCII fallback plus `filename*=UTF-8''`.
-- **L1** — **A Settings CSV import stores reminder and invite offsets
+- ~~**L1**~~ — **Done in #3093**: phase 1 runs the details card's offset rules, the lead-time floor waived (`session_offset_errors`), and an out-of-range duration is a parse error rather than an `OverflowError`. **A Settings CSV import stores reminder and invite offsets
   unvalidated**, and an out-of-range one makes Session Home answer 500 on every
   load and holds a scheduled activation forever (`OverflowError`)
   (`app/services/session_config_io/_apply_session.py:75-85`, raised from
