@@ -727,10 +727,11 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     ),
                 )
             )
-    # A Link 2 pair-tag IS keeps pairs one by one, so a grouped
-    # instrument cannot use it — the refusal Band 1's Save makes
-    # (``guide/archive/assignment_rule_clarify.md`` Item 2), so an import
-    # cannot store the combination either.
+    # A Link 2 pair-tag IS or IS FILLED keeps pairs one by one, so a
+    # grouped instrument cannot use it — the refusal Band 1's Save makes
+    # (``guide/archive/assignment_rule_clarify.md`` Item 2;
+    # ``guide/pair_context_tags_further_clarify.md`` Item 1), so an
+    # import cannot store the combination either.
     rules_by_name = {
         spec.name: spec.rules_json or []
         for spec in plan.session_rule_sets.values()
@@ -748,7 +749,7 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
                     field=f"instruments[{n}].group_kind",
                     message=(
                         "a group instrument can't use a rule set whose Link 2 "
-                        "keeps pairs by a relationship tag (IS): "
+                        "keeps pairs by a relationship tag (IS or IS FILLED): "
                         f"{instrument.rule_set_name!r}"
                     ),
                 )
