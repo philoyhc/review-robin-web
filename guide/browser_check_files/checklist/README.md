@@ -23,20 +23,33 @@ through its service, not the card.
 - **The run:** local, `uvicorn` with fake auth, so you are
   `operator@example.edu` ("Local Operator"). Start from a fresh database
   (`review_robin_web.db` deleted, then `alembic upgrade head`).
-- **Other people** are a restart of `uvicorn` with these set, then a
-  restart back as yourself:
+- **Other people** are a restart of `uvicorn` (stop it, then run one of
+  these lines from the repository root). Variables set on the command
+  line win over `.env`.
 
-  | Who | Environment |
-  |---|---|
-  | Bob (operator and admin) | `FAKE_AUTH_EMAIL=bob@example.edu FAKE_AUTH_NAME="Bob Smith"` |
-  | Alice (participant only) | `FAKE_AUTH_EMAIL=alice@example.edu FAKE_AUTH_NAME="Alice Chan"` plus the three flags below |
-  | Olive (participant only) | `FAKE_AUTH_EMAIL=olive@example.edu FAKE_AUTH_NAME="Olive Grant"` plus the flags |
-  | Nobody (no role) | `FAKE_AUTH_EMAIL=nobody@example.edu FAKE_AUTH_NAME="No Body"` plus the flags |
+  ```bash
+  # You (operator@example.edu)
+  uvicorn app.main:app --reload
 
-  The flags are `FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false
-  FAKE_AUTH_SUPER_ADMIN=false`. Set them from that person's **first**
-  sign-in: a role is stored on first sign-in, so an Alice who once
-  signed in as an operator stays one.
+  # Bob: operator and admin
+  FAKE_AUTH_EMAIL=bob@example.edu FAKE_AUTH_NAME="Bob Smith" uvicorn app.main:app --reload
+
+  # Alice: participant only
+  FAKE_AUTH_EMAIL=alice@example.edu FAKE_AUTH_NAME="Alice Chan" FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false FAKE_AUTH_SUPER_ADMIN=false uvicorn app.main:app --reload
+
+  # Olive: participant only
+  FAKE_AUTH_EMAIL=olive@example.edu FAKE_AUTH_NAME="Olive Grant" FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false FAKE_AUTH_SUPER_ADMIN=false uvicorn app.main:app --reload
+
+  # Nobody: no role
+  FAKE_AUTH_EMAIL=nobody@example.edu FAKE_AUTH_NAME="No Body" FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false FAKE_AUTH_SUPER_ADMIN=false uvicorn app.main:app --reload
+
+  # You, for Part 11 (scheduled events)
+  SCHEDULED_OPERATIONAL_LEAD_HOURS=0 REVIEWER_NOTICE_MIN_HOURS=0 uvicorn app.main:app --reload
+  ```
+
+  Use Alice's, Olive's and Nobody's lines from their **first** sign-in: a
+  role is stored then, so an Alice who once signed in as an operator
+  stays one.
 - **Uploads:** "stage" means choosing files in the New session page's
   upload slots before Create; "Quick Setup" means Session Home's card.
   Tick the replacement box if it shows, then Submit. A settings file
@@ -196,14 +209,14 @@ ticked, Tags `gamma`; stage 01–05.
 
 ## Part 11 — BC sched (scheduled events)
 
-Restart with `SCHEDULED_OPERATIONAL_LEAD_HOURS=0 REVIEWER_NOTICE_MIN_HOURS=0`.
+Restart with the Part 11 line from "Before you start".
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
 | 64 | New session `BC sched`, code `bc-sched`; stage 01–05. Session Home: Start 5 minutes ahead, End a week ahead, Send invites `-PT2M`, reminders `-P2D`; Save. **Prepare**; open the review link. On BC broken (draft) set a Start 5 minutes ahead too. | "Scheduled to open". | M3: scheduled |
 | 65 | After both Starts pass, open the lobby, not Session Home. Then Session Home, reloaded a few times. | BC sched reads Activated; its audit log has `session.activated` (`trigger=scheduled`) and the invitations sent. BC broken logs `session.scheduled_activation_skipped` and its Start is cleared. Home loads each time. | L4 (both); B20 |
 
-Restart as yourself without the two settings.
+Restart as yourself with the plain `uvicorn app.main:app --reload`.
 
 ## Part 12 — Lobby, archive, codes, zones
 
