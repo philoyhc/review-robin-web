@@ -32,8 +32,8 @@ do not gate whether the row is created.
 So in a deployment fronted by institutional MS365, **every account in
 the tenant can sign in.** Someone with no role lands on `/me` and reads:
 
-> **Your reviews** — There's nothing here for you right now. You're
-> signed in as their@address. If you expected to see a review here,
+> **Your reviews** — You're signed in as their@address but there's
+> nothing here for you right now. If you expected to see a review here,
 > check that it was sent to this address, or contact the person running
 > it. [About Review Robin]
 

@@ -110,8 +110,8 @@ delete them once no remaining section points to them.
   deployment, open the URL signed out in a fresh tab: after the sign-in
   redirect, no "Go back" shows.
 - [ ] **The empty dashboard.** Signed in as someone with no role, `/me`
-  reads "There's nothing here for you right now.", names your address,
-  and links to About.
+  reads "You're signed in as <your address> but there's nothing here
+  for you right now.", then what to check, and links to About.
 
 ## "Your reviews" on every participant page (P4)
 
