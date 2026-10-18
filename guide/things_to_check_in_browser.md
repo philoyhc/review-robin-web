@@ -61,29 +61,6 @@ delete them once no remaining section points to them.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## Back links name only sessions you can see (P1)
-
-- [ ] **A stranger sees the default.** Signed in as someone with no role
-  on a session, open `/about?return_to=/me/sessions/<id>` for that
-  session's id. The back link reads "← Back to your reviews" (or "← Back
-  to Sessions" if you are an operator), never the session's name.
-- [ ] **An owner still sees the name.** As the session's owner, open
-  About from inside that session. The back link names the session.
-
-## Participant chrome and copy (M2, M5, M8, M14)
-
-- [ ] **No Settings link for a participant.** Signed in as a reviewer who
-  is not an operator, open About. The top bar shows no Settings link,
-  and the back link reads "← Back to your reviews" and goes to `/me`.
-- [ ] **The Guide shows its version.** As the same reviewer, open the
-  Guide. The top bar reads "(version …)" with a number in it.
-- [ ] **Sign-in details names you.** From the invite mismatch page, follow
-  "Sign-in details". The top bar reads "Signed in as" with your name.
-- [ ] **Collation empty states read as a participant's.** As an observer
-  with no cohort rule, open the collation page: "You haven't been given
-  anyone to observe in this review yet." With a rule on a draft session:
-  "There are no results for you to see right now."
-
 ## Revisited POST addresses and the empty-cohort download (M10, M13)
 
 - [ ] **Enter on a refused Submit's address lands on the form.** As a
@@ -112,15 +89,6 @@ delete them once no remaining section points to them.
 - [ ] **The empty dashboard.** Signed in as someone with no role, `/me`
   reads "You're signed in as <your address> but there's nothing here
   for you right now.", then what to check, and links to About.
-
-## "Your reviews" on every participant page (P4)
-
-- [ ] **One session is enough.** As a reviewer on a single session, open
-  the review form. The top bar shows "Your reviews", and it goes to
-  `/me`.
-- [ ] **Reviewees and observers too.** On a reviewee's results page and
-  an observer's collation page, the top bar shows "Your reviews".
-- [ ] **Not on the dashboard itself.** On `/me`, the link is absent.
 
 ## A refused write keeps what was typed (P3) and Recall after the deadline (M1)
 
@@ -214,75 +182,6 @@ delete them once no remaining section points to them.
   an operator: the rows keep their order (newest-created first).
 - [ ] **Observer CSV name.** Download an observer's per-instrument CSV:
   the file is named after the session code, not the observer's address.
-
-## Audit log Severity chips
-
-- [ ] **Chips, not checkboxes.** After `Event type | Severity`, three
-  chips: `INFO`, `WARNING`, `ERROR`, each in its pale status tint with
-  the blue chip edge. Click one: info turns solid blue, warning solid dark
-  amber, error solid red, each with white text. Apply filters: the table
-  narrows and the chips you picked stay on.
-- [ ] **Dark mode.** Switch to dark: off chips are the dark status
-  tints; on, warning is bright amber and error light red, with dark text
-  (as the blue chip turns light blue with dark text).
-- [ ] **Keyboard.** Tab to a chip: a focus ring shows; Space toggles it.
-- [ ] **Guide.** About → Guide, "Reading the controls": the new "On or
-  off, in a status color" row has a Warning (on) and an Error (off) chip;
-  both switch on a click.
-
-## Session-nav hover (19J, carried from the post-Azure checklist)
-
-- [ ] **Hover paints the selected colors.** On Session Home, hover a
-  Setup tab, an Operations tab and the Home anchor, in **both** themes:
-  each paints the colors its own selected state uses (no tinted
-  near-white on light, no pale block on dark), and the active underline
-  stays on the current tab only. Moved from
-  `guide/post_azure_todo_checklist.md` item 3 on 2026-10-16: the only
-  row there with no recorded pass, and a local browser settles it.
-
-## Band 1: IS FILLED / IS EMPTY, and relationship tags by Link and operator
-
-- [ ] **Relationship tags offered as "Pair: …".** On a session whose
-  relationships carry a tag, open an instrument card. Link 1's field
-  list ("Reviewer's tag"), Link 2's field list ("Reviewee's tag") and its
-  comparison list ("Reviewer's tag") each end with the relationship tags
-  as "Pair: <label>"; Link 3's boundary list holds reviewee tags only.
-- [ ] **IS FILLED / IS EMPTY dim the value box.** Cycle a Link 1 rule
-  through `IS`, `IS NOT`, `IS FILLED`, `IS EMPTY`: on the last two the
-  value box is dimmed and can't be typed in, and back on `IS` it is live
-  with what was typed. In Link 2, `IS FILLED` shows the dimmed value box
-  in place of the reviewer-tag list. Save and reload: the rule comes
-  back on the operator saved.
-- [ ] **A Link 2 pair-tag IS keeps exactly those pairs.** Link 2 "Pair:
-  <label> IS <value>", Save, then the Assignments page: only the
-  relationship pairs carrying that value are assigned. Change it to IS
-  NOT: every pair but those is assigned, pairs with no relationship
-  included.
-- [ ] **"Pairwise tag" caption.** In Link 2, pick a "Pair: …" tag and
-  cycle the operator: on `IS` and `IS NOT` the caption above the tag list
-  reads "Pairwise tag"; on every other operator, and for any roster tag,
-  it reads "Reviewee's tag". Save and reload a Pair `IS` rule: it comes
-  back captioned "Pairwise tag".
-- [ ] **Group steps aside.** With that Link 2 `IS` rule on the card, the
-  Unit of review pill goes Individual → Not set, never Group; with `IS
-  NOT` it reaches Group again. An instrument already grouped refuses a
-  Save that adds the `IS` rule, with a banner saying why.
-- [ ] **A Settings import refuses Group beside a Pair IS.** Export a
-  session's settings, set an instrument's `group_kind` to a reviewee tag
-  while its rule set's Link 2 holds a Pair `IS` rule, and import: the
-  import is refused with an error on `group_kind`, and nothing changes.
-- [ ] **A Group Pair IS NOT drops one member.** On a Group instrument,
-  Link 2 "Pair: <label> IS NOT <value>", Generate: the reviewer in that
-  tagged pair loses only that one reviewee, and keeps the rest of the
-  group.
-- [ ] **An observer with no tag.** On the Observers page, give an
-  observer the rule "Reviewer: <tag> IS DIFFERENT FROM Observer: Tag" and
-  leave their tag empty: their collation shows every response whose
-  reviewer has that tag set. With IS THE SAME AS it shows the responses
-  whose reviewer has none.
-- [ ] **A rule from an emptied slot is kept.** Empty a roster tag column
-  a saved rule uses: the card still shows that tag selected, and Save
-  keeps it. `+` adds a cell without it.
 
 ## Band 1 rules and the Settings import refuse what the engine rejects (S2, E1)
 
