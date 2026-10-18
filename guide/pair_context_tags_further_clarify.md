@@ -154,9 +154,10 @@ Taken 2026-10-18 at `928dbc15`.
 
 ### Out of scope
 
-- A group-scoped instrument that includes or excludes a whole group by a
-  member pair's tag: raised 2026-10-18, discussed separately, not
-  planned here.
+- A group-scoped instrument that includes or excludes a whole group by
+  a member's tag, pair tags included: a deferred idea in
+  `guide/group_membership_rules.md`, whose Exceptions block could move
+  relationship tags out of the Links altogether (its Open question 3).
 - The Relationships page, and pair-tag display fields on the reviewer
   surface.
 

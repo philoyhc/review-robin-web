@@ -1038,6 +1038,34 @@ and a route slice for that convenience.
 Path B (immediate download), and the TTL. Then re-take its Blast
 radius and follow its PR ladder, scaffold first.
 
+
+### Assignment rules
+
+#### Include or rule out whole groups by their members' tags (author, 2026-10-18)
+
+> Recorded in `guide/group_membership_rules.md` as a deferred idea,
+> unplanned. Raised while planning `guide/pair_context_tags_further_clarify.md`.
+
+**Ships.** On a Group instrument, groups form as usual. Then a group is
+included or ruled out whole when at least one member carries a given
+reviewee tag, reviewer tag or relationship tag. The likely shape is a
+separate Exceptions block on the Band 1 card, applied after the Links.
+
+**Why deferred.** It asks the card to do a second job, a special
+inclusion or exclusion on top of normal formation (author, 2026-10-18).
+That is a new block, a new Generate step and open questions on what
+Include adds. No session needs it yet.
+
+**Lift trigger** (proposed; the author's call). Any one of:
+
+- an operator needs a whole-group conflict-of-interest or must-review
+  rule;
+- building `guide/pair_context_tags_further_clarify.md` Item 1 reopens
+  where relationship tags live (Open question 3 there).
+
+**Wire-up.** Turn the idea doc into a plan: settle its Open questions,
+then take the blast radius and cut the ladder, scaffold first.
+
 ---
 
 ## Part B — Deferred infrastructure & platform hardening
