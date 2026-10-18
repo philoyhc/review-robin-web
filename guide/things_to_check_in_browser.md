@@ -552,3 +552,25 @@ deployment, not a local run.
 - [ ] **New session (O7).** Stage a bad file on New session: you land
   on the new session's Home with the fixed "…was refused…" sentence and
   no lines; upload it again in Quick Setup and the lines appear.
+
+## A relationship tag judges the pair, in Link 2 only (pair tags Item 1, rung 2)
+
+Use a session with tagged relationships (Setup → Relationships) and an
+instrument card unlocked.
+
+- [ ] **Offered once.** "Pair: …" options appear in Who is being
+  reviewed's field list only: not in Who does the review, not in the
+  reviewer-tag list beside IS THE SAME AS, not in Unit of review.
+- [ ] **Its own cycle.** Pick a "Pair: …" field in Who is being
+  reviewed: the operator opens on IS and cycles IS → IS NOT → IS FILLED
+  → IS EMPTY, the caption reads "Pairwise tag" throughout, and the value
+  box goes inactive on IS FILLED / IS EMPTY. Pick a reviewee tag again:
+  the full cycle, from IS THE SAME AS, is back and the caption reads
+  "Reviewee's tag".
+- [ ] **IS FILLED assigns by any value.** Save "Pair: … IS FILLED", then
+  Generate on Assignments: only the pairs carrying a value in that tag
+  are assigned. "IS EMPTY" assigns every other pair.
+- [ ] **Group skips beside IS FILLED.** With "Pair: … IS FILLED" (or
+  IS) in Who is being reviewed, the Unit of review pill cycles
+  Individual → Not set, skipping Group; IS NOT or IS EMPTY leave Group
+  in the cycle.

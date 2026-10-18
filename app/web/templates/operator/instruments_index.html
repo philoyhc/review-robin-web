@@ -522,7 +522,7 @@
          cross-side IS THE SAME AS / IS DIFFERENT FROM operators).
          Hydrated from ``state`` (a dict with mode / combinator /
          rules — see views._instruments.build_band1_state). #}
-      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None, stored_only_labels=None, pair_field_helper=None) %}
+      {% macro new_model_rule_list(link_id, instrument_id, state, title, tag_options, operator_cycle=None, operand_tag_options=None, on_label="Filter using rules", field_helper=None, operand_tag_helper=None, stored_only_labels=None, pair_field_helper=None, pair_operator_cycle=None) %}
         {% set _ops = operator_cycle or ["IS", "IS NOT", "IS FILLED", "IS EMPTY"] %}
         {% set _stored_only = stored_only_labels or {} %}
         {% set _field_keys = tag_options | map('first') | list %}
@@ -621,9 +621,25 @@
                  style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
               {% for _rule in _cells %}
                 {% set _r = _rule or {"field": "", "op": _ops[0], "operand_value": "", "operand_tag": ""} %}
-                {% set _cell_ops = _ops_full if (_r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") and _r.operand_tag in _stored_operands.keys) else _ops %}
-                {% set _use_tag_operand = _r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
-                {% set _no_operand = _r.op in ("IS FILLED", "IS EMPTY") %}
+                {# A relationship-tag cell (``pair_operator_cycle``, Link 2)
+                   cycles IS → IS NOT → IS FILLED → IS EMPTY, every one
+                   judging the pair (``guide/pair_context_tags_further_clarify.md``
+                   Item 1). A default cell reads as the select's first
+                   option; a stored cross-side operator on one keeps the
+                   full cycle, so it shows as stored and Save refuses it. #}
+                {% set _cell_field = _r.field or (tag_options[0][0] if tag_options else "") %}
+                {% set _pair_cell = pair_operator_cycle and _cell_field.startswith("pair_context.") %}
+                {% if _pair_cell %}
+                  {% set _cell_ops = pair_operator_cycle if (_rule is none or _r.op in pair_operator_cycle) else _ops_full %}
+                {% else %}
+                  {% set _cell_ops = _ops_full if (_r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") and _r.operand_tag in _stored_operands.keys) else _ops %}
+                {% endif %}
+                {# The operator the cell shows: a default relationship-tag
+                   cell shows IS while ``_r.op`` holds the Link's first, so
+                   the operand widgets follow what is shown. #}
+                {% set _cell_op = _r.op if _r.op in _cell_ops else _cell_ops[0] %}
+                {% set _use_tag_operand = _cell_op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
+                {% set _no_operand = _cell_op in ("IS FILLED", "IS EMPTY") %}
                 {% set _is_first = loop.first %}
                 <div data-new-model-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
@@ -636,11 +652,10 @@
                      ``cloneNode(true)`` carries it onto every new
                      cell added via the ``+`` button. #}
                   {# ``pair_field_helper`` (Link 2): a relationship tag
-                     under IS / IS NOT judges the pair itself, so the
-                     caption says so (author, 2026-10-17);
+                     judges the pair under every operator, so the caption
+                     says so (author, 2026-10-18);
                      ``newModelSyncFieldHelper`` keeps it current. #}
-                  {% set _pairwise = pair_field_helper and (_r.field or "").startswith("pair_context.")
-                     and (_r.op if _r.op in _cell_ops else _cell_ops[0]) in ("IS", "IS NOT") %}
+                  {% set _pairwise = pair_field_helper and _pair_cell %}
                   {% if field_helper %}
                     <div style="display: flex; align-items: center; gap: 4px;">
                       <span data-new-model-rule-field-helper
@@ -659,7 +674,7 @@
                     <select style="flex: 0 1 50%; min-width: 0; padding: 4px;"
                             form="dfsave-{{ instrument_id }}" name="{{ link_id }}_field"
                             data-new-model-rule-field
-                            {% if pair_field_helper %}onchange="newModelSyncFieldHelper(this)"{% endif %}>
+                            {% if pair_field_helper %}onchange="newModelSyncPairCell(this)"{% endif %}>
                       {% for key, label in tag_options %}
                         <option value="{{ key }}" {% if key == _r.field %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
@@ -669,12 +684,14 @@
                     </select>
                     <button type="button" class="btn secondary cohort-cell-btn"
                             data-new-model-operator-cycle="{{ _cell_ops | join('|') }}"
+                            {% if pair_operator_cycle %}data-new-model-operator-cycle-pair="{{ pair_operator_cycle | join('|') }}"
+                            data-new-model-operator-cycle-default="{{ _ops | join('|') }}"{% endif %}
                             onclick="newModelCycleOperator(this)"
-                            title="Toggle operator">{{ _r.op if _r.op in _cell_ops else _cell_ops[0] }}</button>
+                            title="Toggle operator">{{ _cell_op }}</button>
                     <input form="dfsave-{{ instrument_id }}" type="hidden"
                            name="{{ link_id }}_op"
                            data-new-model-op-input
-                           value="{{ _r.op if _r.op in _cell_ops else _cell_ops[0] }}">
+                           value="{{ _cell_op }}">
                   </div>
                   {# Optional caption above the operand-tag
                      dropdown (Link 2 only — Link 1 compares with
@@ -738,24 +755,31 @@
          slots that have at least one populated row in the
          session — built by ``views._instruments._new_model_usable_tags``.
          Empty lists drive the column's pill into the disabled /
-         inactive state. Relationship tags join Links 1 and 2 as
-         "Pair: <label>" (author, 2026-10-17;
-         ``guide/archive/assignment_rule_clarify.md`` Item 2); Save decides
-         whose tag each one is (``_band1._engine_field``). Link 3 groups
-         by reviewee tags only. A tag a stored rule holds that the card
-         no longer offers keeps its select option (``data-new-model-stored-only``)
-         rather than dropping on the next Save; ``_stored_only_labels``
-         gives a relationship-tag boundary its label (an emptied slot
-         shows its key). #}
-      {% set _pair_ns = namespace(tags=[]) %}
+         inactive state. Relationship tags are a Link 2 field only, as
+         "Pair: <label>", judging the pair (author, 2026-10-18;
+         ``guide/pair_context_tags_further_clarify.md`` Item 1); Link 1
+         and Link 2's operand list offer roster tags only, and Link 3
+         groups by reviewee tags only. A tag a stored rule holds that the
+         card no longer offers keeps its select option
+         (``data-new-model-stored-only``) rather than dropping on the
+         next Save, which refuses one the card no longer offers;
+         ``_stored_only_labels`` gives a relationship-tag boundary its
+         label (an emptied slot shows its key), and ``_rule_stored_only_labels``
+         names a stored relationship-tag rule by whose tag it reads. #}
+      {% set _pair_ns = namespace(tags=[], labels={}) %}
       {% for key, label in new_model_tags.pair_context %}
+        {% set _slot = key | replace("pair_context.tag", "") %}
         {% set _pair_ns.tags = _pair_ns.tags + [(key, "Pair: " ~ label)] %}
+        {% set _ = _pair_ns.labels.update({key: "Pair: " ~ label,
+             "reviewer.pair_tag" ~ _slot: "Reviewer's pair tag: " ~ label,
+             "reviewee.pair_tag" ~ _slot: "Reviewee's pair tag: " ~ label}) %}
       {% endfor %}
-      {% set _link1_tags = new_model_tags.reviewer + _pair_ns.tags %}
+      {% set _link1_tags = new_model_tags.reviewer %}
       {% set _link2_tags = new_model_tags.reviewee + _pair_ns.tags %}
-      {% set _link2_operand = new_model_tags.reviewer + _pair_ns.tags %}
+      {% set _link2_operand = new_model_tags.reviewer %}
       {% set _link3_tags = new_model_tags.reviewee %}
       {% set _stored_only_labels = dict(new_model_tags.pair_context) %}
+      {% set _rule_stored_only_labels = _pair_ns.labels %}
       {% set _band1_state = new_model_band1_state.get(instrument.id, {"link1": {"mode": "all", "combinator": "AND", "rules": []}, "link2": {"mode": "all", "combinator": "AND", "rules": []}}) %}
       {% set _link3_state = new_model_link3_state.get(instrument.id, {"mode": "individual", "boundary_pairs": []}) %}
       {# Canonical key lookup for the stored boundary pairs:
@@ -787,7 +811,7 @@
               "Who does the review", _link1_tags,
               on_label="Filter using tags",
               field_helper="Reviewer's tag",
-              stored_only_labels=_stored_only_labels) }}
+              stored_only_labels=_rule_stored_only_labels) }}
           {# "Refresh sample" was previously rendered as a row
              beneath Link 1; moved inline beside the Band 2
              "Preview review instrument" heading per operator
@@ -804,8 +828,9 @@
               on_label="Filter using tags",
               field_helper="Reviewee's tag",
               pair_field_helper="Pairwise tag",
+              pair_operator_cycle=["IS", "IS NOT", "IS FILLED", "IS EMPTY"],
               operand_tag_helper="Reviewer's tag",
-              stored_only_labels=_stored_only_labels) }}
+              stored_only_labels=_rule_stored_only_labels) }}
         </div>
         <div style="padding: 0 0 0 16px; border-left: 1px solid var(--border-default);">
           <div data-new-model-link-wrapper>
@@ -1058,6 +1083,9 @@
           }
           clone.querySelectorAll('input[type="text"], [data-new-model-operand-value]').forEach(function (i) { i.value = ''; });
           clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+          // The reset field decides a Link 2 cell's cycle (a relationship
+          // tag has its own) before the operator resets to its first.
+          if (cloneFieldSel) { window.newModelPairCycle(cloneFieldSel); }
           // Reset each operator-toggle button + its hidden op input
           // to the first option in the cycle.
           clone.querySelectorAll('button[data-new-model-operator-cycle]').forEach(function (b) {
@@ -1103,20 +1131,48 @@
           container.appendChild(clone);
         };
         // Link 2's caption reads "Pairwise tag" while the cell holds a
-        // relationship tag under IS / IS NOT, which judge the pair
-        // itself; otherwise the default ("Reviewee's tag").
+        // relationship tag, which judges the pair under every operator;
+        // otherwise the default ("Reviewee's tag").
         window.newModelSyncFieldHelper =
           window.newModelSyncFieldHelper || function (el) {
           var cell = el.closest('[data-new-model-rule-cell]');
           var helper = cell && cell.querySelector('[data-new-model-field-helper-pair]');
           if (!helper) { return; }
           var field = cell.querySelector('[data-new-model-rule-field]');
-          var op = cell.querySelector('[data-new-model-op-input]');
-          var pairwise = field && field.value.indexOf('pair_context.') === 0 &&
-            op && (op.value === 'IS' || op.value === 'IS NOT');
+          var pairwise = field && field.value.indexOf('pair_context.') === 0;
           helper.textContent = helper.getAttribute(
             pairwise ? 'data-new-model-field-helper-pair' : 'data-new-model-field-helper-default'
           );
+        };
+        // A Link 2 relationship-tag cell cycles IS / IS NOT / IS FILLED /
+        // IS EMPTY (``guide/pair_context_tags_further_clarify.md`` Item 1).
+        // Swaps the cell's cycle when its field moves onto or off a
+        // relationship tag, leaving any other cycle (a stored operand's)
+        // alone; returns the cycle now in force.
+        window.newModelPairCycle = window.newModelPairCycle || function (sel) {
+          var cell = sel.closest('[data-new-model-rule-cell]');
+          var btn = cell && cell.querySelector('button[data-new-model-operator-cycle-pair]');
+          if (!btn) { return null; }
+          var pairCycle = btn.getAttribute('data-new-model-operator-cycle-pair');
+          var current = btn.getAttribute('data-new-model-operator-cycle');
+          if (sel.value.indexOf('pair_context.') === 0) {
+            btn.setAttribute('data-new-model-operator-cycle', pairCycle);
+          } else if (current === pairCycle) {
+            btn.setAttribute('data-new-model-operator-cycle', btn.getAttribute('data-new-model-operator-cycle-default'));
+          }
+          return btn.getAttribute('data-new-model-operator-cycle').split('|');
+        };
+        // The Link 2 field select's change: the cycle follows the field,
+        // and an operator the new cycle lacks resets to its first.
+        window.newModelSyncPairCell = window.newModelSyncPairCell || function (sel) {
+          var cycle = window.newModelPairCycle(sel);
+          var cell = sel.closest('[data-new-model-rule-cell]');
+          var btn = cell && cell.querySelector('button[data-new-model-operator-cycle]');
+          if (cycle && btn && cycle.indexOf(btn.textContent.trim()) === -1) {
+            window.newModelSetOperator(btn, cycle[0]);
+            return;
+          }
+          window.newModelSyncFieldHelper(sel);
         };
         // IS FILLED / IS EMPTY test the field alone, so the value box
         // goes inactive: read-only and dimmed, but still submitted, so
@@ -1134,7 +1190,9 @@
         window.newModelCycleOperator = window.newModelCycleOperator || function (btn) {
           var cycle = (btn.getAttribute('data-new-model-operator-cycle') || 'IS|IS NOT').split('|');
           var idx = cycle.indexOf(btn.textContent.trim());
-          var next = cycle[(idx + 1) % cycle.length];
+          window.newModelSetOperator(btn, cycle[(idx + 1) % cycle.length]);
+        };
+        window.newModelSetOperator = window.newModelSetOperator || function (btn, next) {
           btn.textContent = next;
           // Keep the hidden op input in sync so the form submission
           // carries the operator label.
@@ -1248,8 +1306,8 @@
           if (combInput) { combInput.value = next; }
         };
         // True while the card's Link 2 is filtering with a relationship
-        // tag under IS (the cell's field a ``pair_context.`` key, its
-        // operator IS).
+        // tag under IS or IS FILLED (the cell's field a ``pair_context.``
+        // key), either of which keeps pairs one by one.
         window.newModelKeepsPairsByPairTag = window.newModelKeepsPairsByPairTag || function (el) {
           var card = el.closest('[id^="instrument-"]');
           if (!card) { return false; }
@@ -1259,7 +1317,8 @@
           return Array.prototype.some.call(cells, function (sel) {
             var cell = sel.closest('[data-new-model-rule-cell]');
             var op = cell && cell.querySelector('[data-new-model-op-input]');
-            return sel.value.indexOf('pair_context.') === 0 && op && op.value === 'IS';
+            return sel.value.indexOf('pair_context.') === 0 && op &&
+              (op.value === 'IS' || op.value === 'IS FILLED');
           });
         };
         window.newModelToggleUnitMode = window.newModelToggleUnitMode || function (btn) {
@@ -1280,9 +1339,9 @@
           } else {
             next = 'not_set';
           }
-          // A Link 2 pair-tag IS keeps pairs one by one, so Group is
-          // skipped while one is set (author, 2026-10-17); Save refuses
-          // the pair if it was already grouped.
+          // A Link 2 pair-tag IS or IS FILLED keeps pairs one by one, so
+          // Group is skipped while one is set (author, 2026-10-17; IS
+          // FILLED 2026-10-18); Save refuses the pair if already grouped.
           if (next === 'group' && newModelKeepsPairsByPairTag(btn)) {
             next = 'not_set';
           }

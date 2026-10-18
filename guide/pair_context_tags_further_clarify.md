@@ -121,6 +121,15 @@ Taken 2026-10-18 at `928dbc15`.
   It also matches `spec/settings_inventory.md`, for a browser
   preference only; that one is untouched.
 
+### Status
+
+- 2026-10-18: Open question 1 ruled **retire** (author). Rung 3 goes ahead.
+- Rung 2 (card and Save): Save stores a relationship tag as is and
+  refuses the three unoffered shapes through one helper,
+  `unoffered_pair_rule` in `app/services/instruments/_band1.py`, which
+  rung 3's import refusal reuses. A stored person-level rule shows as
+  "Reviewer's pair tag: …" / "Reviewee's pair tag: …".
+
 ### PR ladder
 
 1. **This plan** (prose).
@@ -129,7 +138,7 @@ Taken 2026-10-18 at `928dbc15`.
    `IS FILLED` / `IS EMPTY` store as `pair_context.tagN`. Extend the
    Group guard. Make Save refuse a stored rule the card no longer offers.
    Must not touch the rules engine.
-3. **Engine and import** (if Open question 1 is ruled "retire"). Remove
+3. **Engine and import**. Remove
    `reviewer.pair_tagN` / `reviewee.pair_tagN` from
    `ALLOWED_PREDICATE_FIELDS` and the resolvers, and make the Settings
    import refuse them. Update the specs and close.
@@ -147,10 +156,9 @@ Taken 2026-10-18 at `928dbc15`.
 
 ### Open questions
 
-1. **Retire `reviewer.pair_tagN` / `reviewee.pair_tagN` from the engine,
-   or keep them for Settings imports?** Recommended: retire. Nothing the
-   card builds would use them, and a field only an import can set is
-   the hidden second reading again. Author decides.
+1. ~~Retire `reviewer.pair_tagN` / `reviewee.pair_tagN` from the
+   engine, or keep them for Settings imports?~~ Retire (author,
+   2026-10-18).
 
 ### Out of scope
 

@@ -298,7 +298,8 @@ def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
 ) -> None:
     """Item 2 (author, 2026-10-17): a Link 2 pair-tag IS picks pairs one
     by one, so the Unit of review pill cycles Individual → Not set,
-    skipping Group; any other Link 2 rule leaves Group in the cycle."""
+    skipping Group; so does IS FILLED (``guide/pair_context_tags_further_clarify.md``
+    Item 1), and IS NOT leaves Group in the cycle."""
     session_id = new_session()
     _seed(api, session_id)
     _tag_the_pair(live_server, session_id)
@@ -321,14 +322,24 @@ def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
     operator.click()  # IS NOT
     unit.click()
     expect(unit).to_have_attribute("data-new-model-unit-mode", "group")
+    unit.click()
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "not_set")
+    unit.click()
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "individual")
+
+    operator.click()  # IS FILLED
+    expect(operator).to_have_text("IS FILLED")
+    unit.click()
+    expect(unit).to_have_attribute("data-new-model-unit-mode", "not_set")
 
 
-def test_link2_caption_reads_pairwise_for_a_pair_tag_under_is(
+def test_a_link2_pair_tag_cell_has_its_own_cycle_and_caption(
     page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
 ) -> None:
-    """A relationship tag under IS / IS NOT judges the pair itself, so
-    Link 2's caption reads "Pairwise tag" (author, 2026-10-17); any other
-    tag or operator keeps "Reviewee's tag"."""
+    """``guide/pair_context_tags_further_clarify.md`` Item 1 (author,
+    2026-10-18): a relationship tag cycles IS → IS NOT → IS FILLED → IS
+    EMPTY, every one judging the pair under the "Pairwise tag" caption;
+    moving the field back to a reviewee tag restores the full cycle."""
     session_id = new_session()
     _seed(api, session_id)
     _tag_the_pair(live_server, session_id)
@@ -338,38 +349,50 @@ def test_link2_caption_reads_pairwise_for_a_pair_tag_under_is(
     caption = cell.locator("[data-new-model-rule-field-helper]")
     field = cell.locator('select[name="link2_field"]')
     operator = cell.locator("[data-new-model-operator-cycle]")
+    op_input = cell.locator("[data-new-model-op-input]")
+    value = cell.locator("[data-new-model-operand-value]")
     expect(caption).to_have_text("Reviewee's tag")
+    expect(operator).to_have_text("IS THE SAME AS")
 
+    # IS THE SAME AS is not on the pair cycle, so the cell opens on IS.
     field.select_option("pair_context.tag1")
+    expect(operator).to_have_text("IS")
+    expect(op_input).to_have_value("IS")
+    expect(value).to_be_visible()
     seen = []
-    for _ in range(6):
+    for _ in range(5):
         seen.append((operator.inner_text(), caption.inner_text()))
         operator.click()
     assert seen == [
-        ("IS THE SAME AS", "Reviewee's tag"),
-        ("IS DIFFERENT FROM", "Reviewee's tag"),
         ("IS", "Pairwise tag"),
         ("IS NOT", "Pairwise tag"),
-        ("IS FILLED", "Reviewee's tag"),
-        ("IS EMPTY", "Reviewee's tag"),
+        ("IS FILLED", "Pairwise tag"),
+        ("IS EMPTY", "Pairwise tag"),
+        ("IS", "Pairwise tag"),
     ]
 
-    while operator.inner_text() != "IS":
-        operator.click()
-    expect(caption).to_have_text("Pairwise tag")
+    expect(operator).to_have_text("IS NOT")  # on both cycles
     field.select_option("reviewee.tag1")
+    expect(operator).to_have_text("IS NOT")
     expect(caption).to_have_text("Reviewee's tag")
+    assert operator.get_attribute("data-new-model-operator-cycle") == (
+        "IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"
+    )
     field.select_option("pair_context.tag1")
     expect(caption).to_have_text("Pairwise tag")
 
-    # A new cell starts on the default operator and field, so on the
-    # default caption.
+    # A new cell starts on the default field, cycle and caption.
     card.locator("[data-new-model-rule-builder]").nth(1).locator(
         "[data-new-model-rule-add]"
     ).click()
-    expect(card.locator("[data-new-model-rule-field-helper]").filter(
-        has_text="Pairwise tag"
-    )).to_have_count(1)
+    added = card.locator('select[name="link2_field"]').nth(1).locator(
+        "xpath=ancestor::*[@data-new-model-rule-cell]"
+    )
+    expect(added.locator("[data-new-model-operator-cycle]")).to_have_text("IS THE SAME AS")
+    assert added.locator("[data-new-model-operator-cycle]").get_attribute(
+        "data-new-model-operator-cycle"
+    ) == "IS THE SAME AS|IS DIFFERENT FROM|IS|IS NOT|IS FILLED|IS EMPTY"
+    expect(added.locator("[data-new-model-rule-field-helper]")).to_have_text("Reviewee's tag")
 
 
 def test_a_stored_pair_tag_is_renders_the_pairwise_caption(

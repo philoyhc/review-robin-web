@@ -161,7 +161,7 @@ def test_band1_card_save_keeps_a_cross_side_rule(db: Session, client: TestClient
 
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_link2_form("pair_context.tag1", "reviewer.tag1"),
+        data=_link2_form("reviewee.tag1", "reviewer.tag1"),
     )
 
     assert response.status_code == 200, response.text
@@ -305,3 +305,21 @@ def test_settings_import_keeps_a_link2_pair_tag_is_on_an_individual_instrument(
     result = apply_session_config(db, session, rows, user=operator)
 
     assert not result.errors
+
+
+def test_settings_import_refuses_group_beside_a_link2_pair_tag_filled(db: Session) -> None:
+    """IS FILLED keeps pairs one by one too (pair tags Item 1), and the
+    error names it beside IS."""
+    operator, session = _seed_for_import(db, "pt-group-filled")
+    filled = _LINK2_PAIR_IS.replace(
+        '"operator": "equals", "operand": "Friend"', '"operator": "is_not_empty"'
+    )
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", filled)
+    rows = _with_cell(rows, ".group_kind", "r1")
+
+    result = apply_session_config(db, session, rows, user=operator)
+
+    assert any(
+        error.field.endswith(".group_kind") and "IS or IS FILLED" in error.message
+        for error in result.errors
+    ), result.errors
