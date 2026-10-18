@@ -25,13 +25,12 @@ skipped at lookup time — pair_context predicates evaluate as if
 the row didn't exist (return ``None``), per the locked
 "skip-at-lookup" semantic.
 
-``reviewer.pair_tag1/2/3`` and ``reviewee.pair_tag1/2/3`` (author,
-2026-10-17; ``guide/archive/assignment_rule_clarify.md`` Item 2) read the same
-relationship tags as a *person's* tag: every value the reviewer (or the
-reviewee) holds in that slot across their active pairs, whoever the
-other side is. They are multi-valued, so predicates read them through
-:func:`get_field_values`; ``pair_context.tagN`` stays the per-pair
-reading.
+A relationship tag is read per pair only (``pair_context.tagN``). The
+person-level reading ``guide/archive/assignment_rule_clarify.md`` Item 2
+added (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``, every value a
+person held across their pairs) retired with
+``guide/pair_context_tags_further_clarify.md`` Item 1 (author,
+2026-10-18).
 """
 
 from __future__ import annotations
@@ -43,10 +42,8 @@ if TYPE_CHECKING:
     from app.db.models import Relationship
 
 # (side, attribute) tuple per dotted field name. ``side`` is
-# ``"reviewer"`` / ``"reviewee"`` / ``"pair_context"`` for a single
-# value off one row, or ``"reviewer_pairs"`` / ``"reviewee_pairs"`` for
-# a person's values across their relationships; ``attribute`` is the
-# ORM column attribute (on ``Relationship`` for the last three).
+# ``"reviewer"`` / ``"reviewee"`` / ``"pair_context"``; ``attribute``
+# is the ORM column attribute on the corresponding model.
 FIELD_MAP: Final[dict[str, tuple[str, str]]] = {
     "reviewer.email": ("reviewer", "email"),
     "reviewer.tag1": ("reviewer", "tag_1"),
@@ -59,16 +56,7 @@ FIELD_MAP: Final[dict[str, tuple[str, str]]] = {
     "pair_context.tag1": ("pair_context", "tag_1"),
     "pair_context.tag2": ("pair_context", "tag_2"),
     "pair_context.tag3": ("pair_context", "tag_3"),
-    "reviewer.pair_tag1": ("reviewer_pairs", "tag_1"),
-    "reviewer.pair_tag2": ("reviewer_pairs", "tag_2"),
-    "reviewer.pair_tag3": ("reviewer_pairs", "tag_3"),
-    "reviewee.pair_tag1": ("reviewee_pairs", "tag_1"),
-    "reviewee.pair_tag2": ("reviewee_pairs", "tag_2"),
-    "reviewee.pair_tag3": ("reviewee_pairs", "tag_3"),
 }
-
-_PERSON_SIDES: Final[frozenset[str]] = frozenset({"reviewer_pairs", "reviewee_pairs"})
-
 
 def parse_field(dotted: str) -> tuple[str, str]:
     """Resolve a dotted field name to ``(side, orm_attribute)``.
@@ -93,34 +81,6 @@ _pair_context_lookup: ContextVar[
     dict[tuple[int, int], "Relationship"] | None
 ] = ContextVar("pair_context_lookup", default=None)
 
-# ``(side, person_id, attribute) -> values`` over the bound lookup's
-# active rows, built once per bind so a person-level field costs a dict
-# read per pair rather than a scan.
-_PersonIndex = dict[tuple[str, int, str], frozenset[str]]
-_person_index: ContextVar[_PersonIndex | None] = ContextVar(
-    "pair_context_person_index", default=None
-)
-
-
-def _build_person_index(
-    lookup: dict[tuple[int, int], "Relationship"] | None,
-) -> _PersonIndex:
-    collected: dict[tuple[str, int, str], set[str]] = {}
-    for (reviewer_id, reviewee_id), relationship in (lookup or {}).items():
-        if getattr(relationship, "status", None) != "active":
-            continue
-        for attribute in ("tag_1", "tag_2", "tag_3"):
-            raw = getattr(relationship, attribute, None)
-            if raw is None or not str(raw).strip():
-                continue
-            for key in (
-                ("reviewer_pairs", reviewer_id, attribute),
-                ("reviewee_pairs", reviewee_id, attribute),
-            ):
-                collected.setdefault(key, set()).add(raw)
-    return {key: frozenset(values) for key, values in collected.items()}
-
-
 def set_pair_context_lookup(
     lookup: dict[tuple[int, int], "Relationship"] | None,
 ) -> object:
@@ -129,16 +89,11 @@ def set_pair_context_lookup(
     done. Engine call sites use this in a try/finally pair around
     ``evaluate()``."""
 
-    return (
-        _pair_context_lookup.set(lookup),
-        _person_index.set(_build_person_index(lookup)),
-    )
+    return _pair_context_lookup.set(lookup)
 
 
 def reset_pair_context_lookup(token: object) -> None:
-    lookup_token, index_token = token  # type: ignore[misc]
-    _person_index.reset(index_token)
-    _pair_context_lookup.reset(lookup_token)
+    _pair_context_lookup.reset(token)  # type: ignore[arg-type]
 
 
 def get_field_value(
@@ -160,10 +115,6 @@ def get_field_value(
     """
 
     side, attribute = parse_field(dotted)
-    if side in _PERSON_SIDES:
-        raise ValueError(
-            f"{dotted!r} is multi-valued; read it with get_field_values"
-        )
     if side == "pair_context":
         return _resolve_pair_context(reviewer, reviewee, attribute)
     target = reviewer if side == "reviewer" else reviewee
@@ -204,31 +155,19 @@ def _resolve_pair_context(
 def get_field_values(
     dotted: str, *, reviewer: object, reviewee: object
 ) -> tuple[str, ...]:
-    """Every value of ``dotted`` for the pair, empty when it has none.
-
-    A single-valued field gives at most one value, the raw column
-    value: unlike :func:`get_field_value` it leaves a blank string for
-    the caller's normalisation to drop. A person-level pair tag
-    (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``) gives every value
-    that person holds in slot N across their active relationships, in
-    no particular order; a person with no such pair gives none.
+    """Every value of ``dotted`` for the pair, empty when it has none:
+    at most one, the raw column value. Unlike :func:`get_field_value` it
+    leaves a blank string for the caller's normalisation to drop.
     """
 
     side, attribute = parse_field(dotted)
-    if side not in _PERSON_SIDES:
-        # Resolved inline rather than through get_field_value, which
-        # would parse the field a second time on this per-pair path.
-        if side == "pair_context":
-            value = _resolve_pair_context(reviewer, reviewee, attribute)
-        else:
-            target = reviewer if side == "reviewer" else reviewee
-            value = getattr(target, attribute, None)
-        # A blank string comes back as a value; the predicates'
-        # normalisation drops it, once, for every operator.
-        return () if value is None else (value,)
-    person = reviewer if side == "reviewer_pairs" else reviewee
-    person_id = getattr(person, "id", None)
-    index = _person_index.get()
-    if index is None or person_id is None:
-        return ()
-    return tuple(index.get((side, person_id, attribute), ()))
+    # Resolved inline rather than through get_field_value, which would
+    # parse the field a second time on this per-pair path.
+    if side == "pair_context":
+        value = _resolve_pair_context(reviewer, reviewee, attribute)
+    else:
+        target = reviewer if side == "reviewer" else reviewee
+        value = getattr(target, attribute, None)
+    # A blank string comes back as a value; the predicates'
+    # normalisation drops it, once, for every operator.
+    return () if value is None else (value,)

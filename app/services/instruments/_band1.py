@@ -654,17 +654,25 @@ _PERSON_PAIR_PREFIXES: tuple[str, ...] = ("reviewer.pair_tag", "reviewee.pair_ta
 _PAIR_KEEPING_OPS: frozenset[str] = frozenset({"equals", "is_not_empty"})
 
 
-def _link_predicates(rules_json: list[dict[str, Any]], link_id: str) -> list[dict[str, Any]]:
+def _link_predicates(rules_json: list[Any], link_id: str) -> list[dict[str, Any]]:
+    """The predicates of a Link's Composite. Skips anything that is not
+    the shape the card stores, so an imported cell can reach the
+    engine's own check (``rules_payload_error``) and be named there."""
     predicates: list[dict[str, Any]] = []
     for entry in rules_json:
+        if not isinstance(entry, dict):
+            continue
         if entry.get("id") != link_id or entry.get("kind") != "COMPOSITE":
             continue
-        for child in entry.get("rules", []):
-            predicates.append(child.get("predicate") or {})
+        children = entry.get("rules")
+        for child in children if isinstance(children, list) else []:
+            predicate = child.get("predicate") if isinstance(child, dict) else None
+            if isinstance(predicate, dict):
+                predicates.append(predicate)
     return predicates
 
 
-def unoffered_pair_rule(rules_json: list[dict[str, Any]]) -> str | None:
+def unoffered_pair_rule(rules_json: list[Any]) -> str | None:
     """Why a Band 1 rule set holds a relationship-tag rule the card no
     longer offers, or ``None``. A relationship tag is a Link 2 field
     only, judging the pair (``guide/pair_context_tags_further_clarify.md``

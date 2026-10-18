@@ -307,6 +307,54 @@ def test_settings_import_keeps_a_link2_pair_tag_is_on_an_individual_instrument(
     assert not result.errors
 
 
+def _one_rule(link: str, predicate: str) -> str:
+    return (
+        f'[{{"id": "{link}", "enabled": true, "kind": "COMPOSITE", "op": "AND", "rules": ['
+        f'{{"id": "{link}-r0", "enabled": true, "kind": "MATCH", "predicate": {predicate}}}]}}]'
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        (
+            _one_rule("link1", '{"field": "pair_context.tag1", "operator": "equals", "operand": "F"}'),
+            "Who does the review no longer filters",
+        ),
+        (
+            _one_rule("link1", '{"field": "reviewer.pair_tag1", "operator": "equals", "operand": "F"}'),
+            "a person's relationship tag",
+        ),
+        (
+            _one_rule("link2", '{"field": "reviewee.pair_tag2", "operator": "is_not_empty"}'),
+            "a person's relationship tag",
+        ),
+        (
+            _one_rule(
+                "link2",
+                '{"field": "reviewee.tag1", "operator": "same_as", "operand": "pair_context.tag1"}',
+            ),
+            "can't be compared",
+        ),
+    ],
+    ids=["link1-pair", "reviewer-pair-tag", "reviewee-pair-tag", "pair-operand"],
+)
+def test_settings_import_refuses_a_relationship_rule_the_card_no_longer_offers(
+    db: Session, value: str, message: str
+) -> None:
+    """``guide/pair_context_tags_further_clarify.md`` Item 1: the import
+    refuses what Band 1's Save refuses, with the same reason."""
+    operator, session = _seed_for_import(db, "pt-import")
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", value)
+
+    result = apply_session_config(db, session, rows, user=operator)
+
+    assert any(
+        error.field.endswith(".rules_json") and message in error.message
+        for error in result.errors
+    ), result.errors
+
+
 def test_settings_import_refuses_group_beside_a_link2_pair_tag_filled(db: Session) -> None:
     """IS FILLED keeps pairs one by one too (pair tags Item 1), and the
     error names it beside IS."""

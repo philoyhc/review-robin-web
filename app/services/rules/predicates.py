@@ -4,10 +4,11 @@ One function per operator from ``spec/rule_based_assignment.md`` §4.4.
 The dispatch table at the bottom is what
 ``app/services/rules/engine.py`` calls into.
 
-Every field reads as a *set* of values (``fields.get_field_values``): at
-most one for a roster or per-pair tag, any number for a person-level
-pair tag (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``). An empty
-string is no value. The operators over that set (author, 2026-10-17;
+Every field reads as a *set* of values (``fields.get_field_values``),
+at most one for a roster or per-pair tag; the set form outlived the
+person-level pair tags it was built for (retired by
+``guide/pair_context_tags_further_clarify.md`` Item 1). An empty string
+is no value. The operators over that set (author, 2026-10-17;
 ``guide/archive/assignment_rule_clarify.md`` Item 2):
 
 - ``equals`` / ``in`` / ``matches`` pass when some value matches, so a

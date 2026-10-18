@@ -124,13 +124,14 @@ def test_allowed_predicate_fields_match_spec_vocabulary() -> None:
     """Spec §4.4 names email + tag1/2/3 on each side; Segment 15D PR 3
     extends the allow-list with ``pair_context.tag1/2/3`` (per-pair
     attributes living on the new ``relationships`` table), and
-    ``guide/archive/assignment_rule_clarify.md`` Item 2 with each person's pair
-    tags, ``reviewer.pair_tagN`` / ``reviewee.pair_tagN``."""
+    ``guide/archive/assignment_rule_clarify.md`` Item 2 added each person's
+    pair tags, which ``guide/pair_context_tags_further_clarify.md`` Item 1
+    retired."""
 
     expected = {
         f"{side}.{name}"
         for side in ("reviewer", "reviewee")
-        for name in ("email", "tag1", "tag2", "tag3", "pair_tag1", "pair_tag2", "pair_tag3")
+        for name in ("email", "tag1", "tag2", "tag3")
     } | {
         f"pair_context.tag{n}" for n in (1, 2, 3)
     }
