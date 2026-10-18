@@ -1044,7 +1044,7 @@ radius and follow its PR ladder, scaffold first.
 #### Include or rule out whole groups by their members' tags (author, 2026-10-18)
 
 > Recorded in `guide/group_membership_rules.md` as a deferred idea,
-> unplanned. Raised while planning `guide/pair_context_tags_further_clarify.md`.
+> unplanned. Raised while planning `guide/archive/pair_context_tags_further_clarify.md`.
 
 **Ships.** On a Group instrument, groups form as usual. Then a group is
 included or ruled out whole when at least one member carries a given
@@ -1060,8 +1060,9 @@ Include adds. No session needs it yet.
 
 - an operator needs a whole-group conflict-of-interest or must-review
   rule;
-- building `guide/pair_context_tags_further_clarify.md` Item 1 reopens
-  where relationship tags live (Open question 3 there).
+- a change reopens where relationship tags live (Open question 3 in
+  `guide/group_membership_rules.md`; `guide/archive/pair_context_tags_further_clarify.md`
+  Item 1, closed 2026-10-18, kept them in Link 2).
 
 **Wire-up.** Turn the idea doc into a plan: settle its Open questions,
 then take the blast radius and cut the ladder, scaffold first.

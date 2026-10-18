@@ -1,10 +1,11 @@
 """Pair tags through Generate, on real ``Relationship`` rows (author,
-2026-10-17; ``guide/archive/assignment_rule_clarify.md`` Item 2).
+2026-10-17; ``guide/archive/assignment_rule_clarify.md`` Item 2, and
+``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
 
 A relationship is a pair of individuals: on a Group instrument a Link 2
 pair-tag IS NOT drops only the ruled-out member's row, not the group;
-and a reviewer's pair tag (``reviewer.pair_tagN``) holds for every one
-of their pairs, through ``relationships.pair_context_lookup``.
+and a Link 2 pair-tag IS FILLED / IS EMPTY assigns / excludes exactly
+the pairs carrying a value, through ``relationships.pair_context_lookup``.
 """
 
 from __future__ import annotations
@@ -77,7 +78,7 @@ def _seed(db: Session, code: str, *, group_kind: str | None, rules_json: list) -
     return user, review_session
 
 
-def _link(link: str, field: str, operator: str, operand: str) -> dict:
+def _link(link: str, field: str, operator: str, operand: str | None) -> dict:
     return {
         "id": link,
         "enabled": True,
@@ -88,7 +89,8 @@ def _link(link: str, field: str, operator: str, operand: str) -> dict:
                 "id": f"{link}-r0",
                 "enabled": True,
                 "kind": "MATCH",
-                "predicate": {"field": field, "operator": operator, "operand": operand},
+                "predicate": {"field": field, "operator": operator}
+                | ({} if operand is None else {"operand": operand}),
             }
         ],
     }
@@ -124,11 +126,25 @@ def test_group_pair_tag_is_not_drops_only_that_members_row(db: Session) -> None:
     }
 
 
-def test_a_reviewers_pair_tag_holds_for_every_one_of_their_pairs(db: Session) -> None:
+def test_link2_pair_tag_filled_and_empty_assign_and_exclude_by_any_value(db: Session) -> None:
+    """Rae–Ann is the only tagged pair: IS FILLED assigns it alone, and
+    IS EMPTY every other pair."""
     user, review_session = _seed(
         db,
-        "pt-person",
+        "pt-filled",
         group_kind=None,
-        rules_json=[_link("link1", "reviewer.pair_tag1", "equals", "COI")],
+        rules_json=[_link("link2", "pair_context.tag1", "is_not_empty", None)],
     )
-    assert _generated(db, user, review_session) == {("Rae", "Ann"), ("Rae", "Ben")}
+    assert _generated(db, user, review_session) == {("Rae", "Ann")}
+
+    user, review_session = _seed(
+        db,
+        "pt-empty",
+        group_kind=None,
+        rules_json=[_link("link2", "pair_context.tag1", "is_empty", None)],
+    )
+    assert _generated(db, user, review_session) == {
+        ("Rae", "Ben"),
+        ("Sol", "Ann"),
+        ("Sol", "Ben"),
+    }

@@ -574,3 +574,14 @@ instrument card unlocked.
   IS) in Who is being reviewed, the Unit of review pill cycles
   Individual → Not set, skipping Group; IS NOT or IS EMPTY leave Group
   in the cycle.
+- [ ] **Untagged reviewees (rung 2 read fix).** With tagged reviewers,
+  untagged reviewees and tagged relationships, turn Who is being reviewed
+  to Filter: the cell opens on "Pair: …" with IS and a value box, no
+  reviewer-tag picker. Type a value and Save: the rule is kept.
+- [ ] **A rule saved before this change (rung 3).** A local session
+  saved since 2026-10-17 with "Pair: …" in Who does the review, or with
+  "Pair: …" under IS FILLED / IS EMPTY / IS THE SAME AS in Who is being
+  reviewed, now holds a retired field: Assignments and Validate answer
+  500. Open its Instruments card: the rule shows as "Reviewer's pair
+  tag: …" / "Reviewee's pair tag: …"; Save is refused until it is
+  removed, after which both pages load.

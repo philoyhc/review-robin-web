@@ -4,7 +4,7 @@
 2026-10-18) · **Lift trigger and ledger entry:**
 `guide/deferred_consolidated.md`, Part A, "Assignment rules" ·
 **Related:** `spec/instruments.md` (Band 1), `spec/assignments.md`,
-`guide/pair_context_tags_further_clarify.md`
+`guide/archive/pair_context_tags_further_clarify.md`
 
 A record of an idea and the shape it would likely take, not a plan:
 there is no PR ladder, and nothing here is ruled. If it is lifted, it
@@ -72,9 +72,9 @@ Links:
    state on the Links, or "all Links Not set plus an Include means
    nothing but the includes".
 3. **Do relationship tags leave the Links altogether?** Then
-   `guide/pair_context_tags_further_clarify.md` Item 1, which keeps them
-   in Link 2, would be superseded or reworked. Whichever builds first
-   should say so.
+   `guide/archive/pair_context_tags_further_clarify.md` Item 1, which built
+   first (2026-10-18) and keeps them in Link 2, would be superseded or
+   reworked, and this plan should say so.
 4. **Self-review.** How a whole-group include meets the instrument's
    self-review toggle and the exclude-self-reviews chip.
 5. **Generate and staleness.** The exceptions must run inside Prepare /

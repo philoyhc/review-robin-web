@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionRuleSet
 from app.schemas.rules import rules_payload_error
+from app.services.instruments._band1 import unoffered_pair_rule
 
 from ._apply_shared import (
     _RX_RULE_SET,
@@ -51,6 +52,13 @@ def _apply_rule_set_kv(
         spec.seed = _parse_int(value)
     elif attr == "rules_json":
         rules = _parse_json(value, default=[])
+        # A relationship-tag rule the Band 1 card no longer offers is
+        # refused as its Save refuses it, before the engine's own check
+        # names a retired field less helpfully
+        # (``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
+        unoffered = unoffered_pair_rule(rules) if isinstance(rules, list) else None
+        if unoffered is not None:
+            raise _ParseError(f"rules_json is not a valid rule list: {unoffered}")
         # Phase 1 holds the rules to the shape the engine reads, so a
         # bad cell refuses the file rather than storing rules every
         # reconcile reader then rejects (findings S2, 2026-10-16).

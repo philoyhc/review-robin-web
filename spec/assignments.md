@@ -160,8 +160,6 @@ A `MATCH` rule carries a `predicate` of `{field, operator, operand, case_sensiti
 | `reviewer.tagN` | `Reviewer.tag_N` | `tag1 / tag2 / tag3` |
 | `reviewee.tagN` | `Reviewee.tag_N` | `tag1 / tag2 / tag3` |
 | `pair_context.tagN` | `Relationship.tag_N` of the pair being judged | `tag1 / tag2 / tag3` |
-| `reviewer.pair_tagN` | `Relationship.tag_N` of every active relationship the reviewer is in | `tag1 / tag2 / tag3` |
-| `reviewee.pair_tagN` | `Relationship.tag_N` of every active relationship the reviewee is in | `tag1 / tag2 / tag3` |
 | `reviewer.email` | `Reviewer.email` | — |
 | `reviewee.email` | `Reviewee.email_or_identifier` | — |
 
@@ -169,9 +167,11 @@ The engine accepts every field above (`ALLOWED_PREDICATE_FIELDS` in
 `app/schemas/rules.py`); Band 1 offers the tag slots, and of those
 only namespace + slot combinations with at least one populated row
 appear in its dropdowns (`views._instruments.new_model_usable_tags`).
-It offers a relationship tag once, as "Pair: <label>", and stores it as
-`pair_context.tagN`, `reviewer.pair_tagN` or `reviewee.pair_tagN`
-according to the Link and operator (`spec/instruments.md`, Band 1).
+It offers a relationship tag as a Link 2 field only, as "Pair: <label>",
+and stores it as `pair_context.tagN` under every operator
+(`spec/instruments.md`, Band 1). A relationship tag is read per pair
+only: `reviewer.pair_tagN` / `reviewee.pair_tagN` are not fields, and
+the engine, Band 1's Save and the Settings import all refuse them.
 
 **Operators** (UI → engine internal):
 
@@ -179,16 +179,16 @@ according to the Link and operator (`spec/instruments.md`, Band 1).
 |---|---|---|
 | `IS` | `equals` | Free-text string |
 | `IS NOT` | `not_equals` | Free-text string |
-| `IS THE SAME AS` | `same_as` | A reviewer tag or the reviewer's pair tag (e.g. `reviewer.tag1`, `reviewer.pair_tag1`) |
-| `IS DIFFERENT FROM` | `different_from` | A reviewer tag or the reviewer's pair tag |
+| `IS THE SAME AS` | `same_as` | A reviewer tag (e.g. `reviewer.tag1`) |
+| `IS DIFFERENT FROM` | `different_from` | A reviewer tag |
 | `IS FILLED` | `is_not_empty` | None |
 | `IS EMPTY` | `is_empty` | None |
 
 The operand must address a different population from the field: the
 engine refuses the same population on both sides, and Band 1's Save
 refuses it before storing (`spec/instruments.md`, Link 1 / Link 2). Of
-what the card offers, a reviewee field or the reviewee's pair tag takes
-a reviewer operand or the reviewer's pair tag.
+what the card offers, a reviewee tag takes a reviewer tag; a
+relationship tag takes no cross-side operator.
 
 The cross-side operators (`same_as` / `different_from`) read
 the operand as another field reference rather than a literal —
@@ -199,8 +199,8 @@ tag" without listing every value in the world.
 both sides before comparison.
 
 **Values and empty values** (author, 2026-10-17). A field holds a set
-of values: at most one for a roster tag, an email or `pair_context.tagN`,
-any number for a person's pair tag. A blank (empty or whitespace-only)
+of at most one value: a roster tag, an email or `pair_context.tagN`.
+A blank (empty or whitespace-only)
 string is no value, and
 an inactive or missing relationship gives none. Over that set:
 

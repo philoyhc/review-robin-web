@@ -123,12 +123,56 @@ Taken 2026-10-18 at `928dbc15`.
 
 ### Status
 
-- 2026-10-18: Open question 1 ruled **retire** (author). Rung 3 goes ahead.
-- Rung 2 (card and Save): Save stores a relationship tag as is and
-  refuses the three unoffered shapes through one helper,
-  `unoffered_pair_rule` in `app/services/instruments/_band1.py`, which
-  rung 3's import refusal reuses. A stored person-level rule shows as
-  "Reviewer's pair tag: …" / "Reviewee's pair tag: …".
+**Closed 2026-10-18.** Shipped as laddered: plan #3119, card and Save
+#3120, engine and import #3121. Open question 1 was ruled **retire**
+(author, 2026-10-18).
+
+Decisions confirmed at build:
+
+- Save refuses all three unoffered shapes (a Link 1 relationship tag, a
+  person's relationship tag, a relationship tag beside a cross-side
+  operator) through one helper, `unoffered_pair_rule` in
+  `app/services/instruments/_band1.py`. The Settings import calls the
+  same helper with the same reason. The helper skips a malformed cell,
+  so the engine's own check names it, and it reads an operand as a field
+  only under a cross-side operator.
+- A stored person-level rule shows as "Reviewer's pair tag: <label>" /
+  "Reviewee's pair tag: <label>", or as its key once that slot empties.
+- The pair cycle is per cell. Moving a Link 2 field onto a relationship
+  tag swaps it in, and from a cross-side operator opens on `IS`.
+
+Divergence from Semantics: once the engine retired the fields, a stored
+person-level rule makes Assignments and Validate answer 500 (Prepare
+reports a failure) until it is removed on the card. The card still
+renders it, so it can be removed there. Only sessions saved under
+#3088–#3091 can hold one, and pre-Azure sessions are disposable, so
+nothing was built for it; `spec/instruments.md` Band 1 says so.
+
+Reads: one cumulative `diff-reviewer` read, of `6fa5412c..` at rung 3.
+It found two mediums:
+
+- the stored-rule 500 above, recorded rather than built;
+- a default Link 2 cell whose first option is a relationship tag showed
+  `IS` beside the reviewer-tag picker, so Save dropped its rule. Fixed in
+  #3120.
+
+It also found five lows. Three were fixed:
+
+- an `IS` value spelled like a field was refused;
+- a test counted Link 1's cycle;
+- the stored-only label overclaimed.
+
+Two were left:
+
+- rung 3 overlapped #3120's import message, which was resolved at
+  rebase;
+- `_link_predicates` reads one nesting level, which suffices because the
+  card never nests.
+
+`spec-writer`'s close pass found the four specs current. It reworded
+two history-tense sentences, corrected the cycle "restores the Link's
+usual cycle", and reflowed a line. Codex on #3120 asked that the
+import's grouped refusal name `IS FILLED`, and that is fixed.
 
 ### PR ladder
 

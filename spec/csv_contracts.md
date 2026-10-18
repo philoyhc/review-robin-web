@@ -534,11 +534,15 @@ the round-trip notes below.
    A `session_rule_sets[N].rules_json` the rule engine would refuse
    to load is an error naming the field (`rules_payload_error` in
    `app/schemas/rules.py`, the check the reader makes), and so is an
-   `instruments[N].band2_state` that is not a JSON object. So is an
+   `instruments[N].band2_state` that is not a JSON object. So is a
+   `rules_json` holding a relationship-tag rule Band 1's card no longer
+   offers — one in Link 1, a person's pair tag (`reviewer.pair_tagN` /
+   `reviewee.pair_tagN`, retired from the engine) or one beside a
+   cross-side operator — with the reason Band 1's Save gives
+   (`spec/instruments.md`, Band 1). So is an
    `instruments[N].group_kind` beside a `rule_set_name` whose Link 2
-   keeps pairs by a relationship-tag `IS`: Band 1's Save refuses the
-   same pairing (`spec/instruments.md`, Band 1), and the error names the
-   `group_kind` field.
+   keeps pairs by a relationship-tag `IS` or `IS FILLED`: Band 1's Save
+   refuses the same pairing, and the error names the `group_kind` field.
    Only values phase 2 writes are checked: a *fill-blanks* `session.*`
    key (below) only where the destination is blank, and a data shape
    only when it is written, as for the duplicate-name rule.
