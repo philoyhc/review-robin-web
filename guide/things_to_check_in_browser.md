@@ -8,6 +8,50 @@ section (git history keeps it), so this file lists only what is owed. A
 section may point to upload files under `guide/browser_check_files/`;
 delete them once no remaining section points to them.
 
+**One run order covers every open section:**
+`guide/browser_check_files/checklist/README.md`, with its upload files.
+It names the rows it skips and why.
+
+## Sessions and answers are named without database IDs (19V, #3126–#3130)
+
+Needs `alembic upgrade head` first (two migrations). A database from
+before them works, but its sessions take new addresses.
+
+- [ ] **Every address carries the public ID.** The lobby's links,
+  Session Home and each of its tabs, `/me`, the review page, Submit and
+  Summary all show a 10-character ID of digits and lower-case letters
+  where the session's number was.
+- [ ] **The lobby still acts on a session.** The row expander's Save and
+  Duplicate, and the bulk panel's tag and archive actions, each act on
+  the rows chosen.
+- [ ] **A sort is remembered per session.** Sort a Setup table and a
+  review page, then reload: each keeps its sort. (A sort remembered
+  under the old numeric address is forgotten once, which a fresh
+  database cannot show.)
+- [ ] **Extract data.** Each card's download works, and a chip turned
+  off stays off after a reload.
+- [ ] **Sys Admin → Sessions.** Outbox, Audit log and Adopt each open the
+  session they name.
+- [ ] **An old address answers 404.** `/operator/sessions/1` and
+  `/me/sessions/1/1` show the error page, with no redirect.
+- [ ] **Back links.** About and Settings, opened from a session page,
+  link back to that page.
+- [ ] **Answers are named by row, not by assignment.** In the review
+  page's source the answer boxes are named `response[1][…]`,
+  `response[2][…]` and so on, beside a hidden `page_digest`.
+- [ ] **Save after a sort.** Sort a column, type answers and Save:
+  after a reload each answer is on the row it was typed on.
+- [ ] **A stale tab is refused.** Open a review page in two tabs. As the
+  operator, Revert, Prepare, inactivate one of that reviewer's rows on
+  Assignments, and Activate. Type in the stale tab and Save: "This page
+  changed after you opened it, so your last changes weren't saved.
+  Check the answers below and enter them again.", with what you typed
+  listed under it.
+- [ ] **A group answer is the group's.** Save one rating on a group row
+  and reload: it shows on the row, and the responses CSV holds it on one
+  row naming every member, e.g. "Team A (Dev Patel, Erin Walsh, Local
+  Operator)".
+
 ## Email dates in the session's zone (#2720)
 
 - [x] **The deadline reads in the session's zone.** On a session whose

@@ -1,0 +1,3 @@
+ObserverName,ObserverEmail,CohortRule
+Local Operator,operator@example.edu,"{""combinator"":""AND"",""rules"":[{""field"":""reviewee.tag1"",""op"":""CONTAINS"",""operand_tag"":"""",""operand_value"":""Team""}]}"
+Olive Grant,olive@example.edu,"{""combinator"":""AND"",""rules"":[{""field"":""reviewee.tag1"",""op"":""IS"",""operand_tag"":"""",""operand_value"":""Team Z""}]}"

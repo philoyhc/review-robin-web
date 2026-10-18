@@ -11,4 +11,6 @@ checks.
 
 ## Current sets
 
-None (cleared 2026-10-17). The next set adds its folder and a row here.
+| Folder | Sections | Built |
+|---|---|---|
+| `checklist/` | Every open section a local run can settle, 19V included; its README names the rows it skips and why | 2026-10-18 |
