@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, false, true
+import secrets
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, false, select, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -22,10 +23,44 @@ if TYPE_CHECKING:
     from app.db.models.user import User
 
 
+# A session's URL handle (segment 19V Item 1): lowercase letters and
+# digits without the look-alikes (0/o, 1/l/i), so it reads back cleanly.
+PUBLIC_ID_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz"
+PUBLIC_ID_LENGTH = 10
+
+
+def generate_public_id() -> str:
+    """A fresh random ``sessions.public_id``: 10 symbols of 31, about 49
+    bits, so it carries no count and is not guessable by walking."""
+    return "".join(secrets.choice(PUBLIC_ID_ALPHABET) for _ in range(PUBLIC_ID_LENGTH))
+
+
+def _new_public_id(context: Any) -> str:
+    """Column default for :attr:`ReviewSession.public_id`, so every path
+    that makes a session (Create, Duplicate, Rehydrate, a test fixture)
+    gets one without remembering it. Context-sensitive like
+    ``instrument._next_session_seq``: it draws again in the unlikely case
+    the value is taken, and the unique index is the backstop."""
+    table = ReviewSession.__table__
+    while True:
+        candidate = generate_public_id()
+        taken = context.connection.execute(
+            select(table.c.id).where(table.c.public_id == candidate)
+        ).first()
+        if taken is None:
+            return candidate
+
+
 class ReviewSession(Base, TimestampMixin):
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # Carried by every session URL in place of ``id``, which counts the
+    # workspace (``guide/segment_19V_public_id_revamp.md`` Item 1). Set
+    # once at insert and never changed; not exported.
+    public_id: Mapped[str] = mapped_column(
+        String(16), unique=True, index=True, nullable=False, default=_new_public_id
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     code: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(2000))
