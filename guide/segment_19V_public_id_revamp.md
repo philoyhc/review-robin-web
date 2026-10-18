@@ -124,22 +124,28 @@ Taken 2026-10-18 at `c39186b4`.
 
 ### Status
 
-- **Rung 2 (2026-10-18).** Cumulative-read base `18d9013f`. One
-  context-sensitive model default (`_new_public_id`, the
-  `_next_session_seq` pattern) covers Create, Duplicate, Rehydrate and
-  every fixture, so no creator names the column.
-- **Rung 3 (2026-10-18).** One rung, not split by surface. Beyond the
-  measured sites it reached `app/web/return_to.py` (its session regexes
-  read digits) and the sys-admin outbox / audit-log / adopt routes.
-  Tests hand helpers the integer, so `tests/integration/_public_id.py`
-  resolves it; browser tests hold the public ID (`new_session()`) and
-  resolve the key with `_builder.session_pk`.
-- **Cumulative read (2026-10-18, one read, `18d9013f..a42b3173`).** No
-  `app/` blocker. It found five tests (enumeration gate, `return_to`)
-  still formatting the integer and so passing vacuously, and a NUL byte
-  in the path reaching Postgres as a 500. Both fixed in a follow-up: the
-  tests use `public_id`, and `sessions.get_by_public_id` checks the shape
-  before it queries, the one lookup every resolver now shares.
+**Closed 2026-10-18** (#3126, #3127, #3128); the segment stays open for
+Item 2 and follow-ups.
+
+- **Ladder as planned, plus one fix PR.** Rung 3 landed whole, not split
+  by surface. Beyond the measured sites it reached `app/web/return_to.py`
+  (its session regexes read digits) and the sys-admin outbox / audit-log
+  / adopt routes. #3128 acted on the read.
+- **Decisions confirmed at build.** One context-sensitive model default
+  (`_new_public_id`, the `_next_session_seq` pattern) covers every create
+  path and fixture. Every resolver shares `sessions.get_by_public_id`,
+  which checks the shape before it queries. The public ID is logged on an
+  operator-gate denial, as the only trace of a probe; Semantics' "not
+  logged" meant not handled as a token. Tests hand helpers the integer
+  through `tests/integration/_public_id.py`; browser tests hold the public
+  ID and resolve the key with `_builder.session_pk`.
+- **Reads: one** (`diff-reviewer`, `18d9013f..a42b3173`). No `app/`
+  blocker. It found five tests passing vacuously on integer URLs and a
+  NUL byte reaching Postgres as a 500; both fixed in #3128.
+- **Doc impact grew** by `spec/settings_inventory.md` and
+  `spec/reviewer-surface.md` (the read). `spec-writer` flagged nothing
+  that changed a decision. Specs outside the manifest keep their `{id}`
+  placeholders, which `spec/architecture.md` now defines.
 
 ### PR ladder
 
@@ -197,6 +203,8 @@ Taken 2026-10-18 at `c39186b4`.
 - `spec/participant_model.md` — the `/me/sessions/{session_id}/…` routes take the public ID; an integer answers 404 (Item 1).
 - `spec/operator_ui_concept.md` — operator page URLs carry the public ID (Item 1).
 - `docs/database.md` — the `sessions.public_id` column and its unique index (Item 1).
+- `spec/settings_inventory.md` — the session-scoped sort cookies and Extract-data storage keys are named by the public ID (Item 1; added at the cumulative read).
+- `spec/reviewer-surface.md` — URL examples use a public ID, not an integer (Item 1; added at the cumulative read).
 
 ---
 
