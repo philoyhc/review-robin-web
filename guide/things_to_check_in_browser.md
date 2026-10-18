@@ -88,7 +88,7 @@ delete them once no remaining section points to them.
   redirect, no "Go back" shows.
 - [ ] **The empty dashboard.** Signed in as someone with no role, `/me`
   reads "You're signed in as <your address> but there's nothing here
-  for you right now.", then what to check, and links to About.
+  for you right now.", then who to contact, and links to About.
 
 ## A refused write keeps what was typed (P3) and Recall after the deadline (M1)
 

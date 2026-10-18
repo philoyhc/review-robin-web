@@ -1235,8 +1235,8 @@ reviewee-/observer-only rows show `—` in those cells.
 - **Empty state** — when the user has no row to show in any
   role: a single `.card` (`data-me-empty`) reading "You're signed
   in as {user.email} but there's nothing here for you right now.
-  If you expected to see a review here, check that it was sent to
-  this address, or contact the person running it.", then an "About
+  If you expected to see a review here, contact the person running
+  it.", then an "About
   Review Robin" link
   (`/about?return_to=/me`). One wording for everyone it reaches
   (a stranger, a reviewee with no current grant, a deactivated
