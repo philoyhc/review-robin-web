@@ -140,6 +140,15 @@ multi-column `UniqueConstraint` (e.g. `assignments
 B-tree index whose **leading-column prefixes** cover prefix
 lookups.
 
+`sessions.public_id` (`String(16)`, not null) is the session's URL
+handle: 10 random characters from `23456789abcdefghjkmnpqrstuvwxyz`,
+set once by the model default `_new_public_id` and never changed. Its
+unique index `ix_sessions_public_id` serves every session URL lookup
+(`sessions.get_by_public_id`); `sessions.id` stays the primary key and
+the target of every foreign key. Migration `a9d4f2c7e1b8` adds the
+column, backfills existing rows, then makes it `NOT NULL` and unique.
+It is not exported in any CSV.
+
 ### §5.5 query-path review (Segment 14A PR 3)
 
 The main workflow queries were reviewed against the indexes

@@ -25,6 +25,24 @@ Review Robin Web is organized around explicit domain entities:
   nothing is scheduled, and the per-session retention columns are
   stored but inert)
 
+**A session's URL handle is its `public_id`, not its `id`.**
+`sessions.public_id` is 10 characters from the 31-symbol alphabet
+`23456789abcdefghjkmnpqrstuvwxyz` (`PUBLIC_ID_ALPHABET`,
+`app/db/models/review_session.py`), unique and not null, drawn at
+random on every create path (Create, Duplicate, Rehydrate) by the
+model default, and never changed. Every session-scoped URL
+(`/operator/sessions/{id}/…`, `/me/sessions/{id}/…`,
+`/operator/sys-admin/sessions/{id}/…`) carries it in place of the
+integer, so a URL does not reveal how many sessions the workspace has
+made. The path parameter keeps the name `{session_id}` (written `{id}`
+in the specs), and the gates in `app/web/deps.py` resolve it with
+`sessions.get_by_public_id`; an ill-formed value, an unknown one and an
+integer all answer 404, with no redirect. Below the route layer
+nothing changes: foreign keys, services, audit `refs` and form fields
+such as the lobby's `session_ids` keep the integer `id`. The public ID
+is not a secret and grants nothing (every route still checks
+permission), and no CSV carries it, the Settings CSV included.
+
 **Participant-model context.** The domain has **four participant
 roles** — operator, reviewer, reviewee, observer. The three
 participant rosters (reviewers, reviewees, observers) are

@@ -77,7 +77,7 @@ then the only valid page.
 
 `GET /me/sessions/{id}` (no page) **303s to
 `/me/sessions/{id}/1`** so existing invitation links and dashboard
-rows keep working. Out-of-range pages (e.g. `/me/sessions/5/9` when
+rows keep working. Out-of-range pages (e.g. `/me/sessions/k7x3m9pq2d/9` when
 the session has only 2 pages) return **404**.
 
 The reviewer dashboard at `/me` links a reviewer row to `/1`, since

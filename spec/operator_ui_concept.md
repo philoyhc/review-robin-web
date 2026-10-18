@@ -42,6 +42,8 @@ There is no `closed` state in the canonical enum — `expired` is the post-respo
 
 The operator's pages fall into five active groupings plus one forward-looking placeholder.
 
+In every session-scoped URL in this document, `{id}` is the session's `public_id`, not its integer key (`spec/architecture.md`); an integer in that position answers 404, with no redirect.
+
 ### 1. Operator's Overview
 
 The **top level** for a signed-in operator. Lists every session the operator has access to. The single launch point for everything session-scoped — to do anything inside a session, the operator clicks into it from here.
