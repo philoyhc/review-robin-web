@@ -121,3 +121,30 @@ def test_no_page_links_a_session_by_its_integer_id(
         # A template reading a missing attribute renders it empty.
         assert "/sessions//" not in html, path
         assert not _EMPTY_SESSION_LINK.search(html), path
+
+
+class _NoQueries:
+    def execute(self, *args: object, **kwargs: object) -> None:
+        raise AssertionError("an ill-formed public ID reached the database")
+
+
+def test_an_ill_formed_public_id_never_reaches_the_database() -> None:
+    """Postgres cannot bind a NUL byte into a text parameter and answers
+    with a 500 where SQLite finds no row, so the shape is checked first."""
+    from app.services.sessions import get_by_public_id
+
+    for raw in ("\x00", "abc\x00def", "ABCDEFGHJK", "k3m9-x2pq7", "a" * 17, ""):
+        assert get_by_public_id(_NoQueries(), raw) is None, raw
+
+
+def test_a_nul_byte_in_a_session_url_answers_404(
+    db: Session, client: TestClient
+) -> None:
+    _create(db, client, "pid-nul")
+    for path in (
+        "/operator/sessions/%00",
+        "/operator/sessions/%00/reviewers",
+        "/me/sessions/%00/1",
+        "/me/sessions/%00/results",
+    ):
+        assert client.get(path).status_code == 404, path

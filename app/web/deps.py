@@ -260,9 +260,7 @@ def _session_by_public_id(db: Session, public_id: str) -> ReviewSession | None:
     after the gate works with ``review_session.id``. An integer in the
     path matches no row and answers the same 404 as any unknown session.
     """
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.public_id == public_id)
-    ).scalar_one_or_none()
+    return sessions.get_by_public_id(db, public_id)
 
 
 def require_session_operator(
@@ -281,6 +279,9 @@ def require_session_operator(
                 "gate": "require_session_operator",
                 "user_id": user.id,
                 "session_id": review_session.id if review_session else None,
+                # Not a secret (19V Item 1), and the only trace of a probe
+                # for a session that does not exist.
+                "public_id": session_id,
             },
         )
         # Sys-admins are exempt from the uniform 404 (author,

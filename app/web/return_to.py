@@ -22,12 +22,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import unquote
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.routing import Match
 
-from app.db.models import ReviewSession, User
-from app.services import permissions
+from app.db.models import User
+from app.services import permissions, sessions
 
 
 @dataclass(frozen=True)
@@ -56,12 +55,6 @@ _OPERATOR_PAGES = {
 _OPERATOR_SESSION = re.compile(r"^/operator/sessions/([0-9a-z]+)(?:/[A-Za-z0-9_\-]+)*/?\Z")
 _REVIEWER_ROOT = re.compile(r"^/me/?\Z")
 _REVIEWER_SESSION = re.compile(r"^/me/sessions/([0-9a-z]+)/?\Z")
-
-
-def _by_public_id(db: Session, public_id: str) -> ReviewSession | None:
-    return db.execute(
-        select(ReviewSession).where(ReviewSession.public_id == public_id)
-    ).scalar_one_or_none()
 
 
 def _is_get_page(path: str) -> bool:
@@ -146,7 +139,7 @@ def _resolve(
 
     m = _OPERATOR_SESSION.match(path)
     if m and _is_get_page(path):
-        session = _by_public_id(db, m.group(1))
+        session = sessions.get_by_public_id(db, m.group(1))
         if session is None or not permissions.may_name_session(db, get_viewer(), session):
             return None
         return ReturnTarget(url=path, label=session.name)
@@ -156,7 +149,7 @@ def _resolve(
 
     m = _REVIEWER_SESSION.match(path)
     if m:
-        session = _by_public_id(db, m.group(1))
+        session = sessions.get_by_public_id(db, m.group(1))
         if session is None or not permissions.may_name_session(db, get_viewer(), session):
             return None
         return ReturnTarget(url=path, label=session.name)

@@ -25,8 +25,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models import ReviewSession
 
-# An id far past anything the per-test database allocates.
-MISSING_SESSION_ID = 987654
+# A public ID in the session alphabet that no session holds (19V Item 1).
+MISSING_SESSION_ID = "zzzzzzzzzz"
 
 
 def _make_session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
@@ -72,7 +72,7 @@ def test_a_session_you_hold_no_role_on_is_indistinguishable_from_no_session(
     bob_client = make_client(bob)
 
     existing = bob_client.get(
-        path.format(id=review_session.id), follow_redirects=False
+        path.format(id=review_session.public_id), follow_redirects=False
     )
     missing = bob_client.get(
         path.format(id=MISSING_SESSION_ID), follow_redirects=False

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from datetime import datetime, timezone
 
@@ -168,6 +169,22 @@ def list_all(db: Session) -> list[ReviewSession]:
     """
     stmt = select(ReviewSession).order_by(ReviewSession.created_at.desc())
     return list(db.execute(stmt).scalars())
+
+
+# The shape a URL's public ID can take (19V Item 1). Anything else names
+# no session, and is refused before it reaches the database: a NUL byte,
+# say, which Postgres cannot bind into a text parameter and would answer
+# with a 500 where SQLite finds no row.
+_PUBLIC_ID_SHAPE = re.compile(r"[0-9a-z]{1,16}")
+
+
+def get_by_public_id(db: Session, public_id: str) -> ReviewSession | None:
+    """The session whose URL carries ``public_id``, or ``None``."""
+    if not _PUBLIC_ID_SHAPE.fullmatch(public_id):
+        return None
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.public_id == public_id)
+    ).scalar_one_or_none()
 
 
 def get_for_user(db: Session, user: User, session_id: int) -> ReviewSession | None:

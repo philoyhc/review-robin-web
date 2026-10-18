@@ -40,7 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.roles import effective_super_admin_emails
-from app.db.models import ReviewSession, User
+from app.db.models import User
 from app.db.session import get_db
 from app.services import (
     account_listing,
@@ -166,9 +166,7 @@ def sys_admin_session_outbox(
     """Child page under Sessions Diagnostics. The back-link points
     at /operator/sys-admin/sessions; the Admin chrome's
     Sessions Diagnostics tab stays highlighted."""
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.public_id == session_id)
-    ).scalar_one_or_none()
+    review_session = sessions.get_by_public_id(db, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return _templates.TemplateResponse(
@@ -220,9 +218,7 @@ def sys_admin_session_audit_log(
     ``?tz=utc`` reads the page in UTC; without it, in the viewer's
     Settings timezone (``views.resolve_audit_log_zone``).
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.public_id == session_id)
-    ).scalar_one_or_none()
+    review_session = sessions.get_by_public_id(db, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     zone = views.resolve_audit_log_zone(
@@ -446,9 +442,7 @@ def sys_admin_adopt_session(
     — a no-op when they already own it. This is the explicit, recorded
     elevation that replaces the old back-door edit access.
     """
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.public_id == session_id)
-    ).scalar_one_or_none()
+    review_session = sessions.get_by_public_id(db, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     if not permissions.user_can_view_session(db, actor, review_session.id):
