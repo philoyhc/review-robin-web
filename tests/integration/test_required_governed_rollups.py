@@ -198,12 +198,12 @@ def test_a_closed_branch_isnt_reminded(
     # Every invitation goes out before anyone submits, as in
     # ``test_remind_incomplete_targets_only_incomplete``.
     for invitation in invitations.values():
-        operator.post(f"/operator/sessions/{session.id}/invitations/{invitation.id}/send")
+        operator.post(f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send")
     for email, rating in (("rae@example.edu", "2"), ("sam@example.edu", "5")):
         make_client(
             AuthenticatedUser(principal_id=email, email=email, name=email, provider="aad")
         ).post(
-            f"/me/sessions/{session.id}/submit",
+            f"/me/sessions/{session.public_id}/submit",
             data={f"response[{assignments[email].id}][rating]": rating},
             follow_redirects=False,
         )
@@ -213,7 +213,7 @@ def test_a_closed_branch_isnt_reminded(
     assert rows["sam@example.edu"].is_incomplete is True
 
     response = make_client(alice).post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303

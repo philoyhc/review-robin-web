@@ -124,7 +124,7 @@ def test_every_inline_script_on_a_session_page_parses(
     client: TestClient, db: Session, page: str
 ) -> None:
     review_session = _session(client, db)
-    response = client.get(f"/operator/sessions/{review_session.id}{page}")
+    response = client.get(f"/operator/sessions/{review_session.public_id}{page}")
     assert response.status_code == 200, (page, response.status_code)
     _assert_parses(page, response.text)
 
@@ -147,7 +147,7 @@ def test_the_observers_expander_script_is_among_them(
     would quietly drop the block that motivated the check."""
     review_session = _session(client, db)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
 
     blocks = _SCRIPT.findall(body)

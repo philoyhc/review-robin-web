@@ -33,6 +33,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _make_session(
@@ -50,8 +51,9 @@ def _make_session(
 
 
 def _seed_pair(client: TestClient, session_id: int) -> None:
+    pid = public_id(session_id)
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -62,7 +64,7 @@ def _seed_pair(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -87,7 +89,7 @@ def test_status_block_reports_type_individual(
     pin_full_matrix_on_all_instruments(db, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     status_section = body.split('id="assignments-status-blocks"', 1)[1]
     assert "Individual" in status_section
@@ -102,7 +104,7 @@ def test_status_block_reports_group_type_and_group_count(
     review_session = _make_session(client, db, code="page-group")
     add_group_instrument(db, review_session)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -113,7 +115,7 @@ def test_status_block_reports_group_type_and_group_count(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -135,7 +137,7 @@ def test_status_block_reports_group_type_and_group_count(
     db.commit()
     pin_full_matrix_on_all_instruments(db, review_session.id)
 
-    status_url = f"/operator/sessions/{review_session.id}/assignments"
+    status_url = f"/operator/sessions/{review_session.public_id}/assignments"
     # Before generation: Type "Group", Groups column shows "—".
     section = client.get(status_url).text.split(
         'id="assignments-status-blocks"', 1
@@ -193,7 +195,7 @@ def test_bulk_inactivate_and_activate_assignments(
 
     # The page renders the row-select column + bulk buttons.
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'id="assignments-select-all"' in body
     assert 'class="assignment-select"' in body
@@ -202,7 +204,7 @@ def test_bulk_inactivate_and_activate_assignments(
 
     payload = {"assignment_ids": [str(i) for i in ids]}
     resp = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/assignments/bulk-inactivate",
         data=payload,
         follow_redirects=False,
     )
@@ -211,7 +213,7 @@ def test_bulk_inactivate_and_activate_assignments(
     assert not any(_includes())
 
     resp = client.post(
-        f"/operator/sessions/{review_session.id}/assignments/bulk-activate",
+        f"/operator/sessions/{review_session.public_id}/assignments/bulk-activate",
         data=payload,
         follow_redirects=False,
     )
@@ -231,7 +233,7 @@ def test_assignment_search_filters_the_preview_table(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
-    base = f"/operator/sessions/{review_session.id}/assignments"
+    base = f"/operator/sessions/{review_session.public_id}/assignments"
 
     # A matching term (the reviewee's email) keeps the row.
     body = client.get(base + "?q=carol").text
@@ -258,7 +260,7 @@ def test_assignment_search_by_scopes_the_match(
     _seed_pair(client, review_session.id)  # reviewer alice@, reviewee carol@
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
-    base = f"/operator/sessions/{review_session.id}/assignments"
+    base = f"/operator/sessions/{review_session.public_id}/assignments"
 
     def _matches(query: str) -> bool:
         return "No assignments match" not in client.get(base + query).text
@@ -293,7 +295,7 @@ def test_generate_materialises_per_instrument(
     # the ``?generated=1`` flash signal retired with the banner.
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.id}/assignments"
+        == f"/operator/sessions/{review_session.public_id}/assignments"
     )
 
     rows = list(
@@ -306,7 +308,7 @@ def test_generate_materialises_per_instrument(
     assert len(rows) == 1
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'id="generated-flash"' not in body
     # Status block flips from "Not generated yet" placeholder to a
@@ -345,7 +347,7 @@ def test_generate_with_existing_pairs_requires_confirm(
     banner = page.text.split('id="missing-confirm-banner"', 1)[1]
     banner = banner.split("</div>", 1)[0]  # up to the actions row's close
     assert (
-        f'href="/operator/sessions/{review_session.id}/assignments">Cancel</a>'
+        f'href="/operator/sessions/{review_session.public_id}/assignments">Cancel</a>'
         in banner
     )
     assert 'class="btn secondary"' in banner
@@ -369,5 +371,5 @@ def test_generate_with_existing_pairs_requires_confirm(
     # Redirect lands plain on the Assignments page (flash retired).
     assert (
         confirmed.headers["location"]
-        == f"/operator/sessions/{review_session.id}/assignments"
+        == f"/operator/sessions/{review_session.public_id}/assignments"
     )

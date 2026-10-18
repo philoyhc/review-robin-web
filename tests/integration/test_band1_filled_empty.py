@@ -83,9 +83,9 @@ def _predicates(db: Session, instrument_id: int) -> list[dict[str, object]]:
     return [child["predicate"] for link in rules for child in link["rules"]]
 
 
-def _page(client: TestClient, session_id: int, instrument_id: int) -> str:
+def _page(client: TestClient, session_public_id: str, instrument_id: int) -> str:
     return client.get(
-        f"/operator/sessions/{session_id}/instruments?editing={instrument_id}"
+        f"/operator/sessions/{session_public_id}/instruments?editing={instrument_id}"
     ).text
 
 
@@ -93,7 +93,7 @@ def test_filled_and_empty_store_with_no_operand(db: Session, client: TestClient)
     session, instrument = _session(db, client, "b1-filled")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_form(
             link1=("reviewer.tag1", "IS FILLED", "ignored"),
             link2=("reviewee.tag1", "IS EMPTY", ""),
@@ -108,7 +108,7 @@ def test_filled_and_empty_store_with_no_operand(db: Session, client: TestClient)
     ]
     assert all(p.get("operand") is None for p in predicates)
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
     assert ">IS FILLED</button>" in page
     assert ">IS EMPTY</button>" in page
     # Each rule's value box renders inactive.
@@ -119,7 +119,7 @@ def test_filled_and_empty_store_with_no_operand(db: Session, client: TestClient)
 def test_link1_cycle_offers_filled_and_empty(db: Session, client: TestClient) -> None:
     session, instrument = _session(db, client, "b1-cycle")
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
 
     assert 'data-new-model-operator-cycle="IS|IS NOT|IS FILLED|IS EMPTY"' in page
 
@@ -137,7 +137,7 @@ def test_pair_tags_are_a_link2_field_only(db: Session, client: TestClient) -> No
     roster tags only."""
     session, instrument = _session(db, client, "b1-pc-offered")
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
 
     assert len(re.findall(r'<option value="pair_context\.tag1"\s*>Pair: ', page)) == 1
     assert "pair_context." in _select(page, "link2_field")
@@ -174,7 +174,7 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
     }
 
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
 
     assert saved.status_code == 200, saved.text
@@ -187,7 +187,7 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
 
     # Each shows as the offered relationship tag, on the pair cycle,
     # under the "Pairwise tag" caption; saving again stores the same.
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
     assert "selected data-new-model-stored-only" not in page
     assert len(re.findall(r'<option value="pair_context\.tag1" selected>', page)) == 4
     link2_cycles = re.findall(
@@ -197,7 +197,7 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
     assert len(re.findall(r'data-new-model-field-helper-pair="Pairwise tag"[^>]*>Pairwise tag<', page)) == 4
     before = _predicates(db, instrument.id)
     again = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     assert again.status_code == 200, again.text
     assert _predicates(db, instrument.id) == before
@@ -223,10 +223,10 @@ def test_save_refuses_a_relationship_rule_the_card_no_longer_offers(
     session, instrument = _session(db, client, "b1-pc-refused")
 
     card = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     fallback = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
@@ -247,7 +247,7 @@ def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
     session, instrument = _session(db, client, "b1-pc-stored")
     form = _form(link1=("reviewer.tag1", "IS", "A"), link2=("reviewee.tag1", "IS FILLED", ""))
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     assert saved.status_code == 200, saved.text
     db.expire_all()
@@ -258,7 +258,7 @@ def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
     rule_set.rules_json = rules
     db.commit()
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
 
     assert re.search(
         r'<option value="reviewer\.pair_tag1" selected data-new-model-stored-only>Reviewer&#39;s pair tag: ',
@@ -269,7 +269,7 @@ def test_a_stored_person_pair_tag_shows_as_stored_and_save_refuses_it(
         page,
     )
     refused = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_form(
             link1=("reviewer.pair_tag1", "IS", "A"), link2=("reviewee.pair_tag1", "IS FILLED", "")
         ),
@@ -291,10 +291,10 @@ def test_group_is_refused_beside_a_link2_pair_tag_is_or_filled(
     )
 
     card = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     fallback = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
     )
@@ -322,7 +322,7 @@ def test_group_stands_beside_other_link2_pair_tags(db: Session, client: TestClie
         }
     )
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     assert saved.status_code == 200, saved.text
     db.expire_all()
@@ -339,7 +339,7 @@ def test_group_stands_beside_other_link2_pair_tags(db: Session, client: TestClie
         }
     )
     refused = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=with_or
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=with_or
     )
     assert refused.status_code == 422
 
@@ -376,14 +376,14 @@ def test_a_stored_operand_from_an_emptied_slot_survives_with_no_reviewer_tags(
         ),
     }
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     assert saved.status_code == 200, saved.text
     reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session.id)).scalar_one()
     reviewer.tag_1 = None
     db.commit()
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
 
     cycles = re.findall(r'data-new-model-operator-cycle="([^"]*)"', page)
     # Link 1's default cell, then Link 2's two.
@@ -400,7 +400,7 @@ def test_a_stored_operand_from_an_emptied_slot_survives_with_no_reviewer_tags(
     # The same values saved again (what the rendered cells above carry)
     # keep both rules.
     again = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=form
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=form
     )
     assert again.status_code == 200, again.text
     assert [(p["operator"], p.get("operand")) for p in _predicates(db, instrument.id)] == [
@@ -416,11 +416,11 @@ def test_link3_pill_follows_a_stored_boundary_with_only_pair_tags(
     stays disabled, and Link 3, which groups by reviewee tags only, stays
     disabled unless a boundary is stored."""
     session, instrument = _pair_tags_only(db, client, "b1-pair-only")
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
     assert page.count('title="No usable tags for this link"') == 2
 
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
         data={
             **_form(),
             **_link2_rules(("pair_context.tag1", "IS NOT", "C", "")),
@@ -431,7 +431,7 @@ def test_link3_pill_follows_a_stored_boundary_with_only_pair_tags(
     )
     assert saved.status_code == 303, saved.text
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
     assert page.count('title="No usable tags for this link"') == 1
     assert 'onclick="newModelToggleUnitMode(this)"' in page
 
@@ -448,7 +448,7 @@ def test_a_default_link2_cell_on_a_pair_tag_shows_the_value_box(
         reviewee.tag_1 = None
     db.commit()
 
-    page = _page(client, session.id, instrument.id)
+    page = _page(client, session.public_id, instrument.id)
 
     assert re.findall(r'name="link2_op"\s+data-new-model-op-input\s+value="([^"]*)"', page) == ["IS"]
     operand_tag = re.search(r'<select data-new-model-operand-tag\s+style="([^"]*)"', page)
@@ -463,7 +463,7 @@ def test_an_is_value_reading_like_a_field_is_free_text(db: Session, client: Test
     session, instrument = _session(db, client, "b1-pc-literal")
 
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_form(link1=("reviewer.tag1", "IS", "reviewer.pair_tag1")),
     )
 

@@ -73,7 +73,7 @@ def test_reviewee_pill_renders_as_anchor_to_results(
     body = client.get("/me").text
     expected = (
         f'<a class="pill pill-role-reviewee" '
-        f'href="/me/sessions/{review_session.id}/results">Reviewee</a>'
+        f'href="/me/sessions/{review_session.public_id}/results">Reviewee</a>'
     )
     assert expected in body
 
@@ -93,7 +93,7 @@ def test_observer_pill_renders_as_anchor_to_collation(
     body = client.get("/me").text
     expected = (
         f'<a class="pill pill-role-observer" '
-        f'href="/me/sessions/{review_session.id}/collation">Observer</a>'
+        f'href="/me/sessions/{review_session.public_id}/collation">Observer</a>'
     )
     assert expected in body
 
@@ -156,14 +156,14 @@ def test_session_name_links_to_reviewer_when_reviewer_reachable(
     review_session.status = "ready"
     db.commit()
     body = client.get("/me").text
-    assert f'href="/me/sessions/{review_session.id}/1"' in body
+    assert f'href="/me/sessions/{review_session.public_id}/1"' in body
     # Reviewee + Observer links should not be the session-name
     # target — only the reviewer target should appear in a name
     # link. (They still appear inside the pill anchors.)
     # A name link is the one wrapping ``{{ session.name }}``;
     # we check by counting occurrences of the reviewer target
     # — once for the pill anchor, once for the name link.
-    assert body.count(f'href="/me/sessions/{review_session.id}/1"') == 2
+    assert body.count(f'href="/me/sessions/{review_session.public_id}/1"') == 2
 
 
 def test_reviewer_wins_over_reviewee_because_the_fall_through_is_unreachable(
@@ -209,12 +209,12 @@ def test_reviewer_wins_over_reviewee_because_the_fall_through_is_unreachable(
     body = client.get("/me").text
     # Reviewer wins: the name points at the reviewer surface, not
     # /results, even though a live reviewee link also exists.
-    assert f'href="/me/sessions/{review_session.id}/1"' in body
+    assert f'href="/me/sessions/{review_session.public_id}/1"' in body
     # And the reviewee link is present as its own pill — the escape
     # hatch the priority order leaves open.
     assert (
         f'<a class="pill pill-role-reviewee" '
-        f'href="/me/sessions/{review_session.id}/results">Reviewee</a>'
+        f'href="/me/sessions/{review_session.public_id}/results">Reviewee</a>'
     ) in body
 
 
@@ -233,7 +233,7 @@ def test_session_name_falls_through_to_observer_when_only_observer_reachable(
     )
     db.commit()
     body = client.get("/me").text
-    assert f'href="/me/sessions/{review_session.id}/collation"' in body
+    assert f'href="/me/sessions/{review_session.public_id}/collation"' in body
 
 
 def test_session_name_is_plain_text_when_no_role_reachable(
@@ -254,7 +254,7 @@ def test_session_name_is_plain_text_when_no_role_reachable(
     body = client.get("/me").text
     # No href anywhere in the row for this session — neither
     # session-name link nor pill anchor.
-    assert f'href="/me/sessions/{review_session.id}' not in body
+    assert f'href="/me/sessions/{review_session.public_id}' not in body
 
 
 # ── Session status pill (participant audit M6) ──────────────────────
@@ -449,7 +449,7 @@ def test_observer_row_is_linked_in_every_state_but_archived(
         db.commit()
         body = client.get("/me").text
         assert (
-            f'href="/me/sessions/{review_session.id}/collation"' in body
+            f'href="/me/sessions/{review_session.public_id}/collation"' in body
         ), state
 
 
@@ -474,12 +474,12 @@ def test_an_archived_session_leaves_me_for_every_role(
         ]
     )
     db.commit()
-    assert f"/me/sessions/{review_session.id}/" in client.get("/me").text
+    assert f"/me/sessions/{review_session.public_id}/" in client.get("/me").text
 
     review_session.status = "archived"
     db.commit()
     body = client.get("/me").text
-    assert f"/me/sessions/{review_session.id}/" not in body
+    assert f"/me/sessions/{review_session.public_id}/" not in body
     assert ">Finished<" not in body
     assert 'class="pill pill-role-observer"' not in body
     assert "nothing here for you right now" in body
@@ -713,8 +713,8 @@ def test_rows_keep_their_order_when_a_session_is_edited(
     assert older.updated_at > newer.updated_at
 
     body = client.get("/me").text
-    assert body.index(f"/me/sessions/{newer.id}/") < body.index(
-        f"/me/sessions/{older.id}/"
+    assert body.index(f"/me/sessions/{newer.public_id}/") < body.index(
+        f"/me/sessions/{older.public_id}/"
     )
 
 

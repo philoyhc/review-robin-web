@@ -11,14 +11,14 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
-from ._builder import open_unlocked, pin_full_matrix
+from ._builder import open_unlocked, pin_full_matrix, session_pk
 from .conftest import LiveServer
 
 REVIEWERS_CSV = b"ReviewerName,ReviewerEmail,ReviewerTag1\nRana,rana@example.edu,Red\n"
 REVIEWEES_CSV = b"RevieweeName,RevieweeEmail,RevieweeTag1\nCarol,carol@example.edu,Blue\n"
 
 
-def _seed(api: httpx.Client, session_id: int) -> None:
+def _seed(api: httpx.Client, session_id: str) -> None:
     for kind, body in (("reviewers", REVIEWERS_CSV), ("reviewees", REVIEWEES_CSV)):
         response = api.post(
             f"/operator/sessions/{session_id}/{kind}/import",
@@ -42,7 +42,7 @@ def _filter_on(card: Locator, link: str) -> Locator:
 
 
 def test_filled_and_empty_make_the_value_box_inactive(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -72,7 +72,7 @@ def test_filled_and_empty_make_the_value_box_inactive(
 
 
 def test_link2_filled_shows_the_inactive_value_box(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -101,7 +101,7 @@ def test_link2_filled_shows_the_inactive_value_box(
     assert added.locator("[data-new-model-operand-value]").evaluate("i => i.readOnly") is False
 
 
-def _store_pair_context_config(live_server: LiveServer, session_id: int) -> None:
+def _store_pair_context_config(live_server: LiveServer, session_id: str) -> None:
     """A Link 1 rule and a Link 3 boundary on a pair-context tag, stored as
     the card could store them before it stopped offering one."""
     from sqlalchemy import create_engine, select
@@ -109,14 +109,15 @@ def _store_pair_context_config(live_server: LiveServer, session_id: int) -> None
 
     from app.db.models import Instrument, SessionRuleSet
 
+    pk = session_pk(live_server.database_url, session_id)
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
             instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == session_id)
+                select(Instrument).where(Instrument.session_id == pk)
             ).scalars().first()
             rule_set = SessionRuleSet(
-                session_id=session_id,
+                session_id=pk,
                 name=f"Band1 {instrument.id}",
                 description="",
                 combinator="ALL_OF",
@@ -159,7 +160,7 @@ def _offered(select: Locator) -> list[str]:
 
 
 def test_a_new_cell_does_not_offer_a_stored_only_tag(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -186,7 +187,7 @@ UNTAGGED_REVIEWERS_CSV = b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"
 
 
 def test_a_new_cell_beside_a_stored_operand_opens_on_is_with_no_reviewer_tags(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """With no usable reviewer tag, only the cell holding a stored operand
     keeps IS THE SAME AS; a cell cloned from it by ``+`` gets the trimmed
@@ -217,21 +218,22 @@ def test_a_new_cell_beside_a_stored_operand_opens_on_is_with_no_reviewer_tags(
     )
 
 
-def _store_link2_operand(live_server: LiveServer, session_id: int) -> None:
+def _store_link2_operand(live_server: LiveServer, session_id: str) -> None:
     """``reviewee.tag1 IS THE SAME AS pair_context.tag1`` in Link 2."""
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
     from app.db.models import Instrument, SessionRuleSet
 
+    pk = session_pk(live_server.database_url, session_id)
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
             instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == session_id)
+                select(Instrument).where(Instrument.session_id == pk)
             ).scalars().first()
             rule_set = SessionRuleSet(
-                session_id=session_id,
+                session_id=pk,
                 name=f"Band1 {instrument.id}",
                 description="",
                 combinator="ALL_OF",
@@ -268,21 +270,22 @@ def _store_link2_operand(live_server: LiveServer, session_id: int) -> None:
         engine.dispose()
 
 
-def _tag_the_pair(live_server: LiveServer, session_id: int) -> None:
+def _tag_the_pair(live_server: LiveServer, session_id: str) -> None:
     """One relationship tagged ``Pod``, so the card offers ``Pair: …``."""
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
     from app.db.models import Relationship, Reviewee, Reviewer
 
+    pk = session_pk(live_server.database_url, session_id)
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == session_id)).scalar_one()
-            reviewee = db.execute(select(Reviewee).where(Reviewee.session_id == session_id)).scalar_one()
+            reviewer = db.execute(select(Reviewer).where(Reviewer.session_id == pk)).scalar_one()
+            reviewee = db.execute(select(Reviewee).where(Reviewee.session_id == pk)).scalar_one()
             db.add(
                 Relationship(
-                    session_id=session_id,
+                    session_id=pk,
                     reviewer_id=reviewer.id,
                     reviewee_id=reviewee.id,
                     tag_1="Pod",
@@ -294,7 +297,7 @@ def _tag_the_pair(live_server: LiveServer, session_id: int) -> None:
 
 
 def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Item 2 (author, 2026-10-17): a Link 2 pair-tag IS picks pairs one
     by one, so the Unit of review pill cycles Individual → Not set,
@@ -334,7 +337,7 @@ def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
 
 
 def test_a_link2_pair_tag_cell_has_its_own_cycle_and_caption(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """``guide/archive/pair_context_tags_further_clarify.md`` Item 1 (author,
     2026-10-18): a relationship tag cycles IS → IS NOT → IS FILLED → IS
@@ -396,7 +399,7 @@ def test_a_link2_pair_tag_cell_has_its_own_cycle_and_caption(
 
 
 def test_a_stored_pair_tag_is_renders_the_pairwise_caption(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -410,21 +413,22 @@ def test_a_stored_pair_tag_is_renders_the_pairwise_caption(
     expect(cell.locator("[data-new-model-rule-field-helper]")).to_have_text("Pairwise tag")
 
 
-def _store_link2_pair_is(live_server: LiveServer, session_id: int) -> None:
+def _store_link2_pair_is(live_server: LiveServer, session_id: str) -> None:
     """``pair_context.tag1 IS Pod`` in Link 2."""
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
     from app.db.models import Instrument, SessionRuleSet
 
+    pk = session_pk(live_server.database_url, session_id)
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
             instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == session_id)
+                select(Instrument).where(Instrument.session_id == pk)
             ).scalars().first()
             rule_set = SessionRuleSet(
-                session_id=session_id,
+                session_id=pk,
                 name=f"Band1 {instrument.id}",
                 description="",
                 combinator="ALL_OF",

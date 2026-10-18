@@ -108,7 +108,7 @@ def _rosters(
         ).scalar_one()
         row.profile_link = value
     db.commit()
-    base = f"/operator/sessions/{review_session.id}"
+    base = f"/operator/sessions/{review_session.public_id}"
     return (
         operator.get(f"{base}/reviewers").text,
         operator.get(f"{base}/reviewees").text,
@@ -167,7 +167,7 @@ def _surface(
     ))
     db.commit()
     _activate(operator, db, review_session)
-    response = make_client(rae_user).get(f"/me/sessions/{review_session.id}")
+    response = make_client(rae_user).get(f"/me/sessions/{review_session.public_id}")
     assert response.status_code == 200, response.text
     return response.text
 
@@ -242,8 +242,8 @@ def _pages(
         db, review_session, operator=_operator_user(db), open_window=True
     )
     _enable_reviewer_after_release_raw(db, review_session, operator=_operator_user(db))
-    summary = make_client(rae_user).get(f"/me/sessions/{review_session.id}/summary").text
-    results = make_client(carol).get(f"/me/sessions/{review_session.id}/results").text
+    summary = make_client(rae_user).get(f"/me/sessions/{review_session.public_id}/summary").text
+    results = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     return summary, results
 
 
@@ -348,7 +348,7 @@ def test_the_preview_mirrors_the_rule(client: TestClient, db: Session) -> None:
 
     review_session, instrument = _new_model_with_tags(client, db, code="pv-preview")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     for line in (

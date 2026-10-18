@@ -149,7 +149,7 @@ def test_participant_only_user_redirected_from_per_session_route(
 
     carol_client = _make_client(db, auth_carol)
     response = carol_client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     )
     assert response.status_code == 303
     assert response.headers["location"] == "/me?notice=organizers"
@@ -193,7 +193,7 @@ def test_workspace_operator_non_owner_404_on_per_session_route(
 
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}",
+        f"/operator/sessions/{review_session.public_id}",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -236,7 +236,7 @@ def test_session_owner_reaches_per_session_route(
     gate."""
     review_session = _alice_session(client, db, "gate-5")
     response = client.get(
-        f"/operator/sessions/{review_session.id}",
+        f"/operator/sessions/{review_session.public_id}",
         follow_redirects=False,
     )
     assert response.status_code == 200
@@ -281,7 +281,7 @@ def test_sys_admin_reaches_other_owners_per_session_route(
     )
     dave_client = make_client(auth_dave)
     response = dave_client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "dave@example.edu"},
         follow_redirects=False,
     )

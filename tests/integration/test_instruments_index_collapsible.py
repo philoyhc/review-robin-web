@@ -34,7 +34,7 @@ def test_each_instrument_renders_as_collapsible_details(
     review_session = _make_session(client, db, code="18m-1")
     # Default seed = one instrument.
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     instruments = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
@@ -54,7 +54,7 @@ def test_summary_holds_title_and_both_status_pills(
 ) -> None:
     review_session = _make_session(client, db, code="18m-2")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     # The <summary> carries the title and the per-instrument
     # Set up / Not set up pill (matches the workflow card's
@@ -77,7 +77,7 @@ def test_summary_carries_drag_handle_and_chevron(
 ) -> None:
     review_session = _make_session(client, db, code="18m-3")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     # Drag handle placeholder PR 2 will bind to.
     assert "data-instrument-drag-handle" in body
@@ -91,7 +91,7 @@ def test_bulk_expand_and_collapse_buttons_render(
 ) -> None:
     review_session = _make_session(client, db, code="18m-4")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     assert ">Expand all instruments</button>" in body
     assert ">Collapse all instruments</button>" in body
@@ -109,14 +109,14 @@ def test_multiple_instruments_render_multiple_details(
     review_session = _make_session(client, db, code="18m-5")
     # Add a second instrument so the loop renders twice.
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model"
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model"
     )
     instruments = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().all()
     assert len(instruments) == 2
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     assert body.count('details class="instrument-card-collapsible"') == 2
     assert body.count('<summary class="instrument-card-summary">') == 2

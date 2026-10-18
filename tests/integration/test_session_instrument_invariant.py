@@ -72,7 +72,7 @@ def test_assignment_generation_reuses_existing_default_instrument(
     ).scalar_one()
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -83,7 +83,7 @@ def test_assignment_generation_reuses_existing_default_instrument(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",

@@ -105,6 +105,6 @@ def reviewee_results_acknowledge(
         db, review_session=review_session, reviewee=reviewee, user=user
     )
     return RedirectResponse(
-        url=f"/me/sessions/{review_session.id}/results",
+        url=f"/me/sessions/{review_session.public_id}/results",
         status_code=status.HTTP_303_SEE_OTHER,
     )

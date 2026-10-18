@@ -20,6 +20,7 @@ from app.web.views._workflow_card import (
     build_schedule_timeline,
 )
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._public_id import public_id
 
 
 def _fmt_local_input(dt: datetime) -> str:
@@ -28,6 +29,7 @@ def _fmt_local_input(dt: datetime) -> str:
 
 def _create_session(
     client: TestClient,
+    db: Session,
     code: str,
     *,
     deadline: str | None = None,
@@ -47,12 +49,16 @@ def _create_session(
     )
     session_id = 0
     if response.status_code == 303:
-        # Create-session redirect targets ``.../{id}/edit``; strip
-        # the trailing ``/edit`` before parsing the id.
+        # Create-session redirect targets ``.../{public_id}?editing=1``;
+        # strip the query and fragment before parsing the ID.
         location = (
             response.headers["location"].split("?", 1)[0].split("#", 1)[0]
         )
-        session_id = int(location.rsplit("/", 1)[-1])
+        session_id = db.execute(
+            select(ReviewSession.id).where(
+                ReviewSession.public_id == location.rsplit("/", 1)[-1]
+            )
+        ).scalar_one()
     return response.status_code, response, session_id
 
 
@@ -178,6 +184,7 @@ def test_create_accepts_reminder_offsets_with_valid_deadline(
     deadline = datetime.now(timezone.utc) + timedelta(days=30)
     status_code, _, session_id = _create_session(
         client,
+        db,
         "create-rem",
         deadline=_fmt_local_input(deadline),
         reminder_offsets="-P1D, -PT4H",
@@ -207,12 +214,12 @@ def test_create_rejects_invalid_reminder_offset(client: TestClient) -> None:
 def test_edit_round_trips_reminder_offsets(
     client: TestClient, db: Session
 ) -> None:
-    _, _, session_id = _create_session(client, "edit-rem")
+    _, _, session_id = _create_session(client, db, "edit-rem")
     deadline = datetime.now(timezone.utc) + timedelta(days=30)
 
     # Set
     response = client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-rem",
             "code": "edit-rem",
@@ -226,7 +233,7 @@ def test_edit_round_trips_reminder_offsets(
     assert rs.reminder_offsets == ["-P1D"]
 
     # Edit GET prefills the input value
-    page = client.get(f"/operator/sessions/{session_id}?editing=1")
+    page = client.get(f"/operator/sessions/{public_id(session_id)}?editing=1")
     assert page.status_code == 200
     assert 'name="reminder_offsets"' in page.text
     # The disabled attribute should be gone now.
@@ -235,7 +242,7 @@ def test_edit_round_trips_reminder_offsets(
 
     # Clear
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-rem",
             "code": "edit-rem",
@@ -251,10 +258,10 @@ def test_edit_round_trips_reminder_offsets(
 def test_edit_emits_reminder_schedule_updated_audit(
     client: TestClient, db: Session
 ) -> None:
-    _, _, session_id = _create_session(client, "audit-rem")
+    _, _, session_id = _create_session(client, db, "audit-rem")
     deadline = datetime.now(timezone.utc) + timedelta(days=30)
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "x",
             "code": "audit-rem",
@@ -528,6 +535,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     deadline = datetime.now(timezone.utc) + timedelta(days=30)
     _, _, session_id = _create_session(
         client,
+        db,
         "rcap-loc",
         deadline=_fmt_local_input(deadline),
         reminder_offsets="-P1D",
@@ -535,7 +543,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     rs = db.get(ReviewSession, session_id)
     assert rs.reminder_offsets == ["-P1D"]
 
-    body = client.get(f"/operator/sessions/{session_id}/invitations").text
+    body = client.get(f"/operator/sessions/{public_id(session_id)}/invitations").text
     # New caption id sits inside the Workflow card right column.
     assert 'id="next-action-auto-send-reminders-caption"' in body
     # Old standalone caption id is gone from the Invitations page.

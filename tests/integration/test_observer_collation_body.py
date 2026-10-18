@@ -182,7 +182,7 @@ def test_collation_shows_empty_cohort_message_when_no_rule(
     _add_observer(db, review_session, email="alice@example.edu")
 
     body = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     ).text
     assert "haven't been given anyone to observe" in body
     # Participant audit P4: an observer has a way back to /me.
@@ -213,7 +213,7 @@ def test_collation_with_nothing_open_says_so_in_participant_words(
         },
     )
 
-    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "no results for you to see right now" in body
     # The old copy's phrases (bare "Band 3" and "Setup page" also appear
     # in base.html's inline CSS comments).
@@ -246,7 +246,7 @@ def test_collation_renders_per_instrument_table_with_two_stats_rows(
     )
 
     body = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     ).text
     assert "Reviewers in cohort" in body
     assert "Reviewees in cohort" in body
@@ -283,7 +283,7 @@ def test_an_empty_cohort_gets_no_download_link(
         },
     )
 
-    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "0 Reviewers in cohort" in body
     assert "Download CSV" not in body
     assert "data-collation-nothing-to-download" in body
@@ -339,7 +339,7 @@ def test_collation_numbers_instruments_from_one(
         },
     )
 
-    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
 
     assert "#1: First" in body
     assert "#2: Second" in body
@@ -376,7 +376,7 @@ def test_collation_summarized_mode_omits_download_button(
     )
 
     body = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     ).text
     assert "Reviewers in cohort" in body
     assert "Download CSV" not in body
@@ -411,7 +411,7 @@ def test_collation_anonymized_mode_marks_download_label(
     )
 
     body = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     ).text
     assert "Download CSV" in body
     assert "(Anonymized)" in body
@@ -443,7 +443,7 @@ def test_collation_csv_serves_raw_rows_for_cohort(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 200
@@ -521,12 +521,12 @@ def test_collation_leaves_out_fields_marked_not_visible(
         db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE
     )
 
-    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Rating" in body
     assert "Notes" in body
     assert "Secret note" not in body
     csv_response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert csv_response.status_code == 200
@@ -572,7 +572,7 @@ def test_collation_string_cell_at_zero_responses_shows_a_dash(
         db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE
     )
 
-    body = client.get(f"/me/sessions/{review_session.id}/collation").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
     assert "Total length:" in body
     assert "Total length: 0 characters" not in body
 
@@ -605,7 +605,7 @@ def test_collation_csv_anonymized_swaps_names_for_tokens(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 200
@@ -647,7 +647,7 @@ def test_collation_csv_summarized_returns_404(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 404
@@ -663,7 +663,7 @@ def test_collation_csv_cohort_empty_returns_404(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 404
@@ -785,7 +785,7 @@ def test_collation_csv_or_rule_per_row_either_side(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{inst.id}.csv"
     )
     assert response.status_code == 200
@@ -902,7 +902,7 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{inst.id}.csv"
     )
     assert response.status_code == 200
@@ -1012,7 +1012,7 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
     )
 
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{inst.id}.csv"
     )
     assert response.status_code == 200
@@ -1066,7 +1066,7 @@ def test_collation_csv_raw_filename_prefixes_the_session_code(
         },
     )
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 200
@@ -1106,7 +1106,7 @@ def test_collation_csv_anonymized_filename_carries_anon_suffix(
         },
     )
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 200
@@ -1206,7 +1206,7 @@ def test_collation_renders_after_release_section_when_window_open(
     )
 
     body = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     ).text
     # The instrument section renders + Anonymized download
     # button appears.
@@ -1222,7 +1222,7 @@ def test_collation_csv_404_when_user_is_not_an_observer(
     seeded = _seed_one_instrument(db, review_session)
     # Authenticated user isn't on the observer roster.
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 404
@@ -1256,7 +1256,7 @@ def _archived_csv_url(client: TestClient, db: Session, *, code: str) -> str:
         cohort_rule=_ARCHIVE_COHORT_RULE,
     )
     url = (
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert client.get(url).status_code == 200

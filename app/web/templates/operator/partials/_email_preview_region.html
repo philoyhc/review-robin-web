@@ -32,7 +32,7 @@
         <span class="nav-tab active" aria-current="page">{{ tab.label }}</span>
       {% elif tab.is_shipped %}
         <a class="nav-tab"
-           href="/operator/sessions/{{ session.id }}/invitations/reviewers/{{ reviewer.id }}?email={{ tab.key }}#email-previews">{{ tab.label }}</a>
+           href="/operator/sessions/{{ session.public_id }}/invitations/reviewers/{{ reviewer.id }}?email={{ tab.key }}#email-previews">{{ tab.label }}</a>
       {% else %}
         <span class="nav-tab disabled" aria-disabled="true">{{ tab.label }} (coming soon)</span>
       {% endif %}
@@ -59,8 +59,8 @@
 
   <p class="form-help email-preview-footer">
     Rendered from
-    <a href="/operator/sessions/{{ session.id }}/setup-invite?template={{ active_email_tab.template_setup_param }}">Email Template (Setup)</a>
+    <a href="/operator/sessions/{{ session.public_id }}/setup-invite?template={{ active_email_tab.template_setup_param }}">Email Template (Setup)</a>
     and
-    <a href="/operator/sessions/{{ session.id }}/reviewers">Reviewers (Setup)</a>.
+    <a href="/operator/sessions/{{ session.public_id }}/reviewers">Reviewers (Setup)</a>.
   </p>
 </div>

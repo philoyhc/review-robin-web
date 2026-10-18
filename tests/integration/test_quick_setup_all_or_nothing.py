@@ -77,7 +77,7 @@ def _bad_settings() -> bytes:
 
 def _submit_all(client: TestClient, rs: ReviewSession, **files: bytes):
     return client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/submit-all",
+        f"/operator/sessions/{rs.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={
             f"{kind}_file": (f"{kind}.csv", payload, "text/csv")
@@ -149,7 +149,7 @@ def test_the_same_rename_on_one_roster_alone_is_still_refused(
     _seed_bob(db, rs)
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/reviewers",
+        f"/operator/sessions/{rs.public_id}/quick-setup/reviewers",
         data={"confirm_replace": "true"},
         files={"file": ("r.csv", _reviewers(("Robert Smith", BOB)), "text/csv")},
         follow_redirects=False,

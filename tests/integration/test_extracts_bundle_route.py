@@ -42,7 +42,7 @@ def test_bundle_route_streams_zip_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="bnd-fname")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
@@ -59,7 +59,7 @@ def test_bundle_contains_only_the_setup_csv_members(
 ) -> None:
     review_session = _make_session(client, db, code="bnd-mem")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
     )
     assert response.status_code == 200
 
@@ -84,7 +84,7 @@ def test_bundle_route_emits_audit_event_with_per_csv_counts(
 ) -> None:
     review_session = _make_session(client, db, code="bnd-aud")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
     )
     assert response.status_code == 200
 

@@ -11,7 +11,7 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
-from ._builder import pin_full_matrix
+from ._builder import pin_full_matrix, session_pk
 from .conftest import LiveServer
 
 #: Rana and Carol on both sides: four pairs, two of them self reviews.
@@ -21,7 +21,7 @@ ROSTERS = {
 }
 
 
-def _generated(api: httpx.Client, live_server: LiveServer, session_id: int) -> None:
+def _generated(api: httpx.Client, live_server: LiveServer, session_id: str) -> None:
     for kind, body in ROSTERS.items():
         response = api.post(
             f"/operator/sessions/{session_id}/{kind}/import",
@@ -36,9 +36,10 @@ def _generated(api: httpx.Client, live_server: LiveServer, session_id: int) -> N
     assert generated.status_code == 303, generated.text
 
 
-def _exclude_one_self_review(database_url: str, session_id: int) -> None:
+def _exclude_one_self_review(database_url: str, session_id: str) -> None:
     """Leave the instrument mixed: Rana's self review out, Carol's in. The
     page's row expander can do this too; the database is the short way."""
+    pk = session_pk(database_url, session_id)
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
@@ -49,12 +50,12 @@ def _exclude_one_self_review(database_url: str, session_id: int) -> None:
         with Session(engine) as db:
             rana = db.execute(
                 select(Reviewer).where(
-                    Reviewer.session_id == session_id, Reviewer.name == "Rana"
+                    Reviewer.session_id == pk, Reviewer.name == "Rana"
                 )
             ).scalar_one()
             row = db.execute(
                 select(Assignment).where(
-                    Assignment.session_id == session_id,
+                    Assignment.session_id == pk,
                     Assignment.reviewer_id == rana.id,
                     Assignment.is_self_review.is_(True),
                 )
@@ -70,7 +71,7 @@ def _bg(locator: Locator) -> str:
 
 
 def test_the_self_review_chip_is_dark_light_or_amber(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _generated(api, live_server, session_id)
@@ -104,7 +105,7 @@ def test_the_self_review_chip_is_dark_light_or_amber(
 
 
 def test_the_instrument_name_chip_filters_the_preview_table(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _generated(api, live_server, session_id)

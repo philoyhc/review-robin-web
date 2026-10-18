@@ -205,10 +205,10 @@ def test_a_session_the_admin_owns_shows_owned_not_manage(
     )
     for code, review_session in (("zz-mine", mine), ("zz-shared", shared)):
         assert owned.search(rows[code]), code
-        assert f"/sessions/{review_session.id}/adopt" not in rows[code]
+        assert f"/sessions/{review_session.public_id}/adopt" not in rows[code]
         assert ">Manage<" not in rows[code]
     assert not owned.search(rows["zz-theirs"])
-    assert f'action="/operator/sys-admin/sessions/{theirs.id}/adopt"' in rows["zz-theirs"]
+    assert f'action="/operator/sys-admin/sessions/{theirs.public_id}/adopt"' in rows["zz-theirs"]
     assert ">Manage</button>" in rows["zz-theirs"]
 
 

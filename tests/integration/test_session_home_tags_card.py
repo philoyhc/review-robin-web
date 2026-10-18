@@ -91,7 +91,7 @@ def _save(
         # What the card sends alongside its Tags field (cold read M3).
         data["tags_present"] = "1"
     return client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -151,7 +151,7 @@ def test_the_card_helper_is_bounded(client: TestClient, db: Session) -> None:
     """Balanced, and something rendered follows it: the field is not the
     page's last element, so a tail slice would carry the Save cluster."""
     review_session = _create(client, db, "HOME-TAGS-BOUND")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     card = _card(body)
 
     assert card.startswith('<div id="config-tags-field"')
@@ -171,7 +171,7 @@ def test_the_field_sits_under_description_above_the_optional_tabs(
     the Save cluster moves to the foot of the right column. No sub-card
     or sub-card grid is left inside the details card."""
     review_session = _create(client, db, "HOME-TAGS-ORDER")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     start = body.find('id="session-config"')
     end = body.find("window.sessionConfig", start)
@@ -196,7 +196,7 @@ def test_the_field_sits_a_wider_gap_below_description(
     """19U Item 3 (author, 2026-10-08): Tags moves down from the
     Description box — its own step of top margin over its label's."""
     review_session = _create(client, db, "HOME-TAGS-GAP")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert '<div id="config-tags-field" class="config-field-gap">' in body
     assert ".config-field-gap { margin-top: var(--space-3); }" in body
@@ -211,7 +211,7 @@ def test_locked_it_renders_the_lobbys_pills(
     would outrank edit mode's ``display: none`` on the same element."""
     review_session = _create(client, db, "HOME-TAGS-LOCKED")
     _tag(db, review_session, ["pilot", "2026"])
-    card = _card(client.get(f"/operator/sessions/{review_session.id}").text)
+    card = _card(client.get(f"/operator/sessions/{review_session.public_id}").text)
 
     # Nested, not merely following: the wrapper must hold the pills, or
     # they stay visible in edit mode.
@@ -237,7 +237,7 @@ def test_the_helper_text_shows_only_while_editing(
     label and the pills. The CSS does the hiding; the attribute on a
     locked page is what a server-side test can pin."""
     review_session = _create(client, db, "HOME-TAGS-SUBTITLE")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'data-config-mode="display"' in body, "the page is locked"
     assert (
@@ -252,7 +252,7 @@ def test_an_untagged_session_shows_an_em_dash(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create(client, db, "HOME-TAGS-EMPTY")
-    card = _card(client.get(f"/operator/sessions/{review_session.id}").text)
+    card = _card(client.get(f"/operator/sessions/{review_session.public_id}").text)
 
     assert '<div class="config-value" data-display-only>—</div>' in card
     assert 'value=""' in card, "and the edit box starts empty"
@@ -261,7 +261,7 @@ def test_an_untagged_session_shows_an_em_dash(
 def test_unlocked_the_input_is_prefilled(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "HOME-TAGS-EDIT")
     _tag(db, review_session, ["pilot", "2026"])
-    body = client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     card = _card(body)
 
     assert 'data-config-mode="edit"' in body
@@ -278,7 +278,7 @@ def test_the_input_is_wired_to_the_config_form(
     ``<form>`` with the card's save."""
     review_session = _create(client, db, "HOME-TAGS-WIRED")
     card = _card(
-        client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+        client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     )
 
     assert 'id="config-tags"' in card
@@ -335,7 +335,7 @@ def test_the_card_posts_the_marker_beside_the_field(
 ) -> None:
     review_session = _create(client, db, "HOME-TAGS-MARKER")
     card = _card(
-        client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+        client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
     )
     assert 'name="tags_present"' in card
     assert f'form="config-save-{review_session.id}"' in card

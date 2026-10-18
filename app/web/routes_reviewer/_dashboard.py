@@ -184,9 +184,9 @@ def reviewer_dashboard(
         if reviewer is not None:
             role_links["reviewer"] = {
                 "target": (
-                    f"/me/sessions/{review_session.id}/summary"
+                    f"/me/sessions/{review_session.public_id}/summary"
                     if pill is not None and pill.state == "submitted"
-                    else f"/me/sessions/{review_session.id}/1"
+                    else f"/me/sessions/{review_session.public_id}/1"
                 ),
                 # Off while ``session_status_for_reviewer`` says "not
                 # opened" (draft or validated; the row's pill reads "Not
@@ -197,7 +197,7 @@ def reviewer_dashboard(
             }
         if "reviewee" in roles:
             role_links["reviewee"] = {
-                "target": f"/me/sessions/{review_session.id}/results",
+                "target": f"/me/sessions/{review_session.public_id}/results",
                 # Unconditionally enabled, and that is not a
                 # placeholder: `roles` only carries `reviewee` when
                 # `reviewee_has_current_grant` said yes above, so
@@ -212,7 +212,7 @@ def reviewer_dashboard(
             }
         if "observer" in roles:
             role_links["observer"] = {
-                "target": f"/me/sessions/{review_session.id}/collation",
+                "target": f"/me/sessions/{review_session.public_id}/collation",
                 # Live in every lifecycle state a row is listed in (19F
                 # decision 7). Observers are deliberately *not*
                 # grant-gated the way reviewees are — being appointed an

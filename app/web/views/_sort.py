@@ -166,13 +166,14 @@ def apply_cookie_sort(
 # Cookie name convention:
 #   ``rrw-sort-rs-{session_id}-{instrument_id}`` for the reviewer surface.
 #   ``rrw-sort-{surface}-{session_id}`` for operator setup tables.
+# ``session_id`` is the session's URL public ID (19V Item 1).
 _REVIEWER_COOKIE_PREFIX = "rrw-sort-rs"
 
 
 def decode_cookie_sort_spec_for_reviewer_surface(
     *,
     cookies: dict[str, str],
-    session_id: int,
+    session_id: str,
     instrument_id: int,
     display_fields,
 ) -> list[dict[str, object]] | None:

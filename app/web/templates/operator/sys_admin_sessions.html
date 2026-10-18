@@ -86,7 +86,7 @@
         {% for s in sessions %}
           <tr data-filter-text="{{ filter_text_by_session[s.id] }}">
             <td>
-              <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
+              <a href="/operator/sessions/{{ s.public_id }}">{{ s.name }}</a>
             </td>
             <td><code>{{ s.code }}</code></td>
             <td>
@@ -134,15 +134,15 @@
                         data-diagnostics-owned>Owned</button>
                 {% else %}
                 <form method="post"
-                      action="/operator/sys-admin/sessions/{{ s.id }}/adopt">
+                      action="/operator/sys-admin/sessions/{{ s.public_id }}/adopt">
                   <button type="submit" class="btn secondary"
                           title="Adds you as an owner of this session, then opens it">Manage</button>
                 </form>
                 {% endif %}
                 <a class="btn secondary"
-                   href="/operator/sys-admin/sessions/{{ s.id }}/outbox">Outbox</a>
+                   href="/operator/sys-admin/sessions/{{ s.public_id }}/outbox">Outbox</a>
                 <a class="btn secondary"
-                   href="/operator/sys-admin/sessions/{{ s.id }}/audit-log">Audit log</a>
+                   href="/operator/sys-admin/sessions/{{ s.public_id }}/audit-log">Audit log</a>
               </div>
             </td>
           </tr>

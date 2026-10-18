@@ -24,7 +24,7 @@ from ._builder import (
 )
 
 
-def test_cancel_removes_a_new_row(page: Page, new_session: Callable[[], int]) -> None:
+def test_cancel_removes_a_new_row(page: Page, new_session: Callable[[], str]) -> None:
     """Item 6, 'Cancel removes a new row'."""
     card = open_unlocked(page, new_session())
     rows(card).first.locator("[data-new-model-rf-add]").click()
@@ -38,7 +38,7 @@ def test_cancel_removes_a_new_row(page: Page, new_session: Callable[[], int]) ->
 
 
 def test_an_open_card_leaves_the_action_row_live_after_lock(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'An open card doesn't lock the row'."""
     session_id = new_session()
@@ -57,7 +57,7 @@ def test_an_open_card_leaves_the_action_row_live_after_lock(
 
 
 def test_ticking_delete_leaves_the_card_clean(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Delete's checkbox is clean'."""
     session_id = new_session()
@@ -76,7 +76,7 @@ def test_ticking_delete_leaves_the_card_clean(
 
 
 def test_name_and_email_are_fixed_display_fields(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Name and Email are fixed'."""
     session_id = new_session()
@@ -101,7 +101,7 @@ def _chip(card, audience: str, window: str):
 
 
 def test_visibility_is_edited_in_the_card_and_survives_lock_and_reload(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Visibility in the card' and 'Visibility preview repaints'."""
     session_id = new_session()
@@ -136,7 +136,7 @@ def test_visibility_is_edited_in_the_card_and_survives_lock_and_reload(
 
 
 def test_link3_cells_keep_their_markers_through_add_and_remove(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Ec9: adding a boundary cell turns the earlier one into a disabled
     AND and puts the X on the new last cell, keeping the cell-button

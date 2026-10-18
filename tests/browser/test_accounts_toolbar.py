@@ -73,7 +73,7 @@ def test_every_chip_off_survives_the_round_trip(page: Page) -> None:
 
 
 def test_the_role_dropdown_and_the_pager(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Session role narrows on Search; the pager pages a filtered list and
     carries the filter (admin_pages_refine Item 1 rung 3)."""

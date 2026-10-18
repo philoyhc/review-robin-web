@@ -133,7 +133,7 @@ def test_reviewee_chip_present_once_a_grant_resolves(db: Session) -> None:
     reviewee = _chip(chips, "reviewee")
     assert reviewee is not None
     assert reviewee["enabled"] is True
-    assert reviewee["target"] == f"/me/sessions/{review_session.id}/results"
+    assert reviewee["target"] == f"/me/sessions/{review_session.public_id}/results"
 
 
 def test_observer_chip_live_on_an_unarchived_session(db: Session) -> None:

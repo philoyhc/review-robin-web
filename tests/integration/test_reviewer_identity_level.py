@@ -114,7 +114,7 @@ def _results(
     ).scalar_one()
     reviewer.profile_link = link
     db.commit()
-    response = make_client(carol).get(f"/me/sessions/{review_session.id}/results")
+    response = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 200, response.text
     assert "Solid work." in response.text
     return response.text
@@ -203,7 +203,7 @@ def _download(
     db.commit()
     _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation/instruments/"
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
         f"{seeded['instrument'].id}.csv"
     )
     assert response.status_code == 200, response.text
@@ -379,7 +379,7 @@ def _session_with_policy(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().first()
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={"reviewee_after_release_mode": "raw"},
         follow_redirects=False,
     )
@@ -394,7 +394,7 @@ def test_the_cards_save_keeps_a_stored_level(
 ) -> None:
     review_session, instrument, policy = _session_with_policy(client, db, "rid-keep")
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={"reviewee_after_release_mode": "anonymized"},
         follow_redirects=False,
     )

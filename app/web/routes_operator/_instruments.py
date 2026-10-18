@@ -129,7 +129,7 @@ def instrument_detail_redirect(
 ) -> RedirectResponse:
     """Back-compat: legacy per-instrument page redirects to consolidated view."""
     _, review_session = bundle
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/edit")
@@ -147,7 +147,7 @@ def instrument_edit_description(
         description=description,
         actor=user,
     )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/fields")
@@ -191,13 +191,13 @@ def instrument_add_field(
     except instruments_service.FieldKeyError as exc:
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/instruments"
+                f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?field_key_error={int(False)}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
             headers={"X-FieldKey-Error": str(exc)},
         )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post(
@@ -221,7 +221,7 @@ def instrument_add_default_field(
     # editing, so the operator stays in editing mode after the add.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/instruments"
+            f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -271,12 +271,12 @@ def instrument_edit_field(
     if warning_count > 0:
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/instruments"
+                f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?required_warning={warning_count}&field_id={field.id}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post(
@@ -305,7 +305,7 @@ def instrument_delete_field(
     except instruments_service.ResponsesPresentError as exc:
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/instruments"
+                f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?editing={instrument.id}"
                 f"&delete_blocked_field_id={field.id}"
                 f"&delete_blocked_count={exc.cascaded_response_count}"
@@ -316,7 +316,7 @@ def instrument_delete_field(
     # Preserve editing state on the redirect.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/instruments"
+            f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -349,7 +349,7 @@ def instrument_move_field(
     # while editing.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/instruments"
+            f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -371,7 +371,7 @@ def instrument_add_display_field(
     if ":" not in source_pair:
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/instruments"
+                f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?display_source_error=invalid_pair"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
@@ -391,12 +391,12 @@ def instrument_add_display_field(
     except instruments_service.DisplaySourceError:
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/instruments"
+                f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?display_source_error={source_type}:{source_field}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post(
@@ -433,7 +433,7 @@ def instrument_edit_display_field(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be hidden.",
         )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post(
@@ -457,7 +457,7 @@ def instrument_delete_display_field(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be deleted.",
         )
-    return _instruments_redirect(review_session.id)
+    return _instruments_redirect(review_session.public_id)
 
 
 @router.post(
@@ -490,7 +490,7 @@ def instrument_move_display_field(
     # the editable view after moving a row.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/instruments"
+            f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -607,7 +607,7 @@ async def instrument_bulk_save_fields(
                 db.rollback()
                 return RedirectResponse(
                     url=(
-                        f"/operator/sessions/{review_session.id}/instruments"
+                        f"/operator/sessions/{review_session.public_id}/instruments"
                         f"?editing={instrument.id}"
                         f"&sort_save_error_instrument_id={instrument.id}"
                         f"&sort_save_error=misaligned"
@@ -623,7 +623,7 @@ async def instrument_bulk_save_fields(
                     db.rollback()
                     return RedirectResponse(
                         url=(
-                            f"/operator/sessions/{review_session.id}/instruments"
+                            f"/operator/sessions/{review_session.public_id}/instruments"
                             f"?editing={instrument.id}"
                             f"&sort_save_error_instrument_id={instrument.id}"
                             f"&sort_save_error=bad_id"
@@ -647,7 +647,7 @@ async def instrument_bulk_save_fields(
                 # copy (findings O7).
                 return RedirectResponse(
                     url=(
-                        f"/operator/sessions/{review_session.id}/instruments"
+                        f"/operator/sessions/{review_session.public_id}/instruments"
                         f"?editing={instrument.id}"
                         f"&sort_save_error_instrument_id={instrument.id}"
                         f"&sort_save_error={quote(exc.code, safe='')}"
@@ -747,7 +747,7 @@ async def instrument_bulk_save_fields(
         # confirmation banner on the next render.
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/instruments"
+                f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?editing={instrument.id}&saved={instrument.id}"
                 f"#instrument-{instrument.id}"
             ),
@@ -1122,7 +1122,7 @@ def instruments_add_new_model(
         actor=user,
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
+        url=f"/operator/sessions/{review_session.public_id}/instruments#instrument-{instrument.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1146,7 +1146,7 @@ def instruments_replicate(
         actor=user,
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/instruments#instrument-{instrument.id}",
+        url=f"/operator/sessions/{review_session.public_id}/instruments#instrument-{instrument.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1191,7 +1191,7 @@ def instruments_delete(
             detail=str(exc),
         )
     return _instruments_redirect(
-        review_session.id,
+        review_session.public_id,
         fragment=f"instrument-{landing_id}" if landing_id else None,
     )
 

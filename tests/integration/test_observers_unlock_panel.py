@@ -72,7 +72,7 @@ def _session(
 
 
 def _page(client: TestClient, s: ReviewSession, suffix: str = "") -> str:
-    return client.get(f"/operator/sessions/{s.id}/observers{suffix}").text
+    return client.get(f"/operator/sessions/{s.public_id}/observers{suffix}").text
 
 
 def _markup(body: str) -> str:
@@ -316,7 +316,7 @@ def test_delete_all_returns_with_the_panel_still_open(
     """
     s = _session(client, db, "unl-5")
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/delete-all",
+        f"/operator/sessions/{s.public_id}/observers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -333,7 +333,7 @@ def test_a_successful_import_returns_with_the_panel_still_open(
     about its controls: a Save does not close this card, `Lock` does."""
     s = _session(client, db, "unl-6", rows=0)
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/import",
+        f"/operator/sessions/{s.public_id}/observers/import",
         files={"file": ("o.csv", CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -357,7 +357,7 @@ def test_a_failed_import_arrives_with_the_panel_open(
     """
     s = _session(client, db, "unl-7", rows=0)
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/import",
+        f"/operator/sessions/{s.public_id}/observers/import",
         files={"file": ("bad.csv", b"NotAColumn\nx\n", "text/csv")},
         follow_redirects=False,
     )

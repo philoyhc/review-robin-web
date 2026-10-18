@@ -21,6 +21,7 @@ from ._full_matrix import (
 )
 from app.services import session_lifecycle as lifecycle
 from ._instrument_states import add_group_instrument
+from ._public_id import public_id
 from ._validated import validate_session
 
 
@@ -42,8 +43,9 @@ def _create_session(client: TestClient, db: Session, code: str = "spring-2026") 
 
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
+    pid = public_id(session_id)
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -54,7 +56,7 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -79,9 +81,9 @@ def _build_ready_session(
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
     validate_session(session)
-    client.get(f"/operator/sessions/{session.id}/assignments")
+    client.get(f"/operator/sessions/{session.public_id}/assignments")
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -107,7 +109,7 @@ def test_default_instrument_starts_closed(client: TestClient, db: Session) -> No
 def test_activate_blocks_when_errors_exist(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="empty-session")
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -126,12 +128,12 @@ def test_activate_requires_acknowledge_when_warnings_present(
     _populate_rosters(client, session.id)
     # Skip _generate_full_matrix so the assignment_mode-is-None warning fires.
     validate_session(session)
-    client.get(f"/operator/sessions/{session.id}/assignments")
+    client.get(f"/operator/sessions/{session.public_id}/assignments")
     db.refresh(session)
     assert session.status == "validated"
 
     no_ack = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         follow_redirects=False,
     )
     # audit R2 — unacknowledged warnings bounce to the flash, not an
@@ -142,7 +144,7 @@ def test_activate_requires_acknowledge_when_warnings_present(
     assert session.status == "validated"
 
     with_ack = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -193,13 +195,13 @@ def test_revert_requires_confirm_and_preserves_responses(
     db.commit()
 
     no_confirm = client.post(
-        f"/operator/sessions/{session.id}/revert",
+        f"/operator/sessions/{session.public_id}/revert",
         follow_redirects=False,
     )
     assert no_confirm.status_code == 400
 
     confirmed = client.post(
-        f"/operator/sessions/{session.id}/revert",
+        f"/operator/sessions/{session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -230,7 +232,7 @@ def test_each_mutating_endpoint_returns_409_while_ready(
     client: TestClient, db: Session
 ) -> None:
     session = _build_ready_session(client, db, code="locked-1")
-    sid = session.id
+    sid = session.public_id
 
     targets: list[tuple[str, dict, dict]] = [
         (f"/operator/sessions/{sid}/config", {"name": "x", "code": "x", "description": ""}, {}),
@@ -279,20 +281,20 @@ def test_response_loss_ack_required_after_revert(
     db.commit()
 
     client.post(
-        f"/operator/sessions/{session.id}/revert",
+        f"/operator/sessions/{session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
 
     no_ack = client.post(
-        f"/operator/sessions/{session.id}/reviewers/delete-all",
+        f"/operator/sessions/{session.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert no_ack.status_code == 400
 
     with_ack = client.post(
-        f"/operator/sessions/{session.id}/reviewers/delete-all",
+        f"/operator/sessions/{session.public_id}/reviewers/delete-all",
         data={"confirm": "true", "acknowledge_response_loss": "true"},
         follow_redirects=False,
     )
@@ -315,7 +317,7 @@ def test_reviewer_save_403_when_session_draft(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.public_id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -338,13 +340,13 @@ def test_no_per_instrument_open_or_close(
         select(Instrument).where(Instrument.session_id == session.id)
     ).scalar_one()
 
-    page = operator.get(f"/operator/sessions/{session.id}/instruments")
+    page = operator.get(f"/operator/sessions/{session.public_id}/instruments")
     assert page.status_code == 200
     assert "Close this instrument" not in page.text
     assert "Open this Instrument" not in page.text
     for action in ("open", "close"):
         response = operator.post(
-            f"/operator/sessions/{session.id}/instruments/{instrument.id}/{action}",
+            f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/{action}",
             follow_redirects=False,
         )
         assert response.status_code in (404, 405), action
@@ -375,7 +377,7 @@ def test_a_live_session_left_split_by_the_retired_close_heals(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
     response = make_client(rae).post(
-        f"/me/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.public_id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -425,7 +427,7 @@ def test_reviewer_save_403_when_deadline_passed(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.public_id}/1/save",
         data={},
         follow_redirects=False,
     )
@@ -453,7 +455,7 @@ def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{session.id}/1/save",
+        f"/me/sessions/{session.public_id}/1/save",
         data={
             f"response[{assignment.id}][rating]": "4",
             f"response[{assignment.id}][comments]": "secret-comment",
@@ -466,7 +468,7 @@ def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values
     session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     db.commit()
 
-    page = rae_client.get(f"/me/sessions/{session.id}")
+    page = rae_client.get(f"/me/sessions/{session.public_id}")
     assert page.status_code == 200
     assert "no longer accepting responses" in page.text.lower()
     assert "secret-comment" in page.text
@@ -487,9 +489,9 @@ def test_lazy_deadline_close_fires_once(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
     rae_client = make_client(rae)
-    rae_client.get(f"/me/sessions/{session.id}")
-    rae_client.get(f"/me/sessions/{session.id}")
-    rae_client.get(f"/me/sessions/{session.id}")
+    rae_client.get(f"/me/sessions/{session.public_id}")
+    rae_client.get(f"/me/sessions/{session.public_id}")
+    rae_client.get(f"/me/sessions/{session.public_id}")
 
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == session.id)
@@ -529,7 +531,7 @@ def test_lazy_deadline_close_audit_carries_correlation_id(
         principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad"
     )
     rae_client = make_client(rae)
-    rae_client.get(f"/me/sessions/{session.id}")
+    rae_client.get(f"/me/sessions/{session.public_id}")
 
     deadline_events = db.execute(
         select(AuditEvent).where(
@@ -568,9 +570,9 @@ def test_activation_opens_a_group_instrument(
     _populate_rosters(client, session.id)
     _generate_full_matrix(client, db, session.id)
     validate_session(session)
-    client.get(f"/operator/sessions/{session.id}/assignments")
+    client.get(f"/operator/sessions/{session.public_id}/assignments")
     activate = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )

@@ -96,10 +96,10 @@ def test_a_picked_label_returns_that_person_and_not_the_lookalike(
     _add_lookalike(db, s.id)
 
     by_name = client.get(
-        f"/operator/sessions/{s.id}/assignments?q=Ana&search_by=reviewer"
+        f"/operator/sessions/{s.public_id}/assignments?q=Ana&search_by=reviewer"
     ).text
     by_pick = client.get(
-        f"/operator/sessions/{s.id}/assignments"
+        f"/operator/sessions/{s.public_id}/assignments"
         f"?q=Ana+Lim+%28ana%40example.edu%29&search_by=reviewer"
     ).text
 
@@ -155,10 +155,10 @@ def test_a_picked_label_scopes_to_the_side(
     picked = "q=Ana+Lim+%28ana%40example.edu%29"
 
     reviewer = client.get(
-        f"/operator/sessions/{s.id}/assignments?{picked}&search_by=reviewer"
+        f"/operator/sessions/{s.public_id}/assignments?{picked}&search_by=reviewer"
     ).text
     reviewee = client.get(
-        f"/operator/sessions/{s.id}/assignments?{picked}&search_by=reviewee"
+        f"/operator/sessions/{s.public_id}/assignments?{picked}&search_by=reviewee"
     ).text
 
     assert (
@@ -206,7 +206,7 @@ def test_the_datalist_offers_both_sides_and_no_tags(
     s = _seed(client, db, code="ta-list")
 
     options = _datalist_options(client.get(
-        f"/operator/sessions/{s.id}/assignments"
+        f"/operator/sessions/{s.public_id}/assignments"
     ).text)
 
     assert PICKED in options, "the reviewer's label"
@@ -222,7 +222,7 @@ def test_the_search_input_is_wired_to_the_datalist(
 ) -> None:
     s = _seed(client, db, code="ta-wire")
 
-    body = client.get(f"/operator/sessions/{s.id}/assignments").text
+    body = client.get(f"/operator/sessions/{s.public_id}/assignments").text
 
     assert 'list="assignments-search-options"' in body
     assert '<datalist id="assignments-search-options">' in body
@@ -236,7 +236,7 @@ def test_the_page_renders_the_pick(
     _add_lookalike(db, s.id)
 
     body = client.get(
-        f"/operator/sessions/{s.id}/assignments"
+        f"/operator/sessions/{s.public_id}/assignments"
         f"?q=Ana+Lim+%28ana%40example.edu%29&search_by=reviewer"
     ).text
 

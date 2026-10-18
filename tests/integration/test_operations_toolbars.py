@@ -32,7 +32,7 @@ MATCHING_TERM = {"invitations": "rae", "responses": "carol"}
 
 def _page(client: TestClient, session, page: str, query: str = "") -> str:
     return client.get(
-        f"/operator/sessions/{session.id}/{page}{query}"
+        f"/operator/sessions/{session.public_id}/{page}{query}"
     ).text
 
 
@@ -91,7 +91,7 @@ def test_the_search_lands_on_the_table_card(
     """
     rs = _ready_session(client, db, code=f"ops-an-{page[:3]}")
     body = _page(client, rs, page)
-    anchored = f"/operator/sessions/{rs.id}/{page}#{page}-table-card"
+    anchored = f"/operator/sessions/{rs.public_id}/{page}#{page}-table-card"
 
     assert f'action="{anchored}"' in _pane(body, "right")
 

@@ -86,20 +86,20 @@ def test_operator_sessions_root_resolves_to_sessions_label(db: Session) -> None:
 def test_operator_session_detail_resolves_to_session_name(db: Session) -> None:
     session = _seed_session(db, name="My Review")
     target = resolve_return_to(
-        f"/operator/sessions/{session.id}", db, viewer=_owner(db, session)
+        f"/operator/sessions/{session.public_id}", db, viewer=_owner(db, session)
     )
-    assert target.url == f"/operator/sessions/{session.id}"
+    assert target.url == f"/operator/sessions/{session.public_id}"
     assert target.label == "My Review"
 
 
 def test_operator_session_tab_resolves_to_session_name(db: Session) -> None:
     session = _seed_session(db, name="Tabbed Session")
     target = resolve_return_to(
-        f"/operator/sessions/{session.id}/instruments",
+        f"/operator/sessions/{session.public_id}/instruments",
         db,
         viewer=_owner(db, session),
     )
-    assert target.url == f"/operator/sessions/{session.id}/instruments"
+    assert target.url == f"/operator/sessions/{session.public_id}/instruments"
     assert target.label == "Tabbed Session"
 
 
@@ -116,9 +116,9 @@ def test_reviewer_root_resolves_to_your_reviews(db: Session) -> None:
 def test_reviewer_session_resolves_to_session_name(db: Session) -> None:
     session = _seed_session(db, name="Reviewer Session")
     target = resolve_return_to(
-        f"/me/sessions/{session.id}", db, viewer=_owner(db, session)
+        f"/me/sessions/{session.public_id}", db, viewer=_owner(db, session)
     )
-    assert target.url == f"/me/sessions/{session.id}"
+    assert target.url == f"/me/sessions/{session.public_id}"
     assert target.label == "Reviewer Session"
 
 
@@ -155,7 +155,7 @@ def test_operator_session_page_at_any_depth_resolves_to_session_name(
     db: Session,
 ) -> None:
     session = _seed_session(db, name="Deep Session")
-    path = f"/operator/sessions/{session.id}/instruments/7"
+    path = f"/operator/sessions/{session.public_id}/instruments/7"
     target = resolve_return_to(path, db, viewer=_owner(db, session))
     assert target.url == path
     assert target.label == "Deep Session"
@@ -221,7 +221,7 @@ def test_a_sys_admin_is_told_any_session_name(db: Session) -> None:
     """Sessions Diagnostics already lists every session by name."""
     session = _seed_session(db, name="Overseen")
     admin = _user(db, "admin@example.edu", is_sys_admin=True)
-    target = resolve_return_to(f"/me/sessions/{session.id}", db, viewer=admin)
+    target = resolve_return_to(f"/me/sessions/{session.public_id}", db, viewer=admin)
     assert target.label == "Overseen"
 
 
@@ -236,7 +236,7 @@ def test_an_active_reviewer_or_observer_is_told_the_name(
     else:
         db.add(Observer(session_id=session.id, display_name="Pat", email="pat@example.edu"))
     db.flush()
-    target = resolve_return_to(f"/me/sessions/{session.id}", db, viewer=viewer)
+    target = resolve_return_to(f"/me/sessions/{session.public_id}", db, viewer=viewer)
     assert target.label == "Mine Too"
 
 
@@ -252,7 +252,7 @@ def test_an_inactive_reviewer_is_not_told_the_name(db: Session) -> None:
         )
     )
     db.flush()
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
@@ -266,7 +266,7 @@ def test_a_role_on_another_session_does_not_name_this_one(db: Session) -> None:
     viewer = _user(db, "pat@example.edu")
     db.add(Reviewer(session_id=other.id, name="Pat", email="pat@example.edu"))
     db.flush()
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
@@ -281,7 +281,7 @@ def test_a_reviewee_without_a_grant_is_not_told_the_name(db: Session) -> None:
         )
     )
     db.flush()
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
@@ -324,7 +324,7 @@ def test_a_reviewee_is_told_the_name_while_a_grant_resolves(db: Session) -> None
         )
     )
     _grant_reviewees(db, session)
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer).label == "Released"
 
     session.status = "draft"
@@ -346,10 +346,10 @@ def test_a_grant_on_one_session_does_not_name_another(db: Session) -> None:
         )
     _grant_reviewees(db, granted)
     assert (
-        resolve_return_to(f"/me/sessions/{granted.id}", db, viewer=viewer).label
+        resolve_return_to(f"/me/sessions/{granted.public_id}", db, viewer=viewer).label
         == "Granted"
     )
-    raw = f"/me/sessions/{ungranted.id}"
+    raw = f"/me/sessions/{ungranted.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
@@ -359,7 +359,7 @@ def test_an_observer_on_another_session_is_not_told_this_name(db: Session) -> No
     viewer = _user(db, "pat@example.edu")
     db.add(Observer(session_id=other.id, display_name="Pat", email="pat@example.edu"))
     db.flush()
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
 
 
@@ -378,7 +378,7 @@ def test_a_callable_viewer_is_resolved_at_most_once_and_only_when_needed(
     assert resolve_return_to("/operator/settings", db, viewer=viewer).label == "Settings"
     assert calls == []
     # A session path asks once.
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer).label == "Lazy"
     assert calls == [1]
     # A fallback asks once too: it decides between the lobby and /me.
@@ -397,6 +397,6 @@ def test_a_refused_name_and_its_fallback_share_one_lookup(db: Session) -> None:
         calls.append(1)
         return stranger
 
-    raw = f"/me/sessions/{session.id}"
+    raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
     assert calls == [1]

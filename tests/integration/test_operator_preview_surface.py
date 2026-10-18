@@ -64,7 +64,7 @@ def _make_session_with_reviewer(
         f"R{i},{e}\n" for i, e in enumerate(reviewer_emails)
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", rev_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -72,13 +72,13 @@ def _make_session_with_reviewer(
         f"Carol{i},{e}\n" for i, e in enumerate(reviewee_idents)
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={"file": ("e.csv", rev_csv2.encode(), "text/csv")},
         follow_redirects=False,
     )
     for _ in range(extra_instruments):
         operator.post(
-            f"/operator/sessions/{review_session.id}/instruments/add-new-model"
+            f"/operator/sessions/{review_session.public_id}/instruments/add-new-model"
         )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
@@ -93,12 +93,12 @@ def _make_session_with_reviewer(
 def test_bare_url_303s_to_page_1(client: TestClient, db: Session) -> None:
     session = _make_session_with_reviewer(client, db, code="prev-s-1")
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface",
+        f"/operator/sessions/{session.public_id}/preview-surface",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
     )
 
 
@@ -107,14 +107,14 @@ def test_bare_url_preserves_reviewer_email(
 ) -> None:
     session = _make_session_with_reviewer(client, db, code="prev-s-2")
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface"
+        f"/operator/sessions/{session.public_id}/preview-surface"
         "?reviewer_email=rae@example.edu",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{session.id}/preview-surface/1"
+        == f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=rae%40example.edu"
     )
 
@@ -124,7 +124,7 @@ def test_out_of_range_page_returns_404(
 ) -> None:
     session = _make_session_with_reviewer(client, db, code="prev-s-3")
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/99",
+        f"/operator/sessions/{session.public_id}/preview-surface/99",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -150,12 +150,12 @@ def test_session_without_reviewers_303s_to_invitations(
         select(ReviewSession).where(ReviewSession.code == "prev-s-empty")
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1",
+        f"/operator/sessions/{session.public_id}/preview-surface/1",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
     assert "no_match" not in response.headers["location"]
 
@@ -174,13 +174,13 @@ def test_unmatched_reviewer_email_303s_to_invitations(
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-bad")
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=ghost@example.edu",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
         "?no_match=ghost%40example.edu"
     )
 
@@ -205,13 +205,13 @@ def test_a_whitespace_email_on_an_empty_roster_carries_no_hint(
         select(ReviewSession).where(ReviewSession.code == "prev-s-ws")
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=%20%20%20",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
 
 
@@ -228,7 +228,7 @@ def test_a_hand_typed_no_match_for_a_real_reviewer_is_ignored(
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-liar")
     response = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
         "?no_match=RAE@example.edu"
     )
     assert response.status_code == 200
@@ -255,13 +255,13 @@ def test_a_picker_label_is_reported_as_the_address_inside_it(
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-label")
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=R0 (ghost@example.edu)",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
         "?no_match=ghost%40example.edu"
     )
 
@@ -277,7 +277,7 @@ def test_the_landing_page_names_the_address_that_did_not_match(
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-hint")
     html = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=ghost@example.edu",
         follow_redirects=True,
     ).text
@@ -313,7 +313,7 @@ def test_renders_reviewer_surface_template_with_operator_banner(
     """
     session = _make_session_with_reviewer(client, db, code="prev-s-render")
     body = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
     ).text
     # The banner's sentences wrap in the template, so prose assertions
     # run against collapsed whitespace — matching what a reader sees
@@ -413,7 +413,7 @@ def test_preview_surface_renders_the_reviewer_s_saved_responses(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=rae@example.edu"
     ).text
     assert "SAVED-BY-THE-REVIEWER" in body
@@ -427,13 +427,13 @@ def test_no_write_form_in_preview(
     ``<form action>``."""
     session = _make_session_with_reviewer(client, db, code="prev-s-noform")
     body = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
     ).text
     # No reviewer save endpoint as a form action.
-    assert f'action="/me/sessions/{session.id}/1/save"' not in body
+    assert f'action="/me/sessions/{session.public_id}/1/save"' not in body
     # No session-wide submit formaction either.
     assert (
-        f'formaction="/me/sessions/{session.id}/submit' not in body
+        f'formaction="/me/sessions/{session.public_id}/submit' not in body
     )
 
 
@@ -446,7 +446,7 @@ def test_action_row_renders_save_discard_submit_disabled(
     ``data-rs-discard`` hooks, no ``type="submit"``."""
     session = _make_session_with_reviewer(client, db, code="prev-s-actrow")
     body = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
     ).text
     # The action row container is present (a rendered ``<div
     # class="rs-action-row…``, not just the inline-CSS class
@@ -492,20 +492,20 @@ def test_multi_page_nav_links_point_at_operator_preview(
     _split_into_two_pages(db, session.id)
 
     body1 = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
     ).text
     # Page 1 has no Prev (disabled button), has Next pointing at /2.
-    next_href = f'href="/operator/sessions/{session.id}/preview-surface/2"'
+    next_href = f'href="/operator/sessions/{session.public_id}/preview-surface/2"'
     assert next_href in body1
     # Prev/Next URLs point at operator route, not reviewer.
-    assert f'href="/me/sessions/{session.id}/2"' not in body1
+    assert f'href="/me/sessions/{session.public_id}/2"' not in body1
     # Page counter renders.
     assert "Page 1 of 2" in body1
 
     body2 = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/2"
+        f"/operator/sessions/{session.public_id}/preview-surface/2"
     ).text
-    prev_href = f'href="/operator/sessions/{session.id}/preview-surface/1"'
+    prev_href = f'href="/operator/sessions/{session.public_id}/preview-surface/1"'
     assert prev_href in body2
     assert "Page 2 of 2" in body2
 
@@ -539,7 +539,7 @@ def test_group_scoped_instrument_on_later_page_renders(
     instruments_service.create_page_break_after(db, instrument=instruments[0])
 
     response = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/2"
+        f"/operator/sessions/{session.public_id}/preview-surface/2"
     )
     assert response.status_code == 200, response.text
     # The second instrument's section should render on page 2.
@@ -556,11 +556,11 @@ def test_prev_next_preserve_reviewer_email_query(
     )
     _split_into_two_pages(db, session.id)
     body = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
         "?reviewer_email=rae@example.edu"
     ).text
     expected_next = (
-        f"/operator/sessions/{session.id}/preview-surface/2"
+        f"/operator/sessions/{session.public_id}/preview-surface/2"
         "?reviewer_email=rae%40example.edu"
     )
     assert f'href="{expected_next}"' in body
@@ -584,7 +584,7 @@ def test_preview_works_on_draft_session(
     db.refresh(session)
     assert session.status == "draft"
     body = client.get(
-        f"/operator/sessions/{session.id}/preview-surface/1"
+        f"/operator/sessions/{session.public_id}/preview-surface/1"
     ).text
     # Action row rendered (the inert form chrome).
     assert 'class="rs-action-row' in body

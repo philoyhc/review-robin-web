@@ -135,7 +135,7 @@ def _seed(db: Session, sid: int, page: str, n: int = 3, *, profiles: int = 0):
 
 
 def _get(client: TestClient, rs: ReviewSession, page: str, suffix: str = "") -> str:
-    return client.get(f"/operator/sessions/{rs.id}/{page}{suffix}").text
+    return client.get(f"/operator/sessions/{rs.public_id}/{page}{suffix}").text
 
 
 # ── The panel's starting state ────────────────────────────────────────
@@ -521,13 +521,13 @@ def test_a_labels_save_returns_with_the_panel_still_open(
     _seed(db, rs.id, page)
     field = "tag_1" if page == "reviewees" else "1"
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/field-labels",
+        f"/operator/sessions/{rs.public_id}/{page}/field-labels",
         data={field: "Tutor"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
     assert response.headers["location"] == (
-        f"/operator/sessions/{rs.id}/{page}?unlocked=1#roster-card"
+        f"/operator/sessions/{rs.public_id}/{page}?unlocked=1#roster-card"
     )
 
 
@@ -538,13 +538,13 @@ def test_delete_all_returns_with_the_panel_still_open(
     rs = _mk(client, db, f"up-d-{page[:4]}")
     _seed(db, rs.id, page)
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/delete-all",
+        f"/operator/sessions/{rs.public_id}/{page}/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
     assert response.headers["location"] == (
-        f"/operator/sessions/{rs.id}/{page}?unlocked=1#roster-card"
+        f"/operator/sessions/{rs.public_id}/{page}?unlocked=1#roster-card"
     )
 
 
@@ -564,7 +564,7 @@ def test_a_failed_import_arrives_with_the_panel_open(
     rs = _mk(client, db, f"up-i-{page[:4]}")
     _seed(db, rs.id, page)
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/import",
+        f"/operator/sessions/{rs.public_id}/{page}/import",
         files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
     )
     assert response.status_code == 400, response.status_code
@@ -604,7 +604,7 @@ def test_a_failed_import_still_reports_the_real_columns(
     _seed(db, rs.id, "reviewees", profiles=2)
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/import",
+        f"/operator/sessions/{rs.public_id}/{page}/import",
         files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
     )
     assert response.status_code == 400, response.status_code
@@ -634,7 +634,7 @@ def test_the_relationships_replace_confirmation_also_arrives_open(
         f"{reviewer.email},{reviewee.email_or_identifier}\n"
     ).encode()
     response = client.post(
-        f"/operator/sessions/{rs.id}/relationships/import",
+        f"/operator/sessions/{rs.public_id}/relationships/import",
         files={"file": ("r.csv", csv, "text/csv")},
     )
     assert response.status_code == 400, response.text[:400]

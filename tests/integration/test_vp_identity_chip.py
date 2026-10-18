@@ -23,6 +23,7 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import Instrument, Reviewer, ReviewSession
 from app.services import visibility_policies as vp
 
+from ._public_id import public_id
 from .test_reviewee_results_body import (
     _enable_reviewee_after_release_raw,
     _operator_user,
@@ -48,7 +49,7 @@ def _session(client: TestClient, db: Session, code: str) -> tuple[int, int]:
 
 def _save(client: TestClient, session_id: int, instrument_id: int, **data: str) -> None:
     response = client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/fields/save",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/fields/save",
         data=data,
         follow_redirects=False,
     )
@@ -62,7 +63,7 @@ def _span(body: str, attr: str) -> str:
 
 
 def _page(client: TestClient, session_id: int) -> str:
-    return client.get(f"/operator/sessions/{session_id}/instruments").text
+    return client.get(f"/operator/sessions/{public_id(session_id)}/instruments").text
 
 
 def test_the_chip_hides_unless_the_released_cell_is_raw(
@@ -234,7 +235,7 @@ def test_save_refuses_a_level_that_is_not_one(
 ) -> None:
     session_id, instrument_id = _session(client, db, "vp-ident-bad")
     response = client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/fields/save",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/fields/save",
         data={
             "reviewee_after_release_mode": "raw",
             "reviewee_after_release_reviewer_identity": "everything",
@@ -274,7 +275,7 @@ def test_the_reviewer_sees_the_level_after_a_raw_reviewees_cell(
         "name_email_profile"
     )
     db.commit()
-    body = make_client(rae).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
     assert _span(body, "data-rs-reviewer-identity").endswith(
         ">Reviewer name, email, profile</span>"
     )

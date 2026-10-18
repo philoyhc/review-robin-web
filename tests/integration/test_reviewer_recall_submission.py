@@ -68,7 +68,7 @@ def _seed_session_with_rae_and_one_reviewee(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -79,7 +79,7 @@ def _seed_session_with_rae_and_one_reviewee(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -96,11 +96,11 @@ def _seed_session_with_rae_and_one_reviewee(
 
 def _activate(operator_client: TestClient, review_session: ReviewSession) -> None:
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
 
@@ -121,12 +121,12 @@ def _submit(
         data[f"response[{aid}][rating]"] = "5"
         data[f"response[{aid}][comments]"] = "fine"
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data=data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         follow_redirects=False,
     )
 
@@ -150,11 +150,11 @@ def test_recall_button_renders_on_summary_when_session_is_ready(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "Recall my submission" in body
     assert (
-        f'action="/me/sessions/{review_session.id}/recall"' in body
+        f'action="/me/sessions/{review_session.public_id}/recall"' in body
     )
     # One name for the dashboard (participant audit L1).
     assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
@@ -178,7 +178,7 @@ def test_recall_button_hidden_on_summary_when_session_is_expired(
 
     _restore_operator_identity(alice)
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -186,7 +186,7 @@ def test_recall_button_hidden_on_summary_when_session_is_expired(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "Recall my submission" not in body
 
@@ -222,12 +222,12 @@ def test_recall_post_nulls_submitted_at_and_lands_on_form(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/recall",
+        f"/me/sessions/{review_session.public_id}/recall",
         follow_redirects=False,
     )
     assert resp.status_code == 303
     assert resp.headers["location"] == (
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     )
 
     # Same rows, ``submitted_at`` now None; values intact.
@@ -274,13 +274,13 @@ def test_recall_post_403s_when_session_is_expired(
 
     _restore_operator_identity(alice)
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
 
     app.dependency_overrides[get_current_user] = lambda: rae
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/recall",
+        f"/me/sessions/{review_session.public_id}/recall",
         follow_redirects=False,
     )
     assert resp.status_code == 403
@@ -307,7 +307,7 @@ def test_recall_then_resubmit_round_trips_the_submitted_at_stamp(
     _submit(rae_client, review_session, db)
     app.dependency_overrides[get_current_user] = lambda: rae
     rae_client.post(
-        f"/me/sessions/{review_session.id}/recall",
+        f"/me/sessions/{review_session.public_id}/recall",
         follow_redirects=False,
     )
 
@@ -348,10 +348,10 @@ def test_recall_button_hidden_once_the_deadline_passes(
     _submit(rae_client, review_session, db)
     _past_deadline(db, review_session)
 
-    resp = rae_client.get(f"/me/sessions/{review_session.id}/summary")
+    resp = rae_client.get(f"/me/sessions/{review_session.public_id}/summary")
     assert resp.status_code == 200
     assert "Recall my submission" not in resp.text
-    assert f'action="/me/sessions/{review_session.id}/recall"' not in resp.text
+    assert f'action="/me/sessions/{review_session.public_id}/recall"' not in resp.text
 
 
 def test_recall_post_403s_once_the_deadline_passes(
@@ -369,7 +369,7 @@ def test_recall_post_403s_once_the_deadline_passes(
     _past_deadline(db, review_session)
 
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/recall", follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/recall", follow_redirects=False
     )
     assert resp.status_code == 403
     assert "This review has closed" in resp.text
@@ -395,7 +395,7 @@ def test_recall_post_in_draft_says_not_currently_open(
     db.commit()
 
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/recall", follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/recall", follow_redirects=False
     )
     assert resp.status_code == 403
     assert "This review is not currently open" in resp.text

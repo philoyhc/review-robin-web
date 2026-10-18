@@ -39,8 +39,9 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
 
 
 def _seed_two_reviewers(client: TestClient, db: Session, session_id: int) -> None:
+    public_id = db.get(ReviewSession, session_id).public_id
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -51,7 +52,7 @@ def _seed_two_reviewers(client: TestClient, db: Session, session_id: int) -> Non
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -67,7 +68,7 @@ def _seed_two_reviewers(client: TestClient, db: Session, session_id: int) -> Non
 
 def _validated(client: TestClient, db: Session, session_id: int) -> None:
     response = client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{db.get(ReviewSession, session_id).public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -125,7 +126,7 @@ def test_invitations_pill_not_created_when_no_invitation_rows(
     ]
     assert len(reviewer_ids) == 2
     response = client.post(
-        f"/operator/sessions/{session.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{session.public_id}/reviewers/bulk-inactivate",
         data={"reviewer_ids": reviewer_ids},
         follow_redirects=False,
     )
@@ -144,7 +145,7 @@ def test_invitations_pill_not_created_when_no_invitation_rows(
         is None
     ), "Prepare created an invitation for a reviewer with no active status"
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert (
         '<span class="pill pill-empty">Not created</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'Not created'"
@@ -157,7 +158,7 @@ def test_invitations_pill_not_sent_after_prepare_before_send(
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert (
         f'<span class="pill pill-warning" title="{_SENT_TITLE}">Not sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'Not sent'"
@@ -171,7 +172,7 @@ def test_invitations_pill_partially_sent_when_some_reviewers_sent(
     _validated(client, db, session.id)
     # Per-row Send is `ready`-only (B17, 2026-10-02), so activate first.
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -191,12 +192,12 @@ def test_invitations_pill_partially_sent_when_some_reviewers_sent(
         )
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{rae_invitation.id}/send",
+        f"/operator/sessions/{session.public_id}/invitations/{rae_invitation.id}/send",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert (
         f'<span class="pill pill-warning" title="{_SENT_TITLE}">Partially sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'Partially sent'"
@@ -209,12 +210,12 @@ def test_invitations_pill_all_sent_when_every_reviewer_sent(
     _seed_two_reviewers(client, db, session.id)
     _validated(client, db, session.id)
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert (
         f'<span class="pill pill-info" title="{_SENT_TITLE}">All sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'All sent'"
@@ -231,12 +232,12 @@ def test_invitations_pill_reads_not_sent_after_regenerate_all(
     _validated(client, db, session.id)
     for action in ("send-all", "regenerate-all"):
         response = client.post(
-            f"/operator/sessions/{session.id}/invitations/{action}",
+            f"/operator/sessions/{session.public_id}/invitations/{action}",
             follow_redirects=False,
         )
         assert response.status_code == 303, response.text
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert (
         f'<span class="pill pill-warning" title="{_SENT_TITLE}">Not sent</span>' in body
     ), "expected the chrome-strip Invitations pill to read 'Not sent'"

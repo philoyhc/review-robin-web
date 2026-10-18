@@ -43,7 +43,7 @@ def test_reviewer_metadata_route_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="rmd-name")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewer_metadata.csv"
     )
     assert response.status_code == 200
@@ -71,7 +71,7 @@ def test_reviewer_metadata_instrument_param_adds_per_field_block(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/export/reviewer_metadata.csv?instrument={instrument.id}"
     )
     first_line = response.text.split("\r\n", 1)[0]
@@ -92,7 +92,7 @@ def test_reviewer_metadata_audit_event_carries_row_and_instrument_counts(
     review_session = _make_session(client, db, code="rmd-aud")
     instrument = _default_instrument(db, review_session.id)
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/export/reviewer_metadata.csv?instrument={instrument.id}"
     )
     assert response.status_code == 200
@@ -116,7 +116,7 @@ def test_reviewee_metadata_route_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="emd-name")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewee_metadata.csv"
     )
     assert response.status_code == 200
@@ -136,17 +136,17 @@ def test_extract_data_page_links_both_metadata_buttons(
 ) -> None:
     review_session = _make_session(client, db, code="md-links")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     assert 'id="extract-data-reviewer-metadata-zip"' in body
     assert (
-        f'href="/operator/sessions/{review_session.id}'
+        f'href="/operator/sessions/{review_session.public_id}'
         f'/export/reviewer_metadata.csv?all_instruments=1"' in body
     )
     assert 'id="extract-data-reviewee-metadata-zip"' in body
     assert (
-        f'href="/operator/sessions/{review_session.id}'
+        f'href="/operator/sessions/{review_session.public_id}'
         f'/export/reviewee_metadata.csv?all_instruments=1"' in body
     )
 
@@ -163,7 +163,7 @@ def test_reviewer_metadata_route_honours_exclude_self_query_param(
     suffix to ``_noself`` and renames the file accordingly."""
     review_session = _make_session(client, db, code="srh-route-excl")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewer_metadata.csv?self_review_handling=exclude_self"
     )
     assert response.status_code == 200
@@ -184,7 +184,7 @@ def test_reviewer_metadata_route_honours_both_query_param(
     blocks and renames the file to ``_both.csv``."""
     review_session = _make_session(client, db, code="srh-route-both")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewer_metadata.csv?self_review_handling=both"
     )
     assert response.status_code == 200
@@ -208,7 +208,7 @@ def test_reviewer_metadata_route_unknown_state_falls_through_to_default(
     still returns a sensible CSV."""
     review_session = _make_session(client, db, code="srh-route-junk")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewer_metadata.csv?self_review_handling=garbage"
     )
     assert response.status_code == 200
@@ -226,7 +226,7 @@ def test_reviewer_metadata_audit_event_carries_context_self_review_handling(
     handling* — *Audit event payload*)."""
     review_session = _make_session(client, db, code="srh-route-aud")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewer_metadata.csv?self_review_handling=both"
     )
     assert response.status_code == 200
@@ -248,7 +248,7 @@ def test_reviewee_metadata_route_honours_self_review_handling_param(
     """Reviewee side mirrors the reviewer-side query-param wiring."""
     review_session = _make_session(client, db, code="srh-route-ree")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/reviewee_metadata.csv?self_review_handling=exclude_self"
     )
     assert response.status_code == 200

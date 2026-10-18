@@ -73,7 +73,7 @@ TOOLBAR_RIGHT = '<div class="toolbar-pane toolbar-right">'
 
 
 def _page(client: TestClient, s, *, q: str = "") -> str:
-    url = f"/operator/sessions/{s.id}/assignments"
+    url = f"/operator/sessions/{s.public_id}/assignments"
     if q:
         url = f"{url}?q={q}"
     return client.get(url).text
@@ -90,7 +90,7 @@ def test_the_bulk_routes_answer_by_editability(
 
     for action in ("bulk-inactivate", "bulk-activate"):
         response = client.post(
-            f"/operator/sessions/{s.id}/assignments/{action}",
+            f"/operator/sessions/{s.public_id}/assignments/{action}",
             data={"assignment_ids": str(aid), "confirm": "true"},
             follow_redirects=False,
         )

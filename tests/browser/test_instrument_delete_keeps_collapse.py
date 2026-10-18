@@ -46,7 +46,7 @@ def _expand(page: Page, index: int):
 def test_delete_leaves_the_landing_card_collapsed(
     page: Page,
     api: httpx.Client,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
     deleted: int,
     landing: int,
 ) -> None:

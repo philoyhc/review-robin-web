@@ -52,3 +52,72 @@ def test_a_settings_export_carries_no_public_id(db: Session, client: TestClient)
 
     assert not any("public_id" in row.field for row in rows)
     assert not any(row.value == session.public_id for row in rows)
+
+
+# --- Rung 3: URLs carry the public ID ---------------------------------------
+
+_INTEGER_SESSION_URL = re.compile(r"/sessions/([0-9]+)(?![0-9a-z])")
+_EMPTY_SESSION_LINK = re.compile(r'(?:href|action)="[^"]*/sessions/"')
+
+
+def _live_session_alice_reviews(db: Session, client: TestClient) -> ReviewSession:
+    """A live session alice runs and is a reviewer on, so the lobby,
+    Session Home, ``/me`` and a review page all render it."""
+    from ._display_field_helpers import _activate, _generate_full_matrix
+
+    session = _create(db, client, "pid-pages")
+    for kind, body in (
+        ("reviewers", b"ReviewerName,ReviewerEmail\nAlice,alice@example.edu\n"),
+        ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
+    ):
+        response = client.post(
+            f"/operator/sessions/{session.public_id}/{kind}/import",
+            files={"file": (f"{kind}.csv", body, "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303, response.text
+    _generate_full_matrix(client, db, session.id)
+    _activate(client, db, session.id)
+    db.refresh(session)
+    assert session.status in ("ready", "active")
+    return session
+
+
+def test_an_integer_session_url_answers_404(db: Session, client: TestClient) -> None:
+    session = _live_session_alice_reviews(db, client)
+
+    assert client.get(f"/operator/sessions/{session.public_id}").status_code == 200
+    assert client.get(f"/me/sessions/{session.public_id}/1").status_code == 200
+    for path in (
+        f"/operator/sessions/{session.id}",
+        f"/operator/sessions/{session.id}/reviewers",
+        f"/me/sessions/{session.id}/1",
+        f"/me/sessions/{session.id}/summary",
+    ):
+        assert client.get(path).status_code == 404, path
+
+
+def test_no_page_links_a_session_by_its_integer_id(
+    db: Session, client: TestClient
+) -> None:
+    session = _live_session_alice_reviews(db, client)
+
+    for path in (
+        "/operator/sessions",
+        f"/operator/sessions/{session.public_id}",
+        "/me",
+        f"/me/sessions/{session.public_id}/1",
+    ):
+        html = client.get(path).text
+        assert f"/sessions/{session.public_id}" in html, path
+        # A digit-only public ID is possible (about 1 in 10^6), so only
+        # the session's own public ID is exempt.
+        integers = {
+            m.group(1)
+            for m in _INTEGER_SESSION_URL.finditer(html)
+            if m.group(1) != session.public_id
+        }
+        assert not integers, (path, integers)
+        # A template reading a missing attribute renders it empty.
+        assert "/sessions//" not in html, path
+        assert not _EMPTY_SESSION_LINK.search(html), path

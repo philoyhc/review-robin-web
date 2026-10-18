@@ -33,7 +33,7 @@ def _chain_page(client: TestClient, db: Session, code: str, **modes: str):
     fields["Rating"].branch_mode = modes.get("rating")
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     return review_session, instrument, _card_slice(flat, instrument.id), flat, body
@@ -134,7 +134,7 @@ def test_a_governed_number_forks_one_level_down(client: TestClient, db: Session)
     comments._inline_data_type = "Integer"
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     card = _card_slice(" ".join(body.split()), instrument.id)
     fork = re.search(r"<button[^>]*data-new-model-rf-fork[^>]*>", _row(_rows_table(card), "Comments")).group(0)
@@ -203,7 +203,7 @@ def test_answers_lock_every_branch_above_on_the_page(client: TestClient, db: Ses
     db.add(Response(assignment_id=assignment.id, response_field_id=comments.id, value="x"))
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
     for cond in table.split("<tr data-new-model-rf-condition")[1:]:
@@ -301,7 +301,7 @@ def _with_other(
     if answered:
         _add_response(db, review_session, instrument, fields[answered])
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     return _rows_table(_card_slice(" ".join(body.split()), instrument.id)), body
 

@@ -142,7 +142,7 @@ def _with_responses(
 
 def _post(client: TestClient, s: ReviewSession, page: str, **data):
     return client.post(
-        f"/operator/sessions/{s.id}/{page}/bulk-delete",
+        f"/operator/sessions/{s.public_id}/{page}/bulk-delete",
         data=data,
         follow_redirects=False,
     )
@@ -421,7 +421,7 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
     def needle(p: str) -> str:
         return f'id="{p}-delete-ack"'.replace('"', '\\"')
 
-    without = client.get(f"/operator/sessions/{s.id}/{page}").text
+    without = client.get(f"/operator/sessions/{s.public_id}/{page}").text
     assert needle(page) not in without
 
     reviewer = Reviewer(session_id=s.id, name="Z", email="z@example.edu")
@@ -432,7 +432,7 @@ def test_the_gate_names_the_response_loss_when_there_is_any(
     db.flush()
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=1)
 
-    with_loss = client.get(f"/operator/sessions/{s.id}/{page}").text
+    with_loss = client.get(f"/operator/sessions/{s.public_id}/{page}").text
     assert needle(page) in with_loss
     assert (
         "delete these and their associated assignments and reviewer responses"
@@ -458,7 +458,7 @@ def test_the_gate_never_names_response_loss_where_there_is_none(
     db.flush()
     _with_responses(db, s, reviewer=reviewer, reviewee=reviewee, n=2)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
 
     assert f'id="{page}-delete-ack"' not in body
     assert "reviewer responses" not in body

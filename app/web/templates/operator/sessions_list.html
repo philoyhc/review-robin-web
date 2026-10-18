@@ -170,11 +170,11 @@
           <tbody class="rrw-rows">
           {% for s in sessions %}
             <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'
-                data-session-id="{{ s.id }}"
+                data-session-id="{{ s.public_id }}"
                 data-status="{{ s.status }}"
                 data-deadline="{{ format_datetime_local(s.deadline, session_timezone(s)) }}">
               <td>
-                <a href="/operator/sessions/{{ s.id }}">{{ s.name }}</a>
+                <a href="/operator/sessions/{{ s.public_id }}">{{ s.name }}</a>
               </td>
               <td><code>{{ s.code }}</code></td>
               <td>

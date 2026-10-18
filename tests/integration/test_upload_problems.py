@@ -36,7 +36,7 @@ def _session(client: TestClient, db: Session, code: str) -> ReviewSession:
 
 def _upload(client: TestClient, rs: ReviewSession, kind: str, body: str):
     return client.post(
-        f"/operator/sessions/{rs.id}/{kind}/import",
+        f"/operator/sessions/{rs.public_id}/{kind}/import",
         files={"file": (f"{kind}.csv", body.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -121,7 +121,7 @@ def test_each_upload_card_lists_kinds_of_problem_with_counts(
     # the page with the upload card open and no file.
     assert 'class="banner banner-error banner-scroll-target"' in response.text
     assert (
-        f'href="/operator/sessions/{rs.id}/{kind}?unlocked=1#upload-csv">Dismiss</a>'
+        f'href="/operator/sessions/{rs.public_id}/{kind}?unlocked=1#upload-csv">Dismiss</a>'
     ) in response.text
 
 
@@ -219,7 +219,7 @@ def test_a_relationships_replace_without_the_tick_says_so(
 def test_a_clean_page_has_no_banner(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "up-clean")
 
-    page = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    page = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
 
     assert "data-upload-problems" not in page
 

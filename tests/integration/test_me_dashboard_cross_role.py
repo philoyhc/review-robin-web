@@ -228,7 +228,7 @@ def test_reviewee_with_no_current_grant_gets_no_row_at_all(
     assert 'class="pill pill-role-reviewee"' not in body
     # Id-qualified: a bare "/results" also matches a CSS comment, since
     # base.html inlines the whole stylesheet into every page.
-    assert f"/me/sessions/{review_session.id}/results" not in body
+    assert f"/me/sessions/{review_session.public_id}/results" not in body
     # Indistinguishable from the empty dashboard a stranger sees.
     assert "there's nothing here for you right now." in " ".join(body.split())
 
@@ -380,7 +380,7 @@ def test_a_padded_reviewee_identifier_still_matches(
     grant_reviewee_visibility(review_session)
     body = client.get("/me").text
     assert 'class="pill pill-role-reviewee"' in body
-    assert client.get(f"/me/sessions/{review_session.id}/results").status_code == 200
+    assert client.get(f"/me/sessions/{review_session.public_id}/results").status_code == 200
 
 
 def test_a_non_email_reviewee_identifier_confers_no_role(
@@ -410,9 +410,9 @@ def test_a_non_email_reviewee_identifier_confers_no_role(
     )
     body = anon.get("/me").text
     assert 'class="pill pill-role-reviewee"' not in body
-    assert f"/me/sessions/{review_session.id}/results" not in body
+    assert f"/me/sessions/{review_session.public_id}/results" not in body
     assert (
-        anon.get(f"/me/sessions/{review_session.id}/results").status_code
+        anon.get(f"/me/sessions/{review_session.public_id}/results").status_code
         == 404
     )
 

@@ -28,7 +28,7 @@ def _zip_all_query(page: Page) -> dict[str, list[str]]:
 
 
 def test_zip_all_carries_each_cards_chips(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sessions/{session_id}/extract-data")
@@ -67,7 +67,7 @@ def test_zip_all_carries_each_cards_chips(
 
 
 def test_a_by_instrument_card_with_nothing_chosen_rides_as_off(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """The card's own Zip all greys out with no instrument chip on;
     the intro's Zip all leaves its files out rather than asking for
@@ -84,7 +84,7 @@ def test_a_by_instrument_card_with_nothing_chosen_rides_as_off(
 
 
 def test_a_partial_selection_lists_its_ids(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """With two instruments and one chip off, each card lists the one
     left on, both on its own link and in Zip all; with both on again,

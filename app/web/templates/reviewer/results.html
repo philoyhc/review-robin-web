@@ -203,7 +203,7 @@
       <p class="muted" style="margin-top: var(--space-3);">
         Tick the box to confirm you've seen the responses written about you.
       </p>
-      <form method="post" action="/me/sessions/{{ session.id }}/results/acknowledge" class="rs-acknowledge-form-row">
+      <form method="post" action="/me/sessions/{{ session.public_id }}/results/acknowledge" class="rs-acknowledge-form-row">
         <label>
           <input type="checkbox" data-delete-confirm="ack-results">
           I have read these results.

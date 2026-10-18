@@ -36,7 +36,7 @@ def test_only_saves_reload_opts_into_the_cross_fade(
     so only Save's reload fades (a fade in progress swallows clicks —
     the Owners card's browser tests met that when it was static)."""
     review_session = _make_session(client, db, "seat-fade")
-    home = client.get(f"/operator/sessions/{review_session.id}").text
+    home = client.get(f"/operator/sessions/{review_session.public_id}").text
     head = " ".join(home[: home.index("</head>")].split())
     assert "window.rrwSaveFade = function" in head
     # A double-clicked Save adds the rule once.
@@ -61,7 +61,7 @@ def test_the_card_form_remembers_the_scroll_and_lock_drops_the_param(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, "seat-script")
-    body = client.get(f"/operator/sessions/{review_session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}?editing=1").text
 
     marker = body.index("// Read, checked and removed by the head script.")
     script = body[body.rindex("<script>", 0, marker) : body.index("</script>", marker)]

@@ -57,7 +57,7 @@ def _seed_pair(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -68,7 +68,7 @@ def _seed_pair(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -87,9 +87,9 @@ def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -109,7 +109,7 @@ def test_validate_page_renders_workflow_card_with_return_to_validate(
     the card's POSTs land back here."""
     review_session = _seed_pair(client, db, code="val-card")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
@@ -131,7 +131,7 @@ def test_setup_coverage_matrix_renders_canonical_rows(
 ) -> None:
     review_session = _seed_pair(client, db, code="cov-rows")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     assert "Setup coverage" in body
     # The grid renders one .setup-coverage-cell per row, each carrying
@@ -159,7 +159,7 @@ def test_setup_coverage_matrix_links_to_issue_source_anchor_when_issues(
     section in the issue list (e.g. `#issue-source-reviewers`)."""
     review_session = _make_session(client, db, code="cov-links")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     # Bare session has no reviewers → reviewers row carries an
     # error-pill anchor link to the issue-list anchor.
@@ -174,7 +174,7 @@ def test_setup_coverage_matrix_omits_issue_pill_when_clean(
 ) -> None:
     review_session = _seed_pair(client, db, code="cov-clean")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     # When a session is fully populated, no error-pill anchors render
     # in the matrix.
@@ -189,12 +189,12 @@ def test_validate_page_renders_fix_on_link_per_issue(
     rule emits one)."""
     review_session = _make_session(client, db, code="fix-link")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     # Bare session has no reviewers → reviewers.empty rule fires →
     # "Fix on Reviewers Setup ↗" link surfaces.
     assert (
-        f'href="/operator/sessions/{review_session.id}/reviewers"'
+        f'href="/operator/sessions/{review_session.public_id}/reviewers"'
         in body
     )
     assert "Fix on Reviewers Setup ↗" in body
@@ -205,7 +205,7 @@ def test_validate_page_renders_per_issue_id_anchors(
 ) -> None:
     review_session = _make_session(client, db, code="issue-ids")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     # rule_key + loop index combine into the per-issue id; every
     # registry-emitted issue carries an id="issue-{rule_key}-N".
@@ -235,7 +235,7 @@ def test_validate_page_renders_severity_chip_strip(
     """Three status-colored on/off chips with their unfiltered totals,
     all on by default; the retired All issues chip is gone."""
     review_session = _make_session(client, db, code="chip-strip")
-    resp = client.get(f"/operator/sessions/{review_session.id}/validate")
+    resp = client.get(f"/operator/sessions/{review_session.public_id}/validate")
     strip = _chip_strip(resp.text)
     for key, label in (("error", "Errors"), ("warning", "Warnings"), ("info", "Info")):
         assert f'class="pill tag-chip status-chip-{key}"' in strip
@@ -262,15 +262,15 @@ def test_the_chips_last_asked_for_are_remembered(
     back, across sessions, and a URL choice outranks it."""
     first = _make_session(client, db, code="chip-cookie-a")
     resp = client.get(
-        f"/operator/sessions/{first.id}/validate?severity=&severity=warning"
+        f"/operator/sessions/{first.public_id}/validate?severity=&severity=warning"
     )
     assert resp.cookies.get("rrw-validate-severity") == "warning"
     second = _make_session(client, db, code="chip-cookie-b")
-    body = client.get(f"/operator/sessions/{second.id}/validate").text
+    body = client.get(f"/operator/sessions/{second.public_id}/validate").text
     assert _chips_on(body) == ["warning"]
     # A URL choice wins over the cookie, and is remembered in turn.
     resp = client.get(
-        f"/operator/sessions/{second.id}/validate?severity=&severity=error"
+        f"/operator/sessions/{second.public_id}/validate?severity=&severity=error"
     )
     assert _chips_on(resp.text) == ["error"]
     assert "assignments.no_included_pairs" not in resp.text
@@ -281,7 +281,7 @@ def test_every_chip_off_shows_no_issues_and_is_remembered(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="chips-off")
-    url = f"/operator/sessions/{review_session.id}/validate"
+    url = f"/operator/sessions/{review_session.public_id}/validate"
     resp = client.get(f"{url}?severity=")
     assert resp.cookies.get("rrw-validate-severity") == "none"
     assert "No issues shown. Turn a severity chip on to see them." in resp.text
@@ -299,7 +299,7 @@ def test_a_retired_or_unknown_severity_reads_sensibly(
     """``?severity=all``, the retired chip's old URL, turns all three on;
     an unknown key drops out."""
     review_session = _make_session(client, db, code="chips-legacy")
-    url = f"/operator/sessions/{review_session.id}/validate"
+    url = f"/operator/sessions/{review_session.public_id}/validate"
     assert _chips_on(client.get(f"{url}?severity=all").text) == [
         "error", "warning", "info"
     ]
@@ -326,7 +326,7 @@ def test_a_mistyped_severity_link_shows_everything(
 ) -> None:
     review_session = _make_session(client, db, code="chips-typo")
     resp = client.get(
-        f"/operator/sessions/{review_session.id}/validate?severity=Errors"
+        f"/operator/sessions/{review_session.public_id}/validate?severity=Errors"
     )
     assert _chips_on(resp.text) == ["error", "warning", "info"]
     assert "No issues shown." not in resp.text
@@ -337,7 +337,7 @@ def test_a_quoted_multi_key_cookie_reads_back(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="chips-quoted")
-    url = f"/operator/sessions/{review_session.id}/validate"
+    url = f"/operator/sessions/{review_session.public_id}/validate"
     client.get(f"{url}?severity=&severity=error&severity=info")
     assert _chips_on(client.get(url).text) == ["error", "info"]
 
@@ -350,7 +350,7 @@ def test_a_session_with_no_issues_ignores_a_remembered_off(
     from app.services import validation
 
     review_session = _make_session(client, db, code="chips-clean")
-    url = f"/operator/sessions/{review_session.id}/validate"
+    url = f"/operator/sessions/{review_session.public_id}/validate"
     first = client.get(f"{url}?severity=")
     assert first.cookies.get("rrw-validate-severity") == "none"
     monkeypatch.setattr(validation, "validate_session_setup", lambda db, s: [])
@@ -367,7 +367,7 @@ def test_validate_page_filter_errors_only(
     leaves only the Errors chip on."""
     review_session = _make_session(client, db, code="errors-only")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate?severity=error"
+        f"/operator/sessions/{review_session.public_id}/validate?severity=error"
     ).text
     # Warnings like assignments.no_included_pairs should not appear
     # under errors-only filtering of the bare session.
@@ -382,7 +382,7 @@ def test_validate_page_filter_no_match_shows_empty_message(
     filter-empty placeholder."""
     review_session = _seed_pair(client, db, code="filter-empty")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate?severity=error"
+        f"/operator/sessions/{review_session.public_id}/validate?severity=error"
     ).text
     # Seeded session has no errors → filter-empty message renders.
     assert "No issues match the severity chips that are on." in body
@@ -395,7 +395,7 @@ def test_validate_page_per_source_group_count_summary(
     ``Reviewers (1 error)`` — that respects the filter."""
     review_session = _make_session(client, db, code="grp-count")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     # Bare session has reviewers.empty error → "1 error" summary
     # under the Reviewers <h3>.
@@ -409,7 +409,7 @@ def test_validate_page_renders_why_disclosure_per_issue(
     ``<details>`` with the rule's ``why`` paragraph."""
     review_session = _make_session(client, db, code="why-disclosure")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     assert "Why this check?" in body
     # "<details" (no closing >) — actual element renders with the
@@ -434,7 +434,7 @@ def _seed_validated_with_warnings(
     no assignments generated."""
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -445,7 +445,7 @@ def _seed_validated_with_warnings(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -469,7 +469,7 @@ def _seed_validated_with_warnings(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     # Validated when can_activate (no errors). Warnings don't block.
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     db.refresh(review_session)
     assert review_session.status == "validated"
     return review_session
@@ -488,7 +488,7 @@ def test_validate_activate_param_renders_warning_banner(
         client, db, code="banner-warn"
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate?activate=1"
+        f"/operator/sessions/{review_session.public_id}/validate?activate=1"
     ).text
     assert "Acknowledge warnings to activate" in body
     assert 'id="activate-confirm-banner"' in body
@@ -496,7 +496,7 @@ def test_validate_activate_param_renders_warning_banner(
     # The acknowledge POST submit + Cancel link both render.
     assert "Acknowledge and activate" in body
     assert (
-        f'href="/operator/sessions/{review_session.id}/validate"'
+        f'href="/operator/sessions/{review_session.public_id}/validate"'
         in body
     )
 
@@ -508,7 +508,7 @@ def test_validate_activate_param_acknowledge_post_activates_session(
         client, db, code="ack-post"
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -525,7 +525,7 @@ def test_the_chip_form_keeps_the_activate_banner(
     review_session = _seed_validated_with_warnings(
         client, db, code="banner-chips"
     )
-    url = f"/operator/sessions/{review_session.id}/validate"
+    url = f"/operator/sessions/{review_session.public_id}/validate"
     strip = _chip_strip(client.get(f"{url}?activate=1&return_to=assignments").text)
     assert '<input type="hidden" name="activate" value="1">' in strip
     assert '<input type="hidden" name="return_to" value="assignments">' in strip
@@ -544,13 +544,13 @@ def test_a_chip_change_survives_the_activate_redirect(
     keeps the chips the click asked for."""
     review_session = _make_session(client, db, code="chips-redirect")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
         "?severity=&severity=warning&activate=1",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
         "?severity=&severity=warning"
     )
 
@@ -561,12 +561,12 @@ def test_validate_activate_param_on_draft_redirects_to_clean_url(
     review_session = _make_session(client, db, code="draft-redir")
     # Session stays draft.
     response = client.get(
-        f"/operator/sessions/{review_session.id}/validate?activate=1",
+        f"/operator/sessions/{review_session.public_id}/validate?activate=1",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     )
 
 
@@ -577,25 +577,25 @@ def test_validate_activate_param_no_warnings_redirects(
     to acknowledge → 303 to clean /validate URL."""
     review_session = _seed_pair(client, db, code="no-warn-redir")
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     db.refresh(review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/validate?activate=1",
+        f"/operator/sessions/{review_session.public_id}/validate?activate=1",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     )
     # The same branch keeps a chip change made from the banner.
     response = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
         "?severity=&severity=info&activate=1",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
         "?severity=&severity=info"
     )

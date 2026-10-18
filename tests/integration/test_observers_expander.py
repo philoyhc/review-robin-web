@@ -95,7 +95,7 @@ def _code(js: str) -> str:
 
 def _page(client: TestClient, s: ReviewSession, suffix: str = "") -> str:
     return client.get(
-        f"/operator/sessions/{s.id}/observers{suffix}"
+        f"/operator/sessions/{s.public_id}/observers{suffix}"
     ).text
 
 
@@ -338,7 +338,7 @@ def test_a_rejected_save_puts_its_reason_in_the_row_bar(
     anyway: the message is about the values in the row above."""
     s = _session(client, db, "exp-err")
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/create",
+        f"/operator/sessions/{s.public_id}/observers/create",
         data={
             "email": "o0@example.org", "display_name": "Dup",
             "tag_1": "", "status": "active",

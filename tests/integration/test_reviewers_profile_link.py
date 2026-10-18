@@ -126,7 +126,7 @@ def test_create_form_round_trips_profile_link(
     review_session = _make_session(client, db, code="rev-pl-form-c")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/create",
+        f"/operator/sessions/{review_session.public_id}/reviewers/create",
         data={
             "name": "Dee",
             "email": "dee@example.edu",
@@ -158,7 +158,7 @@ def test_update_form_round_trips_profile_link(
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/{reviewer.id}/update",
+        f"/operator/sessions/{review_session.public_id}/reviewers/{reviewer.id}/update",
         data={
             "name": "Eli",
             "email": "eli@example.edu",
@@ -196,7 +196,7 @@ def test_reviewers_table_hides_profile_link_column_when_no_data(
     )
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     # Non-edit mode + no profile_link data anywhere ⇒ column is hidden.
     #
@@ -225,7 +225,7 @@ def test_reviewers_table_surfaces_profile_link_column_with_data(
     )
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     # One row has data ⇒ column appears with the rendered link.
     assert "profile-col" in body

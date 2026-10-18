@@ -16,7 +16,7 @@
   {# 19P.1 rung 3a — the Unlock panel's condition. #}
   {% set unlock_available = is_editable and not edit_mode %}
   {% set reviewers_base_url =
-        "/operator/sessions/" ~ session.id ~ "/reviewers" %}
+        "/operator/sessions/" ~ session.public_id ~ "/reviewers" %}
   {# The tag-labels editor's parameters, for its one home, the Unlock
      panel. #}
   {% set field_labels_form_action = reviewers_base_url ~ "/field-labels" %}
@@ -846,7 +846,7 @@
       <div class="table-scroll">
       <table id="reviewers-table"
              data-rrw-col-toggles="rrw-reviewer-tag-visibility"
-             {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewers-{{ session.id }}"{% endif %}>
+             {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewers-{{ session.public_id }}"{% endif %}>
         <thead>
         <tr>
           <th>

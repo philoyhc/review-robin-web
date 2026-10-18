@@ -106,7 +106,7 @@ def _band3_spans(client: TestClient, db: Session, *, code: str) -> list[Span]:
     editor (``data-new-model-vp-editor``)."""
     review_session = _make_session(client, db, code=code)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     start = body.index("data-new-model-vp-editor")
     # The grid is the editor's only table; the hidden mode inputs sit

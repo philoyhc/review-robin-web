@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Relationship, ReviewSession
 
+from ._public_id import public_id
+
 
 def _make_session(
     client: TestClient, db: Session, *, code: str
@@ -35,7 +37,7 @@ def _seed_rosters(
     client: TestClient, session_id: int
 ) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -50,7 +52,7 @@ def _seed_rosters(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -71,7 +73,7 @@ def test_get_relationships_page_renders(
 ) -> None:
     review_session = _make_session(client, db, code="rel-render")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     )
     assert response.status_code == 200
     body = response.text
@@ -91,10 +93,10 @@ def test_chrome_nav_includes_relationships_tab(
 
     review_session = _make_session(client, db, code="rel-nav")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert (
-        f'href="/operator/sessions/{review_session.id}/relationships">'
+        f'href="/operator/sessions/{review_session.public_id}/relationships">'
         "Relationships</a>"
     ) in body
     # Tab order: Relationships sits between Reviewees and Assignments.
@@ -109,13 +111,13 @@ def test_relationships_page_marks_active_tab(
 ) -> None:
     review_session = _make_session(client, db, code="rel-active")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     # The chrome partial breaks the anchor across two lines (class on
     # one, href on the next). Search by the `nav-tab active` class
     # then confirm the href matches the Relationships URL within the
     # same anchor.
-    target = f'href="/operator/sessions/{review_session.id}/relationships"'
+    target = f'href="/operator/sessions/{review_session.public_id}/relationships"'
     # The active class precedes the href in the rendered markup.
     cut = body.find(target)
     assert cut > 0, "Relationships href not found in chrome"
@@ -129,7 +131,7 @@ def test_status_pill_shows_count(
     review_session = _make_session(client, db, code="rel-pill")
     _seed_rosters(client, review_session.id)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     )
     assert response.status_code == 200
     body = response.text
@@ -139,7 +141,7 @@ def test_status_pill_shows_count(
 
     # After upload, the pill shows the count.
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -153,7 +155,7 @@ def test_status_pill_shows_count(
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     after_pill = body.split("Relationships:", 1)[1][:200]
     assert 'class="pill pill-info">1</span>' in after_pill
@@ -165,7 +167,7 @@ def test_post_import_inserts_rows_and_redirects(
     review_session = _make_session(client, db, code="rel-upload")
     _seed_rosters(client, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -185,7 +187,7 @@ def test_post_import_inserts_rows_and_redirects(
     # test seeing a redirect that lost the suffix — so it asserts the
     # whole URL.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
         "?unlocked=1#roster-card"
     )
 
@@ -205,7 +207,7 @@ def test_post_import_invalid_csv_returns_400(
     review_session = _make_session(client, db, code="rel-bad")
     _seed_rosters(client, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -236,7 +238,7 @@ def test_post_import_replace_requires_confirm(
     _seed_rosters(client, review_session.id)
     # First upload populates the table.
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -248,7 +250,7 @@ def test_post_import_replace_requires_confirm(
     )
     # Second upload without confirm_replace 400s.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -269,7 +271,7 @@ def test_post_import_replace_requires_confirm(
 
     # With confirm_replace, the upload succeeds.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         data={"confirm_replace": "true"},
         files={
             "file": (
@@ -289,7 +291,7 @@ def test_delete_all_wipes_table(
     review_session = _make_session(client, db, code="rel-delete")
     _seed_rosters(client, review_session.id)
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -300,7 +302,7 @@ def test_delete_all_wipes_table(
         follow_redirects=False,
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/delete-all",
+        f"/operator/sessions/{review_session.public_id}/relationships/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -318,7 +320,7 @@ def test_delete_all_requires_confirm(
 ) -> None:
     review_session = _make_session(client, db, code="rel-delete-noconfirm")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/delete-all",
+        f"/operator/sessions/{review_session.public_id}/relationships/delete-all",
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -330,7 +332,7 @@ def test_preview_table_renders_resolved_emails(
     review_session = _make_session(client, db, code="rel-preview")
     _seed_rosters(client, review_session.id)
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -344,7 +346,7 @@ def test_preview_table_renders_resolved_emails(
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     assert "alice@example.edu" in body
     assert "carol@example.edu" in body

@@ -41,7 +41,7 @@ def test_audit_log_page_403_for_non_admin(
     require_sys_admin."""
     review_session = _make_session(client, db, code="audit-page-403")
     response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log",
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log",
         follow_redirects=False,
     )
     assert response.status_code == 403
@@ -58,7 +58,7 @@ def test_audit_log_page_renders_for_sys_admin(
     review_session = _make_session(client, db, code="audit-page-200")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     assert response.status_code == 200
     # Chrome conventions: back-link + Admin nav + audit-log section
@@ -68,7 +68,7 @@ def test_audit_log_page_renders_for_sys_admin(
     assert "Sessions Diagnostics" in response.text  # tab strip
     assert f"Audit log — {review_session.name}" in response.text
     assert (
-        f'href="/operator/sessions/{review_session.id}/export/audit_log.csv"'
+        f'href="/operator/sessions/{review_session.public_id}/export/audit_log.csv"'
         in response.text
     )
     assert "Download CSV" in response.text
@@ -113,7 +113,7 @@ def test_audit_log_page_renders_seeded_events(
     review_session = _make_session(client, db, code="audit-seeded")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     body = response.text
     # All 8 column headers present.
@@ -162,7 +162,7 @@ def test_audit_log_page_renders_next_link_when_page_fills(
 
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     assert response.status_code == 200
     body = response.text
@@ -195,7 +195,7 @@ def test_audit_log_pagination_round_trip(
 
     bob_client = make_client(bob)
     page1 = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     assert page1.status_code == 200
     # Pull the cursor out of the rendered next-page anchor.
@@ -206,7 +206,7 @@ def test_audit_log_pagination_round_trip(
     cursor = int(match.group(1))
 
     page2 = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}"
+        f"/operator/sys-admin/sessions/{review_session.public_id}"
         f"/audit-log?cursor={cursor}"
     )
     assert page2.status_code == 200
@@ -231,7 +231,7 @@ def test_audit_log_page_no_events_renders_empty_copy(
     review_session = _make_session(client, db, code="audit-empty-cursor")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}"
+        f"/operator/sys-admin/sessions/{review_session.public_id}"
         f"/audit-log?cursor=1"
     )
     assert response.status_code == 200
@@ -254,12 +254,12 @@ def test_diagnostics_row_audit_log_link_points_at_child_page(
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200
     assert (
-        f'href="/operator/sys-admin/sessions/{review_session.id}/audit-log">Audit log</a>'
+        f'href="/operator/sys-admin/sessions/{review_session.public_id}/audit-log">Audit log</a>'
         in response.text
     )
     # The old direct-CSV link no longer renders.
     assert (
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
         not in response.text
     )
 
@@ -304,7 +304,7 @@ def test_audit_log_filter_strip_renders(
     review_session = _make_session(client, db, code="filter-render")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     assert response.status_code == 200
     body = response.text
@@ -332,7 +332,7 @@ def test_audit_log_filter_by_event_type_narrows_table(
     _seed_mixed_events(db, review_session)
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?event_type=session.activated"
     )
     assert response.status_code == 200
@@ -361,7 +361,7 @@ def test_audit_log_filter_by_severity_narrows_table(
     _seed_mixed_events(db, review_session)
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?severity=warning"
     )
     assert response.status_code == 200
@@ -387,7 +387,7 @@ def test_audit_log_filter_by_actor_narrows_table(
     bob_client = make_client(bob)
     # Alice is the session creator → on session.created rows.
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?actor=alice@example.edu"
     )
     assert response.status_code == 200
@@ -395,7 +395,7 @@ def test_audit_log_filter_by_actor_narrows_table(
 
     # Unknown actor → empty.
     empty = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?actor=ghost@example.edu"
     )
     assert empty.status_code == 200
@@ -416,7 +416,7 @@ def test_audit_log_combined_filters_and_together(
     _seed_mixed_events(db, review_session)
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?event_type=session.activated&severity=warning"
     )
     assert response.status_code == 200
@@ -437,14 +437,14 @@ def test_audit_log_download_button_carries_filter_query_string(
     review_session = _make_session(client, db, code="filter-csv-link")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?event_type=session.activated&severity=info"
     )
     assert response.status_code == 200
     body = response.text
     # The Download CSV anchor should embed both filter slots.
     assert (
-        f'href="/operator/sessions/{review_session.id}/export/audit_log.csv'
+        f'href="/operator/sessions/{review_session.public_id}/export/audit_log.csv'
         "?event_type=session.activated&amp;severity=info" in body
     )
 
@@ -466,7 +466,7 @@ def test_audit_log_csv_route_honours_filters(
     _seed_mixed_events(db, review_session)
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
         "?event_type=session.activated"
     )
     assert response.status_code == 200
@@ -494,7 +494,7 @@ def test_audit_log_csv_emits_context_slot_on_filtered_extract(
     bob_client = make_client(bob)
     # Filtered hit.
     bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
         "?event_type=session.activated&severity=info"
     )
 
@@ -532,7 +532,7 @@ def test_audit_log_csv_no_context_on_unfiltered_extract(
     review_session = _make_session(client, db, code="filter-csv-noctx")
     bob_client = make_client(bob)
     bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     )
     db.expire_all()
     event = (
@@ -560,7 +560,7 @@ def test_audit_log_filter_url_param_round_trip(
     review_session = _make_session(client, db, code="filter-rt")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?event_type=session.activated"
         "&severity=info&severity=warning"
         "&actor=alice@example.edu"
@@ -590,7 +590,7 @@ def test_audit_log_filter_invalid_date_422s(
     review_session = _make_session(client, db, code="filter-bad-date")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?from=2026-13-99"
     )
     assert response.status_code == 422
@@ -610,7 +610,7 @@ def test_audit_log_filter_unknown_event_type_silently_dropped(
     review_session = _make_session(client, db, code="filter-unknown-et")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?event_type=does.not.exist"
     )
     assert response.status_code == 200
@@ -641,7 +641,7 @@ def test_audit_log_pagination_carries_filter_state(
         )
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
         "?event_type=session.activated"
     )
     assert response.status_code == 200
@@ -815,7 +815,7 @@ def test_audit_log_page_renders_expander_with_structured_detail(
     review_session = _make_session(client, db, code="audit-detail-render")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     assert response.status_code == 200
     body = response.text

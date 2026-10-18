@@ -45,7 +45,7 @@ def _operator_creates_session_with_pair(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -56,7 +56,7 @@ def _operator_creates_session_with_pair(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -69,9 +69,9 @@ def _operator_creates_session_with_pair(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     validate_session(review_session)
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -109,7 +109,7 @@ def test_non_integer_position_returns_422(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    response = rae_client.get(f"/me/sessions/{review_session.id}/abc")
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}/abc")
     assert response.status_code == 422
 
 
@@ -133,11 +133,11 @@ def test_dashboard_rows_link_to_position_1(
     rae_client = make_client(rae)
     body = rae_client.get("/me").text
     assert (
-        f'<a href="/me/sessions/{review_session.id}/1">' in body
+        f'<a href="/me/sessions/{review_session.public_id}/1">' in body
     )
     # The bare URL no longer appears in the dashboard.
     assert (
-        f'href="/me/sessions/{review_session.id}">' not in body
+        f'href="/me/sessions/{review_session.public_id}">' not in body
     )
 
 
@@ -164,14 +164,14 @@ def test_save_post_url_carries_position(
     ).scalar_one()
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={f"response[{assignment.id}][rating]": "4"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/me/sessions/{review_session.id}/1"
+        == f"/me/sessions/{review_session.public_id}/1"
     )
 
 
@@ -211,7 +211,7 @@ def test_submit_redirect_lands_on_summary_when_session_complete(
     # ``current_position`` hint — the redirect target is the bare
     # session URL (which 303s on to /1) or /summary when complete.
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{assignment.id}][rating]": "4",
         },
@@ -220,7 +220,7 @@ def test_submit_redirect_lands_on_summary_when_session_complete(
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/me/sessions/{review_session.id}/summary"
+        == f"/me/sessions/{review_session.public_id}/summary"
     )
 
 
@@ -246,12 +246,12 @@ def test_clear_redirect_goes_to_bare_url(
     )
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/clear",
+        f"/me/sessions/{review_session.public_id}/clear",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert (
         response.headers["location"]
-        == f"/me/sessions/{review_session.id}"
+        == f"/me/sessions/{review_session.public_id}"
     )

@@ -42,7 +42,7 @@ def _branched(
 
 def _save(client: TestClient, review_session, instrument, rfs: list[dict]):
     return client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/instruments/{instrument.id}/save",
         data={"band2_state_snapshot": json.dumps(
             {"selected_display_keys": [], "response_fields": rfs}
@@ -357,7 +357,7 @@ def test_the_per_field_routes_refuse_a_branched_instrument(
     """Edit, delete, move and insert act on one field and can't keep a
     branch's rules, so they refuse; the card's Save checks it whole."""
     review_session, instrument, rating, comments = _branched(client, db, "19t10-legacy")
-    base = f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields"
+    base = f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields"
     for url, data in [
         (f"{base}/{comments.id}/edit", {"label": "Comments", "required": "true"}),
         (f"{base}/{rating.id}/delete", {"confirm": "true"}),
@@ -380,7 +380,7 @@ def test_an_instrument_with_a_branch_can_be_deleted(
     review_session, instrument, *_ = _branched(client, db, "19t10-delete-inst")
     instrument_id = instrument.id
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument_id}/delete",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument_id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )

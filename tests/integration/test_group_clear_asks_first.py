@@ -117,7 +117,7 @@ def test_a_merge_is_refused_with_the_count(db: Session, client: TestClient) -> N
     session, instrument = _seed(db, client, "gc-merge")
 
     resp = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save", data=_form()
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save", data=_form()
     )
 
     assert resp.status_code == 422
@@ -135,7 +135,7 @@ def test_an_acknowledged_merge_clears(db: Session, client: TestClient) -> None:
     session, instrument = _seed(db, client, "gc-merge-ack")
 
     resp = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_form(acknowledged=4),
     )
 
@@ -153,7 +153,7 @@ def test_a_tick_for_another_count_is_refused_again(
     session, instrument = _seed(db, client, "gc-stale")
 
     resp = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_form(acknowledged=2),
     )
 
@@ -166,7 +166,7 @@ def test_the_no_js_fallback_refuses_then_goes_through(
     db: Session, client: TestClient
 ) -> None:
     session, instrument = _seed(db, client, "gc-fallback")
-    url = f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save"
+    url = f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save"
 
     refused = client.post(url, data=_form(), follow_redirects=False)
     assert refused.status_code == 422
@@ -181,7 +181,7 @@ def test_the_no_js_fallback_refuses_then_goes_through(
 
 def test_a_save_that_clears_nothing_never_asks(db: Session, client: TestClient) -> None:
     session, instrument = _seed(db, client, "gc-noop")
-    url = f"/operator/sessions/{session.id}/instruments/{instrument.id}/save"
+    url = f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save"
 
     unchanged = client.post(url, data=_form("reviewee.tag1"))
     assert unchanged.status_code == 200
@@ -200,7 +200,7 @@ def test_the_card_renders_the_tick_on_its_dfsave_form(
     session, instrument = _seed(db, client, "gc-tick")
 
     page = client.get(
-        f"/operator/sessions/{session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{session.public_id}/instruments?editing={instrument.id}"
     ).text
 
     assert "confirm_group_clear" in page
@@ -234,7 +234,7 @@ def test_a_reviewee_tag_edit_into_an_answered_group_is_refused(
     # own row (3 responses); red, which only lost her, keeps Bo's.
     session, _ = _seed(db, client, "gc-reviewee")
     ann = _reviewee(db, session.id, "Ann")
-    url = f"/operator/sessions/{session.id}/reviewees/{ann.id}/update"
+    url = f"/operator/sessions/{session.public_id}/reviewees/{ann.id}/update"
 
     refused = client.post(url, data=_edit("Ann", "blue"), follow_redirects=False)
 
@@ -256,7 +256,7 @@ def test_a_refused_reviewee_edit_keeps_the_view(db: Session, client: TestClient)
     ann = _reviewee(db, session.id, "Ann")
 
     refused = client.post(
-        f"/operator/sessions/{session.id}/reviewees/{ann.id}/update",
+        f"/operator/sessions/{session.public_id}/reviewees/{ann.id}/update",
         data=_edit("Ann", "blue") | {"filter_q": "Ann", "filter_status": "active"},
         follow_redirects=False,
     )
@@ -273,7 +273,7 @@ def test_a_reviewee_tag_edit_with_a_stale_tick_is_refused_again(
     ann = _reviewee(db, session.id, "Ann")
 
     refused = client.post(
-        f"/operator/sessions/{session.id}/reviewees/{ann.id}/update",
+        f"/operator/sessions/{session.public_id}/reviewees/{ann.id}/update",
         data=_edit("Ann", "blue", acknowledged=2),
         follow_redirects=False,
     )
@@ -290,7 +290,7 @@ def test_an_acknowledged_reviewee_tag_edit_clears_the_group_joined(
     ann = _reviewee(db, session.id, "Ann")
 
     accepted = client.post(
-        f"/operator/sessions/{session.id}/reviewees/{ann.id}/update",
+        f"/operator/sessions/{session.public_id}/reviewees/{ann.id}/update",
         data=_edit("Ann", "blue", acknowledged=3),
         follow_redirects=False,
     )
@@ -305,7 +305,7 @@ def test_a_reviewee_edit_that_clears_nothing_never_asks(
 ) -> None:
     session, _ = _seed(db, client, "gc-reviewee-noop")
     ann = _reviewee(db, session.id, "Ann")
-    url = f"/operator/sessions/{session.id}/reviewees/{ann.id}/update"
+    url = f"/operator/sessions/{session.public_id}/reviewees/{ann.id}/update"
 
     # A rename moves nobody. A move into a team of her own leaves Ann in
     # a one-member group that came out of red, a subset of it, so it

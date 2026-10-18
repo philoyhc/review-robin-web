@@ -53,7 +53,7 @@ def _all_optional_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -64,7 +64,7 @@ def _all_optional_session(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -81,9 +81,9 @@ def _all_optional_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
-    operator.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -122,7 +122,7 @@ def test_blank_all_optional_rows_read_not_started_on_both(
     review_session, reviewer, _ = _all_optional_session(
         make_client(alice), db, code="r7-blank"
     )
-    body = make_client(rae).get(f"/me/sessions/{review_session.id}/1").text
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
 
     # Every row is "complete" by its required fields, since none are;
     # with no answer the page is not started, as on the dashboard.
@@ -143,11 +143,11 @@ def test_submit_with_a_blank_optional_row_reads_submitted_on_both(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={f"response[{by_name['Carol'].id}][comments]": "good"},
         follow_redirects=False,
     )
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
 
     # Dan's row is blank and nothing on it is required, so it does not
     # hold the page off submitted.
@@ -180,19 +180,19 @@ def test_new_answer_after_submit_is_unsubmitted_on_both(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={f"response[{by_name['Carol'].id}][comments]": "good"},
         follow_redirects=False,
     )
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={
             f"response[{by_name['Carol'].id}][comments]": "good",
             f"response[{by_name['Dan'].id}][comments]": "late thought",
         },
         follow_redirects=False,
     )
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
 
     _assert_unsubmitted_on_both(db, reviewer, review_session, body)
 
@@ -210,15 +210,15 @@ def test_changed_answer_after_submit_is_unsubmitted_on_both(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={f"response[{by_name['Carol'].id}][comments]": "good"},
         follow_redirects=False,
     )
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={f"response[{by_name['Carol'].id}][comments]": "better"},
         follow_redirects=False,
     )
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
 
     _assert_unsubmitted_on_both(db, reviewer, review_session, body)

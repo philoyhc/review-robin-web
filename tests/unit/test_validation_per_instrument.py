@@ -185,7 +185,7 @@ def test_single_instrument_flags_reviewer_with_no_assignments(
     # carry ``#reviewer-row-{id}``, an anchor only the Reviewers page
     # renders, so the deep link went nowhere (post_assessment_1oct E6).
     assert single[0].fix_anchor is None
-    assert single[0].fix_url == f"/operator/sessions/{review_session.id}/assignments"
+    assert single[0].fix_url == f"/operator/sessions/{review_session.public_id}/assignments"
     # Per-instrument sibling stays quiet on N==1 sessions.
     assert (
         _issues_with_key(

@@ -21,7 +21,7 @@ _LINE = "This change clears 3 saved responses on groups whose members it changes
 
 
 def test_a_refused_save_offers_the_tick_and_the_next_save_sends_it(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     card = _builder.open_unlocked(page, session_id)

@@ -24,7 +24,7 @@ def test_join_reads_the_up_arrow_and_detach_the_down_arrow(
     of its ``set(...)`` calls, and the template row's (the item's read)."""
     review_session, instrument, _, flat = _page(client, db, "12a-glyphs")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     sync = _rf_fn(body, "newModelRfSyncJoin")
     calls = [
@@ -76,7 +76,7 @@ def test_a_numbers_condition_boxes_follow_the_parents_min_box(
         "width: var(--rf-condition-box, 12em); box-sizing: border-box; }"
     ) in flat
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     size = _rf_fn(body, "newModelRfSizeCondition")
     assert "parent.querySelector('[data-new-model-rf-bound=\"min\"]')" in size
@@ -173,7 +173,7 @@ def test_the_operator_and_name_boxes_carry_their_full_text_as_tooltips(
     comes first."""
     review_session, instrument, _, _ = _page(client, db, "12a-tooltips")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     title = _rf_fn(body, "newModelRfTitleOperator")
     assert "if (!option || pending) { sel.removeAttribute('title'); return; }" in title
@@ -208,7 +208,7 @@ def test_a_lists_condition_puts_its_box_beside_a_shrunk_operator(
     ))
     assert response.status_code == 200, response.text
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     condition = _rows_table(_card_slice(flat, instrument.id)).split(
@@ -250,7 +250,7 @@ def test_a_quick_fill_preset_snaps_the_type_before_the_options_event(
     snaps to "list" first now (found by the item's read of #2665)."""
     review_session, instrument, _, _ = _page(client, db, "12a-quick-fill")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     bounds = _rf_fn(body, "newModelRfSyncBounds")
     snap = bounds.index("select.value = 'list';")
@@ -283,7 +283,7 @@ def test_a_locked_card_locks_band_3s_tables_not_their_scrollers(
     review_session, instrument, _, _ = _page(client, db, "12a-locked-scroll")
     for query, locked in (("", True), (f"?editing={instrument.id}", False)):
         body = client.get(
-            f"/operator/sessions/{review_session.id}/instruments{query}"
+            f"/operator/sessions/{review_session.public_id}/instruments{query}"
         ).text
         card = _card_slice(" ".join(body.split()), instrument.id)
         band3 = card[card.index("<div data-new-model-band3 ") :]
@@ -325,7 +325,7 @@ def test_a_locked_card_scrolls_band_2s_visibility_table(
     ) in flat
     for query, locked in (("", True), (f"?editing={instrument.id}", False)):
         body = client.get(
-            f"/operator/sessions/{review_session.id}/instruments{query}"
+            f"/operator/sessions/{review_session.public_id}/instruments{query}"
         ).text
         card = _card_slice(" ".join(body.split()), instrument.id)
         band2 = card[card.index("<div data-new-model-band2-editable") :]
@@ -370,7 +370,7 @@ def test_band_1_scrolls_rather_than_spilling(
     )
     for query, locked in (("", True), (f"?editing={instrument.id}", False)):
         body = client.get(
-            f"/operator/sessions/{review_session.id}/instruments{query}"
+            f"/operator/sessions/{review_session.public_id}/instruments{query}"
         ).text
         card = _card_slice(" ".join(body.split()), instrument.id)
         tag = _open_tag(card, 'class="band1-grid"')

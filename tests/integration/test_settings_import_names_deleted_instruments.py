@@ -74,7 +74,7 @@ def test_a_file_that_drops_an_instrument_names_it_then_applies_on_the_tick(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="s4-drop")
-    url = f"/operator/sessions/{review_session.id}/import-config"
+    url = f"/operator/sessions/{review_session.public_id}/import-config"
     payload = _settings_csv([("instruments[1].name", "Default", "string")])
 
     response = client.post(
@@ -113,7 +113,7 @@ def test_a_file_with_no_instrument_rows_names_every_instrument(
 ) -> None:
     review_session = _make_session(client, db, code="s4-none")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={
             "settings_file": (
@@ -138,7 +138,7 @@ def test_a_tick_for_another_count_is_refused_again(
     on for one file cannot approve another that deletes more."""
     review_session = _make_session(client, db, code="s4-stale")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={
             "file": (
@@ -167,7 +167,7 @@ def test_a_file_that_deletes_no_instrument_never_asks(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={"file": ("c.csv", payload, "text/csv")},
         follow_redirects=False,
@@ -200,7 +200,7 @@ def test_a_file_with_errors_reports_them_before_asking(
 ) -> None:
     review_session = _make_session(client, db, code="s4-errors")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={
             "file": (

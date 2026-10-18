@@ -50,7 +50,7 @@ def _ready_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -62,7 +62,7 @@ def _ready_session(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -75,11 +75,11 @@ def _ready_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -115,7 +115,7 @@ def test_a_save_past_the_deadline_shows_the_surface_and_what_was_typed(
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{aid}][comments]": TYPED},
     )
 
@@ -137,7 +137,7 @@ def test_a_submit_after_the_operator_closed_says_so(
 ) -> None:
     review_session = _ready_session(client, db, code="refused-closed")
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -146,7 +146,7 @@ def test_a_submit_after_the_operator_closed_says_so(
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/submit?page=1",
+        f"/me/sessions/{review_session.public_id}/submit?page=1",
         {f"response[{aid}][comments]": TYPED},
     )
 
@@ -165,7 +165,7 @@ def test_a_save_on_a_session_reverted_to_draft_is_not_currently_open(
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{aid}][comments]": TYPED},
     )
 
@@ -188,7 +188,7 @@ def test_a_reviewer_with_nothing_assigned_is_not_told_no_longer(
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{assignment.id}][comments]": TYPED},
     )
 
@@ -207,13 +207,13 @@ def test_a_refused_clear_lists_nothing(
 ) -> None:
     review_session = _ready_session(client, db, code="refused-clear")
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/clear",
+        f"/me/sessions/{review_session.public_id}/clear",
         {"confirm": "true"},
     )
 
@@ -244,7 +244,7 @@ def test_a_row_no_get_would_show_is_listed_without_labels(
 
     resp, _ = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {
             f"response[{raes}][comments]": "for rae",
             f"response[{sams}][comments]": "for sam",
@@ -279,7 +279,7 @@ def test_an_excluded_row_comes_back_without_labels(
 
     resp, _ = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{assignment.id}][comments]": "kept text"},
     )
 
@@ -300,7 +300,7 @@ def test_a_session_that_never_opened_names_nobody(
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{aid}][comments]": "early"},
     )
 
@@ -323,7 +323,7 @@ def test_an_archived_session_refuses_the_write_like_a_stranger(
 
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {"response[1][comments]": "late"},
     )
 
@@ -341,7 +341,7 @@ def test_a_value_matching_the_stored_answer_is_still_listed(
     aid = _assignment_of(db, review_session, "rae@example.edu").id
     rae_client = make_client(RAE)
     saved = rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={f"response[{aid}][comments]": "same answer"},
         follow_redirects=False,
     )
@@ -350,7 +350,7 @@ def test_a_value_matching_the_stored_answer_is_still_listed(
     db.commit()
 
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={f"response[{aid}][comments]": "same answer"},
         follow_redirects=False,
     )
@@ -377,7 +377,7 @@ def test_a_hidden_field_comes_back_without_labels(
 
     resp, _ = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{assignment.id}][comments]": "hidden text"},
     )
 
@@ -399,7 +399,7 @@ def test_typed_text_comes_back_as_typed(
 
     resp, _ = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {
             f"response[{aid}][comments]": "  indented\n    more  ",
             f"response[{aid}][rating]": "   ",
@@ -420,7 +420,7 @@ def test_a_refused_post_to_an_out_of_range_page_still_renders(
     db.commit()
 
     resp, _ = _rae_posts(
-        make_client, f"/me/sessions/{review_session.id}/99/save", {}
+        make_client, f"/me/sessions/{review_session.public_id}/99/save", {}
     )
     assert resp.status_code == 403
     assert "data-rs-write-refused" in resp.text
@@ -433,12 +433,12 @@ def test_an_accepted_save_shows_no_notice(
     aid = _assignment_of(db, review_session, "rae@example.edu").id
     rae_client = make_client(RAE)
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={f"response[{aid}][comments]": "kept"},
         follow_redirects=False,
     )
     assert resp.status_code == 303
-    page = rae_client.get(f"/me/sessions/{review_session.id}/1")
+    page = rae_client.get(f"/me/sessions/{review_session.public_id}/1")
     assert "data-rs-write-refused" not in page.text
 
 
@@ -468,7 +468,7 @@ def test_a_save_the_deadline_overtakes_mid_request_keeps_what_was_typed(
     monkeypatch.setattr(session_lifecycle, "require_accepting_responses", overtaken)
     resp, text = _rae_posts(
         make_client,
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         {f"response[{aid}][comments]": TYPED},
     )
 

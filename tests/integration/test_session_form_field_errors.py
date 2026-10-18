@@ -33,7 +33,7 @@ def test_details_save_refuses_an_over_long_name_with_a_422(
 ) -> None:
     review_session = _make_session(client, db, "c4-home")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data={
             "name": "N" * 256,
             "code": review_session.code,

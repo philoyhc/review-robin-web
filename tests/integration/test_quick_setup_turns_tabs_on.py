@@ -46,7 +46,7 @@ def _session(
 
 def _submit_all(client: TestClient, rs: ReviewSession, **files: bytes):
     return client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/submit-all",
+        f"/operator/sessions/{rs.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={
             f"{kind}_file": (f"{kind}.csv", payload, "text/csv")
@@ -96,7 +96,7 @@ def test_an_observers_upload_turns_observers_on(
     rs = _session(client, db, "tabs-obs", observers_enabled=False)
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/observers",
+        f"/operator/sessions/{rs.public_id}/quick-setup/observers",
         files={"file": ("o.csv", OBSERVERS, "text/csv")},
         follow_redirects=False,
     )

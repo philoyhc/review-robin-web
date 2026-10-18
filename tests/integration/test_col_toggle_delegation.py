@@ -133,7 +133,7 @@ def test_the_rendered_markup_still_carries_what_the_block_reads(
         for i in range(5)
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -144,7 +144,7 @@ def test_the_rendered_markup_still_carries_what_the_block_reads(
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
     # The chip row, the pairing attribute, and the key on the table.

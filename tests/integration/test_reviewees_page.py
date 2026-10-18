@@ -58,7 +58,7 @@ def test_plain_render_has_checkbox_column_and_buttons(
     _seed(db, review_session.id, ["Alice", "Bob"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     assert 'class="reviewee-select"' in body
     assert 'id="reviewees-select-all"' in body
@@ -78,7 +78,7 @@ def test_status_filter_narrows_to_inactive(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees?status=inactive"
+        f"/operator/sessions/{review_session.public_id}/reviewees?status=inactive"
     ).text
     table = body[body.find('id="reviewees-table"') :]
     assert "Bob" in table
@@ -92,7 +92,7 @@ def test_search_filter_substring_match(
     _seed(db, review_session.id, ["Alpha", "Beta"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees?q=alph"
+        f"/operator/sessions/{review_session.public_id}/reviewees?q=alph"
     ).text
     table = body[body.find('id="reviewees-table"') :]
     assert "Alpha" in table
@@ -112,7 +112,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     table = body[body.find('id="reviewees-table"') :]
     assert "E0199" in table
@@ -136,7 +136,7 @@ def test_edit_id_renders_target_row_as_inputs(
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
         f"?edit_id={rows[0].id}"
     ).text
     assert "reviewee-edit-row" in body
@@ -159,7 +159,7 @@ def test_edit_post_updates_row_and_redirects(
     rows = _seed(db, review_session.id, ["Alice"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/{rows[0].id}/update",
+        f"/operator/sessions/{review_session.public_id}/reviewees/{rows[0].id}/update",
         data={
             "name": "Alice Renamed",
             "email_or_identifier": "alice@example.edu",
@@ -188,7 +188,7 @@ def test_edit_post_validation_error_rerenders(
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/{rows[1].id}/update",
+        f"/operator/sessions/{review_session.public_id}/reviewees/{rows[1].id}/update",
         data={
             "name": "Bob",
             "email_or_identifier": "alice@example.edu",
@@ -210,7 +210,7 @@ def test_add_renders_blank_edit_row(
 ) -> None:
     review_session = _make_session(client, db, code="rve-addget")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees?add=1"
+        f"/operator/sessions/{review_session.public_id}/reviewees?add=1"
     ).text
     assert "reviewee-edit-row" in body
     assert ">Add new reviewee</h2>" not in body
@@ -220,7 +220,7 @@ def test_add_renders_blank_edit_row(
 def test_add_post_creates_row(db: Session, client: TestClient) -> None:
     review_session = _make_session(client, db, code="rve-addpost")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/create",
+        f"/operator/sessions/{review_session.public_id}/reviewees/create",
         data={
             "name": "Newbie",
             "email_or_identifier": "newbie-2026",
@@ -245,7 +245,7 @@ def test_add_post_validation_error_rerenders(
 ) -> None:
     review_session = _make_session(client, db, code="rve-adderr")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/create",
+        f"/operator/sessions/{review_session.public_id}/reviewees/create",
         data={
             "name": "Bad",
             "email_or_identifier": "bad@",  # @ present → must be email
@@ -285,7 +285,7 @@ def test_bulk_inactivate_flips_selected(
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewees/bulk-inactivate",
         data={"reviewee_ids": [rows[0].id, rows[2].id]},
         follow_redirects=False,
     )
@@ -315,7 +315,7 @@ def test_bulk_action_keeps_filter(
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewees/bulk-inactivate",
         data={
             "reviewee_ids": [rows[0].id],
             "filter_status": "active",
@@ -337,7 +337,7 @@ def test_bulk_reactivate_flips_selected(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/bulk-reactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewees/bulk-reactivate",
         data={"reviewee_ids": [rows[0].id]},
         follow_redirects=False,
     )
@@ -365,7 +365,7 @@ def test_edit_mode_suppressed_on_ready_session(
     rows = _seed(db, review_session.id, ["Alice"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
         f"?edit_id={rows[0].id}"
     ).text
     assert "reviewee-edit-row" not in body
@@ -379,7 +379,7 @@ def test_create_on_ready_session_is_409(
         client, db, code="rve-ready-create", status="ready"
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/create",
+        f"/operator/sessions/{review_session.public_id}/reviewees/create",
         data={
             "name": "X",
             "email_or_identifier": "x@example.edu",

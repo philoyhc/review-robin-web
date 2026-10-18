@@ -25,7 +25,7 @@ def test_prepare_says_so_and_takes_one_click(
     page: Page,
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
 ) -> None:
     session_id = new_session()
     seed_rosters(api, session_id)

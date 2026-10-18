@@ -36,7 +36,7 @@ def _operator_creates_session_with_pair(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -47,7 +47,7 @@ def _operator_creates_session_with_pair(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -63,7 +63,7 @@ def _operator_creates_session_with_pair(
     # rung 2 it is what creates the invitations, and rung 3 retired the
     # `POST /invitations/generate` this file used to call below.
     response = operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -71,7 +71,7 @@ def _operator_creates_session_with_pair(
         f"Prepare did not succeed: {response.headers['location']}"
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -131,7 +131,7 @@ def test_reviewer_chrome_links_to_your_reviews_with_one_review(
     )
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
     assert (
         'class="chrome-link" href="/me" data-your-reviews>Your reviews</a>'
         in body
@@ -184,12 +184,12 @@ def test_status_icons_use_canonical_classes_not_inline_style(
     # Submit with no values to force the status column to render with
     # the incomplete glyph (show_acknowledge path).
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={f"response[{assignment.id}][rating]": ""},
         follow_redirects=False,
     )
     body = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={},
         follow_redirects=False,
     ).text
@@ -226,7 +226,7 @@ def test_invite_mismatch_renders_banner_warning(
         select(Invitation).where(Invitation.session_id == review_session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/invitations/{invitation.id}/send",
+        f"/operator/sessions/{review_session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
     # Mint a token by reading the outbox row the send route just wrote
@@ -325,7 +325,7 @@ def test_review_surface_renders_h1_and_deadline(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
     assert f"<h1>{review_session.name}</h1>" in body
     # H1 is wrapped in the page-header flex row.
     assert 'class="rs-page-header"' in body
@@ -352,7 +352,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     # Two .rs-action-row containers, mirrored top + bottom (PR γ
     # collapsed the previous review-level + page-level rows into a
@@ -366,7 +366,7 @@ def test_review_surface_action_rows_render_above_and_below_tables(
     # Submit lives at both rows too — formaction routes the click to
     # /submit instead of the form's default /save action.
     assert (
-        body.count(f'formaction="/me/sessions/{review_session.id}/submit?page=1"')
+        body.count(f'formaction="/me/sessions/{review_session.public_id}/submit?page=1"')
         >= 2
     )
 
@@ -392,7 +392,7 @@ def test_review_surface_session_description_renders_in_overview_card(
     db.commit()
 
     rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
     assert 'class="card rs-status-panel"' in body
     assert 'class="rs-session-description"' in body
     assert "Please rate each reviewee on the rubric." in body
@@ -416,7 +416,7 @@ def test_review_surface_clear_all_card_is_half_width_flush_right(
         reviewee_ident="carol@example.edu",
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.id}").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
     assert 'class="card danger-zone rs-danger-zone"' in body
     assert "<h2>Clear all responses</h2>" in body
 
@@ -442,7 +442,7 @@ def test_operator_preview_keeps_operator_chrome(
         select(ReviewSession).where(ReviewSession.code == "rae-prev-chrome")
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -453,7 +453,7 @@ def test_operator_preview_keeps_operator_chrome(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",

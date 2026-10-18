@@ -67,14 +67,14 @@ def _seed(client: TestClient, db: Session, *, code: str) -> ReviewSession:
         f"{name},r{i}@example.edu\n".encode() for i, name in enumerate(NAMES)
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": ("r.csv", b"ReviewerName,ReviewerEmail\n" + rows, "text/csv")
         },
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -276,7 +276,7 @@ def test_the_page_carries_the_sort_cookie_into_the_query(
         json.dumps([{"key": "reviewer", "dir": "desc"}]),
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     table = body[body.index('id="assignments-table"') :]
     # Descending code point: `charlie` first, `Ana Lim` last.

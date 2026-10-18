@@ -134,7 +134,7 @@ def test_replacing_a_roster_works_on_a_session_that_has_responses(
     s = _session(client, db, code=f"imp-{page}")
     _roster_with_responses(db, s, n=2)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
     form = _upload_form(body, page)
 
     data: dict[str, str] = {}
@@ -144,7 +144,7 @@ def test_replacing_a_roster_works_on_a_session_that_has_responses(
         data["acknowledge_response_loss"] = "true"
 
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/import",
+        f"/operator/sessions/{s.public_id}/{page}/import",
         files={"file": ("new.csv", CSV[page], "text/csv")},
         data=data,
         follow_redirects=False,
@@ -164,7 +164,7 @@ def test_the_upload_label_names_the_responses_it_will_discard(
     s = _session(client, db, code=f"imp-copy-{page}")
     _roster_with_responses(db, s, n=3)
 
-    form = _upload_form(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    form = _upload_form(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
 
     assert "3 reviewer responses" in form
 
@@ -182,7 +182,7 @@ def test_the_label_names_no_responses_when_there_are_none(
     )
     db.commit()
 
-    form = _upload_form(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    form = _upload_form(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
 
     assert "reviewer response" not in form
 
@@ -196,7 +196,7 @@ def test_replacing_the_observer_roster_keeps_every_response(
     _roster_with_responses(db, s, n=4)
 
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/import",
+        f"/operator/sessions/{s.public_id}/observers/import",
         files={"file": ("new.csv", CSV["observers"], "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -217,7 +217,7 @@ def test_a_blocked_upload_redisplays_the_label_with_its_clause(
     _roster_with_responses(db, s, n=2)
 
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/import",
+        f"/operator/sessions/{s.public_id}/{page}/import",
         files={"file": ("bad.csv", b"NotAColumn\nx\n", "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -243,7 +243,7 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
     _roster_with_responses(db, s, n=2)
 
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/import",
+        f"/operator/sessions/{s.public_id}/{page}/import",
         files={"file": ("new.csv", CSV[page], "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -257,7 +257,7 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
     ) in response.text
     assert "acknowledge response loss" not in response.text
     assert (
-        f'href="/operator/sessions/{s.id}/{page}?unlocked=1#upload-csv">Dismiss</a>'
+        f'href="/operator/sessions/{s.public_id}/{page}?unlocked=1#upload-csv">Dismiss</a>'
     ) in response.text
     form = _upload_form(response.text, page)
     assert "2 reviewer responses" in form
@@ -272,7 +272,7 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
     if 'name="acknowledge_response_loss"' in form:
         data["acknowledge_response_loss"] = "true"
     retry = client.post(
-        f"/operator/sessions/{s.id}/{page}/import",
+        f"/operator/sessions/{s.public_id}/{page}/import",
         files={"file": ("new.csv", CSV[page], "text/csv")},
         data=data,
         follow_redirects=False,
@@ -288,7 +288,7 @@ def test_a_missing_tick_is_reported_before_a_missing_acknowledgment(
     _roster_with_responses(db, s, n=2)
 
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/import",
+        f"/operator/sessions/{s.public_id}/{page}/import",
         files={"file": ("new.csv", CSV[page], "text/csv")},
         follow_redirects=False,
     )

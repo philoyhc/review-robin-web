@@ -99,7 +99,7 @@ def test_breadcrumb_on_session_detail_links_back_to_sessions(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create_session(client, db)
-    response = client.get(f"/operator/sessions/{review_session.id}")
+    response = client.get(f"/operator/sessions/{review_session.public_id}")
     body = response.text
     assert '<a href="/operator/sessions">Sessions</a>' in body
     assert f'<span aria-current="page">{review_session.name}</span>' in body
@@ -109,11 +109,11 @@ def test_breadcrumb_on_nested_operator_page_renders_three_tuple_trail(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create_session(client, db)
-    response = client.get(f"/operator/sessions/{review_session.id}/reviewers")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/reviewers")
     body = response.text
     assert '<a href="/operator/sessions">Sessions</a>' in body
     assert (
-        f'<a href="/operator/sessions/{review_session.id}">{review_session.name}</a>'
+        f'<a href="/operator/sessions/{review_session.public_id}">{review_session.name}</a>'
         in body
     )
     assert '<span aria-current="page">Reviewers</span>' in body
@@ -141,7 +141,7 @@ def test_sessions_list_row_renders_name_link_and_select_checkbox(
     # the redundant Access button was retired once the name became the
     # primary affordance.
     assert (
-        f'<a href="/operator/sessions/{review_session.id}">{review_session.name}</a>'
+        f'<a href="/operator/sessions/{review_session.public_id}">{review_session.name}</a>'
         in body
     )
     assert ">Access</a>" not in body
@@ -182,12 +182,12 @@ def test_back_links_are_removed_from_nested_operator_pages(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create_session(client, db)
-    response = client.get(f"/operator/sessions/{review_session.id}/reviewers")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/reviewers")
     body = response.text
     # The old back-arrow link is gone — the chrome breadcrumb replaces it.
     assert "&larr;" not in body
     assert (
-        f'<a href="/operator/sessions/{review_session.id}">{review_session.name}</a> '
+        f'<a href="/operator/sessions/{review_session.public_id}">{review_session.name}</a> '
         not in body
         # Allow the breadcrumb anchor (which is the crumb to session detail);
         # the regression-guard is the absence of the standalone "← {name}"
@@ -201,7 +201,7 @@ def test_session_home_has_danger_zone_anchor(
     """18R Item 4 — Danger Zone is wired on Session Home (bottom-right),
     relocated from the retired Edit page."""
     review_session = _create_session(client, db)
-    home_body = client.get(f"/operator/sessions/{review_session.id}").text
+    home_body = client.get(f"/operator/sessions/{review_session.public_id}").text
     assert 'id="danger-zone"' in home_body
 
 

@@ -18,6 +18,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _make_session(
@@ -40,8 +41,9 @@ def _populate_full_matrix(
     """Three reviewers × three reviewees → 9 (or 6 with self-review
     excluded) assignments. Names are deliberately non-alphabetical
     so a sort actually reshuffles."""
+    pid = public_id(session_id)
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -57,7 +59,7 @@ def _populate_full_matrix(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -82,13 +84,13 @@ def test_assignments_table_renders_sort_scaffolding(
     review_session = _make_session(client, db, code="asn-scaff")
     _populate_full_matrix(client, db, review_session.id)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     assert response.status_code == 200
     body = response.text
     # Table marker + tbody wrapper.
     assert (
-        f'data-rrw-sortable="rrw-sort-assignments-{review_session.id}"'
+        f'data-rrw-sortable="rrw-sort-assignments-{review_session.public_id}"'
         in body
     )
     assert '<tbody class="rrw-rows">' in body
@@ -115,7 +117,7 @@ def test_a_populated_tag_column_carries_its_sort_key(
     deleted outright."""
     review_session = _make_session(client, db, code="asn-scaff-tag")
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -130,7 +132,7 @@ def test_a_populated_tag_column_carries_its_sort_key(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -147,7 +149,7 @@ def test_a_populated_tag_column_carries_its_sort_key(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'data-sort-key="reviewer_tag_1"' in body
     assert 'data-col-toggle="rt1"' in body
@@ -161,14 +163,14 @@ def test_assignments_cookie_sort_by_reviewer_asc(
 ) -> None:
     review_session = _make_session(client, db, code="asn-asc")
     _populate_full_matrix(client, db, review_session.id)
-    cookie_name = f"rrw-sort-assignments-{review_session.id}"
+    cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewer", "dir": "asc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # Reviewer column sorts on name — Alpha R, Bravo R, Charlie R
     # in row order.
@@ -198,14 +200,14 @@ def test_assignments_cookie_sort_by_reviewer_desc(
 ) -> None:
     review_session = _make_session(client, db, code="asn-desc")
     _populate_full_matrix(client, db, review_session.id)
-    cookie_name = f"rrw-sort-assignments-{review_session.id}"
+    cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewer", "dir": "desc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert (
         _rows(body).find("Charlie R")
@@ -221,17 +223,17 @@ def test_assignments_cookie_sort_by_reviewee(
     tie on reviewer falls through to reviewee desc."""
     review_session = _make_session(client, db, code="asn-cascade")
     _populate_full_matrix(client, db, review_session.id)
-    cookie_name = f"rrw-sort-assignments-{review_session.id}"
+    cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([
             {"key": "reviewer", "dir": "asc"},
             {"key": "reviewee", "dir": "desc"},
         ]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # Within Alpha R's rows (the first reviewer alphabetically),
     # reviewees sort desc: Charlie E before Alpha E.
@@ -250,14 +252,14 @@ def test_assignments_malformed_cookie_falls_back(
 ) -> None:
     review_session = _make_session(client, db, code="asn-bad")
     _populate_full_matrix(client, db, review_session.id)
-    cookie_name = f"rrw-sort-assignments-{review_session.id}"
+    cookie_name = f"rrw-sort-assignments-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         "not-json{",
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     response = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     assert response.status_code == 200
     # Page renders; assertion that no sort badges appear is too

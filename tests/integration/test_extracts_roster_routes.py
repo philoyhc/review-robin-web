@@ -41,7 +41,7 @@ def _make_session(
 
 def _seed_roster(client: TestClient, review_session: ReviewSession) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -56,7 +56,7 @@ def _seed_roster(client: TestClient, review_session: ReviewSession) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -84,7 +84,7 @@ def test_reviewers_route_streams_csv_with_canonical_filename(
     _seed_roster(client, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/reviewers.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -112,7 +112,7 @@ def test_reviewers_route_emits_audit_event(
     review_session = _make_session(client, db, code="r-audit")
     _seed_roster(client, review_session)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/reviewers.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
     )
     assert response.status_code == 200
     response.read()
@@ -135,7 +135,7 @@ def test_reviewers_route_empty_session_emits_header_only(
 ) -> None:
     review_session = _make_session(client, db, code="r-empty")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/reviewers.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
     )
     assert response.status_code == 200
     rows = list(csv.reader(io.StringIO(response.text)))
@@ -165,7 +165,7 @@ def test_reviewees_route_streams_csv_with_canonical_filename(
     _seed_roster(client, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/reviewees.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewees.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
@@ -189,7 +189,7 @@ def test_reviewees_route_emits_audit_event(
     review_session = _make_session(client, db, code="e-audit")
     _seed_roster(client, review_session)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/reviewees.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewees.csv"
     )
     assert response.status_code == 200
     response.read()
@@ -209,7 +209,7 @@ def _seed_relationships(
     client: TestClient, review_session: ReviewSession
 ) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "p.csv",
@@ -238,7 +238,7 @@ def test_relationships_route_streams_csv_with_canonical_filename(
     _seed_relationships(client, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/relationships.csv"
+        f"/operator/sessions/{review_session.public_id}/export/relationships.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
@@ -262,7 +262,7 @@ def test_relationships_route_emits_audit_event(
     _seed_roster(client, review_session)
     _seed_relationships(client, review_session)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/relationships.csv"
+        f"/operator/sessions/{review_session.public_id}/export/relationships.csv"
     )
     assert response.status_code == 200
     response.read()
@@ -290,6 +290,6 @@ def test_routes_reject_non_operator(
     bob_client = make_client(bob)  # type: ignore[operator]
     for kind in ("reviewers", "reviewees", "relationships"):
         response = bob_client.get(
-            f"/operator/sessions/{review_session.id}/export/{kind}.csv"
+            f"/operator/sessions/{review_session.public_id}/export/{kind}.csv"
         )
         assert response.status_code in (403, 404)

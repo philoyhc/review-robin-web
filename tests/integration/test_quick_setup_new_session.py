@@ -212,7 +212,7 @@ def test_create_session_with_no_quick_setup_files_still_works(
     # is retired) so the operator continues filling in session details.
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.id}?editing=1#session-config"
+        == f"/operator/sessions/{review_session.public_id}?editing=1#session-config"
     )
 
 
@@ -236,7 +236,7 @@ def test_session_home_quick_setup_keeps_default_title(
     review_session = db.execute(
         select(ReviewSession).where(ReviewSession.code == "qs-defaults")
     ).scalar_one()
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     # Default title preserved.
     assert "<h2>Quick Setup</h2>" in body

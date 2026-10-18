@@ -40,7 +40,7 @@ def _branched_session(
     page: Page,
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
     *,
     required: bool = False,
     opens_at: str = "4",
@@ -60,7 +60,7 @@ def test_a_branch_opens_as_the_answer_meets_its_condition(
     page_as: Callable[..., Page],
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
 ) -> None:
     """Item 6, 'The branch for a reviewer'."""
     session_id = _branched_session(page, api, live_server, new_session)
@@ -100,7 +100,7 @@ def test_a_required_governed_field_is_required_only_while_open(
     page_as: Callable[..., Page],
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
 ) -> None:
     """Item 6, 'Required only while open'."""
     session_id = _branched_session(page, api, live_server, new_session, required=True)
@@ -131,7 +131,7 @@ def test_a_refused_parent_keeps_the_text_without_javascript(
     page_as: Callable[..., Page],
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
 ) -> None:
     """Item 6, 'A refused parent keeps the text'.
 

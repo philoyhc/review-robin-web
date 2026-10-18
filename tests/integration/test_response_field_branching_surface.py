@@ -73,7 +73,7 @@ def test_a_governed_cell_is_closed_until_its_parent_is_answered(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     review_session, _ = _branched_live_session(db, make_client(alice), "br-surface")
-    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     comments = _cells(body, "comments")
     assert comments
     for td in comments:
@@ -116,11 +116,11 @@ def test_an_answer_that_meets_the_condition_opens_the_cell(
     db.add(rating)
     db.flush()
     client = make_client(reviewer_user)
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     assert all(" disabled" in c for c in _controls(body, "comments"))
     rating.value = "5"
     db.flush()
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     assert all(" disabled" not in c for c in _controls(body, "comments"))
     assert all("rs-branch-closed" not in td for td in _cells(body, "comments"))
     assert "All items completed: 1/2" in body
@@ -136,7 +136,7 @@ def test_the_surface_script_mirrors_the_service_rule(
     rule is ``branch_is_open``'s (pinned here, driven in Chromium at
     build time)."""
     review_session, _ = _branched_live_session(db, make_client(alice), "br-surface-js")
-    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
     assert 'if (!op || raw === "") { return false; }' in script
@@ -165,7 +165,7 @@ def test_an_instrument_without_a_branch_renders_as_before(
     _populate_rosters(operator, review_session.id)
     _generate_full_matrix(operator, db, review_session.id)
     _activate(operator, db, review_session.id)
-    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     comments = _cells(body, "comments")
     assert comments
     assert all("rs-branch-closed" not in td for td in comments)

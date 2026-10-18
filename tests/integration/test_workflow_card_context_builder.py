@@ -35,7 +35,7 @@ def _seed_pair_plus_pinned(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -46,7 +46,7 @@ def _seed_pair_plus_pinned(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -162,7 +162,7 @@ def test_builder_never_promotes_a_draft(
         client, db, code="builder-promote"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     db.refresh(review_session)

@@ -96,7 +96,7 @@ def _save(
         else:
             deadline = anchor
     return client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": session.name,
             "code": session.code,
@@ -232,7 +232,7 @@ def test_the_lobby_cannot_move_end_back_onto_sent_reminders(
     assert moved.status_code == 303, moved.text
     db.expire_all()
     back = client.post(
-        f"/operator/sessions/{session.id}/lobby-edit",
+        f"/operator/sessions/{session.public_id}/lobby-edit",
         data={
             "name": session.name,
             "code": session.code,
@@ -262,7 +262,7 @@ def test_the_lobby_names_a_moved_sent_reminder_before_its_lead_time(
     db.expire_all()
     # Back on the first End, -P2D resolves about now: short of the floor.
     back = client.post(
-        f"/operator/sessions/{session.id}/lobby-edit",
+        f"/operator/sessions/{session.public_id}/lobby-edit",
         data={
             "name": session.name,
             "code": session.code,

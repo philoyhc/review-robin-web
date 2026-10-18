@@ -33,7 +33,7 @@ def test_extract_data_tab_renders_skeleton(
 ) -> None:
     review_session = _make_session(client, db, code="ed-tab-basic")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     )
     assert response.status_code == 200, response.text
     body = response.text
@@ -63,12 +63,12 @@ def test_extract_data_tab_appears_in_operations_strip(
 
     # On the new Extract data page itself, the tab is active.
     own = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     )
     assert own.status_code == 200
     assert "Extract data</a>" in own.text
     assert (
-        f'href="/operator/sessions/{review_session.id}/extract-data"'
+        f'href="/operator/sessions/{review_session.public_id}/extract-data"'
         in own.text
     )
     # The active class lands on the matching tab.
@@ -77,11 +77,11 @@ def test_extract_data_tab_appears_in_operations_strip(
     # On a sibling Operations page (Responses), the tab also
     # appears (inactive).
     sibling = client.get(
-        f"/operator/sessions/{review_session.id}/responses"
+        f"/operator/sessions/{review_session.public_id}/responses"
     )
     assert sibling.status_code == 200
     assert (
-        f'href="/operator/sessions/{review_session.id}/extract-data"'
+        f'href="/operator/sessions/{review_session.public_id}/extract-data"'
         in sibling.text
     )
 
@@ -91,7 +91,7 @@ def test_extract_data_tab_breadcrumbs(
 ) -> None:
     review_session = _make_session(client, db, code="ed-tab-crumbs")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # operator_session_child renders "Sessions › <name> › Extract data".
@@ -107,7 +107,7 @@ def test_data_shaper_card_renders(
     ``Zip all`` bundles every saved shape."""
     review_session = _make_session(client, db, code="ed-shaper")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # Intro card chip.
@@ -132,7 +132,7 @@ def test_data_shaper_axis_chip_row_and_pools(
     rendered to the right of the intra-pool pipe."""
     review_session = _make_session(client, db, code="ed-shaper-axes")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     for axis, label in [
@@ -203,7 +203,7 @@ def test_data_shaper_numeric_field_carries_discrete_steps_attribute(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     assert 'data-shaper-field-discrete-steps="1,2,3,4,5"' in body
     # The per-axis ``Discrete steps`` chip + its leading pipe
@@ -244,7 +244,7 @@ def test_data_shaper_oversized_numeric_field_skips_discrete_steps(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     # Slice the body around the oversized field's chip to
     # confirm its tag doesn't carry the attribute (the
@@ -289,7 +289,7 @@ def test_data_shaper_list_field_carries_options_attribute(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     assert (
         'data-shaper-field-list-options="Strong yes,Yes,Maybe,No"' in body
@@ -311,7 +311,7 @@ def test_data_shaper_aggregate_chips_carry_data_type_attribute(
     bucket to apply on toggle."""
     review_session = _make_session(client, db, code="ed-shaper-dtype")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # Numeric aggregates carry the ``numeric`` marker.
@@ -357,7 +357,7 @@ def test_data_shaper_response_field_chip_pool(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # Field-section pipe and slot live on the top axis row.
@@ -408,7 +408,7 @@ def test_data_shaper_tag_chip_labels_resolve_friendly_overrides(
     )
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     reviewer_pool = body.split('data-shaper-chip-pool="reviewer"')[1].split(
         "</template>"
@@ -444,7 +444,7 @@ def test_data_shaper_instrument_chips_live_on_axis_row(
     reviewer" / "By reviewee" general-data framing."""
     review_session = _make_session(client, db, code="ed-shaper-pool")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # The card opens with the **scope** chip row (axis chips +
@@ -496,7 +496,7 @@ def test_data_shaper_initial_blank_shape_card(
     the bottom-right."""
     review_session = _make_session(client, db, code="ed-shaper-blank")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     assert "data-shaper-stack" in body
@@ -531,7 +531,7 @@ def test_extract_all_card_renders_lens_selector_chips(
     later; this slice is layout."""
     review_session = _make_session(client, db, code="ed-all-chips")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     assert 'data-extract-all-chip="by-instruments"' in body
@@ -562,7 +562,7 @@ def test_reviewer_metadata_card_renders_selectable_chips(
     ``.Mean/.Median/.Min/.Max``, string fields ship ``.Length``)."""
     review_session = _make_session(client, db, code="ed-revwr-meta-chips")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     chip_block = body.split('id="extract-data-by-reviewer"')[1].split(
@@ -589,7 +589,7 @@ def test_reviewee_metadata_card_renders_selectable_chips(
     reviewees``."""
     review_session = _make_session(client, db, code="ed-revwe-meta-chips")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     chip_block = body.split('id="extract-data-by-reviewee"')[1].split(
@@ -613,7 +613,7 @@ def test_self_review_handling_chips_render(
     backed by the per-shape persisted column."""
     review_session = _make_session(client, db, code="ed-self-review-chips")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # Reviewer / Reviewee metadata — wired chip with the live
@@ -674,7 +674,7 @@ def test_by_instrument_card_renders_selectable_chips(
     (``is-selected`` + ``aria-pressed="true"``)."""
     review_session = _make_session(client, db, code="ed-chips")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # Default-seeded session has one instrument with no short
@@ -705,7 +705,7 @@ def test_include_empty_rows_chip_renders_on_data_shaper(
     handling chip. Default state is ``true`` (``All rows``)."""
     review_session = _make_session(client, db, code="ed-ier-chip")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     shaper_block = body.split('id="extract-data-shaper"')[1].split(
@@ -740,7 +740,7 @@ def test_empty_row_drop_chips_carry_dual_labels(
     initial render shows the on-label."""
     review_session = _make_session(client, db, code="ed-dual-labels")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # By instrument card.

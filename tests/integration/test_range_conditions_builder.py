@@ -41,7 +41,7 @@ def test_the_card_saves_a_range_and_refuses_a_bad_one(
 
 def _condition(client: TestClient, review_session, instrument) -> str:
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
     return table.split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
@@ -74,7 +74,7 @@ def test_the_row_script_joins_checks_and_titles_a_range(
 ) -> None:
     review_session, instrument, _, _ = _page(client, db, "range-js")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     value = _rf_fn(body, "newModelRfConditionValue")
     assert "return lowText + ' to ' + (high ? high.value.trim() : '');" in value
@@ -105,7 +105,7 @@ def test_the_builders_check_agrees_with_save(client: TestClient, db: Session) ->
     cumulative read)."""
     review_session, instrument, _, _ = _page(client, db, "range-parity")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     ops = html.unescape(
         re.search(r"data-new-model-rf-branch-ops='([^']*)'", body).group(1)
@@ -150,7 +150,7 @@ def test_no_button_on_the_page_is_inline_styled(client: TestClient, db: Session)
     classes (Codex on #2659)."""
     review_session, instrument, _, _ = _page(client, db, "range-no-inline")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     for tag in re.finditer(r"<button\b[^>]*>", body, re.S):
         assert "style=" not in tag.group(0), tag.group(0)[:120]

@@ -19,6 +19,7 @@ from __future__ import annotations
 from urllib.parse import quote
 
 from fastapi.testclient import TestClient
+from ._public_id import public_id
 
 
 def get_full_preview_html(
@@ -29,7 +30,7 @@ def get_full_preview_html(
     return the rendered HTML.
     """
     response = client.get(
-        f"/operator/sessions/{session_id}/preview-surface/1"
+        f"/operator/sessions/{public_id(session_id)}/preview-surface/1"
         f"?reviewer_email={quote(reviewer_email)}"
     )
     assert response.status_code == 200, response.text

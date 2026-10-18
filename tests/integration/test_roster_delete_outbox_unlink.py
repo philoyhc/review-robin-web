@@ -44,12 +44,12 @@ def _session_with_sent_invitations(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/import",
+        f"/operator/sessions/{rs.public_id}/reviewers/import",
         files={"file": ("r.csv", R_CSV, "text/csv")},
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{rs.id}/reviewees/import",
+        f"/operator/sessions/{rs.public_id}/reviewees/import",
         files={"file": ("e.csv", E_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -121,7 +121,7 @@ def test_reviewer_delete_path_survives_a_sent_invitation(
     assert _outbox(db, rs.id), "precondition: outbox rows exist"
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/{path}",
+        f"/operator/sessions/{rs.public_id}/{path}",
         files=files,
         data=data,
         follow_redirects=False,
@@ -151,7 +151,7 @@ def test_bulk_delete_survives_a_sent_invitation(client, db):
     ]
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/bulk-delete",
+        f"/operator/sessions/{rs.public_id}/reviewers/bulk-delete",
         data={
             "reviewer_ids": [str(i) for i in reviewer_ids],
             "confirm": "true",
@@ -178,7 +178,7 @@ def test_reviewee_import_leaves_the_outbox_linked(client, db):
     before = {(r.id, r.reviewer_id, r.invitation_id) for r in _outbox(db, rs.id)}
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewees/import",
+        f"/operator/sessions/{rs.public_id}/reviewees/import",
         files={"file": ("e2.csv", E2_CSV, "text/csv")},
         data={"confirm_replace": "true", "acknowledge_response_loss": "true"},
         follow_redirects=False,

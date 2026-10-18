@@ -38,7 +38,7 @@ def _seed_pair_plus_pinned(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -49,7 +49,7 @@ def _seed_pair_plus_pinned(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -80,15 +80,15 @@ def test_workflow_card_right_column_renders_setup_checklist_in_state_1(
     tweaks can't silently strip the checklist."""
     review_session = _make_session(client, db, code="rt-state1")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # Right-column aside contains the inline checklist line.
     assert 'class="next-action-checklist-inline"' in body
     assert "<strong>Setup checklist</strong>" in body
     # Three checklist rows with their deep-link targets.
-    assert f'href="/operator/sessions/{review_session.id}/reviewers"' in body
-    assert f'href="/operator/sessions/{review_session.id}/reviewees"' in body
-    assert f'href="/operator/sessions/{review_session.id}/instruments"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/reviewers"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/reviewees"' in body
+    assert f'href="/operator/sessions/{review_session.public_id}/instruments"' in body
 
 
 def test_workflow_card_right_column_renders_once_validated(
@@ -100,13 +100,13 @@ def test_workflow_card_right_column_renders_once_validated(
     findings B32.)"""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-state3")
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     # Validate, to populate validation_summary.
     validate_session(review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # The right-column aside is present.
     assert 'id="next-action-status"' in body
@@ -132,7 +132,7 @@ def test_workflow_card_renders_two_column_grid(
     regress."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-grid")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'class="next-action-grid"' in body
     assert 'class="next-action-main"' in body
@@ -163,11 +163,11 @@ def test_prepare_session_form_targets_workflow_route(
     runs Activate only."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-prepare-form")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'id="next-action-prepare-form"' in body
     assert (
-        f'action="/operator/sessions/{review_session.id}/workflow/prepare"'
+        f'action="/operator/sessions/{review_session.public_id}/workflow/prepare"'
         in body
     )
     # Retired per-step forms must not render in the card.
@@ -188,18 +188,18 @@ def test_activate_form_includes_return_to_assignments(
     /activate route redirects back here, not to Session Home."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-activate-rt")
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     db.refresh(review_session)
     assert lifecycle.is_validated(review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # The Activate session super-button form on the Workflow card
     # carries the hidden return_to=assignments token. Posts to
@@ -212,7 +212,7 @@ def test_activate_form_includes_return_to_assignments(
     )
     assert activate_form is not None
     assert (
-        f'action="/operator/sessions/{review_session.id}/workflow/activate"'
+        f'action="/operator/sessions/{review_session.public_id}/workflow/activate"'
         in activate_form.group(1)
     )
     assert 'name="return_to"' in activate_form.group(1)
@@ -228,22 +228,22 @@ def test_activate_post_with_return_to_redirects_to_assignments(
         client, db, code="rt-activate-post"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
 
 
@@ -256,21 +256,21 @@ def test_activate_post_without_return_to_redirects_to_session_home(
         client, db, code="rt-activate-home"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     )
 
 
@@ -286,18 +286,18 @@ def test_revert_form_on_assignments_carries_return_to(
     carries ``return_to=assignments`` so revert lands back here."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-revert")
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     db.refresh(review_session)
     assert lifecycle.is_validated(review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     import re
     revert_form = re.search(
@@ -317,22 +317,22 @@ def test_pause_form_on_assignments_carries_return_to(
     ``return_to=assignments``."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-pause")
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         follow_redirects=False,
     )
     db.refresh(review_session)
     assert lifecycle.is_ready(review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     import re
     pause_form = re.search(
@@ -364,12 +364,12 @@ def test_activate_warnings_detour_link_carries_return_to(
         client, db, code="rt-activate-warn"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -383,13 +383,13 @@ def test_activate_warnings_detour_link_carries_return_to(
     db.flush()
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # The Activate button is an anchor to the warnings detour, with
     # return_to appended. HTML escapes the ``&`` as ``&amp;`` so
     # match the rendered form rather than the raw URL.
     assert (
-        f'href="/operator/sessions/{review_session.id}/validate?activate=1'
+        f'href="/operator/sessions/{review_session.public_id}/validate?activate=1'
         f'&amp;return_to=assignments"'
         in body
     )
@@ -405,12 +405,12 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
         client, db, code="rt-validate-banner"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments",
+        f"/operator/sessions/{review_session.public_id}/assignments",
         follow_redirects=False,
     )
     from app.db.models import Assignment
@@ -421,7 +421,7 @@ def test_validate_warnings_banner_acknowledge_form_carries_return_to(
     db.flush()
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/validate?activate=1&return_to=assignments"
     ).text
     assert 'name="return_to"' in body
@@ -442,7 +442,7 @@ def test_session_home_renders_workflow_card_with_return_to_home(
     shows the Prepare-session form as the primary forward action."""
     review_session = _seed_pair_plus_pinned(client, db, code="rt-home")
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     ).text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body

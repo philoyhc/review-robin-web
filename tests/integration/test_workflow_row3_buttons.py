@@ -152,7 +152,7 @@ def test_workflow_release_responses_route_stamps_and_redirects(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/release-responses",
+        f"/operator/sessions/{review_session.public_id}/workflow/release-responses",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -174,7 +174,7 @@ def test_workflow_stop_release_route_stamps_and_redirects(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/stop-release",
+        f"/operator/sessions/{review_session.public_id}/workflow/stop-release",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -198,7 +198,7 @@ def test_workflow_archive_route_redirects_to_archived_lobby(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/archive",
+        f"/operator/sessions/{review_session.public_id}/workflow/archive",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -230,7 +230,7 @@ def test_workflow_archive_route_works_from_ready_state(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/archive",
+        f"/operator/sessions/{review_session.public_id}/workflow/archive",
         follow_redirects=False,
     )
     assert response.status_code == 303

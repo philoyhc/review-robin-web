@@ -31,6 +31,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._validated import validate_session
+from ._public_id import public_id
 
 
 def _make_session(
@@ -49,7 +50,7 @@ def _make_session(
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -60,7 +61,7 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -96,9 +97,9 @@ def _generate_full_matrix(
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
     validate_session(db, session_id)
-    client.get(f"/operator/sessions/{session_id}/assignments")
+    client.get(f"/operator/sessions/{public_id(session_id)}/assignments")
     client.post(
-        f"/operator/sessions/{session_id}/activate",
+        f"/operator/sessions/{public_id(session_id)}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -106,7 +107,7 @@ def _activate(client: TestClient, db: Session, session_id: int) -> None:
 
 def _validate(client: TestClient, db: Session, session_id: int) -> None:
     validate_session(db, session_id)
-    client.get(f"/operator/sessions/{session_id}/assignments")
+    client.get(f"/operator/sessions/{public_id(session_id)}/assignments")
 
 
 def _instrument(db: Session, session_id: int) -> Instrument:

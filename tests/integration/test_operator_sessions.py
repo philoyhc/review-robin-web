@@ -17,6 +17,7 @@ from app.db.models import (
     User,
 )
 from app.services import session_tags, sessions
+from ._public_id import public_id
 
 
 def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
@@ -37,7 +38,7 @@ def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
     ).scalar_one()
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.id}?editing=1#session-config"
+        == f"/operator/sessions/{review_session.public_id}?editing=1#session-config"
     )
 
 
@@ -107,7 +108,7 @@ def test_detail_renders_for_operator(client: TestClient, db: Session) -> None:
         select(ReviewSession).where(ReviewSession.code == "spring-2026")
     ).scalar_one()
 
-    response = client.get(f"/operator/sessions/{review_session.id}")
+    response = client.get(f"/operator/sessions/{review_session.public_id}")
     assert response.status_code == 200
     assert "Spring Reviews" in response.text
 
@@ -129,7 +130,7 @@ def test_non_operator_cannot_view_other_session(
     ).scalar_one()
 
     bob_client = make_client(bob)
-    response = bob_client.get(f"/operator/sessions/{review_session.id}")
+    response = bob_client.get(f"/operator/sessions/{review_session.public_id}")
 
     assert response.status_code == 404
 
@@ -199,7 +200,7 @@ def test_delete_session_with_email_outbox_rows_succeeds(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/delete",
+        f"/operator/sessions/{review_session.public_id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -309,7 +310,7 @@ def test_lobby_edit_updates_draft_session_and_tags(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={
             "name": "New Name",
             "code": "new-1",
@@ -348,7 +349,7 @@ def test_lobby_edit_skips_name_code_when_not_editable(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={
             "name": "Attempted",
             "code": "attempted-1",
@@ -419,7 +420,7 @@ def _lobby_save(
     tags: str = "",
 ):
     return client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={"name": name, "code": code, "deadline": deadline, "tags": tags},
         follow_redirects=False,
     )
@@ -448,7 +449,7 @@ def test_lobby_edit_applies_name_code_on_validated(
     session_id = _validated_session(client, db, "val-edit-1")
 
     response = client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={"name": "Renamed", "code": "val-edit-2", "deadline": "", "tags": ""},
         follow_redirects=False,
     )
@@ -468,7 +469,7 @@ def test_lobby_tags_only_save_keeps_validated(
     session_id = _validated_session(client, db, "val-tags-1")
 
     response = client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={"name": "Checked", "code": "val-tags-1", "deadline": "", "tags": "t1"},
         follow_redirects=False,
     )
@@ -495,7 +496,7 @@ def test_lobby_tags_only_save_keeps_validated_with_a_seconds_deadline(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={
             "name": "Checked",
             "code": "val-secs-1",
@@ -528,7 +529,7 @@ def test_lobby_tags_only_save_keeps_a_deadline_in_the_repeated_dst_hour(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{session_id}/lobby-edit",
+        f"/operator/sessions/{public_id(session_id)}/lobby-edit",
         data={
             "name": "Checked",
             "code": "val-dst-1",

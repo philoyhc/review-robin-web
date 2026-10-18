@@ -79,7 +79,7 @@ def _seed_session_with_rae_and_one_reviewee(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -90,7 +90,7 @@ def _seed_session_with_rae_and_one_reviewee(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -102,7 +102,7 @@ def _seed_session_with_rae_and_one_reviewee(
     )
     for _ in range(extra_instruments):
         operator_client.post(
-            f"/operator/sessions/{review_session.id}/instruments/add-new-model"
+            f"/operator/sessions/{review_session.public_id}/instruments/add-new-model"
         )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
@@ -113,11 +113,11 @@ def _activate(
     operator_client: TestClient, review_session: ReviewSession
 ) -> None:
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
 
@@ -143,13 +143,13 @@ def _submit_rating(
         data[f"response[{aid}][rating]"] = rating_value
         data[f"response[{aid}][comments]"] = comments_value
     save_resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data=data,
         follow_redirects=False,
     )
     assert save_resp.status_code in (200, 303), save_resp.text[:500]
     submit_resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         follow_redirects=False,
     )
     assert submit_resp.status_code == 303, submit_resp.text[:500]
@@ -206,7 +206,7 @@ def _close_after_rae_submits(
             )
     db.commit()
     close_resp = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     assert close_resp.status_code == 303
@@ -229,17 +229,17 @@ def test_released_raw_shows_the_reviewers_own_values(
         client, db, alice, rae, make_client,
         code="vis-raw", released_mode="raw", open_release=True,
     )
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert 'value="5"' in body
     assert "great review" in body
     assert "remain visible below" in body
     # Still the closed, read-only form, not pre_open.html.
     assert "Review opens later" not in body
     assert "disabled" in body
-    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary")
+    summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary")
     assert "great review" in summary.text
     csv_body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     ).text
     assert "great review" in csv_body
 
@@ -266,17 +266,17 @@ def test_otherwise_a_closed_session_hides_them(
         released_mode=released_mode,
         open_release=open_release,
     )
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert 'value="5"' not in body
     assert "great review" not in body
     assert "hidden by the operator" in body
     assert "disabled" in body
-    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary").text
+    summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "great review" not in summary
     assert "Your responses are not shown" in summary
     assert "summary.csv" not in summary
     csv_body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     ).text
     assert "great review" not in csv_body
 
@@ -292,15 +292,15 @@ def test_visibility_is_decided_per_instrument(
         code="vis-mixed", released_mode="raw", open_release=True,
         second_instrument_mode=None,
     )
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Some of your previously saved values are hidden" in body
     assert "great review" in body
-    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary").text
+    summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "Some of your responses are not shown" in summary
     assert summary.count('<section class="card"') == 1
     assert "summary.csv" in summary
     csv_body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     ).text
     assert "instrument_1" in csv_body
     assert "instrument_2" not in csv_body
@@ -317,10 +317,10 @@ def test_archiving_ends_all_visibility(
     )
     review_session.status = "archived"
     db.commit()
-    summary = rae_client.get(f"/me/sessions/{review_session.id}/summary").text
+    summary = rae_client.get(f"/me/sessions/{review_session.public_id}/summary").text
     assert "great review" not in summary
     csv_body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     ).text
     assert "great review" not in csv_body
 
@@ -349,7 +349,7 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
     )
     _restore_operator_identity(alice)
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
 
@@ -386,6 +386,6 @@ def test_dashboard_shows_closed_status_and_keeps_link_after_close(
     # of one instrument's only assignment, the pill should be
     # ``submitted`` and the link target ``/summary``.
     assert (
-        f'href="/me/sessions/{review_session.id}/summary"' in body
-        or f'href="/me/sessions/{review_session.id}/1"' in body
+        f'href="/me/sessions/{review_session.public_id}/summary"' in body
+        or f'href="/me/sessions/{review_session.public_id}/1"' in body
     ), "dashboard must keep an active link into the closed session"

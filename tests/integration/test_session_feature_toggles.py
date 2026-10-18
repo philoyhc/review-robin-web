@@ -45,7 +45,7 @@ def _submit_edit(
     }
     data.update(overrides)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -211,7 +211,7 @@ def test_lock_on_data_renders_disabled_checkbox(
     _seed_one_relationship(db, review_session)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}?editing=1"
+        f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
     assert 'name="relationships_enabled"' in body
     # The disabled attribute appears on the (edit-mode) relationships
@@ -238,7 +238,7 @@ def test_observers_chip_with_data_is_a_fixed_switch(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}?editing=1"
+        f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
     box = body.split('name="observers_enabled"', 1)[1].split("</label>", 1)[0]
     assert "disabled" in box
@@ -255,10 +255,10 @@ def test_relationships_nav_tab_hidden_when_flag_off(
 ) -> None:
     review_session = _make_session(client, db, code="ft-nav-off")
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     ).text
     assert (
-        f'href="/operator/sessions/{review_session.id}/relationships"'
+        f'href="/operator/sessions/{review_session.public_id}/relationships"'
         not in body
     )
 
@@ -270,10 +270,10 @@ def test_relationships_nav_tab_visible_when_flag_on(
     review_session.relationships_enabled = True
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     ).text
     assert (
-        f'href="/operator/sessions/{review_session.id}/relationships"'
+        f'href="/operator/sessions/{review_session.public_id}/relationships"'
         in body
     )
 
@@ -287,7 +287,7 @@ def test_status_row_hides_relationships_and_observers_when_flags_off(
     """The chrome status strip only reports Relationships / Observers when
     the operator has enabled their optional Setup tab (UI settings)."""
     review_session = _make_session(client, db, code="ft-status-off")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     strip = body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
     assert "Relationships:" not in strip
     assert "Observers:" not in strip
@@ -303,7 +303,7 @@ def test_status_row_shows_relationships_and_observers_when_flags_on(
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
     db.commit()
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     strip = body.split('class="status-row"', 1)[1].split("</div>", 1)[0]
     assert "Relationships:" in strip
     assert "Observers:" in strip
@@ -317,7 +317,7 @@ def test_relationships_route_404_when_flag_off(
 ) -> None:
     review_session = _make_session(client, db, code="ft-route-off")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     )
     assert response.status_code == 404
 
@@ -329,7 +329,7 @@ def test_relationships_route_200_when_flag_on(
     review_session.relationships_enabled = True
     db.commit()
     response = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     )
     assert response.status_code == 200
 
@@ -344,7 +344,7 @@ def test_session_home_renders_the_optional_setup_tabs_field(
     "Optional setup tabs", not a "User interface settings" sub-card."""
     review_session = _make_session(client, db, code="ft-ui")
     body = client.get(
-        f"/operator/sessions/{review_session.id}?editing=1"
+        f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
     assert 'id="config-optional-tabs"' in body
     assert ">Optional setup tabs and pages</label>" in body
@@ -383,7 +383,7 @@ def test_the_optional_tabs_are_selector_chips(
     review_session.relationships_enabled = True
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}?editing=1"
+        f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
 
     edit = _chips(body, "edit")
@@ -410,7 +410,7 @@ def test_locked_the_chips_are_inert_and_show_the_stored_state(
     review_session = _make_session(client, db, code="ft-chips-locked")
     review_session.observers_enabled = True
     db.commit()
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     display = _chips(body, "display")
     assert "<input" not in display and "<label" not in display

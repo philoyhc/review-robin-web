@@ -57,7 +57,7 @@ def test_a_refused_roster_names_each_kind_of_problem_with_a_count(
 ) -> None:
     rs = _session(client, db, "qsp-reviewers")
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/reviewers",
+        f"/operator/sessions/{rs.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", BAD_REVIEWERS, "text/csv")},
         follow_redirects=False,
     )
@@ -81,7 +81,7 @@ def test_a_file_level_problem_reads_as_itself(
 ) -> None:
     rs = _session(client, db, "qsp-column")
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/reviewers",
+        f"/operator/sessions/{rs.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", b"ReviewerName,Wrong\nAnn,x\n", "text/csv")},
         follow_redirects=False,
     )
@@ -95,7 +95,7 @@ def test_the_submit_all_form_carries_the_problems_too(
 ) -> None:
     rs = _session(client, db, "qsp-submit-all")
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/submit-all",
+        f"/operator/sessions/{rs.public_id}/quick-setup/submit-all",
         files={"reviewers_file": ("r.csv", BAD_REVIEWERS, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -125,7 +125,7 @@ def test_the_other_roster_slots_name_their_problems(
     rs.observers_enabled = True
     db.commit()
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/{kind}",
+        f"/operator/sessions/{rs.public_id}/quick-setup/{kind}",
         files={"file": ("x.csv", content, "text/csv")},
         follow_redirects=False,
     )
@@ -139,7 +139,7 @@ def test_a_name_another_roster_holds_is_named_without_the_email(
     db.add(Reviewee(session_id=rs.id, name="Ann", email_or_identifier="ann@example.org"))
     db.commit()
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/reviewers",
+        f"/operator/sessions/{rs.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nAnnie,ann@example.org\n", "text/csv")},
         follow_redirects=False,
     )
@@ -185,7 +185,7 @@ def test_a_link_with_any_other_code_shows_nothing(
     ``quick_setup_detail`` puts nothing on the page (findings O7)."""
     rs = _session(client, db, "qsp-old-link-" + reason.replace("_", "-"))
     body = client.get(
-        f"/operator/sessions/{rs.id}",
+        f"/operator/sessions/{rs.public_id}",
         params=[
             ("quick_setup_error", "reviewers"),
             ("quick_setup_reason", reason),
@@ -202,7 +202,7 @@ def test_a_refused_code_for_an_unknown_slot_shows_nothing(
 ) -> None:
     rs = _session(client, db, "qsp-unknown-slot")
     body = client.get(
-        f"/operator/sessions/{rs.id}"
+        f"/operator/sessions/{rs.public_id}"
         "?quick_setup_error=elsewhere&quick_setup_reason=refused"
     ).text
     assert 'data-quick-setup-reason="' not in body
@@ -223,7 +223,7 @@ def test_relationships_name_an_unknown_reviewer(
         b"ann@example.org,bo@example.org\n"
     )
     response = client.post(
-        f"/operator/sessions/{rs.id}/quick-setup/relationships",
+        f"/operator/sessions/{rs.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", csv, "text/csv")},
         follow_redirects=False,
     )

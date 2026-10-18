@@ -34,7 +34,7 @@ def _glyph(chip: Locator) -> str:
     )
 
 
-def _seed(api: httpx.Client, session_id: int) -> None:
+def _seed(api: httpx.Client, session_id: str) -> None:
     """A roster whose reviewees carry a tag, so Band 3 has a field
     besides Name and Email (``seed_rosters``' ``Tag1`` header isn't one)."""
     for kind, body in (
@@ -58,7 +58,7 @@ def _box(card: Locator, key: str) -> Locator:
 
 
 def test_a_display_field_toggles_through_its_chip(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -89,7 +89,7 @@ def test_a_display_field_toggles_through_its_chip(
 
 
 def test_name_and_email_chips_are_fixed_switches(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -106,7 +106,7 @@ def test_name_and_email_chips_are_fixed_switches(
 
 
 def test_a_field_a_group_row_cant_show_is_fixed_off(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -139,7 +139,7 @@ def test_a_field_a_group_row_cant_show_is_fixed_off(
 
 
 def test_a_locked_cards_chips_drop_the_edge_until_it_unlocks(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """A locked card's chips read as the display pills they replaced (the
     author, 2026-10-10; Codex on #2936), read off the card's lock
@@ -171,7 +171,7 @@ def _rf_chip(row: Locator) -> Locator:
 
 
 def test_a_response_chip_follows_its_name_live(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     card = open_unlocked(page, new_session())
     row = rows(card).first
@@ -203,7 +203,7 @@ def test_a_response_chip_follows_its_name_live(
 
 
 def test_hiding_a_field_with_responses_through_its_chip_still_asks(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     card = open_unlocked(page, new_session())
     row = rows(card).first
@@ -228,7 +228,7 @@ def test_hiding_a_field_with_responses_through_its_chip_still_asks(
 
 
 def test_a_hidden_parents_branch_chips_are_fixed_off(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     card = open_unlocked(page, new_session())
     parent = rows(card).first
@@ -255,7 +255,7 @@ def test_a_hidden_parents_branch_chips_are_fixed_off(
 
 
 def test_a_pending_rows_chip_follows_its_default_when_another_takes_it(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """The cold read: a name edit can move another row's default, and a
     pending row (one that can't commit) still relabels its chip."""
@@ -306,7 +306,7 @@ def _leading(row: Locator) -> list[str]:
 
 
 def test_the_row_script_keeps_the_chip_first_at_every_level(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """The cold read: the rows the script builds and re-levels (fork, a
     fork one level down, ending a branch) keep the chip first and start a

@@ -193,10 +193,12 @@ def api(live_server: LiveServer) -> Iterator[httpx.Client]:
 
 
 @pytest.fixture
-def new_session(api: httpx.Client) -> Callable[[], int]:
-    """Create a session through ``POST /operator/sessions``; return its id."""
+def new_session(api: httpx.Client) -> Callable[[], str]:
+    """Create a session through ``POST /operator/sessions``; return its
+    public ID, the handle its URLs carry (19V Item 1). A step that writes
+    the database directly resolves the key with ``_builder.session_pk``."""
 
-    def make() -> int:
+    def make() -> str:
         code = f"b{uuid.uuid4().hex[:8]}"
         response = api.post(
             "/operator/sessions",
@@ -204,8 +206,8 @@ def new_session(api: httpx.Client) -> Callable[[], int]:
             follow_redirects=False,
         )
         assert response.status_code == 303, response.text
-        # Location: /operator/sessions/<id>?editing=1#session-config
-        return int(response.headers["location"].split("?")[0].rsplit("/", 1)[1])
+        # Location: /operator/sessions/<public_id>?editing=1#session-config
+        return response.headers["location"].split("?")[0].rsplit("/", 1)[1]
 
     return make
 

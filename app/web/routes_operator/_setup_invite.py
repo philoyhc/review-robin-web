@@ -131,7 +131,7 @@ async def setupinvite_save(
     )
     db.commit()
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/setup-invite?template={template}",
+        url=f"/operator/sessions/{review_session.public_id}/setup-invite?template={template}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -171,7 +171,7 @@ def setupinvite_reset(
     db.commit()
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/setup-invite"
+            f"/operator/sessions/{review_session.public_id}/setup-invite"
             f"?template={template}"
         ),
         status_code=status.HTTP_303_SEE_OTHER,

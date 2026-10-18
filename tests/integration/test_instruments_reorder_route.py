@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, ReviewSession
+from ._public_id import public_id
 
 
 def _make_session(
@@ -34,7 +35,7 @@ def _make_session(
 def _add_instruments(client: TestClient, session_id: int, n: int) -> None:
     for _ in range(n):
         client.post(
-            f"/operator/sessions/{session_id}/instruments/add-new-model"
+            f"/operator/sessions/{public_id(session_id)}/instruments/add-new-model"
         )
 
 
@@ -61,7 +62,7 @@ def test_instruments_order_swap_returns_ok_and_persists(
     a, b = _ordered(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [b.id, a.id]},
     )
     assert response.status_code == 200
@@ -80,7 +81,7 @@ def test_instruments_order_adds_break_via_null_in_items(
     a, b = _ordered(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, None, b.id]},
     )
     assert response.status_code == 200
@@ -98,7 +99,7 @@ def test_instruments_order_no_op_returns_ok_with_current_state(
     a, b = _ordered(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, b.id]},
     )
     assert response.status_code == 200
@@ -119,7 +120,7 @@ def test_instruments_order_400_on_non_json_body(
 ) -> None:
     review_session = _make_session(client, db, code="ord-4")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         content=b"not json",
         headers={"Content-Type": "application/json"},
     )
@@ -131,7 +132,7 @@ def test_instruments_order_400_when_items_missing(
 ) -> None:
     review_session = _make_session(client, db, code="ord-5")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={},
     )
     assert response.status_code == 400
@@ -144,7 +145,7 @@ def test_instruments_order_400_when_items_contains_non_int(
     _add_instruments(client, review_session.id, 1)
     a, _b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, "bogus"]},
     )
     assert response.status_code == 400
@@ -158,7 +159,7 @@ def test_instruments_order_400_when_items_contains_bool(
     coerced into 0/1 ids."""
     review_session = _make_session(client, db, code="ord-7")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [True, False]},
     )
     assert response.status_code == 400
@@ -176,7 +177,7 @@ def test_instruments_order_409_on_leading_break(
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [None, a.id, b.id]},
     )
     assert response.status_code == 409, f"body: {response.text!r}"
@@ -190,7 +191,7 @@ def test_instruments_order_409_on_trailing_break(
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, b.id, None]},
     )
     assert response.status_code == 409
@@ -203,7 +204,7 @@ def test_instruments_order_409_on_double_stack(
     _add_instruments(client, review_session.id, 1)
     a, b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, None, None, b.id]},
     )
     assert response.status_code == 409
@@ -216,7 +217,7 @@ def test_instruments_order_409_on_missing_id(
     _add_instruments(client, review_session.id, 1)
     a, _b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id]},  # missing b
     )
     assert response.status_code == 409
@@ -229,7 +230,7 @@ def test_instruments_order_409_on_duplicate(
     _add_instruments(client, review_session.id, 1)
     a, _b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, a.id]},
     )
     assert response.status_code == 409
@@ -242,7 +243,7 @@ def test_instruments_order_409_on_unknown_id(
     _add_instruments(client, review_session.id, 1)
     a, _b = _ordered(db, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/order",
+        f"/operator/sessions/{review_session.public_id}/instruments/order",
         json={"items": [a.id, 99_999]},
     )
     assert response.status_code == 409
@@ -258,7 +259,7 @@ def test_drag_handle_is_draggable(client: TestClient, db: Session) -> None:
     drag-and-drop fires dragstart from it."""
     review_session = _make_session(client, db, code="dr-1")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     needle = (
         '<span class="instrument-card-drag-handle"\n'
@@ -273,7 +274,7 @@ def test_drag_handler_iife_renders(client: TestClient, db: Session) -> None:
     template refactor doesn't silently drop it."""
     review_session = _make_session(client, db, code="dr-2")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     assert "Segment 18M PR 2b — drag-and-drop instrument reorder" in body
     assert "/instruments/order" in body

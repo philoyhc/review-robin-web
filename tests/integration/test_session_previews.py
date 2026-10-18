@@ -27,13 +27,13 @@ def test_previews_get_permanently_redirects_to_invitations(
     session = _create_session(client, db)
 
     response = client.get(
-        f"/operator/sessions/{session.id}/previews",
+        f"/operator/sessions/{session.public_id}/previews",
         follow_redirects=False,
     )
 
     assert response.status_code == 308
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
 
 
@@ -43,7 +43,7 @@ def test_previews_random_post_is_retired(
     session = _create_session(client, db)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/previews/random",
+        f"/operator/sessions/{session.public_id}/previews/random",
         follow_redirects=False,
     )
 

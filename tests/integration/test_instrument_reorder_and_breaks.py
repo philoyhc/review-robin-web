@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, ReviewSession, User
 from app.services import instruments as instruments_service
+from ._public_id import public_id
 
 
 # --------------------------------------------------------------------------- #
@@ -52,9 +53,10 @@ def _add_instruments(
 ) -> None:
     """Add n more instruments to the session (default-seeded session
     already has one)."""
+    pid = public_id(session_id)
     for _ in range(n):
         response = client.post(
-            f"/operator/sessions/{session_id}/instruments/add-new-model",
+            f"/operator/sessions/{pid}/instruments/add-new-model",
             follow_redirects=False,
         )
         assert response.status_code == 303

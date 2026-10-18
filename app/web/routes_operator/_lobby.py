@@ -385,7 +385,7 @@ def clone_session_submit(
     # first task on a clone is to rename it, then review the cloned setup
     # on the same page.
     return RedirectResponse(
-        url=f"/operator/sessions/{clone.id}?editing=1#session-config",
+        url=f"/operator/sessions/{clone.public_id}?editing=1#session-config",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

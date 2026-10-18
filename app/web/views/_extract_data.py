@@ -120,7 +120,7 @@ def build_extract_data_context(
             label="Reviewers",
             noun="reviewer",
             count=reviewer_count,
-            sid=sid,
+            public_id=review_session.public_id,
             code=code,
         ),
         _entity_row(
@@ -128,7 +128,7 @@ def build_extract_data_context(
             label="Reviewees",
             noun="reviewee",
             count=reviewee_count,
-            sid=sid,
+            public_id=review_session.public_id,
             code=code,
         ),
     ]
@@ -138,7 +138,7 @@ def build_extract_data_context(
             label="Relationships",
             noun="relationship",
             count=relationship_count,
-            sid=sid,
+            public_id=review_session.public_id,
             code=code,
         ),
     ]
@@ -149,7 +149,7 @@ def build_extract_data_context(
                 label="Observers",
                 noun="observer",
                 count=observer_count,
-                sid=sid,
+                public_id=review_session.public_id,
                 code=code,
             )
         )
@@ -161,7 +161,7 @@ def build_extract_data_context(
             count=instrument_count,
             count_summary=_extract_summary("instrument", instrument_count),
             is_wired=True,
-            download_url=f"/operator/sessions/{sid}/export/settings.csv",
+            download_url=f"/operator/sessions/{review_session.public_id}/export/settings.csv",
             coming_in=None,
         )
     )
@@ -182,7 +182,7 @@ def build_extract_data_context(
             f"zip of the {bundle_member_count} setup CSVs"
         ),
         is_wired=True,
-        download_url=f"/operator/sessions/{sid}/export/bundle.zip",
+        download_url=f"/operator/sessions/{review_session.public_id}/export/bundle.zip",
         coming_in=None,
     )
 
@@ -197,7 +197,7 @@ def _entity_row(
     label: str,
     noun: str,
     count: int,
-    sid: int,
+    public_id: str,
     code: str,
 ) -> ExtractDataRow:
     """Per-entity Extract Data row that greys out when ``count``
@@ -213,7 +213,7 @@ def _entity_row(
         count_summary=_extract_summary(noun, count),
         is_wired=has_data,
         download_url=(
-            f"/operator/sessions/{sid}/export/{key}.csv"
+            f"/operator/sessions/{public_id}/export/{key}.csv"
             if has_data
             else None
         ),

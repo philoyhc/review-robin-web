@@ -35,11 +35,11 @@ def test_a_non_latin_code_downloads_with_both_filenames(
         follow_redirects=False,
     )
     assert resp.status_code == 303, resp.text
-    session_id = db.execute(
-        select(ReviewSession.id).where(ReviewSession.code == CODE)
+    public_id = db.execute(
+        select(ReviewSession.public_id).where(ReviewSession.code == CODE)
     ).scalar_one()
 
-    resp = client.get(f"/operator/sessions/{session_id}/{path}")
+    resp = client.get(f"/operator/sessions/{public_id}/{path}")
 
     assert resp.status_code == 200, resp.text
     header = resp.headers["content-disposition"]

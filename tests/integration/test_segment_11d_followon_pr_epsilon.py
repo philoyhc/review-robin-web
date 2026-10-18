@@ -53,7 +53,7 @@ def _setup_two_instrument_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -64,7 +64,7 @@ def _setup_two_instrument_session(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -82,7 +82,7 @@ def _setup_two_instrument_session(
         ).scalars()
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
         data={"after": str(first.id)},
         follow_redirects=False,
     )
@@ -107,9 +107,9 @@ def _setup_two_instrument_session(
         db, instrument=second, short_label="Peer review", actor=None
     )
     validate_session(review_session)
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -160,7 +160,7 @@ def test_submit_missing_names_the_instrument_of_each_gap(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 only",
             f"response[{page2_assignment.id}][comments]": "page-2 only",
@@ -197,7 +197,7 @@ def test_submit_missing_only_on_the_second_instrument_names_it(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -229,7 +229,7 @@ def test_submit_invalid_value_names_the_instrument(
 
     rae_client = make_client(rae)
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={f"response[{second_assignment.id}][rating]": "99"},
         follow_redirects=False,
     )
@@ -263,7 +263,7 @@ def test_missing_required_renders_in_full_width_card(
     ).scalar_one()
     rae_client = make_client(rae)
     body = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -299,7 +299,7 @@ def test_missing_required_card_uses_two_column_list(
     ).scalar_one()
     rae_client = make_client(rae)
     body = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -333,7 +333,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     ).scalar_one()
     rae_client = make_client(rae)
     body = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{page1_assignment.id}][rating]": "5",
         },
@@ -341,7 +341,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     ).text
     assert "data-rs-missing-dismiss" in body
     assert (
-        f'href="/me/sessions/{review_session.id}/1">\n          Cancel\n        </a>'
+        f'href="/me/sessions/{review_session.public_id}/1">\n          Cancel\n        </a>'
         in body
     )
     # Submit is a hard gate when required fields are missing; the
@@ -363,7 +363,7 @@ def test_missing_required_card_absent_when_no_gaps(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     # The CSS rule for `.rs-missing-card` is always in the inline
     # stylesheet; assert on the element class + dismiss data attr's
@@ -392,7 +392,7 @@ def test_preview_status_panel_renders_without_per_page_pills(
         select(ReviewSession).where(ReviewSession.code == "prev-eps-pills")
     ).scalar_one()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
+        f"/operator/sessions/{review_session.public_id}/preview"
     ).text
     # Status panel is part of the bottom-grid layout shared with the
     # live surface. Per-page pills (`rs-page-status-pills`) are
@@ -427,7 +427,7 @@ def test_preview_omits_pushstate_prefix(
         select(ReviewSession).where(ReviewSession.code == "prev-eps-nopush")
     ).scalar_one()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/preview"
+        f"/operator/sessions/{review_session.public_id}/preview"
     ).text
     # The attribute itself (``data-rs-pushstate-prefix="..."``) is
     # absent; the substring still appears inside JS comments, so

@@ -64,7 +64,7 @@ def _surface_cols(
     }
     db.commit()
     _activate(operator, db, review_session)
-    body = make_client(rae_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(rae_user).get(f"/me/sessions/{review_session.public_id}").text
     colgroup = body.split("<colgroup>")[1].split("</colgroup>")[0]
     return re.findall(r"<col[^>]*>", colgroup)
 
@@ -109,7 +109,7 @@ def test_the_preview_mirrors_it(client: TestClient, db: Session) -> None:
 
     review_session, instrument = _new_model_with_tags(client, db, code="prof-width-preview")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     assert (
@@ -204,8 +204,8 @@ def test_the_summary_and_the_results_start_it_the_same_way(
         )
     ).scalar_one()
     numeric = f'style="width: {numeric_column_ch_width(rating)}ch"'
-    summary = make_client(rae_user).get(f"/me/sessions/{review_session.id}/summary").text
-    results = make_client(carol).get(f"/me/sessions/{review_session.id}/results").text
+    summary = make_client(rae_user).get(f"/me/sessions/{review_session.public_id}/summary").text
+    results = make_client(carol).get(f"/me/sessions/{review_session.public_id}/results").text
     for name, body in (("summary", summary), ("results", results)):
         assert 'style="table-layout: fixed;"' in body, name
         assert ">Profile</th>" in body, name

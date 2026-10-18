@@ -26,6 +26,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._invitation_states import _create_session, _populate
+from ._public_id import public_id
 from ._validated import validate_session
 
 
@@ -35,10 +36,11 @@ from ._validated import validate_session
 
 
 def _activate(client: TestClient, session_id: int) -> None:
+    pid = public_id(session_id)
     # Prepare: since 19Q.2 rung 2 it is what creates the invitations, and every test below
     # that used to call `POST /invitations/generate` now relies on it.
     response = client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{pid}/workflow/prepare",
         follow_redirects=False,
     )
     # 303 alone says nothing: `workflow_prepare` also 303s on a failed
@@ -51,7 +53,7 @@ def _activate(client: TestClient, session_id: int) -> None:
         f"Prepare did not succeed: {response.headers['location']}"
     )
     response = client.post(
-        f"/operator/sessions/{session_id}/activate",
+        f"/operator/sessions/{pid}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -82,7 +84,7 @@ def test_invitations_page_renders_workflow_card(
     """Per spec/workflow_card.md — the Invitations page hosts
     the Workflow card with ``next_action_return_to=invitations``."""
     session = _ready_session(client, db, code="inv-card")
-    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
     # In a ready session, the card's invitation forms render with
@@ -110,7 +112,7 @@ def test_the_generate_route_is_gone(client: TestClient, db: Session) -> None:
     """
     session = _ready_session(client, db, code="gen-gone")
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/generate",
+        f"/operator/sessions/{session.public_id}/invitations/generate",
         follow_redirects=False,
     )
     assert response.status_code == 404, (
@@ -147,9 +149,9 @@ def _ready_session_without_invitations(
     session = _create_session(client, db, code)
     _populate(client, db, session.id, reviewer_email=reviewer_email)
     validate_session(session)
-    client.get(f"/operator/sessions/{session.id}/assignments")
+    client.get(f"/operator/sessions/{session.public_id}/assignments")
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -175,7 +177,7 @@ def _validated_session(
     session = _create_session(client, db, code)
     _populate(client, db, session.id, reviewer_email=reviewer_email)
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -190,7 +192,7 @@ def test_send_all_works_from_validated_session(
     operator can notify reviewers ahead of activation."""
     session = _validated_session(client, db, "val-send")
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -213,7 +215,7 @@ def test_reviewer_pre_open_page_renders_for_validated_session(
         provider="aad",
     )
     rae_client = make_client(rae)
-    page = rae_client.get(f"/me/sessions/{session.id}/1")
+    page = rae_client.get(f"/me/sessions/{session.public_id}/1")
     assert page.status_code == 200
     body = page.text
     assert "<title>Review not open" in body
@@ -229,7 +231,7 @@ def test_send_writes_outbox_and_flips_to_sent(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -254,7 +256,7 @@ def test_send_all_writes_one_outbox_per_pending(
     session = _ready_session(client, db, code="sendall-1")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -283,7 +285,7 @@ def test_regenerate_rotates_token_and_resets_status(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
     db.refresh(invitation)
@@ -291,7 +293,7 @@ def test_regenerate_rotates_token_and_resets_status(
     assert invitation.status == "sent"
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -319,7 +321,7 @@ def test_token_url_with_matching_email_stamps_opened_and_redirects(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -333,7 +335,7 @@ def test_token_url_with_matching_email_stamps_opened_and_redirects(
 
     response = rae_client.get(f"/me/invite/{raw_token}", follow_redirects=False)
     assert response.status_code == 303
-    assert response.headers["location"] == f"/me/sessions/{session.id}"
+    assert response.headers["location"] == f"/me/sessions/{session.public_id}"
 
     db.refresh(invitation)
     assert invitation.status == "opened"
@@ -351,7 +353,7 @@ def test_token_url_repeat_visit_does_not_restamp(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -382,7 +384,7 @@ def test_token_url_with_mismatched_email_returns_403(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -419,7 +421,7 @@ def test_token_url_treats_an_inactive_reviewer_as_not_a_reviewer(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -484,7 +486,7 @@ def test_revert_then_reactivate_keeps_existing_invitations_idempotent(
 
     # Revert + reactivate without touching the roster.
     client.post(
-        f"/operator/sessions/{session.id}/revert",
+        f"/operator/sessions/{session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -513,14 +515,14 @@ def test_manage_invitations_no_longer_links_to_outbox(
     """
     session = _ready_session(client, db, code="outbox-retired")
     invitations_body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     assert (
-        f'href="/operator/sessions/{session.id}/outbox">View outbox</a>'
+        f'href="/operator/sessions/{session.public_id}/outbox">View outbox</a>'
         not in invitations_body
     )
     # The per-session route is gone — direct access 404s.
-    response = client.get(f"/operator/sessions/{session.id}/outbox")
+    response = client.get(f"/operator/sessions/{session.public_id}/outbox")
     assert response.status_code == 404
 
 
@@ -532,10 +534,10 @@ def test_audit_events_written_for_lifecycle(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate"
     )
 
     events = {
@@ -566,7 +568,7 @@ def test_record_open_audit_event_written(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -596,7 +598,7 @@ def test_invitations_page_renders_consolidated_column_headers(
     session = _ready_session(client, db, code="cols-1")
 
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     # The full new column spec from segment_11C plan, in order.
     #
@@ -633,7 +635,7 @@ def test_invitations_page_renders_review_progress_and_required_fields_format(
     session = _ready_session(client, db, code="prog-fmt")
 
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     # Review Progress: "{state} ({done}/{total})". Single reviewer with
     # one assignment (Rae ⨯ Carol), no responses yet → "not started (0/1)".
@@ -655,7 +657,7 @@ def test_invitations_data_cells_render_in_pills(
 
     # Pre-send state: not-sent pill, em-dash pills for empty cells.
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     assert '<span class="pill pill-empty">not sent</span>' in body
     # Review Progress pill (not started state) carries the formatted count.
@@ -674,10 +676,10 @@ def test_invitations_data_cells_render_in_pills(
 
     # After send: Email Sent timestamp wraps in a pill-count.
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     # The Email Sent cell now carries a pill-count with a timestamp
     # (look for the year prefix as a reasonable shape proxy).
@@ -690,7 +692,7 @@ def test_invitations_page_email_status_reflects_outbox_row(
 ) -> None:
     session = _ready_session(client, db, code="email-status")
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     # Before send: no outbox row exists → "not sent" pill.
     assert "not sent" in body
@@ -699,10 +701,10 @@ def test_invitations_page_email_status_reflects_outbox_row(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     # After send: outbox row exists at status="sent" (today the queue
     # path stamps sent immediately; Part 2 widens the value set).
@@ -728,7 +730,7 @@ def test_invitations_page_reviewer_name_links_to_drill_in(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
     href = (
-        f'href="/operator/sessions/{session.id}'
+        f'href="/operator/sessions/{session.public_id}'
         f'/invitations/reviewers/{reviewer.id}"'
     )
 
@@ -737,11 +739,11 @@ def test_invitations_page_reviewer_name_links_to_drill_in(
     ).scalars().all()
     assert no_invitations == []
     assert href in client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
 
     assert href in client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
 
 
@@ -774,12 +776,12 @@ def test_old_invitation_keyed_detail_url_308s_to_the_reviewer_url(
     )
 
     response = client.get(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/detail",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/detail",
         follow_redirects=False,
     )
     assert response.status_code == 308
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}"
+        f"/operator/sessions/{session.public_id}"
         f"/invitations/reviewers/{invitation.reviewer_id}"
     )
 
@@ -873,7 +875,7 @@ def test_detail_page_renders_for_a_reviewer_the_table_does_not_list(
     }
 
     response = client.get(
-        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+        f"/operator/sessions/{session.public_id}/invitations/reviewers/{reviewer.id}"
     )
     assert response.status_code == 200, response.text
     body = response.text
@@ -915,7 +917,7 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.id == invitation.reviewer_id)
@@ -927,7 +929,7 @@ def test_detail_page_keeps_the_invite_url_for_a_reviewer_off_the_table(
         r.reviewer.id for r in views.build_invitations_rows(db, session)
     }
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+        f"/operator/sessions/{session.public_id}/invitations/reviewers/{reviewer.id}"
     ).text
     assert "/me/invite/" in body
     assert "No invitation URL has been issued yet." not in body
@@ -979,7 +981,7 @@ def test_detail_page_does_not_claim_an_invitation_that_was_never_created(
     )
 
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+        f"/operator/sessions/{session.public_id}/invitations/reviewers/{reviewer.id}"
     ).text
     facts = _invitation_facts(body)
     # The top line reports the state the page previously got wrong.
@@ -1021,7 +1023,7 @@ def test_detail_page_links_to_the_reviewer_surface_in_a_new_tab(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+        f"/operator/sessions/{session.public_id}/invitations/reviewers/{reviewer.id}"
     ).text
 
     card = body[body.index("Review Progress") :]
@@ -1031,7 +1033,7 @@ def test_detail_page_links_to_the_reviewer_surface_in_a_new_tab(
     assert 'class="btn secondary"' in row
     assert 'target="_blank"' in row and 'rel="noopener"' in row
     assert (
-        f'href="/operator/sessions/{session.id}/preview-surface/1'
+        f'href="/operator/sessions/{session.public_id}/preview-surface/1'
         f'?reviewer_email=rae%40example.edu"' in row
     )
     assert "/previews" not in row
@@ -1058,7 +1060,7 @@ def test_detail_page_404s_for_a_reviewer_in_another_session(
         select(Reviewer).where(Reviewer.session_id == theirs.id)
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{mine.id}"
+        f"/operator/sessions/{mine.public_id}"
         f"/invitations/reviewers/{other_reviewer.id}"
     )
     assert response.status_code == 404
@@ -1072,7 +1074,7 @@ def test_invitation_reviewer_detail_renders(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.id}"
+        f"/operator/sessions/{session.public_id}"
         f"/invitations/reviewers/{invitation.reviewer_id}"
     )
     assert response.status_code == 200
@@ -1091,10 +1093,10 @@ def test_invitation_reviewer_detail_renders(
     # After send: the Send recorded slot takes a timestamp, Last reminder
     # stays empty, and the URL surfaces.
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     body = client.get(
-        f"/operator/sessions/{session.id}"
+        f"/operator/sessions/{session.public_id}"
         f"/invitations/reviewers/{invitation.reviewer_id}"
     ).text
     facts = _invitation_facts(body)
@@ -1130,7 +1132,7 @@ def test_invitation_reviewer_detail_renders_email_preview_tab(
     ).scalar_one()
 
     response = client.get(
-        f"/operator/sessions/{session.id}"
+        f"/operator/sessions/{session.public_id}"
         f"/invitations/reviewers/{reviewer.id}",
         params={"email": email_tab},
     )
@@ -1145,7 +1147,7 @@ def test_invitation_reviewer_detail_renders_email_preview_tab(
     assert f"<strong>To:</strong> {reviewer.email}" in body
     assert 'id="email-previews"' in body
     assert (
-        f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+        f"/operator/sessions/{session.public_id}/invitations/reviewers/{reviewer.id}"
         in body
     )
 
@@ -1171,10 +1173,10 @@ def test_detail_page_dates_line_reports_a_sent_reminder(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind"
     )
     db.refresh(invitation)
     assert invitation.last_reminder_at is not None, (
@@ -1191,7 +1193,7 @@ def test_detail_page_dates_line_reports_a_sent_reminder(
 
     facts = _invitation_facts(
         client.get(
-            f"/operator/sessions/{session.id}"
+            f"/operator/sessions/{session.public_id}"
             f"/invitations/reviewers/{reviewer.id}"
         ).text
     )
@@ -1229,7 +1231,7 @@ def test_detail_page_url_region_distinguishes_its_states(
     reviewer = db.execute(
         select(Reviewer).where(Reviewer.session_id == session.id)
     ).scalar_one()
-    url = f"/operator/sessions/{session.id}/invitations/reviewers/{reviewer.id}"
+    url = f"/operator/sessions/{session.public_id}/invitations/reviewers/{reviewer.id}"
 
     # No invitation: the card names the action, not the missing URL.
     card = _invitation_card(client.get(url).text)
@@ -1237,12 +1239,12 @@ def test_detail_page_url_region_distinguishes_its_states(
     assert "No invitation URL has been issued yet." not in card
 
     client.post(
-        f"/operator/sessions/{session.id}/revert",
+        f"/operator/sessions/{session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1255,7 +1257,7 @@ def test_detail_page_url_region_distinguishes_its_states(
     # Sent: the URL itself, and neither fallback. Per-row Send is
     # `ready`-only (B17, 2026-10-02), so activate first.
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -1264,7 +1266,7 @@ def test_detail_page_url_region_distinguishes_its_states(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1298,13 +1300,13 @@ def test_detail_page_after_regenerate_reports_the_current_token(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind"
     )
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate"
     )
     db.refresh(invitation)
     assert invitation.sent_at is None, "premise: regenerate cleared the send"
@@ -1313,7 +1315,7 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     )
 
     body = client.get(
-        f"/operator/sessions/{session.id}"
+        f"/operator/sessions/{session.public_id}"
         f"/invitations/reviewers/{invitation.reviewer_id}"
     ).text
     facts = _invitation_facts(body)
@@ -1339,10 +1341,10 @@ def test_detail_page_hides_a_regenerated_link(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     page = (
-        f"/operator/sessions/{session.id}"
+        f"/operator/sessions/{session.public_id}"
         f"/invitations/reviewers/{invitation.reviewer_id}"
     )
-    base = f"/operator/sessions/{session.id}/invitations/{invitation.id}"
+    base = f"/operator/sessions/{session.public_id}/invitations/{invitation.id}"
     client.post(f"{base}/send")
     sent_body = client.get(page).text
     old_url = re.search(r"\S*/me/invite/[\w-]+", sent_body).group(0)
@@ -1387,7 +1389,7 @@ def test_detail_page_reports_a_failed_delivery(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -1398,7 +1400,7 @@ def test_detail_page_reports_a_failed_delivery(
 
     facts = _invitation_facts(
         client.get(
-            f"/operator/sessions/{session.id}"
+            f"/operator/sessions/{session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
@@ -1424,11 +1426,11 @@ def test_detail_page_shows_no_delivery_pill_on_an_ordinary_send(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     facts = _invitation_facts(
         client.get(
-            f"/operator/sessions/{session.id}"
+            f"/operator/sessions/{session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
@@ -1460,7 +1462,7 @@ def test_table_and_card_agree_on_a_failed_delivery(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -1468,14 +1470,14 @@ def test_table_and_card_agree_on_a_failed_delivery(
     outbox.status = "failed"
     db.commit()
 
-    table = client.get(f"/operator/sessions/{session.id}/invitations").text
+    table = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     assert _DELIVERY("failed") in table
     assert _DELIVERY("not sent") not in table, (
         "the table must not relabel a failed delivery as never sent"
     )
     facts = _invitation_facts(
         client.get(
-            f"/operator/sessions/{session.id}"
+            f"/operator/sessions/{session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
@@ -1505,7 +1507,7 @@ def test_delivery_pill_does_not_need_a_send_timestamp(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -1519,7 +1521,7 @@ def test_delivery_pill_does_not_need_a_send_timestamp(
 
     facts = _invitation_facts(
         client.get(
-            f"/operator/sessions/{session.id}"
+            f"/operator/sessions/{session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
@@ -1552,7 +1554,7 @@ def test_regenerate_clears_a_stale_delivery_pill(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -1560,7 +1562,7 @@ def test_regenerate_clears_a_stale_delivery_pill(
     outbox.status = "failed"
     db.commit()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate"
     )
     db.refresh(invitation)
     assert invitation.status == "pending", "premise: the token was rotated"
@@ -1573,7 +1575,7 @@ def test_regenerate_clears_a_stale_delivery_pill(
 
     facts = _invitation_facts(
         client.get(
-            f"/operator/sessions/{session.id}"
+            f"/operator/sessions/{session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ).text
     )
@@ -1590,15 +1592,15 @@ def test_per_row_remind_redirects_to_invitations_page(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
 
 
@@ -1615,7 +1617,7 @@ def test_per_row_remind_refuses_an_inactive_reviewer(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     reviewer = db.get(Reviewer, invitation.reviewer_id)
     assert reviewer is not None
@@ -1623,7 +1625,7 @@ def test_per_row_remind_refuses_an_inactive_reviewer(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 409, response.text
@@ -1646,15 +1648,15 @@ def test_invitations_remind_incomplete_bulk_endpoint(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
     # A reminder outbox row was written.
     reminder_count = len(
@@ -1673,7 +1675,7 @@ def test_invitations_remind_incomplete_409_while_session_draft(
 ) -> None:
     session = _create_session(client, db, "bulk-draft")
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 409
@@ -1695,7 +1697,7 @@ def test_send_invitation_populates_cc_bcc_from_override_json(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
 
     outbox = db.execute(
@@ -1719,10 +1721,10 @@ def test_send_reminder_populates_cc_bcc_from_override_json(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind"
     )
 
     reminder = db.execute(
@@ -1744,7 +1746,7 @@ def test_send_omits_cc_bcc_when_overrides_blank(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -1765,7 +1767,7 @@ def _ready_session_with_two_reviewers(
     exercise filters that narrow to one row."""
     session = _create_session(client, db, code)
     client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -1777,7 +1779,7 @@ def _ready_session_with_two_reviewers(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session.id}/reviewees/import",
+        f"/operator/sessions/{session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -1798,7 +1800,7 @@ def test_invitations_filter_strip_renders(
     client: TestClient, db: Session
 ) -> None:
     session = _ready_session(client, db, code="filt-strip")
-    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     # Status dropdown lands with the four mapped options + All.
     assert '<option value="all"' in body
     assert '<option value="not_sent"' in body
@@ -1838,7 +1840,7 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
     session = _ready_session_with_two_reviewers(client, db, "inv-count-line")
 
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations?q=rae"
+        f"/operator/sessions/{session.public_id}/invitations?q=rae"
     ).text
 
     # Left pane: what the table is showing.
@@ -1865,7 +1867,7 @@ def test_the_count_line_is_absent_when_no_filter_narrows(
     the plain filter count are its only two states."""
     session = _ready_session_with_two_reviewers(client, db, "inv-count-quiet")
 
-    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
 
     assert '<p class="muted table-showing-hint">' not in body
     assert "more not shown" not in body
@@ -1883,11 +1885,11 @@ def test_invitations_filter_status_narrows_rows(
         .order_by(Invitation.id)
     ).scalars().first()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation_rae.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation_rae.id}/send"
     )
     # Filter to "Not yet sent" → only Ren.
     body = _strip_datalist(client.get(
-        f"/operator/sessions/{session.id}/invitations?status=not_sent"
+        f"/operator/sessions/{session.public_id}/invitations?status=not_sent"
     ).text)
     assert "ren@example.edu" in body
     assert "rae@example.edu" not in body
@@ -1905,13 +1907,13 @@ def test_invitations_filter_search_narrows_rows(
     session = _ready_session_with_two_reviewers(client, db, "filt-search")
     # Search by partial email.
     body = _strip_datalist(client.get(
-        f"/operator/sessions/{session.id}/invitations?q=rae"
+        f"/operator/sessions/{session.public_id}/invitations?q=rae"
     ).text)
     assert "rae@example.edu" in body
     assert "ren@example.edu" not in body
     # Search is case-insensitive.
     body = _strip_datalist(client.get(
-        f"/operator/sessions/{session.id}/invitations?q=REN"
+        f"/operator/sessions/{session.public_id}/invitations?q=REN"
     ).text)
     assert "ren@example.edu" in body
 
@@ -1921,7 +1923,7 @@ def test_invitations_filter_no_match_shows_empty_message(
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "filt-empty")
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations?q=nobody"
+        f"/operator/sessions/{session.public_id}/invitations?q=nobody"
     ).text
     assert "No reviewers match the current filter." in body
 
@@ -1944,19 +1946,19 @@ def test_regenerate_all_rotates_every_token_and_resets_status(
         .order_by(Invitation.id)
     ).scalars().first()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{rae_invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{rae_invitation.id}/send"
     )
     db.refresh(rae_invitation)
     rae_old_hash = rae_invitation.token_hash
     assert rae_invitation.status == "sent"
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
 
     rows = db.execute(
@@ -1976,7 +1978,7 @@ def test_regenerate_all_writes_single_batch_audit_event(
 ) -> None:
     session = _ready_session_with_two_reviewers(client, db, "regen-all-audit")
     client.post(
-        f"/operator/sessions/{session.id}/invitations/regenerate-all"
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all"
     )
 
     audit_rows = db.execute(
@@ -1998,7 +2000,7 @@ def test_regenerate_all_409_while_session_draft(
 ) -> None:
     session = _create_session(client, db, "regen-all-draft")
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
         follow_redirects=False,
     )
     assert response.status_code == 409
@@ -2010,7 +2012,7 @@ def test_regenerate_all_with_zero_invitations_writes_no_audit(
     session = _ready_session_without_invitations(client, db, "regen-all-empty")
     # Don't generate invitations.
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -2038,7 +2040,7 @@ def test_invitations_info_card_omits_bulk_action_buttons(
     actions column)."""
     session = _ready_session(client, db, code="regen-all-btn")
     body = client.get(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     ).text
     # The card itself renders with its new info-list shape.
     assert 'id="invitations-info-card"' in body
@@ -2070,7 +2072,7 @@ def _two_reviewer_validated_session(
     """A prepared session with two assigned, active reviewers."""
     session = _create_session(client, db, code)
     client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -2082,7 +2084,7 @@ def _two_reviewer_validated_session(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session.id}/reviewees/import",
+        f"/operator/sessions/{session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -2095,7 +2097,7 @@ def _two_reviewer_validated_session(
     pin_full_matrix_on_all_instruments(db, session.id)
     generate_via_page_button(client, session.id)
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -2127,7 +2129,7 @@ def _strand_an_invitation(
         )
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{session.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{session.public_id}/reviewers/bulk-inactivate",
         data={"reviewer_ids": [stranded.id]},
         follow_redirects=False,
     )
@@ -2135,7 +2137,7 @@ def _strand_an_invitation(
 
     # The edit invalidated the session; Prepare again so Send all is live.
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -2184,7 +2186,7 @@ def test_send_all_skips_a_reviewer_who_is_no_longer_eligible(
     stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -2216,7 +2218,7 @@ def test_send_all_leaves_the_ineligible_invitation_pending(
     stranded = _strand_an_invitation(client, db, session, "sam@example.edu")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     # Both assertions below are satisfied by a send that never
@@ -2299,7 +2301,7 @@ def test_send_all_skips_an_active_reviewer_with_no_included_assignment(
     assert session.status in {"validated", "ready"}
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -2330,7 +2332,7 @@ def test_pending_counter_counts_what_send_all_can_actually_send(
     _strand_an_invitation(client, db, session, "sam@example.edu")
 
     client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
 
@@ -2340,7 +2342,7 @@ def test_pending_counter_counts_what_send_all_can_actually_send(
     assert rows == [], "the eligible invitation was sent, so nothing is sendable"
     assert invitations_view_rows == []
 
-    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     assert "Pending invitations" in body
     # The stranded row is still `pending` in the table, and must not be
     # counted here — the counter is about what can still be sent.
@@ -2374,7 +2376,7 @@ def test_send_one_refuses_a_reviewer_the_bulk_paths_would_skip(
         )
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
     assert response.status_code == 409, response.text
@@ -2410,13 +2412,13 @@ def test_an_open_session_with_no_invitations_is_told_a_remedy_it_can_reach(
     # copy should go back to naming it.
     assert (
         client.post(
-            f"/operator/sessions/{session.id}/workflow/prepare",
+            f"/operator/sessions/{session.public_id}/workflow/prepare",
             follow_redirects=False,
         ).headers["location"].find("super_step=precondition")
         != -1
     ), "Prepare is reachable from `ready` now; the copy below is stale"
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert "no invitations exist" in body
     assert "Revert to draft" in body
     assert "stops responses" in body
@@ -2464,7 +2466,7 @@ def test_the_copy_that_prompts_prepare_names_what_prepare_does(
     session = _create_session(client, db, "state2-copy")
     _populate(client, db, session.id, reviewer_email="rae@example.edu")
 
-    card = _next_action_body(client.get(f"/operator/sessions/{session.id}").text)
+    card = _next_action_body(client.get(f"/operator/sessions/{session.public_id}").text)
 
     # The premise: this is State 2 — Prepare is offered, and it has not
     # run, so no invitations exist yet.
@@ -2476,7 +2478,7 @@ def test_the_copy_that_prompts_prepare_names_what_prepare_does(
 
     # And the claim the copy gained is true from exactly this state.
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -2512,7 +2514,7 @@ def test_state_6_copy_does_not_claim_reviewers_were_told(
     )
     session = _validated_session(client, db, "state6-copy")
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -2520,7 +2522,7 @@ def test_state_6_copy_does_not_claim_reviewers_were_told(
     assert not called, "a transport was constructed; the copy below is now wrong"
     assert inv_service.has_sent_invitations(db, session.id)
 
-    card = _next_action_body(client.get(f"/operator/sessions/{session.id}").text)
+    card = _next_action_body(client.get(f"/operator/sessions/{session.public_id}").text)
     assert "no mail leaves the app" in card
     assert "have been notified" not in card
 
@@ -2543,7 +2545,7 @@ def test_an_archived_session_answers_404_on_the_surface(
         name="Rae",
         provider="aad",
     )
-    resp = make_client(rae).get(f"/me/sessions/{session.id}/1")
+    resp = make_client(rae).get(f"/me/sessions/{session.public_id}/1")
     assert resp.status_code == 404
     assert session.name not in resp.text
 
@@ -2561,7 +2563,7 @@ def test_an_archived_sessions_invitation_link_answers_404(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     outbox = db.execute(
         select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
@@ -2593,20 +2595,20 @@ def test_regenerate_all_resets_the_table_and_the_sent_counter(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
-    sent = client.get(f"/operator/sessions/{session.id}/invitations").text
+    sent = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     assert ">sent</span>" in sent, "premise: the send shows in the table"
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
     db.refresh(invitation)
     assert invitation.status == "pending", "premise: the token was rotated"
 
-    body = client.get(f"/operator/sessions/{session.id}/invitations").text
+    body = client.get(f"/operator/sessions/{session.public_id}/invitations").text
     assert '<span class="pill pill-count">sent</span>' not in body
     assert _DELIVERY("not sent") in body
     assert re.search(

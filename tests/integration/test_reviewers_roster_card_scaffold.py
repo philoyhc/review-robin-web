@@ -47,7 +47,7 @@ def _with_reviewers(
 ) -> ReviewSession:
     rs = _session(client, db, code)
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/import",
+        f"/operator/sessions/{rs.public_id}/reviewers/import",
         files={"file": ("r.csv", csv, "text/csv")},
         follow_redirects=False,
     )
@@ -60,7 +60,7 @@ def _give_it_assignments(
     """A reviewee roster plus generated assignments, so the confirm's
     optional clauses are reachable."""
     client.post(
-        f"/operator/sessions/{rs.id}/reviewees/import",
+        f"/operator/sessions/{rs.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -71,14 +71,14 @@ def _give_it_assignments(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{rs.id}/assignments/generate",
+        f"/operator/sessions/{rs.public_id}/assignments/generate",
         data={"mode": "all_to_all"},
         follow_redirects=False,
     )
 
 
 def _page(client: TestClient, rs: ReviewSession) -> str:
-    response = client.get(f"/operator/sessions/{rs.id}/reviewers")
+    response = client.get(f"/operator/sessions/{rs.public_id}/reviewers")
     assert response.status_code == 200
     return response.text
 
@@ -147,7 +147,7 @@ def test_populated_columns_use_the_session_friendly_label(client, db):
         b"ReviewerName,ReviewerEmail,ReviewerTag1\nR1,r1@example.com,alpha\n",
     )
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/field-labels",
+        f"/operator/sessions/{rs.public_id}/reviewers/field-labels",
         data={"tag_1": "Tutor"},
         follow_redirects=False,
     )
@@ -208,7 +208,7 @@ def test_the_panel_holds_its_four_cards_and_nothing_else(client, db):
     # cards are removed by their own markers rather than by naming the
     # controls inside them: a control list stops covering anything the
     # moment a card renames one.
-    rs_id = rs.id
+    rs_id = rs.public_id
 
     # Each card is excised by a marker its WIRED form renders, not by a
     # class the scaffold also had: the labels editor by its own POST
@@ -366,7 +366,7 @@ def test_nothing_is_left_below_the_table(client, db):
     )
     # The live editor's own route, not a string the scaffold prints —
     # deleting the include outright must fail this.
-    assert f"/operator/sessions/{rs.id}/reviewers/field-labels" in panel
+    assert f"/operator/sessions/{rs.public_id}/reviewers/field-labels" in panel
 
 
 def test_the_replace_roster_key_appears_exactly_once(client, db):
@@ -468,7 +468,7 @@ def test_the_panel_is_reachable_without_javascript(client, db):
     ability to see the cards at all.
     """
     rs = _with_reviewers(client, db, "rc-nojs")
-    base = f"/operator/sessions/{rs.id}/reviewers"
+    base = f"/operator/sessions/{rs.public_id}/reviewers"
 
     closed = _markup(_page(client, rs))
     assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
@@ -510,7 +510,7 @@ def test_a_failed_import_arrives_with_the_panel_open(client, db):
     """
     rs = _with_reviewers(client, db, "rc-badcsv")
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/import",
+        f"/operator/sessions/{rs.public_id}/reviewers/import",
         files={"file": ("bad.csv", b"ReviewerName\nAlice\n", "text/csv")},
         follow_redirects=False,
     )
@@ -563,7 +563,7 @@ def test_the_row_expander_script_is_gated_on_selectable(client, db):
 
     edit_id = re.search(r'id="reviewer-row-(\d+)"', html).group(1)
     editing = client.get(
-        f"/operator/sessions/{rs.id}/reviewers?edit_id={edit_id}"
+        f"/operator/sessions/{rs.public_id}/reviewers?edit_id={edit_id}"
     ).text
     # Vacuity guard: the param is `edit_id`, and an unrecognized name is
     # ignored silently rather than erroring — so a typo here would leave
@@ -640,7 +640,7 @@ def test_a_server_restored_selection_renders_its_panel(client, db):
     html = _page(client, rs)
     row_id = re.search(r'id="reviewer-row-(\d+)"', html).group(1)
     restored = client.get(
-        f"/operator/sessions/{rs.id}/reviewers?selected={row_id}"
+        f"/operator/sessions/{rs.public_id}/reviewers?selected={row_id}"
     ).text
     # Vacuity guard: prove the server actually restored the tick, or the
     # assertion below would pass against an unselected page.
@@ -868,7 +868,7 @@ def test_a_zero_match_filter_still_offers_the_control_that_clears_it(client, db)
     """
     rs = _with_reviewers(client, db, "rc26")
     html = client.get(
-        f"/operator/sessions/{rs.id}/reviewers?q=nothingmatchesthis"
+        f"/operator/sessions/{rs.public_id}/reviewers?q=nothingmatchesthis"
     ).text
     # Vacuity guard: prove the filter really did match nothing.
     assert "No reviewers match the current filter." in html
@@ -919,7 +919,7 @@ def test_the_filter_strip_sits_in_the_tables_toolbar(client, db):
     `Show columns:`, the pager and the count line, in the order
     `tests/unit/test_pager.py` pins."""
     rs = _with_reviewers(client, db, "rc27", csv=R_CSV_TAGGED)
-    html = _markup(client.get(f"/operator/sessions/{rs.id}/reviewers").text)
+    html = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers").text)
 
     toolbar = re.search(
         r'<div class="table-card-toolbar is-split">.*?id="reviewers-table"',
@@ -950,7 +950,7 @@ def test_the_filter_strip_sits_in_the_tables_toolbar(client, db):
 
     # Filtered: the chip row and the count line, and no pager.
     filtered = _markup(
-        client.get(f"/operator/sessions/{rs.id}/reviewers?q=r1").text
+        client.get(f"/operator/sessions/{rs.public_id}/reviewers?q=r1").text
     )
     fleft = _left_pane(filtered)
     assert "table-showing-hint" in fleft, (
@@ -986,7 +986,7 @@ def test_an_empty_roster_still_offers_add_new(client, db):
     rosters still render theirs unconditionally.
     """
     rs = _session(client, db, "rc29")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     # Vacuity guard: prove the roster really is empty.
     assert "No reviewers yet." in html
     assert 'id="reviewers-table"' not in html
@@ -999,7 +999,7 @@ def test_an_empty_roster_is_not_told_it_filtered_them_out(client, db):
     matched nothing is the operator's own doing and clearable, an empty
     roster is a starting point."""
     rs = _session(client, db, "rc30")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     assert "No reviewers match the current filter." not in html
     assert "No reviewers yet." in html
 
@@ -1014,7 +1014,7 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(client, db):
     rs = _with_reviewers(client, db, "rc31")
     listing = _page(client, rs)
     rid = re.search(r'id="reviewer-row-(\d+)"', listing).group(1)
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers?edit_id={rid}").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers?edit_id={rid}").text
     # Vacuity guard: `edit_id` typo'd is ignored silently, leaving the
     # page in its normal state — prove edit mode actually engaged.
     assert 'name="name"' in html, "edit mode did not engage"
@@ -1065,7 +1065,7 @@ def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
     is made against a page that actually renders.
     """
     rs = _with_reviewers(client, db, "rc32")
-    reviewers = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    reviewers = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     assert '<div class="table-card-toolbar is-split">' in _markup(reviewers)
 
     # The shared rule stays flex; only the modifier is a grid.
@@ -1078,7 +1078,7 @@ def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
     )
 
     enable_observers(db, rs)
-    observers = client.get(f"/operator/sessions/{rs.id}/observers")
+    observers = client.get(f"/operator/sessions/{rs.public_id}/observers")
     assert observers.status_code == 200, (
         "the Observers assertion below needs a page that renders"
     )
@@ -1091,7 +1091,7 @@ def test_every_table_toolbar_splits_and_the_panes_stay_a_modifier(client, db):
     # have made its assertion unreachable rather than false.
     enable_relationships(db, rs)
     for page in ("reviewees", "relationships"):
-        response = client.get(f"/operator/sessions/{rs.id}/{page}")
+        response = client.get(f"/operator/sessions/{rs.public_id}/{page}")
         assert response.status_code == 200, page
         assert "table-card-toolbar is-split" in _markup(response.text), (
             f"{page} opted in at 19P.3 rung 2"
@@ -1132,7 +1132,7 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
     inferred from the container being gone.
     """
     rs = _with_reviewers(client, db, "rc33")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     assert "page-guidance-wide" in _markup(html), "Reviewers did not opt in"
     assert re.search(
         r"\.page-guidance-wide > \.page-guidance-body \{[^}]*column-count: 2",
@@ -1143,7 +1143,7 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
     enable_observers(db, rs)
     enable_relationships(db, rs)
     for page in ("observers", "reviewees", "relationships"):
-        response = client.get(f"/operator/sessions/{rs.id}/{page}")
+        response = client.get(f"/operator/sessions/{rs.public_id}/{page}")
         assert response.status_code == 200, page
         assert "page-guidance-wide" in _markup(response.text), (
             f"{page} runs full width but did not opt in"
@@ -1154,7 +1154,7 @@ def test_full_width_guidance_runs_its_prose_in_two_columns(client, db):
     # negative asserted against one of them would be asserting nothing.
     # `instruments_index.html` and `session_setupinvite.html` are the two
     # templates still calling the macro without `full_width`.
-    other = client.get(f"/operator/sessions/{rs.id}/instruments")
+    other = client.get(f"/operator/sessions/{rs.public_id}/instruments")
     assert other.status_code == 200
     other_markup = _markup(other.text)
     assert "page-guidance" in other_markup, "vacuity: no guidance card"
@@ -1253,7 +1253,7 @@ def test_the_toolbar_controls_land_on_the_table_not_the_top_of_the_page(
     """
     rs = _with_reviewers(client, db, "rc35")
     html = _markup(client.get(
-        f"/operator/sessions/{rs.id}/reviewers?q=R1"
+        f"/operator/sessions/{rs.public_id}/reviewers?q=R1"
     ).text)
 
     # Vacuity guard: `Clear` renders only while a filter is active.
@@ -1287,7 +1287,7 @@ def test_add_new_lands_on_the_editor_not_the_table(client, db):
     revisit.
     """
     rs = _with_reviewers(client, db, "rc36")
-    html = _markup(client.get(f"/operator/sessions/{rs.id}/reviewers").text)
+    html = _markup(client.get(f"/operator/sessions/{rs.public_id}/reviewers").text)
     right = _toolbar_right(html)
 
     add = re.search(r'<a[^>]*>\s*Add new</a>', right, re.S)
@@ -1300,7 +1300,7 @@ def test_add_new_lands_on_the_editor_not_the_table(client, db):
     # ...and the anchor it names exists once edit mode is on, or it is a
     # fragment pointing at nothing.
     editing = _markup(
-        client.get(f"/operator/sessions/{rs.id}/reviewers?add=1").text
+        client.get(f"/operator/sessions/{rs.public_id}/reviewers?add=1").text
     )
     assert 'id="reviewers-row-editor"' in editing, (
         "`Add new` points at an id the add-mode render does not have"
@@ -1325,7 +1325,7 @@ def test_a_failed_import_still_renders_real_anchors(client, db):
     """
     rs = _with_reviewers(client, db, "rc37")
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/import",
+        f"/operator/sessions/{rs.public_id}/reviewers/import",
         files={"file": ("bad.csv", b"NotAColumn,Nope\nx,y\n", "text/csv")},
         follow_redirects=False,
     )
@@ -1519,7 +1519,7 @@ def test_the_status_actions_are_offered_only_where_they_act(client, db):
 
 
 def _add_page(client: TestClient, rs: ReviewSession) -> str:
-    response = client.get(f"/operator/sessions/{rs.id}/reviewers?add=1")
+    response = client.get(f"/operator/sessions/{rs.public_id}/reviewers?add=1")
     assert response.status_code == 200
     # The fixture must actually BE in edit mode, or every absence
     # assertion below passes against a page with no editor at all.
@@ -1654,7 +1654,7 @@ def test_the_labels_editor_renders_once_with_its_panel_else_never(
     review_session = db.get(ReviewSession, rs.id)
     review_session.status = state
     db.flush()
-    url = f"/operator/sessions/{review_session.id}/reviewers"
+    url = f"/operator/sessions/{review_session.public_id}/reviewers"
     if adding:
         url += "?add=1"
     response = client.get(url)
@@ -1675,7 +1675,7 @@ def test_the_labels_editor_renders_once_with_its_panel_else_never(
         # The form's TARGET: a cold read once pointed a copy at
         # `/reviewees/field-labels` and the whole suite passed.
         assert html.count(
-            f'action="/operator/sessions/{review_session.id}'
+            f'action="/operator/sessions/{review_session.public_id}'
             f'/reviewers/field-labels"'
         ) == 1, where
         for slot in ("tag_1", "tag_2", "tag_3"):
@@ -1784,7 +1784,7 @@ def test_the_panel_arrives_open_when_the_flag_is_set(client, db):
     rs = _with_reviewers(client, db, "rc-open")
     closed = _markup(_page(client, rs))
     opened = _markup(
-        client.get(f"/operator/sessions/{rs.id}/reviewers?unlocked=1").text
+        client.get(f"/operator/sessions/{rs.public_id}/reviewers?unlocked=1").text
     )
 
     assert re.search(r'id="roster-unlock-panel"[^>]*\bhidden', closed), (
@@ -1876,7 +1876,7 @@ def test_the_edit_row_carries_an_expander_bar_beneath_it(
     ).scalars().first()
     html = _markup(
         client.get(
-            f"/operator/sessions/{rs.id}/reviewers"
+            f"/operator/sessions/{rs.public_id}/reviewers"
             + url_suffix.format(rid=rid)
         ).text
     )
@@ -1967,7 +1967,7 @@ def test_the_danger_zone_is_wired_in_the_panel(client, db):
     card = _danger(_markup(_page(client, rs)))
     assert card, "no Danger Zone in the panel"
 
-    assert f'action="/operator/sessions/{rs.id}/reviewers/delete-all"' in card
+    assert f'action="/operator/sessions/{rs.public_id}/reviewers/delete-all"' in card
     assert 'name="confirm" value="true"' in card, "no confirm to tick"
     assert 'data-delete-confirm="delete-all"' in card
     assert 'data-delete-btn="delete-all"' in card
@@ -2037,7 +2037,7 @@ def test_the_danger_zone_is_gated_on_the_roster_having_rows(client, db):
     # The ROUTE, not the bare word: the roster card's own note says
     # "delete-all lives behind Unlock", so the substring matches the
     # page's prose. Third instance of that trap in this segment.
-    assert f"/operator/sessions/{empty.id}/reviewers/delete-all" not in html, (
+    assert f"/operator/sessions/{empty.public_id}/reviewers/delete-all" not in html, (
         "the route is still reachable on an empty roster"
     )
 
@@ -2080,7 +2080,7 @@ def test_add_new_is_disabled_while_a_row_is_being_edited(client, db):
     reviewer = db.execute(select(Reviewer)).scalars().first()
     html = _markup(
         client.get(
-            f"/operator/sessions/{rs.id}/reviewers?edit_id={reviewer.id}"
+            f"/operator/sessions/{rs.public_id}/reviewers?edit_id={reviewer.id}"
         ).text
     )
     assert 'name="name"' in html, "edit mode did not engage"

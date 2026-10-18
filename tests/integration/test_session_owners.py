@@ -77,7 +77,7 @@ def test_edit_page_renders_owners_section_for_owner(
 ) -> None:
     review_session = _make_session(client, db, code="own-1")
     # Owners live on Session Home's Owners card, no unlock needed.
-    response = client.get(f"/operator/sessions/{review_session.id}")
+    response = client.get(f"/operator/sessions/{review_session.public_id}")
     assert response.status_code == 200
     # Owners card present; creator (alice) is the single owner.
     assert 'id="owners-card"' in response.text
@@ -95,7 +95,7 @@ def test_edit_page_404s_for_plain_non_member_operator(
     # 18R Item 4 — Session Home is the config surface; a non-owner is
     # refused, with a 404 since 19F PR 1.
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}",
+        f"/operator/sessions/{review_session.public_id}",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -117,7 +117,7 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
 
     bob_client = make_client(bob)
     # Denied before adopting.
-    denied = bob_client.get(f"/operator/sessions/{review_session.id}")
+    denied = bob_client.get(f"/operator/sessions/{review_session.public_id}")
     # 403, not the uniform 404: sys-admins are exempt (19F PR 1
     # follow-up) because the sys-admin Sessions list already names
     # every session, so a 404 here would only break a link that page
@@ -126,14 +126,14 @@ def test_sys_admin_non_member_denied_edit_until_adopt(
 
     # The audited elevation door: self-add as owner, land on Home.
     adopt = bob_client.post(
-        f"/operator/sys-admin/sessions/{review_session.id}/adopt",
+        f"/operator/sys-admin/sessions/{review_session.public_id}/adopt",
         follow_redirects=False,
     )
     assert adopt.status_code == 303
-    assert adopt.headers["location"] == f"/operator/sessions/{review_session.id}"
+    assert adopt.headers["location"] == f"/operator/sessions/{review_session.public_id}"
 
     # Now an owner → Home renders with the Owners card.
-    response = bob_client.get(f"/operator/sessions/{review_session.id}")
+    response = bob_client.get(f"/operator/sessions/{review_session.public_id}")
     assert response.status_code == 200
     assert 'id="owners-card"' in response.text
 
@@ -154,7 +154,7 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
     _seed_user(db, email="bob@example.edu")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
@@ -162,7 +162,7 @@ def test_add_owner_inserts_session_operator_and_emits_audit(
     # Owner add/remove land on Session Home's Owners card — its own card
     # since 19S Item 10, so the details card stays locked.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#owners-card"
+        f"/operator/sessions/{review_session.public_id}#owners-card"
     )
 
     bob_row = db.execute(
@@ -197,7 +197,7 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     review_session = _make_session(client, db, code="own-addform")
     _seed_user(db, email="bob@example.edu")
 
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     owners_pos = body.find('id="owners-card"')
     card = body[owners_pos:body.find("<script", owners_pos)]
 
@@ -213,7 +213,7 @@ def test_config_owners_card_renders_add_form_when_candidates_exist(
     # 2026-09-23, retiring the card's staged Save).
     assert 'name="target_email"' in card
     assert (
-        f'action="/operator/sessions/{review_session.id}/owners/add"' in card
+        f'action="/operator/sessions/{review_session.public_id}/owners/add"' in card
     )
     # Bob is offered as a candidate in the datalist.
     assert "bob@example.edu" in card
@@ -228,7 +228,7 @@ def test_add_owner_target_not_in_workspace_303s_with_error(
     _seed_user(db, email="outsider@example.edu", is_operator=False)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "outsider@example.edu"},
         follow_redirects=False,
     )
@@ -243,7 +243,7 @@ def test_add_owner_target_already_owner_303s_with_error(
     review_session = _make_session(client, db, code="own-dup")
     # Alice (creator) is already the owner; try to add her again.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "alice@example.edu"},
         follow_redirects=False,
     )
@@ -257,7 +257,7 @@ def test_add_owner_unknown_email_303s_with_error(
 ) -> None:
     review_session = _make_session(client, db, code="own-unknown")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "ghost@example.edu"},
         follow_redirects=False,
     )
@@ -272,7 +272,7 @@ def test_owners_banner_maps_codes_and_ignores_text_from_the_url(
     """``owners_error`` is a code mapped to fixed copy; an unlisted one
     renders no banner rather than echoing itself (findings O7)."""
     review_session = _make_session(client, db, code="own-banner")
-    base = f"/operator/sessions/{review_session.id}"
+    base = f"/operator/sessions/{review_session.public_id}"
     known = client.get(f"{base}?owners_error=already_owner").text
     assert "That user is already an owner of this session." in known
 
@@ -294,13 +294,13 @@ def test_remove_owner_deletes_session_operator_and_emits_audit(
     bob_row = _seed_user(db, email="bob@example.edu")
     # Add Bob first.
     client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/{bob_row.id}/remove",
+        f"/operator/sessions/{review_session.public_id}/owners/{bob_row.id}/remove",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -333,7 +333,7 @@ def test_remove_last_owner_409s(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/{alice_row.id}/remove",
+        f"/operator/sessions/{review_session.public_id}/owners/{alice_row.id}/remove",
         follow_redirects=False,
     )
     assert response.status_code == 409
@@ -347,7 +347,7 @@ def test_self_remove_allowed_when_not_last_owner(
     review_session = _make_session(client, db, code="own-self-rm")
     _seed_user(db, email="bob@example.edu")
     client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
@@ -356,7 +356,7 @@ def test_self_remove_allowed_when_not_last_owner(
         select(User).where(User.email == "alice@example.edu")
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/{alice_row.id}/remove",
+        f"/operator/sessions/{review_session.public_id}/owners/{alice_row.id}/remove",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -391,10 +391,10 @@ def test_sys_admin_can_self_add_to_session_via_relaxed_gate(
     # Bob hits a session route first to land his user row via the bootstrap
     # (get_or_create_user runs even though the operator gate refuses him).
     bob_client = make_client(bob)
-    bob_client.get(f"/operator/sessions/{review_session.id}")
+    bob_client.get(f"/operator/sessions/{review_session.public_id}")
 
     response = bob_client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
@@ -443,12 +443,12 @@ def test_diagnostics_row_renders_manage_adopt_action(
     response = client.get("/operator/sys-admin/sessions")
     assert response.status_code == 200
     assert (
-        f'action="/operator/sys-admin/sessions/{review_session.id}/adopt"'
+        f'action="/operator/sys-admin/sessions/{review_session.public_id}/adopt"'
         in response.text
     )
     assert ">Manage</button>" in response.text
     # The old back-door edit link is gone.
-    assert f'/operator/sessions/{review_session.id}/edit">Details' not in response.text
+    assert f'/operator/sessions/{review_session.public_id}/edit">Details' not in response.text
 
 
 # --------------------------------------------------------------------------- #
@@ -464,7 +464,7 @@ def test_non_owner_sys_admin_denied_edit_submit(
     review_session = _make_session(client, db, code="deny-edit")
     # 18R Item 4 — config edits go through /config (require_session_operator).
     resp = make_client(bob).post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data={"name": "x", "code": "deny-edit", "description": ""},
         follow_redirects=False,
     )
@@ -482,7 +482,7 @@ def test_non_owner_sys_admin_denied_lobby_edit(
     monkeypatch.setattr(settings, "sys_admin_emails", ["bob@example.edu"])
     review_session = _make_session(client, db, code="deny-lobby")
     resp = make_client(bob).post(
-        f"/operator/sessions/{review_session.id}/lobby-edit",
+        f"/operator/sessions/{review_session.public_id}/lobby-edit",
         data={"name": "x", "code": "deny-lobby", "tags": ""},
         follow_redirects=False,
     )
@@ -501,7 +501,7 @@ def test_non_owner_sys_admin_denied_owners_remove(
     review_session = _make_session(client, db, code="deny-remove")
     # The per-session gate denies before the target user_id matters.
     resp = make_client(bob).post(
-        f"/operator/sessions/{review_session.id}/owners/1/remove",
+        f"/operator/sessions/{review_session.public_id}/owners/1/remove",
         follow_redirects=False,
     )
     # 403, not the uniform 404: sys-admins are exempt (19F PR 1
@@ -522,7 +522,7 @@ def test_owners_add_self_only_blocks_adding_other(
     carol = _seed_user(db, email="carol@example.edu")
 
     resp = make_client(bob).post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "carol@example.edu"},
         follow_redirects=False,
     )
@@ -546,7 +546,7 @@ def test_non_owner_sys_admin_can_still_clone(
     review_session = _make_session(client, db, code="clone-ok")
     before = db.execute(select(SessionOperator.id)).all()
     resp = make_client(bob).post(
-        f"/operator/sessions/{review_session.id}/clone",
+        f"/operator/sessions/{review_session.public_id}/clone",
         data={"mode": "all"},
         follow_redirects=False,
     )
@@ -555,8 +555,11 @@ def test_non_owner_sys_admin_can_still_clone(
     assert len(after) > len(before)  # a new owned clone was created
     # Findings P2: the source's own trail names the non-owner actor and
     # the copy, since a full Duplicate carries the roster with it.
-    clone_id = int(resp.headers["location"].split("/")[3].split("?")[0])
-    clone = db.get(ReviewSession, clone_id)
+    clone_public_id = resp.headers["location"].split("/")[3].split("?")[0]
+    clone = db.execute(
+        select(ReviewSession).where(ReviewSession.public_id == clone_public_id)
+    ).scalar_one()
+    clone_id = clone.id
     bob_row = db.execute(
         select(User).where(User.email == "bob@example.edu")
     ).scalar_one()
@@ -582,7 +585,7 @@ def test_adopt_idempotent_when_already_owner(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="adopt-idem")
     resp = client.post(
-        f"/operator/sys-admin/sessions/{review_session.id}/adopt",
+        f"/operator/sys-admin/sessions/{review_session.public_id}/adopt",
         follow_redirects=False,
     )
     assert resp.status_code == 303

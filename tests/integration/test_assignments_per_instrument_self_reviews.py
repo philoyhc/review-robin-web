@@ -420,7 +420,7 @@ def test_self_review_chip_tracks_the_include_state(
     def chip() -> str:
         """The chip's ``<label …>…</label>``, its box inside it."""
         body = client.get(
-            f"/operator/sessions/{review_session.id}/assignments"
+            f"/operator/sessions/{review_session.public_id}/assignments"
         ).text
         head, tail = body.split(f'data-self-review-chip="{instrument_id}"', 1)
         return "<label" + head.rsplit("<label", 1)[1] + tail.split("</label>", 1)[0] + "</label>"
@@ -432,7 +432,7 @@ def test_self_review_chip_tracks_the_include_state(
     assert "Include 1 self review</label>" in on
 
     client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
@@ -485,7 +485,7 @@ def test_toggle_route_404s_another_sessions_instrument(
     before = db.execute(select(func.count()).select_from(AuditEvent)).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{mine.id}"
+        f"/operator/sessions/{mine.public_id}"
         f"/assignments/{foreign_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,

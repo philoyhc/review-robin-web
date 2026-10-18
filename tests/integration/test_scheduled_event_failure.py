@@ -65,7 +65,7 @@ def test_session_home_renders_when_a_trigger_raises(
         scheduled_events, "_observe_scheduled_invites", _boom("render failed")
     )
 
-    response = client.get(f"/operator/sessions/{review_session.id}")
+    response = client.get(f"/operator/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
     rows = _failed_rows(db, review_session)
@@ -105,7 +105,7 @@ def test_a_repeated_failure_is_recorded_once(
     )
 
     for _ in range(3):
-        assert client.get(f"/operator/sessions/{review_session.id}").status_code == 200
+        assert client.get(f"/operator/sessions/{review_session.public_id}").status_code == 200
 
     rows = _failed_rows(db, review_session)
     assert len(rows) == 1
@@ -142,7 +142,7 @@ def test_two_failing_triggers_each_record_once(
     )
 
     for _ in range(3):
-        assert client.get(f"/operator/sessions/{review_session.id}").status_code == 200
+        assert client.get(f"/operator/sessions/{review_session.public_id}").status_code == 200
 
     triggers = [row.detail["context"]["trigger"] for row in _failed_rows(db, review_session)]
     assert sorted(triggers) == ["invites", "reminders"]
@@ -181,7 +181,7 @@ def test_a_failure_to_record_is_swallowed(
 
     monkeypatch.setattr(scheduled_events.audit, "write_event", _failure_write_down)
 
-    response = client.get(f"/operator/sessions/{review_session.id}")
+    response = client.get(f"/operator/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
     assert "Spring" in response.text

@@ -11,7 +11,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_a_refused_upload_lands_on_homes_own_path(
-    page: Page, new_session: Callable[[], int], tmp_path
+    page: Page, new_session: Callable[[], str], tmp_path
 ) -> None:
     session_id = new_session()
     bad = tmp_path / "reviewers.csv"

@@ -40,7 +40,7 @@ def _operator_creates_session_with_pair(
     review_session.relationships_enabled = True
     db.commit()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -51,7 +51,7 @@ def _operator_creates_session_with_pair(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -66,7 +66,7 @@ def _operator_creates_session_with_pair(
     # assignments CSV's PairContext columns are silently ignored
     # post-15D.
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -90,9 +90,9 @@ def _activate(
     operator_client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
     validate_session(review_session)
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     response = operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -127,7 +127,7 @@ def test_pair_context_renders_as_separate_columns(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/me/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
     body = response.text
@@ -155,7 +155,7 @@ def test_pair_context_no_longer_renders_inside_identity_cell(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/me/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
     assert "P1:" not in response.text
@@ -198,7 +198,7 @@ def test_profile_link_renders_as_anchor(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/me/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
     body = response.text
@@ -241,7 +241,7 @@ def test_profile_link_empty_renders_empty_cell(
     _activate(operator, db, review_session)
 
     rae_client = make_client(rae)
-    response = rae_client.get(f"/me/sessions/{review_session.id}")
+    response = rae_client.get(f"/me/sessions/{review_session.public_id}")
 
     assert response.status_code == 200
     assert '>Profile<' in response.text

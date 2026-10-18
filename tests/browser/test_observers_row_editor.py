@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 from playwright.sync_api import Page, expect
 
+from ._builder import session_pk
 from .conftest import LiveServer
 
 RULE = {
@@ -34,23 +35,24 @@ RULE = {
 }
 
 
-def _seed_observer(database_url: str, session_id: int) -> int:
+def _seed_observer(database_url: str, session_id: str) -> int:
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
     from app.db.models import Observer, Reviewee, ReviewSession
 
+    pk = session_pk(database_url, session_id)
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            db.get(ReviewSession, session_id).observers_enabled = True
+            db.get(ReviewSession, pk).observers_enabled = True
             # A populated tag, so the builder offers a field to pick.
             db.add(Reviewee(
-                session_id=session_id, name="E",
+                session_id=pk, name="E",
                 email_or_identifier="e@example.org", tag_1="Blue",
             ))
             observer = Observer(
-                session_id=session_id, email="o@example.org",
+                session_id=pk, email="o@example.org",
                 display_name="O", status="active", cohort_rule=RULE,
             )
             db.add(observer)
@@ -61,7 +63,7 @@ def _seed_observer(database_url: str, session_id: int) -> int:
 
 
 def test_edit_loads_the_observers_rule_into_the_builder(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     observer_id = _seed_observer(live_server.database_url, session_id)
@@ -82,7 +84,7 @@ def test_edit_loads_the_observers_rule_into_the_builder(
 
 
 def test_add_starts_from_one_default_cell_and_the_buttons_work(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed_observer(live_server.database_url, session_id)
@@ -119,7 +121,7 @@ def _stored_rule(database_url: str, email: str) -> object:
 
 
 def test_save_waits_for_an_email_and_a_finished_rule(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Rung 3: Save is live only when the row and its rule are savable,
     and one click stores both."""
@@ -154,7 +156,7 @@ def test_save_waits_for_an_email_and_a_finished_rule(
 
 
 def test_a_rule_the_dropdown_lacks_survives_a_rename(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Codex on #2989: a stale key loaded into a disabled
     option, which the browser leaves out of the submission — so a rename
@@ -211,18 +213,19 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
     assert rule == stale
 
 
-def _rules(database_url: str, session_id: int) -> list[object]:
+def _rules(database_url: str, session_id: str) -> list[object]:
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
 
     from app.db.models import Observer
 
+    pk = session_pk(database_url, session_id)
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
             return list(db.execute(
                 select(Observer.cohort_rule)
-                .where(Observer.session_id == session_id)
+                .where(Observer.session_id == pk)
                 .order_by(Observer.id)
             ).scalars())
     finally:
@@ -230,7 +233,7 @@ def _rules(database_url: str, session_id: int) -> list[object]:
 
 
 def test_edit_on_several_rows_saves_one_rule_to_each(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Rung 4: the expander shows no builder; `Edit` on two rows opens
     their rule alone, and its Save writes it to both."""
@@ -244,7 +247,8 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            db.add(Observer(session_id=session_id, email="p@example.org",
+            db.add(Observer(session_id=session_pk(live_server.database_url, session_id),
+                            email="p@example.org",
                             display_name="P", status="active"))
             db.commit()
     finally:
@@ -285,7 +289,7 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
 
 
 def test_several_rows_save_waits_for_a_change(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Over differing rules the builder arrives empty; a live Save would
     clear them all in one click, so it waits for a change.
@@ -303,7 +307,8 @@ def test_several_rows_save_waits_for_a_change(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            second = Observer(session_id=session_id, email="p@example.org",
+            second = Observer(session_id=session_pk(live_server.database_url, session_id),
+                              email="p@example.org",
                               display_name="P", status="active")
             db.add(second)
             db.commit()

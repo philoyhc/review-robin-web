@@ -21,6 +21,8 @@ from fastapi.testclient import TestClient
 
 from app.db.models import AuditEvent, ReviewSession
 
+from ._public_id import public_id
+
 
 def _session_id(client: TestClient, engine: Engine, code: str) -> int:
     response = client.post(
@@ -59,7 +61,7 @@ def test_a_failed_prepare_persists_its_audit_event(
     # so the run starts, and a blocking validation error stops it at the
     # `validate` step — the path that writes the event.
     committed_client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -71,7 +73,7 @@ def test_a_failed_prepare_persists_its_audit_event(
     )
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{public_id(session_id)}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -112,7 +114,7 @@ def test_a_prepare_failing_at_generate_keeps_its_started_event(
     monkeypatch.setattr(generate, "_load_reconcile_inputs", _boom)
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{public_id(session_id)}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -142,7 +144,7 @@ def test_a_prepare_failing_unexpectedly_records_its_failure(
 
     with pytest.raises(IntegrityError):
         committed_client.post(
-            f"/operator/sessions/{session_id}/workflow/prepare",
+            f"/operator/sessions/{public_id(session_id)}/workflow/prepare",
             follow_redirects=False,
         )
 
@@ -182,7 +184,7 @@ def test_activate_commits_its_started_event_before_the_warnings_detour(
     )
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/workflow/activate",
+        f"/operator/sessions/{public_id(session_id)}/workflow/activate",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -223,7 +225,7 @@ def test_an_unexpected_failure_after_a_flush_lands_only_its_failure_row(
 
     with pytest.raises(OperationalError):
         committed_client.post(
-            f"/operator/sessions/{session_id}/workflow/prepare",
+            f"/operator/sessions/{public_id(session_id)}/workflow/prepare",
             follow_redirects=False,
         )
 

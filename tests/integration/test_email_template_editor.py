@@ -45,12 +45,12 @@ def test_get_default_template_is_invitation(
 ) -> None:
     review_session = _make_session(client, db)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite"
+        f"/operator/sessions/{review_session.public_id}/setup-invite"
     ).text
     assert "Invitation email" in body
     # The other template is reachable as a Secondary tab.
     assert (
-        f'href="/operator/sessions/{review_session.id}/setup-invite?template=reminder"'
+        f'href="/operator/sessions/{review_session.public_id}/setup-invite?template=reminder"'
         in body
     )
 
@@ -60,11 +60,11 @@ def test_get_with_reminder_template_renders_reminder(
 ) -> None:
     review_session = _make_session(client, db)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite?template=reminder"
+        f"/operator/sessions/{review_session.public_id}/setup-invite?template=reminder"
     ).text
     assert "Reminder email" in body
     assert (
-        f'href="/operator/sessions/{review_session.id}/setup-invite?template=invitation"'
+        f'href="/operator/sessions/{review_session.public_id}/setup-invite?template=invitation"'
         in body
     )
 
@@ -74,7 +74,7 @@ def test_get_with_unknown_template_404s(
 ) -> None:
     review_session = _make_session(client, db)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite?template=garbage"
+        f"/operator/sessions/{review_session.public_id}/setup-invite?template=garbage"
     )
     assert response.status_code == 404
 
@@ -87,7 +87,7 @@ def test_save_persists_overrides_and_audits(
 ) -> None:
     review_session = _make_session(client, db)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "invitation",
             "subject": "Custom: $session_name",
@@ -127,12 +127,12 @@ def test_save_does_not_audit_when_nothing_changed(
     # Empty submission == no overrides; second submission == still no
     # overrides; the second save is a no-op and emits no audit event.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={"template": "invitation", "subject": "", "body": "", "cc": "", "bcc": ""},
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={"template": "invitation", "subject": "", "body": "", "cc": "", "bcc": ""},
         follow_redirects=False,
     )
@@ -148,7 +148,7 @@ def test_save_clearing_a_field_removes_override(
     review_session = _make_session(client, db)
     # First save: set the subject.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "invitation",
             "subject": "First override",
@@ -160,7 +160,7 @@ def test_save_clearing_a_field_removes_override(
     )
     # Second save: subject blank -> override removed.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={"template": "invitation", "subject": "", "body": "", "cc": "", "bcc": ""},
         follow_redirects=False,
     )
@@ -174,7 +174,7 @@ def test_save_unknown_template_404s(
 ) -> None:
     review_session = _make_session(client, db)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={"template": "garbage", "subject": "x"},
         follow_redirects=False,
     )
@@ -190,7 +190,7 @@ def test_reset_removes_override_and_audits(
     review_session = _make_session(client, db)
     # Set overrides for two fields on invitation.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "invitation",
             "subject": "Custom subject",
@@ -202,7 +202,7 @@ def test_reset_removes_override_and_audits(
     )
     # Reset only the subject.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite/reset",
+        f"/operator/sessions/{review_session.public_id}/setup-invite/reset",
         data={"template": "invitation", "field": "subject"},
         follow_redirects=False,
     )
@@ -229,7 +229,7 @@ def test_reset_unknown_field_404s(
 ) -> None:
     review_session = _make_session(client, db)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite/reset",
+        f"/operator/sessions/{review_session.public_id}/setup-invite/reset",
         data={"template": "invitation", "field": "no-such-field"},
         follow_redirects=False,
     )
@@ -245,13 +245,13 @@ def test_reset_link_only_renders_for_overridden_fields(
     review_session = _make_session(client, db)
     # Pre-save state: no overrides — no reset links anywhere.
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite"
+        f"/operator/sessions/{review_session.public_id}/setup-invite"
     ).text
     assert "Reset subject to default" not in body
 
     # Override only the subject.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "invitation",
             "subject": "x",
@@ -262,7 +262,7 @@ def test_reset_link_only_renders_for_overridden_fields(
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite"
+        f"/operator/sessions/{review_session.public_id}/setup-invite"
     ).text
     assert "Reset subject to default" in body
     assert "Reset body to default" not in body
@@ -281,7 +281,7 @@ def test_get_with_responses_received_template_renders_third_tab(
 ) -> None:
     review_session = _make_session(client, db, code="rr-tab")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite"
+        f"/operator/sessions/{review_session.public_id}/setup-invite"
         "?template=responses_received"
     ).text
 
@@ -302,11 +302,11 @@ def test_get_with_responses_received_template_renders_third_tab(
     assert opening.startswith('<label class="pill pill-count tag-chip is-selected"')
     # The other two tabs link back via the selector.
     assert (
-        f'href="/operator/sessions/{review_session.id}/setup-invite?template=invitation"'
+        f'href="/operator/sessions/{review_session.public_id}/setup-invite?template=invitation"'
         in body
     )
     assert (
-        f'href="/operator/sessions/{review_session.id}/setup-invite?template=reminder"'
+        f'href="/operator/sessions/{review_session.public_id}/setup-invite?template=reminder"'
         in body
     )
 
@@ -316,7 +316,7 @@ def test_invitation_tab_does_not_show_send_on_submit_checkbox(
 ) -> None:
     review_session = _make_session(client, db, code="rr-no-checkbox")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite?template=invitation"
+        f"/operator/sessions/{review_session.public_id}/setup-invite?template=invitation"
     ).text
 
     assert "Send response confirmation</span>" not in body
@@ -328,7 +328,7 @@ def test_save_responses_received_persists_overrides_and_audits(
 ) -> None:
     review_session = _make_session(client, db, code="rr-save")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "responses_received",
             "subject": "Got it: $session_name",
@@ -365,12 +365,12 @@ def test_the_confirmation_chip_reads_dont_send_once_turned_off(
     unticked, still the always-dark cycle chip."""
     review_session = _make_session(client, db, code="rr-chip-off")
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={"template": "responses_received", "subject": "", "body": "", "cc": "", "bcc": ""},
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/setup-invite"
+        f"/operator/sessions/{review_session.public_id}/setup-invite"
         "?template=responses_received"
     ).text
     chip = body[body.index("data-send-confirmation-chip") :]
@@ -390,7 +390,7 @@ def test_save_responses_received_unchecking_persists_explicit_false(
     # Browsers omit unchecked checkboxes from the form payload entirely;
     # absence == off for this checkbox.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "responses_received",
             "subject": "",
@@ -419,7 +419,7 @@ def test_save_responses_received_re_check_resets_enabled(
     review_session = _make_session(client, db, code="rr-recheck")
     # First save: uncheck → store explicit False.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "responses_received",
             "subject": "",
@@ -436,7 +436,7 @@ def test_save_responses_received_re_check_resets_enabled(
 
     # Second save: re-check → key removed, default True takes over.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "responses_received",
             "subject": "",
@@ -460,7 +460,7 @@ def test_save_responses_received_no_change_does_not_audit(
     # changes either time, so no audit events.
     for _ in range(2):
         client.post(
-            f"/operator/sessions/{review_session.id}/setup-invite",
+            f"/operator/sessions/{review_session.public_id}/setup-invite",
             data={
                 "template": "responses_received",
                 "subject": "",
@@ -483,7 +483,7 @@ def test_reset_responses_received_subject_removes_override(
     review_session = _make_session(client, db, code="rr-reset")
     # Set a subject override on responses_received.
     client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite",
+        f"/operator/sessions/{review_session.public_id}/setup-invite",
         data={
             "template": "responses_received",
             "subject": "Custom",
@@ -496,7 +496,7 @@ def test_reset_responses_received_subject_removes_override(
     )
     # Reset just the subject.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/setup-invite/reset",
+        f"/operator/sessions/{review_session.public_id}/setup-invite/reset",
         data={"template": "responses_received", "field": "subject"},
         follow_redirects=False,
     )

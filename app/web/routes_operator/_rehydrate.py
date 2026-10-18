@@ -243,7 +243,7 @@ def rehydrate_commit(
     if not result.dropped:
         db.commit()
         return RedirectResponse(
-            url=f"/operator/sessions/{result.session.id}?rehydrated=1",
+            url=f"/operator/sessions/{result.session.public_id}?rehydrated=1",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
@@ -258,7 +258,7 @@ def rehydrate_commit(
         request,
         user,
         outcome={
-            "session_id": result.session.id,
+            "session_public_id": result.session.public_id,
             "session_name": result.session.name,
             "dropped_count": result.dropped_count,
             "dropped_token": dropped_token,

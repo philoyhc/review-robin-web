@@ -52,7 +52,7 @@ def test_audit_log_route_streams_csv_with_canonical_filename(
     review_session = _make_session(client, db, code="al-fname")
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-disposition"] == (
@@ -79,7 +79,7 @@ def test_audit_log_route_emits_audit_event(
 
     review_session = _make_session(client, db, code="al-audit")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     )
     assert response.status_code == 200
     response.read()
@@ -106,7 +106,7 @@ def test_audit_log_route_returns_session_events(
     review_session = _make_session(client, db, code="al-rows")
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     )
     rows = list(csv.reader(io.StringIO(response.text)))
     # Header + at least one row (session.created).
@@ -133,7 +133,7 @@ def test_audit_log_route_rejects_non_sys_admin(
 
     bob_client = make_client(bob)  # type: ignore[operator]
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv",
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv",
         follow_redirects=False,
     )
     assert response.status_code == 403
@@ -161,7 +161,7 @@ def test_audit_log_recorded_count_matches_the_file(
     a filter that excludes it leaves the count at the rows it keeps
     (findings O5)."""
     review_session = _make_session(client, db, code="al-count")
-    base = f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+    base = f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
 
     rows = list(csv.reader(io.StringIO(client.get(base).text)))[1:]
     [event] = _extract_events(db, review_session.id)

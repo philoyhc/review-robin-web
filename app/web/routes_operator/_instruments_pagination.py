@@ -67,7 +67,7 @@ def instrument_page_break_create(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{instrument.id}"
+        review_session.public_id, fragment=f"instrument-{instrument.id}"
     )
 
 
@@ -97,7 +97,7 @@ def instrument_page_break_delete(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     return _instruments_redirect(
-        review_session.id, fragment=f"instrument-{instrument.id}"
+        review_session.public_id, fragment=f"instrument-{instrument.id}"
     )
 
 

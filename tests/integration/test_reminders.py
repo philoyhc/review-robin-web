@@ -22,6 +22,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 # --------------------------------------------------------------------------- #
@@ -42,16 +43,17 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
 
 
 def _populate(client: TestClient, db: Session, session_id: int, *, reviewers: list[str]) -> None:
+    pid = db.get(ReviewSession, session_id).public_id
     csv = b"ReviewerName,ReviewerEmail\n" + b"".join(
         f"R{i},{email}\n".encode() for i, email in enumerate(reviewers)
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={"file": ("r.csv", csv, "text/csv")},
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -69,8 +71,9 @@ def _activate(client: TestClient, session_id: int) -> None:
     # Prepare, not the `?validated=1` promotion: since 19Q.2 rung 2
     # Prepare is what creates the invitations, and every test below
     # that used to call `POST /invitations/generate` now relies on it.
+    pid = public_id(session_id)
     response = client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{pid}/workflow/prepare",
         follow_redirects=False,
     )
     # 303 alone says nothing: `workflow_prepare` also 303s on a failed
@@ -83,7 +86,7 @@ def _activate(client: TestClient, session_id: int) -> None:
         f"Prepare did not succeed: {response.headers['location']}"
     )
     response = client.post(
-        f"/operator/sessions/{session_id}/activate",
+        f"/operator/sessions/{pid}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -133,12 +136,12 @@ def test_monitoring_url_redirects_to_invitations(
         client, db, "mon-redir", reviewers=["rae@example.edu"]
     )
     response = client.get(
-        f"/operator/sessions/{session.id}/monitoring",
+        f"/operator/sessions/{session.public_id}/monitoring",
         follow_redirects=False,
     )
     assert response.status_code == 308
     assert response.headers["location"].endswith(
-        f"/operator/sessions/{session.id}/invitations"
+        f"/operator/sessions/{session.public_id}/invitations"
     )
 
 
@@ -152,7 +155,7 @@ def test_send_reminder_reuses_invitation_url_without_rotating_token(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     invitation_outbox = db.execute(
         select(EmailOutbox).where(
@@ -165,7 +168,7 @@ def test_send_reminder_reuses_invitation_url_without_rotating_token(
     original_hash = invitation.token_hash
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -195,7 +198,7 @@ def test_send_reminder_falls_back_to_fresh_send_when_never_sent(
     pre_hash = invitation.token_hash
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -235,10 +238,10 @@ def test_per_row_reminder_writes_a_reminders_sent_event(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -265,7 +268,7 @@ def test_per_row_reminder_that_falls_back_counts_it(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -294,7 +297,7 @@ def test_send_reminder_after_regenerate_sends_a_live_link(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     first_url = _extract_url(
         db.execute(
@@ -305,13 +308,13 @@ def test_send_reminder_after_regenerate_sends_a_live_link(
         ).scalar_one().body
     )
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/regenerate",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/regenerate",
         follow_redirects=False,
     )
     assert response.status_code == 303
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -340,7 +343,7 @@ def _sent_session_with_two(client: TestClient, db: Session, code: str):
         .order_by(Invitation.id)
     ).scalars().all()
     for inv in rows:
-        client.post(f"/operator/sessions/{session.id}/invitations/{inv.id}/send")
+        client.post(f"/operator/sessions/{session.public_id}/invitations/{inv.id}/send")
     return session, rows
 
 
@@ -362,11 +365,11 @@ def test_bulk_reminder_after_one_regenerate_sends_that_one_a_live_link(
     session, (regen, kept) = _sent_session_with_two(client, db, "rem-bulk-regen")
     kept_url = _extract_url(_latest_outbox(db, kept.id).body)
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{regen.id}/regenerate"
+        f"/operator/sessions/{session.public_id}/invitations/{regen.id}/regenerate"
     )
 
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -385,13 +388,13 @@ def test_reminders_after_regenerate_all_send_live_links(
 ) -> None:
     session, rows = _sent_session_with_two(client, db, "rem-regen-all")
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/regenerate-all",
+        f"/operator/sessions/{session.public_id}/invitations/regenerate-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
 
     client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
 
@@ -425,10 +428,10 @@ def test_remind_incomplete_targets_only_incomplete(
         .where(Reviewer.email == "sam@example.edu")
     ).one()[0]
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{rae_inv.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{rae_inv.id}/send"
     )
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{sam_inv.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{sam_inv.id}/send"
     )
 
     # Rae submits in full so she's "submitted" and excluded from reminders.
@@ -442,14 +445,14 @@ def test_remind_incomplete_targets_only_incomplete(
     )
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{session.id}/submit",
+        f"/me/sessions/{session.public_id}/submit",
         data={f"response[{rae_assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
 
     operator2 = make_client(alice)
     response = operator2.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -482,11 +485,11 @@ def test_remind_incomplete_writes_single_batch_audit_event(
     ).scalars().all()
     for inv in invitations_rows:
         client.post(
-            f"/operator/sessions/{session.id}/invitations/{inv.id}/send"
+            f"/operator/sessions/{session.public_id}/invitations/{inv.id}/send"
         )
 
     client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
 
@@ -511,11 +514,11 @@ def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
 
     client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     db.refresh(invitation)
@@ -523,7 +526,7 @@ def test_per_row_and_bulk_reminders_stamp_last_reminder_at(
     assert first is not None
 
     client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     db.refresh(invitation)
@@ -551,13 +554,13 @@ def test_reminder_actions_409_while_session_draft(
     db.commit()
 
     bulk = client.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert bulk.status_code == 409
 
     single = client.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/remind",
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/remind",
         follow_redirects=False,
     )
     assert single.status_code == 409
@@ -576,7 +579,7 @@ def test_submitted_with_warn_override_classified_incomplete(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
 
     # Rae attempts a submit with the required ``rating`` left blank.
@@ -591,7 +594,7 @@ def test_submitted_with_warn_override_classified_incomplete(
         select(Assignment).where(Assignment.session_id == session.id)
     ).scalar_one()
     rae_client.post(
-        f"/me/sessions/{session.id}/submit",
+        f"/me/sessions/{session.public_id}/submit",
         data={
             f"response[{assignment.id}][comments]": "fine",
         },
@@ -600,7 +603,7 @@ def test_submitted_with_warn_override_classified_incomplete(
 
     operator2 = make_client(alice)
     response = operator2.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -626,7 +629,7 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
 
     rae = AuthenticatedUser(
@@ -637,14 +640,14 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
         select(Assignment).where(Assignment.session_id == session.id)
     ).scalar_one()
     rae_client.post(
-        f"/me/sessions/{session.id}/submit",
+        f"/me/sessions/{session.public_id}/submit",
         data={f"response[{assignment.id}][rating]": "5"},
         follow_redirects=False,
     )
 
     operator2 = make_client(alice)
     operator2.post(
-        f"/operator/sessions/{session.id}/invitations/remind-incomplete",
+        f"/operator/sessions/{session.public_id}/invitations/remind-incomplete",
         follow_redirects=False,
     )
     events = db.execute(
@@ -674,7 +677,7 @@ def test_per_row_actions_and_reminders_409_while_session_validated(
     session = _create_session(client, db, "validated-rem")
     _populate(client, db, session.id, reviewers=["rae@example.edu"])
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -684,7 +687,7 @@ def test_per_row_actions_and_reminders_409_while_session_validated(
         select(Invitation).where(Invitation.session_id == session.id)
     ).scalar_one()
 
-    base = f"/operator/sessions/{session.id}/invitations"
+    base = f"/operator/sessions/{session.public_id}/invitations"
     for path in (
         f"{base}/{invitation.id}/send",
         f"{base}/{invitation.id}/regenerate",

@@ -76,7 +76,7 @@ def _card(body: str, marker: str = 'id="owners-card"') -> str:
 
 
 def _home(client: TestClient, review_session: ReviewSession, query: str = "") -> str:
-    return client.get(f"/operator/sessions/{review_session.id}{query}").text
+    return client.get(f"/operator/sessions/{review_session.public_id}{query}").text
 
 
 def _tag(card: str, marker: str) -> str:
@@ -143,7 +143,7 @@ def test_add_owner_is_a_form_to_owners_add(client: TestClient, db: Session) -> N
 
     assert re.search(
         rf'<form method="post" id="owners-add-form"\s+'
-        rf'action="/operator/sessions/{review_session.id}/owners/add">',
+        rf'action="/operator/sessions/{review_session.public_id}/owners/add">',
         card,
     )
     picker = _tag(card, 'id="owners-add-email"')
@@ -161,13 +161,13 @@ def test_add_owner_saves_at_once(client: TestClient, db: Session) -> None:
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
 
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#owners-card"
+        f"/operator/sessions/{review_session.public_id}#owners-card"
     )
     assert "bob@example.edu" in _card(_home(client, review_session))
 
@@ -178,15 +178,15 @@ def test_each_row_removes_at_once(client: TestClient, db: Session) -> None:
     card = _card(_home(client, review_session))
 
     assert (
-        f'action="/operator/sessions/{review_session.id}/owners/{bob.id}/remove"'
+        f'action="/operator/sessions/{review_session.public_id}/owners/{bob.id}/remove"'
         in card
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/{bob.id}/remove",
+        f"/operator/sessions/{review_session.public_id}/owners/{bob.id}/remove",
         follow_redirects=False,
     )
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#owners-card"
+        f"/operator/sessions/{review_session.public_id}#owners-card"
     )
     card = _card(_home(client, review_session))
     table = card[card.index("<table>") : card.index("</table>")]
@@ -223,7 +223,7 @@ def test_removing_yourself_asks_first_and_lands_on_the_lobby(
     assert all("disabled" not in b for b in re.findall(r"<button[^>]*>Remove", card))
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/{alice.id}/remove",
+        f"/operator/sessions/{review_session.public_id}/owners/{alice.id}/remove",
         follow_redirects=False,
     )
     assert response.headers["location"] == "/operator/sessions"
@@ -244,7 +244,7 @@ def test_the_card_is_editable_on_an_activated_session(
     assert 'id="owners-add-form"' in card
     assert f"/owners/{bob.id}/remove" in card
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "carol@example.edu"},
         follow_redirects=False,
     )
@@ -325,7 +325,7 @@ def test_the_card_has_no_lock_and_is_live(client: TestClient, db: Session) -> No
 def test_the_owners_lock_route_is_gone(client: TestClient, db: Session) -> None:
     review_session = _create(client, db, "OWN-LIVE-2")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/lock",
+        f"/operator/sessions/{review_session.public_id}/owners/lock",
         data={"action": "unlock"},
         follow_redirects=False,
     )
@@ -369,12 +369,12 @@ def test_an_owners_change_leaves_quick_setup_live(
     db.add(User(email="bob@example.edu", is_operator=True))
     db.commit()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/owners/add",
+        f"/operator/sessions/{review_session.public_id}/owners/add",
         data={"target_email": "bob@example.edu"},
         follow_redirects=False,
     )
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#owners-card"
+        f"/operator/sessions/{review_session.public_id}#owners-card"
     )
     body = _home(client, review_session)
     card = _card(body)

@@ -994,27 +994,27 @@ def _session_edit_url(s: ReviewSession) -> str:
     # 18R Item 4 Slice 5 — the Edit page is retired from the UI; session
     # config is edited in place on Session Home's Session details card.
     # "Fix" links open that card in edit mode.
-    return f"/operator/sessions/{s.id}?editing=1#session-config"
+    return f"/operator/sessions/{s.public_id}?editing=1#session-config"
 
 
 def _reviewers_url(s: ReviewSession) -> str:
-    return f"/operator/sessions/{s.id}/reviewers"
+    return f"/operator/sessions/{s.public_id}/reviewers"
 
 
 def _reviewees_url(s: ReviewSession) -> str:
-    return f"/operator/sessions/{s.id}/reviewees"
+    return f"/operator/sessions/{s.public_id}/reviewees"
 
 
 def _observers_url(s: ReviewSession) -> str:
-    return f"/operator/sessions/{s.id}/observers"
+    return f"/operator/sessions/{s.public_id}/observers"
 
 
 def _instruments_url(s: ReviewSession) -> str:
-    return f"/operator/sessions/{s.id}/instruments"
+    return f"/operator/sessions/{s.public_id}/instruments"
 
 
 def _assignments_url(s: ReviewSession) -> str:
-    return f"/operator/sessions/{s.id}/assignments"
+    return f"/operator/sessions/{s.public_id}/assignments"
 
 
 REGISTERED_RULES: tuple[ValidationRule, ...] = (

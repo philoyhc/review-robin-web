@@ -25,7 +25,7 @@ def _visible_rows(page: Page):
 
 
 def test_the_filter_matches_an_owner_and_clear_empties_it(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     owner = f"diag-{uuid.uuid4().hex[:8]}@example.edu"
     _invite(page, owner)
@@ -58,7 +58,7 @@ def test_the_filter_matches_an_owner_and_clear_empties_it(
 
 
 def test_a_header_sorts_and_the_actions_stay_on_one_line(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     new_session()
     new_session()

@@ -37,9 +37,9 @@ def test_about_renders_session_label_when_return_to_is_session_path(
 ) -> None:
     session = _create_session(client, db)
     body = client.get(
-        f"/about?return_to=/operator/sessions/{session.id}"
+        f"/about?return_to=/operator/sessions/{session.public_id}"
     ).text
-    assert f'href="/operator/sessions/{session.id}"' in body
+    assert f'href="/operator/sessions/{session.public_id}"' in body
     assert f"Back to {session.name}" in body
 
 
@@ -55,7 +55,7 @@ def test_about_falls_back_to_default_for_disallowed_return_to(
 def test_me_debug_renders_back_link(client: TestClient, db: Session) -> None:
     session = _create_session(client, db, code="rrw-md")
     body = client.get(
-        f"/auth/me/debug?return_to=/operator/sessions/{session.id}"
+        f"/auth/me/debug?return_to=/operator/sessions/{session.public_id}"
     ).text
     assert 'class="back-link"' in body
     assert f"Back to {session.name}" in body
@@ -97,7 +97,7 @@ def test_me_debug_creates_no_user_row(
             name="Eve", provider="aad",
         )
     )
-    body = eve.get(f"/auth/me/debug?return_to=/me/sessions/{session.id}").text
+    body = eve.get(f"/auth/me/debug?return_to=/me/sessions/{session.public_id}").text
     assert "Back to your reviews" in body
     assert db.execute(
         select(User).where(User.email == "eve@example.edu")
@@ -135,7 +135,7 @@ def test_settings_does_not_name_another_operators_session(
     own stays unnamed in its back link."""
     session = _create_session(client, db, code="rrw-alices")
     body = make_client(bob).get(
-        f"/operator/settings?return_to=/operator/sessions/{session.id}"
+        f"/operator/settings?return_to=/operator/sessions/{session.public_id}"
     ).text
     assert session.name not in body
     assert "Back to Sessions" in body

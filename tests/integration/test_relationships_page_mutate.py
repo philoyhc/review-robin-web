@@ -228,7 +228,7 @@ def test_plain_render_has_checkbox_column_and_name_display(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     table = body[body.find('id="relationships-table"') :]
     # Checkbox column + selection-driven Edit button.
@@ -255,7 +255,7 @@ def test_edit_id_renders_pickers(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
         f"?edit_id={rels[0].id}"
     ).text
     assert "relationship-edit-row" in body
@@ -291,7 +291,7 @@ def test_picker_marks_inactive_members(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
         f"?edit_id={rels[0].id}"
     ).text
     assert "Peter (peter@example.edu) — inactive" in body
@@ -310,7 +310,7 @@ def test_edit_post_updates_and_redirects(
         pairs=[(1, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/relationships/{rels[0].id}/update",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
@@ -344,7 +344,7 @@ def test_edit_post_duplicate_pair_rerenders_400(
         pairs=[(0, 0), (1, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/relationships/{rels[1].id}/update",
         data={
             # Ali (ali@example.edu) collides with rels[0].
@@ -374,7 +374,7 @@ def test_edit_post_unresolvable_pick_rerenders_400(
         pairs=[(0, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/relationships/{rels[0].id}/update",
         data={
             "reviewer_pick": "Nobody In Particular",
@@ -400,7 +400,7 @@ def test_bulk_inactivate_route(db: Session, client: TestClient) -> None:
         pairs=[(0, 0), (0, 1)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/relationships/bulk-inactivate",
         data={"relationship_ids": [rels[0].id]},
         follow_redirects=False,
@@ -426,7 +426,7 @@ def test_bulk_action_keeps_filter(
         pairs=[(0, 0), (0, 1)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/relationships/bulk-inactivate",
         data={
             "relationship_ids": [rels[0].id],
@@ -454,7 +454,7 @@ def test_edit_mode_suppressed_on_ready_session(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
         f"?edit_id={rels[0].id}"
     ).text
     assert "relationship-edit-row" not in body
@@ -475,7 +475,7 @@ def test_update_on_ready_session_is_409(
         pairs=[(0, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/relationships/{rels[0].id}/update",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
@@ -555,7 +555,7 @@ def test_add_renders_blank_picker_row(
         pairs=[],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?add=1"
+        f"/operator/sessions/{review_session.public_id}/relationships?add=1"
     ).text
     assert "relationship-edit-row" in body
     assert ">Add new relationship</h2>" not in body
@@ -580,7 +580,7 @@ def test_add_post_creates_and_redirects(
         pairs=[],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/create",
+        f"/operator/sessions/{review_session.public_id}/relationships/create",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
             "reviewee_pick": "Jane (jane@example.edu)",
@@ -612,7 +612,7 @@ def test_add_post_duplicate_pair_rerenders_400(
         pairs=[(0, 0)],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/create",
+        f"/operator/sessions/{review_session.public_id}/relationships/create",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
             "reviewee_pick": "Jane (jane@example.edu)",
@@ -643,7 +643,7 @@ def test_add_post_unresolvable_pick_rerenders_400(
         pairs=[],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/create",
+        f"/operator/sessions/{review_session.public_id}/relationships/create",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
             "reviewee_pick": "Nobody In Particular",
@@ -676,7 +676,7 @@ def test_add_disabled_when_a_roster_is_empty(
         pairs=[],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     tooltip = re.search(
         r'aria-disabled="true"\s+title="([^"]*)">Add new', body
@@ -706,7 +706,7 @@ def test_create_on_ready_session_is_409(
         pairs=[],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/create",
+        f"/operator/sessions/{review_session.public_id}/relationships/create",
         data={
             "reviewer_pick": "Ali (ali@example.edu)",
             "reviewee_pick": "Jane (jane@example.edu)",

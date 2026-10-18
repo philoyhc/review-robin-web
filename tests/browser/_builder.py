@@ -9,7 +9,7 @@ REVIEWERS_CSV = b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"
 REVIEWEES_CSV = b"RevieweeName,RevieweeEmail,Tag1\nCarol,carol@example.edu,Blue\n"
 
 
-def seed_rosters(api: httpx.Client, session_id: int) -> None:
+def seed_rosters(api: httpx.Client, session_id: str) -> None:
     """One reviewer and one reviewee, so Band 3 has display fields."""
     for kind, body in (("reviewers", REVIEWERS_CSV), ("reviewees", REVIEWEES_CSV)):
         response = api.post(
@@ -20,7 +20,7 @@ def seed_rosters(api: httpx.Client, session_id: int) -> None:
         assert response.status_code in (200, 303), response.text
 
 
-def add_instrument(api: httpx.Client, session_id: int) -> None:
+def add_instrument(api: httpx.Client, session_id: str) -> None:
     response = api.post(
         f"/operator/sessions/{session_id}/instruments/add-new-model",
         follow_redirects=False,
@@ -28,7 +28,7 @@ def add_instrument(api: httpx.Client, session_id: int) -> None:
     assert response.status_code == 303, response.text
 
 
-def open_card(page: Page, session_id: int, index: int = 0) -> Locator:
+def open_card(page: Page, session_id: str, index: int = 0) -> Locator:
     """Load the Instruments page and expand one card, still locked."""
     page.goto(f"/operator/sessions/{session_id}/instruments")
     card = page.locator("[data-instrument-card]").nth(index)
@@ -42,7 +42,7 @@ def unlock(card: Locator) -> None:
     expect(card).to_have_attribute("data-instrument-locked", "false")
 
 
-def open_unlocked(page: Page, session_id: int, index: int = 0) -> Locator:
+def open_unlocked(page: Page, session_id: str, index: int = 0) -> Locator:
     card = open_card(page, session_id, index)
     unlock(card)
     return card
@@ -107,7 +107,28 @@ def sign_in(api: httpx.Client, email: str) -> None:
     assert response.status_code == 200, response.text
 
 
-def pin_full_matrix(database_url: str, session_id: int) -> None:
+def session_pk(database_url: str, session_id: str) -> int:
+    """The primary key of the session whose URL carries ``session_id``.
+
+    Browser tests hold a session by its public ID, the handle in every
+    URL (19V Item 1); a step that writes the database directly needs the
+    integer key instead."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import ReviewSession
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            return db.execute(
+                select(ReviewSession.id).where(ReviewSession.public_id == session_id)
+            ).scalar_one()
+    finally:
+        engine.dispose()
+
+
+def pin_full_matrix(database_url: str, session_id: str) -> None:
     """Pin a full matrix on every instrument, writing the database directly
     as ``tests/integration/_full_matrix.py`` does: the UI has no short
     route to it, and an unpinned instrument hides Prepare."""
@@ -118,12 +139,12 @@ def pin_full_matrix(database_url: str, session_id: int) -> None:
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            pin_full_matrix_on_all_instruments(db, session_id)
+            pin_full_matrix_on_all_instruments(db, session_pk(database_url, session_id))
     finally:
         engine.dispose()
 
 
-def mark_validated(database_url: str, session_id: int) -> None:
+def mark_validated(database_url: str, session_id: str) -> None:
     """Promote the session ``draft → validated`` through the service, as
     ``tests/integration/_validated.py`` does; the ``?validated=1`` GET
     that used to do it is retired."""
@@ -134,12 +155,12 @@ def mark_validated(database_url: str, session_id: int) -> None:
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            validate_session(db, session_id)
+            validate_session(db, session_pk(database_url, session_id))
     finally:
         engine.dispose()
 
 
-def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
+def activate(api: httpx.Client, database_url: str, session_id: str) -> None:
     """Pin a full matrix, generate, validate and activate, so the roster's
     reviewer has an assignment. The pin and the validate step write the
     database directly; generate and activate are the app's routes.
@@ -158,7 +179,7 @@ def activate(api: httpx.Client, database_url: str, session_id: int) -> None:
     assert activated.headers["location"] == base, activated.headers["location"]
 
 
-def branch_rating(page: Page, session_id: int, *, op: str = "ge", value: str = "4") -> Locator:
+def branch_rating(page: Page, session_id: str, *, op: str = "ge", value: str = "4") -> Locator:
     """Give "Rating" a Show branch holding one String field, "Why"; save."""
     card = open_unlocked(page, session_id)
     rows(card).first.locator("[data-new-model-rf-fork]").click()

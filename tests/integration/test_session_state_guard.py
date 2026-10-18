@@ -285,7 +285,7 @@ def test_the_release_routes_answer_an_archive_race_as_their_own_gate(
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "archived"))
 
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/{path}",
+        f"/operator/sessions/{session.public_id}/workflow/{path}",
         follow_redirects=False,
     )
 
@@ -395,7 +395,7 @@ def test_the_revert_route_decides_its_path_under_the_lock(
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     response = client.post(
-        f"/operator/sessions/{session.id}/revert", follow_redirects=False
+        f"/operator/sessions/{session.public_id}/revert", follow_redirects=False
     )
 
     assert response.status_code == 400
@@ -435,7 +435,7 @@ def test_a_roster_import_refuses_a_session_activated_at_the_lock(
     )
 
     response = client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         data={"confirm_replace": "true", "acknowledge_response_loss": "true"},
         files={
             "file": (
@@ -1005,7 +1005,7 @@ def test_an_async_instrument_route_answers_409_off_the_event_loop(
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/identity",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/identity",
         json={"short_label": "Late"},
     )
 
@@ -1035,7 +1035,7 @@ def test_an_identity_save_of_both_fields_is_one_commit(
     commits = _counting_commits(monkeypatch, db)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/identity",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/identity",
         json={"short_label": "Late", "description": "Also late"},
     )
 
@@ -1203,7 +1203,7 @@ def test_a_band2_save_is_one_commit(client, db: Session, monkeypatch) -> None:
     commits = _counting_commits(monkeypatch, db)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/band2-state",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/band2-state",
         json={"selected_display_keys": []},
     )
 
@@ -1343,7 +1343,7 @@ def test_a_quick_setup_slot_reports_the_lifecycle_reason(
     _lands_at_the_lock(monkeypatch, db, _status_becomes(session, "ready"))
 
     response = client.post(
-        f"/operator/sessions/{session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{session.public_id}/quick-setup/reviewers",
         files={
             "file": (
                 "r.csv",
@@ -1439,7 +1439,7 @@ def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
             ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
         ):
             client.post(
-                f"/operator/sessions/{session.id}/quick-setup/{kind}",
+                f"/operator/sessions/{session.public_id}/quick-setup/{kind}",
                 files={"file": (f"{kind}.csv", roster, "text/csv")},
                 follow_redirects=False,
             )
@@ -1448,7 +1448,7 @@ def test_the_other_quick_setup_slots_report_the_lifecycle_reason(
     )
 
     response = client.post(
-        f"/operator/sessions/{session.id}/quick-setup/{slot}",
+        f"/operator/sessions/{session.public_id}/quick-setup/{slot}",
         files={"file": (f"{slot}.csv", csv, "text/csv")},
         follow_redirects=False,
     )
@@ -1475,7 +1475,7 @@ def test_a_session_home_config_save_is_one_commit(
     commits = _counting_commits(monkeypatch, db)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": "Renamed",
             "code": "guard-config",
@@ -1905,9 +1905,9 @@ def test_an_invitation_send_route_refuses_a_state_committed_at_the_lock(
     )
 
     url = (
-        f"/operator/sessions/{session.id}/invitations/send-all"
+        f"/operator/sessions/{session.public_id}/invitations/send-all"
         if route == "send-all"
-        else f"/operator/sessions/{session.id}/invitations/{invitation.id}/send"
+        else f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
     )
     response = client.post(url, follow_redirects=False)
 
@@ -2037,7 +2037,7 @@ def test_rendering_the_instruments_page_writes_nothing_past_setup(
     session.status = status
     db.commit()
 
-    response = client.get(f"/operator/sessions/{session.id}/instruments")
+    response = client.get(f"/operator/sessions/{session.public_id}/instruments")
 
     assert response.status_code == 200
     db.expire_all()

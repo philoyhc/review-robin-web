@@ -87,7 +87,7 @@ def test_lazy_seed_fires_from_relationships_save(
     db.commit()
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -98,7 +98,7 @@ def test_lazy_seed_fires_from_relationships_save(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -109,7 +109,7 @@ def test_lazy_seed_fires_from_relationships_save(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",

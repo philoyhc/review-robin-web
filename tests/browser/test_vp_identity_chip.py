@@ -25,7 +25,7 @@ def _cycle(card: Locator, audience: str) -> Locator:
 
 
 def test_enter_and_space_cycle_a_mode_chip(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """A keyboard user reaches Raw, and so the identity chip, without a
     mouse (the author, 2026-10-11)."""
@@ -52,7 +52,7 @@ def test_enter_and_space_cycle_a_mode_chip(
 
 
 def test_the_identity_chip_follows_its_cell_and_cycles(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     card = open_unlocked(page, session_id)
@@ -100,7 +100,7 @@ def _widths(card: Locator) -> list[float]:
 
 
 def test_the_released_column_widens_while_an_identity_pill_shows(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """The author, 2026-10-11: the second pill crowded the column. A
     visible identity pill widens Responses released; hiding it again

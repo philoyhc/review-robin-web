@@ -20,7 +20,7 @@ import httpx
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from ._builder import REVIEWER_EMAIL, activate
+from ._builder import REVIEWER_EMAIL, activate, session_pk
 from .conftest import LiveServer
 
 #: Listed out of name and score order, so the roster's (assignment) order
@@ -35,7 +35,7 @@ REVIEWEES_CSV = (
 )
 
 
-def _seed(api: httpx.Client, session_id: int) -> None:
+def _seed(api: httpx.Client, session_id: str) -> None:
     for kind, body in (
         ("reviewers", b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"),
         ("reviewees", REVIEWEES_CSV),
@@ -50,7 +50,7 @@ def _seed(api: httpx.Client, session_id: int) -> None:
 
 def _save_ratings(
     database_url: str,
-    session_id: int,
+    session_id: str,
     ratings: dict[str, str],
     *,
     operator_default_name_dir: str | None = None,
@@ -71,11 +71,12 @@ def _save_ratings(
         Response,
     )
 
+    pk = session_pk(database_url, session_id)
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
             instrument = db.execute(
-                select(Instrument).where(Instrument.session_id == session_id)
+                select(Instrument).where(Instrument.session_id == pk)
             ).scalar_one()
             rating = db.execute(
                 select(InstrumentResponseField).where(
@@ -135,7 +136,7 @@ def test_a_response_only_sort_cookie_orders_rows_on_load(
     page_as: Callable[..., Page],
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
     direction: str,
     expected: list[str],
 ) -> None:
@@ -186,7 +187,7 @@ def test_a_reload_orders_tied_rows_as_the_click_did(
     page_as: Callable[..., Page],
     api: httpx.Client,
     live_server: LiveServer,
-    new_session: Callable[[], int],
+    new_session: Callable[[], str],
     clicks: int,
     expected: list[str],
 ) -> None:

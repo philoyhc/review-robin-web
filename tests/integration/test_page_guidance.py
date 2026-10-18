@@ -39,11 +39,15 @@ def _session_id(client: TestClient, db: Session) -> int:
     ).scalar_one()
 
 
+def _public_id(client: TestClient, db: Session) -> str:
+    return db.get(ReviewSession, _session_id(client, db)).public_id
+
+
 def test_the_email_template_page_carries_one_guidance_card(
     client: TestClient, db: Session
 ) -> None:
     body = client.get(
-        f"/operator/sessions/{_session_id(client, db)}/setup-invite"
+        f"/operator/sessions/{_public_id(client, db)}/setup-invite"
     ).text
 
     assert body.count(CARD) == 1
@@ -57,7 +61,7 @@ def test_the_disclosure_is_closed_by_default(
     they have read. `<details>` without `open` is closed — asserted
     because adding `open` is a one-word change that would go unnoticed."""
     body = client.get(
-        f"/operator/sessions/{_session_id(client, db)}/setup-invite"
+        f"/operator/sessions/{_public_id(client, db)}/setup-invite"
     ).text
 
     assert CARD in body
@@ -75,7 +79,7 @@ def test_the_guidance_sits_above_the_merge_tags_card(
     which the author replaced when the help cards became half-width
     cards (see the segment plan's `## Status`)."""
     body = client.get(
-        f"/operator/sessions/{_session_id(client, db)}/setup-invite"
+        f"/operator/sessions/{_public_id(client, db)}/setup-invite"
     ).text
 
     assert body.index(CARD) < body.index('id="merge-tags"')
@@ -89,7 +93,8 @@ def test_the_guidance_links_into_the_guide_and_returns_here(
     name a real section, and the `return_to` has to survive the
     allowlist so the operator lands back on this page."""
     session_id = _session_id(client, db)
-    page = f"/operator/sessions/{session_id}/setup-invite"
+    public_id = db.get(ReviewSession, session_id).public_id
+    page = f"/operator/sessions/{public_id}/setup-invite"
 
     body = client.get(page).text
     assert f'href="/guide?return_to={page}#guide-give_access"' in body
@@ -175,9 +180,10 @@ def test_every_setup_page_carries_exactly_one_guidance_card(
     page-level affordance, and two of them on one page would make
     neither the place to look."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
 
     for page in SETUP_PAGES:
-        body = client.get(f"/operator/sessions/{session_id}/{page}").text
+        body = client.get(f"/operator/sessions/{public_id}/{page}").text
 
         assert body.count(CARD) == 1, page
         assert "<summary>What this page is for</summary>" in body, page
@@ -190,13 +196,14 @@ def test_the_gated_setup_pages_carry_one_too(
     so they need the flag set rather than riding the loop above. Both are
     Setup pages and both take the scaffold."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
 
     for page, flag in GATED_SETUP_PAGES:
         review_session = db.get(ReviewSession, session_id)
         setattr(review_session, flag, True)
         db.flush()
 
-        response = client.get(f"/operator/sessions/{session_id}/{page}")
+        response = client.get(f"/operator/sessions/{public_id}/{page}")
 
         assert response.status_code == 200, page
         assert response.text.count(CARD) == 1, page
@@ -207,7 +214,7 @@ def test_the_guidance_card_is_a_card(client: TestClient, db: Session) -> None:
     disclosures. Width comes from the grid slot each page puts them in,
     so what is asserted here is the card class the styling hangs off."""
     body = client.get(
-        f"/operator/sessions/{_session_id(client, db)}/reviewers"
+        f"/operator/sessions/{_public_id(client, db)}/reviewers"
     ).text
 
     assert CARD in body
@@ -220,7 +227,7 @@ def test_the_instruments_bulk_toggles_moved_into_the_deadline_card(
     be on the page and ahead of the guidance — losing them would be a
     silent regression, since nothing else expands an instrument card."""
     body = client.get(
-        f"/operator/sessions/{_session_id(client, db)}/instruments"
+        f"/operator/sessions/{_public_id(client, db)}/instruments"
     ).text
 
     assert "data-instruments-expand-all" in body
@@ -280,6 +287,7 @@ def test_every_setup_page_nests_correctly(
     of the suite passed clean.
     """
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.observers_enabled = True
     review_session.relationships_enabled = True
@@ -287,7 +295,7 @@ def test_every_setup_page_nests_correctly(
 
     for page in (*SETUP_PAGES, "relationships", "observers"):
         parser = _NestingCheck()
-        parser.feed(client.get(f"/operator/sessions/{session_id}/{page}").text)
+        parser.feed(client.get(f"/operator/sessions/{public_id}/{page}").text)
 
         assert parser.errors == [], (page, parser.errors)
         assert parser.stack == [], (page, parser.stack)
@@ -309,11 +317,12 @@ def test_the_observers_guidance_leads_the_left_column(
     to act with.
     """
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.observers_enabled = True
     db.flush()
 
-    body = client.get(f"/operator/sessions/{session_id}/observers").text
+    body = client.get(f"/operator/sessions/{public_id}/observers").text
 
     # Markup markers, not bare class names: both classes are also
     # styled in base.html, and a bare-name index finds the stylesheet.
@@ -393,12 +402,13 @@ def test_no_roster_page_renders_the_column_container_beside_its_panel(
     fallback home, retired on 2026-10-11; the test below pins that.
     """
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
     db.flush()
 
     for page in ROSTER_PAGES:
-        body = client.get(f"/operator/sessions/{session_id}/{page}").text
+        body = client.get(f"/operator/sessions/{public_id}/{page}").text
         assert body.count('class="card-columns"') == 0, (
             f"{page} rendered a container beside its Unlock panel"
         )
@@ -424,13 +434,14 @@ def test_no_roster_page_renders_the_container_where_the_panel_cannot(
     Was `test_the_container_comes_back_as_the_labels_editors_fallback`.
     """
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
     review_session.status = "ready"
     db.flush()
 
     for page in ("reviewers", "reviewees", "relationships"):
-        body = client.get(f"/operator/sessions/{session_id}/{page}").text
+        body = client.get(f"/operator/sessions/{public_id}/{page}").text
         assert 'class="card-columns"' not in body, page
         assert 'id="roster-unlock-panel"' not in body, (
             f"{page} offers Unlock on a locked session"
@@ -442,7 +453,7 @@ def test_no_roster_page_renders_the_container_where_the_panel_cannot(
     db.flush()
     for page in ("reviewers", "reviewees", "relationships"):
         body = client.get(
-            f"/operator/sessions/{session_id}/{page}?add=1"
+            f"/operator/sessions/{public_id}/{page}?add=1"
         ).text
         assert 'class="card-columns"' not in body, page
         assert 'id="roster-unlock-panel"' not in body, page
@@ -459,11 +470,12 @@ def test_the_activated_lock_card_leads_the_roster_card(
     columns it sat above were the labels editor's fallback, retired
     2026-10-11."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.status = "ready"
     db.flush()
 
-    body = client.get(f"/operator/sessions/{session_id}/reviewers").text
+    body = client.get(f"/operator/sessions/{public_id}/reviewers").text
 
     assert 'class="card lock"' in body
     assert body.index('class="card lock"') < body.index('id="roster-card"')
@@ -483,8 +495,9 @@ def test_the_assignments_page_says_where_pairs_come_from(
     rule. Inline rather than a guidance card; it is one sentence about
     the card's own table, so it sits under that card's header."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
 
-    body = client.get(f"/operator/sessions/{session_id}/assignments").text
+    body = client.get(f"/operator/sessions/{public_id}/assignments").text
     # Whitespace-normalised: the template wraps the sentence, so the
     # rendered text carries newlines a literal match would trip on — and
     # re-wrapping the paragraph should not break the test.
@@ -514,8 +527,9 @@ def test_the_invitations_page_says_sends_are_not_delivered(
     note.
     """
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
 
-    body = client.get(f"/operator/sessions/{session_id}/invitations").text
+    body = client.get(f"/operator/sessions/{public_id}/invitations").text
     flat = " ".join(body.split())
 
     assert (
@@ -598,6 +612,7 @@ def test_every_setup_page_states_its_own_invisible_fact(
     consequence the page's controls do not. These are the five claims
     the bodies were written around."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
@@ -605,7 +620,7 @@ def test_every_setup_page_states_its_own_invisible_fact(
 
     for page, claims in PAGE_CLAIMS.items():
         prose = _guidance_body(
-            client.get(f"/operator/sessions/{session_id}/{page}").text
+            client.get(f"/operator/sessions/{public_id}/{page}").text
         )
         for claim in claims:
             assert claim in prose, f"{page}: {claim!r}"
@@ -618,6 +633,7 @@ def test_no_setup_page_still_carries_the_scaffold_placeholder(
     "Guidance to follow". A page that kept one would still pass every
     structural test in this file."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
@@ -625,11 +641,11 @@ def test_no_setup_page_still_carries_the_scaffold_placeholder(
 
     for page, _flag in GATED_SETUP_PAGES:
         assert "Guidance to follow" not in client.get(
-            f"/operator/sessions/{session_id}/{page}"
+            f"/operator/sessions/{public_id}/{page}"
         ).text, page
     for page in SETUP_PAGES:
         assert "Guidance to follow" not in client.get(
-            f"/operator/sessions/{session_id}/{page}"
+            f"/operator/sessions/{public_id}/{page}"
         ).text, page
 
 
@@ -640,20 +656,21 @@ def test_the_five_bodies_link_into_the_guide_and_return_here(
     it: a fragment naming a real Guide section, and a `return_to` that
     survives the allowlist. All five land on `create_and_set_up`."""
     session_id = _session_id(client, db)
+    public_id = db.get(ReviewSession, session_id).public_id
     review_session = db.get(ReviewSession, session_id)
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
     db.flush()
 
     for page in PAGE_CLAIMS:
-        path = f"/operator/sessions/{session_id}/{page}"
+        path = f"/operator/sessions/{public_id}/{page}"
         prose = _guidance_body(client.get(path).text)
         assert (
             f'href="/guide?return_to={path}#guide-create_and_set_up"' in prose
         ), page
 
     guide = client.get(
-        f"/guide?return_to=/operator/sessions/{session_id}/reviewers"
+        f"/guide?return_to=/operator/sessions/{public_id}/reviewers"
     )
     assert guide.status_code == 200
     assert 'id="guide-create_and_set_up"' in guide.text

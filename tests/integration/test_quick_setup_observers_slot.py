@@ -88,7 +88,7 @@ def test_observers_slot_renders_whatever_the_toggle(
     assert by_key["observers"].is_wired is True
     assert by_key["observers"].mode == "file_upload"
     assert by_key["observers"].wire_url == (
-        f"/operator/sessions/{rs_on.id}/quick-setup/observers"
+        f"/operator/sessions/{rs_on.public_id}/quick-setup/observers"
     )
 
 
@@ -101,7 +101,7 @@ def test_observers_slot_count_reflects_population(
     assert by_key["observers"].count == 0
 
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/observers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -121,7 +121,7 @@ def test_observers_route_imports_rows(
     review_session = _make_session(client, db, code="qsobs-route")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/observers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -143,13 +143,13 @@ def test_observers_route_replace_requires_confirm(
 
     # First upload populates.
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/observers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
     # Second upload without confirm should redirect with needs_confirm.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/observers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -181,7 +181,7 @@ def test_observers_lifecycle_gate_on_ready(
     db.commit()
 
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/observers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -202,7 +202,7 @@ def test_submit_all_runs_observers_branch(
     review_session = _make_session(client, db, code="qsobs-chain")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={"observers_file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )

@@ -53,7 +53,7 @@ _CARD_OPEN = '<div class="card lock">'
 
 
 def _page(client: TestClient, s: ReviewSession, page: str) -> str:
-    response = client.get(f"/operator/sessions/{s.id}/{page}")
+    response = client.get(f"/operator/sessions/{s.public_id}/{page}")
     assert response.status_code == 200, (page, response.status_code)
     return response.text
 
@@ -112,14 +112,14 @@ def test_every_roster_page_posts_a_return_to_its_own_route_honours(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/revert",
+        f"/operator/sessions/{s.public_id}/revert",
         data={"confirm": "true", "return_to": page},
         follow_redirects=False,
     )
 
     assert response.status_code == 303, (page, response.text[:200])
     assert response.headers["location"] == (
-        f"/operator/sessions/{s.id}/{page}"
+        f"/operator/sessions/{s.public_id}/{page}"
     ), page
 
 
@@ -154,13 +154,13 @@ def test_an_unknown_slug_still_falls_through_to_session_home(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/revert",
+        f"/operator/sessions/{s.public_id}/revert",
         data={"confirm": "true", "return_to": "../../etc"},
         follow_redirects=False,
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == f"/operator/sessions/{s.id}"
+    assert response.headers["location"] == f"/operator/sessions/{s.public_id}"
 
 
 # ------------------------------------------------------------------ #
@@ -241,7 +241,7 @@ def test_revertable_states_carry_the_inline_revert_form(
 
     card = _lock_card(client, s, page)
 
-    assert f'action="/operator/sessions/{s.id}/revert"' in card, (page, state)
+    assert f'action="/operator/sessions/{s.public_id}/revert"' in card, (page, state)
     assert 'data-delete-btn="revert"' in card, (page, state)
 
 
@@ -260,7 +260,7 @@ def test_archived_names_unarchive_instead_of_revert(
 
     assert 'href="/operator/sessions/archived"' in card, page
     assert "Unarchive" in card, page
-    assert f'action="/operator/sessions/{s.id}/revert"' not in card, page
+    assert f'action="/operator/sessions/{s.public_id}/revert"' not in card, page
     assert 'data-delete-btn="revert"' not in card, page
 
 
@@ -277,7 +277,7 @@ def test_the_offered_revert_actually_works(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/revert",
+        f"/operator/sessions/{s.public_id}/revert",
         data={"confirm": "true", "return_to": page},
         follow_redirects=False,
     )
@@ -285,7 +285,7 @@ def test_the_offered_revert_actually_works(
 
     assert response.status_code == 303, (page, state, response.text[:200])
     assert response.headers["location"] == (
-        f"/operator/sessions/{s.id}/{page}"
+        f"/operator/sessions/{s.public_id}/{page}"
     ), (page, state)
     assert db.get(ReviewSession, s.id).status == "draft", (page, state)
 
@@ -301,7 +301,7 @@ def test_the_revert_archived_offers_no_control_would_have_failed(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/revert",
+        f"/operator/sessions/{s.public_id}/revert",
         data={"confirm": "true", "return_to": page},
         follow_redirects=False,
     )

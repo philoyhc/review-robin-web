@@ -61,7 +61,7 @@
       {% endif %}
     </p>
     {% if not is_archived %}
-    <form method="post" action="/operator/sessions/{{ session.id }}/revert">
+    <form method="post" action="/operator/sessions/{{ session.public_id }}/revert">
       <input type="hidden" name="return_to" value="{{ lock_slug }}">
       <p>
         <label style="font-weight: normal;">

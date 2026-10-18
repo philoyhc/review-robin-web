@@ -42,7 +42,7 @@ def test_a_range_condition_opens_and_titles_the_cell(
     _activate(operator, db, review_session.id)
 
     client = make_client(reviewer_user)
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     for td in _cells(body, "comments"):
         assert 'title="Opens when Rating ≥ 2 and ≤ 4"' in td
     for td in _cells(body, "rating"):
@@ -63,11 +63,11 @@ def test_a_range_condition_opens_and_titles_the_cell(
     )
     db.add(rating)
     db.flush()
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     assert all(" disabled" in c for c in _controls(body, "comments"))
     rating.value = "3"
     db.flush()
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     assert all(" disabled" not in c for c in _controls(body, "comments"))
 
 

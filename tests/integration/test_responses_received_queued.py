@@ -52,7 +52,7 @@ def _ready_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -63,7 +63,7 @@ def _ready_session(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -76,11 +76,11 @@ def _ready_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -98,12 +98,12 @@ def _answer_and_submit(
         data[f"response[{assignment.id}][rating]"] = "5"
         data[f"response[{assignment.id}][comments]"] = "fine"
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data=data,
         follow_redirects=False,
     )
     return rae_client.post(
-        f"/me/sessions/{review_session.id}/submit", follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/submit", follow_redirects=False
     ).status_code
 
 
@@ -157,7 +157,7 @@ def test_a_second_submit_refreshes_the_one_queued_row(
     assert _answer_and_submit(rae_client, db, review_session) == 303
     assert (
         rae_client.post(
-            f"/me/sessions/{review_session.id}/submit", follow_redirects=False
+            f"/me/sessions/{review_session.public_id}/submit", follow_redirects=False
         ).status_code
         == 303
     )
@@ -238,7 +238,7 @@ def test_a_blocked_submit_queues_nothing(
     review_session = _ready_session(client, db, "received-blocked")
 
     response = make_client(rae).post(
-        f"/me/sessions/{review_session.id}/submit", follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/submit", follow_redirects=False
     )
 
     assert response.status_code == 400
@@ -283,7 +283,7 @@ def test_a_submit_that_recorded_nothing_queues_nothing(
     db.commit()
 
     response = make_client(rae).post(
-        f"/me/sessions/{review_session.id}/submit", follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/submit", follow_redirects=False
     )
 
     assert response.status_code == 303

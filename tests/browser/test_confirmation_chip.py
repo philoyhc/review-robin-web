@@ -12,7 +12,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_the_confirmation_chip_cycles_and_saves(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sessions/{session_id}/setup-invite?template=responses_received")

@@ -30,7 +30,7 @@ from ._instrument_states import (
 
 
 def _page(client: TestClient, s: ReviewSession) -> str:
-    return client.get(f"/operator/sessions/{s.id}/instruments").text
+    return client.get(f"/operator/sessions/{s.public_id}/instruments").text
 
 
 @pytest.mark.parametrize("state", ALL_STATES)
@@ -77,7 +77,7 @@ def test_revertable_states_carry_the_inline_revert_form(
 
     page = _page(client, s)
 
-    assert f'action="/operator/sessions/{s.id}/revert"' in page, state
+    assert f'action="/operator/sessions/{s.public_id}/revert"' in page, state
     assert 'data-delete-btn="revert"' in page, state
 
 
@@ -95,7 +95,7 @@ def test_archived_names_unarchive_instead_of_revert(
 
     assert 'href="/operator/sessions/archived"' in page
     assert "Unarchive" in page
-    assert f'action="/operator/sessions/{s.id}/revert"' not in page
+    assert f'action="/operator/sessions/{s.public_id}/revert"' not in page
     assert 'data-delete-btn="revert"' not in page
 
 
@@ -110,7 +110,7 @@ def test_the_offered_revert_actually_works(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/revert",
+        f"/operator/sessions/{s.public_id}/revert",
         data={"confirm": "true", "return_to": "instruments"},
         follow_redirects=False,
     )

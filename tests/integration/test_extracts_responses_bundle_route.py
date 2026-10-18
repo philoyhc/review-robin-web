@@ -94,7 +94,7 @@ def _bundle(
     client: TestClient, review_session: ReviewSession, query: str = ""
 ) -> zipfile.ZipFile:
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/export/responses_bundle.zip{query}"
     )
     assert response.status_code == 200, response.text
@@ -126,7 +126,7 @@ def test_responses_bundle_route_streams_zip_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="rb-fname")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/responses_bundle.zip"
     )
     assert response.status_code == 200
@@ -143,7 +143,7 @@ def test_every_card_passes_through_as_configured(
     member equals that card's own download with the same query."""
     review_session = _make_session(client, db, code="rb-pass")
     first, second = _instrument_ids(db, review_session)
-    base = f"/operator/sessions/{review_session.id}/export"
+    base = f"/operator/sessions/{review_session.public_id}/export"
 
     by_instrument = _card_zip(
         client,
@@ -220,7 +220,7 @@ def test_omitted_options_take_each_card_routes_defaults(
     defaults, and the stats and per-instrument long files that used
     to ride along are gone."""
     review_session = _make_session(client, db, code="rb-def")
-    base = f"/operator/sessions/{review_session.id}/export"
+    base = f"/operator/sessions/{review_session.public_id}/export"
     by_instrument = _card_zip(client, f"{base}/by_instrument_bundle.zip")
     reviewer_name, reviewer_body = _download(
         client, f"{base}/reviewer_metadata.csv"
@@ -273,7 +273,7 @@ def test_saved_shapes_ride_as_their_download_buttons_name_them(
 ) -> None:
     review_session = _make_session(client, db, code="rb-shapes")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={
             "name": "My Shape",
             "axis": "reviewer",
@@ -287,7 +287,7 @@ def test_saved_shapes_ride_as_their_download_buttons_name_them(
     shape_id = created.json()["id"]
     name, body = _download(
         client,
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{shape_id}/download.csv",
     )
     assert name == "rb-shapes_My_Shape_noself.csv"
@@ -304,7 +304,7 @@ def test_a_shape_named_like_another_member_does_not_replace_it(
 ) -> None:
     review_session = _make_session(client, db, code="rb-dup")
     client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={
             "name": "reviewer_metadata",
             "axis": "reviewer",
@@ -319,7 +319,7 @@ def test_a_shape_named_like_another_member_does_not_replace_it(
     # The card's file keeps its card name; the shape takes the ``_2``.
     _, reviewer_body = _download(
         client,
-        f"/operator/sessions/{review_session.id}/export/reviewer_metadata.csv",
+        f"/operator/sessions/{review_session.public_id}/export/reviewer_metadata.csv",
     )
     assert archive.read("rb-dup_reviewer_metadata_self.csv") == reviewer_body
     assert archive.read("rb-dup_reviewer_metadata_self_2.csv") != reviewer_body
@@ -361,12 +361,12 @@ def test_extract_data_page_surfaces_zip_all_button(
 ) -> None:
     review_session = _make_session(client, db, code="rb-page")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     assert 'id="extract-data-zip-all"' in body
     assert (
-        f'href="/operator/sessions/{review_session.id}'
+        f'href="/operator/sessions/{review_session.public_id}'
         f'/export/responses_bundle.zip"' in body
     )
     assert "a complete set" in body
@@ -380,7 +380,7 @@ def test_half_width_cards_follow_the_authors_order(
     column: By instrument then Extract all data (D28)."""
     review_session = _make_session(client, db, code="rb-order")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     grid = body[: body.index('id="extract-data-shaper"')]
     columns = grid.split('<div class="extract-data-column">')[1:]
@@ -404,7 +404,7 @@ def test_all_instruments_stands_for_every_instrument_chip(
     card's own route and in the bundle."""
     review_session = _make_session(client, db, code="rb-allinst")
     ids = _instrument_ids(db, review_session)
-    base = f"/operator/sessions/{review_session.id}/export"
+    base = f"/operator/sessions/{review_session.public_id}/export"
     listed = "&".join(f"instrument={i}" for i in ids)
     for kind in ("reviewer_metadata", "reviewee_metadata"):
         name, body = _download(client, f"{base}/{kind}.csv?{listed}")

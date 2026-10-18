@@ -31,7 +31,7 @@ def _record_dialogs(page: Page, *, accept: bool = False) -> list[str]:
     return seen
 
 
-def _edit_description(page: Page, session_id: int, text: str) -> None:
+def _edit_description(page: Page, session_id: str, text: str) -> None:
     page.goto(f"/operator/sessions/{session_id}?editing=1")
     expect(page.locator("#session-config")).to_have_attribute("data-config-mode", "edit")
     field = page.locator("#mock-description")
@@ -45,7 +45,7 @@ def _reviewers_tab(page: Page):
 
 
 def test_a_dirty_card_asks_before_a_link_leaves_home(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _edit_description(page, session_id, "Unsaved")
@@ -66,7 +66,7 @@ def test_a_dirty_card_asks_before_a_link_leaves_home(
 
 
 def test_accepting_the_prompt_leaves_and_drops_the_edit(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _edit_description(page, session_id, "Dropped")
@@ -82,7 +82,7 @@ def test_accepting_the_prompt_leaves_and_drops_the_edit(
 
 
 def test_save_leaves_without_asking(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _edit_description(page, session_id, "Saved")
@@ -100,7 +100,7 @@ def test_save_leaves_without_asking(
 
 
 def test_cancel_and_lock_leave_without_asking(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     seen = _record_dialogs(page)

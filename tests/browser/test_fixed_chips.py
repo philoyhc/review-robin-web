@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 from playwright.sync_api import Locator, Page
 
-from ._builder import open_card
+from ._builder import open_card, session_pk
 from .conftest import LiveServer
 
 
@@ -35,7 +35,7 @@ def _assert_fixed_like(fixed: Locator, live: Locator) -> None:
 
 
 def test_visibility_fixed_cells_are_fixed_switches(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     card = open_card(page, new_session())
     editor = card.locator("[data-new-model-vp-editor]")
@@ -46,25 +46,26 @@ def test_visibility_fixed_cells_are_fixed_switches(
         _assert_fixed_like(fixed.nth(i), live)
 
 
-def _seed_relationship(database_url: str, session_id: int) -> None:
+def _seed_relationship(database_url: str, session_id: str) -> None:
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
     from app.db.models import Relationship, Reviewee, Reviewer, ReviewSession
 
+    pk = session_pk(database_url, session_id)
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            db.get(ReviewSession, session_id).relationships_enabled = True
-            reviewer = Reviewer(session_id=session_id, name="R", email="r@example.org")
+            db.get(ReviewSession, pk).relationships_enabled = True
+            reviewer = Reviewer(session_id=pk, name="R", email="r@example.org")
             reviewee = Reviewee(
-                session_id=session_id, name="E", email_or_identifier="e@example.org"
+                session_id=pk, name="E", email_or_identifier="e@example.org"
             )
             db.add_all([reviewer, reviewee])
             db.flush()
             db.add(
                 Relationship(
-                    session_id=session_id,
+                    session_id=pk,
                     reviewer_id=reviewer.id,
                     reviewee_id=reviewee.id,
                 )
@@ -75,7 +76,7 @@ def _seed_relationship(database_url: str, session_id: int) -> None:
 
 
 def test_session_home_tab_with_data_is_a_fixed_switch(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed_relationship(live_server.database_url, session_id)

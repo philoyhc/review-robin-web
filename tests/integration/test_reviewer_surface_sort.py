@@ -45,7 +45,7 @@ def _setup_session_with_three_reviewees(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -59,7 +59,7 @@ def _setup_session_with_three_reviewees(
     # so the test catches "sort actually happened" rather than
     # "rows already in name order."
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -84,10 +84,10 @@ def _activate(
 ) -> None:
     validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     response = operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -138,7 +138,7 @@ def test_no_sort_spec_renders_three_rows(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -164,7 +164,7 @@ def test_sort_spec_orders_rows_ascending_by_name(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     body = response.text
     # Alphabetical: Alpha, Bravo, Charlie.
@@ -190,7 +190,7 @@ def test_sort_spec_orders_rows_descending_by_name(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
@@ -216,7 +216,7 @@ def test_empty_sort_spec_renders_insertion_order(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -241,7 +241,7 @@ def test_reviewer_surface_renders_sortable_header_scaffolding(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -276,7 +276,7 @@ def test_reviewer_surface_response_field_headers_carry_sort_type(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -308,7 +308,7 @@ def test_reviewer_surface_no_override_preserves_operator_sort(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -340,7 +340,7 @@ def test_stale_display_field_id_skipped_silently(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text

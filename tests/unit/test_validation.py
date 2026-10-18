@@ -92,7 +92,15 @@ def test_registry_rules_have_non_empty_metadata() -> None:
     from app.services.validation import REGISTERED_RULES
 
     fake_session = type(
-        "_S", (), {"id": 1, "code": "x", "name": "x", "help_contact": None}
+        "_S",
+        (),
+        {
+            "id": 1,
+            "public_id": "k3m9x2pq7a",
+            "code": "x",
+            "name": "x",
+            "help_contact": None,
+        },
     )()
     for rule in REGISTERED_RULES:
         assert rule.key
@@ -100,10 +108,10 @@ def test_registry_rules_have_non_empty_metadata() -> None:
         assert rule.why
         assert rule.fix_page_label
         url = rule.fix_url(fake_session)
-        # Some fix links target a sub-path (…/1/reviewers), others the
-        # Session Home config card (…/1?editing=1#session-config) after the
-        # Edit page was retired (18R Item 4 Slice 5).
-        assert url and url.startswith("/operator/sessions/1")
+        # Some fix links target a sub-path (…/k3m9x2pq7a/reviewers), others
+        # the Session Home config card (…/k3m9x2pq7a?editing=1#session-config)
+        # after the Edit page was retired (18R Item 4 Slice 5).
+        assert url and url.startswith("/operator/sessions/k3m9x2pq7a")
 
 
 def test_validate_stamps_rule_key_and_fix_url(db: Session) -> None:
@@ -118,10 +126,10 @@ def test_validate_stamps_rule_key_and_fix_url(db: Session) -> None:
     assert "reviewers.empty" in by_rule
     assert "reviewees.empty" in by_rule
     assert by_rule["reviewers.empty"].fix_url == (
-        f"/operator/sessions/{session.id}/reviewers"
+        f"/operator/sessions/{session.public_id}/reviewers"
     )
     assert by_rule["reviewees.empty"].fix_url == (
-        f"/operator/sessions/{session.id}/reviewees"
+        f"/operator/sessions/{session.public_id}/reviewees"
     )
     # fix_page_label is operator-facing copy, lands in the
     # "Fix on {label} ↗" anchor.

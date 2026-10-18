@@ -116,7 +116,7 @@ def test_the_page_renders_the_status_select(
 ) -> None:
     s = _seed(client, db, code="asf-page")
 
-    body = client.get(f"/operator/sessions/{s.id}/assignments").text
+    body = client.get(f"/operator/sessions/{s.public_id}/assignments").text
 
     assert '<select name="status">' in body
     assert ">Active</option>" in body
@@ -130,7 +130,7 @@ def test_the_hint_counts_both_filters(
     _one_inactive(db, s.id)
 
     body = client.get(
-        f"/operator/sessions/{s.id}/assignments?status=active"
+        f"/operator/sessions/{s.public_id}/assignments?status=active"
     ).text
 
     assert "Showing 1 assignment." in body
@@ -162,10 +162,10 @@ def test_the_column_chips_ignore_the_status_filter(
         )
 
     active_only = enabled_chips(
-        client.get(f"/operator/sessions/{s.id}/assignments?status=active").text
+        client.get(f"/operator/sessions/{s.public_id}/assignments?status=active").text
     )
     unfiltered = enabled_chips(
-        client.get(f"/operator/sessions/{s.id}/assignments").text
+        client.get(f"/operator/sessions/{s.public_id}/assignments").text
     )
 
     assert unfiltered, "fixture must leave some chip enabled or this proves nothing"
@@ -186,7 +186,7 @@ def test_an_unrecognised_status_is_normalised_before_it_round_trips(
     s = _seed(client, db, code="asf-junk")
 
     body = client.get(
-        f"/operator/sessions/{s.id}/assignments?status=nonsense"
+        f"/operator/sessions/{s.public_id}/assignments?status=nonsense"
     ).text
 
     assert '<input type="hidden" name="filter_status" value="all">' in body
@@ -200,9 +200,9 @@ def test_clear_shows_for_a_status_filter_alone(
     term too, as on the other table pages (findings B11, 2026-10-03)."""
     s = _seed(client, db, code="asf-clear")
 
-    bare = client.get(f"/operator/sessions/{s.id}/assignments").text
+    bare = client.get(f"/operator/sessions/{s.public_id}/assignments").text
     filtered = client.get(
-        f"/operator/sessions/{s.id}/assignments?status=inactive"
+        f"/operator/sessions/{s.public_id}/assignments?status=inactive"
     ).text
 
     assert ">Clear</a>" not in bare

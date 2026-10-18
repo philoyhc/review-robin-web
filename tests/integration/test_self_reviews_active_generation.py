@@ -55,7 +55,7 @@ def _seed_population_with_self_review(
     client: TestClient, review_session: ReviewSession
 ) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -70,7 +70,7 @@ def _seed_population_with_self_review(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",

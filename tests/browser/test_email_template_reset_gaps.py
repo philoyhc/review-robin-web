@@ -29,7 +29,7 @@ def _gap(page: Page, field: str) -> float:
 
 
 def test_both_reset_links_sit_the_same_gap_below_their_field(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     response = api.post(

@@ -23,7 +23,7 @@ from playwright.sync_api import Page, Route, expect
 
 
 def test_edit_and_cancel_swap_the_saved_shapes_buttons(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     response = api.post(
@@ -57,7 +57,7 @@ def test_edit_and_cancel_swap_the_saved_shapes_buttons(
     expect(save).to_be_hidden()
 
 
-def _save_shape(api: httpx.Client, session_id: int, name: str) -> int:
+def _save_shape(api: httpx.Client, session_id: str, name: str) -> int:
     response = api.post(
         f"/operator/sessions/{session_id}/extract-data/shapes",
         json={
@@ -73,7 +73,7 @@ def _save_shape(api: httpx.Client, session_id: int, name: str) -> int:
 
 
 def test_delete_waits_for_its_confirm_tick_and_the_tick_resets(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """E36: each shape's Delete stays disabled until its own confirm
     box is ticked, and Cancel or a switch of shape clears the tick
@@ -165,7 +165,7 @@ def test_delete_waits_for_its_confirm_tick_and_the_tick_resets(
 
 
 def test_deleting_the_only_editing_shape_selects_the_fresh_blank(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Delete on the only card resets it to a fresh blank card, which
     becomes the selected edit target. The Delete click goes on to
@@ -196,7 +196,7 @@ def test_deleting_the_only_editing_shape_selects_the_fresh_blank(
 
 
 def test_zip_all_waits_for_a_shape_delete_to_land(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """D13's Zip all downloads every saved shape. Delete removes its
     card before the server answers, so Zip all stays off until the

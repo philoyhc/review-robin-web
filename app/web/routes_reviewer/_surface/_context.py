@@ -515,7 +515,7 @@ def _surface_context(
             # identity row.
             cookie_spec = views.decode_cookie_sort_spec_for_reviewer_surface(
                 cookies=cookies or {},
-                session_id=review_session.id,
+                session_id=review_session.public_id,
                 instrument_id=instrument_id,
                 display_fields=all_display_fields_by_instrument.get(
                     instrument_id, []
@@ -673,11 +673,11 @@ def _surface_context(
         )
     else:
         prev_page_url = (
-            f"/me/sessions/{review_session.id}/{safe_page_n - 1}"
+            f"/me/sessions/{review_session.public_id}/{safe_page_n - 1}"
             if safe_page_n > 1 else None
         )
         next_page_url = (
-            f"/me/sessions/{review_session.id}/{safe_page_n + 1}"
+            f"/me/sessions/{review_session.public_id}/{safe_page_n + 1}"
             if safe_page_n < page_count else None
         )
 

@@ -24,6 +24,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _make_session(
@@ -47,7 +48,7 @@ def _seed_population_with_self_review(
     the self-review."""
 
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -62,7 +63,7 @@ def _seed_population_with_self_review(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -105,7 +106,7 @@ def test_chrome_assignments_tab_now_on_operations_row(
 ) -> None:
     review_session = _make_session(client, db, code="ops-chrome")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
     # The Setup tab strip no longer carries Assignments.
@@ -148,10 +149,10 @@ def test_assignments_page_marks_active_tab_on_operations_row(
 ) -> None:
     review_session = _make_session(client, db, code="ops-active")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     target = (
-        f'href="/operator/sessions/{review_session.id}/assignments"'
+        f'href="/operator/sessions/{review_session.public_id}/assignments"'
     )
     cut = body.find(target)
     assert cut > 0
@@ -184,7 +185,7 @@ def test_operations_page_drops_manual_upload_card(
 ) -> None:
     review_session = _make_session(client, db, code="ops-noupload")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'id="upload-csv"' not in body
     assert "Upload Manual Assignment" not in body
@@ -201,7 +202,7 @@ def test_operations_page_does_not_render_generate_card(
 
     review_session = _make_session(client, db, code="ops-rule")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'id="rule-based-assignment"' not in body
     assert 'id="assignments-generate-card"' not in body
@@ -222,7 +223,7 @@ def test_operations_page_renders_self_reviews_toggle_section(
     _generate_with_self_reviews(client, db, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     instrument_id = _self_review_instrument_id(db, review_session.id)
     # Standalone self-reviews card retired in the post-15B
@@ -250,7 +251,7 @@ def test_self_reviews_column_omits_checkbox_when_count_zero(
     review_session = _make_session(client, db, code="ops-toggle-zero")
     # Generate against a population with no email overlap.
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -261,7 +262,7 @@ def test_self_reviews_column_omits_checkbox_when_count_zero(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -274,7 +275,7 @@ def test_self_reviews_column_omits_checkbox_when_count_zero(
     _generate_with_self_reviews(client, db, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     instrument_id = _self_review_instrument_id(db, review_session.id)
     # 0 self-review rows → a dash and no chip (ux_refinements Item 7).
@@ -315,7 +316,7 @@ def test_per_instrument_toggle_off_flips_self_review_rows_to_inactive(
     instrument_id = _self_review_instrument_id(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
@@ -343,7 +344,7 @@ def test_per_instrument_toggle_on_flips_self_review_rows_to_active(
     instrument_id = _self_review_instrument_id(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "true"},
         follow_redirects=False,
@@ -362,7 +363,7 @@ def test_per_instrument_toggle_emits_audit_event(
     instrument_id = _self_review_instrument_id(db, review_session.id)
 
     client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "false"},
         follow_redirects=False,
@@ -393,7 +394,7 @@ def test_per_instrument_toggle_idempotent_when_state_unchanged(
     instrument_id = _self_review_instrument_id(db, review_session.id)
     # Default is_active=True; toggling to true again does nothing.
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments/{instrument_id}/self-reviews/active",
         data={"active": "true"},
         follow_redirects=False,

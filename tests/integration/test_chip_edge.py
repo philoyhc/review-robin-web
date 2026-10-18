@@ -71,7 +71,7 @@ def test_the_chip_rule_declares_a_two_pixel_edge_in_the_reserved_shade(
 ) -> None:
     review_session = _make_session(client, db, code="19j7r3-1")
     css = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     block = _chip_rule(css)
 
@@ -98,7 +98,7 @@ def test_the_chip_rule_leaves_the_fill_alone(
     """
     review_session = _make_session(client, db, code="19j7r3-2")
     css = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
 
     assert "background" not in _chip_rule(css)
@@ -111,7 +111,7 @@ def test_an_inert_chip_does_not_wear_the_shade(
     cannot be clicked must not also say it can."""
     review_session = _make_session(client, db, code="19j7r3-3")
     css = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
 
     block = _rule(css, "body.ui-v2 .tag-chip.is-disabled")
@@ -135,7 +135,7 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
     review_session = _make_session(client, db, code="19j7r3-4")
 
     assignments = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     toggles = re.findall(
         r'<span class="([^"]*tag-chip[^"]*)"[^>]*data-col-toggle=', assignments
@@ -143,7 +143,7 @@ def test_the_chips_the_rule_targets_are_really_on_the_page(
     assert toggles, "no column-toggle chip rendered on Assignments"
 
     instruments = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     # The response pills retired in 19T Item 9 (the display pills in
     # Item 8), so the page's clickable chips are the visibility editor's
@@ -167,7 +167,7 @@ def test_a_locked_chip_drops_the_edge_and_keeps_its_state(
     does, but says on or off in the card's display-value colors rather
     than the reserved shade, and is not struck through."""
     review_session = _make_session(client, db, code="19u3-locked")
-    css = client.get(f"/operator/sessions/{review_session.id}").text
+    css = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     block = _rule(css, "body.ui-v2 .tag-chip.is-locked")
     assert block is not None
@@ -203,7 +203,7 @@ def test_a_fixed_chip_drops_the_edge_and_keeps_the_fill(
     fill — a ``<span>`` always, a ``<label>`` only while its box is
     ticked, so one fixed off stays the off chip."""
     review_session = _make_session(client, db, code="ux2-fixed")
-    css = client.get(f"/operator/sessions/{review_session.id}").text
+    css = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     block = _rule(
         css,
@@ -238,7 +238,7 @@ def test_a_checkbox_chip_fills_from_its_box(
     """A chip wrapping a checkbox is selected when the box is ticked, so a
     Cancel's ``form.reset()`` repaints it with no script."""
     review_session = _make_session(client, db, code="19u3-has")
-    css = client.get(f"/operator/sessions/{review_session.id}").text
+    css = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     block = _rule(
         css,
@@ -268,7 +268,7 @@ def test_a_linked_role_pill_wears_the_edge_and_a_span_does_not(
     ``test_me_surface_role_chips.py`` and ``test_me_dashboard_links.py``."""
     review_session = _make_session(client, db, code="e13-role-edge")
     css = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
 
     block = _rule(
@@ -301,7 +301,7 @@ def test_a_locked_instrument_cards_chips_read_as_display_pills(
     edge, pointer or glyph, the pill's own fill — an unticked one faded,
     keyed on the card's lock attribute."""
     review_session = _make_session(client, db, code="ux1-locked-card")
-    css = client.get(f"/operator/sessions/{review_session.id}").text
+    css = client.get(f"/operator/sessions/{review_session.public_id}").text
     locked = 'body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] label.tag-chip'
     block = _rule(css, locked)
     assert block is not None

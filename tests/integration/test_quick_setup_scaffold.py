@@ -45,7 +45,7 @@ def _seed_pair(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -56,7 +56,7 @@ def _seed_pair(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -75,9 +75,9 @@ def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -104,22 +104,22 @@ def test_build_quick_setup_context_returns_five_slots(
     by_key = {slot.key: slot for slot in context.slots}
     assert by_key["reviewers"].is_wired is True
     assert by_key["reviewers"].wire_url == (
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers"
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers"
     )
     assert by_key["reviewers"].coming_in is None
     assert by_key["reviewees"].is_wired is True
     assert by_key["reviewees"].wire_url == (
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewees"
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewees"
     )
     assert by_key["relationships"].is_wired is True
     assert by_key["relationships"].wire_url == (
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships"
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships"
     )
     assert by_key["relationships"].coming_in is None
     # Settings graduates to live in 12A-3 PR 4.
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].wire_url == (
-        f"/operator/sessions/{review_session.id}/import-config"
+        f"/operator/sessions/{review_session.public_id}/import-config"
     )
     assert by_key["settings"].coming_in is None
     # Default state is not disabled in draft.
@@ -191,7 +191,7 @@ def test_quick_setup_available_on_validated(
 
     assert context.is_disabled is False
     assert context.is_locked is False
-    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    body = operator.get(f"/operator/sessions/{review_session.public_id}").text
     assert 'class="quick-setup-body"' in body
     assert 'id="quick-setup-lock-toggle"' not in body
 
@@ -313,7 +313,7 @@ def test_quick_setup_dom_carries_wire_target_attributes(
     contract."""
 
     review_session = _make_session(client, db, code="qs-wire-targets")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     for key in ("reviewers", "reviewees", "settings"):
         assert f'data-wire-target="quick-setup-{key}"' in body
@@ -330,7 +330,7 @@ def test_quick_setup_card_level_replacement_checkbox_renders(
     input via inline JS on submit."""
 
     review_session = _make_session(client, db, code="qs-confirm-checkbox")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'id="quick-setup-confirm-replace-toggle"' in body
     assert (
@@ -353,7 +353,7 @@ def test_quick_setup_is_live_in_draft(
 
     review_session = _make_session(client, db, code="qs-locked")
     context = views.build_quick_setup_context(db, review_session)
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert context.is_disabled is False
     assert context.is_locked is False
@@ -380,7 +380,7 @@ def test_quick_setup_locked_when_session_activated(
     _activate(operator, db, review_session)
 
     context = views.build_quick_setup_context(db, review_session)
-    body = operator.get(f"/operator/sessions/{review_session.id}").text
+    body = operator.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert context.is_disabled is True
     assert context.is_locked is True
@@ -407,7 +407,7 @@ def test_quick_setup_card_lives_at_bottom_left(
     """
 
     review_session = _make_session(client, db, code="qs-card-order")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     workflow_pos = body.find('id="next-action"')
     config_pos = body.find('id="session-config"')
@@ -433,7 +433,7 @@ def test_quick_setup_top_grid_layout(
     Relationships + Session settings on the right."""
 
     review_session = _make_session(client, db, code="qs-grid")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     grid_start = body.find('class="quick-setup-top-grid"')
     config_pos = body.find('id="quick-setup-settings"')

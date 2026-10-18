@@ -44,11 +44,11 @@
     {% else %}
       <button class="btn secondary" type="submit" data-rs-save>Save</button>
       <a class="btn secondary"
-         href="/me/sessions/{{ session.id }}/{{ current_page_n }}"
+         href="/me/sessions/{{ session.public_id }}/{{ current_page_n }}"
          data-rs-discard>Cancel</a>
       <button class="btn"
               type="submit"
-              formaction="/me/sessions/{{ session.id }}/submit?page={{ current_page_n }}">
+              formaction="/me/sessions/{{ session.public_id }}/submit?page={{ current_page_n }}">
         Submit
       </button>
     {% endif %}

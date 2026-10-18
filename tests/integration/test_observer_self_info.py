@@ -82,7 +82,7 @@ def _readout(html: str) -> list[str]:
 def test_the_readout_reports_the_default(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "obi-readout")
     _alice(db, rs)
-    html = client.get(f"/operator/sessions/{rs.id}/observers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/observers").text
     assert _readout(html) == ["Name", "Email"]
 
 
@@ -91,7 +91,7 @@ def test_the_card_heads_the_right_column_at_the_default(
 ) -> None:
     rs = _session(client, db, "obi-card")
     _alice(db, rs)
-    html = client.get(f"/operator/sessions/{rs.id}/observers?unlocked=1").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/observers?unlocked=1").text
     _, _, right = panel_columns(html)
     assert right.index("data-observer-self-card") < right.index("danger-zone")
     card = _card(html)
@@ -102,7 +102,7 @@ def test_the_card_heads_the_right_column_at_the_default(
         ("tag_1", False, "Tag"),
     ]
     # The form posts to its route; Save and Cancel wait for a change.
-    assert f'action="/operator/sessions/{rs.id}/observers/self-fields"' in card
+    assert f'action="/operator/sessions/{rs.public_id}/observers/self-fields"' in card
     assert len(re.findall(r"<button[^>]*disabled", card)) == 2
 
 
@@ -111,7 +111,7 @@ def test_the_tag_is_offered_only_while_a_row_holds_one(
 ) -> None:
     rs = _session(client, db, "obi-notag")
     _alice(db, rs, tag=None)
-    card = _card(client.get(f"/operator/sessions/{rs.id}/observers?unlocked=1").text)
+    card = _card(client.get(f"/operator/sessions/{rs.public_id}/observers?unlocked=1").text)
     assert [key for key, _, _ in _chips(card)] == ["display_name", "email"]
 
 
@@ -119,7 +119,7 @@ def test_an_empty_roster_still_renders_the_card(
     client: TestClient, db: Session
 ) -> None:
     rs = _session(client, db, "obi-empty")
-    html = client.get(f"/operator/sessions/{rs.id}/observers?unlocked=1").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/observers?unlocked=1").text
     assert [key for key, _, _ in _chips(_card(html))] == ["display_name", "email"]
     assert _readout(html) == ["Name", "Email"]
 
@@ -132,7 +132,7 @@ def test_a_failed_import_still_renders_the_card_and_readout(
     rs = _session(client, db, "obi-badcsv")
     _alice(db, rs)
     response = client.post(
-        f"/operator/sessions/{rs.id}/observers/import",
+        f"/operator/sessions/{rs.public_id}/observers/import",
         files={"file": ("o.csv", b"ObserverName\nX\n", "text/csv")},
     )
     assert response.status_code == 400, response.status_code
@@ -154,7 +154,7 @@ def test_collation_shows_the_observers_own_line_after_the_pills(
 ) -> None:
     rs = _session(client, db, "obi-collation")
     _alice(db, rs)
-    html = client.get(f"/me/sessions/{rs.id}/collation").text
+    html = client.get(f"/me/sessions/{rs.public_id}/collation").text
     nav = _div_at(html, 'class="rs-role-nav"')
     assert nav.index("rs-role-nav-active") < nav.index("data-observer-self-info")
     info = _info(html)
@@ -176,7 +176,7 @@ def test_a_reviewer_who_is_also_an_observer_sees_only_the_active_pages_line(
     _alice(db, rs)
     db.add(Reviewer(session_id=rs.id, name="Alice Reviewer", email="alice@example.edu"))
     db.commit()
-    html = client.get(f"/me/sessions/{rs.id}/collation").text
+    html = client.get(f"/me/sessions/{rs.public_id}/collation").text
     assert "Alice Observer" in _info(html)
     assert "Alice Reviewer" not in _info(html)
     assert "data-reviewer-self-info" not in html
@@ -186,7 +186,7 @@ def test_a_reviewer_who_is_also_an_observer_sees_only_the_active_pages_line(
 
 def _save(client: TestClient, rs: ReviewSession, **form) -> object:
     return client.post(
-        f"/operator/sessions/{rs.id}/observers/self-fields",
+        f"/operator/sessions/{rs.public_id}/observers/self-fields",
         data=form,
         follow_redirects=False,
     )
@@ -200,14 +200,14 @@ def test_a_save_stores_the_selection_and_collation_follows(
     response = _save(client, rs, fields=["email", "tag_1"])
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{rs.id}/observers?unlocked=1#roster-card"
+        f"/operator/sessions/{rs.public_id}/observers?unlocked=1#roster-card"
     )
     db.refresh(rs)
     assert rs.observer_self_fields == ["email", "tag_1"]
     assert rs.reviewer_self_fields is None and rs.reviewee_self_fields is None
-    html = client.get(f"/operator/sessions/{rs.id}/observers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/observers").text
     assert _readout(html) == ["Email", "Tag"]
-    info = _info(client.get(f"/me/sessions/{rs.id}/collation").text)
+    info = _info(client.get(f"/me/sessions/{rs.public_id}/collation").text)
     assert "alice@example.edu" in info and "Tag: Panel" in info
     assert "Alice Observer" not in info
 
@@ -221,7 +221,7 @@ def test_an_empty_save_shows_nothing_after_the_pill(
     db.refresh(rs)
     assert rs.observer_self_fields == []
     assert "data-observer-self-info" not in client.get(
-        f"/me/sessions/{rs.id}/collation"
+        f"/me/sessions/{rs.public_id}/collation"
     ).text
 
 
@@ -232,7 +232,7 @@ def test_a_key_with_no_chip_survives_a_save(client: TestClient, db: Session) -> 
     _alice(db, rs, tag=None)
     rs.observer_self_fields = ["display_name", "tag_1"]
     db.commit()
-    html = client.get(f"/operator/sessions/{rs.id}/observers?unlocked=1").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/observers?unlocked=1").text
     assert '<input type="hidden" name="keep" value="tag_1">' in html
     assert _save(client, rs, fields=["email"], keep=["tag_1"]).status_code == 303
     db.refresh(rs)
@@ -280,7 +280,7 @@ def test_archived_the_readout_stays_and_the_card_goes(
     _alice(db, rs)
     rs.status = "archived"
     db.commit()
-    html = client.get(f"/operator/sessions/{rs.id}/observers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/observers").text
     assert _readout(html) == ["Name", "Email"]
     assert "data-observer-self-card" not in html
 

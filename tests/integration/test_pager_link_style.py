@@ -62,7 +62,7 @@ def _rule(css: str, selector: str) -> str | None:
 def _stylesheet(client: TestClient, db: Session) -> str:
     review_session = _make_session(client, db, code="pager-css")
     return client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
 

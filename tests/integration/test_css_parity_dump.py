@@ -63,7 +63,7 @@ def test_dump_filter_strip_pages(client, db) -> None:
         setattr(review_session, flag, True)
     db.commit()
 
-    base = f"/operator/sessions/{review_session.id}"
+    base = f"/operator/sessions/{review_session.public_id}"
     for role, header in (("reviewers", b"ReviewerName,ReviewerEmail\n"),
                          ("reviewees", b"RevieweeName,RevieweeEmail\n")):
         client.post(f"{base}/{role}/import",

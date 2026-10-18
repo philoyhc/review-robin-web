@@ -41,7 +41,7 @@ def test_reviewer_import_redirects_and_persists_rows(
     review_session = _make_session(client, db)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -58,7 +58,7 @@ def test_reviewer_import_redirects_and_persists_rows(
     # close the panel it was made from; the Lock button is what closes
     # it. Same contract as the labels save (3a) and delete-all (3b).
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         "?unlocked=1#roster-card"
     )
     reviewers = list(
@@ -72,7 +72,7 @@ def test_reviewer_import_redirects_and_persists_rows(
 def test_reviewer_import_writes_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -105,7 +105,7 @@ def test_reviewer_import_blocks_replace_without_confirm(
 ) -> None:
     review_session = _make_session(client, db)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -117,7 +117,7 @@ def test_reviewer_import_blocks_replace_without_confirm(
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -142,7 +142,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
 ) -> None:
     review_session = _make_session(client, db)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -154,7 +154,7 @@ def test_reviewer_import_replace_with_confirm_succeeds(
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -196,7 +196,7 @@ def test_reviewer_import_renders_issues_for_bad_csv(
     review_session = _make_session(client, db)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("bad.csv", b"ReviewerName\nAlice\n", "text/csv")},
         follow_redirects=False,
     )
@@ -220,7 +220,7 @@ def test_non_operator_gets_404_on_reviewer_import(
 
     bob_client = make_client(bob)
     response = bob_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "reviewers.csv",
@@ -239,7 +239,7 @@ def _reviewee_csv(*rows: tuple[str, str]) -> bytes:
     return body.encode("utf-8")
 
 
-def _post_reviewers(client: TestClient, sid: int, *rows: tuple[str, str]):
+def _post_reviewers(client: TestClient, sid: str, *rows: tuple[str, str]):
     return client.post(
         f"/operator/sessions/{sid}/reviewers/import",
         files={"file": ("reviewers.csv", _reviewer_csv(*rows), "text/csv")},
@@ -247,7 +247,7 @@ def _post_reviewers(client: TestClient, sid: int, *rows: tuple[str, str]):
     )
 
 
-def _post_reviewees(client: TestClient, sid: int, *rows: tuple[str, str]):
+def _post_reviewees(client: TestClient, sid: str, *rows: tuple[str, str]):
     return client.post(
         f"/operator/sessions/{sid}/reviewees/import",
         files={"file": ("reviewees.csv", _reviewee_csv(*rows), "text/csv")},
@@ -260,9 +260,9 @@ def test_cross_table_reviewer_matches_reviewee_same_name_is_allowed(
 ) -> None:
     """Person who is both reviewer + reviewee imports cleanly when names match."""
     review_session = _make_session(client, db)
-    assert _post_reviewees(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+    assert _post_reviewees(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
 
-    response = _post_reviewers(client, review_session.id, ("Alice", "alice@example.edu"))
+    response = _post_reviewers(client, review_session.public_id, ("Alice", "alice@example.edu"))
 
     assert response.status_code == 303
     reviewers = list(
@@ -277,9 +277,9 @@ def test_cross_table_reviewer_matches_reviewee_different_name_blocks(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
-    assert _post_reviewees(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+    assert _post_reviewees(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
 
-    response = _post_reviewers(client, review_session.id, ("Alex", "alice@example.edu"))
+    response = _post_reviewers(client, review_session.public_id, ("Alex", "alice@example.edu"))
 
     assert response.status_code == 400
     body = response.text
@@ -296,9 +296,9 @@ def test_cross_table_reviewee_matches_reviewer_different_name_blocks(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db)
-    assert _post_reviewers(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+    assert _post_reviewers(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
 
-    response = _post_reviewees(client, review_session.id, ("Alex", "alice@example.edu"))
+    response = _post_reviewees(client, review_session.public_id, ("Alex", "alice@example.edu"))
 
     assert response.status_code == 400
     assert (
@@ -312,9 +312,9 @@ def test_cross_table_reviewee_non_email_identifier_never_collides(
 ) -> None:
     """Reviewees without @ in identifier can't collide with reviewer emails."""
     review_session = _make_session(client, db)
-    assert _post_reviewers(client, review_session.id, ("Alice", "alice@example.edu")).status_code == 303
+    assert _post_reviewers(client, review_session.public_id, ("Alice", "alice@example.edu")).status_code == 303
 
-    response = _post_reviewees(client, review_session.id, ("Different Person", "alice"))
+    response = _post_reviewees(client, review_session.public_id, ("Different Person", "alice"))
 
     assert response.status_code == 303
 
@@ -331,7 +331,7 @@ def test_reviewee_import_persists_with_profilelink(
     ).encode("utf-8")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={"file": ("reviewees.csv", csv_body, "text/csv")},
         follow_redirects=False,
     )
@@ -348,7 +348,7 @@ def test_reviewee_import_persists_with_profilelink(
     # panel on this page too, so a bare redirect would close the panel
     # the operator just used.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
         "?unlocked=1#roster-card"
     )
     from app.db.models import Reviewee
@@ -382,7 +382,7 @@ def test_reviewer_replace_cascades_assignments(
     ).scalar_one()
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -393,7 +393,7 @@ def test_reviewer_replace_cascades_assignments(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -413,7 +413,7 @@ def test_reviewer_replace_cascades_assignments(
     assert len(assignments_before) == 1
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -462,7 +462,7 @@ def test_reviewee_replace_cascades_assignments(
     ).scalar_one()
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -473,7 +473,7 @@ def test_reviewee_replace_cascades_assignments(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -493,7 +493,7 @@ def test_reviewee_replace_cascades_assignments(
     assert len(assignments_before) == 2
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -549,7 +549,7 @@ def test_reviewer_import_form_warns_about_cascade(
     ).scalar_one()
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -560,7 +560,7 @@ def test_reviewer_import_form_warns_about_cascade(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -574,7 +574,7 @@ def test_reviewer_import_form_warns_about_cascade(
     generate_via_page_button(client, review_session.id)
 
     page = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     )
 
     assert page.status_code == 200
@@ -594,12 +594,12 @@ def test_reviewers_page_lists_imported_rows(client: TestClient, db: Session) -> 
         b"Bob,bob@example.edu,\n"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv_body, "text/csv")},
         follow_redirects=False,
     )
 
-    response = client.get(f"/operator/sessions/{review_session.id}/reviewers")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/reviewers")
 
     assert response.status_code == 200
     body = response.text
@@ -608,7 +608,7 @@ def test_reviewers_page_lists_imported_rows(client: TestClient, db: Session) -> 
     assert "Bob" in body
     assert "bob@example.edu" in body
     assert "senior" in body
-    assert f"/operator/sessions/{review_session.id}\"" in body  # back link
+    assert f"/operator/sessions/{review_session.public_id}\"" in body  # back link
 
 
 def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
@@ -621,12 +621,12 @@ def test_reviewers_page_renders_tag_columns_with_visibility_toggles(
         b"Bob,bob@example.edu,,\n"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv_body, "text/csv")},
         follow_redirects=False,
     )
 
-    body = client.get(f"/operator/sessions/{review_session.id}/reviewers").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/reviewers").text
 
     # New per-tag columns replace the combined "Tags" cell. The
     # 13B Part 2 PR 6 scaffolding adds ``rrw-sortable`` class +
@@ -688,12 +688,12 @@ def test_reviewees_page_lists_imported_rows_with_profilelink(
         b"Dan,dan-2026,\n"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={"file": ("e.csv", csv_body, "text/csv")},
         follow_redirects=False,
     )
 
-    response = client.get(f"/operator/sessions/{review_session.id}/reviewees")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/reviewees")
 
     assert response.status_code == 200
     body = response.text
@@ -716,7 +716,7 @@ def test_reviewers_page_offers_a_profile_chip_only_with_data(
     """Reviewers gets the Profile column chip Reviewees has, shown only
     while some reviewer carries a ProfileLink (the author, 2026-10-11)."""
     review_session = _make_session(client, db, code="r-profile")
-    url = f"/operator/sessions/{review_session.id}/reviewers"
+    url = f"/operator/sessions/{review_session.public_id}/reviewers"
     client.post(
         f"{url}/import",
         files={
@@ -737,7 +737,7 @@ def test_reviewers_page_offers_a_profile_chip_only_with_data(
     assert "#reviewers-table.col-hidden-profile .profile-col" in flat
 
     bare = _make_session(client, db, code="r-noprof")
-    bare_url = f"/operator/sessions/{bare.id}/reviewers"
+    bare_url = f"/operator/sessions/{bare.public_id}/reviewers"
     client.post(
         f"{bare_url}/import",
         files={
@@ -760,7 +760,7 @@ def test_relationships_page_renders_column_chips(
 ) -> None:
     review_session = _make_session(client, db, code="rel-chips")
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -771,7 +771,7 @@ def test_relationships_page_renders_column_chips(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -782,7 +782,7 @@ def test_relationships_page_renders_column_chips(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -796,7 +796,7 @@ def test_relationships_page_renders_column_chips(
 
     flat = re.sub(
         r"\s+", " ", client.get(
-            f"/operator/sessions/{review_session.id}/relationships"
+            f"/operator/sessions/{review_session.public_id}/relationships"
         ).text
     )
 
@@ -831,10 +831,10 @@ def test_non_operator_gets_404_on_roster_pages(
 
     bob_client = make_client(bob)
     assert (
-        bob_client.get(f"/operator/sessions/{review_session.id}/reviewers").status_code
+        bob_client.get(f"/operator/sessions/{review_session.public_id}/reviewers").status_code
         == 404
     )
     assert (
-        bob_client.get(f"/operator/sessions/{review_session.id}/reviewees").status_code
+        bob_client.get(f"/operator/sessions/{review_session.public_id}/reviewees").status_code
         == 404
     )

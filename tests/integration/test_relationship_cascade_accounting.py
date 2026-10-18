@@ -196,7 +196,7 @@ def test_the_count_must_be_taken_before_the_delete(
         db, model=Reviewer, ids=ids
     )
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/delete-all",
+        f"/operator/sessions/{rs.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -224,7 +224,7 @@ def test_delete_all_logs_the_relationships_it_destroyed(
     _seed(db, rs.id)
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/delete-all",
+        f"/operator/sessions/{rs.public_id}/{page}/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -252,7 +252,7 @@ def test_bulk_delete_logs_only_the_selection_s_relationships(
     one = (reviewers if page == "reviewers" else reviewees)[0]
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/bulk-delete",
+        f"/operator/sessions/{rs.public_id}/{page}/bulk-delete",
         data={field: [str(one.id)], "confirm": "true"},
         follow_redirects=False,
     )
@@ -285,7 +285,7 @@ def test_a_csv_replace_logs_the_relationships_it_destroyed(
     _seed(db, rs.id)
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/import",
+        f"/operator/sessions/{rs.public_id}/{page}/import",
         files={"file": ("r.csv", header + b"\nNew,new@example.org\n",
                         "text/csv")},
         data={"confirm_replace": "true"},
@@ -313,7 +313,7 @@ def test_observers_events_keep_the_payload_they_had(
     db.commit()
 
     client.post(
-        f"/operator/sessions/{rs.id}/observers/delete-all",
+        f"/operator/sessions/{rs.public_id}/observers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -364,7 +364,7 @@ def test_observer_events_do_not_report_assignments_they_never_delete(
         correlation_id="s10-import",
     )
     client.post(
-        f"/operator/sessions/{rs.id}/observers/delete-all",
+        f"/operator/sessions/{rs.public_id}/observers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -408,7 +408,7 @@ def test_bulk_delete_omits_the_key_for_the_models_that_reach_nothing(
         ).scalars().first().id
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/{page}/bulk-delete",
+        f"/operator/sessions/{rs.public_id}/{page}/bulk-delete",
         data={field: [str(row_id)], "confirm": "true"},
         follow_redirects=False,
     )
@@ -431,7 +431,7 @@ def test_the_envelope_admits_the_field_without_a_schema_edit(
     rs = _mk(client, db, "relcc-env")
     _seed(db, rs.id)
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/delete-all",
+        f"/operator/sessions/{rs.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -489,9 +489,9 @@ def test_every_render_path_already_reaches_the_count(
 
     _shared._templates.TemplateResponse = _capture  # type: ignore[assignment]
     try:
-        client.get(f"/operator/sessions/{rs.id}/{page}")
+        client.get(f"/operator/sessions/{rs.public_id}/{page}")
         response = client.post(
-            f"/operator/sessions/{rs.id}/{page}/import",
+            f"/operator/sessions/{rs.public_id}/{page}/import",
             files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
         )
         assert response.status_code == 400, response.status_code
@@ -523,7 +523,7 @@ def test_the_audit_log_page_shows_the_new_count(
     rs = _mk(client, db, "relcc-log")
     _seed(db, rs.id)
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/delete-all",
+        f"/operator/sessions/{rs.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -534,7 +534,7 @@ def test_the_audit_log_page_shows_the_new_count(
     signed_in.is_sys_admin = True
     db.commit()
 
-    response = client.get(f"/operator/sys-admin/sessions/{rs.id}/audit-log")
+    response = client.get(f"/operator/sys-admin/sessions/{rs.public_id}/audit-log")
     assert response.status_code == 200, response.status_code
 
     # The rendered `<dt>` inside the Counts section, NOT the raw-JSON
@@ -562,7 +562,7 @@ def test_every_confirmation_names_the_relationship_loss(
     """
     rs = _mk(client, db, f"relcc-copy-{page[:4]}")
     _seed(db, rs.id)
-    body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/{page}?unlocked=1").text
     body = re.sub(r"<style\b.*?</style>", "", body, flags=re.S)
 
     keys = set(re.findall(r'data-delete-confirm="([^"]+)"', body))
@@ -617,7 +617,7 @@ def test_a_roster_with_no_relationships_reads_exactly_as_before(
     )
     db.commit()
 
-    body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/{page}?unlocked=1").text
     flat = " ".join(re.sub(r"<style\b.*?</style>", "", body, flags=re.S).split())
 
     # The confirmation SENTENCES, not the page: the chrome carries a
@@ -661,7 +661,7 @@ def test_each_row_carries_the_relationships_it_would_take(
     )
     db.commit()
 
-    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
     rows = (reviewers if page == "reviewers" else reviewees)
     found = {}
     for row in rows:
@@ -701,7 +701,7 @@ def test_the_expander_clause_is_gated_on_the_selection_not_the_roster(
     """
     rs = _mk(client, db, f"relcc-src-{page[:4]}")
     _seed(db, rs.id)
-    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
 
     assert "relationshipsIn(sel) > 0" in body, (
         "the clause no longer reads the selection"
@@ -740,7 +740,7 @@ def test_the_replace_verb_is_not_repeated_when_assignments_exist(
     )
     db.commit()
 
-    body = client.get(f"/operator/sessions/{rs.id}/{page}?unlocked=1").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/{page}?unlocked=1").text
     flat = " ".join(re.sub(r"<[^>]+>", " ", body).split())
 
     assert (
@@ -769,7 +769,7 @@ def test_the_guide_tells_operators_what_order_to_work_in(
     """
     rs = _mk(client, db, "relcc-guide")
     body = client.get(
-        f"/guide?return_to=/operator/sessions/{rs.id}/relationships"
+        f"/guide?return_to=/operator/sessions/{rs.public_id}/relationships"
     ).text
     section = body[body.index("Optional: relationships and observers"):]
     section = " ".join(re.sub(r"<[^>]+>", " ", section[:2000]).split())
@@ -811,7 +811,7 @@ def test_the_three_cards_agree_about_what_an_upload_costs(
 
     bodies = {}
     for page in ("reviewers", "reviewees", "relationships"):
-        body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+        body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
         start = body.index('<details class="card page-guidance')
         bodies[page] = " ".join(
             re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
@@ -864,7 +864,7 @@ def test_a_session_without_relationships_is_not_told_their_cost(
     rs.relationships_enabled = False
     db.commit()
 
-    body = client.get(f"/operator/sessions/{rs.id}/{page}").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/{page}").text
     start = body.index('<details class="card page-guidance')
     prose = " ".join(
         re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
@@ -887,7 +887,7 @@ def test_relationships_guidance_does_not_claim_an_upload_clears_assignments(
     rs.relationships_enabled = True
     db.commit()
 
-    body = client.get(f"/operator/sessions/{rs.id}/relationships").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/relationships").text
     start = body.index('<details class="card page-guidance')
     prose = " ".join(
         re.sub(r"<[^>]+>", " ", body[start : body.index("</details>", start)])
@@ -901,7 +901,7 @@ def test_relationships_guidance_does_not_claim_an_upload_clears_assignments(
 # ── Rung 4: the empty state and the inactive `Add new` ─────────────────
 
 
-def _empty_state(client: TestClient, sid: int) -> str:
+def _empty_state(client: TestClient, sid: str) -> str:
     """The paragraph rendered where the rows would be, tags stripped."""
     body = client.get(f"/operator/sessions/{sid}/relationships").text
     match = re.search(r'<p class="muted">No relationships.*?</p>', body, re.S)
@@ -909,7 +909,7 @@ def _empty_state(client: TestClient, sid: int) -> str:
     return " ".join(re.sub(r"<[^>]+>", " ", match.group(0)).split())
 
 
-def _add_new_title(client: TestClient, sid: int) -> str | None:
+def _add_new_title(client: TestClient, sid: str) -> str | None:
     """The disabled `Add new`'s tooltip, or None when there is no
     disabled-with-a-title `Add new` on the page.
 
@@ -927,7 +927,7 @@ def _add_new_title(client: TestClient, sid: int) -> str | None:
     return match.group(1) if match else None
 
 
-def _add_new_is_live(client: TestClient, sid: int) -> bool:
+def _add_new_is_live(client: TestClient, sid: str) -> bool:
     """An `Add new` that is present, enabled and links somewhere."""
     body = client.get(f"/operator/sessions/{sid}/relationships").text
     return bool(
@@ -982,7 +982,7 @@ def test_the_empty_state_names_the_roster_that_is_missing(
     )
     db.commit()
 
-    prose = _empty_state(client, rs.id)
+    prose = _empty_state(client, rs.public_id)
     assert "none can be added" in prose, prose
     assert "Upload a CSV" not in prose, (
         "an upload here fails every row; do not invite one"
@@ -1016,11 +1016,11 @@ def test_the_empty_state_links_to_the_roster_it_names(
     db.add(Reviewer(session_id=rs.id, name="R", email="r@example.org"))
     db.commit()
 
-    body = client.get(f"/operator/sessions/{rs.id}/relationships").text
+    body = client.get(f"/operator/sessions/{rs.public_id}/relationships").text
     match = re.search(r'<p class="muted">No relationships.*?</p>', body, re.S)
     assert match is not None
     hrefs = re.findall(r'href="([^"]+)"', match.group(0))
-    assert hrefs == [f"/operator/sessions/{rs.id}/reviewees"], hrefs
+    assert hrefs == [f"/operator/sessions/{rs.public_id}/reviewees"], hrefs
 
 
 def test_a_populated_pair_of_rosters_reads_as_it_did(
@@ -1046,10 +1046,10 @@ def test_a_populated_pair_of_rosters_reads_as_it_did(
     )
     db.commit()
 
-    assert _empty_state(client, rs.id) == (
+    assert _empty_state(client, rs.public_id) == (
         "No relationships yet. Upload a CSV or add a row to get started."
     )
-    assert _add_new_is_live(client, rs.id), "Add new should be live"
+    assert _add_new_is_live(client, rs.public_id), "Add new should be live"
 
 
 @pytest.mark.parametrize(
@@ -1092,7 +1092,7 @@ def test_the_disabled_add_new_names_the_roster_that_is_missing(
     )
     db.commit()
 
-    assert _add_new_title(client, rs.id) == (
+    assert _add_new_title(client, rs.public_id) == (
         f"{expected} — a relationship needs one of each."
     )
 
@@ -1112,7 +1112,7 @@ def test_a_roster_delete_is_what_puts_the_page_in_that_state(
     assert _relationships(db, rs.id) == 2
 
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/delete-all",
+        f"/operator/sessions/{rs.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -1120,10 +1120,10 @@ def test_a_roster_delete_is_what_puts_the_page_in_that_state(
     db.expire_all()
     assert _relationships(db, rs.id) == 0
 
-    prose = _empty_state(client, rs.id)
+    prose = _empty_state(client, rs.public_id)
     assert "none can be added" in prose, prose
     assert "Reviewers" in prose, prose
-    assert _add_new_title(client, rs.id) == (
+    assert _add_new_title(client, rs.public_id) == (
         "Add rows to the Reviewers roster first — "
         "a relationship needs one of each."
     )
@@ -1149,7 +1149,7 @@ def test_an_inactive_reviewer_still_counts_as_a_reviewer(
         row.status = "inactive"
     db.commit()
 
-    assert _add_new_is_live(client, rs.id)
-    assert _empty_state(client, rs.id) == (
+    assert _add_new_is_live(client, rs.public_id)
+    assert _empty_state(client, rs.public_id) == (
         "No relationships yet. Upload a CSV or add a row to get started."
     )

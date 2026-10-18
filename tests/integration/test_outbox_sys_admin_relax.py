@@ -51,7 +51,7 @@ def test_session_creator_cannot_download_audit_log_without_sys_admin(
     plain operators (incl. the session creator) 403."""
     review_session = _make_session(client, db, code="audit-403-creator")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv",
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv",
         follow_redirects=False,
     )
     assert response.status_code == 403
@@ -69,7 +69,7 @@ def test_non_member_plain_operator_cannot_download_audit_log(
     review_session = _make_session(client, db, code="audit-403")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv",
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv",
         follow_redirects=False,
     )
     assert response.status_code == 403
@@ -88,7 +88,7 @@ def test_sys_admin_can_download_audit_log(
     review_session = _make_session(client, db, code="audit-sa-200")
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv",
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv",
         follow_redirects=False,
     )
     assert response.status_code == 200

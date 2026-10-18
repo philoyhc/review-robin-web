@@ -122,7 +122,7 @@ def _row_action_payloads(page: str, rid: int) -> list[tuple[str, str, dict]]:
     ]
 
 
-def _base(sid: int, page: str) -> str:
+def _base(sid: str, page: str) -> str:
     return f"/operator/sessions/{sid}/{page}"
 
 
@@ -135,7 +135,7 @@ def test_every_row_action_lands_on_the_row_it_acted_on(
 ) -> None:
     rs = _make_session(client, db, f"land-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    base = _base(rs.id, page)
+    base = _base(rs.public_id, page)
 
     for name, template, data in _row_action_payloads(page, ids[0]):
         response = client.post(
@@ -155,7 +155,7 @@ def test_every_row_action_carries_the_pager_offset(
     it the redirect answers page 1, where the acted-on row is not."""
     rs = _make_session(client, db, f"off-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    base = _base(rs.id, page)
+    base = _base(rs.public_id, page)
 
     for name, template, data in _row_action_payloads(page, ids[0]):
         response = client.post(
@@ -175,7 +175,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     rs = _make_session(client, db, f"del-{page[:4]}")
     ids = _seed(db, rs.id, page)
     response = client.post(
-        f"{_base(rs.id, page)}/bulk-delete",
+        f"{_base(rs.public_id, page)}/bulk-delete",
         data={f"{page[:-1]}_ids": [ids[0]], "confirm": "true",
               "filter_offset": "200"},
         follow_redirects=False,
@@ -222,7 +222,7 @@ def test_a_create_carries_the_filter_offset_and_focus(
             "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
         }
     response = client.post(
-        f"{_base(rs.id, page)}/create",
+        f"{_base(rs.public_id, page)}/create",
         data={**payload, "filter_status": "active", "filter_q": "e",
               "filter_offset": "200"},
         follow_redirects=False,
@@ -269,7 +269,7 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
             "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
         }
     response = client.post(
-        f"{_base(rs.id, page)}/create", data=payload, follow_redirects=False
+        f"{_base(rs.public_id, page)}/create", data=payload, follow_redirects=False
     )
     assert response.status_code == 303, response.text[:400]
     loc = response.headers["location"]
@@ -313,13 +313,13 @@ def test_both_form_shells_send_the_offset_the_route_reads(
     rs = _make_session(client, db, f"snd-{page[:4]}")
     ids = _seed(db, rs.id, page, n=230)
 
-    bulk = client.get(f"{_base(rs.id, page)}?offset=200").text
+    bulk = client.get(f"{_base(rs.public_id, page)}?offset=200").text
     bulk = re.sub(r"<(style|script)\b.*?</\1>", "", bulk, flags=re.S)
     assert 'name="filter_offset" value="200"' in _shell(
         bulk, f"{page}-bulk-form"
     ), "the bulk shell does not send the live offset"
 
-    edit = client.get(f"{_base(rs.id, page)}?edit_id={ids[210]}").text
+    edit = client.get(f"{_base(rs.public_id, page)}?edit_id={ids[210]}").text
     edit = re.sub(r"<(style|script)\b.*?</\1>", "", edit, flags=re.S)
     shell = _shell(edit, f"{noun}-edit-form")
     m = re.search(r'name="filter_offset" value="(\d+)"', shell)
@@ -344,7 +344,7 @@ def test_rows_and_the_fallback_are_both_present(
     """
     rs = _make_session(client, db, f"row-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    body = client.get(_base(rs.id, page)).text
+    body = client.get(_base(rs.public_id, page)).text
     markup = re.sub(r"<(style|script)\b.*?</\1>", "", body, flags=re.S)
 
     assert f'id="{noun}-row-{ids[0]}"' in markup
@@ -375,7 +375,7 @@ def test_the_fallback_survives_an_empty_filtered_view(
     """
     rs = _make_session(client, db, f"emp-{page[:4]}")
     _seed(db, rs.id, page, n=2)
-    body = client.get(f"{_base(rs.id, page)}?q=zzz-matches-nothing").text
+    body = client.get(f"{_base(rs.public_id, page)}?q=zzz-matches-nothing").text
 
     assert "match the current filter" in body or "No " in body, (
         "the fixture did not reach the empty-filtered branch"
@@ -416,7 +416,7 @@ def test_add_carries_the_active_filter_into_add_mode(
     """
     rs = _make_session(client, db, f"add-{page[:4]}")
     _seed(db, rs.id, page, n=3)
-    listing = client.get(f"{_base(rs.id, page)}?status=active&q=re").text
+    listing = client.get(f"{_base(rs.public_id, page)}?status=active&q=re").text
 
     # The link the operator actually clicks.
     m = re.search(rf'href="([^"]*{page}[^"]*add=1[^"]*)"', listing)
