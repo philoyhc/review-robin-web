@@ -369,6 +369,35 @@ Taken 2026-10-18 at `e406297e`.
   note).
 - **Schema:** one migration, the unique index; `docs/database.md`.
 
+### Status
+
+**Closed 2026-10-18** (#3135), one rung as planned; the segment stays open.
+
+- **Decisions confirmed at build.** The route takes the number as a
+  string and answers 404 unless it is 1–9 digits, so `abc`, `-1`, an
+  overflow or a NUL never reaches the query as a 422 or a 500. The
+  migration renumbers duplicates in Python, lowest `id` first, so it
+  reads the same on SQLite and Postgres.
+- **Scope moved: the batched insert.** The constraint turned the
+  latent duplicate into an `IntegrityError` for 50 tests whose fixtures
+  add several instruments in one flush. `_next_session_seq` now keeps
+  the numbers it hands out on the batch's execution context, so such a
+  flush numbers its rows in turn. Every app creation path already
+  flushed per row. One test had written `session_seq=1` into a session
+  already holding 1, and now takes the default.
+- **Reads: one** (`diff-reviewer`, `719097ce..ad848f25`). No blocker.
+  It found the other-session test passing with no grant on the other
+  instrument (now granted; the route and the cohort each scope by
+  session, so it fails only with both gone), and leading zeros reaching
+  an instrument (`0002.csv`; the number is now canonical, no leading
+  zero). The plan's "unique index" shipped as a unique constraint. The
+  DoD's "`id` appears nowhere in the page" is pinned as no
+  `instruments/{id}.csv`: a bare integer can match anything on a page.
+  `spec-writer` dropped two provenance tags and flagged nothing else.
+- **The tests live in a new file**, `tests/integration/test_collation_csv_address.py`,
+  not the DoD's `test_observer_collation_body.py`, because they pad the
+  workspace so that `id` and number differ.
+
 ### PR ladder
 
 1. **Build:** the unique index and its migration, route lookup, URL
@@ -389,7 +418,7 @@ Taken 2026-10-18 at `e406297e`.
 
 ### Open questions
 
-1. **Build at all?** The author decides.
+1. ~~Build at all?~~ Yes (author, 2026-10-18).
 2. **The review page's sort keys.** Its source also carries
    workspace-wide IDs. The sort cookie name is
    `rrw-sort-rs-{public_id}-{instrument.id}`, and the header keys are

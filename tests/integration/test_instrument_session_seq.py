@@ -13,6 +13,7 @@ order, and immovable.
 
 from __future__ import annotations
 
+import pytest
 import sqlalchemy as sa
 from sqlalchemy import select
 from fastapi.testclient import TestClient
@@ -534,3 +535,84 @@ def test_the_sql_label_and_the_python_label_agree(db: Session) -> None:
         assert sql_label == _instrument_label(instrument)
     # And the fallback really is exercised, not just the short_label arm.
     assert any(lbl.startswith("Instrument_") for _, lbl in rows)
+
+
+# --------------------------------------------------------------------------- #
+# 19V Item 3 — the number is unique per session
+# --------------------------------------------------------------------------- #
+
+
+def test_two_instruments_cannot_share_a_number(db: Session) -> None:
+    """The observer's CSV is addressed by ``(session_id, session_seq)``,
+    so a duplicate is an insert error, not a second row behind one
+    address."""
+    review_session, _ = _session(db, "seq-unique")
+    taken = _seqs(db, review_session.id)[0]
+    db.add(Instrument(session_id=review_session.id, name="Dup", session_seq=taken))
+    with pytest.raises(sa.exc.IntegrityError):
+        db.flush()
+    db.rollback()
+
+
+def test_instruments_added_in_one_flush_are_numbered_in_turn(
+    db: Session,
+) -> None:
+    """One flush batches the inserts, so every row's default runs before
+    any row is written. Each must still take the next number, in two
+    sessions at once, rather than all reading the same ``max``."""
+    first, _ = _session(db, "seq-batch-a")
+    second, _ = _session(db, "seq-batch-b")
+    before = {s.id: max(_seqs(db, s.id)) for s in (first, second)}
+    db.add_all(
+        [
+            Instrument(session_id=first.id, name="A1"),
+            Instrument(session_id=second.id, name="B1"),
+            Instrument(session_id=first.id, name="A2"),
+            Instrument(session_id=first.id, name="A3"),
+            Instrument(session_id=second.id, name="B2"),
+        ]
+    )
+    db.flush()
+
+    assert _seqs(db, first.id)[-3:] == [before[first.id] + n for n in (1, 2, 3)]
+    assert _seqs(db, second.id)[-2:] == [before[second.id] + n for n in (1, 2)]
+
+
+def test_the_unique_migration_renumbers_duplicates_first() -> None:
+    """The renumbering the migration runs before adding the constraint,
+    against real rows: the lowest id keeps the number, the others take
+    the next ones past their session's highest."""
+    import importlib.util
+    import pathlib
+
+    spec = importlib.util.spec_from_file_location(
+        "_seq_unique_migration",
+        pathlib.Path(__file__).resolve().parents[2]
+        / "alembic/versions/d2f7a3c9b5e4_instruments_session_seq_unique.py",
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    engine = sa.create_engine("sqlite://")
+    with engine.begin() as conn:
+        conn.execute(
+            sa.text(
+                "CREATE TABLE instruments ("
+                "  id INTEGER PRIMARY KEY,"
+                "  session_id INTEGER NOT NULL,"
+                "  session_seq INTEGER NOT NULL"
+                ")"
+            )
+        )
+        conn.execute(
+            sa.text(
+                "INSERT INTO instruments (id, session_id, session_seq) VALUES "
+                "(1, 1, 1), (2, 1, 2), (3, 1, 2), (4, 1, 2), (5, 2, 1), (6, 2, 1)"
+            )
+        )
+        module.renumber_duplicates(conn)
+        rows = conn.execute(
+            sa.text("SELECT id, session_id, session_seq FROM instruments ORDER BY id")
+        ).all()
+
+    assert rows == [(1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), (5, 2, 1), (6, 2, 2)]

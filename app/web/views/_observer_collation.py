@@ -183,7 +183,7 @@ def build_observer_collation_context(
             if mode == "summarized" or not cohort_has_rows
             else (
                 f"/me/sessions/{review_session.public_id}/collation/"
-                f"instruments/{instrument.id}.csv"
+                f"instruments/{instrument.session_seq}.csv"
             )
         )
 

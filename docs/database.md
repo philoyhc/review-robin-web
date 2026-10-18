@@ -155,6 +155,14 @@ of the review form's page digest (`spec/reviewer-surface.md`, Form HTML
 mechanics). No page renders it and no CSV exports it; Duplicate and
 Rehydrate draw their own. Migration `c4e8b2f6a1d9` adds and backfills it.
 
+`instruments (session_id, session_seq)` is unique
+(`uq_instruments_session_seq`; 19V Item 3): the observer's collation CSV
+is addressed by the instrument's per-session number, so no two
+instruments in a session may share one. Migration `d2f7a3c9b5e4`
+renumbers any duplicate first (the lowest `id` keeps the number, the
+others take the next ones past their session's highest), then adds the
+constraint.
+
 ### §5.5 query-path review (Segment 14A PR 3)
 
 The main workflow queries were reviewed against the indexes

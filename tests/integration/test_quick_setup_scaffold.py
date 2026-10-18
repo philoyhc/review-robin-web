@@ -245,9 +245,7 @@ def test_quick_setup_unavailable_when_responses_exist_even_on_draft(
     review_session = _make_session(client, db, code="qs-has-responses")
     assert views.build_quick_setup_context(db, review_session).is_disabled is False
 
-    instrument = Instrument(
-        session_id=review_session.id, name="I", order=0, session_seq=1
-    )
+    instrument = Instrument(session_id=review_session.id, name="I", order=0)
     reviewer = Reviewer(
         session_id=review_session.id, name="R", email="r-qshr@example.edu"
     )

@@ -415,10 +415,12 @@ position, which drag-and-drop moves).
   (`app/db/models/instrument.py::_next_session_seq`), so no creation
   path supplies it and none can forget it. There is no *server*
   default: a row inserted outside SQLAlchemy fails loudly rather than
-  minting `Instrument_0`. **Two rows inserted in one flush would both
-  take the same number** — nothing constrains duplicates, and no
-  unique index exists on `(session_id, session_seq)`. Latent today:
-  every creation path flushes immediately.
+  minting `Instrument_0`. **Unique per session**:
+  `uq_instruments_session_seq` on `(session_id, session_seq)`,
+  since the observer's collation CSV is addressed by the
+  number. Rows inserted in one flush are numbered in turn: the default
+  keeps the numbers it has handed out for the batch, so a later row
+  continues from them rather than reading the same `max + 1`.
 - **Older audit summaries embed `Instrument_{id}` labels** rather
   than the ordinal, so the number they name may match a different
   card.

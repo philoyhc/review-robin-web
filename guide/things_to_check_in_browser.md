@@ -14,7 +14,7 @@ It names the rows it skips and why.
 
 ## Sessions and answers are named without database IDs (19V, #3126–#3130)
 
-Needs `alembic upgrade head` first (two migrations). A database from
+Needs `alembic upgrade head` first (three migrations). A database from
 before them works, but its sessions take new addresses.
 
 - [ ] **Every address carries the public ID.** The lobby's links,
@@ -51,6 +51,12 @@ before them works, but its sessions take new addresses.
   and reload: it shows on the row, and the responses CSV holds it on one
   row naming every member, e.g. "Team A (Dev Patel, Erin Walsh, Local
   Operator)".
+- [ ] **The observer's CSV names the instrument by its number** (19V
+  Item 3; needs `alembic upgrade head` again). On the collation page,
+  each Download CSV link ends `/instruments/<n>.csv`, where n is the
+  instrument's place in the session (1, 2, …), not its database ID.
+  Change n in the address to one the session doesn't have, or to `abc`:
+  the error page.
 
 ## Email dates in the session's zone (#2720)
 
