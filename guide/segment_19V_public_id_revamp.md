@@ -279,6 +279,12 @@ Taken 2026-10-18 at `c39186b4`.
   stale post reuses the refused-write page (participant audit P3)
   with a `page_changed` cause and 409, its typed values listed bare.
   Tests post through `tests/integration/_answer_form.py`.
+- **Read (2026-10-18, one, `4e3c853c..233ea039`).** No mis-mapping
+  path. It found the digest, keyed by a salt with a public default,
+  would let a reviewer brute-force the page's assignment IDs; it now
+  hashes only what the page shows. Also a non-ASCII digest answered
+  500 (now a mismatch), and specs still describing ID-keyed form
+  bodies; both fixed in the same PR.
 
 ### PR ladder
 

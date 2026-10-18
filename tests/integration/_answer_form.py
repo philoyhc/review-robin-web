@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Assignment, Reviewer, ReviewSession
 from app.services import responses as responses_service
-from app.web.routes_reviewer._surface._context import page_assignment_ids_for
+from app.web.routes_reviewer._surface._context import page_assignments_for
 
 _BY_ID = re.compile(r"^response\[(?P<aid>[0-9]+)\]\[(?P<key>[^\]]+)\]$")
 
@@ -37,8 +37,8 @@ def answer_form(
     first = db.get(Assignment, min(assignment_ids))
     review_session = db.get(ReviewSession, first.session_id)
     reviewer = db.get(Reviewer, first.reviewer_id)
-    page_ids = page_assignment_ids_for(db, review_session, reviewer, page_n)
-    ordinals = responses_service.answer_ordinals(page_ids)
+    page_rows = page_assignments_for(db, review_session, reviewer, page_n)
+    ordinals = responses_service.answer_ordinals([a.id for a in page_rows])
     missing = assignment_ids - set(ordinals)
     assert not missing, f"assignments {sorted(missing)} are not on page {page_n}"
     out: dict[str, str] = {}
@@ -46,6 +46,6 @@ def answer_form(
         m = matches[key]
         out[f"response[{ordinals[int(m['aid'])]}][{m['key']}]" if m else key] = value
     out[responses_service.PAGE_DIGEST_FIELD] = responses_service.page_digest(
-        review_session.public_id, page_ids
+        review_session.public_id, page_rows
     )
     return out

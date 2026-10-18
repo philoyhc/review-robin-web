@@ -121,7 +121,8 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
      `_branching.py` (branching between response fields — conditions,
      whether a branch is open, which fields an assignment can answer;
      pure), `_branch_rule.py` (the save invariant, "a closed branch
-     holds no value").
+     holds no value"), `_form_keys.py` (the review form's ordinal answer
+     names and page digest).
    - `app/services/rules/` — the pure rule engine (`engine.py`,
      `predicates.py`, `quotas.py`, `fields.py`).
    Other notable services: `session_lifecycle.py`, `validation.py`,

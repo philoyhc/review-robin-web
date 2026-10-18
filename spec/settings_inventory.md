@@ -458,8 +458,12 @@ deployed environments. Source: `app/config.py`.
 
 One more variable is read outside `Settings`:
 `PARTICIPANT_TOKEN_SALT` (`app/services/participant_tokens.py`), the
-deployment salt mixed into every participant token. Unset, it falls
-back to a fixed built-in default.
+deployment salt mixed into every participant token, and the key of the
+review form's page digest (`spec/reviewer-surface.md`, Form HTML
+mechanics). Unset, it falls back to a fixed built-in default; the
+digest is built from what the page already shows, so a known key gives
+nothing away. Changing it makes every open review form answer 409 on
+its next Save.
 
 **Canonical spec:** `docs/local_setup.md` (env-var setup),
 `docs/deployment_dev.md` (deployment-side configuration),

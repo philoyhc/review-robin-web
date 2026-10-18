@@ -14,7 +14,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.db.models import Reviewer, ReviewSession, User
+from app.db.models import Assignment, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
 from app.services import invitations as invitations_service
@@ -39,7 +39,7 @@ from ._context import (
     _race_refusal,
     _surface_context,
     _write_refusal,
-    page_assignment_ids_for,
+    page_assignments_for,
 )
 
 
@@ -139,7 +139,7 @@ def review_surface_clear_revisited(session_id: str) -> RedirectResponse:
 
 
 def _page_changed(
-    form: Mapping[str, str], review_session: ReviewSession, page_ids: list[int]
+    form: Mapping[str, str], review_session: ReviewSession, page_rows: list[Assignment]
 ) -> bool:
     """Whether a post that carries answers was made against a page whose
     rows have changed since (19V Item 2). A post with no answers names no
@@ -149,7 +149,7 @@ def _page_changed(
     return not responses_service.digest_matches(
         form.get(responses_service.PAGE_DIGEST_FIELD),
         review_session.public_id,
-        page_ids,
+        page_rows,
     )
 
 
@@ -374,11 +374,12 @@ async def reviewer_save(
     reviewer, review_session = reviewer_session
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
-    page_ids = page_assignment_ids_for(db, review_session, reviewer, page_n)
+    page_rows = page_assignments_for(db, review_session, reviewer, page_n)
+    page_ids = [a.id for a in page_rows]
     upserts = responses_service.parse_form_payload(
         string_form, page_assignment_ids=page_ids
     )
-    page_changed = _page_changed(string_form, review_session, page_ids)
+    page_changed = _page_changed(string_form, review_session, page_rows)
     # A refusal lists the typed answers under their rows only when the
     # form's ordinals still name them.
     listed_ids = [] if page_changed else page_ids
@@ -498,13 +499,14 @@ async def reviewer_submit(
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
     # Submit is pressed on a page and carries that page's answers, named
     # by ordinal like a Save's (19V Item 2).
-    page_ids = page_assignment_ids_for(
+    page_rows = page_assignments_for(
         db, review_session, reviewer, _submitted_from_page(request)
     )
+    page_ids = [a.id for a in page_rows]
     upserts = responses_service.parse_form_payload(
         string_form, page_assignment_ids=page_ids
     )
-    page_changed = _page_changed(string_form, review_session, page_ids)
+    page_changed = _page_changed(string_form, review_session, page_rows)
     listed_ids = [] if page_changed else page_ids
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).

@@ -145,9 +145,11 @@ edit".
 routes re-scope the child to the gated session
 (`_require_instrument_in_session` and the per-roster
 `_require_*_in_session` helpers → 404 on a cross-session id); the
-reviewer `save` / `submit` handlers build the assignment index from
-the authenticated reviewer's own assignments, so a foreign
-`assignment_id` in a form body is dropped, not written. The route-by-
+reviewer `save` / `submit` handlers name answers by ordinal among the
+authenticated reviewer's own assignments on the page (19V Item 2), so a
+form body carries no assignment ID and cannot address a foreign one; a
+form posted against a changed page answers 409, and the write service
+still drops any assignment that isn't the reviewer's own. The route-by-
 route audit of this is `docs/security_posture.md` §5.6.
 
 ---

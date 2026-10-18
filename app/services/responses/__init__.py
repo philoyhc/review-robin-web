@@ -56,10 +56,12 @@ from ._core import (
 )
 from ._branch_rule import closed_governed_field_ids, drop_closed_branch_answers
 from ._form_keys import (
+    ANSWER_KEY_PATTERN,
     PAGE_DIGEST_FIELD,
     answer_ordinals,
     digest_matches,
     page_assignment_ids,
+    page_assignments,
     page_digest,
 )
 from ._branching import (
@@ -106,10 +108,12 @@ from ._group_reconciliation import (
 
 __all__ = [
     # _form_keys
+    "ANSWER_KEY_PATTERN",
     "PAGE_DIGEST_FIELD",
     "answer_ordinals",
     "digest_matches",
     "page_assignment_ids",
+    "page_assignments",
     "page_digest",
     # _core
     "ClearResult",

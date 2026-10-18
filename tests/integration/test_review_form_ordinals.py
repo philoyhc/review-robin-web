@@ -220,3 +220,141 @@ def test_a_refused_stale_form_lists_its_answers_bare(
     assert ">4<" in listed or "4</" in listed
     # Ordinal 2 now names Eve; the stale form meant Dan. Neither is named.
     assert "Dan" not in listed and "Eve" not in listed
+
+
+def test_a_group_page_posts_back_the_ordinals_it_rendered(
+    db: Session, make_client
+) -> None:
+    """A group instrument renders one row for its members, so the page's
+    ordinals have a gap (1 and 3 render; 2 is the group's other member).
+    Posting the rendered names back lands each answer on its row, the
+    group's on every member."""
+    from app.auth.identity import AuthenticatedUser
+    from app.db.models import Reviewee, Reviewer, SessionOperator, User
+    from app.services import instruments as instruments_service
+
+    op = User(email="op@example.edu", display_name="Op")
+    db.add(op)
+    db.flush()
+    session = ReviewSession(name="G", code="ordinals-group", created_by_user_id=op.id)
+    db.add(session)
+    db.flush()
+    db.add(SessionOperator(session_id=session.id, user_id=op.id, role="owner"))
+    group = instruments_service.create_instrument(
+        db,
+        review_session=session,
+        actor=op,
+        group_kind=instruments_service.GROUP_KIND_SENTINEL,
+    )
+    solo = instruments_service.create_instrument(db, review_session=session, actor=op)
+    reviewer = Reviewer(session_id=session.id, name="Rae", email="rae@example.edu")
+    carol, dan = (
+        Reviewee(session_id=session.id, name=n, email_or_identifier=f"{n.lower()}@example.edu")
+        for n in ("Carol", "Dan")
+    )
+    db.add_all([reviewer, carol, dan])
+    db.flush()
+    in_group = [
+        Assignment(session_id=session.id, reviewer_id=reviewer.id, reviewee_id=r.id, instrument_id=group.id)
+        for r in (carol, dan)
+    ]
+    db.add_all(in_group)
+    db.flush()
+    alone = Assignment(session_id=session.id, reviewer_id=reviewer.id, reviewee_id=carol.id, instrument_id=solo.id)
+    db.add(alone)
+    session.status = "ready"
+    db.commit()
+    rae = make_client(
+        AuthenticatedUser(principal_id="rae", email="rae@example.edu", name="Rae", provider="aad")
+    )
+
+    html = rae.get(f"/me/sessions/{session.public_id}/1").text
+    rendered = {(int(n), key) for n, key in _ANSWER_NAME.findall(html)}
+    assert {n for n, _key in rendered} == {1, 3}
+    form = {f"response[{n}][rating]": str(n) for n, key in rendered if key == "rating"}
+    form["page_digest"] = _DIGEST.search(html).group(1)
+
+    response = rae.post(
+        f"/me/sessions/{session.public_id}/1/save", data=form, follow_redirects=False
+    )
+
+    assert response.status_code == 303, response.text
+    assert [_rating(db, a) for a in in_group] == ["1", "1"]
+    assert _rating(db, alone) == "3"
+
+
+def test_the_digest_carries_no_assignment_id() -> None:
+    """Two pages whose rows look the same to the reviewer, under different
+    IDs, digest alike: brute-forcing the digest (its key has a public
+    default) finds nothing the page doesn't show."""
+    from types import SimpleNamespace
+
+    from app.services.responses import page_digest
+
+    def row(aid: int, name: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            id=aid,
+            instrument=SimpleNamespace(order=1),
+            reviewee=SimpleNamespace(name=name, email_or_identifier=f"{name}@x.edu"),
+        )
+
+    low = [row(3, "carol"), row(4, "dan")]
+    high = [row(90_001, "carol"), row(90_017, "dan")]
+    assert page_digest("k3m9x2pq7a", low) == page_digest("k3m9x2pq7a", high)
+    assert page_digest("k3m9x2pq7a", low) != page_digest("k3m9x2pq7a", low[::-1])
+    assert page_digest("k3m9x2pq7a", low) != page_digest("k3m9x2pq7a", low[:1])
+
+
+def test_a_digest_that_is_not_hex_is_a_mismatch_not_an_error(
+    db: Session, client: TestClient
+) -> None:
+    session = _session_alice_reviews(db, client)
+
+    for digest in ("é" * 32, "", "zz", "0" * 64):
+        response = client.post(
+            f"/me/sessions/{session.public_id}/1/save",
+            data={"response[1][rating]": "4", "page_digest": digest},
+            follow_redirects=False,
+        )
+        assert response.status_code == 409, digest
+
+
+def test_the_service_still_drops_an_excluded_or_foreign_assignment(
+    db: Session, client: TestClient
+) -> None:
+    """The route can no longer post another row's answer, but the write
+    service must still refuse one, for the window between reading the
+    page and saving under the lock: an excluded or foreign assignment is
+    written nowhere, the reviewer's own row still saves. (It is dropped
+    twice over, before validation and again at the write, so this pins
+    the outcome rather than either filter.)"""
+    from app.db.models import Reviewer, User
+    from app.schemas.responses import ResponseUpsert
+    from app.services import responses as responses_service
+
+    other = _session_alice_reviews(db, client, code="ordinals-foreign")
+    session = _session_alice_reviews(db, client)
+    excluded, kept, _third = _assignments(db, session)
+    foreign = _assignments(db, other)[0]
+    excluded.include = False
+    db.commit()
+    reviewer = db.execute(
+        select(Reviewer).where(Reviewer.session_id == session.id)
+    ).scalar_one()
+    user = db.execute(select(User).where(User.email == "alice@example.edu")).scalar_one()
+
+    responses_service.save_draft(
+        db,
+        review_session=session,
+        reviewer=reviewer,
+        user=user,
+        upserts=[
+            ResponseUpsert(assignment_id=a.id, field_key="rating", value="5")
+            for a in (excluded, kept, foreign)
+        ],
+        correlation_id="t",
+    )
+
+    assert _rating(db, kept) == "5"
+    assert _rating(db, excluded) is None
+    assert _rating(db, foreign) is None

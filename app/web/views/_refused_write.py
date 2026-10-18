@@ -6,7 +6,6 @@ cause is ``_write_refusal`` in ``routes_reviewer/_surface/_context.py``.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping, Sequence
 
 from sqlalchemy import select
@@ -21,6 +20,7 @@ from app.db.models import (
 from app.schemas.responses import ResponseUpsert
 from app.services import date_formatting
 from app.services import instruments as instruments_service
+from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
 from app.services import sessions as sessions_service
 
@@ -34,7 +34,6 @@ REFUSED_NO_ASSIGNMENTS = "no_assignments"
 # answers' ordinals no longer name the rows they were typed into.
 REFUSED_PAGE_CHANGED = "page_changed"
 
-_ANSWER_KEY = re.compile(r"^response\[(?P<n>[0-9]{1,6})\]\[(?P<key>[^\]]+)\]$")
 
 
 def write_refused_notice(
@@ -102,7 +101,7 @@ def unsaved_answers(
             continue
         # An ordinal the page doesn't have, or a key of another shape,
         # still comes back: as ID 0, which names no row.
-        match = _ANSWER_KEY.match(key)
+        match = responses_service.ANSWER_KEY_PATTERN.match(key)
         typed.append(
             ResponseUpsert(
                 assignment_id=by_ordinal.get(int(match["n"]), 0) if match else 0,

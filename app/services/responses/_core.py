@@ -24,6 +24,7 @@ from app.services import audit
 from app.services import session_lifecycle as lifecycle
 from app.services.text import decimal_text, pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
+from app.services.responses._form_keys import ANSWER_KEY_PATTERN
 from app.services.responses._branching import (
     DECIMAL_PATTERN,
     may_be_required_field_ids,
@@ -37,11 +38,6 @@ from app.services.responses._group_reconciliation import (
     group_keys,
 )
 
-# ``n`` is the row's ordinal on the page (19V Item 2), ASCII digits; a
-# key that doesn't match, or an ordinal the page doesn't have, is ignored.
-_FORM_FIELD_PATTERN = re.compile(
-    r"^response\[(?P<n>[0-9]{1,6})\]\[(?P<key>[^\]]+)\]$"
-)
 _DECIMAL = re.compile(DECIMAL_PATTERN)
 _INTEGER = re.compile(r"[+-]?[0-9]+")
 
@@ -64,7 +60,7 @@ def parse_form_payload(
     answers back (participant audit P3)."""
     out: list[ResponseUpsert] = []
     for key, value in form.items():
-        match = _FORM_FIELD_PATTERN.match(key)
+        match = ANSWER_KEY_PATTERN.match(key)
         if match is None or not 1 <= int(match["n"]) <= len(page_assignment_ids):
             continue
         out.append(

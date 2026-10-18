@@ -316,8 +316,10 @@ back (`responses._form_keys`, `parse_form_payload`); an ordinal the
 page doesn't have is ignored, so a forged one reaches only the
 reviewer's own page.
 
-The form carries a hidden `page_digest`, a keyed digest of that ID
-set that reveals no count. A Save or Submit carrying any answer whose
+The form carries a hidden `page_digest`, a keyed digest of the page's
+rows in ID order, built only from what the page shows (each row's
+instrument position and reviewee), never an ID, so even a known key
+gives nothing away. A Save or Submit carrying any answer whose
 digest doesn't match the page as it stands now (a row joined or left
 the page since it rendered, or no digest at all) is refused with
 **409**: the page re-renders with a "This page changed after you opened
@@ -342,8 +344,8 @@ answers needs no digest.
   `submissions_cleared`. Answer names map only to the current page's
   rows, and a stale form is refused by its page digest, so a Save never
   touches another page's saved values.
-- **Submit** persists pending writes session-wide (treating the
-  whole form body as a session-wide save), then validates required
+- **Submit** persists the page's pending writes (its form carries only
+  the page Submit was pressed on, `?page={page_n}`), then validates required
   fields across every instrument. With no required field missing
   (Submit is a hard gate; there is no acknowledge path), it stamps
   `submitted_at` on every Response row of the reviewer's included
@@ -962,18 +964,26 @@ cleared" (Clear). The first cause that applies, in this order, wins:
 | no included assignment | "You have nothing to review in this session right now" |
 | `ready` and past the deadline | "This review closed at its deadline, {deadline} ({zone})" |
 
+These causes win over a stale form: only a write the session would
+accept is checked against its page digest (Form HTML mechanics), and a
+mismatch there is the one refusal answered with **HTTP 409**, cause
+`page_changed`, opening "This page changed after you opened it".
+
 Under it, `data-rs-unsaved-answers` lists every value the POST carried
 that isn't blank, as plain text read from the raw form (leading and
 trailing whitespace kept, which a save strips), so it can be copied out
 (`app/web/views/_refused_write.py`).
 An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
 would show that row now: an included assignment of this reviewer, on a
-visible field, in a `ready` or `expired` session. Any other value (an
-excluded row, a session that never opened, an id that isn't the
-reviewer's) is listed bare, so the card labels only the reviewer's
-own included rows on visible fields.
+visible field, in a `ready` or `expired` session, named by an ordinal
+the page has. Answers map to rows only when the form's page digest
+matches the page now (19V Item 2), so a stale form's values are never
+listed under rows they weren't typed into. Any other value (an excluded
+row, a session that never opened, an ordinal the page doesn't have, a
+stale form) is listed bare, so the card labels only the reviewer's own
+included rows on visible fields.
 Every typed value is listed, changed or not, whatever row it names:
-echoing only some would tell the reviewer which ids are theirs, or what
+echoing only some would tell the reviewer which rows are theirs, or what
 is stored where the visibility setting hides it. Clear carries none.
 
 GET requests behave differently depending on which gate fails:
