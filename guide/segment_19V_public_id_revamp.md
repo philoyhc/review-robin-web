@@ -303,3 +303,109 @@ Taken 2026-10-18 at `c39186b4`.
 - `spec/permissions.md` — a reviewer form body carries no assignment ID (Item 2; added at the read).
 - `docs/security_posture.md` — §5.6's reviewer POST note: ordinals, the 409, the service filter (Item 2; added at the read).
 - `spec/architecture.md` — `_form_keys.py` in the module map (Item 2; added at the read).
+
+---
+
+## Item 3 — The observer's CSV address stops carrying the instrument ID
+
+Raised 2026-10-18, while building the browser check set (#3131).
+
+### Opportunity
+
+An observer's per-instrument download is
+`/me/sessions/{public_id}/collation/instruments/{instrument_id}.csv`
+(`app/web/routes_reviewer/_collation.py:102`, built in
+`app/web/views/_observer_collation.py:181`). `instruments.id` is
+workspace-wide, so a participant reads off roughly how many instruments
+the whole workspace has made. Item 1 fixed this for the session in that
+same address; its out-of-scope list ruled out other entities' IDs in
+*operator* URLs only.
+
+### Decision
+
+Address the instrument by its `session_seq`:
+`…/collation/instruments/{session_seq}.csv`. `session_seq` already exists
+(19Q Item 6). It is per session, set once at creation, and never moved by
+drag-and-drop. It is not yet unique: nothing constrains
+`(session_id, session_seq)`, and `spec/instruments.md` records that two
+rows in one flush would share a number. So as the address it gets a unique
+index (one migration), and the route looks the instrument up by
+`(session_id, session_seq)`, under the same 404s as today. An integer
+`instruments.id` that happens to match some other instrument's
+`session_seq` in this session reaches that one, which reveals nothing:
+a session's own instruments are already listed on the page.
+
+Rejected: a random `instruments.public_id` like Item 1's. It costs a
+column and a value from every creation path, to hide a number that a
+per-session sequence already hides once it is unique.
+
+### Semantics
+
+- **Uniqueness.** A unique index on `(session_id, session_seq)` makes a
+  duplicate an insert error instead of a second row that shares an
+  address (Codex on #3133). The migration first renumbers any duplicate
+  above the session's highest number, keeping the lower ID's value.
+  Every creation path already flushes at once, and the instrument
+  writers lock the session row, so a collision means a defect, not a
+  race to retry.
+- **A recycled number.** A trailing delete hands the number back
+  (`_next_session_seq`), so after deleting the newest instrument and
+  adding one, an old bookmark reaches the new instrument. The 404s
+  still apply, so an observer gets only what they could download anyway.
+- **A non-integer or unknown seq** answers 404, as an unknown ID does
+  now.
+
+### Blast radius (measured)
+
+Taken 2026-10-18 at `e406297e`.
+
+- **Route and builder:** 2 sites
+  (`git grep -n 'collation/instruments' -- app`): `_collation.py` and
+  `_observer_collation.py`, plus the route's docstring.
+- **Tests:** 2 files, 16 lines
+  (`git grep -n 'instruments/' -- tests/integration/test_observer_collation_body.py tests/integration/test_reviewer_identity_level.py`).
+- **Spec:** `spec/participant_model.md` (the collation row of the route
+  table) and `spec/instruments.md` (the "nothing constrains duplicates"
+  note).
+- **Schema:** one migration, the unique index; `docs/database.md`.
+
+### PR ladder
+
+1. **Build:** the unique index and its migration, route lookup, URL
+   builder, tests and specs, in one rung.
+
+### Definition of done
+
+- The collation page links `…/instruments/{session_seq}.csv`. A test
+  pins that the instrument's `id` appears nowhere in the page.
+- `tests/integration/test_observer_collation_body.py` covers an unknown
+  seq answering 404, and another session's instrument staying out of
+  reach.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19V.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; on the segment's last item, plan moved to `guide/archive/` + index row
+
+### Open questions
+
+1. **Build at all?** The author decides.
+2. **The review page's sort keys.** Its source also carries
+   workspace-wide IDs. The sort cookie name is
+   `rrw-sort-rs-{public_id}-{instrument.id}`, and the header keys are
+   `display:{field.id}` / `response:{field.id}`
+   (`app/web/templates/reviewer/review_surface.html:333`, `:374`, `:396`).
+   They count instruments and fields, not rows, and the server reads
+   them back for the sort (`app/web/views/_sort.py`). Fold them into this
+   item, or leave them as page source in the way Item 2 first judged
+   its own case? The author decides.
+
+### Out of scope
+
+- **Operator URLs**, as in Item 1.
+
+### Doc impact
+
+- `spec/participant_model.md` — the collation CSV route takes the instrument's per-session number, not its ID (Item 3).
+- `spec/instruments.md` — `session_seq` is unique per session, by index (Item 3; added at Codex's read of the plan).
+- `docs/database.md` — the unique index on `instruments (session_id, session_seq)` (Item 3; added at Codex's read of the plan).

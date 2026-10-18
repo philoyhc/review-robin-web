@@ -66,7 +66,9 @@ concluding** (decision 2026-09-05) and independent of each other.
 3. **19V — Public IDs** (not gated on Azure). Item 1 shipped
    2026-10-18: session URLs carry a random `sessions.public_id`. Open:
    Item 2, review-form answers keyed off an ordinal, not the assignment
-   ID; the segment stays open for follow-ups (author, 2026-10-18).
+   ID (shipped); Item 3, the observer CSV address keyed off the
+   instrument's `session_seq`, made unique (planned, not ruled); the segment stays
+   open for follow-ups (author, 2026-10-18).
    **Plan:** `guide/segment_19V_public_id_revamp.md`.
 
 ### Stubs
