@@ -180,11 +180,17 @@ can read off roughly how many assignments the whole workspace has made.
 
 ### Decision
 
-Name each answer by its row's position on the page:
-`response[{row_index}][{field_key}]`. The server maps positions back to
-assignment IDs from the same page context it rendered, which already
-holds the visible rows in order. Because the mapping is rebuilt on the
-server, a forged index can only address a row the reviewer was shown.
+Name each answer by its row's ordinal on the page:
+`response[{ordinal}][{field_key}]`. The ordinal is the row's rank among
+the page's assignments sorted by assignment ID. That order is
+independent of display: a reviewer's column sort reorders the DOM and
+writes a cookie (`app/web/templates/base.html`, the shared sort handler),
+and the POST rebuilds the rows in the cookie's order
+(`app/web/routes_reviewer/_surface/_context.py`), so a display position
+would point at a different row after a sort (Codex on #3124). The server
+rebuilds the page's assignment set, sorts it by ID and maps ordinal back
+to ID. A forged ordinal can therefore only address a row on the
+reviewer's own page.
 
 Rejected: signing or encrypting the assignment IDs. That adds key
 handling to a page form to protect a count, which a position does
@@ -198,9 +204,12 @@ without any key.
   only drops assignment IDs from other pages
   (`app/web/routes_reviewer/_surface/_routes.py`, the save handler's
   docstring); there is no render stamp. So this item adds one: a hidden
-  digest of the page's ordered assignment IDs (a keyed hash, so it
-  reveals no count), checked on post. A mismatch re-renders the page
+  digest of the page's assignment-ID set in ID order (a keyed hash, so
+  it reveals no count), checked on post. A mismatch re-renders the page
   with a "this page changed" notice and saves nothing.
+- **A client-side sort is not a change.** The ordinals and the digest
+  both come from ID order, so a sort between render and post leaves them
+  valid, and the save lands on the rows the reviewer typed into.
 - **Group pages** fan one row's answer out to its group copies, as today.
   Only the key the form uses changes.
 
