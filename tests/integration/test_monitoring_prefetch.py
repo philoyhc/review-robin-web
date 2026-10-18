@@ -91,11 +91,11 @@ def _activate_and_respond(
     branches are exercised in both directions.
     """
     client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session.id}/workflow/activate",
+        f"/operator/sessions/{session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     for index in range(max(1, n // 2)):
@@ -119,11 +119,11 @@ def _activate_and_respond(
             data[f"response[{aid}][rating]"] = "5"
             data[f"response[{aid}][comments]"] = "fine"
         reviewer_client.post(
-            f"/me/sessions/{session.id}/1/save", data=data, follow_redirects=False
+            f"/me/sessions/{session.public_id}/1/save", data=data, follow_redirects=False
         )
         if index % 2 == 0:
             reviewer_client.post(
-                f"/me/sessions/{session.id}/submit", follow_redirects=False
+                f"/me/sessions/{session.public_id}/submit", follow_redirects=False
             )
 
 
@@ -138,7 +138,7 @@ def _seeded(client: TestClient, db: Session, n: int, code: str) -> ReviewSession
     ).scalar_one()
     for kind in ("reviewers", "reviewees"):
         client.post(
-            f"/operator/sessions/{session.id}/{kind}/import",
+            f"/operator/sessions/{session.public_id}/{kind}/import",
             files={"file": (f"{kind}.csv", _roster(kind, n), "text/csv")},
             follow_redirects=False,
         )
@@ -429,11 +429,11 @@ def test_the_assignments_page_query_count_is_flat_in_the_roster(
 
     small_q = _count_queries(
         db,
-        lambda: client.get(f"/operator/sessions/{small.id}/assignments"),
+        lambda: client.get(f"/operator/sessions/{small.public_id}/assignments"),
     )
     large_q = _count_queries(
         db,
-        lambda: client.get(f"/operator/sessions/{large.id}/assignments"),
+        lambda: client.get(f"/operator/sessions/{large.public_id}/assignments"),
     )
 
     assert small_q == large_q, (

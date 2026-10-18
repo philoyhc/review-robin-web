@@ -58,7 +58,7 @@ def _set_session_timezone(
             "display_timezone": zone}
     data.update(extra)
     return client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -219,7 +219,7 @@ def test_edit_page_renders_timezone_field(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="tz-card")
-    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # The timezone is a field of the Session Home config card's edit
     # mode now, not a standalone card. Datalist options carry the
     # GMT-prefixed form so the operator can search by offset.
@@ -241,7 +241,7 @@ def test_session_detail_renders_in_override_zone(
     db.commit()
     db.refresh(session)
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert format_datetime(session.deadline, "Asia/Singapore") in body
     assert format_datetime(session.deadline, "UTC") not in body
 
@@ -262,7 +262,7 @@ def test_session_with_null_timezone_resolves_to_operator_default(
     session.deadline = datetime(2026, 9, 1, 12, 0)  # naive UTC
     db.commit()
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     # Null session zone → resolves to the operator's default (Singapore);
     # the End datetime on #session-config localises accordingly.
     assert format_datetime(session.deadline, "Asia/Singapore") in body
@@ -276,7 +276,7 @@ def test_session_detail_shows_timezone_label(
     session = _create_session(client, db, code="tz-label")
     _set_session_timezone(client, session, "Asia/Singapore")
 
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     assert "Timezone" in body
     assert "GMT+8 Asia/Singapore" in body
 
@@ -297,7 +297,7 @@ def _build_active_session_with_reviewer(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -308,7 +308,7 @@ def _build_active_session_with_reviewer(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{session.id}/reviewees/import",
+        f"/operator/sessions/{session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -319,7 +319,7 @@ def _build_active_session_with_reviewer(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{session.id}/relationships/import",
+        f"/operator/sessions/{session.public_id}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -335,9 +335,9 @@ def _build_active_session_with_reviewer(
     pin_full_matrix_on_all_instruments(db, session.id)
     generate_via_page_button(operator, session.id)
     validate_session(session)
-    operator.get(f"/operator/sessions/{session.id}/assignments")
+    operator.get(f"/operator/sessions/{session.public_id}/assignments")
     operator.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -371,7 +371,7 @@ def test_reviewer_surface_renders_deadline_in_session_zone(
             provider="aad",
         )
     )
-    response = reviewer.get(f"/me/sessions/{session.id}")
+    response = reviewer.get(f"/me/sessions/{session.public_id}")
     assert response.status_code == 200
     # 02:00 UTC is 10:00 in Singapore — the deadline is converted to
     # the session zone (rendered bare, no zone token), with the
@@ -468,7 +468,7 @@ def test_config_card_timezone_field_uses_gmt_offset_datalist(
     `_timezone_preview.html`, which re-renders its date boxes as the
     zone changes: findings L8.)"""
     session = _create_session(client, db, code="tz-sample")
-    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # The worked-sample line is absent here.
     assert 'id="tz-sample"' not in body
     # The timezone input is bound to the GMT-offset datalist, whose
@@ -546,7 +546,7 @@ def test_config_rename_keeps_a_schedule_that_has_aged(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": "Renamed",
             "code": session.code,
@@ -583,7 +583,7 @@ def test_config_still_refuses_an_edited_start_in_the_past(
     past = datetime.now(timezone.utc) - timedelta(days=1)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": session.name,
             "code": session.code,
@@ -612,7 +612,7 @@ def _post_aged_schedule(
     session.invite_offsets = [stored]
     db.commit()
     return client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": session.name,
             "code": session.code,
@@ -669,7 +669,7 @@ def test_config_rechecks_stored_offsets_when_start_moves(
     new_start = now + timedelta(hours=6)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": session.name,
             "code": session.code,
@@ -716,7 +716,7 @@ def test_config_refuses_a_duplicate_of_an_aged_reminder_offset(
 
     def _save(offsets: str):
         return client.post(
-            f"/operator/sessions/{session.id}/config",
+            f"/operator/sessions/{session.public_id}/config",
             data={
                 "name": session.name,
                 "code": session.code,
@@ -753,7 +753,7 @@ def test_config_refuses_reordered_aged_offsets(
 
     def _save(offsets: str):
         return client.post(
-            f"/operator/sessions/{session.id}/config",
+            f"/operator/sessions/{session.public_id}/config",
             data={
                 "name": session.name,
                 "code": session.code,
@@ -790,7 +790,7 @@ def test_config_refuses_reordered_aged_reminder_offsets(
 
     def _save(offsets: str):
         return client.post(
-            f"/operator/sessions/{session.id}/config",
+            f"/operator/sessions/{session.public_id}/config",
             data={
                 "name": session.name,
                 "code": session.code,
@@ -837,7 +837,7 @@ def _l8_session(
 
 def _l8_save(client: TestClient, session: ReviewSession, boxes: dict[str, str]):
     return client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": session.name,
             "code": session.code,

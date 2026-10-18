@@ -29,7 +29,7 @@ def test_validate_renders_with_errors_for_empty_session(
 ) -> None:
     review_session = _make_session(client, db)
 
-    response = client.get(f"/operator/sessions/{review_session.id}/validate")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/validate")
 
     assert response.status_code == 200
     body = response.text
@@ -45,7 +45,7 @@ def test_validate_renders_clean_for_populated_session(
 ) -> None:
     review_session = _make_session(client, db)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -56,7 +56,7 @@ def test_validate_renders_clean_for_populated_session(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -67,7 +67,7 @@ def test_validate_renders_clean_for_populated_session(
         follow_redirects=False,
     )
 
-    response = client.get(f"/operator/sessions/{review_session.id}/validate")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/validate")
 
     assert response.status_code == 200
     assert "No reviewers" not in response.text
@@ -84,7 +84,7 @@ def test_non_operator_cannot_view_validate(
     review_session = _make_session(alice_client, db, code="alice-only")
 
     bob_client = make_client(bob)
-    response = bob_client.get(f"/operator/sessions/{review_session.id}/validate")
+    response = bob_client.get(f"/operator/sessions/{review_session.public_id}/validate")
 
     assert response.status_code == 404
 
@@ -94,7 +94,7 @@ def test_session_detail_shows_counts_and_validate_link(
 ) -> None:
     review_session = _make_session(client, db)
 
-    empty_response = client.get(f"/operator/sessions/{review_session.id}")
+    empty_response = client.get(f"/operator/sessions/{review_session.public_id}")
     assert empty_response.status_code == 200
     body = empty_response.text
     # Setup row labels appear as button labels
@@ -107,7 +107,7 @@ def test_session_detail_shows_counts_and_validate_link(
     # assignments is populated.
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -120,7 +120,7 @@ def test_session_detail_shows_counts_and_validate_link(
         follow_redirects=False,
     )
 
-    populated = client.get(f"/operator/sessions/{review_session.id}")
+    populated = client.get(f"/operator/sessions/{review_session.public_id}")
     body = populated.text
     # The standalone Session Setup card was retired; reviewer count
     # now surfaces in the chrome status row via the count pill.

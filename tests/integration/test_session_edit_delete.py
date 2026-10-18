@@ -38,7 +38,7 @@ def _make_session(
 def _seed_with_assignments(client: TestClient, db: Session, code: str) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -49,7 +49,7 @@ def _seed_with_assignments(client: TestClient, db: Session, code: str) -> Review
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -70,7 +70,7 @@ def test_session_edit_persists_and_audits_changes(
     review_session = _make_session(client, db)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data={
             "name": "Spring v2",
             "code": "edit-test",
@@ -103,7 +103,7 @@ def test_session_delete_removes_session_and_all_dependents(
     sid = review_session.id
 
     response = client.post(
-        f"/operator/sessions/{sid}/delete",
+        f"/operator/sessions/{review_session.public_id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -151,7 +151,7 @@ def test_session_delete_without_confirm_returns_400(
     review_session = _make_session(client, db, code="no-confirm")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/delete",
+        f"/operator/sessions/{review_session.public_id}/delete",
         data={},
         follow_redirects=False,
     )
@@ -171,7 +171,7 @@ def test_delete_all_reviewers_cascades_assignments(
     review_session = _seed_with_assignments(client, db, code="r-del")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/delete-all",
+        f"/operator/sessions/{review_session.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -210,7 +210,7 @@ def test_delete_all_reviewees_cascades_assignments(
     review_session = _seed_with_assignments(client, db, code="e-del")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/delete-all",
+        f"/operator/sessions/{review_session.public_id}/reviewees/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -255,22 +255,22 @@ def test_non_operator_gets_404_on_destructive_routes(
     bob_client = make_client(bob)
 
     edit = bob_client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data={"name": "x", "code": "y"},
         follow_redirects=False,
     )
     assert edit.status_code == 404
 
     delete = bob_client.post(
-        f"/operator/sessions/{review_session.id}/delete",
+        f"/operator/sessions/{review_session.public_id}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert delete.status_code == 404
 
     for path in (
-        f"/operator/sessions/{review_session.id}/reviewers/delete-all",
-        f"/operator/sessions/{review_session.id}/reviewees/delete-all",
+        f"/operator/sessions/{review_session.public_id}/reviewers/delete-all",
+        f"/operator/sessions/{review_session.public_id}/reviewees/delete-all",
     ):
         r = bob_client.post(path, data={"confirm": "true"}, follow_redirects=False)
         assert r.status_code == 404, path

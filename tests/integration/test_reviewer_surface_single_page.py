@@ -54,7 +54,7 @@ def _operator_creates_session_with_pair(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -65,7 +65,7 @@ def _operator_creates_session_with_pair(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -77,16 +77,16 @@ def _operator_creates_session_with_pair(
     )
     for _ in range(extra_instruments):
         operator_client.post(
-            f"/operator/sessions/{review_session.id}/instruments/add-new-model"
+            f"/operator/sessions/{review_session.public_id}/instruments/add-new-model"
         )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -125,12 +125,12 @@ def test_bare_url_303s_to_page_1(
     )
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}",
+        f"/me/sessions/{review_session.public_id}",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     )
 
 
@@ -155,7 +155,7 @@ def test_page_one_renders_first_pages_instruments(
         extra_instruments=2,  # 3 instruments, all on one page (no breaks)
     )
     rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.id}/1").text
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
     # All three instrument sections render on page 1 since no break exists.
     for n in (1, 2, 3):
         assert f'data-rs-position="{n}"' in body
@@ -177,7 +177,7 @@ def test_out_of_range_page_returns_404(
     )
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}/99",
+        f"/me/sessions/{review_session.public_id}/99",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -223,21 +223,21 @@ def test_page_break_carves_session_into_separate_pages(
 
     # Page 1 has only the first instrument (position 1).
     page1 = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert 'data-rs-position="1"' in page1
     assert 'data-rs-position="2"' not in page1
 
     # Page 2 has only the second (position 2).
     page2 = rae_client.get(
-        f"/me/sessions/{review_session.id}/2"
+        f"/me/sessions/{review_session.public_id}/2"
     ).text
     assert 'data-rs-position="1"' not in page2
     assert 'data-rs-position="2"' in page2
 
     # Page 3 doesn't exist.
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}/3",
+        f"/me/sessions/{review_session.public_id}/3",
         follow_redirects=False,
     )
     assert response.status_code == 404
@@ -264,10 +264,10 @@ def test_form_action_targets_per_page_save_endpoint(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert (
-        f'action="/me/sessions/{review_session.id}/1/save"' in body
+        f'action="/me/sessions/{review_session.public_id}/1/save"' in body
     )
 
 
@@ -303,13 +303,13 @@ def test_save_303s_back_to_current_page(
     rae_client = make_client(rae)
     # Page 2 save 303s back to /2.
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/2/save",
+        f"/me/sessions/{review_session.public_id}/2/save",
         data={},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/me/sessions/{review_session.id}/2"
+        f"/me/sessions/{review_session.public_id}/2"
     )
 
 
@@ -354,15 +354,15 @@ def test_multi_page_renders_prev_next_nav(
         )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/2"
+        f"/me/sessions/{review_session.public_id}/2"
     ).text
     # Page 2 of 3 -> Prev to page 1, Next to page 3.
     assert "Page 2 of 3" in body
     assert (
-        f'href="/me/sessions/{review_session.id}/1"' in body
+        f'href="/me/sessions/{review_session.public_id}/1"' in body
     )
     assert (
-        f'href="/me/sessions/{review_session.id}/3"' in body
+        f'href="/me/sessions/{review_session.public_id}/3"' in body
     )
 
 
@@ -405,12 +405,12 @@ def test_a_closed_multi_page_surface_keeps_prev_and_next(
     )
     db.commit()
 
-    body = make_client(rae).get(f"/me/sessions/{review_session.id}/1").text
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
     assert "no longer accepting responses" in body.lower()
     assert "Page 1 of 2" in body
-    assert f'href="/me/sessions/{review_session.id}/2"' in body
+    assert f'href="/me/sessions/{review_session.public_id}/2"' in body
     assert "data-rs-save>Save</button>" not in body
-    assert f'formaction="/me/sessions/{review_session.id}/submit' not in body
+    assert f'formaction="/me/sessions/{review_session.public_id}/submit' not in body
     assert "<span class=\"rs-action-divider\"" not in body
 
 
@@ -448,15 +448,15 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     db.commit()
 
     rae_client = make_client(rae)
-    page_two = rae_client.get(f"/me/sessions/{review_session.id}/2").text
+    page_two = rae_client.get(f"/me/sessions/{review_session.public_id}/2").text
     assert (
-        f'formaction="/me/sessions/{review_session.id}/submit?page=2"'
+        f'formaction="/me/sessions/{review_session.public_id}/submit?page=2"'
         in page_two
     )
 
     def blocked(query: str) -> str:
         response = rae_client.post(
-            f"/me/sessions/{review_session.id}/submit{query}",
+            f"/me/sessions/{review_session.public_id}/submit{query}",
             data={},
             follow_redirects=False,
         )
@@ -468,7 +468,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     assert "Page 2 of 2" in body
     assert (
         f'data-rs-missing-dismiss\n           href="/me/sessions/'
-        f'{review_session.id}/2"'
+        f'{review_session.public_id}/2"'
     ) in body
     for query in ("", "?page=x", "?page=9"):
         assert "Page 1 of 2" in blocked(query)
@@ -487,7 +487,7 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
         select(Assignment).where(Assignment.instrument_id == second.id)
     ).scalar_one()
     response = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit?page=2",
+        f"/me/sessions/{review_session.public_id}/submit?page=2",
         data={f"response[{assignment.id}][rating]": "9"},
         follow_redirects=False,
     )
@@ -516,7 +516,7 @@ def test_single_page_session_omits_page_nav(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "Page 1 of" not in body
     assert "Previous page" not in body

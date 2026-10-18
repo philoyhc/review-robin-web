@@ -26,7 +26,7 @@ def operator_session(session: ReviewSession) -> list[Crumb]:
 def operator_session_child(session: ReviewSession, label: str) -> list[Crumb]:
     return [
         ("Sessions", "/operator/sessions"),
-        (session.name, f"/operator/sessions/{session.id}"),
+        (session.name, f"/operator/sessions/{session.public_id}"),
         (label, None),
     ]
 
@@ -38,8 +38,8 @@ def operator_session_invitations_reviewer(
     Invitations (Segment 11C Part 1)."""
     return [
         ("Sessions", "/operator/sessions"),
-        (session.name, f"/operator/sessions/{session.id}"),
-        ("Invitations", f"/operator/sessions/{session.id}/invitations"),
+        (session.name, f"/operator/sessions/{session.public_id}"),
+        ("Invitations", f"/operator/sessions/{session.public_id}/invitations"),
         (reviewer_label, None),
     ]
 
@@ -51,8 +51,8 @@ def operator_session_responses_reviewee(
     page (Segment 11C Part 1 PR 3)."""
     return [
         ("Sessions", "/operator/sessions"),
-        (session.name, f"/operator/sessions/{session.id}"),
-        ("Responses", f"/operator/sessions/{session.id}/responses"),
+        (session.name, f"/operator/sessions/{session.public_id}"),
+        ("Responses", f"/operator/sessions/{session.public_id}/responses"),
         (reviewee_label, None),
     ]
 

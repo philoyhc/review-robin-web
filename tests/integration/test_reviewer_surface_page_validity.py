@@ -47,7 +47,7 @@ def _make_active_session_with_one_page(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -58,7 +58,7 @@ def _make_active_session_with_one_page(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -71,11 +71,11 @@ def _make_active_session_with_one_page(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator_client, review_session.id)
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     return review_session
@@ -103,7 +103,7 @@ def test_get_in_range_page_returns_200(
         client, db, code="pg-get-1", reviewer_email=rae.email
     )
     rae_client = make_client(rae)
-    resp = rae_client.get(f"/me/sessions/{review_session.id}/1")
+    resp = rae_client.get(f"/me/sessions/{review_session.public_id}/1")
     assert resp.status_code == 200
 
 
@@ -123,7 +123,7 @@ def test_get_out_of_range_page_returns_404(
     )
     rae_client = make_client(rae)
     resp = rae_client.get(
-        f"/me/sessions/{review_session.id}/{bad_page_n}"
+        f"/me/sessions/{review_session.public_id}/{bad_page_n}"
     )
     assert resp.status_code == 404
 
@@ -144,7 +144,7 @@ def test_save_post_out_of_range_page_returns_404(
     )
     rae_client = make_client(rae)
     resp = rae_client.post(
-        f"/me/sessions/{review_session.id}/{bad_page_n}/save",
+        f"/me/sessions/{review_session.public_id}/{bad_page_n}/save",
         data={},
         follow_redirects=False,
     )
@@ -163,7 +163,7 @@ def test_operator_preview_in_range_page_returns_200(
         client, db, code="pg-prev-ok", reviewer_email=rae.email
     )
     resp = client.get(
-        f"/operator/sessions/{review_session.id}/preview-surface/1"
+        f"/operator/sessions/{review_session.public_id}/preview-surface/1"
         f"?reviewer_email={rae.email}",
     )
     assert resp.status_code == 200
@@ -187,7 +187,7 @@ def test_operator_preview_out_of_range_page_returns_404(
     # The operator preview is owner-only, so the alice-default
     # ``client`` fixture (which the seed used) is the right caller.
     resp = client.get(
-        f"/operator/sessions/{review_session.id}/preview-surface/"
+        f"/operator/sessions/{review_session.public_id}/preview-surface/"
         f"{bad_page_n}?reviewer_email={rae.email}",
     )
     assert resp.status_code == 404

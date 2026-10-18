@@ -53,7 +53,7 @@ def _make_session_with_pair(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -64,7 +64,7 @@ def _make_session_with_pair(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -107,10 +107,10 @@ def _activate(operator_client: TestClient, review_session: ReviewSession) -> Non
     validate → active so the reviewer dashboard treats it as live."""
     validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -170,7 +170,7 @@ def test_lobby_pre_ready_session_renders_not_opened_unlinked(
     # The Session column should not link the session name when the
     # session isn't opened — the row carries the name as plain text.
     assert (
-        f'<a href="/me/sessions/{review_session.id}/1">'
+        f'<a href="/me/sessions/{review_session.public_id}/1">'
         not in body
     )
 
@@ -203,7 +203,7 @@ def test_lobby_ready_session_renders_open_and_start_stamp(
     body = rae_client.get("/me").text
     assert ">Open</span>" in body
     assert (
-        f'<a href="/me/sessions/{review_session.id}/1">' in body
+        f'<a href="/me/sessions/{review_session.public_id}/1">' in body
     )
     # ``activated_at`` is stamped on the first activation.
     assert review_session.activated_at is not None

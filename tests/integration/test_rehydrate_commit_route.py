@@ -343,7 +343,7 @@ def test_a_commit_that_drops_rows_hands_the_operator_the_csv(
         select(ReviewSession).where(ReviewSession.name == "Spring_REHYD")
     ).scalar_one()
     assert rehyd.status == "draft"
-    assert f"/operator/sessions/{rehyd.id}" in response.text
+    assert f"/operator/sessions/{rehyd.public_id}" in response.text
 
     # And the link serves a CSV carrying the dropped row and its reason.
     match = re.search(r'dropped\.csv\?token=([^"]+)', response.text)

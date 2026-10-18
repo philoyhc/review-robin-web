@@ -124,18 +124,18 @@ def test_sessions_diagnostics_renders_for_sys_admin(
     # Per-row Outbox link points at the child page under the
     # Sessions Diagnostics tab.
     assert (
-        f'href="/operator/sys-admin/sessions/{review_session.id}/outbox">Outbox</a>'
+        f'href="/operator/sys-admin/sessions/{review_session.public_id}/outbox">Outbox</a>'
         in response.text
     )
     assert (
-        f'href="/operator/sys-admin/sessions/{review_session.id}/audit-log">Audit log</a>'
+        f'href="/operator/sys-admin/sessions/{review_session.public_id}/audit-log">Audit log</a>'
         in response.text
     )
     # Manage action (Segment 18S Item 3) — a POST to the adopt route
     # (self-add as owner → open), replacing the old back-door link to
     # /edit now that editing a non-owned session requires ownership.
     assert (
-        f'action="/operator/sys-admin/sessions/{review_session.id}/adopt"'
+        f'action="/operator/sys-admin/sessions/{review_session.public_id}/adopt"'
         in response.text
     )
     assert ">Manage</button>" in response.text
@@ -209,7 +209,7 @@ def test_sessions_diagnostics_lists_every_workspace_session(
     assert alice_session.name in response.text
     assert bob_session.code in response.text  # also check Bob's row
     assert (
-        f'href="/operator/sys-admin/sessions/{bob_session.id}/outbox">Outbox</a>'
+        f'href="/operator/sys-admin/sessions/{bob_session.public_id}/outbox">Outbox</a>'
         in response.text
     )
 
@@ -243,10 +243,10 @@ def test_sessions_diagnostics_back_link_resolves_return_to(
     review_session = _make_session(client, db, code="diag-rt")
 
     response = client.get(
-        f"/operator/sys-admin/sessions?return_to=/operator/sessions/{review_session.id}"
+        f"/operator/sys-admin/sessions?return_to=/operator/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
-    assert f'href="/operator/sessions/{review_session.id}"' in response.text
+    assert f'href="/operator/sessions/{review_session.public_id}"' in response.text
     assert "Back to Spring" in response.text
 
 
@@ -327,7 +327,7 @@ def test_manage_invitations_no_longer_renders_view_outbox_button(
     instead. Existing per-session URL stays reachable directly."""
     review_session = _make_session(client, db, code="inv-no-outbox")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/invitations"
+        f"/operator/sessions/{review_session.public_id}/invitations"
     )
     assert response.status_code == 200
     # The button (an <a class="btn ..." href="...outbox">View outbox</a>)

@@ -10,7 +10,7 @@ from playwright.sync_api import Page, expect
 
 
 def test_a_renamed_field_survives_save_and_reload(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sessions/{session_id}/instruments")

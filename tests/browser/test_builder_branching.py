@@ -32,7 +32,7 @@ def _levels(card: Locator) -> list[str]:
 
 
 def test_fork_adds_a_pending_branch_under_a_number_field(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'A branch with ⑂'."""
     card = open_unlocked(page, new_session())
@@ -60,7 +60,7 @@ def test_fork_adds_a_pending_branch_under_a_number_field(
 
 
 def test_join_and_detach_move_a_field_in_and_out_of_a_branch(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Join and detach'."""
     card = open_unlocked(page, new_session())
@@ -84,7 +84,7 @@ def test_join_and_detach_move_a_field_in_and_out_of_a_branch(
 
 
 def test_join_under_a_plain_field_starts_a_branch_without_a_new_row(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """The author, 2026-10-10, reversing guide/ux_refinements.md Item 3: ⑂
     starts a branch with a new field; ↰ under a plain number or List
@@ -119,7 +119,7 @@ def test_join_under_a_plain_field_starts_a_branch_without_a_new_row(
 
 
 def test_list_conditions_offer_is_and_is_not_and_name_a_missing_option(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'List conditions'."""
     card = open_unlocked(page, new_session())
@@ -139,7 +139,7 @@ def test_list_conditions_offer_is_and_is_not_and_name_a_missing_option(
 
 
 def test_unticking_a_parent_cascades_to_its_branch(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Active cascades'."""
     card = open_unlocked(page, new_session())
@@ -160,7 +160,7 @@ def test_unticking_a_parent_cascades_to_its_branch(
 
 
 def test_a_range_condition_takes_two_ends_and_says_when_it_opens(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Range conditions'."""
     card = open_unlocked(page, new_session())
@@ -187,7 +187,7 @@ def test_a_range_condition_takes_two_ends_and_says_when_it_opens(
 
 
 def test_a_second_level_saves_and_a_third_is_not_offered(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Two levels of branching'."""
     session_id = new_session()
@@ -213,7 +213,7 @@ def test_a_second_level_saves_and_a_third_is_not_offered(
 
 
 def test_a_level_one_join_under_a_plain_field_starts_a_branch_inside(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """guide/ux_refinements.md Item 5: a level-1 row's ↰ under a plain
     number or List field in its branch starts a branch on it with the row

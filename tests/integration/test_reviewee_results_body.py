@@ -87,7 +87,7 @@ def _seed_and_activate(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -98,7 +98,7 @@ def _seed_and_activate(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -112,10 +112,10 @@ def _seed_and_activate(
     generate_via_page_button(operator_client, review_session.id)
     validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     response = operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -266,7 +266,7 @@ def test_results_body_renders_raw_responses_for_reviewee(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
 
     # No empty-state copy.
@@ -307,7 +307,7 @@ def test_results_404_when_no_visibility_policy(
     _seed_submitted_responses(db, review_session, comments_value="Hi")
 
     response = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 404
 def test_results_404_before_the_window_opens_retiring_the_scaffolding(
@@ -344,7 +344,7 @@ def test_results_404_before_the_window_opens_retiring_the_scaffolding(
     )
 
     response = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 404
     # The reviewer's identity, which the scaffolding used to show.
@@ -373,7 +373,7 @@ def test_results_body_drafts_render_empty_value_cells(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Draft content never leaks.
     assert "draft text" not in body
@@ -408,7 +408,7 @@ def test_results_body_lists_unsubmitted_reviewers_with_empty_cells(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     assert "No responses to view yet." not in body
     assert '<th scope="col" class="rs-reviewee">Reviewer</th>' in body
@@ -440,7 +440,7 @@ def test_results_body_omits_instrument_with_policy_off(
         select(ReviewSession).where(ReviewSession.code == "vp-raw-multi")
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -451,7 +451,7 @@ def test_results_body_omits_instrument_with_policy_off(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -471,7 +471,7 @@ def test_results_body_omits_instrument_with_policy_off(
     first_instrument.short_label = "First Form"
     db.commit()
     operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
         follow_redirects=False,
     )
     instruments = (
@@ -491,10 +491,10 @@ def test_results_body_omits_instrument_with_policy_off(
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -529,7 +529,7 @@ def test_results_body_omits_instrument_with_policy_off(
     db.commit()
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     assert "First Form" in body
     assert "Second Form" not in body
@@ -564,7 +564,7 @@ def test_results_404_when_release_window_explicitly_closed(
     db.commit()
 
     response = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 404
     assert "Rae" not in response.text
@@ -659,7 +659,7 @@ def test_results_body_anonymized_dashes_identification_keeps_values(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Section renders + Reviewer column header still labeled.
     assert "No responses to view yet." not in body
@@ -715,12 +715,12 @@ def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
         for name in _ROW_ORDER_REVIEWERS
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -733,9 +733,9 @@ def test_results_row_order_does_not_follow_reviewer_names_when_anonymized(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
-    operator.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -809,7 +809,7 @@ def test_results_404_when_anonymized_window_closed_explicitly(
     db.commit()
 
     response = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 404
     assert "Rae" not in response.text
@@ -840,7 +840,7 @@ def test_results_body_summarized_aggregates_numerical_and_strings(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Section renders; the per-row table chrome is gone.
     assert "No responses to view yet." not in body
@@ -917,7 +917,7 @@ def test_results_body_summarized_aggregates_list_choice_frequencies(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Every declared option surfaces — including the two with zero
     # responses — so the operator/reviewee can see the distribution.
@@ -948,7 +948,7 @@ def test_results_body_summarized_zero_responses_shows_label_scaffolding(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     assert ">Summary</th>" in body
     assert "Number of reviewers assigned: 1" in body
@@ -1025,10 +1025,10 @@ def test_results_columns_mirror_reviewer_surface_widths(
 
     # Both surfaces should render the same widths.
     reviewer_body = make_client(rae).get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     reviewee_body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     for body in (reviewer_body, reviewee_body):
         assert 'style="table-layout: fixed;"' in body
@@ -1073,7 +1073,7 @@ def test_results_columns_drop_deselected_response_fields(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     assert "Rating" in body
     assert "Comments" not in body
@@ -1133,7 +1133,7 @@ def test_results_columns_drop_reviewee_identity_display_fields(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # tag_1 column survives (visible non-identity). Its label
     # ("Tag 1" by default) appears as a column header.
@@ -1197,7 +1197,7 @@ def test_results_body_group_scoped_drops_display_field_columns(
     ).scalar_one()
     add_group_instrument(db, review_session)
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -1208,7 +1208,7 @@ def test_results_body_group_scoped_drops_display_field_columns(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -1255,10 +1255,10 @@ def test_results_body_group_scoped_drops_display_field_columns(
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     activate_response = operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -1290,7 +1290,7 @@ def test_results_body_group_scoped_drops_display_field_columns(
     db.commit()
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
 
     # Section + Reviewer column render.
@@ -1341,7 +1341,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
         select(ReviewSession).where(ReviewSession.code == "multi-ree")
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -1352,7 +1352,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -1368,10 +1368,10 @@ def test_results_body_excludes_responses_about_other_reviewees(
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -1445,7 +1445,7 @@ def test_results_body_excludes_responses_about_other_reviewees(
     db.commit()
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Carol's own comment surfaces.
     assert "About-Carol comment." in body
@@ -1478,7 +1478,7 @@ def test_results_body_excludes_responses_about_other_groups(
     ).scalar_one()
     add_group_instrument(db, review_session)
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -1489,7 +1489,7 @@ def test_results_body_excludes_responses_about_other_groups(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -1522,10 +1522,10 @@ def test_results_body_excludes_responses_about_other_groups(
     generate_via_page_button(operator, review_session.id)
     validate_session(review_session)
     operator.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -1596,7 +1596,7 @@ def test_results_body_excludes_responses_about_other_groups(
     db.commit()
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Carol's own group's response surfaces.
     assert "Squad-A: team did well." in body
@@ -1672,7 +1672,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
         ("A41", "a41@example.edu", "Team-4"),
     ]
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -1686,7 +1686,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -1807,7 +1807,7 @@ def test_results_body_team_unit_of_review_scopes_to_own_team(
     db.commit()
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
 
     # Carol (A11, Team-1) should see responses ABOUT Team-1
@@ -1843,7 +1843,7 @@ def test_results_acknowledge_card_renders_before_ack(
     )
 
     body = make_client(carol).get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     # Bottom card present with the form.
     assert "rs-acknowledge-card" in body
@@ -1877,12 +1877,12 @@ def test_results_acknowledge_post_stamps_and_redirects(
 
     carol_client = make_client(carol)
     response = carol_client.post(
-        f"/me/sessions/{review_session.id}/results/acknowledge",
+        f"/me/sessions/{review_session.public_id}/results/acknowledge",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
 
     # DB stamped.
@@ -1903,7 +1903,7 @@ def test_results_acknowledge_post_stamps_and_redirects(
 
     # Subsequent GET: header pill + confirmation strip; no form.
     body = carol_client.get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     assert "&#10003; Acknowledged" in body
     assert "Acknowledged on" in body
@@ -1911,7 +1911,7 @@ def test_results_acknowledge_post_stamps_and_redirects(
 
     # Second POST = no-op (idempotent — stamp + audit unchanged).
     carol_client.post(
-        f"/me/sessions/{review_session.id}/results/acknowledge",
+        f"/me/sessions/{review_session.public_id}/results/acknowledge",
         follow_redirects=False,
     )
     db.refresh(reviewee_row)

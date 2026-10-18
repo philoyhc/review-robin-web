@@ -72,7 +72,7 @@ def _seed_validated(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -83,7 +83,7 @@ def _seed_validated(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -96,7 +96,7 @@ def _seed_validated(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     validate_session(review_session)
     client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     db.refresh(review_session)
     assert review_session.status == "validated"
@@ -133,7 +133,7 @@ def test_the_validate_page_builds_the_readiness_report_once(
     report_runs.clear()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     )
 
     assert response.status_code == 200, response.text
@@ -153,7 +153,7 @@ def test_no_workflow_card_page_builds_the_report_more_than_once(
     report_runs.clear()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}{suffix}"
+        f"/operator/sessions/{review_session.public_id}{suffix}"
     )
 
     assert response.status_code == 200, response.text

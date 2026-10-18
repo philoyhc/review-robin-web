@@ -30,7 +30,7 @@ def _page(client: TestClient, db: Session, code: str, *, branched: bool = True):
         fields["Comments"].branch_parent_id = fields["Rating"].id
         db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     return review_session, instrument, _card_slice(flat, instrument.id), flat
@@ -201,7 +201,7 @@ def test_governed_answers_lock_the_branch_on_the_page(
     db.add(Response(assignment_id=assignment.id, response_field_id=comments.id, value="x"))
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     table = _rows_table(_card_slice(" ".join(body.split()), instrument.id))
     group = table.split("<tbody data-new-model-rf-group")[1]
@@ -215,7 +215,7 @@ def test_governed_answers_lock_the_branch_on_the_page(
 def test_the_row_script_holds_the_branch_rules(client: TestClient, db: Session) -> None:
     review_session, instrument, _, flat = _page(client, db, "br-builder-js")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
 
     def _fn(_flat: str, name: str) -> str:
@@ -300,7 +300,7 @@ def test_join_and_detach_show_their_states(client: TestClient, db: Session) -> N
 def test_the_row_script_joins_and_detaches(client: TestClient, db: Session) -> None:
     review_session, instrument, _, _ = _page(client, db, "br-builder-join-js")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     sync = _rf_fn(body, "newModelRfSyncJoin")
     for title in (
@@ -347,7 +347,7 @@ def test_the_preview_counts_items_as_the_surface_does(
     review_session, instrument, card, _ = _page(client, db, "br-builder-count")
     assert "<span data-new-model-intro-all-count>1</span>" in card
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     # One rule for both counts: a Show branch's fields aren't items, a
     # Require branch's are (19T Item 13).
@@ -369,7 +369,7 @@ def test_saving_the_card_keeps_the_branch(client: TestClient, db: Session) -> No
     rules): the keys are each independently present."""
     review_session, instrument, _, _ = _page(client, db, "br-builder-save")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/save",
         data={"band2_state_snapshot": json.dumps(
             {"selected_display_keys": [], "response_fields": _band2_rfs(instrument)}
         )},

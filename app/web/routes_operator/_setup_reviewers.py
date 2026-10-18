@@ -134,7 +134,7 @@ def _render_reviewers_page(
     # Segment 13B Part 2 PR 6 — cookie-backed personal sort.
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
-        cookie_name=f"rrw-sort-reviewers-{review_session.id}",
+        cookie_name=f"rrw-sort-reviewers-{review_session.public_id}",
         valid_keys=_REVIEWER_SORT_KEYS,
     )
     all_reviewers = views.apply_cookie_sort(
@@ -262,7 +262,7 @@ def _render_reviewers_page(
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
             "pager_url_base": (
-                f"/operator/sessions/{review_session.id}/reviewers?"
+                f"/operator/sessions/{review_session.public_id}/reviewers?"
             ),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
@@ -435,7 +435,7 @@ def reviewers_create(
     # reviewer the page went back to the top of the document with the
     # filter dropped.
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers",
+        f"/operator/sessions/{review_session.public_id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -507,7 +507,7 @@ def reviewers_update(
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers",
+        f"/operator/sessions/{review_session.public_id}/reviewers",
         [reviewer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -539,7 +539,7 @@ def reviewers_bulk_inactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers",
+        f"/operator/sessions/{review_session.public_id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -571,7 +571,7 @@ def reviewers_bulk_reactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers",
+        f"/operator/sessions/{review_session.public_id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -613,7 +613,7 @@ def reviewers_delete_all(
     # panel actually costs.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/reviewers"
+            f"/operator/sessions/{review_session.public_id}/reviewers"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -652,7 +652,7 @@ async def reviewers_save_self_fields(
         ) from exc
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/reviewers"
+            f"/operator/sessions/{review_session.public_id}/reviewers"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -701,7 +701,7 @@ async def reviewers_save_field_labels(
     # lands on the card rather than the top of the document.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/reviewers"
+            f"/operator/sessions/{review_session.public_id}/reviewers"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -749,7 +749,7 @@ def reviewers_bulk_delete(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/reviewers",
+        f"/operator/sessions/{review_session.public_id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,

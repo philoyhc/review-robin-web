@@ -4,7 +4,7 @@ Segment 13B Part 2 PR 5.
 Pins:
 
 - The cookie name follows the
-  ``rrw-sort-rs-{session_id}-{instrument_id}`` convention so the
+  ``rrw-sort-rs-{public_id}-{instrument_id}`` convention so the
   SSR layer can find it for the right instrument.
 - The route reads the cookie at render time and threads the
   decoded spec through ``views.order_rows_by_sort_spec`` so the
@@ -51,7 +51,7 @@ def _setup_session_with_three_reviewees(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -62,7 +62,7 @@ def _setup_session_with_three_reviewees(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -87,10 +87,10 @@ def _activate(
 ) -> None:
     validate_session(review_session)
     operator_client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     response = operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -124,7 +124,7 @@ def test_table_marker_uses_cookie_name_shape(
     make_client,
 ) -> None:
     """The ``data-rrw-sortable`` attribute value is the cookie
-    name. Shape: ``rrw-sort-rs-{session_id}-{instrument_id}``."""
+    name. Shape: ``rrw-sort-rs-{public_id}-{instrument_id}``."""
     review_session = _setup_session_with_three_reviewees(
         client, db, code="ck-marker", reviewer_email=rae.email
     )
@@ -132,12 +132,12 @@ def test_table_marker_uses_cookie_name_shape(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
     expected = (
-        f'data-rrw-sortable="rrw-sort-rs-{review_session.id}'
+        f'data-rrw-sortable="rrw-sort-rs-{review_session.public_id}'
         f'-{instrument.id}"'
     )
     assert expected in body
@@ -161,14 +161,14 @@ def test_cookie_drives_ssr_initial_row_order(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
     rae_client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewee.name", "dir": "desc"}]),
-        path=f"/me/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.public_id}",
     )
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     body = response.text
     # Reverse-alphabetical: Charlie, Bravo, Alpha.
@@ -191,14 +191,14 @@ def test_percent_encoded_cookie_drives_ssr_row_order(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
     rae_client.cookies.set(
         cookie_name,
         quote(json.dumps([{"key": "reviewee.name", "dir": "desc"}])),
-        path=f"/me/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.public_id}",
     )
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     ).text
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
 
@@ -227,14 +227,14 @@ def test_cookie_overrides_operator_default(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
     rae_client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewee.name", "dir": "asc"}]),
-        path=f"/me/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.public_id}",
     )
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     body = response.text
     # Cookie's asc wins over operator's desc.
@@ -266,14 +266,14 @@ def test_malformed_cookie_falls_back_to_operator_default(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
     rae_client.cookies.set(
         cookie_name,
         "not-json{",
-        path=f"/me/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.public_id}",
     )
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}"
+        f"/me/sessions/{review_session.public_id}"
     )
     assert response.status_code == 200
     body = response.text
@@ -309,11 +309,11 @@ def _render_with_cookie(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     rae_client.cookies.set(
-        f"rrw-sort-rs-{review_session.id}-{instrument.id}",
+        f"rrw-sort-rs-{review_session.public_id}-{instrument.id}",
         quote(json.dumps(cookie)),
-        path=f"/me/sessions/{review_session.id}",
+        path=f"/me/sessions/{review_session.public_id}",
     )
-    return rae_client.get(f"/me/sessions/{review_session.id}").text
+    return rae_client.get(f"/me/sessions/{review_session.public_id}").text
 
 
 def test_response_only_cookie_renders_operator_default(

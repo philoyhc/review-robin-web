@@ -95,7 +95,7 @@
            page turn does (19J.8) rather than landing at the document
            top. `Clear` takes the same anchor. #}
           <form method="get"
-                action="/operator/sessions/{{ session.id }}/responses#{{ pager_anchor }}"
+                action="/operator/sessions/{{ session.public_id }}/responses#{{ pager_anchor }}"
                 class="operator-actions-filter">
             <div class="filter-row">
               <label class="filter-status">
@@ -125,7 +125,7 @@
             <div class="filter-actions">
               {% if filter_status != "all" or filter_search %}
                 <a class="btn secondary"
-                   href="/operator/sessions/{{ session.id }}/responses#{{ pager_anchor }}">Clear</a>
+                   href="/operator/sessions/{{ session.public_id }}/responses#{{ pager_anchor }}">Clear</a>
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
             </div>
@@ -140,7 +140,7 @@
       <div class="table-scroll">
       <table id="responses-table"
              data-rrw-col-toggles="rrw-response-tag-visibility"
-             data-rrw-sortable="rrw-sort-responses-{{ session.id }}">
+             data-rrw-sortable="rrw-sort-responses-{{ session.public_id }}">
         <thead>
         <tr>
           <th class="rrw-sortable" data-sort-key="name">Reviewee<button type="button" class="rrw-sort-btn"
@@ -176,7 +176,7 @@
         {% for row in rows %}
           <tr>
             <td data-sort-value="{{ row.reviewee.name }}">
-              <a href="/operator/sessions/{{ session.id }}/responses/{{ row.reviewee.id }}/detail">
+              <a href="/operator/sessions/{{ session.public_id }}/responses/{{ row.reviewee.id }}/detail">
                 <strong>{{ row.reviewee.name }}</strong>
               </a><br>
               <code>{{ row.reviewee.email_or_identifier }}</code>

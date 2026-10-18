@@ -58,7 +58,7 @@ def _seed_pair_with_response(
 
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -69,7 +69,7 @@ def _seed_pair_with_response(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -120,7 +120,7 @@ def test_route_streams_csv_with_canonical_filename(
         client, db, code="rsp-fname"
     )
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
+        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -155,7 +155,7 @@ def test_route_emits_audit_event_with_row_count(
 ) -> None:
     review_session = _seed_pair_with_response(client, db, code="rsp-aud")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
+        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
     )
     assert response.status_code == 200
     response.read()
@@ -180,7 +180,7 @@ def test_session_with_no_responses_emits_no_data_rows(
     data rows below the header."""
     review_session = _make_session(client, db, code="rsp-empty")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
+        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
     )
     assert response.status_code == 200
     rows = list(csv.reader(io.StringIO(response.text)))
@@ -215,15 +215,15 @@ def test_route_works_in_every_lifecycle_state(
     )
     # Draft state — hits before activation.
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
+        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
     )
     assert response.status_code == 200
 
     # Activate.
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     activate = client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -231,7 +231,7 @@ def test_route_works_in_every_lifecycle_state(
 
     # Activated state — extract still works.
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
+        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
     )
     assert response.status_code == 200
 
@@ -247,6 +247,6 @@ def test_route_rejects_non_operator(
 
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/responses.csv"
+        f"/operator/sessions/{review_session.public_id}/export/responses.csv"
     )
     assert response.status_code in (403, 404)

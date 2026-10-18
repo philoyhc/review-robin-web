@@ -70,7 +70,7 @@ def _info(html: str) -> str:
 def test_the_readout_reports_the_default(client: TestClient, db: Session) -> None:
     rs = _session(client, db, "rei-readout")
     _alice(db, rs)
-    html = client.get(f"/operator/sessions/{rs.id}/reviewees").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewees").text
     shown = _div_at(html, "data-reviewee-self-readout")
     assert "Reviewees see:" in shown
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
@@ -83,7 +83,7 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
 ) -> None:
     rs = _session(client, db, "rei-card")
     _alice(db, rs)
-    html = client.get(f"/operator/sessions/{rs.id}/reviewees?unlocked=1").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewees?unlocked=1").text
     _, left, _ = panel_columns(html)
     assert left.index("data-reviewee-self-card") < left.index('id="upload-csv"')
     card = re.search(
@@ -100,7 +100,7 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
         ("tag_1", False, "Tag 1"),
     ]
     # The form posts to its route; Save and Cancel wait for a change.
-    assert f'action="/operator/sessions/{rs.id}/reviewees/self-fields"' in card
+    assert f'action="/operator/sessions/{rs.public_id}/reviewees/self-fields"' in card
     assert len(re.findall(r"<button[^>]*disabled", card)) == 2
 
 
@@ -112,7 +112,7 @@ def test_a_failed_import_still_renders_the_card_and_readout(
     rs = _session(client, db, "rei-badcsv")
     _alice(db, rs)
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewees/import",
+        f"/operator/sessions/{rs.public_id}/reviewees/import",
         files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
     )
     assert response.status_code == 400, response.status_code
@@ -130,7 +130,7 @@ def test_results_shows_the_reviewees_own_line_after_the_pills(
     rs = _session(client, db, "rei-results")
     _alice(db, rs)
     grant_reviewee_visibility(rs)
-    html = client.get(f"/me/sessions/{rs.id}/results").text
+    html = client.get(f"/me/sessions/{rs.public_id}/results").text
     nav = _div_at(html, 'class="rs-role-nav"')
     assert nav.index("rs-role-nav-active") < nav.index("data-reviewee-self-info")
     info = _info(html)
@@ -150,7 +150,7 @@ def test_a_reviewer_who_is_also_a_reviewee_sees_only_the_active_pages_line(
     db.add(Reviewer(session_id=rs.id, name="Alice Reviewer", email="alice@example.edu"))
     db.commit()
     grant_reviewee_visibility(rs)
-    html = client.get(f"/me/sessions/{rs.id}/results").text
+    html = client.get(f"/me/sessions/{rs.public_id}/results").text
     assert "Alice Reviewee" in _info(html)
     assert "Alice Reviewer" not in _info(html)
     assert "data-reviewer-self-info" not in html
@@ -161,7 +161,7 @@ def test_a_reviewer_who_is_also_a_reviewee_sees_only_the_active_pages_line(
 
 def _save(client: TestClient, rs: ReviewSession, **form) -> object:
     return client.post(
-        f"/operator/sessions/{rs.id}/reviewees/self-fields",
+        f"/operator/sessions/{rs.public_id}/reviewees/self-fields",
         data=form,
         follow_redirects=False,
     )
@@ -175,20 +175,20 @@ def test_a_save_stores_the_selection_and_results_follow(
     response = _save(client, rs, fields=["email_or_identifier", "tag_1"])
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{rs.id}/reviewees?unlocked=1#roster-card"
+        f"/operator/sessions/{rs.public_id}/reviewees?unlocked=1#roster-card"
     )
     db.refresh(rs)
     assert rs.reviewee_self_fields == ["email_or_identifier", "tag_1"]
     assert rs.reviewer_self_fields is None, "the reviewers' selection moved"
     shown = _div_at(
-        client.get(f"/operator/sessions/{rs.id}/reviewees").text,
+        client.get(f"/operator/sessions/{rs.public_id}/reviewees").text,
         "data-reviewee-self-readout",
     )
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
         "Email", "Tag 1",
     ]
     grant_reviewee_visibility(rs)
-    info = _info(client.get(f"/me/sessions/{rs.id}/results").text)
+    info = _info(client.get(f"/me/sessions/{rs.public_id}/results").text)
     assert "alice@example.edu" in info and "Tag 1: Blue" in info
     assert "Alice Reviewee" not in info and "Profile" not in info
 
@@ -203,7 +203,7 @@ def test_an_empty_save_shows_nothing_after_the_pill(
     assert rs.reviewee_self_fields == []
     grant_reviewee_visibility(rs)
     assert "data-reviewee-self-info" not in client.get(
-        f"/me/sessions/{rs.id}/results"
+        f"/me/sessions/{rs.public_id}/results"
     ).text
 
 
@@ -212,7 +212,7 @@ def test_a_key_with_no_chip_survives_a_save(client: TestClient, db: Session) -> 
     roster the card offers no chip for it, so it rides as `keep`."""
     rs = _session(client, db, "rei-keep")
     _alice(db, rs, profile=None)
-    html = client.get(f"/operator/sessions/{rs.id}/reviewees?unlocked=1").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewees?unlocked=1").text
     assert '<input type="hidden" name="keep" value="profile_link">' in html
     assert _save(client, rs, fields=["name"], keep=["profile_link"]).status_code == 303
     db.refresh(rs)
@@ -243,7 +243,7 @@ def test_locked_the_readout_stays_and_the_card_goes(
     _alice(db, rs)
     rs.status = "ready"
     db.commit()
-    html = client.get(f"/operator/sessions/{rs.id}/reviewees").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewees").text
     assert "Reviewees see:" in _div_at(html, "data-reviewee-self-readout")
     assert "data-reviewee-self-card" not in html
 
@@ -279,14 +279,14 @@ def test_a_tag_reads_under_the_reviewee_label(
     db.commit()
     assert _save(client, rs, fields=["name", "tag_1"]).status_code == 303
     shown = _div_at(
-        client.get(f"/operator/sessions/{rs.id}/reviewees").text,
+        client.get(f"/operator/sessions/{rs.public_id}/reviewees").text,
         "data-reviewee-self-readout",
     )
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
         "Name", "Cohort",
     ]
     grant_reviewee_visibility(rs)
-    info = _info(client.get(f"/me/sessions/{rs.id}/results").text)
+    info = _info(client.get(f"/me/sessions/{rs.public_id}/results").text)
     assert "Cohort: Blue" in info and "Wrong" not in info
 
 

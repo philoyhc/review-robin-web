@@ -263,7 +263,7 @@ async def create_session(
     # nothing uploaded is saved and the operator lands on Home with the
     # slot's error flag (the Quick Setup card and its error markers live
     # on Home, not the Edit page).
-    home_url = f"/operator/sessions/{review_session.id}"
+    home_url = f"/operator/sessions/{review_session.public_id}"
     # 18R Item 4 Slice 5 — the Edit page is retired; a bare create lands on
     # Session Home with the Session details card open in edit mode so the
     # operator can continue filling in details in place.
@@ -863,7 +863,7 @@ def _slot_response(
 
     if refusal is None:
         return RedirectResponse(
-            url=f"/operator/sessions/{review_session.id}#quick-setup-{kind}",
+            url=f"/operator/sessions/{review_session.public_id}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return render_session_home(
@@ -1082,7 +1082,7 @@ async def quick_setup_submit_all(
             refusal=refusal,
         )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
+        url=f"/operator/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

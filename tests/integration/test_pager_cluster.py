@@ -87,7 +87,7 @@ def _reviewers_page(
         for i in range(rows)
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv", b"ReviewerName,ReviewerEmail\n" + csv, "text/csv"
@@ -97,7 +97,7 @@ def _reviewers_page(
     )
     assert response.status_code in (200, 303), response.status_code
     return client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         + (f"?offset={offset}" if offset else "")
     ).text
 

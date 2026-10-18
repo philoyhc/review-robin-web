@@ -208,7 +208,7 @@ def test_revoking_two_operators_is_one_click(page: Page, api: httpx.Client) -> N
     assert "show=unused" in page.url and "q=exp-" in page.url
 
 
-def _co_own(api: httpx.Client, session_id: int, email: str) -> None:
+def _co_own(api: httpx.Client, session_id: str, email: str) -> None:
     response = api.post(
         f"/operator/sessions/{session_id}/owners/add",
         data={"target_email": email},
@@ -218,7 +218,7 @@ def _co_own(api: httpx.Client, session_id: int, email: str) -> None:
 
 
 def test_a_row_with_history_offers_no_delete_and_says_why(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """The author, 2026-10-14: the server refuses to delete a user with
     history, so the expander doesn't offer it, and says why where the
@@ -261,7 +261,7 @@ def test_a_row_with_history_offers_no_delete_and_says_why(
 
 
 def test_dropping_the_row_with_history_brings_delete_back(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     first, second, _ = _setup(page, api)
     _co_own(api, new_session(), first)
@@ -279,7 +279,7 @@ def test_dropping_the_row_with_history_brings_delete_back(
 
 
 def test_an_owner_offers_remove_from_all_sessions_not_revoke(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """The toolbar's gates, kept: Revoke needs no sessions (the server's
     still_owner), Remove from all sessions needs some and no session

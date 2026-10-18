@@ -94,7 +94,7 @@ def _seed_pair(client: TestClient, review_session: ReviewSession) -> None:
         ("reviewees", REVIEWEE_CSV),
     ):
         response = client.post(
-            f"/operator/sessions/{review_session.id}/{kind}/import",
+            f"/operator/sessions/{review_session.public_id}/{kind}/import",
             files={"file": (f"{kind}.csv", payload, "text/csv")},
             follow_redirects=False,
         )
@@ -108,7 +108,7 @@ def _seed_pair(client: TestClient, review_session: ReviewSession) -> None:
 #: carries the label, and the assertion after it is always the same.
 def _card_reviewers(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/reviewers/import",
+        f"/operator/sessions/{s.public_id}/reviewers/import",
         files={"file": ("r.csv", REVIEWER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -116,7 +116,7 @@ def _card_reviewers(client, db, s):
 
 def _card_reviewees(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/reviewees/import",
+        f"/operator/sessions/{s.public_id}/reviewees/import",
         files={"file": ("e.csv", REVIEWEE_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -124,7 +124,7 @@ def _card_reviewees(client, db, s):
 
 def _card_relationships(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/relationships/import",
+        f"/operator/sessions/{s.public_id}/relationships/import",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -132,7 +132,7 @@ def _card_relationships(client, db, s):
 
 def _quick_setup_reviewers(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/quick-setup/reviewers",
+        f"/operator/sessions/{s.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", REVIEWER_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -141,7 +141,7 @@ def _quick_setup_reviewers(client, db, s):
 
 def _quick_setup_reviewees(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/quick-setup/reviewees",
+        f"/operator/sessions/{s.public_id}/quick-setup/reviewees",
         files={"file": ("e.csv", REVIEWEE_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -150,7 +150,7 @@ def _quick_setup_reviewees(client, db, s):
 
 def _quick_setup_relationships(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/quick-setup/relationships",
+        f"/operator/sessions/{s.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -159,7 +159,7 @@ def _quick_setup_relationships(client, db, s):
 
 def _submit_all(client, db, s):
     return client.post(
-        f"/operator/sessions/{s.id}/quick-setup/submit-all",
+        f"/operator/sessions/{s.public_id}/quick-setup/submit-all",
         files={
             "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
             "reviewees_file": ("e.csv", REVIEWEE_CSV, "text/csv"),
@@ -325,7 +325,7 @@ def test_a_bare_header_on_quick_setup_clears_the_override(
 
     review_session = _make_session(client, db, code="fl-bare")
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", REVIEWER_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -337,7 +337,7 @@ def test_a_bare_header_on_quick_setup_clears_the_override(
     assert field_labels.resolve(review_session, "reviewer", "tag_1") == "Tutor"
 
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", BARE_REVIEWER_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,

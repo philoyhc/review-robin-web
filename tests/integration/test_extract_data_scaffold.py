@@ -48,7 +48,7 @@ def _seed_pair(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -59,7 +59,7 @@ def _seed_pair(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -78,9 +78,9 @@ def _activate(
     client: TestClient, db: Session, review_session: ReviewSession
 ) -> None:
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -140,7 +140,7 @@ def test_build_extract_data_context_returns_four_rows_plus_bundle(
     # Settings always live — session metadata always exists.
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     # Roster rows are inert on an empty session (count=0).
     for key in ("reviewers", "reviewees", "relationships"):
@@ -151,7 +151,7 @@ def test_build_extract_data_context_returns_four_rows_plus_bundle(
     # Settings CSV to bundle.
     assert context.bundle.is_wired is True
     assert context.bundle.download_url == (
-        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
     )
     # Retired / relocated / never-surfaced keys absent.
     assert "assignments" not in by_key
@@ -175,7 +175,7 @@ def test_per_entity_rows_go_live_when_populated(
     # Reviewers + reviewees seeded by ``_seed_pair`` → both live.
     assert by_key["reviewers"].is_wired is True
     assert by_key["reviewers"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/reviewers.csv"
+        f"/operator/sessions/{review_session.public_id}/export/reviewers.csv"
     )
     assert by_key["reviewees"].is_wired is True
     # Relationships not seeded → still inert.
@@ -249,7 +249,7 @@ def test_extract_data_dom_carries_wire_target_attributes(
     seam."""
 
     review_session = _make_session(client, db, code="ed-wire")
-    body = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     for key in (
         "settings",
@@ -283,7 +283,7 @@ def test_extract_data_card_renders_counts_for_entity_rows_only(
     review_session = _seed_pair(
         client, db, code="ed-counts", reviewer_email="r@example.edu"
     )
-    body = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Entity rows render their count after the title.
     assert "Reviewers <span" in body
@@ -317,7 +317,7 @@ def test_extract_data_buttons_are_aria_disabled_anchors(
     on a fresh draft."""
 
     review_session = _make_session(client, db, code="ed-anchors")
-    body = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Inert rows render as aria-disabled anchors.
     download_count = body.count(
@@ -344,7 +344,7 @@ def test_extract_data_card_renders_when_session_is_activated(
     )
     _activate(operator, db, review_session)
 
-    body = operator.get(f"/operator/sessions/{review_session.id}/extract-data").text
+    body = operator.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     # Card rendered without a ``.disabled`` modifier.
     assert 'id="extract-data"' in body
@@ -382,7 +382,7 @@ def test_archive_card_purge_and_archive_active_for_non_activated(
     review_session = _make_session(client, db, code="ed-arch-draft")
     card = _archive_card(
         client.get(
-            f"/operator/sessions/{review_session.id}/extract-data"
+            f"/operator/sessions/{review_session.public_id}/extract-data"
         ).text
     )
     assert 'action="/operator/sessions/bulk-archive"' in card
@@ -408,7 +408,7 @@ def test_archive_card_controls_disabled_when_activated(
 
     card = _archive_card(
         client.get(
-            f"/operator/sessions/{review_session.id}/extract-data"
+            f"/operator/sessions/{review_session.public_id}/extract-data"
         ).text
     )
     # No explanatory note (removed 2026-08-18 as unnecessary).
@@ -431,7 +431,7 @@ def test_archive_card_shows_already_archived(
 
     card = _archive_card(
         client.get(
-            f"/operator/sessions/{review_session.id}/extract-data"
+            f"/operator/sessions/{review_session.public_id}/extract-data"
         ).text
     )
     assert "Already archived" in card
@@ -469,7 +469,7 @@ def test_extract_data_wrapup_layout_with_token_keys(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     token_pos = body.find('id="extract-data-token-keys"')
     archive_pos = body.find('id="extract-data-archive-session"')
@@ -491,7 +491,7 @@ def test_extract_data_wrapup_layout_without_token_keys(
     as the right column. DOM order: Archive session → Extract Setup."""
     review_session = _make_session(client, db, code="ed-wrapup-noobs")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     assert 'id="extract-data-token-keys"' not in body
     archive_pos = body.find('id="extract-data-archive-session"')
@@ -509,7 +509,7 @@ def test_no_button_on_the_page_carries_an_inline_style(
     (post_assessment_1oct E6). A saved shape renders the third."""
     review_session = _make_session(client, db, code="ed-no-inline")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={
             "name": "Saved",
             "axis": "reviewer",
@@ -519,7 +519,7 @@ def test_no_button_on_the_page_carries_an_inline_style(
         },
     )
     assert created.status_code == 201, created.text
-    page = client.get(f"/operator/sessions/{review_session.id}/extract-data").text
+    page = client.get(f"/operator/sessions/{review_session.public_id}/extract-data").text
 
     buttons = re.findall(r"<button\b[^>]*>", page)
     assert buttons

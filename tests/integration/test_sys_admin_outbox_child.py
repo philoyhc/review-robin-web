@@ -19,6 +19,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _make_session(
@@ -36,8 +37,9 @@ def _make_session(
 
 
 def _seed_invite_targets(client: TestClient, session_id: int) -> None:
+    pid = public_id(session_id)
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -48,7 +50,7 @@ def _seed_invite_targets(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -69,7 +71,7 @@ def test_outbox_child_page_renders_back_link_and_chrome(
     review_session = _make_session(client, db, code="ob-child")
 
     response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/outbox"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox"
     )
     assert response.status_code == 200
     # Back-link points at the Sessions Diagnostics list.
@@ -90,7 +92,7 @@ def test_outbox_child_page_empty_state(
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="ob-empty")
     response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/outbox"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox"
     )
     assert response.status_code == 200
     assert "No outbox rows yet for this session." in response.text
@@ -116,7 +118,7 @@ def test_outbox_child_page_lists_seeded_rows(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -126,7 +128,7 @@ def test_outbox_child_page_lists_seeded_rows(
     # raw token and writes no email. Only a send writes an
     # `EmailOutbox` row, which is what this page renders.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/invitations/send-all",
+        f"/operator/sessions/{review_session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -140,7 +142,7 @@ def test_outbox_child_page_lists_seeded_rows(
         )
 
     response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/outbox"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox"
     )
     assert response.status_code == 200
     assert "rae@example.edu" in response.text
@@ -163,7 +165,7 @@ def test_outbox_child_page_403s_for_plain_operator(
 ) -> None:
     review_session = _make_session(client, db, code="ob-child-403")
     response = client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/outbox",
+        f"/operator/sys-admin/sessions/{review_session.public_id}/outbox",
         follow_redirects=False,
     )
     assert response.status_code == 403
@@ -178,7 +180,7 @@ def test_per_session_outbox_route_remains_retired(
     URL is still gone — no second life via the child-page reshape."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
     review_session = _make_session(client, db, code="ob-still-404")
-    response = client.get(f"/operator/sessions/{review_session.id}/outbox")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/outbox")
     assert response.status_code == 404
 
 
@@ -193,7 +195,7 @@ def test_sessions_table_per_row_outbox_link_points_at_child(
     assert response.status_code == 200
     # Per-row Outbox link → child page URL.
     assert (
-        f'href="/operator/sys-admin/sessions/{review_session.id}/outbox">Outbox</a>'
+        f'href="/operator/sys-admin/sessions/{review_session.public_id}/outbox">Outbox</a>'
         in response.text
     )
     # No inline anchor / no inline query param.

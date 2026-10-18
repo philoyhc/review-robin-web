@@ -261,16 +261,16 @@ def _rendered_pages(client: TestClient, db: Session) -> list[str]:
         f"R{i},r{i}@example.edu\n".encode() for i in range(_ROSTER_ROWS)
     )
     client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv, "text/csv")},
         follow_redirects=False,
     )
     urls = [
         "/operator/sessions",
-        f"/operator/sessions/{session.id}",
-        f"/operator/sessions/{session.id}/assignments",
-        f"/operator/sessions/{session.id}/reviewers",
-        f"/operator/sessions/{session.id}/instruments",
+        f"/operator/sessions/{session.public_id}",
+        f"/operator/sessions/{session.public_id}/assignments",
+        f"/operator/sessions/{session.public_id}/reviewers",
+        f"/operator/sessions/{session.public_id}/instruments",
         "/guide",
     ]
     pages = []

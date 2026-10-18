@@ -56,12 +56,12 @@ def _seed_pair(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", REVIEWER_CSV, "text/csv")},
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewees",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewees",
         files={"file": ("e.csv", REVIEWEE_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -74,9 +74,9 @@ def _activate(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -97,7 +97,7 @@ def test_the_card_is_live_on_load_with_no_lock(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qs-live")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'class="quick-setup-body"' in body
     assert 'class="quick-setup-body locked"' not in body
@@ -110,7 +110,7 @@ def test_the_card_is_live_on_load_with_no_lock(
 def test_the_lock_route_is_gone(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qs-no-route")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/lock",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/lock",
         data={"action": "unlock"},
         follow_redirects=False,
     )
@@ -123,7 +123,7 @@ def test_an_unavailable_card_is_locked_with_nothing_to_unlock(
 ) -> None:
     review_session = _seed_pair(client, db, code="qs-unavail")
     _activate(client, db, review_session)
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'class="quick-setup-body locked"' in body
     assert "disabled" in _tag(body, 'name="reviewers_file"')
@@ -143,14 +143,14 @@ def test_reviewers_upload_golden_path_no_banner_on_success(
 ) -> None:
     review_session = _make_session(client, db, code="qs-r-golden")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r.csv", REVIEWER_CSV, "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].endswith("#quick-setup-reviewers")
 
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     # Reviewers slot still rendered, no error banner content.
     assert "Reviewers" in body
     # No flash banner — neither error nor confirm renders content.
@@ -177,12 +177,12 @@ def test_reviewers_upload_golden_path_no_banner_on_success(
 def test_reviewees_upload_golden_path(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="qs-e-golden")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewees",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewees",
         files={"file": ("e.csv", REVIEWEE_CSV, "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     assert "Reviewees" in body
     from app.db.models import Reviewee
 
@@ -210,7 +210,7 @@ def test_card_level_replacement_checkbox_renders_once(
     gate stays the source of truth."""
 
     review_session = _seed_pair(client, db, code="qs-confirm-checkbox")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     # Exactly one card-level toggle.
     assert body.count('id="quick-setup-confirm-replace-toggle"') == 1
@@ -243,7 +243,7 @@ def test_reviewers_replace_without_confirm_renders_the_error(
 ) -> None:
     review_session = _seed_pair(client, db, code="qs-needs-confirm")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -265,7 +265,7 @@ def test_reviewers_replace_without_confirm_renders_the_error(
     # Cancel button on the error banner points at clean URL with the
     # slot fragment.
     assert (
-        f'href="/operator/sessions/{review_session.id}#quick-setup-reviewers"'
+        f'href="/operator/sessions/{review_session.public_id}#quick-setup-reviewers"'
         in body
     )
 
@@ -275,13 +275,13 @@ def test_reviewers_replace_with_confirm_applies(
 ) -> None:
     review_session = _seed_pair(client, db, code="qs-confirm-applies")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     assert "Reviewers" in body
     from app.db.models import Reviewer
 
@@ -305,7 +305,7 @@ def test_reviewers_parse_error_routes_to_scoped_error_banner(
 ) -> None:
     review_session = _make_session(client, db, code="qs-parse-error")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("bad.csv", BAD_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -345,7 +345,7 @@ def test_reviewers_submit_on_ready_routes_to_lifecycle_banner(
     _activate(operator, db, review_session)
 
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/reviewers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
         files={"file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,
@@ -382,7 +382,7 @@ def test_reviewers_submit_on_validated_applies_and_demotes(
 
     # The card's one Submit.
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={
             "reviewers_file": ("r2.csv", SECOND_REVIEWER_CSV, "text/csv")
         },
@@ -438,7 +438,7 @@ def test_card_renders_single_bottom_submit_button(
     paint."""
 
     review_session = _make_session(client, db, code="qs-submit-bottom")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'id="quick-setup-submit-all"' in body
     # Disabled by default — no file selected on first paint.
@@ -448,7 +448,7 @@ def test_card_renders_single_bottom_submit_button(
     # Form is the consolidated submit-all endpoint.
     assert (
         'action="/operator/sessions/'
-        f'{review_session.id}/quick-setup/submit-all"' in body
+        f'{review_session.public_id}/quick-setup/submit-all"' in body
     )
     # Per-slot Submit buttons are gone.
     assert "Submit</button>" in body  # the bottom Submit
@@ -465,12 +465,12 @@ def test_submit_all_runs_reviewers_slot_when_file_attached(
     review_session = _make_session(client, db, code="qs-sa-rev")
     csv = REVIEWER_CSV
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={"reviewers_file": ("reviewers.csv", csv, "text/csv")},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    client.get(f"/operator/sessions/{review_session.id}")
+    client.get(f"/operator/sessions/{review_session.public_id}")
     from app.db.models import Reviewer
 
     rows = (
@@ -488,12 +488,12 @@ def test_submit_all_with_no_input_is_a_clean_redirect(
 ) -> None:
     review_session = _make_session(client, db, code="qs-sa-empty")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"].startswith(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     )
 
 
@@ -505,7 +505,7 @@ def test_submit_all_runs_reviewers_and_reviewees_in_one_post(
 
     review_session = _make_session(client, db, code="qs-sa-both")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={
             "reviewers_file": (
                 "reviewers.csv",
@@ -521,7 +521,7 @@ def test_submit_all_runs_reviewers_and_reviewees_in_one_post(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
     assert "Reviewers" in body and "Reviewees" in body
 
 
@@ -535,7 +535,7 @@ def test_leaving_home_and_returning_finds_the_card_still_live(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qs-nav-live")
-    home_url = f"/operator/sessions/{review_session.id}"
+    home_url = f"/operator/sessions/{review_session.public_id}"
     for away_url in (
         f"{home_url}/reviewers",
         "/operator/sessions",

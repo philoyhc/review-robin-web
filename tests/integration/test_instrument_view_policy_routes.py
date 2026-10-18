@@ -440,7 +440,7 @@ def test_route_save_persists_three_audiences(
     review_session = _alice_session(client, db, code="vp-route")
     instrument = _instrument_for(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={
             "peer_reviewer_while_ongoing_mode": "raw",
             "peer_reviewer_after_release_mode": "raw",
@@ -478,7 +478,7 @@ def test_route_save_rejects_reviewee_session_ongoing_with_mode(
     review_session = _alice_session(client, db, code="vp-bad-cell")
     instrument = _instrument_for(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={
             "reviewee_while_ongoing_mode": "raw",
             "reviewee_after_release_mode": "anonymized",
@@ -496,7 +496,7 @@ def test_route_save_skips_audiences_with_missing_slots(
     review_session = _alice_session(client, db, code="vp-partial")
     instrument = _instrument_for(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={
             "reviewee_while_ongoing_mode": "",
             "reviewee_after_release_mode": "anonymized",
@@ -527,7 +527,7 @@ def test_observer_session_ongoing_chip_cycle_limited_to_off_and_summarized(
     # template that lands on session creation; the chip-slug
     # assertion below doesn't need the row itself.
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
 
     # The Observer / Session-ongoing chip's ``data-new-model-vp-cycle-slugs``
@@ -560,7 +560,7 @@ def test_instruments_page_renders_per_window_form(
     review_session = _alice_session(client, db, code="vp-render")
     instrument = _instrument_for(db, review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     # Hidden inputs hitch a ride on the card's main Save form via
     # ``form="dfsave-<id>"`` — no standalone visibility submit.
@@ -589,7 +589,7 @@ def test_instruments_page_reflects_persisted_state(
     review_session = _alice_session(client, db, code="vp-prefill")
     instrument = _instrument_for(db, review_session)
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}/fields/save",
         data={
             "observer_while_ongoing_mode": "summarized",
             "observer_after_release_mode": "raw",
@@ -597,7 +597,7 @@ def test_instruments_page_reflects_persisted_state(
         follow_redirects=False,
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
 
     def _vp_value(audience_window: str) -> str | None:

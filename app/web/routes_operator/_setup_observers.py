@@ -258,7 +258,7 @@ def _render_observers_page(
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
             "pager_url_base": (
-                f"/operator/sessions/{review_session.id}/observers?"
+                f"/operator/sessions/{review_session.public_id}/observers?"
             ),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
@@ -472,7 +472,7 @@ def observers_create(
     # form was submitted from. `focus` relocates the window to it and
     # the fragment then resolves.
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/observers",
+        f"/operator/sessions/{review_session.public_id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -548,7 +548,7 @@ def observers_update(
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/observers",
+        f"/operator/sessions/{review_session.public_id}/observers",
         [observer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -582,7 +582,7 @@ def observers_bulk_inactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/observers",
+        f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -616,7 +616,7 @@ def observers_bulk_reactivate(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/observers",
+        f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -770,7 +770,7 @@ async def observers_cohort_rule_save(
             http_status=status.HTTP_400_BAD_REQUEST,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/observers",
+        f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -817,7 +817,7 @@ async def observers_save_self_fields(
         ) from exc
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/observers"
+            f"/operator/sessions/{review_session.public_id}/observers"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -864,7 +864,7 @@ def observers_delete_all(
     # the contract.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/observers"
+            f"/operator/sessions/{review_session.public_id}/observers"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -969,7 +969,7 @@ async def observers_import_submit(
     # not close this card; the Lock button does.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/observers"
+            f"/operator/sessions/{review_session.public_id}/observers"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -1019,7 +1019,7 @@ def observers_bulk_delete(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/observers",
+        f"/operator/sessions/{review_session.public_id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,

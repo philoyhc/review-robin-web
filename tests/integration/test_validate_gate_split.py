@@ -131,7 +131,7 @@ def test_validate_page_renders_both_gate_headings(
     """
     review_session = _make_session(client, db, code="gate-both")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     assert 'id="gate-setup"' in body
     assert "setup gate" in body
@@ -149,7 +149,7 @@ def test_validate_page_skips_operations_gate_when_no_operations_issues(
     heading should not render."""
     review_session = _make_session(client, db, code="gate-setup-only")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate?severity=error"
+        f"/operator/sessions/{review_session.public_id}/validate?severity=error"
     ).text
     assert "setup gate" in body
     assert "operations gate" not in body
@@ -188,7 +188,7 @@ def test_validate_page_per_source_anchor_uses_first_gate_only(
         db.delete(field)
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     # The instruments source heads a group in both gates...
     assert 'id="gate-setup"' in body
@@ -206,7 +206,7 @@ def test_validate_page_setup_coverage_deep_link_still_works(
     the issue list for setup-gate sources after the split."""
     review_session = _make_session(client, db, code="gate-deeplink")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     assert 'href="#issue-source-reviewers"' in body
     assert 'id="issue-source-reviewers"' in body
@@ -220,7 +220,7 @@ def test_validate_page_gate_heading_classes(
     the markup."""
     review_session = _make_session(client, db, code="gate-classes")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/validate"
+        f"/operator/sessions/{review_session.public_id}/validate"
     ).text
     assert 'class="issue-gate-heading"' in body
 

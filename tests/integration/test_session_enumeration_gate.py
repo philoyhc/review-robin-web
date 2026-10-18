@@ -95,10 +95,10 @@ def test_no_refusal_body_names_a_role_or_a_session(
     review_session = _make_session(db=db, client=client, code="enum-body")
     bob_client = make_client(bob)
     for path in (
-        f"/operator/sessions/{review_session.id}",
-        f"/me/sessions/{review_session.id}/1",
-        f"/me/sessions/{review_session.id}/results",
-        f"/me/sessions/{review_session.id}/collation",
+        f"/operator/sessions/{review_session.public_id}",
+        f"/me/sessions/{review_session.public_id}/1",
+        f"/me/sessions/{review_session.public_id}/results",
+        f"/me/sessions/{review_session.public_id}/collation",
     ):
         body = bob_client.get(path, follow_redirects=False).text
         assert "not an active" not in body, path
@@ -153,7 +153,7 @@ def test_the_sys_admin_exemption_does_not_invent_sessions(
     bob_client = make_client(bob)
 
     existing = bob_client.get(
-        f"/operator/sessions/{review_session.id}", follow_redirects=False
+        f"/operator/sessions/{review_session.public_id}", follow_redirects=False
     )
     assert existing.status_code == 403
 

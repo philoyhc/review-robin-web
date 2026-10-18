@@ -38,7 +38,7 @@ def test_both_tabs_return_to_the_page_the_admin_link_left(
     client: TestClient, db: Session, admin: None
 ) -> None:
     review_session = _session(client, db)
-    origin = f"/operator/sessions/{review_session.id}"
+    origin = f"/operator/sessions/{review_session.public_id}"
     client.get(f"/operator/sys-admin?return_to={origin}")
     expected = f'{origin}">&larr; Back to Spring'
     # Each tab, reached through the strip with no query of its own, and
@@ -66,7 +66,7 @@ def test_a_later_admin_link_replaces_the_origin(
     client: TestClient, db: Session, admin: None
 ) -> None:
     review_session = _session(client, db)
-    client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.id}")
+    client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.public_id}")
     client.get("/operator/sys-admin?return_to=/operator/sessions")
     assert _back(client.get(ACCOUNTS).text) == '/operator/sessions">&larr; Back to Sessions'
 
@@ -75,7 +75,7 @@ def test_diagnostics_opened_with_a_return_to_remembers_it(
     client: TestClient, db: Session, admin: None
 ) -> None:
     review_session = _session(client, db)
-    origin = f"/operator/sessions/{review_session.id}"
+    origin = f"/operator/sessions/{review_session.public_id}"
     client.get(f"{SESSIONS}?return_to={origin}")
     assert _back(client.get(ACCOUNTS).text) == f'{origin}">&larr; Back to Spring'
 
@@ -84,7 +84,7 @@ def test_a_return_to_wins_over_the_remembered_origin(
     client: TestClient, db: Session, admin: None
 ) -> None:
     review_session = _session(client, db)
-    client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.id}")
+    client.get(f"/operator/sys-admin?return_to=/operator/sessions/{review_session.public_id}")
     page = client.get(f"{SESSIONS}?return_to=/operator/sessions/archived").text
     expected = '/operator/sessions/archived">&larr; Back to Archived sessions'
     assert _back(page) == expected

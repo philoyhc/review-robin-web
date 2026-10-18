@@ -394,7 +394,7 @@ def test_workflow_card_surfaces_untouched_band1_as_setup_empty(
     review_session = _make_session(client, db, code="ws-untouched")
 
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -405,7 +405,7 @@ def test_workflow_card_surfaces_untouched_band1_as_setup_empty(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -452,7 +452,7 @@ def test_instruments_page_renders_not_set_pill_for_default(
     review_session = _make_session(client, db, code="render-not-set")
     instrument = _default_instrument(db, review_session.id)
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
@@ -564,7 +564,7 @@ def test_status_row_reports_instruments_as_configured_over_total(
     )
     db.flush()
 
-    url = f"/operator/sessions/{review_session.id}"
+    url = f"/operator/sessions/{review_session.public_id}"
 
     # Untouched Band 1 links on both: 0 of 2 configured -> amber. Two
     # instruments rather than one so the two numbers differ and the order
@@ -598,5 +598,5 @@ def test_status_row_reports_no_instruments_as_none(
     db.delete(_default_instrument(db, review_session.id))
     db.flush()
 
-    body = " ".join(client.get(f"/operator/sessions/{review_session.id}").text.split())
+    body = " ".join(client.get(f"/operator/sessions/{review_session.public_id}").text.split())
     assert "Instruments: <span class=\"pill pill-warning\" data-instruments-configured-pill>none</span>" in body

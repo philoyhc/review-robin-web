@@ -42,9 +42,9 @@ RETIRED_MARKUP = (
 
 @dataclass(frozen=True)
 class _FakeSession:
-    """Just the ``session.id`` the partial reads, for the direct renders."""
+    """Just the ``session.public_id`` the partial reads, for the direct renders."""
 
-    id: int
+    public_id: str
 
 
 def _status_aside(body: str) -> str:
@@ -65,10 +65,10 @@ def test_the_overlay_column_carries_one_validate_link(
     client: TestClient, db: Session
 ) -> None:
     session = _prepared_session(client, db, "ptr-one", warning=True)
-    aside = _status_aside(_home(client, session.id))
+    aside = _status_aside(_home(client, session.public_id))
 
     links = re.findall(
-        rf'href="/operator/sessions/{session.id}/validate"', aside
+        rf'href="/operator/sessions/{session.public_id}/validate"', aside
     )
     assert len(links) == 1, (
         f"expected exactly one Validate link in the right column, got "
@@ -82,7 +82,7 @@ def test_the_per_issue_enumeration_is_gone(
 ) -> None:
     """The other half: the link replaced the list rather than joining it."""
     session = _prepared_session(client, db, "ptr-gone", warning=True)
-    aside = _status_aside(_home(client, session.id))
+    aside = _status_aside(_home(client, session.public_id))
     for marker in RETIRED_MARKUP:
         assert marker not in aside, (
             f"{marker!r} is back in the Workflow card's right column; the "
@@ -98,7 +98,7 @@ def test_the_premise_holds_there_really_are_issues_to_point_at(
     guard below renders. Without this, a fixture that quietly stopped
     raising its W8 warning would keep them green."""
     session = _prepared_session(client, db, "ptr-premise", warning=True)
-    aside = _status_aside(_home(client, session.id))
+    aside = _status_aside(_home(client, session.public_id))
     counts = re.findall(r'<span class="pill[^"]*">(\d+) (?:warning|error)', aside)
     assert any(int(n) > 0 for n in counts), (
         f"fixture reports no warnings or errors, so the pointer cases "
@@ -135,7 +135,7 @@ def test_the_guard_holds_a_link_back_when_there_is_nothing_to_point_at() -> None
     """A context with every severity empty renders nothing at all —
     no link to an empty report."""
     rendered = _render_partial(
-        session=_FakeSession(7),
+        session=_FakeSession("k3m9x2pq7a"),
         validation_issues_by_severity={"errors": [], "warnings": [], "info": []},
     )
     assert rendered.strip() == "", f"expected empty render, got: {rendered!r}"
@@ -145,14 +145,14 @@ def test_the_same_partial_does_render_when_there_is_something() -> None:
     """The control's control: an empty render above must mean the guard
     fired, not that the partial renders nothing whatever it is given."""
     rendered = _render_partial(
-        session=_FakeSession(7),
+        session=_FakeSession("k3m9x2pq7a"),
         validation_issues_by_severity={
             "errors": [],
             "warnings": [{"message": "one thing"}],
             "info": [],
         },
     )
-    assert 'href="/operator/sessions/7/validate"' in rendered
+    assert 'href="/operator/sessions/k3m9x2pq7a/validate"' in rendered
     assert rendered.count("next-action-issue-pointer") == 1
 
 
@@ -163,9 +163,9 @@ def test_a_state_without_issues_never_reaches_the_partial(
     without the overlay do not include the partial, so the column
     carries no pointer."""
     session = _prepared_session(client, db, "ptr-clean", warning=False)
-    aside = _status_aside(_home(client, session.id))
+    aside = _status_aside(_home(client, session.public_id))
     assert "next-action-issue-pointer" not in aside
-    assert f'href="/operator/sessions/{session.id}/validate"' not in aside
+    assert f'href="/operator/sessions/{session.public_id}/validate"' not in aside
 
 
 def test_the_card_includes_the_partial_at_exactly_two_sites() -> None:

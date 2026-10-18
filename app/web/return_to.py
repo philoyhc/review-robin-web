@@ -22,6 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import unquote
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.routing import Match
 
@@ -39,9 +40,9 @@ DEFAULT_TARGET = ReturnTarget(url="/operator/sessions", label="Sessions")
 PARTICIPANT_DEFAULT = ReturnTarget(url="/me", label="your reviews")
 
 # ``\Z``, not ``$``: ``$`` also matches before a trailing newline. And
-# ``[0-9]``, not ``\d``: ``\d`` matches any Unicode digit, which ``int()``
-# accepts. Either would pass a character a ``Location`` or a cookie
-# refuses.
+# ASCII classes, not ``\w`` or ``\d``, which match any Unicode letter or
+# digit. Either would pass a character a ``Location`` or a cookie
+# refuses. A session is named by its URL public ID (19V Item 1).
 _OPERATOR_SESSIONS = re.compile(r"^/operator/sessions/?\Z")
 # The operator pages outside a session that carry the chrome's links.
 _OPERATOR_PAGES = {
@@ -52,9 +53,15 @@ _OPERATOR_PAGES = {
 # A session page at any depth (a tab, an instrument's editor), so a
 # detour returns to the page it left rather than the session's home, as
 # long as a GET serves it (`_is_get_page`).
-_OPERATOR_SESSION = re.compile(r"^/operator/sessions/([0-9]+)(?:/[A-Za-z0-9_\-]+)*/?\Z")
+_OPERATOR_SESSION = re.compile(r"^/operator/sessions/([0-9a-z]+)(?:/[A-Za-z0-9_\-]+)*/?\Z")
 _REVIEWER_ROOT = re.compile(r"^/me/?\Z")
-_REVIEWER_SESSION = re.compile(r"^/me/sessions/([0-9]+)/?\Z")
+_REVIEWER_SESSION = re.compile(r"^/me/sessions/([0-9a-z]+)/?\Z")
+
+
+def _by_public_id(db: Session, public_id: str) -> ReviewSession | None:
+    return db.execute(
+        select(ReviewSession).where(ReviewSession.public_id == public_id)
+    ).scalar_one_or_none()
 
 
 def _is_get_page(path: str) -> bool:
@@ -139,7 +146,7 @@ def _resolve(
 
     m = _OPERATOR_SESSION.match(path)
     if m and _is_get_page(path):
-        session = db.get(ReviewSession, int(m.group(1)))
+        session = _by_public_id(db, m.group(1))
         if session is None or not permissions.may_name_session(db, get_viewer(), session):
             return None
         return ReturnTarget(url=path, label=session.name)
@@ -149,7 +156,7 @@ def _resolve(
 
     m = _REVIEWER_SESSION.match(path)
     if m:
-        session = db.get(ReviewSession, int(m.group(1)))
+        session = _by_public_id(db, m.group(1))
         if session is None or not permissions.may_name_session(db, get_viewer(), session):
             return None
         return ReturnTarget(url=path, label=session.name)

@@ -132,7 +132,7 @@ def test_the_hint_renders_above_the_table_it_describes(
     s = _make_session(client, db, code=f"sh-{page}")
     _seed(db, s, n=6)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}?q=Keep").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}?q=Keep").text
 
     # Filter branch (3 of 6 match, nothing capped): no "first" and no
     # withheld clause — the three excluded rows are not being kept
@@ -158,7 +158,7 @@ def test_the_hint_carries_the_shared_class(
     s = _make_session(client, db, code=f"sh-cls-{page}")
     _seed(db, s, n=6)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}?q=Keep").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}?q=Keep").text
 
     card = _table_card(body, page)
     assert '<p class="muted table-showing-hint">' in card
@@ -175,7 +175,7 @@ def test_the_hint_has_left_the_operator_actions_strip(
     s = _make_session(client, db, code=f"sh-gone-{page}")
     _seed(db, s, n=6)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}?q=Keep").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}?q=Keep").text
 
     assert "Showing" not in _strip(body)
 
@@ -189,7 +189,7 @@ def test_the_hint_is_absent_when_nothing_is_trimmed(
     s = _make_session(client, db, code=f"sh-none-{page}")
     _seed(db, s, n=6)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
 
     assert "Showing" not in _table_card(body, page)
     assert "Showing" not in _strip(body)
@@ -205,7 +205,7 @@ def test_the_pill_ships_the_two_number_format(
     s = _make_session(client, db, code=f"sh-pill-{page}")
     _seed(db, s, n=4)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
 
     # **All four pages**, since 19P.3 rung 3 took the last two: the row
     # expander writes the count and nothing else does, so the drift this

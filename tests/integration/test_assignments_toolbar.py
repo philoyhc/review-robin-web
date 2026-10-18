@@ -46,7 +46,7 @@ def _seeded(client: TestClient, db: Session, code: str):
 
 
 def _page(client: TestClient, rs, query: str = "") -> str:
-    url = f"/operator/sessions/{rs.id}/assignments"
+    url = f"/operator/sessions/{rs.public_id}/assignments"
     return client.get(url + query).text
 
 
@@ -148,7 +148,7 @@ def test_the_search_lands_on_the_table_card(
     body = _page(client, rs)
     right = _pane(body, "right")
 
-    anchored = f"/operator/sessions/{rs.id}/assignments#assignments-table-card"
+    anchored = f"/operator/sessions/{rs.public_id}/assignments#assignments-table-card"
     assert f'action="{anchored}"' in right
 
     # `Clear` takes the same anchor, so clearing lands where searching

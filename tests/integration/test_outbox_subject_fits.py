@@ -32,7 +32,7 @@ def _ready_session(client: TestClient, db: Session) -> ReviewSession:
         select(ReviewSession).where(ReviewSession.code == "long-subject")
     ).scalar_one()
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -43,7 +43,7 @@ def _ready_session(client: TestClient, db: Session) -> ReviewSession:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -56,11 +56,11 @@ def _ready_session(client: TestClient, db: Session) -> ReviewSession:
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -72,7 +72,7 @@ def test_invitation_and_reminder_subjects_fit_for_a_255_char_name(
     client: TestClient, db: Session
 ) -> None:
     review_session = _ready_session(client, db)
-    base = f"/operator/sessions/{review_session.id}/invitations"
+    base = f"/operator/sessions/{review_session.public_id}/invitations"
 
     assert client.post(f"{base}/send-all", follow_redirects=False).status_code == 303
     invitation = db.execute(

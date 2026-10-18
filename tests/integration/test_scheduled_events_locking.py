@@ -245,7 +245,7 @@ def test_the_session_home_save_locks_before_its_editability_gate(
     )
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={"name": "Renamed", "code": session.code, "display_timezone": "UTC"},
         follow_redirects=False,
     )
@@ -273,7 +273,7 @@ def test_the_lobby_save_locks_before_its_editability_gate(
     )
 
     client.post(
-        f"/operator/sessions/{session.id}/lobby-edit",
+        f"/operator/sessions/{session.public_id}/lobby-edit",
         data={"name": "Renamed", "code": session.code, "deadline": "", "tags": ""},
         follow_redirects=False,
     )
@@ -337,7 +337,7 @@ def test_the_settings_import_route_gates_editability_under_the_lock(
     )
 
     response = client.post(
-        f"/operator/sessions/{session.id}/import-config",
+        f"/operator/sessions/{session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={
             "file": (

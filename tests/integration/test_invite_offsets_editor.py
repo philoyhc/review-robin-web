@@ -27,6 +27,7 @@ def _fmt_local_input(dt: datetime) -> str:
 
 def _create_session(
     client: TestClient,
+    db: Session,
     code: str,
     *,
     scheduled_activate_at: str | None = None,
@@ -45,15 +46,19 @@ def _create_session(
         "/operator/sessions", data=data, follow_redirects=False
     )
     if response.status_code == 303:
-        # Create-session redirect targets ``.../{id}/edit``; strip
-        # the trailing ``/edit`` before parsing the id.
+        # Create-session redirect targets ``.../{public_id}``; strip
+        # the query and fragment before parsing the public id.
         location = (
             response.headers["location"].split("?", 1)[0].split("#", 1)[0]
         )
         return (
             response.status_code,
             response,
-            int(location.rsplit("/", 1)[-1]),
+            db.execute(
+                select(ReviewSession.id).where(
+                    ReviewSession.public_id == location.rsplit("/", 1)[-1]
+                )
+            ).scalar_one(),
         )
     return response.status_code, response, 0
 
@@ -185,6 +190,7 @@ def test_create_accepts_invite_offsets_with_valid_start(
     start = datetime.now(timezone.utc) + timedelta(days=30)
     status_code, _, session_id = _create_session(
         client,
+        db,
         "create-inv",
         scheduled_activate_at=_fmt_local_input(start),
         invite_offsets="-P1D, -PT4H",
@@ -214,12 +220,13 @@ def test_create_rejects_invalid_invite_offset(client: TestClient) -> None:
 def test_edit_round_trips_invite_offsets(
     client: TestClient, db: Session
 ) -> None:
-    _, _, session_id = _create_session(client, "edit-inv")
+    _, _, session_id = _create_session(client, db, "edit-inv")
+    public_id = db.get(ReviewSession, session_id).public_id
     start = datetime.now(timezone.utc) + timedelta(days=30)
 
     # Set
     response = client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id}/config",
         data={
             "name": "Sess edit-inv",
             "code": "edit-inv",
@@ -233,14 +240,14 @@ def test_edit_round_trips_invite_offsets(
     assert rs.invite_offsets == ["-P1D"]
 
     # Edit GET prefills the input value
-    page = client.get(f"/operator/sessions/{session_id}?editing=1")
+    page = client.get(f"/operator/sessions/{public_id}?editing=1")
     assert page.status_code == 200
     assert 'name="invite_offsets"' in page.text
     assert "-P1D" in page.text
 
     # Clear
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id}/config",
         data={
             "name": "Sess edit-inv",
             "code": "edit-inv",
@@ -256,10 +263,11 @@ def test_edit_round_trips_invite_offsets(
 def test_edit_emits_invite_schedule_updated_audit(
     client: TestClient, db: Session
 ) -> None:
-    _, _, session_id = _create_session(client, "audit-inv")
+    _, _, session_id = _create_session(client, db, "audit-inv")
+    public_id = db.get(ReviewSession, session_id).public_id
     start = datetime.now(timezone.utc) + timedelta(days=30)
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id}/config",
         data={
             "name": "x",
             "code": "audit-inv",
@@ -514,6 +522,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     start = datetime.now(timezone.utc) + timedelta(days=30)
     _, _, session_id = _create_session(
         client,
+        db,
         "cap-loc",
         scheduled_activate_at=_fmt_local_input(start),
         invite_offsets="-P1D",
@@ -522,7 +531,7 @@ def test_caption_renders_on_workflow_card_not_invitations_page(
     assert rs.invite_offsets == ["-P1D"]
 
     body = client.get(
-        f"/operator/sessions/{session_id}/invitations"
+        f"/operator/sessions/{rs.public_id}/invitations"
     ).text
     # New caption id sits inside the Workflow card right column.
     assert 'id="next-action-auto-send-invites-caption"' in body

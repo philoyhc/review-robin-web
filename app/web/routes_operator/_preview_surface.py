@@ -47,7 +47,7 @@ from app.web.routes_reviewer._surface import _pages_for_session, _surface_contex
 router = APIRouter()
 
 
-def _preview_url(session_id: int, page_n: int, reviewer_email: str) -> str:
+def _preview_url(session_id: str, page_n: int, reviewer_email: str) -> str:
     base = f"/operator/sessions/{session_id}/preview-surface/{page_n}"
     if reviewer_email:
         return f"{base}?{urlencode({'reviewer_email': reviewer_email})}"
@@ -91,14 +91,14 @@ def _resolve_preview_reviewer(
     response_model=None,
 )
 def preview_surface_default_page(
-    session_id: int,
+    session_id: str,
     reviewer_email: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Bare-URL fallback. 303s to ``/preview-surface/1`` preserving the
     optional reviewer-email picker."""
     return RedirectResponse(
-        url=_preview_url(review_session.id, 1, reviewer_email),
+        url=_preview_url(review_session.public_id, 1, reviewer_email),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -142,7 +142,7 @@ def preview_surface(
         # resolver already used on the same string, so the two halves
         # of this round trip now read the input the same way.
         typo = views.extract_email_from_picker_value(reviewer_email).strip()
-        url = f"/operator/sessions/{review_session.id}/invitations"
+        url = f"/operator/sessions/{review_session.public_id}/invitations"
         if typo:
             url = f"{url}?{urlencode({'no_match': typo})}"
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
@@ -151,7 +151,7 @@ def preview_surface(
     validate_page_n(page_n, pages)
 
     def page_url(n: int) -> str:
-        return _preview_url(review_session.id, n, reviewer_email)
+        return _preview_url(review_session.public_id, n, reviewer_email)
 
     context = _surface_context(
         db=db,

@@ -247,9 +247,10 @@ def test_the_demo_set_builds_a_validated_session(
             ReviewSession.code == "demo-round-trip"
         )
     ).scalar_one()
+    public_id = db.get(ReviewSession, session_id).public_id
 
     submitted = client.post(
-        f"/operator/sessions/{session_id}/quick-setup/submit-all",
+        f"/operator/sessions/{public_id}/quick-setup/submit-all",
         files={
             "reviewers_file": ("reviewers.csv", files["reviewers.csv"], "text/csv"),
             "reviewees_file": ("reviewees.csv", files["reviewees.csv"], "text/csv"),
@@ -282,7 +283,7 @@ def test_the_demo_set_builds_a_validated_session(
         select(Instrument.id).where(Instrument.session_id == session_id)
     ).scalar_one()
     saved = client.post(
-        f"/operator/sessions/{session_id}"
+        f"/operator/sessions/{public_id}"
         f"/instruments/{instrument_id}/fields/save",
         data={
             "link1_mode": "all",
@@ -304,7 +305,7 @@ def test_the_demo_set_builds_a_validated_session(
     assert card["prepare_visible"] is True
 
     prepared = client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert prepared.status_code == 303
@@ -329,8 +330,9 @@ def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
     session_id = db.execute(
         select(ReviewSession.id).where(ReviewSession.code == "demo-populated")
     ).scalar_one()
+    public_id = db.get(ReviewSession, session_id).public_id
     client.post(
-        f"/operator/sessions/{session_id}/quick-setup/submit-all",
+        f"/operator/sessions/{public_id}/quick-setup/submit-all",
         files={
             "reviewers_file": ("reviewers.csv", files["reviewers.csv"], "text/csv"),
             "reviewees_file": ("reviewees.csv", files["reviewees.csv"], "text/csv"),
@@ -344,7 +346,7 @@ def test_the_demo_set_populates_the_surfaces_it_is_meant_to_show(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{public_id}/workflow/prepare",
         follow_redirects=False,
     )
 

@@ -128,6 +128,12 @@ Taken 2026-10-18 at `c39186b4`.
   context-sensitive model default (`_new_public_id`, the
   `_next_session_seq` pattern) covers Create, Duplicate, Rehydrate and
   every fixture, so no creator names the column.
+- **Rung 3 (2026-10-18).** One rung, not split by surface. Beyond the
+  measured sites it reached `app/web/return_to.py` (its session regexes
+  read digits) and the sys-admin outbox / audit-log / adopt routes.
+  Tests hand helpers the integer, so `tests/integration/_public_id.py`
+  resolves it; browser tests hold the public ID (`new_session()`) and
+  resolve the key with `_builder.session_pk`.
 
 ### PR ladder
 

@@ -740,7 +740,7 @@ def export_reviewee_metadata_csv(
 
 @router.get("/sessions/{session_id}/export/audit_log.csv")
 def export_audit_log_csv(
-    session_id: int,
+    session_id: str,
     event_type: list[str] | None = Query(default=None),
     severity: list[str] | None = Query(default=None),
     actor: str | None = Query(default=None),
@@ -759,7 +759,7 @@ def export_audit_log_csv(
     # CSV route stays at its current URL so existing
     # programmatic consumers keep working, just gated tighter.
     review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
+        select(ReviewSession).where(ReviewSession.public_id == session_id)
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

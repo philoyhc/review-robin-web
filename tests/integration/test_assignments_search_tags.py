@@ -141,7 +141,7 @@ def test_the_page_renders_tag_matches(
     s = seed_session_with_assignment(client, db, code="ast-page")
 
     body = client.get(
-        f"/operator/sessions/{s.id}/assignments?q=Team+B&search_by=all"
+        f"/operator/sessions/{s.public_id}/assignments?q=Team+B&search_by=all"
     ).text
 
     assert "Showing 1 assignment." in body
@@ -184,7 +184,7 @@ def test_the_placeholder_names_every_column_the_search_reads(
     """
     s = seed_session_with_assignment(client, db, code="ast-ph")
 
-    body = client.get(f"/operator/sessions/{s.id}/assignments").text
+    body = client.get(f"/operator/sessions/{s.public_id}/assignments").text
 
     assert 'placeholder="Name, email or tag"' in body
     assert 'placeholder="Name or email"' not in body

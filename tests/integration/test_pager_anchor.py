@@ -34,6 +34,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 
+from ._public_id import public_id
+
 #: The seven routes that supply an anchor, and the template each one
 #: renders. Checked at source level rather than by seeding seven rosters:
 #: Relationships and Observers need a populated session to render at all,
@@ -94,7 +96,7 @@ def _import_reviewers(
         for i in range(count)
     )
     response = client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={"file": ("r.csv", header + b"\n" + rows, "text/csv")},
         follow_redirects=False,
     )
@@ -121,7 +123,7 @@ def test_every_range_link_lands_on_the_table(
     review_session = _make_session(client, db, code="anchor-1")
     _import_reviewers(client, review_session.id, 556)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
     hrefs = _ranges(body)
@@ -146,7 +148,7 @@ def test_the_anchor_names_an_id_the_page_actually_has(
     review_session = _make_session(client, db, code="anchor-2")
     _import_reviewers(client, review_session.id, 556)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
     anchors = {href.split("#", 1)[1] for href in _ranges(body)}
@@ -207,7 +209,7 @@ def test_the_anchored_card_keeps_a_landing_margin(
     # the ordering assertion below with only two things to order.
     _import_reviewers(client, review_session.id, 556, tagged=True)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
     # Matched within a selector list rather than as the whole selector.

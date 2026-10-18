@@ -17,7 +17,7 @@
      their routes accept — the silent failure in reverse. #}
   {% set unlock_available = not is_archived and not edit_mode %}
   {% set observers_base_url =
-        "/operator/sessions/" ~ session.id ~ "/observers" %}
+        "/operator/sessions/" ~ session.public_id ~ "/observers" %}
 
   {# The edit row's own action bar, on the analogy of a selected row:
      the row being edited reads as selected and its controls hang

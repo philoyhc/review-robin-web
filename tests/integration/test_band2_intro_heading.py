@@ -12,12 +12,13 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Instrument
 
+from ._public_id import public_id
 from .test_instrument_builder_routes import _make_session, _new_model_with_tags
 
 
 def _name_card(client: TestClient, session_id: int, instrument_id: int) -> str:
     flat = " ".join(
-        client.get(f"/operator/sessions/{session_id}/instruments").text.split()
+        client.get(f"/operator/sessions/{public_id(session_id)}/instruments").text.split()
     )
     intro = flat[flat.index(f'data-instrument-id="{instrument_id}"') :]
     start = intro.index('<div class="card rs-instrument-card rs-intro-name"')

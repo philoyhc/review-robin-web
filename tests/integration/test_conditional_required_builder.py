@@ -81,7 +81,7 @@ def test_the_mode_select_locks_with_its_condition(
     db.add(Response(assignment_id=assignment.id, response_field_id=comments.id, value="x"))
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     card = _card_slice(" ".join(body.split()), instrument.id)
     condition = _rows_table(card).split("<tr data-new-model-rf-condition>")[1].split("</tr>")[0]
@@ -96,7 +96,7 @@ def _require_page(client: TestClient, db: Session, code: str):
     fields["Comments"].required = True
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     flat = " ".join(body.split())
     return review_session, instrument, _card_slice(flat, instrument.id), flat, body

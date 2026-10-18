@@ -147,7 +147,7 @@ def test_the_add_row_renders_the_refusal(
         select(ReviewSession).where(ReviewSession.code == "cc3-add")
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/create",
+        f"/operator/sessions/{rs.public_id}/reviewers/create",
         data={"name": LONG, "email": "a@x.edu"},
         follow_redirects=False,
     )
@@ -170,7 +170,7 @@ def test_the_label_editor_refuses_an_over_long_label_whole(
         select(ReviewSession).where(ReviewSession.code == "cc3-labels")
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/field-labels",
+        f"/operator/sessions/{rs.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort", "tag_2": LONG, "tag_3": ""},
         follow_redirects=False,
     )

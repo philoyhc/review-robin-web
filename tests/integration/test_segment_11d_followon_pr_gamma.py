@@ -62,7 +62,7 @@ def _setup_two_instrument_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -73,7 +73,7 @@ def _setup_two_instrument_session(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -91,7 +91,7 @@ def _setup_two_instrument_session(
         ).scalars()
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
         data={"after": str(first.id)},
         follow_redirects=False,
     )
@@ -133,9 +133,9 @@ def _setup_two_instrument_session(
             actor=None,
         )
     validate_session(review_session)
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -177,7 +177,7 @@ def test_instrument_heading_uses_short_label_when_set(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "#1: Self-eval" in body
     assert "#2: Peer review" in body
@@ -197,7 +197,7 @@ def test_instrument_heading_falls_back_to_position_only(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     # No trailing colon in the heading itself (the status pills above
     # carry their own ``#N: <state>`` colon — out of scope here).
@@ -230,7 +230,7 @@ def test_instrument_heading_multi_with_short_label_and_description(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     # PR γ wrapped the heading in a flex `.rs-instrument-heading` row
     # of bare text; the per-instrument intro grid follow-up moved it
@@ -260,7 +260,7 @@ def test_instrument_heading_multi_short_label_only(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "<h2>#1: Self-eval</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
@@ -283,7 +283,7 @@ def test_instrument_heading_multi_description_only(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "<h2>#1</h2>" in body
     assert "Reflect on your own progress." in body
@@ -304,7 +304,7 @@ def test_instrument_heading_multi_neither(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "<h2>#1</h2>" in body
     assert 'class="rs-instrument-subtitle muted"' not in body
@@ -329,7 +329,7 @@ def test_instrument_heading_single_short_label_only(
         select(ReviewSession).where(ReviewSession.code == "rae-g-h-solo-short")
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -340,7 +340,7 @@ def test_instrument_heading_single_short_label_only(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -362,16 +362,16 @@ def test_instrument_heading_single_short_label_only(
             db, instrument=instrument, short_label="Self-eval", actor=None
         )
     validate_session(review_session)
-    operator.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
 
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "<h2>Self-eval</h2>" in body
     # No #1 prefix in the *heading* — single-instrument sessions
@@ -421,7 +421,7 @@ def test_save_drops_cross_page_assignment_inputs(
     # POST to /1/save with inputs for both pages — the page-2 entry
     # must be filtered out.
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 ok",
             f"response[{page2_assignment.id}][comments]": "page-2 leak",

@@ -53,7 +53,7 @@ _TRANSPARENT = "rgba(0, 0, 0, 0)"
 
 
 def test_severity_chips_fill_by_state_in_both_themes(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sys-admin/sessions/{session_id}/audit-log")
@@ -72,7 +72,7 @@ def test_severity_chips_fill_by_state_in_both_themes(
 
 
 def test_a_severity_chip_filters_and_stays_on(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sys-admin/sessions/{session_id}/audit-log")
@@ -87,7 +87,7 @@ def test_a_severity_chip_filters_and_stays_on(
 
 
 def test_a_validate_chip_submits_at_once_and_is_remembered(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """All three on by default; turning one off reloads the page without
     a button, and a bare URL later finds it still off."""

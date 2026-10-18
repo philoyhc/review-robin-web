@@ -50,7 +50,7 @@ def _make_ready_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -61,7 +61,7 @@ def _make_ready_session(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -77,11 +77,11 @@ def _make_ready_session(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     # Workflow card's Prepare + Activate flow (post-18F Part 1).
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -98,7 +98,7 @@ def test_summary_gate_redirects_when_session_not_fully_submitted(
     review_session = _make_ready_session(operator, db, code="summ-gate")
     rae_client = make_client(rae)
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary",
+        f"/me/sessions/{review_session.public_id}/summary",
         follow_redirects=False,
     )
     # Not submitted yet → redirect to the reviewer dashboard.
@@ -120,7 +120,7 @@ def test_summary_renders_after_full_submission(
     rae_client = make_client(rae)
     # Submit; the redirect should already point at the summary.
     submit = rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{assignment.id}][rating]": "5",
         },
@@ -128,17 +128,17 @@ def test_summary_renders_after_full_submission(
     )
     assert submit.status_code == 303
     assert submit.headers["location"] == (
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     )
     page = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     )
     assert page.status_code == 200
     body = page.text
     assert "Your responses" in body
     # CSV download button is visible at the top of the page.
     assert (
-        f'/me/sessions/{review_session.id}/summary.csv' in body
+        f'/me/sessions/{review_session.public_id}/summary.csv' in body
     )
     # The Carol row appears under the (only) instrument section.
     assert "Carol" in body
@@ -157,14 +157,14 @@ def test_summary_csv_streams_reviewer_only_rows(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{assignment.id}][rating]": "3",
         },
         follow_redirects=False,
     )
     response = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -203,7 +203,7 @@ def test_dashboard_link_points_at_summary_when_submitted(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{assignment.id}][rating]": "4",
         },
@@ -213,7 +213,7 @@ def test_dashboard_link_points_at_summary_when_submitted(
     # Session column now anchors at the summary URL, not the
     # surface position.
     assert (
-        f'href="/me/sessions/{review_session.id}/summary"' in body
+        f'href="/me/sessions/{review_session.public_id}/summary"' in body
     )
 
 
@@ -247,14 +247,14 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
     )
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "<h2 style=\"margin-top: 0;\">Self-eval</h2>" in body
     # No #1 prefix on a single-instrument session.
@@ -294,14 +294,14 @@ def test_summary_single_instrument_heading_uses_operator_label_not_name(
     ).scalar_one()
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{assignment.id}][rating]": "5",
         },
         follow_redirects=False,
     )
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     # 19Q Item 6 rung 2 — derived from ``session_seq``, not ``id``.
     # The ``id`` form passed on SQLite only because each test gets a
@@ -340,7 +340,7 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         select(ReviewSession).where(ReviewSession.code == "summ-h-multi")
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -351,7 +351,7 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -366,7 +366,7 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
     operator.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
         data={"after": str(instrument_1.id)},
         follow_redirects=False,
     )
@@ -390,11 +390,11 @@ def test_summary_multi_instrument_headings_use_page_prefix(
     from ._full_matrix import pin_full_matrix_on_all_instruments
     pin_full_matrix_on_all_instruments(db, review_session.id)
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -413,17 +413,17 @@ def test_summary_multi_instrument_headings_use_page_prefix(
         f"response[{a.id}][rating]": "5" for a in assignments
     }
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data=page_data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         follow_redirects=False,
     )
 
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert (
         "<h2 style=\"margin-top: 0;\">#1: Self-eval</h2>" in body

@@ -83,7 +83,7 @@ def _failure_code(exc: Exception) -> str | None:
     return getattr(exc, "code", None)
 
 
-def _warnings_detour_url(session_id: int, return_to: str | None) -> str:
+def _warnings_detour_url(session_id: str, return_to: str | None) -> str:
     """The Validate-page warnings-acknowledgement detour. Carries
     ``return_to`` through so the eventual ``/activate`` POST from
     that page lands the operator back on the workflow-card page."""
@@ -124,7 +124,7 @@ def workflow_prepare(
     if not lifecycle.is_editable(review_session):
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="prepare",
@@ -149,7 +149,7 @@ def workflow_prepare(
         if impact.responses_lost > 0:
             return RedirectResponse(
                 url=_redirect_url(
-                    review_session.id, return_to, prepare_confirm=True
+                    review_session.public_id, return_to, prepare_confirm=True
                 ),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
@@ -215,7 +215,7 @@ def workflow_prepare(
             db.commit()
             return RedirectResponse(
                 url=_redirect_url(
-                    review_session.id,
+                    review_session.public_id,
                     return_to,
                     super_status="failed",
                     super_button="prepare",
@@ -296,7 +296,7 @@ def workflow_prepare(
         db.commit()
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="prepare",
@@ -337,7 +337,7 @@ def workflow_prepare(
         raise
 
     return RedirectResponse(
-        url=_redirect_url(review_session.id, return_to),
+        url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -367,7 +367,7 @@ def workflow_activate(
     if lifecycle.is_ready(review_session):
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="activate",
@@ -379,7 +379,7 @@ def workflow_activate(
     if not lifecycle.is_validated(review_session):
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="activate",
@@ -420,7 +420,7 @@ def workflow_activate(
             # writes one, or it dies with the connection (findings Bc6).
             db.commit()
             return RedirectResponse(
-                url=_warnings_detour_url(review_session.id, return_to),
+                url=_warnings_detour_url(review_session.public_id, return_to),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
         lifecycle.activate_session(
@@ -460,7 +460,7 @@ def workflow_activate(
         db.commit()
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="activate",
@@ -471,7 +471,7 @@ def workflow_activate(
         )
 
     return RedirectResponse(
-        url=_redirect_url(review_session.id, return_to),
+        url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -497,7 +497,7 @@ def workflow_close(
     if not lifecycle.is_ready(review_session):
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="close",
@@ -516,7 +516,7 @@ def workflow_close(
     except lifecycle.LifecycleError as exc:
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="close",
@@ -526,7 +526,7 @@ def workflow_close(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
-        url=_redirect_url(review_session.id, return_to),
+        url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -547,7 +547,7 @@ def workflow_release_responses(
     if lifecycle.is_archived(review_session):
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="release_responses",
@@ -567,7 +567,7 @@ def workflow_release_responses(
         # Archived since the check above (findings Bc4): the same answer.
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="release_responses",
@@ -577,7 +577,7 @@ def workflow_release_responses(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
-        url=_redirect_url(review_session.id, return_to),
+        url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -598,7 +598,7 @@ def workflow_stop_release(
     if lifecycle.is_archived(review_session):
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="stop_release",
@@ -618,7 +618,7 @@ def workflow_stop_release(
         # Archived since the check above (findings Bc4): the same answer.
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="stop_release",
@@ -628,7 +628,7 @@ def workflow_stop_release(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
-        url=_redirect_url(review_session.id, return_to),
+        url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

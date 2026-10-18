@@ -154,7 +154,7 @@
       </p>
       <div class="banner-actions">
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.id }}/assignments">Cancel</a>
+           href="/operator/sessions/{{ session.public_id }}/assignments">Cancel</a>
       </div>
     </div>
   {% endif %}
@@ -188,7 +188,7 @@
        term rides along so a bulk action redirects back to the
        same filtered view. #}
     <form id="assignments-bulk-form" method="post"
-          action="/operator/sessions/{{ session.id }}/assignments/bulk-inactivate">
+          action="/operator/sessions/{{ session.public_id }}/assignments/bulk-inactivate">
       <input type="hidden" name="filter_q" value="{{ filter_q }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_search_by"
@@ -271,7 +271,7 @@
              away from the rows they were filtering, which is what this
              form did from its old home in the card. #}
           <form method="get"
-                action="/operator/sessions/{{ session.id }}/assignments#{{ pager_anchor }}"
+                action="/operator/sessions/{{ session.public_id }}/assignments#{{ pager_anchor }}"
                 class="operator-actions-filter">
             <div class="filter-row">
               {# Segment 19I Item 9 — the status filter, in the roster
@@ -327,7 +327,7 @@
             <div class="filter-actions">
               {% if filter_q or filter_status != "all" %}
                 <a class="btn secondary"
-                   href="/operator/sessions/{{ session.id }}/assignments#{{ pager_anchor }}">Clear</a>
+                   href="/operator/sessions/{{ session.public_id }}/assignments#{{ pager_anchor }}">Clear</a>
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
             </div>
@@ -349,7 +349,7 @@
       <div class="table-scroll">
       <table id="assignments-table"
              data-rrw-col-toggles="rrw-assignment-col-visibility"
-             data-rrw-sortable="rrw-sort-assignments-{{ session.id }}">
+             data-rrw-sortable="rrw-sort-assignments-{{ session.public_id }}">
         <thead>
         <tr>
           {% if can_edit %}
@@ -534,7 +534,7 @@
         var tickOrder = [];
         var panel = null;
         var BULK_BASE =
-          {{ ("/operator/sessions/" ~ session.id ~ "/assignments") | tojson }};
+          {{ ("/operator/sessions/" ~ session.public_id ~ "/assignments") | tojson }};
 
         // Only the rows the operator can see. This page has something
         // no roster page has: a CLIENT-side filter. The instrument-name

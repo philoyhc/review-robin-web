@@ -64,7 +64,7 @@ def _second_half_hour_after_fall_back() -> tuple[str, str]:
 
 
 def test_session_home_re_renders_from_the_stored_instant(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Seeded in the repeated hour after a DST fall-back, a box's text
     names two instants; the conversion starts from the stored one."""

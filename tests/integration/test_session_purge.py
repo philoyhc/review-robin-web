@@ -48,7 +48,7 @@ def _draft_session_with_rosters(
 ) -> ReviewSession:
     review_session = _draft_session(client, db, code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": (
             "r.csv", b"ReviewerName,ReviewerEmail\nR,r@example.edu\n",
             "text/csv",
@@ -56,7 +56,7 @@ def _draft_session_with_rosters(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={"file": (
             "e.csv", b"RevieweeName,RevieweeEmail\nE,e@example.edu\n",
             "text/csv",

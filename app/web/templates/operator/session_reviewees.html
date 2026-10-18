@@ -12,14 +12,14 @@
      row prepends (Add). Mirror of the Reviewers page. #}
   {% set edit_mode = (edit_id is not none) or add_mode %}
   {% set reviewees_base_url =
-        "/operator/sessions/" ~ session.id ~ "/reviewees" %}
+        "/operator/sessions/" ~ session.public_id ~ "/reviewees" %}
   {# 19P.3 rung 4 — the Unlock panel's condition. #}
   {% set unlock_available = is_editable and not edit_mode %}
 
   {# The tag-labels editor's parameters, for its one home, the Unlock
      panel below. #}
   {% set field_labels_form_action =
-        "/operator/sessions/" ~ session.id ~ "/reviewees/field-labels" %}
+        "/operator/sessions/" ~ session.public_id ~ "/reviewees/field-labels" %}
   {% set field_labels_source_type = "reviewee" %}
   {% set field_labels_card_title = "Reviewee tag labels" %}
   {% set field_labels_help =
@@ -709,7 +709,7 @@
       <div class="table-scroll">
       <table id="reviewees-table"
              data-rrw-col-toggles="rrw-reviewee-tag-visibility"
-             {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.id }}"{% endif %}>
+             {% if not edit_mode %}data-rrw-sortable="rrw-sort-reviewees-{{ session.public_id }}"{% endif %}>
         <thead>
         <tr>
           <th>

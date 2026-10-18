@@ -15,7 +15,7 @@ from .conftest import LiveServer
 
 
 def test_the_self_review_chip_cycles_and_saves(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     pin_full_matrix(live_server.database_url, session_id)
@@ -40,7 +40,7 @@ def test_the_self_review_chip_cycles_and_saves(
 
 
 def test_a_locked_cards_self_review_chip_is_a_plain_unfaded_pill(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """On a locked card the chip reads as a display pill, as Band 3's do,
     but "Include self reviews" is a state, not an off switch, so it is
@@ -55,7 +55,7 @@ def test_a_locked_cards_self_review_chip_is_a_plain_unfaded_pill(
 
 
 def test_switching_link_3_to_group_turns_the_chip_back_to_include(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """The Individual → Group move clears the exclusion (19O Item 2) and
     renames the chip with it; the line takes the group sentence. Link 3

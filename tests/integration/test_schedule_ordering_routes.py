@@ -145,7 +145,7 @@ def _submit_edit(
     }
     data.update(overrides)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data=data,
         follow_redirects=False,
     )
@@ -260,7 +260,7 @@ def test_edit_form_renders_ordered_chain_prefills(
         },
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}?editing=1"
+        f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
     # All four datetime inputs render, each prefilled with its saved
     # value in the local-input format.

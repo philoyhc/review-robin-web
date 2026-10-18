@@ -69,7 +69,7 @@ def test_post_creates_shape_and_returns_201(
 ) -> None:
     review_session = _make_session(client, db, code="post-ok")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="Created"),
     )
     assert response.status_code == 201
@@ -96,7 +96,7 @@ def test_post_invalid_axis_returns_422(
 ) -> None:
     review_session = _make_session(client, db, code="post-axis")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(axis="instrument"),
     )
     assert response.status_code == 422
@@ -110,11 +110,11 @@ def test_post_duplicate_name_returns_422_with_conflict_flag(
 ) -> None:
     review_session = _make_session(client, db, code="post-conflict")
     client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="dupe"),
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="dupe"),
     )
     assert response.status_code == 422
@@ -130,11 +130,11 @@ def test_post_duplicate_name_returns_422_with_conflict_flag(
 def test_patch_updates_shape(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="patch-ok")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="initial"),
     ).json()
     response = client.patch(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}",
         json=_payload(
             name="renamed",
@@ -162,11 +162,11 @@ def test_patch_cross_session_shape_returns_404(
     session_a = _make_session(client, db, code="patch-a")
     session_b = _make_session(client, db, code="patch-b")
     created = client.post(
-        f"/operator/sessions/{session_a.id}/extract-data/shapes",
+        f"/operator/sessions/{session_a.public_id}/extract-data/shapes",
         json=_payload(),
     ).json()
     response = client.patch(
-        f"/operator/sessions/{session_b.id}"
+        f"/operator/sessions/{session_b.public_id}"
         f"/extract-data/shapes/{created['id']}",
         json=_payload(name="hijack"),
     )
@@ -181,11 +181,11 @@ def test_patch_cross_session_shape_returns_404(
 def test_delete_removes_shape(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="del-ok")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(),
     ).json()
     response = client.delete(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}"
     )
     assert response.status_code == 204
@@ -201,15 +201,15 @@ def test_delete_removes_shape(client: TestClient, db: Session) -> None:
 def test_delete_is_idempotent(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="del-idem")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(),
     ).json()
     first = client.delete(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}"
     )
     second = client.delete(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}"
     )
     assert first.status_code == 204
@@ -231,7 +231,7 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
     state + identify the row for PATCH / DELETE."""
     review_session = _make_session(client, db, code="render")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(
             name="Visible",
             column_chip_slots=[
@@ -242,7 +242,7 @@ def test_page_renders_saved_shapes_with_persistence_attrs(
         ),
     ).json()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     # Each saved shape's sub-card carries its id + axis +
@@ -297,7 +297,7 @@ def test_page_renders_initial_blank_when_no_shapes_exist(
     target (band-3 builder pattern)."""
     review_session = _make_session(client, db, code="no-shapes")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     stack_block = body.split("data-shaper-stack")[1].split(
         'id="extract-data-shaper-zip"'
@@ -337,15 +337,15 @@ def test_saved_shape_delete_ships_disabled_behind_a_confirm_tick(
     line after the action row rather than inside it."""
     review_session = _make_session(client, db, code="del-confirm")
     first = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="First"),
     ).json()
     second = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="Second"),
     ).json()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     stack_block = body.split("<div data-shaper-stack>")[1].split(
         'id="extract-data-shaper-zip"'
@@ -378,7 +378,7 @@ def test_unsaved_shape_cards_ship_delete_disabled_too(
     script on every clone, so spawned cards never collide."""
     review_session = _make_session(client, db, code="del-confirm-blank")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     template, stack_block = body.split(
         "<template data-shaper-shape-card-template>"
@@ -402,14 +402,14 @@ def test_download_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="dl-name")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(
             name="My Shape!",
             column_chip_slots=["reviewer:name", "reviewer:email"],
         ),
     ).json()
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}/download.csv"
     )
     assert response.status_code == 200
@@ -431,11 +431,11 @@ def test_download_emits_audit_event(
 
     review_session = _make_session(client, db, code="dl-aud")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(),
     ).json()
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}/download.csv"
     )
     assert response.status_code == 200
@@ -458,11 +458,11 @@ def test_download_cross_session_shape_returns_404(
     session_a = _make_session(client, db, code="dl-a")
     session_b = _make_session(client, db, code="dl-b")
     created = client.post(
-        f"/operator/sessions/{session_a.id}/extract-data/shapes",
+        f"/operator/sessions/{session_a.public_id}/extract-data/shapes",
         json=_payload(),
     ).json()
     response = client.get(
-        f"/operator/sessions/{session_b.id}"
+        f"/operator/sessions/{session_b.public_id}"
         f"/extract-data/shapes/{created['id']}/download.csv"
     )
     assert response.status_code == 404
@@ -481,7 +481,7 @@ def test_post_round_trips_self_review_handling_state(
     response."""
     review_session = _make_session(client, db, code="srh-post")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(), "self_review_handling": "exclude_self"},
     )
     assert response.status_code == 201
@@ -500,12 +500,12 @@ def test_patch_can_flip_self_review_handling(
     """PATCH updates the persisted state."""
     review_session = _make_session(client, db, code="srh-patch")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="To flip"),
     ).json()
     assert created["self_review_handling"] == "include_self"
     response = client.patch(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}",
         json={**_payload(name="To flip"), "self_review_handling": "both"},
     )
@@ -520,7 +520,7 @@ def test_post_rejects_unknown_self_review_handling(
     validator."""
     review_session = _make_session(client, db, code="srh-bogus")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(), "self_review_handling": "garbage"},
     )
     assert response.status_code == 422
@@ -539,14 +539,14 @@ def test_download_filename_carries_state_suffix(
         ("both", "_both"),
     ):
         created = client.post(
-            f"/operator/sessions/{review_session.id}/extract-data/shapes",
+            f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
             json={
                 **_payload(name=f"Shape-{state}"),
                 "self_review_handling": state,
             },
         ).json()
         response = client.get(
-            f"/operator/sessions/{review_session.id}"
+            f"/operator/sessions/{review_session.public_id}"
             f"/extract-data/shapes/{created['id']}/download.csv"
         )
         assert response.status_code == 200
@@ -567,11 +567,11 @@ def test_download_audit_event_carries_context_self_review_handling(
 
     review_session = _make_session(client, db, code="srh-aud")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(), "self_review_handling": "both"},
     ).json()
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/extract-data/shapes/{created['id']}/download.csv"
     )
     assert response.status_code == 200
@@ -595,11 +595,11 @@ def test_saved_shape_renders_self_review_handling_attr_on_card(
     gate has something to compare against."""
     review_session = _make_session(client, db, code="srh-render")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(name="Excludey"), "self_review_handling": "exclude_self"},
     ).json()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-self-review-handling="exclude_self"' in body
@@ -617,7 +617,7 @@ def test_post_round_trips_include_empty_rows_false(
     echoes the value."""
     review_session = _make_session(client, db, code="ier-post")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(), "include_empty_rows": False},
     )
     assert response.status_code == 201
@@ -637,7 +637,7 @@ def test_post_defaults_include_empty_rows_to_true(
     today's behaviour preserved for chip-less clients."""
     review_session = _make_session(client, db, code="ier-default")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(),
     )
     assert response.status_code == 201
@@ -650,12 +650,12 @@ def test_patch_can_flip_include_empty_rows(
     """PATCH updates the persisted state."""
     review_session = _make_session(client, db, code="ier-patch")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(name="To flip"),
     ).json()
     assert created["include_empty_rows"] is True
     response = client.patch(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes/{created['id']}",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes/{created['id']}",
         json={**_payload(name="To flip"), "include_empty_rows": False},
     )
     assert response.status_code == 200
@@ -670,11 +670,11 @@ def test_saved_shape_renders_include_empty_rows_attr_on_card(
     chip on Edit + drive the dirty-state Save gate."""
     review_session = _make_session(client, db, code="ier-render")
     created = client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json={**_payload(name="Dropper"), "include_empty_rows": False},
     ).json()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     assert f'data-shape-id="{created["id"]}"' in body
     assert 'data-shape-include-empty-rows="false"' in body
@@ -695,7 +695,7 @@ def test_preview_th_marks_aggregate_columns_with_data_aggregate(
     Email / Tag-N) never carry the attribute."""
     review_session = _make_session(client, db, code="agg-th")
     client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(
             name="Mixed",
             column_chip_slots=[
@@ -706,7 +706,7 @@ def test_preview_th_marks_aggregate_columns_with_data_aggregate(
         ),
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     # Scope the search to the saved sub-card's preview row to
     # avoid matching chip-pool entries or anything else.
@@ -735,7 +735,7 @@ def test_saved_card_ships_column_aggregates_attr_parallel_to_headers(
     the th cells with the right marker."""
     review_session = _make_session(client, db, code="agg-attr")
     client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(
             name="Mixed",
             column_chip_slots=[
@@ -746,7 +746,7 @@ def test_saved_card_ships_column_aggregates_attr_parallel_to_headers(
         ),
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     assert (
         "data-shape-column-headers='[\"Reviewer Name\", "
@@ -780,12 +780,12 @@ def test_zip_all_bundles_every_saved_shape_file(
     review_session = _make_session(client, db, code="zip-shapes")
     for name in ("First", "Second"):
         assert client.post(
-            f"/operator/sessions/{review_session.id}/extract-data/shapes",
+            f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
             json=_payload(name=name),
         ).status_code == 201
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/data_shapes_bundle.zip"
     )
     assert response.status_code == 200
@@ -812,8 +812,8 @@ def test_zip_all_is_greyed_until_a_shape_is_saved(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="zip-greyed")
-    page = f"/operator/sessions/{review_session.id}/extract-data"
-    url = f"/operator/sessions/{review_session.id}/export/data_shapes_bundle.zip"
+    page = f"/operator/sessions/{review_session.public_id}/extract-data"
+    url = f"/operator/sessions/{review_session.public_id}/export/data_shapes_bundle.zip"
 
     tag = _shaper_zip_tag(client.get(page).text)
     assert 'aria-disabled="true"' in tag
@@ -821,7 +821,7 @@ def test_zip_all_is_greyed_until_a_shape_is_saved(
     assert client.get(url).status_code == 404
 
     client.post(
-        f"/operator/sessions/{review_session.id}/extract-data/shapes",
+        f"/operator/sessions/{review_session.public_id}/extract-data/shapes",
         json=_payload(),
     )
     tag = _shaper_zip_tag(client.get(page).text)

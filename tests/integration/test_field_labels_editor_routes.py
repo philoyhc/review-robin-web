@@ -66,7 +66,7 @@ def test_reviewers_save_upserts_three_slots(
 ) -> None:
     review_session = _make_session(client, db, "fle-rev")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort", "tag_2": "Track", "tag_3": ""},
         follow_redirects=False,
     )
@@ -77,7 +77,7 @@ def test_reviewers_save_upserts_three_slots(
     # keeps the landing on the card. Asserted whole rather than with
     # `in`, so dropping either part fails here.
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         "?unlocked=1#roster-card"
     )
     rows = _rows(db, review_session.id)
@@ -102,7 +102,7 @@ def test_reviewers_save_clears_empty_slots(
     )
     # Empty value clears the row.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
         data={"tag_1": "", "tag_2": "", "tag_3": ""},
         follow_redirects=False,
     )
@@ -115,7 +115,7 @@ def test_reviewers_save_emits_audit_set_per_slot(
 ) -> None:
     review_session = _make_session(client, db, "fle-rev-audit")
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort", "tag_2": "Track", "tag_3": ""},
         follow_redirects=False,
     )
@@ -149,7 +149,7 @@ def test_reviewers_save_rejects_in_every_locked_state(
     review_session.status = state
     db.flush()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort"},
         follow_redirects=False,
     )
@@ -167,7 +167,7 @@ def test_reviewers_save_still_works_while_editable(
     review_session.status = state
     db.flush()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort"},
         follow_redirects=False,
     )
@@ -188,11 +188,11 @@ def test_reviewers_page_renders_editor_when_not_ready(
     """
     review_session = _make_session(client, db, "fle-rev-render")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert "Reviewer tag labels" in body
     assert (
-        f'action="/operator/sessions/{review_session.id}/reviewers/field-labels"'
+        f'action="/operator/sessions/{review_session.public_id}/reviewers/field-labels"'
         in body
     )
     assert "Save labels" in body
@@ -222,7 +222,7 @@ def test_reviewers_page_renders_no_editor_in_every_locked_state(
     review_session.status = state
     db.flush()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert "Reviewer tag labels" not in body, state
     assert 'name="tag_1"' not in body, state
@@ -243,7 +243,7 @@ def test_reviewees_save_upserts_three_tag_slots(
 ) -> None:
     review_session = _make_session(client, db, "fle-revee")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewees/field-labels",
         data={
             "tag_1": "Lab section",
             "tag_2": "",
@@ -268,7 +268,7 @@ def test_reviewees_save_silently_ignores_retired_identity_slots(
     and never reads the form field for an unknown slot."""
     review_session = _make_session(client, db, "fle-revee-retired")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewees/field-labels",
         data={
             "name": "Student name",
             "email_or_identifier": "Student ID",
@@ -289,7 +289,7 @@ def test_reviewees_page_renders_one_row_three_inputs(
 ) -> None:
     review_session = _make_session(client, db, "fle-revee-render")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     assert "Reviewee tag labels" in body
     # Three inputs total — the three tag slots.
@@ -308,7 +308,7 @@ def test_relationships_save_upserts_pair_context_slots(
 ) -> None:
     review_session = _make_session(client, db, "fle-rel")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/relationships/field-labels",
+        f"/operator/sessions/{review_session.public_id}/relationships/field-labels",
         data={
             "slot_1": "Module",
             "slot_2": "",
@@ -329,7 +329,7 @@ def test_relationships_page_renders_pair_context_editor(
 ) -> None:
     review_session = _make_session(client, db, "fle-rel-render")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     assert "Pair-context labels" in body
     assert 'name="slot_1"' in body
@@ -352,7 +352,7 @@ def test_save_invalidates_validated_session(
     review_session.status = "validated"
     db.flush()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/field-labels",
+        f"/operator/sessions/{review_session.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort"},
         follow_redirects=False,
     )

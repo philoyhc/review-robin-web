@@ -33,9 +33,9 @@
         </ul>
         <div class="banner-actions">
           <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/validate">Cancel</a>
+             href="/operator/sessions/{{ session.public_id }}/validate">Cancel</a>
           <form method="post"
-                action="/operator/sessions/{{ session.id }}/activate">
+                action="/operator/sessions/{{ session.public_id }}/activate">
             <input type="hidden" name="acknowledge_warnings" value="true">
             {% if activate_return_to %}
               <input type="hidden" name="return_to" value="{{ activate_return_to }}">
@@ -60,7 +60,7 @@
         </ul>
         <div class="banner-actions">
           <a class="btn secondary"
-             href="/operator/sessions/{{ session.id }}/validate">Cancel</a>
+             href="/operator/sessions/{{ session.public_id }}/validate">Cancel</a>
         </div>
       </div>
     {% endif %}
@@ -100,7 +100,7 @@
        once. The blank `severity` keeps "every chip off" distinct from no
        `severity` at all, which takes the chips last asked for. #}
     <div class="card severity-filter-card" id="severity-filter">
-      <form method="get" action="/operator/sessions/{{ session.id }}/validate#severity-filter"
+      <form method="get" action="/operator/sessions/{{ session.public_id }}/validate#severity-filter"
             class="severity-filter-row" data-severity-chips>
         <input type="hidden" name="severity" value="">
         {% if activate_banner %}

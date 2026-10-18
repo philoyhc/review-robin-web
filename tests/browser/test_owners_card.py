@@ -34,7 +34,7 @@ def _owner_row(page: Page, email: str) -> Locator:
     return _card(page).locator("tr").filter(has=page.locator(f"code:text-is('{email}')"))
 
 
-def _open_home(page: Page, session_id: int) -> None:
+def _open_home(page: Page, session_id: str) -> None:
     page.goto(f"/operator/sessions/{session_id}")
 
 
@@ -45,7 +45,7 @@ def _add(page: Page, email: str) -> None:
 
 
 def _two_owner_session(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> int:
     _sign_in_colleague(api)
     session_id = new_session()
@@ -56,7 +56,7 @@ def _two_owner_session(
 
 
 def test_the_card_is_live_with_no_lock(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """``guide/operator_pages_enhancements.md`` Item 1: no Lock / Unlock;
     the picker, Add owner and another owner's Remove are live on load."""
@@ -74,7 +74,7 @@ def test_the_card_is_live_with_no_lock(
 
 
 def test_add_and_remove_each_save_at_once(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Item 5, 'Add owner saves at once' and 'Remove saves at once'."""
     session_id = _two_owner_session(page, api, new_session)
@@ -91,7 +91,7 @@ def test_add_and_remove_each_save_at_once(
 
 
 def test_removing_another_owner_asks_and_cancel_posts_nothing(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """``guide/operator_pages_enhancements.md`` Item 1: the confirm that
     replaced the Owners lock, naming whom it removes."""
@@ -120,7 +120,7 @@ def test_removing_another_owner_asks_and_cancel_posts_nothing(
 
 
 def test_the_last_owner_cannot_be_removed(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 5, 'The last owner cannot go'."""
     _open_home(page, new_session())
@@ -131,7 +131,7 @@ def test_the_last_owner_cannot_be_removed(
 
 
 def test_removing_yourself_asks_and_cancel_posts_nothing(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Item 5, 'Removing yourself asks'."""
     _two_owner_session(page, api, new_session)
@@ -157,7 +157,7 @@ def test_removing_yourself_asks_and_cancel_posts_nothing(
 
 
 def test_owners_change_in_an_activated_session(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Item 5, 'Any lifecycle state'."""
     _sign_in_colleague(api)
@@ -171,7 +171,7 @@ def test_owners_change_in_an_activated_session(
 
 
 def test_add_and_self_remove_work_without_javascript(
-    browser: Browser, live_server: LiveServer, api: httpx.Client, new_session: Callable[[], int]
+    browser: Browser, live_server: LiveServer, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     """Item 5, 'Without JavaScript'."""
     _sign_in_colleague(api)

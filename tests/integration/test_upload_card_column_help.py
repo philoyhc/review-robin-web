@@ -59,7 +59,7 @@ LABEL_EXAMPLES = {
 
 
 @pytest.fixture
-def session_id(client: TestClient, db: Session) -> int:
+def session_pid(client: TestClient, db: Session) -> str:
     client.post(
         "/operator/sessions",
         data={"name": "Upload Cards", "code": "upload-cards"},
@@ -72,15 +72,15 @@ def session_id(client: TestClient, db: Session) -> int:
     # session has it switched on, so the card is unreachable without this.
     review_session.relationships_enabled = True
     db.flush()
-    return review_session.id
+    return review_session.public_id
 
 
 @pytest.mark.parametrize("slug", sorted(CARDS))
 def test_upload_card_names_every_column_the_parser_accepts(
-    client: TestClient, session_id: int, slug: str
+    client: TestClient, session_pid: str, slug: str
 ) -> None:
     required, optional = CARDS[slug]
-    body = client.get(f"/operator/sessions/{session_id}/{slug}").text
+    body = client.get(f"/operator/sessions/{session_pid}/{slug}").text
 
     for column in required + optional:
         assert f"<code>{column}</code>" in body, f"{slug}: {column} not named"
@@ -88,12 +88,12 @@ def test_upload_card_names_every_column_the_parser_accepts(
 
 @pytest.mark.parametrize("slug", sorted(LABEL_EXAMPLES))
 def test_upload_card_shows_the_friendly_label_header_suffix(
-    client: TestClient, session_id: int, slug: str
+    client: TestClient, session_pid: str, slug: str
 ) -> None:
     """The `<Slot>.<label>` suffix (§1a) is the sole carrier of friendly tag
     labels through a roster CSV, and nothing else on the page mentions it."""
     column, label = LABEL_EXAMPLES[slug]
-    body = client.get(f"/operator/sessions/{session_id}/{slug}").text
+    body = client.get(f"/operator/sessions/{session_pid}/{slug}").text
 
     assert "keyed into the header after a period" in body
     assert f"<code>{column}.{label}</code>" in body

@@ -19,7 +19,7 @@ from collections.abc import Callable
 
 from playwright.sync_api import Dialog, Page, expect
 
-from ._builder import open_unlocked, rows
+from ._builder import open_unlocked, rows, session_pk
 from .conftest import LiveServer
 
 
@@ -46,7 +46,7 @@ def _reviewers_tab(page: Page):
 
 
 def test_instruments_declined_leave_arms_no_bar(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     card = open_unlocked(page, session_id)
@@ -63,20 +63,21 @@ def test_instruments_declined_leave_arms_no_bar(
     _assert_no_busy_bar(page)
 
 
-def _seed_observers(database_url: str, session_id: int) -> None:
+def _seed_observers(database_url: str, session_id: str) -> None:
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
 
     from app.db.models import Observer, ReviewSession
 
+    pk = session_pk(database_url, session_id)
     engine = create_engine(database_url)
     try:
         with Session(engine) as db:
-            review_session = db.get(ReviewSession, session_id)
+            review_session = db.get(ReviewSession, pk)
             review_session.observers_enabled = True
             db.add(
                 Observer(
-                    session_id=session_id,
+                    session_id=pk,
                     email="watcher@example.org",
                     display_name="Watcher",
                     status="active",
@@ -88,7 +89,7 @@ def _seed_observers(database_url: str, session_id: int) -> None:
 
 
 def test_observers_declined_leave_arms_no_bar(
-    page: Page, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed_observers(live_server.database_url, session_id)

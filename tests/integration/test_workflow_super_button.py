@@ -26,6 +26,7 @@ from app.db.models import (
 )
 from app.services import session_lifecycle as lifecycle
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._public_id import public_id
 
 
 def _make_session(
@@ -47,7 +48,7 @@ def _seed_pair_plus_pinned(
 ) -> ReviewSession:
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -58,7 +59,7 @@ def _seed_pair_plus_pinned(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -83,7 +84,7 @@ def _seed_two_reviewers_plus_pinned(
     an invitation."""
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -95,7 +96,7 @@ def _seed_two_reviewers_plus_pinned(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -125,7 +126,7 @@ def _full_activation(
     if acknowledge_response_loss:
         data["acknowledge_response_loss"] = "true"
     prepare = client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{public_id(session_id)}/workflow/prepare",
         data=data,
         follow_redirects=False,
     )
@@ -134,7 +135,7 @@ def _full_activation(
         {"return_to": return_to} if return_to is not None else {}
     )
     activate = client.post(
-        f"/operator/sessions/{session_id}/workflow/activate",
+        f"/operator/sessions/{public_id(session_id)}/workflow/activate",
         data=activate_data,
         follow_redirects=False,
     )
@@ -190,7 +191,7 @@ def _seed_reverted_session_with_response(
     _attach_response(db, assignment=assignment, key="prepbtn")
 
     client.post(
-        f"/operator/sessions/{review_session.id}/revert",
+        f"/operator/sessions/{review_session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -223,7 +224,7 @@ def _seed_session_with_droppable_response(
     clean either side of the reconcile."""
     review_session = _make_session(client, db, code=code)
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -235,7 +236,7 @@ def _seed_session_with_droppable_response(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -269,7 +270,7 @@ def _seed_session_with_droppable_response(
     _attach_response(db, assignment=self_pair, key="selfpair")
 
     client.post(
-        f"/operator/sessions/{review_session.id}/revert",
+        f"/operator/sessions/{review_session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -351,13 +352,13 @@ def test_prepare_lands_session_in_validated_and_audits(
     review_session = _seed_pair_plus_pinned(client, db, code="happy-prep")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
 
     db.refresh(review_session)
@@ -393,12 +394,12 @@ def test_prepare_redirects_to_session_home_without_return_to(
 ) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="happy-home-prep")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     )
 
 
@@ -407,16 +408,16 @@ def test_activate_redirects_to_session_home_without_return_to(
 ) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="happy-home-act")
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     )
 
 
@@ -432,7 +433,7 @@ def test_activate_with_errors_at_revalidation_stays_validated(
 
     review_session = _seed_pair_plus_pinned(client, db, code="act-4err")
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     db.refresh(review_session)
@@ -448,7 +449,7 @@ def test_activate_with_errors_at_revalidation_stays_validated(
         ],
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
 
@@ -481,14 +482,14 @@ def test_prepare_validate_failure_lands_in_draft_and_audits(
     db.refresh(review_session)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     location = response.headers["location"]
     assert location.startswith(
-        f"/operator/sessions/{review_session.id}/assignments?"
+        f"/operator/sessions/{review_session.public_id}/assignments?"
     )
     assert "super_status=failed" in location
     assert "super_button=prepare" in location
@@ -520,7 +521,7 @@ def test_activate_refuses_when_session_already_ready(
     assert lifecycle.is_ready(review_session)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
@@ -541,7 +542,7 @@ def test_activate_refuses_when_session_not_prepared(
         client, db, code="precondition-draft"
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
@@ -562,7 +563,7 @@ def test_prepare_failure_banner_renders_in_right_column(
 ) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="banner-prep")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
         f"?super_status=failed&super_button=prepare&super_step=validate"
         f"&super_error=has_errors"
     ).text
@@ -577,7 +578,7 @@ def test_activate_failure_banner_renders_in_right_column(
 ) -> None:
     review_session = _seed_pair_plus_pinned(client, db, code="banner-act")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
         f"?super_status=failed&super_button=activate&super_step=activate"
         f"&super_error=needs_acknowledge"
     ).text
@@ -595,7 +596,7 @@ def test_failure_banner_shows_no_text_from_the_url(
     O7)."""
     review_session = _seed_pair_plus_pinned(client, db, code="banner-url")
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"?super_status=failed&super_button=activate&super_step=activate"
         f"&super_error=Your+session+is+compromised.+Call+555-0100."
     ).text
@@ -622,13 +623,13 @@ def test_prepare_runs_through_when_reconcile_deletes_no_responses(
     assert _response_count(db, review_session.id) == 1
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
 
     db.refresh(review_session)
@@ -647,13 +648,13 @@ def test_prepare_detours_when_reconcile_would_delete_responses(
     assert _response_count(db, review_session.id) == 1
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments?prepare_confirm=responses"
     )
 
@@ -674,7 +675,7 @@ def test_prepare_acknowledged_loss_regenerates_and_validates(
     assert _response_count(db, review_session.id) == 1
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={
             "return_to": "assignments",
             "acknowledge_response_loss": "true",
@@ -683,7 +684,7 @@ def test_prepare_acknowledged_loss_regenerates_and_validates(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
 
     db.refresh(review_session)
@@ -701,7 +702,7 @@ def test_prepare_confirm_banner_renders_on_host_page(
         client, db, code="loss-banner"
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments?prepare_confirm=responses"
     ).text
     assert 'id="next-action-prepare-confirm-banner"' in body
@@ -723,7 +724,7 @@ def test_prepare_confirm_param_ignored_when_no_responses_lost(
         client, db, code="no-banner"
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/assignments?prepare_confirm=responses"
     ).text
     assert 'id="next-action-prepare-confirm-banner"' not in body
@@ -758,7 +759,7 @@ def test_workflow_close_flips_ready_to_expired_and_closes_instruments(
     assert open_instrument_ids_pre, "test seed should leave ≥1 open instrument"
 
     resp = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -797,7 +798,7 @@ def test_workflow_close_rejects_when_session_not_ready(
     assert lifecycle.is_draft(review_session)
 
     resp = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -816,14 +817,14 @@ def test_revert_from_expired_returns_session_to_draft(
     review_session = _seed_pair_plus_pinned(client, db, code="revert-expired")
     _full_activation(client, review_session.id)
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     db.refresh(review_session)
     assert lifecycle.is_expired(review_session)
 
     resp = client.post(
-        f"/operator/sessions/{review_session.id}/revert",
+        f"/operator/sessions/{review_session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -850,11 +851,11 @@ def test_revert_from_expired_preserves_responses(
     response_id = _attach_response(db, assignment=assignment, key="kept")
 
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/close",
+        f"/operator/sessions/{review_session.public_id}/workflow/close",
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/revert",
+        f"/operator/sessions/{review_session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -888,7 +889,7 @@ def _failure_banner(
     client: TestClient, session_id: int, *, button: str, step: str
 ) -> str:
     return client.get(
-        f"/operator/sessions/{session_id}/assignments"
+        f"/operator/sessions/{public_id(session_id)}/assignments"
         f"?super_status=failed&super_button={button}&super_step={step}"
         f"&super_error=Boom."
     ).text
@@ -1009,7 +1010,7 @@ def test_prepare_creates_one_invitation_per_eligible_reviewer(
     review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-1")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1091,7 +1092,7 @@ def test_a_failed_validation_creates_no_invitations(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -1155,14 +1156,14 @@ def test_re_prepare_is_additive_and_preserves_existing_tokens(
         )
     ).scalar_one()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-inactivate",
         data={"reviewer_ids": [latecomer.id]},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     first = db.execute(
@@ -1173,14 +1174,14 @@ def test_re_prepare_is_additive_and_preserves_existing_tokens(
     assert first.reviewer_id != latecomer.id
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-reactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-reactivate",
         data={"reviewer_ids": [latecomer.id]},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1243,7 +1244,7 @@ def test_the_create_invites_route_is_gone(
     """
     review_session = _seed_pair_plus_pinned(client, db, code="prep-inv-btn")
     client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     rows = list(
@@ -1256,7 +1257,7 @@ def test_the_create_invites_route_is_gone(
     assert len(rows) == 1, "Prepare is the creator now; it made nothing"
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/invitations/generate",
+        f"/operator/sessions/{review_session.public_id}/invitations/generate",
         follow_redirects=False,
     )
     assert response.status_code == 404, (

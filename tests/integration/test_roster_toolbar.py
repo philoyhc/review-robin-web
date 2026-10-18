@@ -164,7 +164,7 @@ def _seed(db: Session, sid: int, page: str, n: int = 3) -> list[int]:
     return [r.id for r in rows]
 
 
-def _base(sid: int, page: str) -> str:
+def _base(sid: str, page: str) -> str:
     return f"/operator/sessions/{sid}/{page}"
 
 
@@ -180,7 +180,7 @@ def test_the_filter_strip_renders_in_the_toolbars_right_pane(
     match the one that did NOT move."""
     rs = _make_session(client, db, f"tb-r-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page)).text)
+    html = _markup(client.get(_base(rs.public_id, page)).text)
 
     assert '<div class="table-card-toolbar is-split">' in html
     right = _pane(html, "right")
@@ -209,7 +209,7 @@ def test_the_left_pane_holds_the_chips_and_the_count_line(
     """
     rs = _make_session(client, db, f"tb-l-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + "?q=Re0").text)
+    html = _markup(client.get(_base(rs.public_id, page) + "?q=Re0").text)
 
     left = _pane(html, "left")
     assert 'class="col-chip-row"' in left, "the chip row is not in the left pane"
@@ -233,7 +233,7 @@ def test_the_pager_is_in_the_left_pane_too(
     """
     rs = _make_session(client, db, f"tb-p-{page[:4]}")
     _seed(db, rs.id, page, n=_PAGE_SIZE + 5)
-    html = _markup(client.get(_base(rs.id, page)).text)
+    html = _markup(client.get(_base(rs.public_id, page)).text)
 
     left = _pane(html, "left")
     assert "table-pager-cluster" in left, "the pager is not in the left pane"
@@ -250,7 +250,7 @@ def test_the_chip_row_carries_no_inline_margin_in_the_pane(
     row kept a 12px tail its sibling panes on Reviewers do not have."""
     rs = _make_session(client, db, f"tb-m-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page)).text)
+    html = _markup(client.get(_base(rs.public_id, page)).text)
 
     chip_row = re.search(r'<p class="col-chip-row"[^>]*>', html)
     assert chip_row, "no chip row"
@@ -277,7 +277,7 @@ def test_a_filter_matching_nothing_still_renders_the_strip(
     that needs them — no way out but the URL bar."""
     rs = _make_session(client, db, f"tb-n-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + "?q=zzzznomatch").text)
+    html = _markup(client.get(_base(rs.public_id, page) + "?q=zzzznomatch").text)
 
     right = _pane(html, "right")
     assert ">Clear</a>" in right, "no way out of a filter matching nothing"
@@ -314,7 +314,7 @@ def test_an_empty_roster_still_offers_a_LIVE_add_new(
     rs = _make_session(client, db, f"tb-e-{page[:4]}")
     if page == "relationships":
         _seed(db, rs.id, "reviewees", n=2)
-    html = _markup(client.get(_base(rs.id, page)).text)
+    html = _markup(client.get(_base(rs.public_id, page)).text)
 
     assert '<div class="table-card-toolbar is-split">' in html, (
         "the whole card went with the empty table"
@@ -344,7 +344,7 @@ def test_a_locked_session_offers_no_add_new_at_all(
         _seed(db, rs.id, page)
         rs.status = status
         db.commit()
-        html = _markup(client.get(_base(rs.id, page)).text)
+        html = _markup(client.get(_base(rs.public_id, page)).text)
 
         right = _pane(html, "right")
         assert ">Add new</a>" not in right, (status, page)
@@ -365,7 +365,7 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     a rule scoped to `.toolbar-right` that actually reaches it."""
     rs = _make_session(client, db, f"tb-k-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    response = client.get(_base(rs.id, page) + f"?edit_id={ids[0]}")
+    response = client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}")
     html = response.text
 
     # Vacuity guard: a typo'd `edit_id` is ignored silently.
@@ -414,7 +414,7 @@ def test_the_filter_and_clear_keep_the_landing_fragment(
     19J.8 and these take the same anchor."""
     rs = _make_session(client, db, f"tb-f-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + "?q=Re0").text)
+    html = _markup(client.get(_base(rs.public_id, page) + "?q=Re0").text)
 
     anchor = f"{page}-table-card"
     right = _pane(html, "right")
@@ -442,7 +442,7 @@ def test_add_new_still_carries_the_active_filter_and_lands_on_the_row(
     """
     rs = _make_session(client, db, f"tb-a-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + "?status=active&q=Re0").text)
+    html = _markup(client.get(_base(rs.public_id, page) + "?status=active&q=Re0").text)
 
     link = re.search(r'href="([^"]*\?add=1[^"]*)"', _pane(html, "right"))
     assert link, "no live Add new link"
@@ -464,7 +464,7 @@ def test_the_landing_anchor_id_is_on_exactly_one_element(
     rs = _make_session(client, db, f"tb-i-{page[:4]}")
     _seed(db, rs.id, page)
     for query in ("", "?q=zzzznomatch"):
-        html = _markup(client.get(_base(rs.id, page) + query).text)
+        html = _markup(client.get(_base(rs.public_id, page) + query).text)
         assert html.count(f'id="{page}-table-card"') == 1, (query, page)
 
 

@@ -34,6 +34,7 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._validated import validate_session
+from ._public_id import public_id
 
 # Emails are deliberately in the **reverse** of name order.
 #
@@ -104,7 +105,7 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
         ("reviewees", reviewees),
     ):
         resp = client.post(
-            f"/operator/sessions/{s.id}/{path}/import",
+            f"/operator/sessions/{s.public_id}/{path}/import",
             files={"file": ("r.csv", payload.encode(), "text/csv")},
             follow_redirects=False,
         )
@@ -113,9 +114,9 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
     pin_full_matrix_on_all_instruments(db, s.id)
     generate_via_page_button(client, s.id)
     validate_session(s)
-    client.get(f"/operator/sessions/{s.id}/assignments")
+    client.get(f"/operator/sessions/{s.public_id}/assignments")
     resp = client.post(
-        f"/operator/sessions/{s.id}/activate",
+        f"/operator/sessions/{s.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -127,12 +128,13 @@ def _seed(client: TestClient, db: Session, code: str) -> ReviewSession:
 def _sorted_body(
     client: TestClient, session_id: int, page: str, key: str, direction: str
 ) -> str:
+    pid = public_id(session_id)
     client.cookies.set(
-        f"rrw-sort-{page}-{session_id}",
+        f"rrw-sort-{page}-{pid}",
         json.dumps([{"key": key, "dir": direction}]),
-        path=f"/operator/sessions/{session_id}",
+        path=f"/operator/sessions/{pid}",
     )
-    return client.get(f"/operator/sessions/{session_id}/{page}").text
+    return client.get(f"/operator/sessions/{pid}/{page}").text
 
 
 # --------------------------------------------------------------------------- #
@@ -175,7 +177,7 @@ def test_invitations_sort_reaches_through_the_row_wrapper(
     # Unsorted first — `client.cookies` persists, so a fetch after
     # `_sorted_body` would still carry the cookie and prove nothing.
     unsorted = _rows(
-        client.get(f"/operator/sessions/{s.id}/invitations").text
+        client.get(f"/operator/sessions/{s.public_id}/invitations").text
     )
     assert [unsorted.find(n) for n in DEFAULT_ORDER] == sorted(
         unsorted.find(n) for n in DEFAULT_ORDER
@@ -191,7 +193,7 @@ def test_invitations_unsorted_without_a_cookie(
 ) -> None:
     """No cookie ⇒ no reordering: the builder's email order survives."""
     s = _seed(client, db, "inv-sort-none")
-    rows = _rows(client.get(f"/operator/sessions/{s.id}/invitations").text)
+    rows = _rows(client.get(f"/operator/sessions/{s.public_id}/invitations").text)
     positions = [rows.find(n) for n in DEFAULT_ORDER]
     assert positions == sorted(positions)
 
@@ -230,9 +232,9 @@ def test_both_tables_carry_the_sort_markers(
         ("invitations", "invitations-table"),
         ("responses", "responses-table"),
     ):
-        body = client.get(f"/operator/sessions/{s.id}/{page}").text
+        body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
         assert f'<table id="{table}"' in body
-        assert f'data-rrw-sortable="rrw-sort-{page}-{s.id}"' in body
+        assert f'data-rrw-sortable="rrw-sort-{page}-{s.public_id}"' in body
         assert '<tbody class="rrw-rows">' in body
         # The table sits inside `.table-scroll` (base.html). Without
         # it, rung 3's tag columns pushed Invitations past its card at
@@ -278,9 +280,9 @@ def test_both_pages_render_the_tag_columns(
     the service or query layer changed, so nothing there would fail if
     the columns silently stopped rendering."""
     s = _seed(client, db, "ops-tags")
-    inv = _rows(client.get(f"/operator/sessions/{s.id}/invitations").text)
+    inv = _rows(client.get(f"/operator/sessions/{s.public_id}/invitations").text)
     assert "Team B" in inv and "Cohort 2" in inv
-    resp = _rows(client.get(f"/operator/sessions/{s.id}/responses").text)
+    resp = _rows(client.get(f"/operator/sessions/{s.public_id}/responses").text)
     assert "Group A" in resp and "Wave 2" in resp
 
 
@@ -300,7 +302,7 @@ def test_an_empty_tag_slot_renders_no_chip_and_no_column(
     left the empty column **visible**."""
     s = _seed(client, db, "ops-tags-empty")
     for page in ("invitations", "responses"):
-        body = client.get(f"/operator/sessions/{s.id}/{page}").text
+        body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
         chips = body[
             body.index('class="col-chip-row"') : body.index("</p>", body.index('class="col-chip-row"'))
         ]
@@ -330,7 +332,7 @@ def test_both_pages_declare_the_shared_primitive(
         ("invitations", "invitations-table", "rrw-invitation-tag-visibility"),
         ("responses", "responses-table", "rrw-response-tag-visibility"),
     ):
-        body = client.get(f"/operator/sessions/{s.id}/{page}").text
+        body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
         assert f'data-rrw-col-toggles="{key}"' in body
         assert f'data-col-toggles-for="{table}"' in body
         # The page's own slot -> column-class mapping, which the shared

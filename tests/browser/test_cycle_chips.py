@@ -20,10 +20,11 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
+from ._builder import session_pk
 from .conftest import LiveServer
 
 
-def _tagged_session(api: httpx.Client, tags: str) -> int:
+def _tagged_session(api: httpx.Client, tags: str) -> str:
     code = f"c{uuid.uuid4().hex[:8]}"
     response = api.post(
         "/operator/sessions",
@@ -31,7 +32,7 @@ def _tagged_session(api: httpx.Client, tags: str) -> int:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return int(response.headers["location"].split("?")[0].rsplit("/", 1)[1])
+    return response.headers["location"].split("?")[0].rsplit("/", 1)[1]
 
 
 def _fill(chip: Locator) -> str:
@@ -78,7 +79,9 @@ def test_archived_select_all_chip_stays_dark(
     engine = create_engine(live_server.database_url)
     try:
         with Session(engine) as db:
-            db.get(ReviewSession, session_id).status = "archived"
+            db.get(
+                ReviewSession, session_pk(live_server.database_url, session_id)
+            ).status = "archived"
             db.commit()
     finally:
         engine.dispose()
@@ -100,7 +103,7 @@ EXTRACT_CYCLE_CHIPS = (
 
 
 def test_extract_empty_row_chips_stay_dark(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     page.goto(f"/operator/sessions/{session_id}/extract-data")

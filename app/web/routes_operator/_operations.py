@@ -158,7 +158,7 @@ def _page_operations_rows(
     )
 
 
-def _invitation_redirect_url(session_id: int, return_to: str | None) -> str:
+def _invitation_redirect_url(session_id: str, return_to: str | None) -> str:
     """Resolve the redirect target for an invitation action. ``return_to``
     overrides only when it matches the operations-row allowlist; otherwise
     fall back to the consolidated Invitations page."""
@@ -208,7 +208,7 @@ def validate_session(
     activate_banner: dict[str, object] | None = None
     # A chip change made from the banner keeps its chips through the
     # redirect, so the page it lands on remembers them.
-    clean_url = f"/operator/sessions/{review_session.id}/validate"
+    clean_url = f"/operator/sessions/{review_session.public_id}/validate"
     if severity is not None:
         clean_url += "?" + urlencode([("severity", value) for value in severity])
     if activate:
@@ -291,7 +291,7 @@ def previews_index(
 ) -> RedirectResponse:
     """Keep old Previews bookmarks useful after the hub's retirement."""
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
@@ -311,7 +311,7 @@ def session_preview(
     semantics for stragglers.
     """
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/preview-surface/1",
+        url=f"/operator/sessions/{review_session.public_id}/preview-surface/1",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
@@ -441,7 +441,7 @@ def invitations_index(
         all_rows,
         views.decode_cookie_sort_spec(
             cookies=dict(request.cookies),
-            cookie_name=f"rrw-sort-invitations-{review_session.id}",
+            cookie_name=f"rrw-sort-invitations-{review_session.public_id}",
             valid_keys=_INVITATIONS_SORT_KEYS,
         ),
         value_resolver=_invitations_sort_value,
@@ -543,7 +543,7 @@ def invitations_index(
             # sort cookie either, which is a cookie and travels on
             # its own.
             "pager_url_base": (
-                f"/operator/sessions/{review_session.id}/invitations?"
+                f"/operator/sessions/{review_session.public_id}/invitations?"
             ),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
@@ -743,7 +743,7 @@ def invitation_reviewer_detail_legacy(
     invitation, review_session = bundle
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}"
+            f"/operator/sessions/{review_session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
         ),
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
@@ -776,7 +776,7 @@ def invitations_send_all(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=_invitation_redirect_url(review_session.id, return_to),
+        url=_invitation_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -800,7 +800,7 @@ def invitations_regenerate_all(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -822,7 +822,7 @@ def invitations_regenerate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -883,7 +883,7 @@ def invitations_send_one(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -910,7 +910,7 @@ def session_monitoring_redirect(
     forward to ``/invitations``, the house rule for a moved GET
     (``spec/architecture.md``; findings F4, 2026-10-03)."""
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
 
@@ -950,7 +950,7 @@ def session_responses(
         all_rows,
         views.decode_cookie_sort_spec(
             cookies=dict(request.cookies),
-            cookie_name=f"rrw-sort-responses-{review_session.id}",
+            cookie_name=f"rrw-sort-responses-{review_session.public_id}",
             valid_keys=_RESPONSES_SORT_KEYS,
         ),
         value_resolver=_responses_sort_value,
@@ -1014,7 +1014,7 @@ def session_responses(
             # sort cookie either, which is a cookie and travels on
             # its own.
             "pager_url_base": (
-                f"/operator/sessions/{review_session.id}/responses?"
+                f"/operator/sessions/{review_session.public_id}/responses?"
             ),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
@@ -1147,7 +1147,7 @@ def invitations_remind_one(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/invitations",
+        url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -1178,7 +1178,7 @@ def invitations_remind_incomplete(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=_invitation_redirect_url(review_session.id, return_to),
+        url=_invitation_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

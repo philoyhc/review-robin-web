@@ -46,7 +46,7 @@ def test_observers_route_404_when_flag_off(
 ) -> None:
     review_session = _make_session(client, db, "obs-off")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     )
     assert response.status_code == 404
 
@@ -57,7 +57,7 @@ def test_observers_route_200_when_flag_on(
     review_session = _make_session(client, db, "obs-on")
     _enable_observers(db, review_session)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     )
     assert response.status_code == 200
 
@@ -70,10 +70,10 @@ def test_observers_nav_tab_hidden_when_flag_off(
 ) -> None:
     review_session = _make_session(client, db, "obs-nav-off")
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     ).text
     assert (
-        f'href="/operator/sessions/{review_session.id}/observers"'
+        f'href="/operator/sessions/{review_session.public_id}/observers"'
         not in body
     )
 
@@ -84,10 +84,10 @@ def test_observers_nav_tab_visible_when_flag_on(
     review_session = _make_session(client, db, "obs-nav-on")
     _enable_observers(db, review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
     ).text
     assert (
-        f'href="/operator/sessions/{review_session.id}/observers"'
+        f'href="/operator/sessions/{review_session.public_id}/observers"'
         in body
     )
 
@@ -103,7 +103,7 @@ def test_observers_page_renders_core_cards(
     review_session = _make_session(client, db, "obs-cards")
     _enable_observers(db, review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
     assert 'id="upload-csv"' in body
     assert "Upload Observers" in body
@@ -128,7 +128,7 @@ def test_observers_page_danger_zone_shows_when_rows_exist(
     )
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
     assert "Danger Zone" in body
     assert "Delete all observers" in body
@@ -156,7 +156,7 @@ def test_observers_page_renders_seeded_rows(
     )
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
     assert "zoe@example.org" in body
     assert "alex@example.org" in body
@@ -175,7 +175,7 @@ def test_observer_create_persists_and_redirects(
     review_session = _make_session(client, db, "obs-create")
     _enable_observers(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/create",
+        f"/operator/sessions/{review_session.public_id}/observers/create",
         data={
             "email": "new@example.org",
             "display_name": "New",
@@ -210,7 +210,7 @@ def test_observer_create_rejects_duplicate_email(
     )
     db.commit()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/create",
+        f"/operator/sessions/{review_session.public_id}/observers/create",
         data={
             "email": "dupe@example.org",
             "display_name": "Second",
@@ -238,7 +238,7 @@ def test_observer_update_changes_fields(
     db.commit()
     db.refresh(observer)
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/observers/{observer.id}/update",
         data={
             "email": "new@example.org",
@@ -276,7 +276,7 @@ def test_observer_bulk_inactivate(
     db.refresh(o1)
     db.refresh(o2)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/observers/bulk-inactivate",
         data={"observer_ids": [o1.id, o2.id]},
         follow_redirects=False,
     )
@@ -308,7 +308,7 @@ def test_observer_cohort_rule_save_persists_to_selected(
     db.refresh(o3)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [o1.id, o2.id],
             "cohort_combinator": "OR",
@@ -346,7 +346,7 @@ def test_observer_cohort_rule_save_rejects_empty_selection(
     review_session = _make_session(client, db, "obs-cohort-empty")
     _enable_observers(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={"cohort_combinator": "AND"},
         follow_redirects=False,
     )
@@ -369,7 +369,7 @@ def test_observer_cohort_rule_save_refuses_a_value_without_a_field(
     db.refresh(obs)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "AND",
@@ -403,7 +403,7 @@ def test_observer_cohort_rule_save_of_blank_cells_clears_the_rule(
     db.commit()
     db.refresh(obs)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "AND",
@@ -442,7 +442,7 @@ def test_observer_cohort_rule_round_trips_into_template(
     db.refresh(o2)
 
     save_response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [o1.id],
             "cohort_combinator": "AND",
@@ -456,7 +456,7 @@ def test_observer_cohort_rule_round_trips_into_template(
     assert save_response.status_code == 303
 
     get_response = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     )
     assert get_response.status_code == 200
     body = get_response.text
@@ -485,7 +485,7 @@ def test_observer_cohort_rule_save_allowed_when_session_is_ready(
     db.refresh(obs)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "AND",
@@ -528,7 +528,7 @@ def test_observer_cohort_rule_save_rejected_when_session_is_archived(
     db.refresh(obs)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "AND",
@@ -561,7 +561,7 @@ def test_an_archived_session_refuses_any_observer_edit_by_name(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/observers/bulk-inactivate",
         data={"observer_ids": [obs.id]},
         follow_redirects=False,
     )
@@ -591,7 +591,7 @@ def test_observer_cohort_rule_save_pads_short_operand_arrays(
     db.refresh(obs)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "AND",
@@ -627,7 +627,7 @@ def test_observer_cohort_rule_save_rejects_cross_session_ids(
     db.refresh(foreign)
 
     response = client.post(
-        f"/operator/sessions/{session_a.id}/observers/cohort-rule",
+        f"/operator/sessions/{session_a.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [foreign.id],
             "cohort_combinator": "AND",
@@ -665,7 +665,7 @@ def test_observer_cohort_rule_save_rejects_unknown_combinator(
     db.refresh(obs)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "XOR",
@@ -692,7 +692,7 @@ def test_observer_cohort_rule_save_rejects_invalid_payload(
     db.refresh(obs)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/cohort-rule",
+        f"/operator/sessions/{review_session.public_id}/observers/cohort-rule",
         data={
             "observer_ids": [obs.id],
             "cohort_combinator": "AND",
@@ -727,7 +727,7 @@ def test_observer_delete_all_clears_roster(
     )
     db.commit()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/delete-all",
+        f"/operator/sessions/{review_session.public_id}/observers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -749,7 +749,7 @@ def test_observer_csv_import_persists(
         b"y@example.org,Yara,\n"
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/import",
+        f"/operator/sessions/{review_session.public_id}/observers/import",
         files={"file": ("o.csv", csv_bytes, "text/csv")},
         follow_redirects=False,
     )
@@ -771,7 +771,7 @@ def test_observer_csv_import_rejects_missing_email_column(
     review_session = _make_session(client, db, "obs-bad-csv")
     _enable_observers(db, review_session)
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/import",
+        f"/operator/sessions/{review_session.public_id}/observers/import",
         files={
             "file": ("o.csv", b"ObserverName\nXavier\n", "text/csv"),
         },
@@ -790,11 +790,11 @@ def test_observers_page_marks_observers_nav_tab_active(
     review_session = _make_session(client, db, "obs-active")
     _enable_observers(db, review_session)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
     assert 'class="nav-tab active"' in body
     assert (
-        f'class="nav-tab active"\n       href="/operator/sessions/{review_session.id}/observers"'
+        f'class="nav-tab active"\n       href="/operator/sessions/{review_session.public_id}/observers"'
         in body
     )
 
@@ -841,7 +841,7 @@ def test_the_filter_strip_sits_in_the_tables_toolbar(
 ) -> None:
     review_session = _observers_page(client, db, "obs-toolbar")
     body = _markup(
-        client.get(f"/operator/sessions/{review_session.id}/observers").text
+        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     )
 
     import re as _re
@@ -899,7 +899,7 @@ def test_the_left_pane_is_deliberately_chipless(
     # Seeded past the 200-row cap: a two-row fixture renders neither and
     # would have found an empty pane, proving nothing.
     review_session = _observers_page(client, db, "obs-chipless", rows=230)
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     import re as _re
 
@@ -933,7 +933,7 @@ def test_the_operator_actions_card_is_retired(
     """
     review_session = _observers_page(client, db, "obs-retired")
     body = _markup(
-        client.get(f"/operator/sessions/{review_session.id}/observers").text
+        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     )
 
     assert 'class="card operator-actions-card"' not in body
@@ -971,7 +971,7 @@ def test_the_moved_filter_locks_while_a_row_is_being_edited(
     row_id = db.execute(
         select(Observer.id).where(Observer.session_id == review_session.id)
     ).scalars().first()
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     import re as _re
 
@@ -1035,7 +1035,7 @@ def test_add_new_is_absent_on_an_archived_session(
     review_session.status = "archived"
     db.commit()
     body = _markup(
-        client.get(f"/operator/sessions/{review_session.id}/observers").text
+        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     )
 
     assert ">Add new</a>" not in body, (
@@ -1057,7 +1057,7 @@ def test_every_filter_control_lands_on_the_table_card(
     and Clear take the same anchor so they land identically.
     """
     review_session = _observers_page(client, db, "obs-anchor")
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
     body = _markup(client.get(f"{base}?status=active&q=o1").text)
 
     import re as _re
@@ -1086,7 +1086,7 @@ def test_a_filter_matching_nothing_keeps_the_control_that_clears_it(
     review_session = _observers_page(client, db, "obs-nomatch")
     body = _markup(
         client.get(
-            f"/operator/sessions/{review_session.id}/observers?q=zzzznope"
+            f"/operator/sessions/{review_session.public_id}/observers?q=zzzznope"
         ).text
     )
 
@@ -1108,7 +1108,7 @@ def test_an_empty_roster_still_offers_add_new(
     them."""
     review_session = _observers_page(client, db, "obs-empty", rows=0)
     body = _markup(
-        client.get(f"/operator/sessions/{review_session.id}/observers").text
+        client.get(f"/operator/sessions/{review_session.public_id}/observers").text
     )
 
     assert "No observers yet." in body

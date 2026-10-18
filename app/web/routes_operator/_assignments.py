@@ -132,7 +132,7 @@ _STATUS_VALUES = {key for key, _ in views.ASSIGNMENTS_STATUS_OPTIONS}
 
 
 def _assignments_url(
-    session_id: int,
+    session_id: str,
     filter_q: str = "",
     search_by: str = "all",
     status: str = "all",
@@ -195,7 +195,7 @@ def _render_assignments_hub(
     # sort is applied by the query rather than to its result.
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
-        cookie_name=f"rrw-sort-assignments-{review_session.id}",
+        cookie_name=f"rrw-sort-assignments-{review_session.public_id}",
         valid_keys=_ASSIGNMENT_SORT_KEYS,
     )
     is_filtered = bool(q or filter_status in _STATUS_VALUES)
@@ -338,7 +338,7 @@ def _render_assignments_hub(
                 )
             ),
             "pager_url_base": (
-                f"/operator/sessions/{review_session.id}/assignments?"
+                f"/operator/sessions/{review_session.public_id}/assignments?"
             ),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
@@ -430,7 +430,7 @@ def assignments_generate(
     if existing > 0 and confirm_replace != "true":
         return RedirectResponse(
             url=(
-                f"/operator/sessions/{review_session.id}/assignments"
+                f"/operator/sessions/{review_session.public_id}/assignments"
                 f"?needs_confirm=1"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
@@ -446,7 +446,7 @@ def assignments_generate(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=f"/operator/sessions/{review_session.public_id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -457,7 +457,7 @@ def assignments_generate(
     response_model=None,
 )
 def assignments_instrument_self_reviews_active(
-    session_id: int,
+    session_id: str,
     active: str = Form(...),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -488,7 +488,7 @@ def assignments_instrument_self_reviews_active(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}/assignments",
+        url=f"/operator/sessions/{review_session.public_id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -499,7 +499,7 @@ def assignments_instrument_self_reviews_active(
     response_model=None,
 )
 def assignments_bulk_inactivate(
-    session_id: int,
+    session_id: str,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
@@ -522,7 +522,7 @@ def assignments_bulk_inactivate(
     )
     return RedirectResponse(
         url=_assignments_url(
-            review_session.id, filter_q, filter_search_by, filter_status
+            review_session.public_id, filter_q, filter_search_by, filter_status
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -534,7 +534,7 @@ def assignments_bulk_inactivate(
     response_model=None,
 )
 def assignments_bulk_activate(
-    session_id: int,
+    session_id: str,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
@@ -557,7 +557,7 @@ def assignments_bulk_activate(
     )
     return RedirectResponse(
         url=_assignments_url(
-            review_session.id, filter_q, filter_search_by, filter_status
+            review_session.public_id, filter_q, filter_search_by, filter_status
         ),
         status_code=status.HTTP_303_SEE_OTHER,
     )

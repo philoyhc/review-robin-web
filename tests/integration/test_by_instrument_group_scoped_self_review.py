@@ -110,7 +110,7 @@ def test_group_scoped_self_review_row_reads_TRUE(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200
@@ -181,7 +181,7 @@ def test_group_scoped_non_member_row_reads_FALSE(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200

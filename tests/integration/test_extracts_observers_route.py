@@ -53,7 +53,7 @@ def _seed_observers(
     client: TestClient, review_session: ReviewSession
 ) -> None:
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/observers",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
         files={"file": ("obs.csv", OBSERVER_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -104,7 +104,7 @@ def test_observers_row_lights_up_after_population(
     assert by_key["observers"].count == 1
     assert by_key["observers"].is_wired is True
     assert by_key["observers"].download_url == (
-        f"/operator/sessions/{review_session.id}/export/observers.csv"
+        f"/operator/sessions/{review_session.public_id}/export/observers.csv"
     )
 
 
@@ -137,7 +137,7 @@ def test_export_observers_csv_round_trips_uploaded_row(
     _seed_observers(client, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/observers.csv"
+        f"/operator/sessions/{review_session.public_id}/export/observers.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -180,7 +180,7 @@ def test_setup_bundle_includes_observers_when_toggle_on(
     _seed_observers(client, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
     )
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -197,7 +197,7 @@ def test_setup_bundle_omits_observers_when_toggle_off(
     )
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/bundle.zip"
     )
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))

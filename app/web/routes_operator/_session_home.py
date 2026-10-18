@@ -164,7 +164,7 @@ def session_edit_redirect(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}?editing=1#session-config",
+        url=f"/operator/sessions/{review_session.public_id}?editing=1#session-config",
         # 308 (not 301) preserves the GET method and matches the other
         # legacy-URL shim (``/preview`` → operations); audit R11.
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
@@ -548,7 +548,7 @@ def session_config_submit(
         # No ``#session-config``: the page's own script restores the
         # operator's scroll position, and a fragment would scroll the
         # card's top edge into view first (19U Item 4).
-        url=f"/operator/sessions/{review_session.id}?editing=1",
+        url=f"/operator/sessions/{review_session.public_id}?editing=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -573,7 +573,7 @@ def session_delete_data(
         correlation_id=request_correlation_id(),
     )
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.id}",
+        url=f"/operator/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -630,7 +630,7 @@ def session_activate(
         # (audit R2).
         return RedirectResponse(
             url=_redirect_url(
-                review_session.id,
+                review_session.public_id,
                 return_to,
                 super_status="failed",
                 super_button="activate",
@@ -639,7 +639,7 @@ def session_activate(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    target = f"/operator/sessions/{review_session.id}"
+    target = f"/operator/sessions/{review_session.public_id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
     return RedirectResponse(
@@ -666,7 +666,7 @@ def session_revert_to_draft(
         )
     except lifecycle.LifecycleError as exc:
         raise _lifecycle_error_response(exc) from exc
-    target = f"/operator/sessions/{review_session.id}"
+    target = f"/operator/sessions/{review_session.public_id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
     return RedirectResponse(
@@ -678,7 +678,7 @@ def session_revert_to_draft(
 # --- Per-session owner management (Segment 16B PR 2) ----------------------
 
 
-def _owners_redirect_url(session_id: int, error_code: str | None = None) -> str:
+def _owners_redirect_url(session_id: str, error_code: str | None = None) -> str:
     # Owner add/remove land back on Session Home's Owners card. 19S Item
     # 10 moved it out of the details card, so no ``?editing=1``: the
     # card is editable without unlocking the details.
@@ -711,7 +711,7 @@ def session_owners_add(
     ).scalar_one_or_none()
     if target is None:
         return RedirectResponse(
-            url=_owners_redirect_url(review_session.id, "not_in_workspace"),
+            url=_owners_redirect_url(review_session.public_id, "not_in_workspace"),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     # Segment 18S Item 3 — self-only for the relaxed (non-owner sys-admin)
@@ -723,7 +723,7 @@ def session_owners_add(
     if not permissions.user_can_view_session(db, actor, review_session.id):
         if target.id != actor.id:
             return RedirectResponse(
-                url=_owners_redirect_url(review_session.id, "self_only"),
+                url=_owners_redirect_url(review_session.public_id, "self_only"),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
     try:
@@ -736,11 +736,11 @@ def session_owners_add(
         )
     except session_owners.OwnerOperationError as exc:
         return RedirectResponse(
-            url=_owners_redirect_url(review_session.id, exc.code),
+            url=_owners_redirect_url(review_session.public_id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     return RedirectResponse(
-        url=_owners_redirect_url(review_session.id),
+        url=_owners_redirect_url(review_session.public_id),
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -775,7 +775,7 @@ def session_owners_remove(
         if status_code == status.HTTP_409_CONFLICT:
             raise HTTPException(status_code=status_code, detail=exc.message) from exc
         return RedirectResponse(
-            url=_owners_redirect_url(review_session.id, exc.code),
+            url=_owners_redirect_url(review_session.public_id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     # Removing yourself leaves Session Home a 404 for you, so land on the
@@ -785,6 +785,6 @@ def session_owners_remove(
             url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
         )
     return RedirectResponse(
-        url=_owners_redirect_url(review_session.id),
+        url=_owners_redirect_url(review_session.public_id),
         status_code=status.HTTP_303_SEE_OTHER,
     )

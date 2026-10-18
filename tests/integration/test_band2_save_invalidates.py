@@ -14,12 +14,13 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AuditEvent, Instrument, ReviewSession
 
+from ._public_id import public_id
 from .test_instrument_builder_routes import _band2_rfs, _instrument, _make_session
 
 
 def _post(client: TestClient, session_id: int, instrument_id: int, rfs: list[dict]):
     return client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/band2-state",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}/band2-state",
         json={"selected_display_keys": ["reviewee.name"], "response_fields": rfs},
     )
 

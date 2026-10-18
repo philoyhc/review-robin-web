@@ -51,7 +51,7 @@ def test_the_delete_route_answers_by_editability(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/instruments/{iid}/delete",
+        f"/operator/sessions/{s.public_id}/instruments/{iid}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -75,7 +75,7 @@ def test_a_locked_session_keeps_its_instrument_assignment_and_response(
     db.commit()
 
     client.post(
-        f"/operator/sessions/{s.id}/instruments/{iid}/delete",
+        f"/operator/sessions/{s.public_id}/instruments/{iid}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -97,7 +97,7 @@ def test_an_editable_session_still_deletes(
     db.commit()
 
     client.post(
-        f"/operator/sessions/{s.id}/instruments/{iid}/delete",
+        f"/operator/sessions/{s.public_id}/instruments/{iid}/delete",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -118,7 +118,7 @@ def test_the_page_offers_delete_exactly_where_the_route_allows_it(
     s.status = state
     db.commit()
 
-    page = client.get(f"/operator/sessions/{s.id}/instruments").text
+    page = client.get(f"/operator/sessions/{s.public_id}/instruments").text
 
     if state in EDITABLE:
         assert _live_delete_buttons(page) > 0, state
@@ -136,7 +136,7 @@ def test_the_card_lock_toggle_is_disabled_on_every_locked_state(
     s.status = state
     db.commit()
 
-    page = client.get(f"/operator/sessions/{s.id}/instruments").text
+    page = client.get(f"/operator/sessions/{s.public_id}/instruments").text
     unlocks = re.findall(r"<a[^>]*data-instrument-unlock-toggle[^>]*>", page, re.S)
 
     assert unlocks, state
@@ -160,7 +160,7 @@ def test_editing_query_param_cannot_open_a_card_on_a_locked_session(
     db.commit()
 
     page = client.get(
-        f"/operator/sessions/{s.id}/instruments?editing={iid}"
+        f"/operator/sessions/{s.public_id}/instruments?editing={iid}"
     ).text
     # Match the card element, not the bare attribute: `base.html`'s
     # inline CSS carries `[data-instrument-locked="false"]` selectors,
@@ -196,7 +196,7 @@ def test_the_disabled_title_names_a_way_out_that_exists(
     s.status = state
     db.commit()
 
-    page = client.get(f"/operator/sessions/{s.id}/instruments").text
+    page = client.get(f"/operator/sessions/{s.public_id}/instruments").text
 
     assert f'title="{expected}"' in page, state
     if state == "archived":
@@ -211,6 +211,6 @@ def test_no_lifecycle_disabled_title_while_editable(
     s.status = state
     db.commit()
 
-    page = client.get(f"/operator/sessions/{s.id}/instruments").text
+    page = client.get(f"/operator/sessions/{s.public_id}/instruments").text
 
     assert "to add or delete instruments." not in page, state

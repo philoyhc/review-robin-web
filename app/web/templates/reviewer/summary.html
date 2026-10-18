@@ -40,7 +40,7 @@
   <div class="btn-pair" style="margin: var(--space-3) 0;">
     {% if summary.sections %}
     <a class="btn"
-       href="/me/sessions/{{ session.id }}/summary.csv">
+       href="/me/sessions/{{ session.public_id }}/summary.csv">
       Download my responses (CSV)
     </a>
     {% endif %}
@@ -51,7 +51,7 @@
        a stray click doesn't silently un-submit. #}
     {% if can_recall %}
       <form method="post"
-            action="/me/sessions/{{ session.id }}/recall"
+            action="/me/sessions/{{ session.public_id }}/recall"
             style="display: inline; margin: 0;"
             onsubmit="return confirm('Recall your submission and return to the form to edit? Your typed values are preserved.');">
         <button class="btn secondary" type="submit">

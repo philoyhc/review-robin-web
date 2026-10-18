@@ -50,7 +50,7 @@ def test_route_streams_zip_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="bi-fname")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200
@@ -69,7 +69,7 @@ def test_members_named_by_instrument_short_label(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200
@@ -93,7 +93,7 @@ def test_members_fall_back_to_the_session_seq_when_short_label_blank(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -112,7 +112,7 @@ def test_meta_block_carries_instrument_identity_and_self_review_flag(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -137,7 +137,7 @@ def test_meta_block_emits_response_field_4_row_subblock(
     (Response field / Data Type / Min,Max,Step,List / Helptext)."""
     review_session = _make_session(client, db, code="bi-field-meta")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -157,7 +157,7 @@ def test_data_block_carries_wide_header_with_field_labels(
     blocks and the SelfReview/SavedAt/SubmittedAt tail."""
     review_session = _make_session(client, db, code="bi-hdr")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -175,7 +175,7 @@ def test_route_emits_audit_event(
 ) -> None:
     review_session = _make_session(client, db, code="bi-aud")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     assert response.status_code == 200
@@ -245,7 +245,7 @@ def test_pool_rule_rows_prefix_source_type_with_friendly_label(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -269,19 +269,19 @@ def test_extract_data_page_links_button_to_by_instrument_bundle(
 ) -> None:
     review_session = _make_session(client, db, code="bi-page")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
 
     assert 'id="extract-data-by-instrument-zip"' in body
     assert (
-        f'href="/operator/sessions/{review_session.id}'
+        f'href="/operator/sessions/{review_session.public_id}'
         f'/export/by_instrument_bundle.zip"' in body
     )
     # Intro card's ``Zip all`` button still wired to the
     # responses bundle.
     assert 'id="extract-data-zip-all"' in body
     assert (
-        f'href="/operator/sessions/{review_session.id}'
+        f'href="/operator/sessions/{review_session.public_id}'
         f'/export/responses_bundle.zip"' in body
     )
 
@@ -313,7 +313,7 @@ def test_instrument_query_param_filters_zip_members(
     second = _make_second_instrument(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/export/by_instrument_bundle.zip?instrument={second.id}"
     )
     assert response.status_code == 200
@@ -346,7 +346,7 @@ def test_meta_query_param_off_drops_meta_block_and_blank_row(
     is the first row."""
     review_session = _make_session(client, db, code="bi-meta-off")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip?meta=0"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -369,7 +369,7 @@ def test_all_rows_query_param_off_drops_empty_assignment_rows(
     just the header — no data rows."""
     review_session = _make_session(client, db, code="bi-allrows-off")
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         "/export/by_instrument_bundle.zip?all_rows=0&meta=0"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -411,7 +411,7 @@ def test_pool_rule_rows_render_filled_and_empty_without_an_operand(
     db.commit()
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/by_instrument_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/by_instrument_bundle.zip"
     )
     archive = zipfile.ZipFile(io.BytesIO(response.content))
     payload = archive.read(archive.namelist()[0]).decode("utf-8")

@@ -28,6 +28,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _make_session(
@@ -58,7 +59,7 @@ def _seed_roster(
         f"R{i},{email}\n" for i, email in enumerate(reviewer_emails)
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -66,7 +67,7 @@ def _seed_roster(
         f"E{i},{ident}\n" for i, ident in enumerate(reviewee_idents)
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={"file": ("e.csv", reviewee_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -87,7 +88,7 @@ def test_full_matrix_save_persists_assignments_and_sets_mode(
     response = generate_via_page_button(client, review_session.id)
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     rows = list(
         db.execute(
@@ -131,7 +132,7 @@ def test_full_matrix_fans_pairs_out_per_instrument(
         ).scalars()
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
         data={"after": str(default_instrument.id)},
         follow_redirects=False,
     )
@@ -249,7 +250,7 @@ def test_assignments_hub_renders_count_and_mode(
     )
     pin_full_matrix_on_all_instruments(db, review_session.id)
 
-    empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
+    empty = client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     assert empty.status_code == 200
     # The Workflow card's Prepare session button is the operator's
     # entry point to materialising assignments (post-18F it runs
@@ -260,7 +261,7 @@ def test_assignments_hub_renders_count_and_mode(
     assert ">Prepare<br>session</button>" in empty.text
 
     generate_via_page_button(client, review_session.id)
-    populated = client.get(f"/operator/sessions/{review_session.id}/assignments")
+    populated = client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     # The preview card, anchored on the table rather than on a
     # heading: 19I Item 12 rung 1 retired the ``Assignments
     # preview`` <h2>, which was the only one on a preview card
@@ -307,7 +308,7 @@ def test_assignments_hub_no_flash_banner_after_generate(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     response = generate_via_page_button(client, review_session.id)
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     )
     body = client.get(response.headers["location"]).text
     assert 'id="generated-flash"' not in body
@@ -337,7 +338,7 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     # ``_seed_population_with_self_review`` in
     # ``test_assignments_operations_page.py``).
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -348,7 +349,7 @@ def test_ready_session_preview_rows_render_alongside_show_script(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -366,7 +367,7 @@ def test_ready_session_preview_rows_render_alongside_show_script(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # Status table renders in ready state too.
     assert 'id="assignments-status-blocks"' in body
@@ -400,7 +401,7 @@ def test_non_operator_gets_404_on_assignments_hub_and_post(
     review_session = _make_session(alice_client, db, code="alice-only")
 
     bob_client = make_client(bob)
-    hub = bob_client.get(f"/operator/sessions/{review_session.id}/assignments")
+    hub = bob_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     assert hub.status_code == 404
 
     post = generate_via_page_button(bob_client, review_session.id)
@@ -433,7 +434,7 @@ def test_the_count_line_uses_the_shared_partial_and_class(
     # A search that matches some but not all pairs, so the filter
     # branch has something to say.
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments?q=r0@example.edu"
+        f"/operator/sessions/{review_session.public_id}/assignments?q=r0@example.edu"
     ).text
 
     # Top of the preview card. Since 19I Item 12 rung 1 that is the
@@ -481,7 +482,7 @@ def test_assignments_hub_pages_a_large_pair_list(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     # No withheld sentence: nothing is withheld. What was
     # `Showing first 200 of 217 assignments; 17 more not shown.` until
@@ -493,7 +494,7 @@ def test_assignments_hub_pages_a_large_pair_list(
     assert "1–200" in body
     assert "201–217" in body
     second = client.get(
-        f"/operator/sessions/{review_session.id}/assignments?offset=200"
+        f"/operator/sessions/{review_session.public_id}/assignments?offset=200"
     ).text
     # Scoped to this table's own markup: the page renders further
     # tables below it, and an open-ended slice counts their rows too.
@@ -514,14 +515,14 @@ def test_hub_renders_current_pairs_card_when_assignments_exist(
         reviewee_idents=["carol@example.edu"],
     )
 
-    empty = client.get(f"/operator/sessions/{review_session.id}/assignments")
+    empty = client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     assert 'id="assignments-table"' not in empty.text
 
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert 'id="assignments-table"' in body
     assert "alice@example.edu" in body
@@ -541,7 +542,7 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         "Alice,alice@example.edu,senior\n"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", reviewer_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -550,7 +551,7 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         "Carol,carol@example.edu,cohort-a\n"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={"file": ("e.csv", reviewee_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -559,7 +560,7 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
         "alice@example.edu,carol@example.edu,bench-a\n"
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/relationships/import",
+        f"/operator/sessions/{review_session.public_id}/relationships/import",
         files={"file": ("rel.csv", rel_csv.encode(), "text/csv")},
         follow_redirects=False,
     )
@@ -567,7 +568,7 @@ def test_hub_renders_per_slot_columns_with_visibility_toggles(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
 
     # The header carries exactly the slots that hold data. Until
@@ -653,7 +654,7 @@ def test_the_selected_count_leads_the_expander_panel(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     builder = body[
         body.index('tr.id = "assignments-row-expander"') : body.index(

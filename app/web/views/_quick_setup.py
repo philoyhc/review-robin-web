@@ -218,7 +218,7 @@ def build_quick_setup_context(
     observer_count = csv_imports.existing_observer_count(db, sid)
 
     cancel_url_for = lambda key: (  # noqa: E731
-        f"/operator/sessions/{sid}#quick-setup-{key}"
+        f"/operator/sessions/{review_session.public_id}#quick-setup-{key}"
     )
     # The re-offered tick renders only for the refusal that asks for it,
     # and only with a count to carry.
@@ -254,7 +254,7 @@ def build_quick_setup_context(
             count=reviewer_count,
             mode="file_upload",
             is_wired=True,
-            wire_url=f"/operator/sessions/{sid}/quick-setup/reviewers",
+            wire_url=f"/operator/sessions/{review_session.public_id}/quick-setup/reviewers",
             coming_in=None,
             error_message=_error_for("reviewers"),
             error_details=_details_for("reviewers"),
@@ -267,7 +267,7 @@ def build_quick_setup_context(
             count=reviewee_count,
             mode="file_upload",
             is_wired=True,
-            wire_url=f"/operator/sessions/{sid}/quick-setup/reviewees",
+            wire_url=f"/operator/sessions/{review_session.public_id}/quick-setup/reviewees",
             coming_in=None,
             error_message=_error_for("reviewees"),
             error_details=_details_for("reviewees"),
@@ -280,7 +280,7 @@ def build_quick_setup_context(
             count=relationship_count,
             mode="file_upload",
             is_wired=True,
-            wire_url=f"/operator/sessions/{sid}/quick-setup/relationships",
+            wire_url=f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
             coming_in=None,
             error_message=_error_for("relationships"),
             error_details=_details_for("relationships"),
@@ -299,7 +299,7 @@ def build_quick_setup_context(
             count=observer_count,
             mode="file_upload",
             is_wired=True,
-            wire_url=f"/operator/sessions/{sid}/quick-setup/observers",
+            wire_url=f"/operator/sessions/{review_session.public_id}/quick-setup/observers",
             coming_in=None,
             error_message=_error_for("observers"),
             error_details=_details_for("observers"),
@@ -314,7 +314,7 @@ def build_quick_setup_context(
             count=0,
             mode="file_upload",
             is_wired=True,
-            wire_url=f"/operator/sessions/{sid}/import-config",
+            wire_url=f"/operator/sessions/{review_session.public_id}/import-config",
             coming_in=None,
             error_message=_error_for("settings"),
             error_details=_details_for("settings"),

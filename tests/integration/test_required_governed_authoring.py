@@ -101,7 +101,7 @@ def test_a_required_governed_row_renders_r_pressed(
     comments.required = True
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     governed = _row(_rows_table(_card_slice(" ".join(body.split()), instrument.id)), "Comments")
     r = re.search(r"<button[^>]*data-new-model-rf-required[^>]*>", governed).group(0)

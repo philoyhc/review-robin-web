@@ -277,7 +277,7 @@ def test_the_surface_keeps_a_require_mode_cell_answerable(
 ) -> None:
     review_session, fields = _require_live(db, make_client(alice), "13-surface")
     client = make_client(reviewer_user)
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     control = _comments_control(body)
     # Unanswered parent: enabled, not closed, not required, no hint.
     assert " disabled" not in control and "(required)" not in control
@@ -299,7 +299,7 @@ def test_the_surface_keeps_a_require_mode_cell_answerable(
         select(Assignment).where(Assignment.reviewer_id == reviewer.id)
     ).scalar_one()
     _answer(db, assignment, fields["rating"], "5")
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     assert "(required)" in _comments_control(body)
     assert "*Required items completed: 1/2" in body
 
@@ -311,7 +311,7 @@ def test_the_surface_script_keeps_a_require_mode_cell_enabled(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     review_session, _ = _require_live(db, make_client(alice), "13-surface-js")
-    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
     assert 'var requireMode = parentCell.dataset.rsBranchMode === "require";' in script

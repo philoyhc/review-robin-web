@@ -186,7 +186,7 @@ async def relationships_import_submit(
     # the document.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/relationships"
+            f"/operator/sessions/{review_session.public_id}/relationships"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -232,7 +232,7 @@ def relationships_delete_all(
     # the document.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/relationships"
+            f"/operator/sessions/{review_session.public_id}/relationships"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -360,7 +360,7 @@ def relationships_create(
     # the response never rendered. It relocates the pager window; the
     # fragment then resolves onto the row.
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/relationships",
+        f"/operator/sessions/{review_session.public_id}/relationships",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -467,7 +467,7 @@ def relationships_update(
             status=filter_status, search=filter_q, offset=filter_offset,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/relationships",
+        f"/operator/sessions/{review_session.public_id}/relationships",
         [relationship_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -512,7 +512,7 @@ def relationships_bulk_inactivate(
             status=filter_status, search=filter_q, offset=filter_offset,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/relationships",
+        f"/operator/sessions/{review_session.public_id}/relationships",
         relationship_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -557,7 +557,7 @@ def relationships_bulk_reactivate(
             status=filter_status, search=filter_q, offset=filter_offset,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/relationships",
+        f"/operator/sessions/{review_session.public_id}/relationships",
         relationship_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,
@@ -708,7 +708,7 @@ def _render_relationships_page(
 
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),
-        cookie_name=f"rrw-sort-relationships-{review_session.id}",
+        cookie_name=f"rrw-sort-relationships-{review_session.public_id}",
         valid_keys=_RELATIONSHIP_SORT_KEYS,
     )
     all_rows = views.apply_cookie_sort(
@@ -829,7 +829,7 @@ def _render_relationships_page(
             # a hidden one across a page boundary is how an operator
             # deletes something they cannot see.
             "pager_url_base": (
-                f"/operator/sessions/{review_session.id}/relationships?"
+                f"/operator/sessions/{review_session.public_id}/relationships?"
             ),
             # The fragment the range links land on (19J.8): the
             # table's card, so a page turn arrives showing the card's
@@ -977,7 +977,7 @@ async def relationships_save_field_labels(
     # the document.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/relationships"
+            f"/operator/sessions/{review_session.public_id}/relationships"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
@@ -1037,7 +1037,7 @@ def relationships_bulk_delete(
             status=filter_status, search=filter_q, offset=filter_offset,
         )
     return _redirect_keeping_selection(
-        f"/operator/sessions/{review_session.id}/relationships",
+        f"/operator/sessions/{review_session.public_id}/relationships",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
         offset=filter_offset,

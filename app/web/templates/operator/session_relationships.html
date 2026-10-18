@@ -11,14 +11,14 @@
      (Edit), or a fresh blank row prepends (Add). #}
   {% set edit_mode = (edit_id is not none) or add_mode %}
   {% set relationships_base_url =
-        "/operator/sessions/" ~ session.id ~ "/relationships" %}
+        "/operator/sessions/" ~ session.public_id ~ "/relationships" %}
   {# 19P.3 rung 4 — the Unlock panel's condition. #}
   {% set unlock_available = is_editable and not edit_mode %}
 
   {# The pair-context labels editor's parameters, for its one home, the
      Unlock panel below. #}
   {% set field_labels_form_action =
-        "/operator/sessions/" ~ session.id ~ "/relationships/field-labels" %}
+        "/operator/sessions/" ~ session.public_id ~ "/relationships/field-labels" %}
   {% set field_labels_source_type = "pair_context" %}
   {% set field_labels_card_title = "Pair-context labels" %}
   {% set field_labels_help =
@@ -648,7 +648,7 @@
             until the
             {%- for roster in relationship_prereqs.missing %}
               {{- " and" if not loop.first }}
-              <a href="/operator/sessions/{{ session.id }}/{{ roster.slug }}">{{ roster.label }}</a>
+              <a href="/operator/sessions/{{ session.public_id }}/{{ roster.slug }}">{{ roster.label }}</a>
             {%- endfor %}
             {{ relationship_prereqs.empty_state_clause }}. Every
             relationship names one reviewer and one reviewee.</p>
@@ -662,7 +662,7 @@
       <div class="table-scroll">
       <table id="relationships-table"
              data-rrw-col-toggles="rrw-relationship-tag-visibility"
-             {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.id }}"{% endif %}>
+             {% if not edit_mode %}data-rrw-sortable="rrw-sort-relationships-{{ session.public_id }}"{% endif %}>
         <thead>
         <tr>
           <th>

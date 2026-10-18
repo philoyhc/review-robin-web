@@ -74,7 +74,7 @@ def test_operator_get_fires_the_past_due_schedule(
     review_session = _make_session(client, db, f"l4-{page}")
     _past_due_start(db, review_session)
 
-    response = client.get(path.format(id=review_session.id))
+    response = client.get(path.format(id=review_session.public_id))
 
     assert response.status_code == 200
     rows = _skipped(db, review_session)

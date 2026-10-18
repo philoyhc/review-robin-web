@@ -45,7 +45,7 @@ def test_export_streams_csv_with_canonical_filename(
 ) -> None:
     review_session = _make_session(client, db, code="filename1")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -59,7 +59,7 @@ def test_export_body_is_well_formed_csv_with_header(
 ) -> None:
     review_session = _make_session(client, db, code="csvshape")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     assert response.status_code == 200
 
@@ -77,7 +77,7 @@ def test_export_body_is_well_formed_csv_with_header(
 def test_export_emits_audit_event(client: TestClient, db: Session) -> None:
     review_session = _make_session(client, db, code="audit-em")
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     assert response.status_code == 200
     # Drain the streaming body so ``StreamingResponse`` finishes its
@@ -126,7 +126,7 @@ def test_export_rejects_non_operator(
 
     bob_client = make_client(bob)
     response = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     assert response.status_code in (403, 404)
 
@@ -140,13 +140,13 @@ def test_export_works_in_every_lifecycle_state(
     review_session = _make_session(client, db, code="lifecycle")
     # Draft.
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     assert response.status_code == 200
 
     # Promote to ready: seed roster + assignments + activate.
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -157,7 +157,7 @@ def test_export_works_in_every_lifecycle_state(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -170,9 +170,9 @@ def test_export_works_in_every_lifecycle_state(
     pin_full_matrix_on_all_instruments(db, review_session.id)
     generate_via_page_button(client, review_session.id)
     validate_session(review_session)
-    client.get(f"/operator/sessions/{review_session.id}/assignments")
+    client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     activate = client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -180,6 +180,6 @@ def test_export_works_in_every_lifecycle_state(
 
     # Activated — extract still works.
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/settings.csv"
+        f"/operator/sessions/{review_session.public_id}/export/settings.csv"
     )
     assert response.status_code == 200

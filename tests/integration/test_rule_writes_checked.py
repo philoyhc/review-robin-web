@@ -128,7 +128,7 @@ def test_band1_fallback_save_refuses_a_same_side_rule(db: Session, client: TestC
     before = _stored_rules(db, instrument.id)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
         data=_link2_form("reviewee.tag1", "reviewee.tag2"),
         follow_redirects=False,
     )
@@ -136,7 +136,7 @@ def test_band1_fallback_save_refuses_a_same_side_rule(db: Session, client: TestC
     assert response.status_code == 400
     assert "compares across populations" in response.text
     assert _stored_rules(db, instrument.id) == before
-    assert client.get(f"/operator/sessions/{session.id}/assignments").status_code == 200
+    assert client.get(f"/operator/sessions/{session.public_id}/assignments").status_code == 200
 
 
 def test_band1_card_save_refuses_a_same_side_rule(db: Session, client: TestClient) -> None:
@@ -144,7 +144,7 @@ def test_band1_card_save_refuses_a_same_side_rule(db: Session, client: TestClien
     before = _stored_rules(db, instrument.id)
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_link2_form("reviewee.tag1", "reviewee.tag1"),
     )
 
@@ -153,14 +153,14 @@ def test_band1_card_save_refuses_a_same_side_rule(db: Session, client: TestClien
     assert body["ok"] is False
     assert any("compares across populations" in error for error in body["errors"])
     assert _stored_rules(db, instrument.id) == before
-    assert client.get(f"/operator/sessions/{session.id}/validate").status_code == 200
+    assert client.get(f"/operator/sessions/{session.public_id}/validate").status_code == 200
 
 
 def test_band1_card_save_keeps_a_cross_side_rule(db: Session, client: TestClient) -> None:
     session, instrument = _session_with_tags(db, client, "e1-ok")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_link2_form("reviewee.tag1", "reviewer.tag1"),
     )
 
@@ -176,7 +176,7 @@ def test_band1_refusal_leaves_a_stored_rule_and_its_links_alone(
     refusal comes before the first write (``band1_touched_links``)."""
     session, instrument = _session_with_tags(db, client, "e1-update")
     saved = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/save",
         data=_link2_form("reviewee.tag1", "reviewer.tag1"),
     )
     assert saved.status_code == 200, saved.text
@@ -184,7 +184,7 @@ def test_band1_refusal_leaves_a_stored_rule_and_its_links_alone(
     before_links = db.get(Instrument, instrument.id).band1_touched_links
 
     refused = client.post(
-        f"/operator/sessions/{session.id}/instruments/{instrument.id}/fields/save",
+        f"/operator/sessions/{session.public_id}/instruments/{instrument.id}/fields/save",
         data={**_link2_form("reviewee.tag1", "reviewee.tag2"), "link1_touched": ""},
         follow_redirects=False,
     )

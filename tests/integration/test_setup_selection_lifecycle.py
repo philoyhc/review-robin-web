@@ -95,7 +95,7 @@ def _session(client: TestClient, db: Session, *, code: str) -> ReviewSession:
 
 
 def _render(client: TestClient, s: ReviewSession, page: str) -> str:
-    r = client.get(f"/operator/sessions/{s.id}/{page}")
+    r = client.get(f"/operator/sessions/{s.public_id}/{page}")
     assert r.status_code == 200, (page, s.status, r.status_code)
     return r.text
 
@@ -271,7 +271,7 @@ def test_the_route_still_refuses_even_though_the_page_no_longer_asks(
         "relationships": "relationship_ids",
     }[page]
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/bulk-delete",
+        f"/operator/sessions/{s.public_id}/{page}/bulk-delete",
         data={field: [row_id], "confirm": "true"},
         follow_redirects=False,
     )
@@ -346,7 +346,7 @@ def test_delete_all_still_refuses_when_frozen(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/delete-all",
+        f"/operator/sessions/{s.public_id}/{page}/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -402,7 +402,7 @@ def _post_mutator(client, s, row_id, suffix, data):
         k: ([row_id] if v == ["{id}"] else v) for k, v in data.items()
     }
     return client.post(
-        f"/operator/sessions/{s.id}/observers/"
+        f"/operator/sessions/{s.public_id}/observers/"
         + suffix.format(id=row_id),
         data=payload,
         follow_redirects=False,
@@ -474,7 +474,7 @@ def test_the_observers_import_accepts_mid_session(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/import",
+        f"/operator/sessions/{s.public_id}/observers/import",
         files={"file": (
             "o.csv",
             b"ObserverEmail,ObserverName\nnew@example.org,New\n",
@@ -501,7 +501,7 @@ def test_the_observers_import_still_refuses_on_archived(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/import",
+        f"/operator/sessions/{s.public_id}/observers/import",
         files={"file": (
             "o.csv", b"ObserverEmail\nnew@example.org\n", "text/csv",
         )},
@@ -568,7 +568,7 @@ def test_add_and_edit_actually_open_an_editor_wherever_they_render(
     ).scalars().one()
     s.status = status
     db.commit()
-    base = f"/operator/sessions/{s.id}/observers"
+    base = f"/operator/sessions/{s.public_id}/observers"
 
     # The controls are reachable...
     listing = _render(client, s, "observers")
@@ -615,7 +615,7 @@ def test_archived_opens_no_editor_even_by_hand_crafted_url(
     ).scalars().one()
     s.status = "archived"
     db.commit()
-    base = f"/operator/sessions/{s.id}/observers"
+    base = f"/operator/sessions/{s.public_id}/observers"
 
     assert not re.search(
         r'<tr\b[^>]*id="observers-row-editor"', client.get(f"{base}?add=1").text
@@ -646,7 +646,7 @@ def test_a_rejected_save_comes_back_editable_wherever_it_can_save(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/create",
+        f"/operator/sessions/{s.public_id}/observers/create",
         data={
             # Duplicate of the row `_session` seeds — a guaranteed
             # rejection that is the service's, not the gate's.
@@ -731,7 +731,7 @@ def test_frozen_pages_open_no_editor_even_by_hand_crafted_url(
     ).scalars().first()
     s.status = status
     db.commit()
-    base = f"/operator/sessions/{s.id}/{page}"
+    base = f"/operator/sessions/{s.public_id}/{page}"
 
     for query in ("?add=1", f"?edit_id={row_id}"):
         r = client.get(f"{base}{query}")

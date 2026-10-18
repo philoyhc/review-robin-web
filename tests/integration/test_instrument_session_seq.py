@@ -286,7 +286,7 @@ def test_the_card_title_and_the_delete_confirm_show_the_same_handle(
     crud.create_instrument(db, review_session=review_session, actor=op)
     db.commit()
 
-    response = client.get(f"/operator/sessions/{review_session.id}/instruments")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/instruments")
     assert response.status_code == 200, response.text[:400]
     body = response.text
 
@@ -316,7 +316,7 @@ def test_the_delete_confirm_names_a_renamed_instrument(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     confirm_start = body.index("Yes, delete <strong>")
     confirm = body[confirm_start : confirm_start + 200]
@@ -401,7 +401,7 @@ def test_the_tint_follows_the_number_on_the_card(
         "ids came out contiguous — the test would pass on the old keying too"
     )
 
-    response = client.get(f"/operator/sessions/{review_session.id}/instruments")
+    response = client.get(f"/operator/sessions/{review_session.public_id}/instruments")
     assert response.status_code == 200
     assert _rendered_tints(response.text) == [1, 2, 3]
 
@@ -435,7 +435,7 @@ def test_the_tint_does_not_move_when_the_operator_reorders(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     # Render order is display order, so the tints arrive reversed —
     # each card kept its own colour rather than inheriting the slot's.
@@ -454,7 +454,7 @@ def test_the_palette_wraps_past_six(client: TestClient, db: Session) -> None:
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
     assert _rendered_tints(body) == [1, 2, 3, 4, 5, 6, 1]
 

@@ -22,7 +22,7 @@ LINK_CHIPS = (
 )
 
 
-def _seed(api: httpx.Client, session_id: int) -> None:
+def _seed(api: httpx.Client, session_id: str) -> None:
     for kind, body in (("reviewers", REVIEWERS_CSV), ("reviewees", REVIEWEES_CSV)):
         response = api.post(
             f"/operator/sessions/{session_id}/{kind}/import",
@@ -60,7 +60,7 @@ def _amber(card: Locator) -> str:
 
 
 def test_a_set_link_chip_cycled_back_to_not_set_is_amber(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -86,7 +86,7 @@ def test_a_set_link_chip_cycled_back_to_not_set_is_amber(
 
 
 def test_enter_and_space_cycle_a_link_chip(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)
@@ -108,7 +108,7 @@ def _style(chip: Locator, prop: str) -> str:
 
 
 def test_a_locked_cards_link_chips_read_as_plain_pills(
-    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """Set links read as the plain pill; no edge or pointer either way."""
     session_id = new_session()
@@ -128,7 +128,7 @@ def test_a_locked_cards_link_chips_read_as_plain_pills(
 
 
 def test_a_locked_cards_unset_link_chip_stays_amber(
-    page: Page, api: httpx.Client, new_session: Callable[[], int]
+    page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
     _seed(api, session_id)

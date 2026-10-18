@@ -78,7 +78,7 @@ def test_export_participant_tokens_csv_lists_reviewers_then_reviewees(
     rev, ree = _seed_one_reviewer_and_reviewee(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/participant_tokens.csv"
+        f"/operator/sessions/{review_session.public_id}/export/participant_tokens.csv"
     )
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
@@ -113,7 +113,7 @@ def test_export_participant_tokens_emits_audit_event(
     _seed_one_reviewer_and_reviewee(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/participant_tokens.csv"
+        f"/operator/sessions/{review_session.public_id}/export/participant_tokens.csv"
     )
     assert response.status_code == 200
 
@@ -145,7 +145,7 @@ def test_export_route_works_even_when_observers_disabled(
     _seed_one_reviewer_and_reviewee(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/participant_tokens.csv"
+        f"/operator/sessions/{review_session.public_id}/export/participant_tokens.csv"
     )
     assert response.status_code == 200
 
@@ -160,10 +160,10 @@ def test_export_route_byte_stable_across_calls(
     _seed_one_reviewer_and_reviewee(db, review_session)
 
     a = client.get(
-        f"/operator/sessions/{review_session.id}/export/participant_tokens.csv"
+        f"/operator/sessions/{review_session.public_id}/export/participant_tokens.csv"
     ).text
     b = client.get(
-        f"/operator/sessions/{review_session.id}/export/participant_tokens.csv"
+        f"/operator/sessions/{review_session.public_id}/export/participant_tokens.csv"
     ).text
     assert a == b
 
@@ -180,7 +180,7 @@ def test_responses_bundle_includes_token_keys_by_default(
     _seed_one_reviewer_and_reviewee(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/responses_bundle.zip"
     )
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -197,7 +197,7 @@ def test_responses_bundle_omits_token_keys_when_tokens_param_off(
     _seed_one_reviewer_and_reviewee(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/export/responses_bundle.zip?tokens=0"
     )
     assert response.status_code == 200
@@ -219,7 +219,7 @@ def test_responses_bundle_omits_token_keys_when_observers_disabled(
     _seed_one_reviewer_and_reviewee(db, review_session)
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/export/responses_bundle.zip"
+        f"/operator/sessions/{review_session.public_id}/export/responses_bundle.zip"
     )
     assert response.status_code == 200
     archive = zipfile.ZipFile(io.BytesIO(response.content))
@@ -238,7 +238,7 @@ def test_extract_data_page_renders_token_keys_chrome_when_observers_on(
 ) -> None:
     review_session = _make_session(client, db, code="tok-page-on")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     # Intro-card chip rendered (rather than just the JS literal).
     assert (
@@ -250,7 +250,7 @@ def test_extract_data_page_renders_token_keys_chrome_when_observers_on(
     assert 'id="extract-data-token-keys"' in body
     assert "Download token keys" in body
     assert (
-        f"/operator/sessions/{review_session.id}/export/participant_tokens.csv"
+        f"/operator/sessions/{review_session.public_id}/export/participant_tokens.csv"
         in body
     )
 
@@ -262,7 +262,7 @@ def test_extract_data_page_omits_token_keys_chrome_when_observers_off(
         client, db, code="tok-page-off", observers_enabled=False
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/extract-data"
+        f"/operator/sessions/{review_session.public_id}/extract-data"
     ).text
     # The chip + card don't render; the JS still references the
     # chip selector defensively but null-checks before use.

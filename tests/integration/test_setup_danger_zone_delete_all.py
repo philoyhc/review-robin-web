@@ -131,7 +131,7 @@ def test_delete_all_works_on_a_session_that_has_responses(
     reviewer, reviewee = _roster(db, s)
     _responses(db, s, reviewer=reviewer, reviewee=reviewee, n=2)
 
-    body = client.get(f"/operator/sessions/{s.id}/{page}").text
+    body = client.get(f"/operator/sessions/{s.public_id}/{page}").text
     form = _form_fields(body, page)
 
     # Post exactly what the rendered form carries — no invented fields.
@@ -140,7 +140,7 @@ def test_delete_all_works_on_a_session_that_has_responses(
         data["acknowledge_response_loss"] = "true"
 
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/delete-all",
+        f"/operator/sessions/{s.public_id}/{page}/delete-all",
         data=data,
         follow_redirects=False,
     )
@@ -155,11 +155,11 @@ def test_the_form_carries_the_acknowledgement_only_when_there_is_loss(
     s = _session(client, db, code=f"dz-ack-{page}")
     reviewer, reviewee = _roster(db, s)
 
-    clean = _form_fields(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    clean = _form_fields(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
     assert 'name="acknowledge_response_loss"' not in clean
 
     _responses(db, s, reviewer=reviewer, reviewee=reviewee, n=1)
-    loaded = _form_fields(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    loaded = _form_fields(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
     assert 'name="acknowledge_response_loss"' in loaded
 
 
@@ -173,7 +173,7 @@ def test_the_route_still_refuses_an_unacknowledged_post(
     _responses(db, s, reviewer=reviewer, reviewee=reviewee, n=1)
 
     response = client.post(
-        f"/operator/sessions/{s.id}/reviewers/delete-all",
+        f"/operator/sessions/{s.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -193,7 +193,7 @@ def test_the_label_names_assignments_and_responses_when_they_exist(
     reviewer, reviewee = _roster(db, s)
     _responses(db, s, reviewer=reviewer, reviewee=reviewee, n=3)
 
-    form = _form_fields(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    form = _form_fields(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
 
     assert "their associated" in form
     assert "1 assignment" in form
@@ -207,7 +207,7 @@ def test_the_label_names_neither_on_a_bare_roster(
     s = _session(client, db, code=f"dz-bare-{page}")
     _roster(db, s)
 
-    form = _form_fields(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    form = _form_fields(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
 
     assert "assignment" not in form
     assert "reviewer response" not in form
@@ -224,7 +224,7 @@ def test_the_label_never_names_responses_where_none_can_be_lost(
     reviewer, reviewee = _roster(db, s)
     _responses(db, s, reviewer=reviewer, reviewee=reviewee, n=4)
 
-    form = _form_fields(client.get(f"/operator/sessions/{s.id}/{page}").text, page)
+    form = _form_fields(client.get(f"/operator/sessions/{s.public_id}/{page}").text, page)
 
     assert "reviewer response" not in form
     assert "acknowledge_response_loss" not in form
@@ -242,7 +242,7 @@ def test_deleting_the_observer_roster_leaves_every_response(
     _responses(db, s, reviewer=reviewer, reviewee=reviewee, n=4)
 
     response = client.post(
-        f"/operator/sessions/{s.id}/observers/delete-all",
+        f"/operator/sessions/{s.public_id}/observers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -273,7 +273,7 @@ def test_the_csv_import_error_page_renders_the_same_strip(
     # A CSV whose header is wrong enough to fail validation and
     # re-render the page with its issue list.
     response = client.post(
-        f"/operator/sessions/{s.id}/{page}/import",
+        f"/operator/sessions/{s.public_id}/{page}/import",
         files={"file": ("bad.csv", b"NotAColumn\nvalue\n", "text/csv")},
         data={"confirm_replace": "true"},
         follow_redirects=False,

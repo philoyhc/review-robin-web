@@ -434,7 +434,7 @@ def parse_session_deadline(
 
 
 def _redirect_url(
-    session_id: int,
+    session_id: str,
     return_to: str | None,
     *,
     super_status: str | None = None,
@@ -826,7 +826,7 @@ def _require_instrument_in_session(
 
 
 def _instruments_redirect(
-    session_id: int, fragment: str | None = None
+    session_id: str, fragment: str | None = None
 ) -> RedirectResponse:
     """Redirect to the Instruments index, optionally landing on an
     in-page anchor.
@@ -1117,7 +1117,7 @@ async def _handle_import(
     # keep open; it has one, and this handler serves no other kind.
     return RedirectResponse(
         url=(
-            f"/operator/sessions/{review_session.id}/{kind}"
+            f"/operator/sessions/{review_session.public_id}/{kind}"
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,

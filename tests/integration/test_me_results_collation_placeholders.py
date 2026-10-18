@@ -43,7 +43,7 @@ def test_results_404_when_user_is_not_a_reviewee(
 ) -> None:
     review_session = _make_session(client, db, code="res-deny")
     response = client.get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 404
 
@@ -65,7 +65,7 @@ def test_results_renders_for_email_identified_reviewee(
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
     response = client.get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 200
     body = response.text
@@ -93,7 +93,7 @@ def test_results_renders_without_description_card_when_none(
     # 19F PR 4 — /results opens only while a grant resolves.
     grant_reviewee_visibility(review_session)
     body = client.get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     ).text
     assert "<h1>Cohort A</h1>" in body
     assert "Results of the review" in body
@@ -116,7 +116,7 @@ def test_results_404_for_inactive_reviewee(
     )
     db.commit()
     response = client.get(
-        f"/me/sessions/{review_session.id}/results"
+        f"/me/sessions/{review_session.public_id}/results"
     )
     assert response.status_code == 404
 
@@ -129,7 +129,7 @@ def test_collation_404_when_user_is_not_an_observer(
 ) -> None:
     review_session = _make_session(client, db, code="col-deny")
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     )
     assert response.status_code == 404
 
@@ -152,7 +152,7 @@ def test_collation_renders_for_observer(
     )
     db.commit()
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     )
     assert response.status_code == 200
     body = response.text
@@ -175,7 +175,7 @@ def test_collation_renders_without_description_card_when_none(
     )
     db.commit()
     body = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     ).text
     assert "<h1>Cohort A</h1>" in body
     assert "Observer view of the session" in body
@@ -196,7 +196,7 @@ def test_collation_404_for_inactive_observer(
     )
     db.commit()
     response = client.get(
-        f"/me/sessions/{review_session.id}/collation"
+        f"/me/sessions/{review_session.public_id}/collation"
     )
     assert response.status_code == 404
 
@@ -226,7 +226,7 @@ def test_results_404_for_an_active_reviewee_with_no_grant(
         )
     )
     db.commit()
-    response = client.get(f"/me/sessions/{review_session.id}/results")
+    response = client.get(f"/me/sessions/{review_session.public_id}/results")
     assert response.status_code == 404
     assert "Cohort A" not in response.text
     assert "Confidential round" not in response.text
@@ -251,14 +251,14 @@ def test_acknowledge_is_gated_too(
     )
     db.commit()
     ungranted = client.post(
-        f"/me/sessions/{review_session.id}/results/acknowledge",
+        f"/me/sessions/{review_session.public_id}/results/acknowledge",
         follow_redirects=False,
     )
     assert ungranted.status_code == 404
 
     grant_reviewee_visibility(review_session)
     granted = client.post(
-        f"/me/sessions/{review_session.id}/results/acknowledge",
+        f"/me/sessions/{review_session.public_id}/results/acknowledge",
         follow_redirects=False,
     )
     assert granted.status_code == 303
@@ -283,7 +283,7 @@ def test_an_ungranted_reviewee_is_byte_identical_to_a_stranger(
         )
     )
     db.commit()
-    url = f"/me/sessions/{review_session.id}/results"
+    url = f"/me/sessions/{review_session.public_id}/results"
     ungranted_reviewee = client.get(url)
     stranger = make_client(bob).get(url)
     assert ungranted_reviewee.status_code == stranger.status_code == 404

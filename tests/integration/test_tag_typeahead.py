@@ -139,7 +139,7 @@ def test_session_home_offers_the_operators_vocabulary(
     client: TestClient, db: Session
 ) -> None:
     mine = _seed(client, db)
-    body = client.get(f"/operator/sessions/{mine.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{mine.public_id}?editing=1").text
 
     assert _vocabulary(body) == EXPECTED
     assert re.search(
@@ -177,7 +177,7 @@ def test_exactly_four_boxes_opt_in_and_none_carries_a_static_list(
     pages = [
         client.get("/operator/sessions").text,
         client.get("/operator/sessions/new").text,
-        client.get(f"/operator/sessions/{mine.id}?editing=1").text,
+        client.get(f"/operator/sessions/{mine.public_id}?editing=1").text,
     ]
     boxes = [
         tag

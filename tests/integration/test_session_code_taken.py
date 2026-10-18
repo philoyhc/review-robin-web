@@ -51,7 +51,7 @@ def test_session_home_save_with_a_taken_code_is_a_422_and_writes_nothing(
     zone_before = other.display_timezone
 
     response = client.post(
-        f"/operator/sessions/{other.id}/config",
+        f"/operator/sessions/{other.public_id}/config",
         data={
             "name": "Renamed",
             "code": "held-code",
@@ -76,7 +76,7 @@ def test_session_home_save_keeps_its_own_code(
     session = _create(client, db, "Mine", "my-code")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={"name": "Mine renamed", "code": "my-code"},
         follow_redirects=False,
     )
@@ -93,7 +93,7 @@ def test_lobby_edit_with_a_taken_code_is_a_422_and_writes_nothing(
     other = _create(client, db, "Other", "lobby-other")
 
     response = client.post(
-        f"/operator/sessions/{other.id}/lobby-edit",
+        f"/operator/sessions/{other.public_id}/lobby-edit",
         data={"name": "Other", "code": "lobby-held", "tags": "pilot"},
         follow_redirects=False,
     )
@@ -110,7 +110,7 @@ def test_lobby_edit_keeps_its_own_code(client: TestClient, db: Session) -> None:
     session = _create(client, db, "Mine", "lobby-mine")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/lobby-edit",
+        f"/operator/sessions/{session.public_id}/lobby-edit",
         data={"name": "Mine renamed", "code": "lobby-mine", "tags": "pilot"},
         follow_redirects=False,
     )
@@ -131,7 +131,7 @@ def test_lobby_edit_when_not_editable_ignores_a_taken_code(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{other.id}/lobby-edit",
+        f"/operator/sessions/{other.public_id}/lobby-edit",
         data={"name": "Other", "code": "lobby-held-2", "tags": "pilot"},
         follow_redirects=False,
     )

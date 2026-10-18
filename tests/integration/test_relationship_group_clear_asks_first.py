@@ -148,7 +148,7 @@ def _edit(name: str, tag: str, *, acknowledged: int | None = None) -> dict[str, 
 
 
 def _base(session: ReviewSession) -> str:
-    return f"/operator/sessions/{session.id}/relationships"
+    return f"/operator/sessions/{session.public_id}/relationships"
 
 
 # --- edit ---------------------------------------------------------------

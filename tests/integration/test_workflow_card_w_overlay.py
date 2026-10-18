@@ -46,7 +46,7 @@ def _prepared_session(
     _populate(client, db, session.id, reviewer_email="rae@example.edu")
     if warning:
         response = client.post(
-            f"/operator/sessions/{session.id}/reviewees/create",
+            f"/operator/sessions/{session.public_id}/reviewees/create",
             data={
                 "name": "Anon",
                 "email_or_identifier": "anon-2026",
@@ -60,7 +60,7 @@ def _prepared_session(
         )
         assert response.status_code == 303, response.text
     response = client.post(
-        f"/operator/sessions/{session.id}/workflow/prepare",
+        f"/operator/sessions/{session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -68,7 +68,7 @@ def _prepared_session(
     return session
 
 
-def _home(client: TestClient, session_id: int) -> str:
+def _home(client: TestClient, session_id: str) -> str:
     response = client.get(f"/operator/sessions/{session_id}")
     assert response.status_code == 200
     return response.text
@@ -87,7 +87,7 @@ def test_the_overlay_adds_its_help_line_to_state_5_rather_than_replacing_it(
 ) -> None:
     """`5W` is State 5 plus the help-line, not State 4."""
     session = _prepared_session(client, db, "w-over-5", warning=True)
-    body = _home(client, session.id)
+    body = _home(client, session.public_id)
     assert STATE_5_BODY in body
     assert OVERLAY_HELP in body
     assert STATE_4_BODY not in body
@@ -99,7 +99,7 @@ def test_without_a_warning_the_same_session_renders_state_5_alone(
     """The control. Without it the case above proves nothing: a page
     that never had a warning would satisfy two of its three asserts."""
     session = _prepared_session(client, db, "w-ctrl-5", warning=False)
-    body = _home(client, session.id)
+    body = _home(client, session.public_id)
     assert STATE_5_BODY in body
     assert OVERLAY_HELP not in body
 
@@ -110,11 +110,11 @@ def test_the_overlay_reaches_state_6_too(
     """`6W`, which the old cascade also said could not exist."""
     session = _prepared_session(client, db, "w-over-6", warning=True)
     response = client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    body = _home(client, session.id)
+    body = _home(client, session.public_id)
     assert STATE_6_BODY in body
     assert OVERLAY_HELP in body
     assert STATE_5_BODY not in body
@@ -130,10 +130,10 @@ def test_the_overlay_changes_no_button_visibility(
     three and was silent about this case.
     """
     warned = _button_row(
-        _home(client, _prepared_session(client, db, "w-btn-a", warning=True).id)
+        _home(client, _prepared_session(client, db, "w-btn-a", warning=True).public_id)
     )
     plain = _button_row(
-        _home(client, _prepared_session(client, db, "w-btn-b", warning=False).id)
+        _home(client, _prepared_session(client, db, "w-btn-b", warning=False).public_id)
     )
     for row in (warned, plain):
         assert row.count("Revert<br>to draft") == 1
@@ -152,8 +152,8 @@ def test_the_overlay_turns_activate_into_the_warnings_detour(
     """The overlay's third effect, also independent of invitations:
     Activate becomes an `<a>` to `/validate?activate=1` instead of a
     form submit."""
-    warned_id = _prepared_session(client, db, "w-detour-a", warning=True).id
-    plain_id = _prepared_session(client, db, "w-detour-b", warning=False).id
+    warned_id = _prepared_session(client, db, "w-detour-a", warning=True).public_id
+    plain_id = _prepared_session(client, db, "w-detour-b", warning=False).public_id
 
     warned = _button_row(_home(client, warned_id))
     assert f"/operator/sessions/{warned_id}/validate?activate=1" in warned

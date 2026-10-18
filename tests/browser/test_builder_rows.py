@@ -25,7 +25,7 @@ from ._builder import (
 
 
 def test_plus_inserts_a_default_named_row_below(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, '"+" inserts below'."""
     card = open_unlocked(page, new_session())
@@ -42,7 +42,7 @@ def test_plus_inserts_a_default_named_row_below(
 
 
 def test_a_default_name_is_taken_with_arrow_and_kept_through_a_reload(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Default names'."""
     session_id = new_session()
@@ -63,7 +63,7 @@ def test_a_default_name_is_taken_with_arrow_and_kept_through_a_reload(
 
 
 def test_the_preview_follows_a_row_and_keeps_its_last_valid_shape(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'The preview follows the row'."""
     card = open_unlocked(page, new_session())
@@ -83,7 +83,7 @@ def test_the_preview_follows_a_row_and_keeps_its_last_valid_shape(
 
 
 def test_moving_a_row_up_reorders_the_preview_and_save_keeps_it(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Active and ▲ ▼' (the ▲ half; the hide-confirm needs saved
     responses and stays a hand check)."""
@@ -100,7 +100,7 @@ def test_moving_a_row_up_reorders_the_preview_and_save_keeps_it(
 
 
 def test_unticking_active_drops_the_column_and_save_keeps_it(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Active and ▲ ▼' (Active on a field with no responses)."""
     session_id = new_session()
@@ -123,7 +123,7 @@ def test_unticking_active_drops_the_column_and_save_keeps_it(
     ids=["R", "help"],
 )
 def test_one_toggle_alone_enables_save_and_persists(
-    page: Page, new_session: Callable[[], int], toggle: str, state: str
+    page: Page, new_session: Callable[[], str], toggle: str, state: str
 ) -> None:
     """Item 6, 'R and ≡ alone'."""
     session_id = new_session()
@@ -141,7 +141,7 @@ def test_one_toggle_alone_enables_save_and_persists(
 
 
 def test_a_new_field_saved_twice_is_still_one_field_in_its_place(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'A new field saves twice' and 'Order persists'."""
     session_id = new_session()
@@ -158,7 +158,7 @@ def test_a_new_field_saved_twice_is_still_one_field_in_its_place(
 
 
 def test_the_last_row_cannot_be_deleted(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'The last row stays'."""
     card = open_unlocked(page, new_session())
@@ -169,7 +169,7 @@ def test_the_last_row_cannot_be_deleted(
 
 
 def test_an_integer_rows_blank_step_saves_as_one(
-    page: Page, new_session: Callable[[], int]
+    page: Page, new_session: Callable[[], str]
 ) -> None:
     """Item 6, 'Integer Step defaults to 1'."""
     session_id = new_session()

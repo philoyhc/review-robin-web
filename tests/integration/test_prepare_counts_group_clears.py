@@ -35,12 +35,12 @@ def _session_with_two_answered_teams(
     ).scalar_one()
     group = add_group_instrument(db, review_session)
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={"file": ("r.csv", b"ReviewerName,ReviewerEmail\nR,rae@example.edu\n", "text/csv")},
         follow_redirects=False,
     )
     operator.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -100,7 +100,7 @@ def test_a_newcomer_to_an_answered_team_detours_prepare(
     assert (impact.responses_deleted, impact.group_responses_cleared) == (0, 1)
 
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments"},
         follow_redirects=False,
     )
@@ -111,7 +111,7 @@ def test_a_newcomer_to_an_answered_team_detours_prepare(
 
     body = " ".join(
         operator.get(
-            f"/operator/sessions/{review_session.id}/assignments?prepare_confirm=responses"
+            f"/operator/sessions/{review_session.public_id}/assignments?prepare_confirm=responses"
         ).text.split()
     )
     assert "Preparing will delete 1 saved response." in body
@@ -128,7 +128,7 @@ def test_acknowledged_prepare_clears_what_the_dry_run_counted(
     review_session, group_id = _session_with_two_answered_teams(db, operator, "clr-ack")
 
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments", "acknowledge_response_loss": "true"},
         follow_redirects=False,
     )
@@ -159,7 +159,7 @@ def test_a_team_that_only_loses_a_member_projects_no_clear(
     )
     db.commit()
     operator.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "assignments", "acknowledge_response_loss": "true"},
         follow_redirects=False,
     )

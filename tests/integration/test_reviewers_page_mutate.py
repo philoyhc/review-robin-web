@@ -80,7 +80,7 @@ def test_plain_render_has_checkbox_column_and_action_buttons(
     _seed(db, review_session.id, ["Alice", "Bob"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     # Per-row select checkboxes + select-all.
     assert 'class="reviewer-select"' in body
@@ -114,7 +114,7 @@ def test_edit_id_renders_target_row_as_inputs(
     rows = _seed(db, review_session.id, ["Alice", "Bob"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         f"?edit_id={rows[0].id}"
     ).text
     assert "reviewer-edit-row" in body
@@ -172,7 +172,7 @@ def test_edit_post_updates_row_and_redirects(
     rows = _seed(db, review_session.id, ["Alice"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/{rows[0].id}/update",
+        f"/operator/sessions/{review_session.public_id}/reviewers/{rows[0].id}/update",
         data={
             "name": "Alice Renamed",
             "email": "alice@example.edu",
@@ -201,7 +201,7 @@ def test_edit_post_validation_error_rerenders_with_values(
 
     # Rename Bob to Alice's email → duplicate-email rejection.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/{rows[1].id}/update",
+        f"/operator/sessions/{review_session.public_id}/reviewers/{rows[1].id}/update",
         data={
             "name": "Bob",
             "email": "alice@example.edu",
@@ -244,7 +244,7 @@ def test_edit_id_outside_cap_is_force_included(
     target = rows[240]
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         f"?edit_id={target.id}"
     ).text
     assert "reviewer-edit-row" in body
@@ -258,7 +258,7 @@ def test_edit_unknown_reviewer_id_falls_back_to_plain_list(
     _seed(db, review_session.id, ["Alice"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers?edit_id=999999"
+        f"/operator/sessions/{review_session.public_id}/reviewers?edit_id=999999"
     ).text
     # Stale id → no edit row, plain list renders.
     assert "reviewer-edit-row" not in body
@@ -277,7 +277,7 @@ def test_add_renders_blank_edit_row(
     _seed(db, review_session.id, ["Alice"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers?add=1"
+        f"/operator/sessions/{review_session.public_id}/reviewers?add=1"
     ).text
     assert "reviewer-edit-row" in body
     # The blank row IS the editor: its heading card went when Save and
@@ -292,7 +292,7 @@ def test_add_works_on_empty_roster(
 ) -> None:
     review_session = _make_session(client, db, code="rev-m-addempty")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers?add=1"
+        f"/operator/sessions/{review_session.public_id}/reviewers?add=1"
     ).text
     # The blank edit row renders even with zero existing reviewers.
     assert "reviewer-edit-row" in body
@@ -304,7 +304,7 @@ def test_add_post_creates_row_and_redirects(
     review_session = _make_session(client, db, code="rev-m-addpost")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/create",
+        f"/operator/sessions/{review_session.public_id}/reviewers/create",
         data={
             "name": "Newbie",
             "email": "newbie@example.edu",
@@ -331,7 +331,7 @@ def test_add_post_validation_error_rerenders_in_add_mode(
     review_session = _make_session(client, db, code="rev-m-adderr")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/create",
+        f"/operator/sessions/{review_session.public_id}/reviewers/create",
         data={
             "name": "Bad",
             "email": "not-an-email",
@@ -378,7 +378,7 @@ def test_bulk_inactivate_flips_selected_rows(
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-inactivate",
         data={"reviewer_ids": [rows[0].id, rows[2].id]},
         follow_redirects=False,
     )
@@ -408,7 +408,7 @@ def test_bulk_action_keeps_selection(
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-inactivate",
         data={"reviewer_ids": [rows[0].id, rows[2].id]},
         follow_redirects=False,
     )
@@ -440,7 +440,7 @@ def test_bulk_action_keeps_filter(
     rows = _seed(db, review_session.id, ["Alice", "Bob", "Carol"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-inactivate",
         data={
             "reviewer_ids": [rows[0].id],
             "filter_status": "active",
@@ -463,7 +463,7 @@ def test_bulk_reactivate_flips_selected_rows(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-reactivate",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-reactivate",
         data={"reviewer_ids": [rows[0].id]},
         follow_redirects=False,
     )
@@ -489,7 +489,7 @@ def test_bulk_with_id_outside_session_is_rejected(
     rows_b = _seed(db, session_b.id, ["Bob"])
 
     response = client.post(
-        f"/operator/sessions/{session_a.id}/reviewers/bulk-inactivate",
+        f"/operator/sessions/{session_a.public_id}/reviewers/bulk-inactivate",
         data={"reviewer_ids": [rows_a[0].id, rows_b[0].id]},
         follow_redirects=False,
     )
@@ -510,7 +510,7 @@ def test_edit_mode_suppressed_on_ready_session(
     rows = _seed(db, review_session.id, ["Alice"])
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         f"?edit_id={rows[0].id}"
     ).text
     # Ready session → edit mode suppressed, lock card shown instead.
@@ -525,7 +525,7 @@ def test_create_on_ready_session_is_409(
         client, db, code="rev-m-ready-create", status="ready"
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/create",
+        f"/operator/sessions/{review_session.public_id}/reviewers/create",
         data={
             "name": "X",
             "email": "x@example.edu",
@@ -565,7 +565,7 @@ def test_send_invitation_to_inactive_reviewer_is_409(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/invitations/{invitation.id}/send",
         follow_redirects=False,
     )
@@ -608,7 +608,7 @@ def test_every_row_action_lands_on_the_row_it_acted_on(
 ) -> None:
     review_session = _make_session(client, db, code=f"rev-anch-{name[:6]}")
     rows = _seed(db, review_session.id, ["Alice"])
-    base = f"/operator/sessions/{review_session.id}/reviewers"
+    base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     response = _post_row_action(client, base, rows[0].id, template, data)
     assert response.status_code == 303, name
@@ -626,7 +626,7 @@ def test_every_row_action_carries_the_pager_offset(
     anchor names was not in the response to be found."""
     review_session = _make_session(client, db, code=f"rev-off-{name[:6]}")
     rows = _seed(db, review_session.id, ["Alice"])
-    base = f"/operator/sessions/{review_session.id}/reviewers"
+    base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     loc = _post_row_action(
         client, base, rows[0].id, template, data, filter_offset=200
@@ -655,7 +655,7 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
     """
     review_session = _make_session(client, db, code="rev-sends-offset")
     _seed(db, review_session.id, [f"R{n}" for n in range(1, 231)])
-    base = f"/operator/sessions/{review_session.id}/reviewers"
+    base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     bulk = re.search(
         r'<form[^>]*id="reviewers-bulk-form".*?</form>',
@@ -694,7 +694,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     rows = _seed(db, review_session.id, ["Alice"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/bulk-delete",
+        f"/operator/sessions/{review_session.public_id}/reviewers/bulk-delete",
         data={
             "reviewer_ids": [rows[0].id],
             "confirm": "true",
@@ -732,7 +732,7 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     review_session = _make_session(client, db, code="rev-landing")
     rows = _seed(db, review_session.id, ["Alice"])
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
 
     row = re.search(
@@ -768,7 +768,7 @@ def test_add_new_carries_the_active_filter_into_add_mode(
     """
     review_session = _make_session(client, db, code="rev-addfilter")
     _seed(db, review_session.id, ["Alice", "Bob"])
-    base = f"/operator/sessions/{review_session.id}/reviewers"
+    base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     body = client.get(f"{base}?status=inactive&q=ali").text
     link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
@@ -797,7 +797,7 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
     """
     review_session = _make_session(client, db, code="rev-createpage")
     _seed(db, review_session.id, [f"R{n}" for n in range(1, 231)])
-    base = f"/operator/sessions/{review_session.id}/reviewers"
+    base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     response = client.post(
         f"{base}/create",
@@ -843,7 +843,7 @@ def test_a_save_error_renders_in_the_row_bar_and_is_reachable(
     """
     review_session = _make_session(client, db, code="rev-errhome")
     _seed(db, review_session.id, ["Alice"])
-    base = f"/operator/sessions/{review_session.id}/reviewers"
+    base = f"/operator/sessions/{review_session.public_id}/reviewers"
 
     response = client.post(
         f"{base}/create",
@@ -928,13 +928,13 @@ def test_delete_all_comes_back_with_the_panel_open(
     _seed(db, review_session.id, ["Alice"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/delete-all",
+        f"/operator/sessions/{review_session.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
         "?unlocked=1#roster-card"
     ), response.headers["location"]
 

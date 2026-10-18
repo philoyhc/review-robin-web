@@ -208,9 +208,9 @@ def build_role_chips(
         )
         role_targets["reviewer"] = {
             "target": (
-                f"/me/sessions/{review_session.id}/summary"
+                f"/me/sessions/{review_session.public_id}/summary"
                 if pill.state == "submitted"
-                else f"/me/sessions/{review_session.id}/1"
+                else f"/me/sessions/{review_session.public_id}/1"
             ),
             "enabled": session_status != "not opened",
         }
@@ -222,12 +222,12 @@ def build_role_chips(
         # so a live chip here was a link to a refusal *and* a statement
         # about the viewer that ``/me`` had stopped making.
         role_targets["reviewee"] = {
-            "target": f"/me/sessions/{review_session.id}/results",
+            "target": f"/me/sessions/{review_session.public_id}/results",
             "enabled": True,
         }
     if observer is not None:
         role_targets["observer"] = {
-            "target": f"/me/sessions/{review_session.id}/collation",
+            "target": f"/me/sessions/{review_session.public_id}/collation",
             "enabled": True,
         }
 

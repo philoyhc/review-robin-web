@@ -13,6 +13,7 @@ import httpx
 import pytest
 from playwright.sync_api import Page, expect
 
+from ._builder import session_pk
 from .conftest import LiveServer
 
 PAGES = {
@@ -21,7 +22,10 @@ PAGES = {
 }
 
 
-def _make(api: httpx.Client, *, archived: bool, word: str = "") -> tuple[int, str]:
+def _make(
+    api: httpx.Client, database_url: str, *, archived: bool, word: str = ""
+) -> tuple[int, str]:
+    """Make a session; return its key (the lobby checkbox's value) and code."""
     code = f"o1{uuid.uuid4().hex[:8]}"
     response = api.post(
         "/operator/sessions",
@@ -29,13 +33,13 @@ def _make(api: httpx.Client, *, archived: bool, word: str = "") -> tuple[int, st
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    session_id = int(response.headers["location"].split("?")[0].rsplit("/", 1)[1])
+    session_id = response.headers["location"].split("?")[0].rsplit("/", 1)[1]
     if archived:
         response = api.post(
             f"/operator/sessions/{session_id}/workflow/archive", follow_redirects=False
         )
         assert response.status_code == 303, response.text
-    return session_id, code
+    return session_pk(database_url, session_id), code
 
 
 @pytest.mark.parametrize("kind", sorted(PAGES))
@@ -43,8 +47,8 @@ def test_select_all_ticks_only_the_rows_the_filter_shows(
     page: Page, api: httpx.Client, live_server: LiveServer, kind: str
 ) -> None:
     url, prefix = PAGES[kind]
-    shown_id, shown_code = _make(api, archived=kind == "archived")
-    hidden_id, _ = _make(api, archived=kind == "archived")
+    shown_id, shown_code = _make(api, live_server.database_url, archived=kind == "archived")
+    hidden_id, _ = _make(api, live_server.database_url, archived=kind == "archived")
     page.goto(live_server.base_url + url)
     box = lambda session_id: page.locator(  # noqa: E731
         f'.{prefix}-list-select-row[value="{session_id}"]'
@@ -78,9 +82,9 @@ def test_the_bulk_panel_follows_the_filter_and_keeps_an_unsaved_edit(
     it is editable, so a keystroke that hides nothing ticked must not
     re-seed it (diff read on #3095)."""
     word = f"w{uuid.uuid4().hex[:6]}"
-    first, _ = _make(api, archived=False, word=word)
-    second, _ = _make(api, archived=False, word=word)
-    other, _ = _make(api, archived=False)
+    first, _ = _make(api, live_server.database_url, archived=False, word=word)
+    second, _ = _make(api, live_server.database_url, archived=False, word=word)
+    other, _ = _make(api, live_server.database_url, archived=False)
     page.goto(live_server.base_url + "/operator/sessions")
     box = lambda session_id: page.locator(  # noqa: E731
         f'.sessions-list-select-row[value="{session_id}"]'

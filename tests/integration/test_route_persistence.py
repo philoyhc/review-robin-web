@@ -25,6 +25,8 @@ from app.db.models import (
     ReviewSession,
 )
 
+from ._public_id import public_id
+
 
 def _bootstrap(
     committed_client: TestClient, committed_engine: Engine, *, code: str
@@ -54,7 +56,8 @@ def test_add_display_field_route_persists(
     )
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/display-fields",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
+        "/display-fields",
         data={
             "source_pair": "reviewee:tag_1",
             "label": "Cohort",
@@ -92,7 +95,8 @@ def test_update_display_field_label_no_longer_persists(
         committed_client, committed_engine, code="edit-disp"
     )
     committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/display-fields",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
+        "/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "", "visible": "true"},
         follow_redirects=False,
     )
@@ -105,7 +109,7 @@ def test_update_display_field_label_no_longer_persists(
         ).scalar_one()
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}"
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
         f"/display-fields/{df_id}/edit",
         data={"label": "Cohort A", "visible": "true"},
         follow_redirects=False,
@@ -128,7 +132,8 @@ def test_delete_display_field_persists(
         committed_client, committed_engine, code="del-disp"
     )
     committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/display-fields",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
+        "/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "", "visible": "true"},
         follow_redirects=False,
     )
@@ -141,7 +146,7 @@ def test_delete_display_field_persists(
         ).scalar_one()
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}"
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
         f"/display-fields/{df_id}/delete",
         follow_redirects=False,
     )
@@ -182,7 +187,7 @@ def test_delete_response_field_persists(
         comments_id = comments.id
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}"
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
         f"/fields/{comments_id}/delete",
         follow_redirects=False,
     )
@@ -213,7 +218,7 @@ def test_update_response_field_label_persists(
         rating_id = rating.id
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}"
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
         f"/fields/{rating_id}/edit",
         data={
             "label": "Score",
@@ -249,7 +254,7 @@ def test_move_response_field_persists(
         rating_id = rating.id
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}"
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
         f"/fields/{rating_id}/move",
         data={"direction": "down"},
         follow_redirects=False,
@@ -276,7 +281,8 @@ def test_add_default_response_field_persists(
     )
 
     response = committed_client.post(
-        f"/operator/sessions/{session_id}/instruments/{instrument_id}/fields/add-row",
+        f"/operator/sessions/{public_id(session_id)}/instruments/{instrument_id}"
+        "/fields/add-row",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -304,7 +310,7 @@ def test_data_shapes_zip_all_audit_row_persists(
         committed_client, committed_engine, code="zip-shapes-commit"
     )
     assert committed_client.post(
-        f"/operator/sessions/{session_id}/extract-data/shapes",
+        f"/operator/sessions/{public_id(session_id)}/extract-data/shapes",
         json={
             "name": "One",
             "axis": "reviewer",
@@ -314,7 +320,7 @@ def test_data_shapes_zip_all_audit_row_persists(
         },
     ).status_code == 201
     response = committed_client.get(
-        f"/operator/sessions/{session_id}/export/data_shapes_bundle.zip"
+        f"/operator/sessions/{public_id(session_id)}/export/data_shapes_bundle.zip"
     )
     assert response.status_code == 200
 
@@ -363,7 +369,7 @@ def test_extract_audit_rows_persist(
         code=f"x-{path.replace('.', '-').replace('_', '-')}",
     )
     response = committed_client.get(
-        f"/operator/sessions/{session_id}/export/{path}"
+        f"/operator/sessions/{public_id(session_id)}/export/{path}"
     )
     assert response.status_code == 200, response.text
 

@@ -5363,12 +5363,13 @@
         // Scope per surface so a Reviewers-page sort never bleeds
         // into a Reviewees-page request, and a session-N sort
         // never bleeds into session-M. ``tableId`` shape is
-        // ``rrw-sort-{surface}-{session_id}[-{instrument_id}]``;
+        // ``rrw-sort-{surface}-{session_id}[-{instrument_id}]``, the
+        // session's URL public ID (19V Item 1);
         // the path mirrors the surface prefix.
         //
         // Map: ``rs`` (reviewer surface) → ``/me/sessions/N``;
         //      anything else → ``/operator/sessions/N``.
-        var match = tableId.match(/^rrw-sort-([^-]+)-(\d+)/);
+        var match = tableId.match(/^rrw-sort-([^-]+)-([0-9a-z]+)/);
         if (!match) return '/';
         var surface = match[1];
         var sessionId = match[2];

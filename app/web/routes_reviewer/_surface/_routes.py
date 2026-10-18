@@ -62,8 +62,8 @@ def submit_redirect_url(
     return the reviewer to "the page they were on".
     """
     if fully_submitted:
-        return f"/me/sessions/{review_session.id}/summary"
-    return f"/me/sessions/{review_session.id}"
+        return f"/me/sessions/{review_session.public_id}/summary"
+    return f"/me/sessions/{review_session.public_id}"
 
 
 def _submitted_from_page(request: Request) -> int:
@@ -81,7 +81,7 @@ def _submitted_from_page(request: Request) -> int:
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
-def review_surface_default_position(session_id: int) -> RedirectResponse:
+def review_surface_default_position(session_id: str) -> RedirectResponse:
     """Bare-URL fallback. 303s to ``/{id}/1`` (page 1) per the
     Segment 18L multi-page replan. Auth happens on the destination
     handler; the redirect is harmless without it.
@@ -102,7 +102,7 @@ def review_surface_default_position(session_id: int) -> RedirectResponse:
 # would otherwise take ``submit`` / ``recall`` / ``clear`` as a page
 # number and 422.
 @router.get("/sessions/{session_id}/{page_n}/save", response_model=None)
-def review_surface_save_revisited(session_id: int, page_n: int) -> RedirectResponse:
+def review_surface_save_revisited(session_id: str, page_n: int) -> RedirectResponse:
     return RedirectResponse(
         url=f"/me/sessions/{session_id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
@@ -111,7 +111,7 @@ def review_surface_save_revisited(session_id: int, page_n: int) -> RedirectRespo
 
 @router.get("/sessions/{session_id}/submit", response_model=None)
 def review_surface_submit_revisited(
-    request: Request, session_id: int
+    request: Request, session_id: str
 ) -> RedirectResponse:
     # ``?page=N`` is the page Submit was pressed on; parsed to an int,
     # so nothing but a number reaches the Location.
@@ -122,7 +122,7 @@ def review_surface_submit_revisited(
 
 
 @router.get("/sessions/{session_id}/recall", response_model=None)
-def review_surface_recall_revisited(session_id: int) -> RedirectResponse:
+def review_surface_recall_revisited(session_id: str) -> RedirectResponse:
     # Recall is posted from the summary page.
     return RedirectResponse(
         url=f"/me/sessions/{session_id}/summary",
@@ -131,7 +131,7 @@ def review_surface_recall_revisited(session_id: int) -> RedirectResponse:
 
 
 @router.get("/sessions/{session_id}/clear", response_model=None)
-def review_surface_clear_revisited(session_id: int) -> RedirectResponse:
+def review_surface_clear_revisited(session_id: str) -> RedirectResponse:
     return RedirectResponse(
         url=f"/me/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
@@ -438,7 +438,7 @@ async def reviewer_save(
             status_code=status.HTTP_400_BAD_REQUEST,
         )
     return RedirectResponse(
-        url=f"/me/sessions/{review_session.id}/{page_n}",
+        url=f"/me/sessions/{review_session.public_id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -619,7 +619,7 @@ def reviewer_recall(
         db.refresh(review_session)
         raise _recall_refused(review_session) from None
     return RedirectResponse(
-        url=f"/me/sessions/{review_session.id}/1",
+        url=f"/me/sessions/{review_session.public_id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
@@ -689,6 +689,6 @@ async def reviewer_clear(
             form={},
         )
     return RedirectResponse(
-        url=f"/me/sessions/{review_session.id}",
+        url=f"/me/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

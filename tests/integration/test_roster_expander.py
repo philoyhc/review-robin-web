@@ -178,7 +178,7 @@ def _with_a_response(db: Session, rs: ReviewSession) -> None:
     db.commit()
 
 
-def _base(sid: int, page: str) -> str:
+def _base(sid: str, page: str) -> str:
     return f"/operator/sessions/{sid}/{page}"
 
 
@@ -272,7 +272,7 @@ def test_the_card_labels_are_gone_from_the_rendered_page(
     passes for the wrong reason — or fails for it."""
     rs = _make_session(client, db, f"ex-c-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page)).text)
+    html = _markup(client.get(_base(rs.public_id, page)).text)
 
     assert "Operator actions" not in html
     assert f'id="{page}-edit-btn"' not in html
@@ -292,13 +292,13 @@ def test_the_panel_carries_all_four_actions(
 ) -> None:
     rs = _make_session(client, db, f"ex-p-{page[:4]}")
     _seed(db, rs.id, page)
-    builder = _builder(client.get(_base(rs.id, page)).text, page)
+    builder = _builder(client.get(_base(rs.public_id, page)).text, page)
 
     assert ">Edit</button>" in builder
     assert ">Delete</button>" in builder
     # The status labels are produced by `statusActions()`, outside
     # `build()` — asserted against the whole script, not the slice.
-    script = _script(client.get(_base(rs.id, page)).text, page)
+    script = _script(client.get(_base(rs.public_id, page)).text, page)
     assert 'out.push("Inactivate")' in script
     assert 'out.push("Activate")' in script
 
@@ -313,7 +313,7 @@ def test_the_panel_posts_to_the_same_routes_the_card_did(
     `form=`, so a button needs only to say where."""
     rs = _make_session(client, db, f"ex-r-{page[:4]}")
     _seed(db, rs.id, page)
-    builder = _builder(client.get(_base(rs.id, page)).text, page)
+    builder = _builder(client.get(_base(rs.public_id, page)).text, page)
 
     assert f'form="{page}-bulk-form"' in builder, builder[:400]
     assert '"/bulk-inactivate"' in builder
@@ -335,7 +335,7 @@ def test_delete_is_destructive_and_ships_gated(
     """
     rs = _make_session(client, db, f"ex-d-{page[:4]}")
     _seed(db, rs.id, page)
-    builder = _builder(client.get(_base(rs.id, page)).text, page)
+    builder = _builder(client.get(_base(rs.public_id, page)).text, page)
 
     start = builder.index(">Delete</button>")
     element = builder[builder.rindex("<button", 0, start) : start]
@@ -356,7 +356,7 @@ def test_the_gate_is_paired_to_the_button_and_submits_with_the_selection(
     slice that wired this, rather than a slice later."""
     rs = _make_session(client, db, f"ex-g-{page[:4]}")
     _seed(db, rs.id, page)
-    body = client.get(_base(rs.id, page)).text
+    body = client.get(_base(rs.public_id, page)).text
     builder = _builder(body, page)
 
     assert f'data-delete-confirm="{page}-bulk-delete"' in builder
@@ -386,8 +386,8 @@ def test_the_delete_sentence_names_what_goes_per_page(
     _seed(db, rs.id, "reviewees")
     _seed(db, rs.id, "relationships")
 
-    rev = _builder(client.get(_base(rs.id, "reviewees")).text, "reviewees")
-    rel = _builder(client.get(_base(rs.id, "relationships")).text, "relationships")
+    rev = _builder(client.get(_base(rs.public_id, "reviewees")).text, "reviewees")
+    rel = _builder(client.get(_base(rs.public_id, "relationships")).text, "relationships")
 
     # No assignments and no responses yet: both pages say the bare thing.
     assert '"Yes, delete these"' in rev, rev[:300]
@@ -398,8 +398,8 @@ def test_the_delete_sentence_names_what_goes_per_page(
 
     # Give the reviewee a response, and only its sentence grows.
     _with_a_response(db, rs)
-    rev = _builder(client.get(_base(rs.id, "reviewees")).text, "reviewees")
-    rel = _builder(client.get(_base(rs.id, "relationships")).text, "relationships")
+    rev = _builder(client.get(_base(rs.public_id, "reviewees")).text, "reviewees")
+    rel = _builder(client.get(_base(rs.public_id, "relationships")).text, "relationships")
     assert (
         '"Yes, delete these and their associated assignments and reviewer responses"'
         in rev
@@ -416,7 +416,7 @@ def test_the_edit_row_is_bracketed_and_the_bar_follows_it(
 ) -> None:
     rs = _make_session(client, db, f"ex-e-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
+    html = _markup(client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}").text)
 
     row = re.search(
         rf'<tr class="{noun}-edit-row[^"]*"[^>]*id="{noun}-row-{ids[0]}"', html
@@ -437,7 +437,7 @@ def test_save_and_cancel_are_in_the_bar_and_nowhere_else(
     `style=` this rung also retires."""
     rs = _make_session(client, db, f"ex-s-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
+    html = _markup(client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}").text)
 
     assert html.count(">Save</button>") == 1, "Save is in two places, or none"
     assert html.count(">Cancel</a>") == 1
@@ -462,14 +462,14 @@ def test_the_bar_announces_the_mode_the_card_heading_used_to(
     rs = _make_session(client, db, f"ex-m-{page[:4]}")
     ids = _seed(db, rs.id, page)
 
-    edit = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
+    edit = _markup(client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}").text)
     assert re.search(
         rf'<span class="visually-hidden" aria-live="polite">\s*Edit {noun}\s*</span>',
         edit,
     ), edit[edit.index("row-editor-bar") : edit.index("row-editor-bar") + 400]
     assert f"<h2>Edit {noun}</h2>" not in edit
 
-    add = _markup(client.get(_base(rs.id, page) + "?add=1").text)
+    add = _markup(client.get(_base(rs.public_id, page) + "?add=1").text)
     assert f"Add new {noun}" in add
     assert f"<h2>Add new {noun}</h2>" not in add
 
@@ -485,7 +485,7 @@ def test_the_bar_spans_exactly_the_row_above_it(
     """
     rs = _make_session(client, db, f"ex-w-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
+    html = _markup(client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}").text)
 
     row_at = html.index(f'id="{noun}-row-{ids[0]}"')
     row = html[row_at : html.index("</tr>", row_at)]
@@ -506,13 +506,13 @@ def test_add_mode_lands_on_the_row_it_opens(
     rs = _make_session(client, db, f"ex-a-{page[:4]}")
     _seed(db, rs.id, page)
 
-    listing = _markup(client.get(_base(rs.id, page)).text)
+    listing = _markup(client.get(_base(rs.public_id, page)).text)
     link = re.search(r'href="([^"]*\?add=1[^"]*)"', listing)
     assert link, "no live Add new"
     href = link.group(1).replace("&amp;", "&")
     assert href.endswith(f"#{page}-row-editor"), href
 
-    added = _markup(client.get(_base(rs.id, page) + "?add=1").text)
+    added = _markup(client.get(_base(rs.public_id, page) + "?add=1").text)
     assert f'id="{page}-row-editor"' in added, "the link names a target that is absent"
     assert added.count(f'id="{page}-row-editor"') == 1
 
@@ -536,7 +536,7 @@ def test_the_save_error_moved_into_the_bar(
             "reviewer_pick": "nobody at all", "reviewee_pick": "nobody either",
             "tag_1": "", "tag_2": "", "tag_3": "", "status_value": "active",
         }
-    response = client.post(_base(rs.id, page) + "/create", data=data)
+    response = client.post(_base(rs.public_id, page) + "/create", data=data)
     assert response.status_code == 400, response.status_code
     html = _markup(response.text)
 
@@ -566,7 +566,7 @@ def test_every_data_row_carries_the_status_the_panel_reads(
     """
     rs = _make_session(client, db, f"ex-st-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page)).text)
+    html = _markup(client.get(_base(rs.public_id, page)).text)
 
     for rid in ids:
         row_at = html.index(f'id="{noun}-row-{rid}"')
@@ -593,7 +593,7 @@ def test_the_add_row_is_bracketed_too(
     """
     rs = _make_session(client, db, f"ex-ab-{page[:4]}")
     _seed(db, rs.id, page)
-    html = _markup(client.get(_base(rs.id, page) + "?add=1").text)
+    html = _markup(client.get(_base(rs.public_id, page) + "?add=1").text)
 
     row = re.search(rf'<tr class="{noun}-edit-row[^"]*"[^>]*id="{page}-row-editor"', html)
     assert row, "the add row is not marked as the editor"
@@ -616,7 +616,7 @@ def test_edit_is_gated_on_a_selection_of_exactly_one(
     """
     rs = _make_session(client, db, f"ex-ar-{page[:4]}")
     _seed(db, rs.id, page)
-    builder = _builder(client.get(_base(rs.id, page)).text, page)
+    builder = _builder(client.get(_base(rs.public_id, page)).text, page)
 
     assert "var editable = sel.length === 1;" in builder
     # The disabled branch itself, as the template writes it: a plain JS
@@ -669,7 +669,7 @@ def test_the_status_actions_are_chosen_by_the_selection_not_always_both(
     """
     rs = _make_session(client, db, f"ex-sa-{page[:4]}")
     _seed(db, rs.id, page)
-    script = _script(client.get(_base(rs.id, page)).text, page)
+    script = _script(client.get(_base(rs.public_id, page)).text, page)
 
     assert 'if (hasActive) out.push("Inactivate");' in script
     assert 'if (hasInactive) out.push("Activate");' in script
@@ -693,7 +693,7 @@ def test_select_all_keeps_its_indeterminate_state(
     """
     rs = _make_session(client, db, f"ex-in-{page[:4]}")
     _seed(db, rs.id, page)
-    script = _script(client.get(_base(rs.id, page)).text, page)
+    script = _script(client.get(_base(rs.public_id, page)).text, page)
 
     assert "selectAll.indeterminate = (n > 0 && n < all.length);" in script
     assert "selectAll.checked = (n > 0 && n === all.length);" in script
@@ -726,7 +726,7 @@ def test_sorting_takes_the_panel_out_and_puts_it_back(
     """
     rs = _make_session(client, db, f"ex-so-{page[:4]}")
     _seed(db, rs.id, page)
-    body = client.get(_base(rs.id, page)).text
+    body = client.get(_base(rs.public_id, page)).text
     script = _script(body, page)
 
     assert 'addEventListener("rrw:sorted"' in script, (
@@ -757,7 +757,7 @@ def test_a_selection_restored_by_the_server_gets_its_panel(
     """
     rs = _make_session(client, db, f"ex-rs-{page[:4]}")
     ids = _seed(db, rs.id, page)
-    url = f"{_base(rs.id, page)}?selected={ids[0]}&selected={ids[2]}"
+    url = f"{_base(rs.public_id, page)}?selected={ids[0]}&selected={ids[2]}"
     body = client.get(url).text
 
     assert _markup(body).count("checked") >= 2, (
@@ -789,14 +789,14 @@ def test_the_add_rows_first_field_takes_the_caret(
     rs = _make_session(client, db, f"ex-cf-{page[:4]}")
     ids = _seed(db, rs.id, page)
 
-    add = _markup(client.get(_base(rs.id, page) + "?add=1").text)
+    add = _markup(client.get(_base(rs.public_id, page) + "?add=1").text)
     assert add.count("row-editor-first-field") == 1, "no caret marker, or two"
     marker_at = add.index("row-editor-first-field")
     field = add[add.rindex("<input", 0, marker_at) : add.index(">", marker_at) + 1]
     expected = "name" if page == "reviewees" else "reviewer_pick"
     assert f'name="{expected}"' in field, field
 
-    edit = _markup(client.get(_base(rs.id, page) + f"?edit_id={ids[0]}").text)
+    edit = _markup(client.get(_base(rs.public_id, page) + f"?edit_id={ids[0]}").text)
     assert "row-editor-first-field" not in edit, (
         "an Edit steals focus from the cell the operator was heading for"
     )
@@ -831,7 +831,7 @@ def test_the_anchor_prunes_on_untick_and_rebuilds_on_select_all(
     """
     rs = _make_session(client, db, f"ex-an-{page[:4]}")
     _seed(db, rs.id, page)
-    script = _script(client.get(_base(rs.id, page)).text, page)
+    script = _script(client.get(_base(rs.public_id, page)).text, page)
 
     assert "tickOrder = tickOrder.filter(function (id) { return id !== row.id; });" in script, (
         "the prune is gone; a re-ticked row would anchor the panel"
@@ -860,7 +860,7 @@ def test_edit_navigates_to_the_row_it_is_about_to_edit(
     """
     rs = _make_session(client, db, f"ex-ed-{page[:4]}")
     _seed(db, rs.id, page)
-    script = _script(client.get(_base(rs.id, page)).text, page)
+    script = _script(client.get(_base(rs.public_id, page)).text, page)
 
     assert 'BULK_BASE + "?edit_id=" +' in script
     assert f'"#{noun}-row-" + encodeURIComponent(editId)' in script, (
@@ -887,7 +887,7 @@ def test_the_panel_stays_a_pill_free_zone(
     """
     rs = _make_session(client, db, f"ex-pf-{page[:4]}")
     _seed(db, rs.id, page)
-    builder = _builder(client.get(_base(rs.id, page)).text, page)
+    builder = _builder(client.get(_base(rs.public_id, page)).text, page)
 
     assert "pill" not in builder, f"a pill came back into the panel: {builder[:400]}"
     assert '<span class="row-expander-count"><strong>' in builder, (

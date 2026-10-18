@@ -226,7 +226,7 @@ def test_the_surface_closes_a_chain_until_its_top_opens(
 ) -> None:
     review_session, fields = _chain_live(db, make_client(alice), "two-level-surface")
     client = make_client(reviewer_user)
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     # Rating is a parent and governed; both it and Comments start closed.
     assert re.search(
         r'<td[^>]*data-rs-branch-parent="rating"[^>]*data-rs-governed-by="familiarity"',
@@ -248,7 +248,7 @@ def test_the_surface_closes_a_chain_until_its_top_opens(
     ).scalar_one()
     _answer(db, assignment, fields["rating"], "5")
     db.commit()
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     comments = re.search(
         r'<(?:input|textarea)[^>]*name="response\[\d+\]\[comments\]"[^>]*>', body
     ).group(0)
@@ -262,7 +262,7 @@ def test_the_surface_script_cascades_down_the_chain(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     review_session, _ = _chain_live(db, make_client(alice), "two-level-js")
-    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     start = body.index("function sync(parentCell)")
     script = " ".join(body[start : body.index("function onEdit", start)].split())
     for line in (

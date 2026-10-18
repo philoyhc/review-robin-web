@@ -39,7 +39,7 @@ def test_sessions_list_renders_v2_table_inside_a_card(
     # The session name is the row's primary anchor into Session Home —
     # there's no separate Access button.
     assert (
-        f'<a href="/operator/sessions/{session.id}">{session.name}</a>'
+        f'<a href="/operator/sessions/{session.public_id}">{session.name}</a>'
     ) in body
     assert ">Access</a>" not in body
 
@@ -143,7 +143,7 @@ def test_session_edit_renders_two_row_chrome_with_no_active_tab(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="rrw-edit")
-    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # Body class flips onto v2.
     assert '<body class="ui-v2">' in body
     # Two-row chrome included.
@@ -164,7 +164,7 @@ def test_session_edit_renders_status_row_with_lifecycle_pill(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="rrw-edit2")
-    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # The status row partial requires status_pills in context — confirm
     # the route now passes it (B1 prerequisite from the spike).
     assert 'class="status-row"' in body
@@ -175,13 +175,13 @@ def test_session_edit_form_lives_inside_a_card(
     client: TestClient, db: Session
 ) -> None:
     session = _create_session(client, db, code="rrw-edit3")
-    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     # The config card carries the `session-config` id and its own form
     # (`config-save-{id}`) so the Save button + the scattered inputs
     # re-associate via the HTML5 `form=` attribute.
     assert 'id="session-config"' in body
     assert f'id="config-save-{session.id}"' in body
-    assert f'action="/operator/sessions/{session.id}/config"' in body
+    assert f'action="/operator/sessions/{session.public_id}/config"' in body
     # Save + Cancel controls carry the config-card hooks; both are gated
     # by the dirty-tracking JS until an input changes.
     assert "data-config-save" in body
@@ -195,9 +195,9 @@ def test_session_edit_has_back_link_to_session_home(
     """The config card lives on Session Home; its Cancel / Lock controls
     return to Home display mode (dropping the ?editing param)."""
     session = _create_session(client, db, code="rrw-edit-back")
-    body = client.get(f"/operator/sessions/{session.id}?editing=1").text
+    body = client.get(f"/operator/sessions/{session.public_id}?editing=1").text
     assert (
-        f'href="/operator/sessions/{session.id}#session-config"' in body
+        f'href="/operator/sessions/{session.public_id}#session-config"' in body
     )
 
 
@@ -208,7 +208,7 @@ def test_session_edit_save_redirects_back_to_edit(
     card still unlocked; Lock, not Save, locks it (19U Item 4)."""
     session = _create_session(client, db, code="rrw-edit-stay")
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": session.name,
             "code": session.code,
@@ -218,7 +218,7 @@ def test_session_edit_save_redirects_back_to_edit(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{session.id}?editing=1"
+        f"/operator/sessions/{session.public_id}?editing=1"
     )
 
 
@@ -230,7 +230,7 @@ def test_session_owners_card_is_half_width_above_the_danger_zone(
     of its own, in the Danger Zone's column of the page's bottom grid —
     above the Danger Zone since the author's ruling of 2026-09-23."""
     session = _create_session(client, db, code="rrw-edit-own")
-    body = client.get(f"/operator/sessions/{session.id}").text
+    body = client.get(f"/operator/sessions/{session.public_id}").text
     owners = body.find('id="owners-card"')
     danger = body.find('id="danger-zone"')
     assert -1 not in (owners, danger)

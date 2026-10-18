@@ -81,7 +81,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewer-metadata-zip"
-             href="/operator/sessions/{{ session.id }}/export/reviewer_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
+             href="/operator/sessions/{{ session.public_id }}/export/reviewer_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
             Download
           </a>
         </div>
@@ -130,7 +130,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewee-metadata-zip"
-             href="/operator/sessions/{{ session.id }}/export/reviewee_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
+             href="/operator/sessions/{{ session.public_id }}/export/reviewee_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
             Download
           </a>
         </div>
@@ -189,7 +189,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-by-instrument-zip"
-             href="/operator/sessions/{{ session.id }}/export/by_instrument_bundle.zip" download>
+             href="/operator/sessions/{{ session.public_id }}/export/by_instrument_bundle.zip" download>
             Zip all
           </a>
         </div>
@@ -248,7 +248,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-zip-all"
-             href="/operator/sessions/{{ session.id }}/export/responses_bundle.zip" download>
+             href="/operator/sessions/{{ session.public_id }}/export/responses_bundle.zip" download>
             Zip all
           </a>
         </div>
@@ -805,7 +805,7 @@
       {# Every saved shape's file in one zip; greyed until a shape is
          saved, since an empty zip is never a useful download. The
          card's script re-syncs it as shapes save and delete. #}
-      {% set shaper_zip_href = "/operator/sessions/" ~ session.id ~ "/export/data_shapes_bundle.zip" %}
+      {% set shaper_zip_href = "/operator/sessions/" ~ session.public_id ~ "/export/data_shapes_bundle.zip" %}
       <a class="btn secondary"
          id="extract-data-shaper-zip"
          data-zip-href="{{ shaper_zip_href }}"
@@ -886,7 +886,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-token-keys-download"
-             href="/operator/sessions/{{ session.id }}/export/participant_tokens.csv">
+             href="/operator/sessions/{{ session.public_id }}/export/participant_tokens.csv">
             Download token keys
           </a>
         </div>
@@ -942,7 +942,7 @@
         "[data-reviewer-metadata-chip], [data-reviewee-metadata-chip]"
       );
       if (!chips.length) return;
-      var sessionId = {{ session.id | tojson }};
+      var sessionId = {{ session.public_id | tojson }};
       var STORAGE_KEY = "rrw-extract-data-chips-" + sessionId;
       var stored = {};
       try {
@@ -1315,7 +1315,7 @@
       // concatenate (without this they emitted
       // ``/operator/sessions/undefined/...`` and every POST
       // silently 404'd).
-      var sessionId = {{ session.id | tojson }};
+      var sessionId = {{ session.public_id | tojson }};
       var relevantSlot = card.querySelector("[data-shaper-relevant-chips]");
       var stack = card.querySelector("[data-shaper-stack]");
       var shapeTemplate = card.querySelector(

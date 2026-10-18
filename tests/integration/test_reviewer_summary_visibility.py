@@ -68,7 +68,7 @@ def _seed_session_with_rae_and_one_reviewee(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -79,7 +79,7 @@ def _seed_session_with_rae_and_one_reviewee(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -96,11 +96,11 @@ def _seed_session_with_rae_and_one_reviewee(
 
 def _activate(operator_client: TestClient, review_session: ReviewSession) -> None:
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/prepare",
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/workflow/activate",
+        f"/operator/sessions/{review_session.public_id}/workflow/activate",
         follow_redirects=False,
     )
 
@@ -122,12 +122,12 @@ def _submit(
         data[f"response[{aid}][rating]"] = "5"
         data[f"response[{aid}][comments]"] = "Carol did fine work"
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data=data,
         follow_redirects=False,
     )
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         follow_redirects=False,
     )
 
@@ -173,7 +173,7 @@ def test_summary_html_hides_column_for_invisible_response_field(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     # Comments column dropped; its value not rendered.
     assert "Comments" not in body
@@ -199,7 +199,7 @@ def test_summary_html_keeps_column_when_visible(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "Rating" in body
     assert "Comments" in body
@@ -225,7 +225,7 @@ def test_summary_html_round_trips_when_visibility_toggles_back(
     _hide_field(db, review_session, "comments")
     app.dependency_overrides[get_current_user] = lambda: rae
     body_hidden = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "Carol did fine work" not in body_hidden
 
@@ -244,7 +244,7 @@ def test_summary_html_round_trips_when_visibility_toggles_back(
     db.commit()
 
     body_again = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "Comments" in body_again
     assert "Carol did fine work" in body_again
@@ -270,7 +270,7 @@ def test_summary_csv_hides_column_for_invisible_response_field(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     csv_resp = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     )
     assert csv_resp.status_code == 200
     body = csv_resp.text
@@ -299,7 +299,7 @@ def test_summary_csv_keeps_column_when_visible(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     csv_resp = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     )
     assert csv_resp.status_code == 200
     body = csv_resp.text
@@ -412,7 +412,7 @@ def test_band2_state_un_pin_with_responses_requires_acknowledgement(
 
     # Without ack — 409 with structured detail.
     resp = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/instruments/{instrument.id}/band2-state",
         json=payload,
     )
@@ -434,7 +434,7 @@ def test_band2_state_un_pin_with_responses_requires_acknowledgement(
     # Now re-POST with ack=true — succeeds.
     payload["acknowledged_drop"] = True
     resp_ok = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/instruments/{instrument.id}/band2-state",
         json=payload,
     )
@@ -467,7 +467,7 @@ def test_band2_state_un_pin_without_responses_no_ack_needed(
         instrument, un_pin_key="comments"
     )
     resp = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/instruments/{instrument.id}/band2-state",
         json=payload,
     )
@@ -540,7 +540,7 @@ def test_pill_state_stays_submitted_after_chip_un_pin_post_submit(
     )
     payload["acknowledged_drop"] = True
     resp = client.post(
-        f"/operator/sessions/{review_session.id}"
+        f"/operator/sessions/{review_session.public_id}"
         f"/instruments/{instrument.id}/band2-state",
         json=payload,
     )
@@ -593,7 +593,7 @@ def test_reviewer_surface_banner_names_dropped_field(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "Some saved responses are no longer collected" in body
     assert "<em>Comments</em>" in body
@@ -639,7 +639,7 @@ def test_operator_view_also_names_the_dropped_field(
     # unauthenticated. Put alice back explicitly.
     app.dependency_overrides[get_current_user] = lambda: alice
     body = client.get(
-        f"/operator/sessions/{review_session.id}/preview-surface/1"
+        f"/operator/sessions/{review_session.public_id}/preview-surface/1"
         f"?reviewer_email={rae.email}"
     ).text
     assert "Operator view." in body, "premise: this is the preview surface"
@@ -665,7 +665,7 @@ def test_reviewer_surface_no_banner_when_no_dropped_fields(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "Some saved responses are no longer collected" not in body
 
@@ -690,7 +690,7 @@ def test_reviewer_surface_banner_disappears_when_visibility_restored(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     body_hidden = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "Some saved responses are no longer collected" in body_hidden
 
@@ -707,7 +707,7 @@ def test_reviewer_surface_banner_disappears_when_visibility_restored(
     db.commit()
 
     body_restored = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     assert "Some saved responses are no longer collected" not in body_restored
 
@@ -768,14 +768,14 @@ def test_group_scoped_instrument_visibility_filter_applies(
 
     app.dependency_overrides[get_current_user] = lambda: rae
     summary_html = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary"
+        f"/me/sessions/{review_session.public_id}/summary"
     ).text
     assert "Comments" not in summary_html
     assert "Carol did fine work" not in summary_html
     assert "Rating" in summary_html
 
     csv_resp = rae_client.get(
-        f"/me/sessions/{review_session.id}/summary.csv"
+        f"/me/sessions/{review_session.public_id}/summary.csv"
     )
     assert csv_resp.status_code == 200
     csv_body = csv_resp.text

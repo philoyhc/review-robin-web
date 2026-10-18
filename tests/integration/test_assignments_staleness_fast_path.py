@@ -151,7 +151,7 @@ def test_the_page_gets_commit_their_warm(
         data={"name": "Pages", "code": f"fp-page{suffix.strip('/')}"},
         follow_redirects=False,
     )
-    session_id = int(response.headers["location"].split("?")[0].rsplit("/", 1)[1])
+    public_id = response.headers["location"].split("?")[0].rsplit("/", 1)[1]
     calls: list[Session] = []
     original = assignments.persist_reconcile_warm
     monkeypatch.setattr(
@@ -165,7 +165,7 @@ def test_the_page_gets_commit_their_warm(
     monkeypatch.setattr(db, "commit", lambda: (commits.append(None), original_commit()))
     db.info.pop(_generate._RECONCILE_WARM_PENDING, None)
 
-    assert client.get(f"/operator/sessions/{session_id}{suffix}").status_code == 200
+    assert client.get(f"/operator/sessions/{public_id}{suffix}").status_code == 200
     # The cold first load warmed the verdict, and the route committed it.
     assert len(calls) == 1
     assert commits, "the warm was not committed"

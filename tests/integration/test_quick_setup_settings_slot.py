@@ -76,7 +76,7 @@ def test_quick_setup_settings_slot_is_wired_live(
     by_key = {slot.key: slot for slot in context.slots}
     assert by_key["settings"].is_wired is True
     assert by_key["settings"].wire_url == (
-        f"/operator/sessions/{review_session.id}/import-config"
+        f"/operator/sessions/{review_session.public_id}/import-config"
     )
     assert by_key["settings"].coming_in is None
 
@@ -119,7 +119,7 @@ def test_import_config_route_via_quick_setup_slot(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         # Replaces the Default instrument: one deletion, ticked (S4).
         data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={"file": ("config.csv", payload, "text/csv")},
@@ -127,7 +127,7 @@ def test_import_config_route_via_quick_setup_slot(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#quick-setup-settings"
+        f"/operator/sessions/{review_session.public_id}#quick-setup-settings"
     )
     instruments = (
         db.execute(
@@ -161,7 +161,7 @@ def test_submit_all_runs_settings_after_rosters_and_relationships(
     )
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={
             "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
@@ -204,7 +204,7 @@ def test_submit_all_settings_parse_error_surfaces_in_settings_slot(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={"settings_file": ("c.csv", bad_payload, "text/csv")},
         follow_redirects=False,
@@ -226,7 +226,7 @@ def test_submit_all_settings_with_a_cell_past_the_csv_limit_is_a_parse_error(
     review_session = _make_session(client, db, code="qsc-huge")
     payload = _settings_csv([("session.name", "x" * 200_000, "string")])
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={"settings_file": ("c.csv", payload, "text/csv")},
         follow_redirects=False,
@@ -252,7 +252,7 @@ def test_submit_all_settings_with_a_repeated_shape_name_is_a_parse_error(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={"settings_file": ("c.csv", payload, "text/csv")},
         follow_redirects=False,
@@ -334,7 +334,7 @@ def test_quick_setup_card_renders_settings_slot_live(
     form-field name."""
 
     review_session = _make_session(client, db, code="qsc-render")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'id="quick-setup-settings"' in body
     assert "Session settings" in body
@@ -357,7 +357,7 @@ def test_submit_all_settings_without_the_tick_is_refused(
     ).scalars().all()
     good = _settings_csv([("instruments[1].name", "Renamed", "string")])
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={"settings_file": ("c.csv", good, "text/csv")},
         follow_redirects=False,
     )
@@ -372,7 +372,7 @@ def test_submit_all_settings_without_the_tick_is_refused(
 
     bad = b"not,a,settings,header\n1,2,3,4\n"
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={"settings_file": ("c.csv", bad, "text/csv")},
         follow_redirects=False,
     )
@@ -406,7 +406,7 @@ def test_settings_errors_reach_the_slot_from_submit_all_but_not_create(
 
     review_session = _make_session(client, db, code="qsc-detail-all")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         data={"confirm_replace": "true"},
         files={"settings_file": ("c.csv", bad, "text/csv")},
         follow_redirects=False,
@@ -417,7 +417,7 @@ def test_settings_errors_reach_the_slot_from_submit_all_but_not_create(
 
     # A crafted link puts nothing under the banner.
     page = client.get(
-        f"/operator/sessions/{review_session.id}",
+        f"/operator/sessions/{review_session.public_id}",
         params=[("quick_setup_error", "settings"), ("quick_setup_reason", "refused")]
         + [("quick_setup_detail", f"qsdmark{n}") for n in range(7)],
     )

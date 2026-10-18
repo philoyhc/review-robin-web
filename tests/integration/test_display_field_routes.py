@@ -37,7 +37,7 @@ def test_add_display_field_appends_row_and_invalidates_validated(
     assert review_session.status == "validated"
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "Cohort", "visible": "true"},
         follow_redirects=False,
@@ -80,7 +80,7 @@ def test_add_display_field_unknown_source_redirects_with_error(
     instrument = _instrument(db, review_session.id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields",
         data={"source_pair": "reviewee:phone", "label": "", "visible": "true"},
         follow_redirects=False,
@@ -97,7 +97,7 @@ def test_add_display_field_duplicate_source_redirects_with_error(
     _seed_pair_context_display_fields(db, instrument)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields",
         data={"source_pair": "pair_context:1", "label": "", "visible": "true"},
         follow_redirects=False,
@@ -135,7 +135,7 @@ def test_edit_display_field_toggles_visibility_only(
     original_label = pair_one.label
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields/{pair_one.id}/edit",
         data={"label": "P1", "visible": "true"},
         follow_redirects=False,
@@ -149,7 +149,7 @@ def test_edit_display_field_toggles_visibility_only(
 
     # Now flip visible off — ``label`` payload still ignored.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields/{pair_one.id}/edit",
         data={"label": "P1"},  # no visible -> false
         follow_redirects=False,
@@ -174,7 +174,7 @@ def test_delete_display_field_removes_row_and_repacks(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields/{pair_two.id}/delete",
         follow_redirects=False,
     )
@@ -214,7 +214,7 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     ).scalar_one()
 
     add = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields",
         data={"source_pair": "reviewee:tag_1", "label": "", "visible": "true"},
         follow_redirects=False,
@@ -222,7 +222,7 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     assert add.status_code == 409
 
     edit = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields/{pair_one.id}/edit",
         data={"label": "X", "visible": "true"},
         follow_redirects=False,
@@ -230,14 +230,14 @@ def test_locked_when_ready_returns_409_for_display_field_routes(
     assert edit.status_code == 409
 
     delete = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields/{pair_one.id}/delete",
         follow_redirects=False,
     )
     assert delete.status_code == 409
 
     bulk = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/fields/save",
         data={"kind": ["display"], "id": [str(pair_one.id)], "order": ["0"]},
         follow_redirects=False,
@@ -262,7 +262,7 @@ def test_move_display_field_swap_preserves_locked_top(
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments/{instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments/{instrument.id}"
         f"/display-fields/{pc_two.id}/move",
         data={"direction": "up"},
         follow_redirects=False,

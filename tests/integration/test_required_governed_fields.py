@@ -233,7 +233,7 @@ def test_a_closed_required_cell_isnt_announced_as_required(
 ) -> None:
     review_session, fields = _live(db, make_client(alice), "req-gov-surface")
     client = make_client(reviewer_user)
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     control = _comments_control(body)
     assert "(required)" not in control
     assert re.search(r'<td[^>]*data-rs-governed-by="rating" data-rs-required="true"', body)
@@ -251,7 +251,7 @@ def test_a_closed_required_cell_isnt_announced_as_required(
         select(Assignment).where(Assignment.reviewer_id == reviewer.id)
     ).scalar_one()
     _answer(db, assignment, fields["rating"], "5")
-    body = client.get(f"/me/sessions/{review_session.id}").text
+    body = client.get(f"/me/sessions/{review_session.public_id}").text
     assert "(required)" in _comments_control(body)
     assert "*Required items completed: 1/2" in body
 
@@ -263,7 +263,7 @@ def test_the_surface_script_toggles_the_required_label(
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
     review_session, _ = _live(db, make_client(alice), "req-gov-js")
-    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.id}").text
+    body = make_client(reviewer_user).get(f"/me/sessions/{review_session.public_id}").text
     start = body.index("function isOpen(op, value, raw)")
     script = body[start : body.index("})();", start)]
     assert (
@@ -288,7 +288,7 @@ def test_the_preview_doesnt_count_a_required_governed_field(
     fields["Comments"].required = True
     db.commit()
     body = client.get(
-        f"/operator/sessions/{review_session.id}/instruments?editing={instrument.id}"
+        f"/operator/sessions/{review_session.public_id}/instruments?editing={instrument.id}"
     ).text
     card = _card_slice(" ".join(body.split()), instrument.id)
     assert (

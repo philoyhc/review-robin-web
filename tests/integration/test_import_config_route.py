@@ -57,7 +57,7 @@ def test_import_config_success_redirects_to_the_slot(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         # The file replaces the Default instrument: one deletion, ticked
         # (findings S4).
         data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
@@ -66,7 +66,7 @@ def test_import_config_success_redirects_to_the_slot(
     )
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#quick-setup-settings"
+        f"/operator/sessions/{review_session.public_id}#quick-setup-settings"
     )
 
 
@@ -78,7 +78,7 @@ def test_import_config_lifecycle_gate_rejects_ready(
     db.commit()
     payload = _build_csv([("instruments[1].name", "X", "string")])
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
@@ -98,7 +98,7 @@ def test_import_config_parse_error_is_refused_with_parse_reason(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
@@ -116,7 +116,7 @@ def test_import_config_validation_errors_reach_the_slot(
     Home, rendered again at 422 (findings O7), lists each under the
     Settings slot's banner, five at most plus a count of the rest."""
     review_session = _make_session(client, db, code="ic-detail")
-    url = f"/operator/sessions/{review_session.id}/import-config"
+    url = f"/operator/sessions/{review_session.public_id}/import-config"
 
     payload = _build_csv([("instruments[1].short_label", "X", "string")])
     response = client.post(
@@ -154,7 +154,7 @@ def test_import_config_short_rows_are_reported_by_row_with_other_errors(
     ``ApplyError`` gives them. The report comes before the replacement
     gates, as for every malformed file, and nothing is written."""
     review_session = _make_session(client, db, code="ic-short")
-    url = f"/operator/sessions/{review_session.id}/import-config"
+    url = f"/operator/sessions/{review_session.public_id}/import-config"
     payload = (
         b"field,value,data_type\n"
         b"session.name,Renamed\n"  # row 1: two cells
@@ -192,7 +192,7 @@ def test_import_config_bad_header_rejected(
 ) -> None:
     review_session = _make_session(client, db, code="ic-hdr")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={
             "file": (
@@ -216,7 +216,7 @@ def test_import_config_emits_audit_event(
         ]
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true", "acknowledge_instrument_deletion": "1"},
         files={"file": ("config.csv", payload, "text/csv")},
         follow_redirects=False,
@@ -244,7 +244,7 @@ def test_import_config_route_rejects_non_operator(
 
     bob_client = make_client(bob)  # type: ignore[operator]
     response = bob_client.post(
-        f"/operator/sessions/{review_session.id}/import-config",
+        f"/operator/sessions/{review_session.public_id}/import-config",
         data={"confirm_replace": "true"},
         files={"file": ("c.csv", b"field,value,data_type\n", "text/csv")},
         follow_redirects=False,
@@ -313,7 +313,7 @@ def test_a_settings_replace_needs_the_tick_and_the_response_loss_ack(
 
     review_session = _session_with_a_response(client, db, "ic-c3")
     payload = _build_csv([("instruments[1].name", "Eval", "string")])
-    url = f"/operator/sessions/{review_session.id}/import-config"
+    url = f"/operator/sessions/{review_session.public_id}/import-config"
 
     for data in ({}, {"confirm_replace": "true"}):
         response = client.post(
@@ -337,7 +337,7 @@ def test_a_settings_replace_needs_the_tick_and_the_response_loss_ack(
         follow_redirects=False,
     )
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}#quick-setup-settings"
+        f"/operator/sessions/{review_session.public_id}#quick-setup-settings"
     )
     db.expire_all()
     assert db.execute(select(Response)).scalars().all() == []

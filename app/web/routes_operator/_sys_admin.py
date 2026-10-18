@@ -159,7 +159,7 @@ def sys_admin_sessions(
 )
 def sys_admin_session_outbox(
     request: Request,
-    session_id: int,
+    session_id: str,
     user: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -167,7 +167,7 @@ def sys_admin_session_outbox(
     at /operator/sys-admin/sessions; the Admin chrome's
     Sessions Diagnostics tab stays highlighted."""
     review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
+        select(ReviewSession).where(ReviewSession.public_id == session_id)
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -193,7 +193,7 @@ _AUDIT_LOG_PAGE_SIZE = 50
 )
 def sys_admin_session_audit_log(
     request: Request,
-    session_id: int,
+    session_id: str,
     cursor: int | None = Query(default=None, ge=1),
     event_type: list[str] | None = Query(default=None),
     severity: list[str] | None = Query(default=None),
@@ -221,7 +221,7 @@ def sys_admin_session_audit_log(
     Settings timezone (``views.resolve_audit_log_zone``).
     """
     review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
+        select(ReviewSession).where(ReviewSession.public_id == session_id)
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -250,10 +250,10 @@ def sys_admin_session_audit_log(
         filters=filters,
     )
     base_url = (
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
     )
     csv_base_url = (
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     )
     return _templates.TemplateResponse(
         request,
@@ -431,7 +431,7 @@ def sys_admin_users_search_options(
 
 @router.post("/sys-admin/sessions/{session_id}/adopt")
 def sys_admin_adopt_session(
-    session_id: int,
+    session_id: str,
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -447,11 +447,11 @@ def sys_admin_adopt_session(
     elevation that replaces the old back-door edit access.
     """
     review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
+        select(ReviewSession).where(ReviewSession.public_id == session_id)
     ).scalar_one_or_none()
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    if not permissions.user_can_view_session(db, actor, session_id):
+    if not permissions.user_can_view_session(db, actor, review_session.id):
         try:
             session_owners.add_owner(
                 db,

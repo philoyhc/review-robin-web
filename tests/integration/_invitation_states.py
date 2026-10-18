@@ -23,6 +23,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession:
@@ -39,7 +40,7 @@ def _create_session(client: TestClient, db: Session, code: str) -> ReviewSession
 
 def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_email: str) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -50,7 +51,7 @@ def _populate(client: TestClient, db: Session, session_id: int, *, reviewer_emai
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",

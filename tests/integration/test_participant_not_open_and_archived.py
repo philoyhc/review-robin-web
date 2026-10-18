@@ -53,7 +53,7 @@ def test_every_not_open_state_reads_the_same(
     client: TestClient, db: Session, status: str
 ) -> None:
     review_session = _session(client, db, code=f"no-{status}", status=status)
-    body = client.get(f"/me/sessions/{review_session.id}/1").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "This review is not currently open." in body
     # One name for the dashboard (participant audit L1).
     assert '<a class="btn secondary" href="/me">Your reviews</a>' in body
@@ -69,7 +69,7 @@ def test_a_prepared_session_shows_when_it_is_scheduled_to_open(
         2031, 3, 4, 9, 30, tzinfo=timezone.utc
     )
     db.commit()
-    body = client.get(f"/me/sessions/{review_session.id}/1").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "data-pre-open-scheduled" in body
     assert "2031-03-04 09:30" in body
 
@@ -81,7 +81,7 @@ def test_a_draft_shows_no_schedule(client: TestClient, db: Session) -> None:
         2031, 3, 4, 9, 30, tzinfo=timezone.utc
     )
     db.commit()
-    body = client.get(f"/me/sessions/{review_session.id}/1").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "data-pre-open-scheduled" not in body
 
 
@@ -92,7 +92,7 @@ def test_the_help_contact_shows(
     review_session = _session(client, db, code=f"no-help-{status}", status=status)
     review_session.help_contact = "help@example.edu"
     db.commit()
-    body = client.get(f"/me/sessions/{review_session.id}/1").text
+    body = client.get(f"/me/sessions/{review_session.public_id}/1").text
     assert "Questions? Contact help@example.edu" in body
 
 
@@ -105,7 +105,7 @@ def test_an_archived_session_is_off_limits(
 ) -> None:
     review_session = _session(client, db, code=f"arch-{path}", status="archived")
     resp = client.get(
-        f"/me/sessions/{review_session.id}/{path}", follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/{path}", follow_redirects=False
     )
     assert resp.status_code == 404
 
@@ -127,7 +127,7 @@ def test_results_404_once_archived_even_with_a_grant(
     monkeypatch.setattr(
         visibility_policies, "reviewee_has_current_grant", lambda *a, **k: True
     )
-    resp = client.get(f"/me/sessions/{review_session.id}/results")
+    resp = client.get(f"/me/sessions/{review_session.public_id}/results")
     assert resp.status_code == 404
 
 
@@ -136,7 +136,7 @@ def test_collation_still_answers_before_archive(
 ) -> None:
     """The 404 is archive's, not the observer gate's or the roster's."""
     review_session = _session(client, db, code="arch-before", status="expired")
-    resp = client.get(f"/me/sessions/{review_session.id}/collation")
+    resp = client.get(f"/me/sessions/{review_session.public_id}/collation")
     assert resp.status_code == 200
 
 
@@ -147,7 +147,7 @@ def test_a_write_to_an_archived_session_is_refused_like_a_strangers(
     refused-write page (that one names the session)."""
     review_session = _session(client, db, code="arch-save", status="archived")
     resp = client.post(
-        f"/me/sessions/{review_session.id}/1/save", data={}, follow_redirects=False
+        f"/me/sessions/{review_session.public_id}/1/save", data={}, follow_redirects=False
     )
     assert resp.status_code == 404
     assert "Spring" not in resp.text
@@ -157,7 +157,7 @@ def test_the_surface_still_answers_before_archive(
     client: TestClient, db: Session
 ) -> None:
     review_session = _session(client, db, code="arch-surf-before", status="expired")
-    assert client.get(f"/me/sessions/{review_session.id}/1").status_code == 200
+    assert client.get(f"/me/sessions/{review_session.public_id}/1").status_code == 200
 
 
 def test_an_archived_session_names_no_role_on_the_guide(
@@ -198,7 +198,7 @@ def test_a_back_link_does_not_name_an_archived_session(
     review_session.name = "Secret Spring"
     db.add(Reviewer(session_id=review_session.id, name="Pat", email="pat@example.edu"))
     db.commit()
-    path = f"/about?return_to=/me/sessions/{review_session.id}"
+    path = f"/about?return_to=/me/sessions/{review_session.public_id}"
     assert "Back to Secret Spring" in make_client(pat).get(path).text
 
     review_session.status = "archived"

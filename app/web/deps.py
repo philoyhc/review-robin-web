@@ -252,26 +252,35 @@ def _stash_session_timezone(
     )
 
 
-def _session_exists(db: Session, session_id: int) -> bool:
-    """Does the row exist at all, ignoring who is asking."""
+def _session_by_public_id(db: Session, public_id: str) -> ReviewSession | None:
+    """The session a URL names, ignoring who is asking (19V Item 1).
+
+    A session's URL carries its random ``public_id``, never the integer
+    key, so the path's ``{session_id}`` is looked up here and everything
+    after the gate works with ``review_session.id``. An integer in the
+    path matches no row and answers the same 404 as any unknown session.
+    """
     return db.execute(
-        select(ReviewSession.id).where(ReviewSession.id == session_id)
-    ).first() is not None
+        select(ReviewSession).where(ReviewSession.public_id == public_id)
+    ).scalar_one_or_none()
 
 
 def require_session_operator(
-    session_id: int,
+    session_id: str,
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> ReviewSession:
-    if not permissions.user_can_view_session(db, user, session_id):
+    review_session = _session_by_public_id(db, session_id)
+    if review_session is None or not permissions.user_can_view_session(
+        db, user, review_session.id
+    ):
         log.warning(
             "permission denied",
             extra={
                 "gate": "require_session_operator",
                 "user_id": user.id,
-                "session_id": session_id,
+                "session_id": review_session.id if review_session else None,
             },
         )
         # Sys-admins are exempt from the uniform 404 (author,
@@ -290,7 +299,7 @@ def require_session_operator(
         # would invent sessions — answering "you do not have access" for
         # an id that has never existed, which is a worse leak than the
         # one 19F closed.
-        if user.is_sys_admin and _session_exists(db, session_id):
+        if user.is_sys_admin and review_session is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
@@ -299,15 +308,12 @@ def require_session_operator(
                 ),
             )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    review_session = sessions.get_for_user(db, user, session_id)
-    if review_session is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     _stash_session_timezone(request, review_session)
     return review_session
 
 
 def require_sys_admin_or_session_operator(
-    session_id: int,
+    session_id: str,
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -328,9 +334,7 @@ def require_sys_admin_or_session_operator(
     ``require_session_operator``.
     """
     if user.is_sys_admin:
-        review_session = db.execute(
-            select(ReviewSession).where(ReviewSession.id == session_id)
-        ).scalar_one_or_none()
+        review_session = _session_by_public_id(db, session_id)
         if review_session is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
         _stash_session_timezone(request, review_session)
@@ -340,22 +344,20 @@ def require_sys_admin_or_session_operator(
     )
 
 
-def _participant_session_or_404(db: Session, session_id: int) -> ReviewSession:
+def _participant_session_or_404(db: Session, session_id: str) -> ReviewSession:
     """The session a participant gate admits to, or 404: none at all,
     or one that is archived. Once archived a session is off limits to
     every participant (author's rulings 2026-10-15 and 2026-10-16), so
     the answer is the same bare 404 a stranger gets, before any roster
-    lookup."""
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.id == session_id)
-    ).scalar_one_or_none()
+    lookup. ``session_id`` is the URL's public ID."""
+    review_session = _session_by_public_id(db, session_id)
     if review_session is None or lifecycle.is_archived(review_session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return review_session
 
 
 def require_reviewer_in_session(
-    session_id: int,
+    session_id: str,
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -374,7 +376,7 @@ def require_reviewer_in_session(
 
     reviewer = db.execute(
         select(Reviewer).where(
-            Reviewer.session_id == session_id,
+            Reviewer.session_id == review_session.id,
             Reviewer.status == "active",
         )
     ).scalars()
@@ -390,7 +392,7 @@ def require_reviewer_in_session(
             extra={
                 "gate": "require_reviewer_in_session",
                 "user_id": user.id,
-                "session_id": session_id,
+                "session_id": review_session.id,
             },
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -399,7 +401,7 @@ def require_reviewer_in_session(
 
 
 def require_reviewee_in_session(
-    session_id: int,
+    session_id: str,
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -425,7 +427,7 @@ def require_reviewee_in_session(
     user_email = normalize_email(user.email)
     candidates = db.execute(
         select(Reviewee).where(
-            Reviewee.session_id == session_id,
+            Reviewee.session_id == review_session.id,
             Reviewee.status == "active",
         )
     ).scalars()
@@ -442,7 +444,7 @@ def require_reviewee_in_session(
             extra={
                 "gate": "require_reviewee_in_session",
                 "user_id": user.id,
-                "session_id": session_id,
+                "session_id": review_session.id,
             },
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -498,7 +500,7 @@ def require_reviewee_with_current_grant(
 
 
 def require_observer_in_session(
-    session_id: int,
+    session_id: str,
     request: Request,
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -520,7 +522,7 @@ def require_observer_in_session(
     user_email = normalize_email(user.email)
     candidates = db.execute(
         select(Observer).where(
-            Observer.session_id == session_id,
+            Observer.session_id == review_session.id,
             Observer.status == "active",
         )
     ).scalars()
@@ -535,7 +537,7 @@ def require_observer_in_session(
             extra={
                 "gate": "require_observer_in_session",
                 "user_id": user.id,
-                "session_id": session_id,
+                "session_id": review_session.id,
             },
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

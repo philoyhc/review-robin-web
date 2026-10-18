@@ -137,7 +137,7 @@
      ``form="..."``) or when there's no session row to scope to. #}
   {% if has_own_form %}
     <form id="{{ submit_all_form_id }}"
-          action="/operator/sessions/{{ session.id }}/quick-setup/submit-all"
+          action="/operator/sessions/{{ session.public_id }}/quick-setup/submit-all"
           method="post"
           enctype="multipart/form-data"
           style="margin: 0;">

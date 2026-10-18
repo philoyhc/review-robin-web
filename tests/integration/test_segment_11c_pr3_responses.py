@@ -17,6 +17,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 
 
 def _strip_datalist(body: str) -> str:
@@ -54,11 +55,12 @@ def _populate(
     reviewer_emails: list[str],
     reviewee_emails: list[str],
 ) -> None:
+    pid = db.get(ReviewSession, session_id).public_id
     rev_csv = b"ReviewerName,ReviewerEmail\n" + b"".join(
         f"R{i},{e}\n".encode() for i, e in enumerate(reviewer_emails)
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={"file": ("r.csv", rev_csv, "text/csv")},
         follow_redirects=False,
     )
@@ -66,7 +68,7 @@ def _populate(
         f"E{i},{e}\n".encode() for i, e in enumerate(reviewee_emails)
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={"file": ("e.csv", revw_csv, "text/csv")},
         follow_redirects=False,
     )
@@ -78,8 +80,9 @@ def _activate(client: TestClient, session_id: int) -> None:
     # Prepare, not `?validated=1` — it creates the invitations these
     # tests need (19Q.2 rung 2), and rung 3 retired the route they
     # used to call for that.
+    pid = public_id(session_id)
     response = client.post(
-        f"/operator/sessions/{session_id}/workflow/prepare",
+        f"/operator/sessions/{pid}/workflow/prepare",
         follow_redirects=False,
     )
     # 303 alone says nothing: `workflow_prepare` also 303s on a failed
@@ -92,7 +95,7 @@ def _activate(client: TestClient, session_id: int) -> None:
         f"Prepare did not succeed: {response.headers['location']}"
     )
     response = client.post(
-        f"/operator/sessions/{session_id}/activate",
+        f"/operator/sessions/{pid}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -137,7 +140,7 @@ def test_responses_page_renders_workflow_card(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu"],
     )
-    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses").text
     assert 'id="next-action"' in body
     assert "<h2>Workflow</h2>" in body
     # In a ready session, the card's invitation forms render with
@@ -155,7 +158,7 @@ def test_responses_page_renders_table_for_assigned_reviewees(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
-    response = client.get(f"/operator/sessions/{session.id}/responses")
+    response = client.get(f"/operator/sessions/{session.public_id}/responses")
     assert response.status_code == 200
     body = response.text
     # Headers per the PR spec, matched by sort key — Segment 19I
@@ -195,11 +198,11 @@ def test_responses_tab_shows_in_top_nav_and_active_on_page(
         reviewee_emails=["carol@example.edu"],
     )
     body = client.get(
-        f"/operator/sessions/{session.id}/responses"
+        f"/operator/sessions/{session.public_id}/responses"
     ).text
     # Tab renders pointing at /responses, and is active.
     assert (
-        f'href="/operator/sessions/{session.id}/responses">Responses</a>'
+        f'href="/operator/sessions/{session.public_id}/responses">Responses</a>'
         in body
     )
     assert "nav-tab active" in body
@@ -223,9 +226,9 @@ def test_responses_page_reviewee_name_links_to_drill_in(
             Reviewee.email_or_identifier == "carol@example.edu",
         )
     ).scalar_one()
-    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses").text
     assert (
-        f'href="/operator/sessions/{session.id}/responses/'
+        f'href="/operator/sessions/{session.public_id}/responses/'
         f'{reviewee.id}/detail"' in body
     )
 
@@ -247,7 +250,7 @@ def test_responses_reviewee_detail_renders(
         )
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.id}/responses/{reviewee.id}/detail"
+        f"/operator/sessions/{session.public_id}/responses/{reviewee.id}/detail"
     )
     assert response.status_code == 200
     body = response.text
@@ -281,7 +284,7 @@ def test_responses_reviewee_detail_404_for_other_session(
         )
     ).scalar_one()
     response = client.get(
-        f"/operator/sessions/{session.id}/responses/"
+        f"/operator/sessions/{session.public_id}/responses/"
         f"{other_reviewee.id}/detail"
     )
     assert response.status_code == 404
@@ -307,13 +310,13 @@ def test_responses_page_bulk_remind_form_targets_invitations_endpoint(
         reviewee_emails=["carol@example.edu"],
     )
     client.post(
-        f"/operator/sessions/{session.id}/invitations/send-all",
+        f"/operator/sessions/{session.public_id}/invitations/send-all",
         data={"return_to": "responses"},
         follow_redirects=False,
     )
-    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses").text
     assert (
-        f'action="/operator/sessions/{session.id}/invitations/remind-incomplete"'
+        f'action="/operator/sessions/{session.public_id}/invitations/remind-incomplete"'
         in body
     )
 
@@ -359,7 +362,7 @@ def test_responses_filter_strip_renders(
         reviewer_emails=["rae@example.edu"],
         reviewee_emails=["carol@example.edu"],
     )
-    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses").text
     # Status dropdown lands with the four spec values + All.
     assert '<option value="all"' in body
     assert '<option value="complete"' in body
@@ -388,7 +391,7 @@ def test_responses_filter_status_narrows_rows(
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
     body = client.get(
-        f"/operator/sessions/{session.id}/responses?status=no_responses"
+        f"/operator/sessions/{session.public_id}/responses?status=no_responses"
     ).text
     # Both reviewees match "no responses" today (no submissions yet).
     assert "carol@example.edu" in body
@@ -396,7 +399,7 @@ def test_responses_filter_status_narrows_rows(
     # Filtering on "complete" with zero matching reviewees shows the
     # filter-empty message, not the "no reviewees assigned yet" copy.
     body = client.get(
-        f"/operator/sessions/{session.id}/responses?status=complete"
+        f"/operator/sessions/{session.public_id}/responses?status=complete"
     ).text
     assert "No reviewees match the current filter." in body
     assert ">Clear</a>" in body
@@ -425,7 +428,7 @@ def test_the_count_line_sits_with_the_table_not_the_filter_row(
     )
 
     body = client.get(
-        f"/operator/sessions/{session.id}/responses?q=carol"
+        f"/operator/sessions/{session.public_id}/responses?q=carol"
     ).text
 
     # Left pane: what the table is showing.
@@ -455,7 +458,7 @@ def test_the_count_line_is_absent_when_no_filter_narrows(
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
 
-    body = client.get(f"/operator/sessions/{session.id}/responses").text
+    body = client.get(f"/operator/sessions/{session.public_id}/responses").text
 
     assert '<p class="muted table-showing-hint">' not in body
     assert "more not shown" not in body
@@ -472,7 +475,7 @@ def test_responses_filter_search_narrows_rows(
         reviewee_emails=["carol@example.edu", "dave@example.edu"],
     )
     body = _strip_datalist(client.get(
-        f"/operator/sessions/{session.id}/responses?q=carol"
+        f"/operator/sessions/{session.public_id}/responses?q=carol"
     ).text)
     assert "carol@example.edu" in body
     assert "dave@example.edu" not in body

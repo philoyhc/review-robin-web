@@ -10,6 +10,7 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+from ._public_id import public_id
 from ._validated import validate_session
 
 
@@ -29,7 +30,7 @@ def _create_session(
 
 def _populate(client: TestClient, db: Session, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -40,7 +41,7 @@ def _populate(client: TestClient, db: Session, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -82,7 +83,7 @@ def test_the_assignments_page_never_promotes_a_draft(
     session = _create_session(client, db, code="t1-ok")
     _populate(client, db, session.id)
 
-    response = client.get(f"/operator/sessions/{session.id}/assignments?validated=1")
+    response = client.get(f"/operator/sessions/{session.public_id}/assignments?validated=1")
 
     assert response.status_code == 200
     db.refresh(session)
@@ -95,7 +96,7 @@ def test_validate_deep_dive_does_not_flip_status(
     session = _create_session(client, db, code="t1-readonly")
     _populate(client, db, session.id)
 
-    response = client.get(f"/operator/sessions/{session.id}/validate")
+    response = client.get(f"/operator/sessions/{session.public_id}/validate")
     assert response.status_code == 200
 
     db.refresh(session)
@@ -113,7 +114,7 @@ def test_activate_rejects_from_draft(client: TestClient, db: Session) -> None:
     # Skip validation step
 
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -132,7 +133,7 @@ def test_activate_succeeds_from_validated(
     session = _validated_session(client, db, code="t2-ok")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -168,7 +169,7 @@ def test_reviewer_import_invalidates_validated(
     session = _validated_session(client, db, code="inv-ri")
 
     client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={
             "file": (
                 "r2.csv",
@@ -189,7 +190,7 @@ def test_reviewee_import_invalidates_validated(
     session = _validated_session(client, db, code="inv-ei")
 
     client.post(
-        f"/operator/sessions/{session.id}/reviewees/import",
+        f"/operator/sessions/{session.public_id}/reviewees/import",
         files={
             "file": (
                 "e2.csv",
@@ -210,7 +211,7 @@ def test_reviewers_delete_all_invalidates_validated(
     session = _validated_session(client, db, code="inv-rda")
 
     client.post(
-        f"/operator/sessions/{session.id}/reviewers/delete-all",
+        f"/operator/sessions/{session.public_id}/reviewers/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -224,7 +225,7 @@ def test_reviewees_delete_all_invalidates_validated(
     session = _validated_session(client, db, code="inv-eda")
 
     client.post(
-        f"/operator/sessions/{session.id}/reviewees/delete-all",
+        f"/operator/sessions/{session.public_id}/reviewees/delete-all",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -256,7 +257,7 @@ def test_session_details_edit_does_not_invalidate(
     session = _validated_session(client, db, code="noinv-se")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/config",
+        f"/operator/sessions/{session.public_id}/config",
         data={
             "name": "Renamed",
             "code": "noinv-se-2",
@@ -292,7 +293,7 @@ def test_delete_data_does_not_invalidate(
     session = _validated_session(client, db, code="noinv-dd")
 
     response = client.post(
-        f"/operator/sessions/{session.id}/delete-data",
+        f"/operator/sessions/{session.public_id}/delete-data",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -335,7 +336,7 @@ def test_revert_from_ready_lands_on_draft(
 ) -> None:
     session = _validated_session(client, db, code="d4")
     client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -343,7 +344,7 @@ def test_revert_from_ready_lands_on_draft(
     assert session.status == "ready"
 
     client.post(
-        f"/operator/sessions/{session.id}/revert",
+        f"/operator/sessions/{session.public_id}/revert",
         data={"confirm": "true"},
         follow_redirects=False,
     )
@@ -364,7 +365,7 @@ def test_session_validated_audit_event(
     _populate(client, db, session.id)
 
     validate_session(session)
-    client.get(f"/operator/sessions/{session.id}/assignments")
+    client.get(f"/operator/sessions/{session.public_id}/assignments")
 
     event = db.execute(
         select(AuditEvent).where(
@@ -386,7 +387,7 @@ def test_reviewer_import_rejected_when_ready(
 ) -> None:
     session = _validated_session(client, db, code="lock-ready")
     client.post(
-        f"/operator/sessions/{session.id}/activate",
+        f"/operator/sessions/{session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -394,7 +395,7 @@ def test_reviewer_import_rejected_when_ready(
     assert session.status == "ready"
 
     response = client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",

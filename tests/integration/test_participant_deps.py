@@ -54,7 +54,7 @@ def test_reviewee_dep_404_when_session_missing(db: Session) -> None:
     me = _user(db, "me@example.org")
     with pytest.raises(HTTPException) as exc:
         require_reviewee_in_session(
-            session_id=999_999, request=_request(), user=me, db=db
+            session_id="zzzzzzzzzz", request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -64,7 +64,7 @@ def test_reviewee_dep_404_when_no_matching_row(db: Session) -> None:
     me = _user(db, "me@example.org")
     with pytest.raises(HTTPException) as exc:
         require_reviewee_in_session(
-            session_id=s.id, request=_request(), user=me, db=db
+            session_id=s.public_id, request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -81,7 +81,7 @@ def test_reviewee_dep_returns_match_on_email(db: Session) -> None:
     )
     db.commit()
     matched, review_session = require_reviewee_in_session(
-        session_id=s.id, request=_request(), user=me, db=db
+        session_id=s.public_id, request=_request(), user=me, db=db
     )
     assert matched.email_or_identifier == "me@example.org"
     assert review_session.id == s.id
@@ -99,7 +99,7 @@ def test_reviewee_dep_case_insensitive_email_match(db: Session) -> None:
     )
     db.commit()
     matched, _ = require_reviewee_in_session(
-        session_id=s.id, request=_request(), user=me, db=db
+        session_id=s.public_id, request=_request(), user=me, db=db
     )
     assert matched is not None
 
@@ -119,7 +119,7 @@ def test_reviewee_dep_rejects_non_email_identifier(db: Session) -> None:
     db.commit()
     with pytest.raises(HTTPException) as exc:
         require_reviewee_in_session(
-            session_id=s.id, request=_request(), user=me, db=db
+            session_id=s.public_id, request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -138,7 +138,7 @@ def test_reviewee_dep_inactive_status_denied(db: Session) -> None:
     db.commit()
     with pytest.raises(HTTPException) as exc:
         require_reviewee_in_session(
-            session_id=s.id, request=_request(), user=me, db=db
+            session_id=s.public_id, request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -150,7 +150,7 @@ def test_observer_dep_404_when_session_missing(db: Session) -> None:
     me = _user(db, "me@example.org")
     with pytest.raises(HTTPException) as exc:
         require_observer_in_session(
-            session_id=999_999, request=_request(), user=me, db=db
+            session_id="zzzzzzzzzz", request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -160,7 +160,7 @@ def test_observer_dep_404_when_no_matching_row(db: Session) -> None:
     me = _user(db, "me@example.org")
     with pytest.raises(HTTPException) as exc:
         require_observer_in_session(
-            session_id=s.id, request=_request(), user=me, db=db
+            session_id=s.public_id, request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
 
@@ -171,7 +171,7 @@ def test_observer_dep_returns_match_on_email(db: Session) -> None:
     db.add(Observer(session_id=s.id, email="me@example.org"))
     db.commit()
     matched, review_session = require_observer_in_session(
-        session_id=s.id, request=_request(), user=me, db=db
+        session_id=s.public_id, request=_request(), user=me, db=db
     )
     assert matched.email == "me@example.org"
     assert review_session.id == s.id
@@ -183,7 +183,7 @@ def test_observer_dep_case_insensitive_email_match(db: Session) -> None:
     db.add(Observer(session_id=s.id, email="me@example.org"))
     db.commit()
     matched, _ = require_observer_in_session(
-        session_id=s.id, request=_request(), user=me, db=db
+        session_id=s.public_id, request=_request(), user=me, db=db
     )
     assert matched is not None
 
@@ -199,6 +199,6 @@ def test_observer_dep_inactive_status_denied(db: Session) -> None:
     db.commit()
     with pytest.raises(HTTPException) as exc:
         require_observer_in_session(
-            session_id=s.id, request=_request(), user=me, db=db
+            session_id=s.public_id, request=_request(), user=me, db=db
         )
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND

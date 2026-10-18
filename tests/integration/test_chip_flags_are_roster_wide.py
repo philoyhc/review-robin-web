@@ -118,7 +118,7 @@ def test_a_tag_past_the_reviewers_cap_still_lights_its_chip(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert "R0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-1") == "live"
@@ -141,7 +141,7 @@ def test_a_tag_past_the_reviewees_cap_still_lights_its_chip(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-2") == "live"
@@ -165,7 +165,7 @@ def test_a_photo_past_the_cap_still_lights_the_profile_chip(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "profile") == "live"
@@ -200,7 +200,7 @@ def test_a_filter_that_excludes_the_tagged_row_keeps_its_chip_live(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers?q=Alpha"
+        f"/operator/sessions/{review_session.public_id}/reviewers?q=Alpha"
     ).text
     assert "Bravo" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-1") == "live"
@@ -234,12 +234,12 @@ def test_the_invitations_chip_reads_the_roster_not_the_filtered_rows(
     )
     db.commit()
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/invitations?q=Alpha"
+        f"/operator/sessions/{review_session.public_id}/invitations?q=Alpha"
     ).text
     assert "bravo@example.edu" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-3") == "live"
@@ -273,12 +273,12 @@ def test_the_responses_chip_reads_the_roster_not_the_filtered_rows(
     )
     db.commit()
     client.post(
-        f"/operator/sessions/{review_session.id}/assignments/generate",
+        f"/operator/sessions/{review_session.public_id}/assignments/generate",
         follow_redirects=False,
     )
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/responses?q=Echo"
+        f"/operator/sessions/{review_session.public_id}/responses?q=Echo"
     ).text
     assert "foxtrot@example.edu" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "tag-2") == "live"
@@ -306,7 +306,7 @@ def test_a_slot_with_no_data_anywhere_renders_no_chip_and_no_column(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert _chip_state(body, "tag-1") == "live"
     assert _chip_state(body, "tag-2") == "absent"
@@ -338,7 +338,7 @@ def test_a_roster_with_no_tags_at_all_renders_no_chip_row(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert "Show columns:" not in body
     assert 'data-col-toggles-for="reviewers-table"' not in body
@@ -372,10 +372,10 @@ def test_edit_mode_renders_every_tag_column_even_when_empty(
     db.commit()
 
     plain = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     adding = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers?add=1"
+        f"/operator/sessions/{review_session.public_id}/reviewers?add=1"
     ).text
 
     _p = plain.index("<table id=")
@@ -428,7 +428,7 @@ def test_a_tag_past_the_assignments_pair_cap_still_lights_its_chip(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert "r15@example.edu" not in _rows(body), (
         "seed is vacuous — the tagged reviewer's pairs rendered, so the "
@@ -476,10 +476,10 @@ def test_assignments_pair_context_chips_stay_active_only(
     generate_via_page_button(client, review_session.id)
 
     assignments_body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     relationships_body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
 
     assert _chip_state(assignments_body, "p1") == "absent"
@@ -510,7 +510,7 @@ def test_the_photo_chip_and_the_photo_column_agree(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     assert "E0249" not in _rows(body), "seed is vacuous"
     assert _chip_state(body, "profile") == "live"
@@ -557,7 +557,7 @@ def test_the_reviewers_profile_column_reads_the_roster_not_the_window(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers?q=Alpha"
+        f"/operator/sessions/{review_session.public_id}/reviewers?q=Alpha"
     ).text
     assert "Bravo" not in _rows(body), "seed is vacuous"
     assert 'class="profile-col"' in body, (
@@ -585,7 +585,7 @@ def test_the_reviewers_index_omits_profile_when_no_row_carries_one(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     assert 'class="profile-col"' not in body
     assert "Profile (" not in " ".join(body.split())
@@ -624,7 +624,7 @@ def test_an_assignments_group_with_no_data_renders_no_row(
     generate_via_page_button(client, review_session.id)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/assignments"
+        f"/operator/sessions/{review_session.public_id}/assignments"
     ).text
     assert "Show reviewers:" in body
     assert "Show reviewees:" not in body

@@ -24,6 +24,8 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession
 
+from ._public_id import public_id
+
 
 def _make_session(
     client: TestClient, db: Session, *, code: str
@@ -46,7 +48,7 @@ def _populate_reviewers(client: TestClient, session_id: int) -> None:
     # Deliberately non-alphabetical insertion order so a sort
     # actually reshuffles.
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -65,7 +67,7 @@ def _populate_reviewers(client: TestClient, session_id: int) -> None:
 
 def _populate_reviewees(client: TestClient, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -91,12 +93,12 @@ def test_reviewers_table_renders_sort_scaffolding(
     review_session = _make_session(client, db, code="rev-scaff")
     _populate_reviewers(client, review_session.id)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     )
     assert response.status_code == 200
     body = response.text
     assert (
-        f'data-rrw-sortable="rrw-sort-reviewers-{review_session.id}"'
+        f'data-rrw-sortable="rrw-sort-reviewers-{review_session.public_id}"'
         in body
     )
     assert '<tbody class="rrw-rows">' in body
@@ -151,14 +153,14 @@ def test_reviewers_updated_at_sort_surfaces_recent_row(
     )
     db.commit()
 
-    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "updated_at", "dir": "desc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Charlie") < body.find("Bravo")
@@ -171,14 +173,14 @@ def test_reviewers_cookie_drives_ssr_initial_order(
     review_session = _make_session(client, db, code="rev-cookie-asc")
     _populate_reviewers(client, review_session.id)
 
-    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "name", "dir": "asc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     # Slice from the table marker so the Segment 15F search-autocomplete
     # `<datalist>` options above the table don't interfere.
@@ -193,14 +195,14 @@ def test_reviewers_cookie_desc_order(
     review_session = _make_session(client, db, code="rev-cookie-desc")
     _populate_reviewers(client, review_session.id)
 
-    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "name", "dir": "desc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
@@ -217,14 +219,14 @@ def test_reviewers_percent_encoded_cookie_drives_ssr_order(
     review_session = _make_session(client, db, code="rev-cookie-enc")
     _populate_reviewers(client, review_session.id)
 
-    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         quote(json.dumps([{"key": "name", "dir": "asc"}])),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     body = body[body.find('id="reviewers-table"') :]
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
@@ -236,14 +238,14 @@ def test_reviewers_malformed_cookie_falls_back_to_insertion_order(
     review_session = _make_session(client, db, code="rev-cookie-bad")
     _populate_reviewers(client, review_session.id)
 
-    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         "not-json{",
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     body = body[body.find('id="reviewers-table"') :]
     # Insertion order: Bravo, Alpha, Charlie.
@@ -259,17 +261,17 @@ def test_reviewers_stale_cookie_key_dropped(
     review_session = _make_session(client, db, code="rev-cookie-stale")
     _populate_reviewers(client, review_session.id)
 
-    cookie_name = f"rrw-sort-reviewers-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewers-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([
             {"key": "tag_5", "dir": "asc"},
             {"key": "name", "dir": "asc"},
         ]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewers"
+        f"/operator/sessions/{review_session.public_id}/reviewers"
     ).text
     body = body[body.find('id="reviewers-table"') :]
     # tag_5 drops; name asc still applies.
@@ -285,12 +287,12 @@ def test_reviewees_table_renders_sort_scaffolding(
     review_session = _make_session(client, db, code="ree-scaff")
     _populate_reviewees(client, review_session.id)
     response = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     )
     assert response.status_code == 200
     body = response.text
     assert (
-        f'data-rrw-sortable="rrw-sort-reviewees-{review_session.id}"'
+        f'data-rrw-sortable="rrw-sort-reviewees-{review_session.public_id}"'
         in body
     )
     assert '<tbody class="rrw-rows">' in body
@@ -305,14 +307,14 @@ def test_reviewees_cookie_drives_ssr_initial_order(
     review_session = _make_session(client, db, code="ree-cookie-asc")
     _populate_reviewees(client, review_session.id)
 
-    cookie_name = f"rrw-sort-reviewees-{review_session.id}"
+    cookie_name = f"rrw-sort-reviewees-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "name", "dir": "asc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/reviewees"
+        f"/operator/sessions/{review_session.public_id}/reviewees"
     ).text
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
 
@@ -327,7 +329,7 @@ def _populate_relationships(
     Relationships CSV. Insertion order is Bravo / Alpha / Charlie
     so a name sort actually reshuffles."""
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -343,7 +345,7 @@ def _populate_relationships(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -354,7 +356,7 @@ def _populate_relationships(
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/relationships/import",
+        f"/operator/sessions/{public_id(session_id)}/relationships/import",
         files={
             "file": (
                 "rel.csv",
@@ -377,10 +379,10 @@ def test_relationships_table_renders_sort_scaffolding(
     review_session = _make_session(client, db, code="rel-scaff")
     _populate_relationships(client, review_session.id)
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     assert (
-        f'data-rrw-sortable="rrw-sort-relationships-{review_session.id}"'
+        f'data-rrw-sortable="rrw-sort-relationships-{review_session.public_id}"'
         in body
     )
     assert '<tbody class="rrw-rows">' in body
@@ -397,14 +399,14 @@ def test_relationships_cookie_sort_by_reviewer_asc(
     review_session = _make_session(client, db, code="rel-by-rev")
     _populate_relationships(client, review_session.id)
 
-    cookie_name = f"rrw-sort-relationships-{review_session.id}"
+    cookie_name = f"rrw-sort-relationships-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewer", "dir": "asc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     body = body[body.find('id="relationships-table"') :]
     # Reviewer column sorts on email — alphabetical: alpha,
@@ -422,14 +424,14 @@ def test_relationships_cookie_sort_desc(
     review_session = _make_session(client, db, code="rel-desc")
     _populate_relationships(client, review_session.id)
 
-    cookie_name = f"rrw-sort-relationships-{review_session.id}"
+    cookie_name = f"rrw-sort-relationships-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewer", "dir": "desc"}]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     body = body[body.find('id="relationships-table"') :]
     assert (
@@ -445,17 +447,17 @@ def test_relationships_stale_cookie_key_dropped(
     review_session = _make_session(client, db, code="rel-stale")
     _populate_relationships(client, review_session.id)
 
-    cookie_name = f"rrw-sort-relationships-{review_session.id}"
+    cookie_name = f"rrw-sort-relationships-{review_session.public_id}"
     client.cookies.set(
         cookie_name,
         json.dumps([
             {"key": "not_a_column", "dir": "asc"},
             {"key": "reviewer", "dir": "asc"},
         ]),
-        path=f"/operator/sessions/{review_session.id}",
+        path=f"/operator/sessions/{review_session.public_id}",
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     body = body[body.find('id="relationships-table"') :]
     assert (

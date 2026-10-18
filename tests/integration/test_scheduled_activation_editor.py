@@ -16,10 +16,12 @@ from app.db.models import AuditEvent, ReviewSession
 from app.services import scheduled_events
 from app.services import session_lifecycle as lifecycle
 from app.web.views._workflow_card import build_scheduled_activation_caption
+from ._public_id import public_id
 
 
 def _create_session(
     client: TestClient,
+    db: Session,
     code: str,
     *,
     scheduled_activate_at: str | None = None,
@@ -35,10 +37,14 @@ def _create_session(
         "/operator/sessions", data=data, follow_redirects=False
     )
     assert response.status_code == 303, response.text
-    # Create-session redirect targets ``.../{id}/edit``; strip the
-    # trailing ``/edit`` before parsing the id.
+    # Create-session redirect targets ``.../{public_id}?editing=1#...``;
+    # strip the query and fragment before parsing the public id.
     location = response.headers["location"].split("?", 1)[0].split("#", 1)[0]
-    return int(location.rsplit("/", 1)[-1])
+    return db.execute(
+        select(ReviewSession.id).where(
+            ReviewSession.public_id == location.rsplit("/", 1)[-1]
+        )
+    ).scalar_one()
 
 
 def _fmt_local_input(dt: datetime) -> str:
@@ -58,6 +64,7 @@ def test_create_accepts_valid_scheduled_activate_at(
     future = datetime.now(timezone.utc) + timedelta(hours=24)
     session_id = _create_session(
         client,
+        db,
         "create-ok",
         scheduled_activate_at=_fmt_local_input(future),
     )
@@ -96,7 +103,7 @@ def test_create_without_scheduled_activate_at_works(
     client: TestClient, db: Session
 ) -> None:
     """Empty Start input keeps scheduled_activate_at NULL — no regression."""
-    session_id = _create_session(client, "create-empty")
+    session_id = _create_session(client, db, "create-empty")
     review_session = db.get(ReviewSession, session_id)
     assert review_session is not None
     assert review_session.scheduled_activate_at is None
@@ -111,11 +118,11 @@ def test_edit_accepts_setting_scheduled_activate_at(
     client: TestClient, db: Session
 ) -> None:
     """Operator sets Start on an existing draft session via the Edit form."""
-    session_id = _create_session(client, "edit-set")
+    session_id = _create_session(client, db, "edit-set")
     future = datetime.now(timezone.utc) + timedelta(hours=24)
 
     response = client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-set",
             "code": "edit-set",
@@ -133,11 +140,11 @@ def test_edit_clearing_emits_activation_scheduled_audit(
     client: TestClient, db: Session
 ) -> None:
     """Setting then clearing Start emits session.activation_scheduled twice."""
-    session_id = _create_session(client, "edit-clear")
+    session_id = _create_session(client, db, "edit-clear")
     future = datetime.now(timezone.utc) + timedelta(hours=24)
     # Set
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-clear",
             "code": "edit-clear",
@@ -147,7 +154,7 @@ def test_edit_clearing_emits_activation_scheduled_audit(
     )
     # Clear
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-clear",
             "code": "edit-clear",
@@ -166,12 +173,12 @@ def test_edit_clearing_emits_activation_scheduled_audit(
     assert review_session.scheduled_activate_at is None
 
 
-def test_edit_rejects_too_soon(client: TestClient) -> None:
+def test_edit_rejects_too_soon(client: TestClient, db: Session) -> None:
     """Edit save rejects a Start that would violate the lead-time floor."""
-    session_id = _create_session(client, "edit-too-soon")
+    session_id = _create_session(client, db, "edit-too-soon")
     too_soon = datetime.now(timezone.utc) + timedelta(minutes=10)
     response = client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-too-soon",
             "code": "edit-too-soon",
@@ -186,10 +193,10 @@ def test_edit_get_prefills_scheduled_activate_at_input_value(
     client: TestClient, db: Session
 ) -> None:
     """The Edit page GET renders the persisted Start in the input."""
-    session_id = _create_session(client, "edit-prefill")
+    session_id = _create_session(client, db, "edit-prefill")
     future = datetime.now(timezone.utc) + timedelta(hours=24)
     client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "Sess edit-prefill",
             "code": "edit-prefill",
@@ -197,7 +204,7 @@ def test_edit_get_prefills_scheduled_activate_at_input_value(
         },
         follow_redirects=False,
     )
-    page = client.get(f"/operator/sessions/{session_id}?editing=1")
+    page = client.get(f"/operator/sessions/{public_id(session_id)}?editing=1")
     assert page.status_code == 200
     assert 'id="mock-start"' in page.text
     # The input's value attribute should carry the prefilled datetime

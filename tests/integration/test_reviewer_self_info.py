@@ -58,7 +58,7 @@ def _pair(
     reviewer.tag_1 = "Blue"
     db.commit()
     client.post(
-        f"/operator/sessions/{rs.id}/reviewers/field-labels",
+        f"/operator/sessions/{rs.public_id}/reviewers/field-labels",
         data={"tag_1": "Cohort", "tag_2": "", "tag_3": ""},
         follow_redirects=False,
     )
@@ -112,7 +112,7 @@ def test_the_readout_row_reports_what_the_surface_shows(
     client: TestClient, db: Session
 ) -> None:
     rs = _pair(client, db, "rsi-readout")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     readouts = _div_at(html, 'class="roster-readouts"')
     assert re.search(
         r'roster-readout-label">Roster:</span>\s*'
@@ -133,7 +133,7 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
     client: TestClient, db: Session
 ) -> None:
     rs = _pair(client, db, "rsi-card")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     card = re.search(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     )
@@ -154,7 +154,7 @@ def test_the_card_sits_above_upload_with_a_chip_per_populated_column(
         ("tag_1", False, "Cohort"),
     ]
     # The form posts to its route; Save and Cancel wait for a change.
-    assert f'action="/operator/sessions/{rs.id}/reviewers/self-fields"' in card_html
+    assert f'action="/operator/sessions/{rs.public_id}/reviewers/self-fields"' in card_html
     assert len(re.findall(r"<button[^>]*disabled", card_html)) == 2
 
 
@@ -167,7 +167,7 @@ def test_a_failed_import_still_renders_the_card_and_readout(
     and the readout read `none` over the default selection."""
     rs = _pair(client, db, "rsi-badcsv")
     response = client.post(
-        f"/operator/sessions/{rs.id}/reviewers/import",
+        f"/operator/sessions/{rs.public_id}/reviewers/import",
         files={"file": ("r.csv", b"NotAColumn\nx\n", "text/csv")},
     )
     assert response.status_code == 400, response.status_code
@@ -188,7 +188,7 @@ def test_no_profile_chip_without_a_profile(
     client: TestClient, db: Session
 ) -> None:
     rs = _pair(client, db, "rsi-noprof", profile="")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     card = re.search(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
@@ -203,7 +203,7 @@ def test_locked_the_readout_stays_and_the_card_goes(
 ) -> None:
     rs = _pair(client, db, "rsi-locked")
     _activate(client, db, rs)
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     assert "Reviewers see:" in _div_at(html, "data-reviewer-self-readout")
     assert "data-reviewer-self-card" not in html
 
@@ -228,7 +228,7 @@ def test_the_surface_shows_the_reviewers_own_fields_after_the_pills(
 ) -> None:
     rs = _pair(client, db, "rsi-surface")
     _activate(client, db, rs)
-    html = make_client(rae).get(f"/me/sessions/{rs.id}").text
+    html = make_client(rae).get(f"/me/sessions/{rs.public_id}").text
     nav = _div_at(html, 'class="rs-role-nav"')
     assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
     info = _info(html)
@@ -244,7 +244,7 @@ def test_the_preview_shows_a_static_reviewer_pill_and_the_line(
 ) -> None:
     rs = _pair(client, db, "rsi-preview")
     html = client.get(
-        f"/operator/sessions/{rs.id}/preview-surface/1",
+        f"/operator/sessions/{rs.public_id}/preview-surface/1",
         params={"reviewer_email": "rae@example.edu"},
     ).text
     nav = _div_at(html, 'class="rs-role-nav"')
@@ -259,7 +259,7 @@ def test_the_preview_shows_a_static_reviewer_pill_and_the_line(
 
 def _save(client: TestClient, rs: ReviewSession, **form) -> object:
     return client.post(
-        f"/operator/sessions/{rs.id}/reviewers/self-fields",
+        f"/operator/sessions/{rs.public_id}/reviewers/self-fields",
         data=form,
         follow_redirects=False,
     )
@@ -275,17 +275,17 @@ def test_a_save_stores_the_selection_and_the_surface_follows(
     response = _save(client, rs, fields=["email", "tag_1"])
     assert response.status_code == 303
     assert response.headers["location"] == (
-        f"/operator/sessions/{rs.id}/reviewers?unlocked=1#roster-card"
+        f"/operator/sessions/{rs.public_id}/reviewers?unlocked=1#roster-card"
     )
     db.refresh(rs)
     assert rs.reviewer_self_fields == ["email", "tag_1"]
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     shown = _div_at(html, "data-reviewer-self-readout")
     assert re.findall(r'<span class="pill pill-count">([^<]*)</span>', shown) == [
         "Email", "Cohort",
     ]
     _activate(client, db, rs)
-    info = _info(make_client(rae).get(f"/me/sessions/{rs.id}").text)
+    info = _info(make_client(rae).get(f"/me/sessions/{rs.public_id}").text)
     assert "rae@example.edu" in info and "Cohort: Blue" in info
     assert "Rae Reviewer" not in info and "Profile" not in info
 
@@ -297,10 +297,10 @@ def test_an_empty_save_shows_nothing_after_the_pill(
     assert _save(client, rs).status_code == 303
     db.refresh(rs)
     assert rs.reviewer_self_fields == []
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     assert ">none<" in _div_at(html, "data-reviewer-self-readout")
     preview = client.get(
-        f"/operator/sessions/{rs.id}/preview-surface/1",
+        f"/operator/sessions/{rs.public_id}/preview-surface/1",
         params={"reviewer_email": "rae@example.edu"},
     ).text
     assert "data-reviewer-self-info" not in preview
@@ -312,7 +312,7 @@ def test_a_key_with_no_chip_survives_a_save(
     """The NULL default selects profile_link; with no profile in the
     roster the card offers no chip for it, so it rides as `keep`."""
     rs = _pair(client, db, "rsi-keep", profile="")
-    html = client.get(f"/operator/sessions/{rs.id}/reviewers").text
+    html = client.get(f"/operator/sessions/{rs.public_id}/reviewers").text
     card = re.search(
         r"<section[^>]*data-reviewer-self-card[^>]*>.*?</section>", html, re.S
     ).group(0)
@@ -497,12 +497,12 @@ def test_the_summary_shows_the_line_after_the_pills(
     ).scalar_one()
     rae_client = make_client(rae)
     submitted = rae_client.post(
-        f"/me/sessions/{rs.id}/submit",
+        f"/me/sessions/{rs.public_id}/submit",
         data={f"response[{assignment.id}][rating]": "3"},
         follow_redirects=False,
     )
     assert submitted.status_code == 303, submitted.status_code
-    html = rae_client.get(f"/me/sessions/{rs.id}/summary").text
+    html = rae_client.get(f"/me/sessions/{rs.public_id}/summary").text
     assert "Your responses" in html, html[:400]
     nav = _div_at(html, 'class="rs-role-nav"')
     assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
@@ -524,7 +524,7 @@ def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
     rs = _pair(client, db, "rsi-preopen")
     validate_session(rs)
     db.commit()
-    html = make_client(rae).get(f"/me/sessions/{rs.id}/1").text
+    html = make_client(rae).get(f"/me/sessions/{rs.public_id}/1").text
     assert "This review is not currently open." in html, html[:400]
     nav = _div_at(html, 'class="rs-role-nav"')
     assert re.search(
@@ -547,7 +547,7 @@ def test_an_archived_session_shows_no_page_and_so_no_line(
     rs = _pair(client, db, "rsi-closed")
     rs.status = "archived"
     db.commit()
-    resp = make_client(rae).get(f"/me/sessions/{rs.id}/1")
+    resp = make_client(rae).get(f"/me/sessions/{rs.public_id}/1")
     assert resp.status_code == 404
     assert "data-reviewer-self-info" not in resp.text
 
@@ -582,6 +582,6 @@ def test_results_and_collation_carry_no_reviewer_line(
     db.commit()
     grant_reviewee_visibility(rs)
     for page in ("results", "collation"):
-        body = client.get(f"/me/sessions/{rs.id}/{page}").text
+        body = client.get(f"/me/sessions/{rs.public_id}/{page}").text
         assert "pill-role-reviewer" in _div_at(body, 'class="rs-role-nav"'), page
         assert "data-reviewer-self-info" not in body, page

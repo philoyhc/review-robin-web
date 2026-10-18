@@ -85,7 +85,7 @@ def test_plain_render_has_status_dropdown(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     # The card retired at 19P.3 rung 3; the status filter it held moved
     # into the preview table's toolbar at rung 2 and is what this test
@@ -112,7 +112,7 @@ def test_search_matches_the_reviewer_side(
         pairs=[(0, 0), (1, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?q=alice"
+        f"/operator/sessions/{review_session.public_id}/relationships?q=alice"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
@@ -131,7 +131,7 @@ def test_search_matches_the_reviewee_side(
         pairs=[(0, 0), (0, 1)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?q=dan"
+        f"/operator/sessions/{review_session.public_id}/relationships?q=dan"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "dan@example.edu" in table
@@ -154,7 +154,7 @@ def test_one_needle_matches_either_side(
         pairs=[(0, 0), (1, 1)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?q=zeta"
+        f"/operator/sessions/{review_session.public_id}/relationships?q=zeta"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "zeta@example.edu" in table
@@ -171,7 +171,7 @@ def test_empty_search_shows_all(db: Session, client: TestClient) -> None:
         pairs=[(0, 0), (1, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?q="
+        f"/operator/sessions/{review_session.public_id}/relationships?q="
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
@@ -208,7 +208,7 @@ def test_unfiltered_cap_is_200(db: Session, client: TestClient) -> None:
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     # 19J.5 rung 2: the cap is a page size, so nothing is withheld
     # and the sentence that said otherwise is gone; the pager says
@@ -229,10 +229,10 @@ def test_clear_link_only_when_filtered(
         pairs=[(0, 0)],
     )
     plain = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     filtered = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?q=alice"
+        f"/operator/sessions/{review_session.public_id}/relationships?q=alice"
     ).text
     assert ">Clear</a>" not in plain
     assert ">Clear</a>" in filtered
@@ -254,7 +254,7 @@ def test_one_datalist_carries_both_sides(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
 
     assert 'list="relationships-search-options"' in body
@@ -291,14 +291,14 @@ def test_status_filter_hides_the_other_status(
     db.commit()
 
     active = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?status=active"
+        f"/operator/sessions/{review_session.public_id}/relationships?status=active"
     ).text
     table = active[active.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
     assert "bob@example.edu" not in table
 
     inactive = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?status=inactive"
+        f"/operator/sessions/{review_session.public_id}/relationships?status=inactive"
     ).text
     table = inactive[inactive.find('id="relationships-table"') :]
     assert "bob@example.edu" in table
@@ -318,7 +318,7 @@ def test_status_all_shows_both(db: Session, client: TestClient) -> None:
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?status=all"
+        f"/operator/sessions/{review_session.public_id}/relationships?status=all"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
@@ -341,7 +341,7 @@ def test_searching_a_pair_context_tag_narrows_the_table(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?q=TW01"
+        f"/operator/sessions/{review_session.public_id}/relationships?q=TW01"
     ).text
     table = body[body.find('id="relationships-table"') :]
     assert "alice@example.edu" in table
@@ -364,7 +364,7 @@ def test_the_datalist_offers_pair_context_tag_values(
     db.commit()
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships"
+        f"/operator/sessions/{review_session.public_id}/relationships"
     ).text
     start = body.find('id="relationships-search-options"')
     block = body[start : body.find("</datalist>", start)]
@@ -389,6 +389,6 @@ def test_clear_link_appears_for_a_status_only_filter(
         pairs=[(0, 0)],
     )
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?status=inactive"
+        f"/operator/sessions/{review_session.public_id}/relationships?status=inactive"
     ).text
     assert ">Clear</a>" in body

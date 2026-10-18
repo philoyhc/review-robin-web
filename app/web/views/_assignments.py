@@ -263,7 +263,7 @@ def build_assignments_page_context(
                 self_review_active_count=sr_active,
                 self_review_checkbox_state=sr_state,
                 self_review_toggle_url=(
-                    f"/operator/sessions/{review_session.id}"
+                    f"/operator/sessions/{review_session.public_id}"
                     f"/assignments/{instrument.id}/self-reviews/active"
                 ),
                 self_review_excluded_by_rule=bool(
@@ -275,7 +275,7 @@ def build_assignments_page_context(
                 ),
                 is_stale=is_stale,
                 edit_url=(
-                    f"/operator/sessions/{review_session.id}/instruments"
+                    f"/operator/sessions/{review_session.public_id}/instruments"
                     f"#instrument-{instrument.id}"
                 ),
             )
@@ -284,6 +284,6 @@ def build_assignments_page_context(
         status_blocks=blocks,
         pinned_instrument_count=pinned_count,
         instruments_url=(
-            f"/operator/sessions/{review_session.id}/instruments"
+            f"/operator/sessions/{review_session.public_id}/instruments"
         ),
     )

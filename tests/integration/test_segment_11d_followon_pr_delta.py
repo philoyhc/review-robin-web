@@ -58,7 +58,7 @@ def _setup_two_instrument_session(
         select(ReviewSession).where(ReviewSession.code == code)
     ).scalar_one()
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewers/import",
+        f"/operator/sessions/{review_session.public_id}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -69,7 +69,7 @@ def _setup_two_instrument_session(
         follow_redirects=False,
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/reviewees/import",
+        f"/operator/sessions/{review_session.public_id}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -87,7 +87,7 @@ def _setup_two_instrument_session(
         ).scalars()
     )
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/instruments/add-new-model",
+        f"/operator/sessions/{review_session.public_id}/instruments/add-new-model",
         data={"after": str(first.id)},
         follow_redirects=False,
     )
@@ -114,9 +114,9 @@ def _setup_two_instrument_session(
             db, instrument=second, short_label="Peer review", actor=None
         )
     validate_session(review_session)
-    operator_client.get(f"/operator/sessions/{review_session.id}/assignments")
+    operator_client.get(f"/operator/sessions/{review_session.public_id}/assignments")
     operator_client.post(
-        f"/operator/sessions/{review_session.id}/activate",
+        f"/operator/sessions/{review_session.public_id}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -157,7 +157,7 @@ def test_inputs_carry_data_rs_saved_value(
     )
     rae_client = make_client(rae)
     body = rae_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
     # At least one input carries the attribute.
     assert "data-rs-saved-value=" in body
@@ -199,7 +199,7 @@ def test_save_still_filters_cross_page_inputs_under_pr_delta(
 
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/1/save",
+        f"/me/sessions/{review_session.public_id}/1/save",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 saved",
             f"response[{page2_assignment.id}][comments]": "page-2 dirty",
@@ -257,7 +257,7 @@ def test_submit_persists_inputs_from_every_group(
 
     rae_client = make_client(rae)
     rae_client.post(
-        f"/me/sessions/{review_session.id}/submit",
+        f"/me/sessions/{review_session.public_id}/submit",
         data={
             f"response[{page1_assignment.id}][comments]": "page-1 submit",
             f"response[{page2_assignment.id}][comments]": "page-2 submit",

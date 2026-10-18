@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Instrument, SessionRuleSet
+from ._public_id import public_id
 
 
 _BAND1_LINKS_ALL = ["link1", "link2", "link3"]
@@ -123,7 +124,7 @@ def generate_via_page_button(
     if acknowledge_response_loss:
         data["acknowledge_response_loss"] = "true"
     return client.post(
-        f"/operator/sessions/{session_id}/assignments/generate",
+        f"/operator/sessions/{public_id(session_id)}/assignments/generate",
         data=data,
         follow_redirects=False,
     )

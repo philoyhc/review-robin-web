@@ -30,6 +30,7 @@ from app.db.models import (
     InstrumentDisplayField,
     ReviewSession,
 )
+from ._public_id import public_id
 
 
 def _make_session(
@@ -53,8 +54,9 @@ def _instrument(db: Session, review_session: ReviewSession) -> Instrument:
 
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
+    pid = public_id(session_id)
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{pid}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -70,7 +72,7 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
     # tag_2 display fields silently disappear before the page
     # renders.
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{pid}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -113,7 +115,7 @@ def _seed_display_fields_via_get(
     on the default instrument by hitting the Instruments page
     (which runs the seed inside the view builder)."""
     client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
     )
 
 
@@ -186,7 +188,7 @@ def test_bulk_save_persists_sort_spec(
     form["sort_dir"] = ["asc", "desc"]
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
@@ -219,7 +221,7 @@ def test_bulk_save_empty_sort_arrays_clear_the_spec(
     db.commit()
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/fields/save",
         data=_bulk_save_form(instrument),
         follow_redirects=False,
@@ -248,7 +250,7 @@ def test_bulk_save_misaligned_arrays_redirects_with_banner(
     # No matching sort_dir → misaligned arrays.
     form["sort_dir"] = []
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
@@ -286,7 +288,7 @@ def test_bulk_save_over_cap_redirects_with_banner(
     ]
     form["sort_dir"] = ["asc", "asc", "asc", "desc"]
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
@@ -312,7 +314,7 @@ def test_rejected_sort_spec_renders_the_error_banner(
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = []
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
@@ -322,13 +324,13 @@ def test_rejected_sort_spec_renders_the_error_banner(
     assert 'id="sort-save-error-banner"' in body
     assert "Could not save the sort order:</strong> Sort spec arrays misaligned." in body
     assert (
-        f'href="/operator/sessions/{review_session.id}/instruments'
+        f'href="/operator/sessions/{review_session.public_id}/instruments'
         f'?editing={instrument.id}#instrument-{instrument.id}">Cancel</a>'
     ) in body
     assert '<div class="banner-actions">' in _banner(body, "sort-save-error-banner")
 
     clean = client.get(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"?editing={instrument.id}"
     ).text
     assert 'id="sort-save-error-banner"' not in clean
@@ -345,7 +347,7 @@ def test_bulk_save_unknown_dir_redirects_with_banner(
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = ["sideways"]
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/fields/save",
         data=form,
         follow_redirects=False,
@@ -376,7 +378,7 @@ def test_consolidated_save_returns_ok_json_and_persists(
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = ["asc"]
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/save",
         data=form,
         follow_redirects=False,
@@ -407,7 +409,7 @@ def test_consolidated_save_drops_a_sort_key_whose_field_was_deleted(
     form["sort_display_field_id"] = [str(stale_id), str(f2.id)]
     form["sort_dir"] = ["asc", "desc"]
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/save",
         data=form,
         follow_redirects=False,
@@ -434,7 +436,7 @@ def test_consolidated_save_misaligned_returns_422_json(
     form["sort_display_field_id"] = [str(f1.id)]
     form["sort_dir"] = []  # misaligned arrays
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/save",
         data=form,
         follow_redirects=False,
@@ -470,7 +472,7 @@ def test_consolidated_save_over_cap_returns_422_json(
     ]
     form["sort_dir"] = ["asc", "asc", "asc", "desc"]
     response = client.post(
-        f"/operator/sessions/{review_session.id}/instruments"
+        f"/operator/sessions/{review_session.public_id}/instruments"
         f"/{instrument.id}/save",
         data=form,
         follow_redirects=False,
@@ -496,7 +498,7 @@ def test_instruments_error_banners_show_no_text_from_the_url(
     the page (findings O7)."""
     review_session = _make_session(client, db, code="dfsort-banner-url")
     instrument = _instrument(db, review_session)
-    base = f"/operator/sessions/{review_session.id}/instruments"
+    base = f"/operator/sessions/{review_session.public_id}/instruments"
     forged = client.get(
         f"{base}?rf_save_error=Boom"
         f"&sort_save_error=Your+session+is+compromised"

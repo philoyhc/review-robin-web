@@ -44,6 +44,7 @@ from app.web.views._workflow_card import (
     build_manual_activate_cancellation,
 )
 from ._full_matrix import pin_full_matrix_on_all_instruments
+from ._public_id import public_id
 
 
 def _fmt_local_input(dt: datetime) -> str:
@@ -52,6 +53,7 @@ def _fmt_local_input(dt: datetime) -> str:
 
 def _create_session(
     client: TestClient,
+    db: Session,
     code: str,
     *,
     scheduled_activate_at: str | None = None,
@@ -70,10 +72,14 @@ def _create_session(
         "/operator/sessions", data=data, follow_redirects=False
     )
     assert response.status_code == 303, response.text
-    # Create-session redirect targets ``.../{id}/edit``; strip the
-    # trailing ``/edit`` before parsing the id.
+    # Create-session redirect targets ``.../{public_id}?editing=1#...``;
+    # strip the query and fragment before parsing the public id.
     location = response.headers["location"].split("?", 1)[0].split("#", 1)[0]
-    return int(location.rsplit("/", 1)[-1])
+    return db.execute(
+        select(ReviewSession.id).where(
+            ReviewSession.public_id == location.rsplit("/", 1)[-1]
+        )
+    ).scalar_one()
 
 
 def _audit_types(db: Session, session_id: int) -> list[str]:
@@ -99,6 +105,7 @@ def test_edit_start_change_revalidates_invite_offsets(
     far_start = datetime.now(timezone.utc) + timedelta(days=10)
     session_id = _create_session(
         client,
+        db,
         "revalidate",
         scheduled_activate_at=_fmt_local_input(far_start),
         invite_offsets="-P5D",  # fires 5 days before Start = now + 5d (future, OK)
@@ -108,7 +115,7 @@ def test_edit_start_change_revalidates_invite_offsets(
     # to 4 days ago — well before now + 1hr operational lead.
     near_start = datetime.now(timezone.utc) + timedelta(days=1)
     response = client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "x",
             "code": "revalidate",
@@ -131,6 +138,7 @@ def test_edit_start_change_within_rules_succeeds(
     far_start = datetime.now(timezone.utc) + timedelta(days=10)
     session_id = _create_session(
         client,
+        db,
         "revalidate-ok",
         scheduled_activate_at=_fmt_local_input(far_start),
         invite_offsets="-P2D",
@@ -138,7 +146,7 @@ def test_edit_start_change_within_rules_succeeds(
 
     further_start = datetime.now(timezone.utc) + timedelta(days=20)
     response = client.post(
-        f"/operator/sessions/{session_id}/config",
+        f"/operator/sessions/{public_id(session_id)}/config",
         data={
             "name": "x",
             "code": "revalidate-ok",

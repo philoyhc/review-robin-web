@@ -340,12 +340,12 @@ def test_clone_route_redirects_to_the_clone(
         data={"name": "Routed", "code": "clone-route"},
         follow_redirects=False,
     )
-    session_id = db.execute(
-        select(ReviewSession.id).where(ReviewSession.code == "clone-route")
+    source = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "clone-route")
     ).scalar_one()
 
     response = client.post(
-        f"/operator/sessions/{session_id}/clone",
+        f"/operator/sessions/{source.public_id}/clone",
         data={"mode": "all"},
         follow_redirects=False,
     )
@@ -357,11 +357,12 @@ def test_clone_route_redirects_to_the_clone(
     # immediately (the Edit page is retired).
     assert location.startswith("/operator/sessions/")
     assert location.endswith("?editing=1#session-config")
-    clone_id = int(
-        location.split("/operator/sessions/")[1].split("?")[0]
-    )
-    assert clone_id != session_id
-    clone = db.get(ReviewSession, clone_id)
+    clone_public_id = location.split("/operator/sessions/")[1].split("?")[0]
+    assert clone_public_id != source.public_id
+    clone = db.execute(
+        select(ReviewSession).where(ReviewSession.public_id == clone_public_id)
+    ).scalar_one()
+    assert clone.id != source.id
     assert clone.name == "Copy of Routed"
 
 

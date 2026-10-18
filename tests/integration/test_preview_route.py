@@ -31,6 +31,7 @@ from ._full_matrix import (
 )
 
 from ._full_preview import get_full_preview_html
+from ._public_id import public_id
 from ._validated import validate_session
 
 
@@ -60,7 +61,7 @@ def _make_session(
 
 def _populate_rosters(client: TestClient, session_id: int) -> None:
     client.post(
-        f"/operator/sessions/{session_id}/reviewers/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewers/import",
         files={
             "file": (
                 "r.csv",
@@ -71,7 +72,7 @@ def _populate_rosters(client: TestClient, session_id: int) -> None:
         follow_redirects=False,
     )
     client.post(
-        f"/operator/sessions/{session_id}/reviewees/import",
+        f"/operator/sessions/{public_id(session_id)}/reviewees/import",
         files={
             "file": (
                 "e.csv",
@@ -90,9 +91,9 @@ def _generate_full_matrix(client: TestClient, db: Session, session_id: int) -> N
 
 def _activate(client: TestClient, db: Session, session_id: int) -> None:
     validate_session(db, session_id)
-    client.get(f"/operator/sessions/{session_id}/assignments")
+    client.get(f"/operator/sessions/{public_id(session_id)}/assignments")
     client.post(
-        f"/operator/sessions/{session_id}/activate",
+        f"/operator/sessions/{public_id(session_id)}/activate",
         data={"acknowledge_warnings": "true"},
         follow_redirects=False,
     )
@@ -110,13 +111,13 @@ def test_preview_route_returns_308_to_full_preview(
     review_session = _make_session(client, db, code="prev-308")
 
     response = client.get(
-        f"/operator/sessions/{review_session.id}/preview",
+        f"/operator/sessions/{review_session.public_id}/preview",
         follow_redirects=False,
     )
 
     assert response.status_code == 308
     assert response.headers["location"] == (
-        f"/operator/sessions/{review_session.id}/preview-surface/1"
+        f"/operator/sessions/{review_session.public_id}/preview-surface/1"
     )
 
 
@@ -139,7 +140,7 @@ def test_preview_route_redirects_non_operator_to_me(
 
     other_client = make_client(reviewer_user)
     response = other_client.get(
-        f"/operator/sessions/{review_session.id}/preview",
+        f"/operator/sessions/{review_session.public_id}/preview",
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -200,7 +201,7 @@ def test_reviewer_side_surface_still_renders_write_path(
 
     reviewer_client = make_client(reviewer_user)
     body = reviewer_client.get(
-        f"/me/sessions/{review_session.id}/1"
+        f"/me/sessions/{review_session.public_id}/1"
     ).text
 
     # Re-aimed at 19P.6 rung 2. This watched for
@@ -211,9 +212,9 @@ def test_reviewer_side_surface_still_renders_write_path(
     assert "Operator view" not in body
     assert ">Save</button>" in body
     assert (
-        f'formaction="/me/sessions/{review_session.id}/submit?page=1"' in body
+        f'formaction="/me/sessions/{review_session.public_id}/submit?page=1"' in body
     )
     assert ">Cancel</a>" in body
     assert (
-        f'action="/me/sessions/{review_session.id}/1/save"' in body
+        f'action="/me/sessions/{review_session.public_id}/1/save"' in body
     )

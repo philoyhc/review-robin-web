@@ -47,7 +47,7 @@ def _make_session(
     return review_session
 
 
-def _seed_rosters(client: TestClient, session_id: int) -> None:
+def _seed_rosters(client: TestClient, session_id: str) -> None:
     client.post(
         f"/operator/sessions/{session_id}/quick-setup/reviewers",
         files={"file": ("r.csv", REVIEWER_CSV, "text/csv")},
@@ -75,7 +75,7 @@ def test_quick_setup_relationships_slot_is_wired_live(
     assert by_key["relationships"].is_wired is True
     assert by_key["relationships"].mode == "file_upload"
     assert by_key["relationships"].wire_url == (
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships"
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships"
     )
     assert by_key["relationships"].coming_in is None
 
@@ -84,13 +84,13 @@ def test_quick_setup_relationships_slot_count_reflects_population(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qsrel-count")
-    _seed_rosters(client, review_session.id)
+    _seed_rosters(client, review_session.public_id)
     context_empty = views.build_quick_setup_context(db, review_session)
     by_key = {slot.key: slot for slot in context_empty.slots}
     assert by_key["relationships"].count == 0
 
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -108,10 +108,10 @@ def test_quick_setup_relationships_route_imports_rows(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qsrel-route")
-    _seed_rosters(client, review_session.id)
+    _seed_rosters(client, review_session.public_id)
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -131,17 +131,17 @@ def test_quick_setup_relationships_route_replace_requires_confirm(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qsrel-confirm")
-    _seed_rosters(client, review_session.id)
+    _seed_rosters(client, review_session.public_id)
 
     # First upload populates.
     client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
     # Second upload without confirm should redirect with needs_confirm.
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -153,14 +153,14 @@ def test_quick_setup_relationships_route_unknown_email_is_parse_error(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qsrel-parse")
-    _seed_rosters(client, review_session.id)
+    _seed_rosters(client, review_session.public_id)
 
     bad_csv = (
         b"ReviewerEmail,RevieweeEmail\n"
         b"ghost@example.edu,carol@example.edu\n"
     )
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", bad_csv, "text/csv")},
         follow_redirects=False,
     )
@@ -192,7 +192,7 @@ def test_quick_setup_relationships_lifecycle_gate_on_ready(
     db.commit()
 
     response = operator.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/relationships",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/relationships",
         files={"file": ("rel.csv", RELATIONSHIP_CSV, "text/csv")},
         follow_redirects=False,
     )
@@ -213,7 +213,7 @@ def test_submit_all_runs_relationships_after_rosters(
     review_session = _make_session(client, db, code="qsrel-chain")
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/quick-setup/submit-all",
+        f"/operator/sessions/{review_session.public_id}/quick-setup/submit-all",
         files={
             "reviewers_file": ("r.csv", REVIEWER_CSV, "text/csv"),
             "reviewees_file": ("e.csv", REVIEWEE_CSV, "text/csv"),
@@ -287,7 +287,7 @@ def test_quick_setup_card_renders_relationships_slot_section(
     client: TestClient, db: Session
 ) -> None:
     review_session = _make_session(client, db, code="qsrel-render")
-    body = client.get(f"/operator/sessions/{review_session.id}").text
+    body = client.get(f"/operator/sessions/{review_session.public_id}").text
 
     assert 'id="quick-setup-relationships"' in body
     # Active label on the slot heading.

@@ -83,27 +83,27 @@ def build_setup_rows(
         SetupRow(
             label="Reviewers",
             value=f"Number of reviewers: {reviewer_count}",
-            manage_url=f"/operator/sessions/{sid}/reviewers",
+            manage_url=f"/operator/sessions/{review_session.public_id}/reviewers",
         ),
         SetupRow(
             label="Reviewees",
             value=f"Number of reviewees: {reviewee_count}",
-            manage_url=f"/operator/sessions/{sid}/reviewees",
+            manage_url=f"/operator/sessions/{review_session.public_id}/reviewees",
         ),
         SetupRow(
             label="Relationships",
             value=f"Number of relationships: {relationship_count}",
-            manage_url=f"/operator/sessions/{sid}/relationships",
+            manage_url=f"/operator/sessions/{review_session.public_id}/relationships",
         ),
         SetupRow(
             label="Instruments",
             value=instruments_value,
-            manage_url=f"/operator/sessions/{sid}/instruments",
+            manage_url=f"/operator/sessions/{review_session.public_id}/instruments",
         ),
         SetupRow(
             label="Email Invites",
             value="—",
-            manage_url=f"/operator/sessions/{sid}/setup-invite",
+            manage_url=f"/operator/sessions/{review_session.public_id}/setup-invite",
         ),
     ]
 

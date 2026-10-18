@@ -80,7 +80,7 @@ def test_config_save_refuses_an_edge_moment(
     assert _create(client, "EDGE-CFG", display_timezone=zone).status_code == 303
     review_session = _session(db, "EDGE-CFG")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data={"name": "S", "code": "EDGE-CFG", "description": "", box: value},
         follow_redirects=False,
     )
@@ -97,7 +97,7 @@ def test_lobby_edit_refuses_an_edge_deadline(
     assert _create(client, "EDGE-LOB", display_timezone=zone).status_code == 303
     review_session = _session(db, "EDGE-LOB")
     response = client.post(
-        f"/operator/sessions/{review_session.id}/lobby-edit",
+        f"/operator/sessions/{review_session.public_id}/lobby-edit",
         data={"name": "S", "code": "EDGE-LOB", "deadline": value},
         follow_redirects=False,
     )
@@ -153,8 +153,8 @@ def test_a_stored_edge_instant_renders(
     db.commit()
     for url in (
         "/operator/sessions",
-        f"/operator/sessions/{review_session.id}",
-        f"/operator/sessions/{review_session.id}?editing=1",
+        f"/operator/sessions/{review_session.public_id}",
+        f"/operator/sessions/{review_session.public_id}?editing=1",
     ):
         response = client.get(url)
         assert response.status_code == 200, url
@@ -191,7 +191,7 @@ def test_config_save_keeps_an_untouched_stored_edge_value(
     setattr(review_session, box, stored)
     db.commit()
     response = client.post(
-        f"/operator/sessions/{review_session.id}/config",
+        f"/operator/sessions/{review_session.public_id}/config",
         data={
             "name": "S",
             "code": "EDGE-KEEP",
@@ -275,12 +275,12 @@ def test_audit_log_dates_at_the_calendar_edges(
     db.commit()
 
     page = bob_client.get(
-        f"/operator/sys-admin/sessions/{review_session.id}/audit-log?{query}"
+        f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log?{query}"
     )
     assert page.status_code == 200
     assert ("the dated one" in page.text) is shown
     extract = bob_client.get(
-        f"/operator/sessions/{review_session.id}/export/audit_log.csv?{query}"
+        f"/operator/sessions/{review_session.public_id}/export/audit_log.csv?{query}"
     )
     assert extract.status_code == 200
     summaries = [row[2] for row in csv.reader(io.StringIO(extract.text))][1:]

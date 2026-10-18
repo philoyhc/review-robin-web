@@ -155,7 +155,7 @@ def test_duplicate_bounces_a_creator_revoked_since_the_gate(
     ).scalar_one()
     monkeypatch.setattr(session_owners, "lock_owner_eligible", lambda db, user: False)
     response = client.post(
-        f"/operator/sessions/{source.id}/clone",
+        f"/operator/sessions/{source.public_id}/clone",
         data={"mode": "config"},
         follow_redirects=False,
     )

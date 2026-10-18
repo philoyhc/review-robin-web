@@ -45,7 +45,7 @@ ROSTERS = [
 ]
 
 
-def _add(client: TestClient, session_id: int, path: str, **fields: str):
+def _add(client: TestClient, session_id: str, path: str, **fields: str):
     return client.post(
         f"/operator/sessions/{session_id}/{path}",
         data={**ROSTER_FORM, **fields},
@@ -69,19 +69,19 @@ def test_the_add_form_and_the_csv_reach_the_same_verdict(
     19Q Item 7 the CSV refused and the form accepted.
     """
     session = _session(client, db, "xr-parity")
-    _add(client, session.id, "reviewees/create",
+    _add(client, session.public_id, "reviewees/create",
          name="Aisha Haddadx", email_or_identifier=EMAIL)
 
     csv = f"ReviewerName,ReviewerEmail\nAisha Haddad,{EMAIL}\n".encode()
     uploaded = client.post(
-        f"/operator/sessions/{session.id}/reviewers/import",
+        f"/operator/sessions/{session.public_id}/reviewers/import",
         files={"file": ("r.csv", csv, "text/csv")},
         follow_redirects=True,
     )
     assert "ReviewerEmail is already used under a different name in another roster (1 row)" in uploaded.text
     assert _rows(db, Reviewer, session.id) == []
 
-    typed = _add(client, session.id, "reviewers/create",
+    typed = _add(client, session.public_id, "reviewers/create",
                  name="Aisha Haddad", email=EMAIL)
     assert typed.status_code == 400, (
         "the Add form accepted what the CSV refused — the asymmetry 19Q "
@@ -104,9 +104,9 @@ def test_every_roster_refuses_a_mailbox_held_under_another_name(
         ("reviewers/create", "email") if roster == "reviewees"
         else ("reviewees/create", "email_or_identifier")
     )
-    _add(client, session.id, holder_path, name="Held Name", **{holder_id: EMAIL})
+    _add(client, session.public_id, holder_path, name="Held Name", **{holder_id: EMAIL})
 
-    response = _add(client, session.id, path,
+    response = _add(client, session.public_id, path,
                     **{id_field: EMAIL, name_field: "Different Name"})
     assert response.status_code == 400, f"{roster} accepted a conflicting name"
 
@@ -124,9 +124,9 @@ def test_the_same_name_is_the_legitimate_case_and_still_creates(
         ("reviewers/create", "email") if roster == "reviewees"
         else ("reviewees/create", "email_or_identifier")
     )
-    _add(client, session.id, holder_path, name="Aisha Haddad", **{holder_id: EMAIL})
+    _add(client, session.public_id, holder_path, name="Aisha Haddad", **{holder_id: EMAIL})
 
-    response = _add(client, session.id, path,
+    response = _add(client, session.public_id, path,
                     **{id_field: EMAIL, name_field: "Aisha Haddad"})
     assert response.status_code == 303, f"{roster} refused the same name"
 
@@ -143,9 +143,9 @@ def test_an_unnamed_observer_does_not_collide(
     mailbox.
     """
     session = _session(client, db, "xr-unnamed")
-    _add(client, session.id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
+    _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
 
-    response = _add(client, session.id, "observers/create",
+    response = _add(client, session.public_id, "observers/create",
                     email=EMAIL, display_name="")
     assert response.status_code == 303
     assert len(_rows(db, Observer, session.id)) == 1
@@ -156,13 +156,13 @@ def test_a_name_only_edit_is_caught(client: TestClient, db: Session) -> None:
     renaming a row into disagreement is invisible to it. The cross-roster
     guard keys on the resulting pair instead."""
     session = _session(client, db, "xr-rename")
-    _add(client, session.id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
-    _add(client, session.id, "reviewees/create",
+    _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
+    _add(client, session.public_id, "reviewees/create",
          name="Aisha Haddad", email_or_identifier=EMAIL)
     reviewee = _rows(db, Reviewee, session.id)[0]
 
     response = client.post(
-        f"/operator/sessions/{session.id}/reviewees/{reviewee.id}/update",
+        f"/operator/sessions/{session.public_id}/reviewees/{reviewee.id}/update",
         data={**ROSTER_FORM, "name": "Someone Else", "email_or_identifier": EMAIL},
         follow_redirects=False,
     )
@@ -214,9 +214,9 @@ def test_an_unnamed_holder_does_not_block_a_named_row(
     blank holder names survived until it was written.
     """
     session = _session(client, db, "xr-unnamed-holder")
-    _add(client, session.id, "observers/create", email=EMAIL, display_name="")
+    _add(client, session.public_id, "observers/create", email=EMAIL, display_name="")
 
-    response = _add(client, session.id, "reviewers/create",
+    response = _add(client, session.public_id, "reviewers/create",
                     name="Aisha Haddad", email=EMAIL)
     assert response.status_code == 303, (
         "an unnamed observer blocked a named reviewer; a missing name "
@@ -234,8 +234,8 @@ def test_the_name_comparison_is_case_sensitive(
     red if someone tidies it into a `.lower()`.
     """
     session = _session(client, db, "xr-exact-case")
-    _add(client, session.id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
-    response = _add(client, session.id, "reviewees/create",
+    _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
+    response = _add(client, session.public_id, "reviewees/create",
                     name="aisha haddad", email_or_identifier=EMAIL)
     assert response.status_code == 400, (
         "'aisha haddad' was accepted against 'Aisha Haddad' — the "
@@ -255,8 +255,8 @@ def test_surrounding_whitespace_is_not_a_difference(
     would fail; writing this case is what disproved it.
     """
     session = _session(client, db, "xr-exact-space")
-    _add(client, session.id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
-    response = _add(client, session.id, "reviewees/create",
+    _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
+    response = _add(client, session.public_id, "reviewees/create",
                     name="Aisha Haddad ", email_or_identifier=EMAIL)
     assert response.status_code == 303, (
         "a trailing space was treated as a conflict; names are trimmed "
@@ -276,11 +276,11 @@ def test_the_observer_csv_import_checks_too(
     **names**.
     """
     session = _session(client, db, "xr-observer-csv")
-    _add(client, session.id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
+    _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
 
     csv = f"ObserverName,ObserverEmail\nAisha Haddadx,{EMAIL}\n".encode()
     response = client.post(
-        f"/operator/sessions/{session.id}/observers/import",
+        f"/operator/sessions/{session.public_id}/observers/import",
         files={"file": ("o.csv", csv, "text/csv")},
         follow_redirects=True,
     )
@@ -304,11 +304,11 @@ def test_an_unnamed_observer_row_in_a_csv_does_not_collide(
     real shape, not a contrived one.
     """
     session = _session(client, db, "xr-csv-unnamed")
-    _add(client, session.id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
+    _add(client, session.public_id, "reviewers/create", name="Aisha Haddad", email=EMAIL)
 
     csv = f"ObserverName,ObserverEmail\n,{EMAIL}\n".encode()
     response = client.post(
-        f"/operator/sessions/{session.id}/observers/import",
+        f"/operator/sessions/{session.public_id}/observers/import",
         files={"file": ("o.csv", csv, "text/csv")},
         follow_redirects=True,
     )
@@ -368,8 +368,8 @@ def test_a_pre_existing_cross_roster_pair_is_reported_on_both_sides(
     assert len(on_reviewers) == 1 and len(on_reviewees) == 1
     assert on_reviewers[0].fix_anchor == f"#reviewer-row-{reviewer.id}"
     assert on_reviewees[0].fix_anchor == f"#reviewee-row-{reviewee.id}"
-    assert on_reviewers[0].fix_url.endswith(f"/{session.id}/reviewers")
-    assert on_reviewees[0].fix_url.endswith(f"/{session.id}/reviewees")
+    assert on_reviewers[0].fix_url.endswith(f"/{session.public_id}/reviewers")
+    assert on_reviewees[0].fix_url.endswith(f"/{session.public_id}/reviewees")
     # Each side names its own spelling first and the other's second, so
     # the operator can tell the two findings apart at a glance.
     assert "'Aisha Haddad' here" in on_reviewers[0].message
@@ -480,7 +480,7 @@ def test_observers_duplicate_email_is_reported(
     assert len(found) == 1
     assert found[0].severity.value == "error"
     assert found[0].fix_anchor == f"#observer-row-{first.id}"
-    assert found[0].fix_url.endswith(f"/{session.id}/observers")
+    assert found[0].fix_url.endswith(f"/{session.public_id}/observers")
     assert "(2 rows)" in found[0].message
 
 
@@ -589,7 +589,7 @@ def test_a_matching_name_does_not_slip_past_a_second_disagreeing_holder(
     _seed(db, Reviewer, session_id=session.id, name="Alpha Name", email=EMAIL)
     _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
 
-    matching = _add(client, session.id, "observers/create",
+    matching = _add(client, session.public_id, "observers/create",
                     display_name="Zed Name", email=EMAIL)
     assert matching.status_code == 400, (
         "matching one holder is not agreeing with the mailbox"
@@ -614,7 +614,7 @@ def test_the_cited_holder_is_picked_from_the_values_not_the_query(
     _seed(db, Reviewer, session_id=session.id, name="Zed Name", email=EMAIL)
     _seed(db, Reviewer, session_id=session.id, name="Alpha Name", email=EMAIL)
 
-    refused = _add(client, session.id, "observers/create",
+    refused = _add(client, session.public_id, "observers/create",
                    display_name="Third Name", email=EMAIL)
     assert refused.status_code == 400
     assert "Alpha Name" in refused.text
@@ -631,7 +631,7 @@ def test_a_reviewee_holder_is_cited_after_a_reviewer_one(
     _seed(db, Reviewee, session_id=session.id,
           name="Alpha Name", email_or_identifier=EMAIL)
 
-    refused = _add(client, session.id, "observers/create",
+    refused = _add(client, session.public_id, "observers/create",
                    display_name="Third Name", email=EMAIL)
     assert refused.status_code == 400
     # Jinja escapes the quotes the message puts round a name, so the

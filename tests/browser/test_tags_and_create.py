@@ -18,11 +18,16 @@ import pytest
 from playwright.sync_api import Page, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
-from ._builder import sign_in
-from .conftest import COLLEAGUE_EMAIL, FAKE_OPERATOR_EMAIL, SECOND_COLLEAGUE_EMAIL
+from ._builder import session_pk, sign_in
+from .conftest import (
+    COLLEAGUE_EMAIL,
+    FAKE_OPERATOR_EMAIL,
+    SECOND_COLLEAGUE_EMAIL,
+    LiveServer,
+)
 
 
-def _tagged_session(api: httpx.Client, tags: str) -> int:
+def _tagged_session(api: httpx.Client, tags: str) -> str:
     code = f"t{uuid.uuid4().hex[:8]}"
     response = api.post(
         "/operator/sessions",
@@ -30,7 +35,7 @@ def _tagged_session(api: httpx.Client, tags: str) -> int:
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    return int(response.headers["location"].split("?")[0].rsplit("/", 1)[1])
+    return response.headers["location"].split("?")[0].rsplit("/", 1)[1]
 
 
 def _suggestions(page: Page) -> list[str]:
@@ -65,10 +70,11 @@ def test_tag_suggestions_complete_only_the_last_tag(
 
 
 def test_enter_in_a_lobby_tag_box_never_submits(
-    page: Page, api: httpx.Client
+    page: Page, api: httpx.Client, live_server: LiveServer
 ) -> None:
     """Item 5, 'The keyboard picks' (Chromium; Safari stays a hand check)."""
-    session_id = _tagged_session(api, "pilot")
+    # The lobby's checkbox carries the session's key, not its public ID.
+    session_id = session_pk(live_server.database_url, _tagged_session(api, "pilot"))
     page.goto("/operator/sessions")
     posted: list[str] = []
     page.on("request", lambda r: posted.append(r.url) if r.method == "POST" else None)
@@ -143,7 +149,7 @@ def test_create_without_javascript_saves_the_typed_owner(
     with page.expect_navigation():
         submit.click()
 
-    expect(page).to_have_url(re.compile(r"/operator/sessions/\d+"))
+    expect(page).to_have_url(re.compile(r"/operator/sessions/[2-9a-z]{10}\b"))
     owners = page.locator("#owners-card code")
     expect(owners).to_have_text(
         [FAKE_OPERATOR_EMAIL, COLLEAGUE_EMAIL], use_inner_text=True

@@ -95,7 +95,7 @@ def test_every_row_action_lands_on_the_row_it_acted_on(
 ) -> None:
     review_session = _make_session(client, db, code=f"obs-anch-{name[:6]}")
     rows = _seed(db, review_session.id, ["Alice"])
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     response = _post_row_action(client, base, rows[0].id, template, data)
     assert response.status_code == 303, f"{name}: {response.text[:400]}"
@@ -113,7 +113,7 @@ def test_every_row_action_carries_the_pager_offset(
     anchor names was not in the response to be found."""
     review_session = _make_session(client, db, code=f"obs-off-{name[:6]}")
     rows = _seed(db, review_session.id, ["Alice"])
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     loc = _post_row_action(
         client, base, rows[0].id, template, data, filter_offset=200
@@ -139,7 +139,7 @@ def test_the_page_actually_sends_the_offset_it_asks_the_route_to_read(
     """
     review_session = _make_session(client, db, code="obs-sends-offset")
     _seed(db, review_session.id, [f"O{n}" for n in range(1, 231)])
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     bulk = re.search(
         r'<form[^>]*id="observers-bulk-form".*?</form>',
@@ -177,7 +177,7 @@ def test_delete_lands_on_the_table_card_because_its_rows_are_gone(
     rows = _seed(db, review_session.id, ["Alice"])
 
     response = client.post(
-        f"/operator/sessions/{review_session.id}/observers/bulk-delete",
+        f"/operator/sessions/{review_session.public_id}/observers/bulk-delete",
         data={
             "observer_ids": [rows[0].id],
             "confirm": "true",
@@ -213,7 +213,7 @@ def test_rows_and_the_fallback_are_both_present_for_the_landing(
     review_session = _make_session(client, db, code="obs-landing")
     rows = _seed(db, review_session.id, ["Alice"])
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
 
     row = re.search(
@@ -253,7 +253,7 @@ def test_add_carries_the_active_filter_into_add_mode(
     """
     review_session = _make_session(client, db, code="obs-addfilter")
     _seed(db, review_session.id, ["Alice", "Bob"])
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     body = client.get(f"{base}?status=inactive&q=ali").text
     link = re.search(r'<a[^>]*>\s*Add new\s*</a>', body)
@@ -282,7 +282,7 @@ def test_creating_a_row_pages_to_where_the_new_row_actually_is(
     """
     review_session = _make_session(client, db, code="obs-createpage")
     _seed(db, review_session.id, [f"O{n}" for n in range(1, 231)])
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     response = client.post(
         f"{base}/create",
@@ -322,7 +322,7 @@ def test_a_create_carries_the_pager_offset_too(
     green. It was one of two mutations that survived the first pass.
     """
     review_session = _make_session(client, db, code="obs-create-off")
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     loc = client.post(
         f"{base}/create",
@@ -348,7 +348,7 @@ def test_entering_edit_mode_lands_on_the_row_being_edited(
     """
     review_session = _make_session(client, db, code="obs-editnav")
     body = client.get(
-        f"/operator/sessions/{review_session.id}/observers"
+        f"/operator/sessions/{review_session.public_id}/observers"
     ).text
 
     script = re.search(
@@ -366,7 +366,7 @@ def test_entering_edit_mode_lands_on_the_row_being_edited(
     # deleted with the suite green.
     row = _seed(db, review_session.id, ["Alice"])[0]
     edit_page = client.get(
-        f"/operator/sessions/{review_session.id}/observers?edit_id={row.id}"
+        f"/operator/sessions/{review_session.public_id}/observers?edit_id={row.id}"
     ).text
     edit_row = re.search(
         rf'<tr\b[^>]*id="observer-row-{row.id}"[^>]*>', edit_page, re.S
@@ -390,7 +390,7 @@ def test_add_lands_on_the_row_it_opens(
     """
     review_session = _make_session(client, db, code="obs-addanchor")
     _seed(db, review_session.id, ["Alice", "Bob"])
-    base = f"/operator/sessions/{review_session.id}/observers"
+    base = f"/operator/sessions/{review_session.public_id}/observers"
 
     link = re.search(r'<a[^>]*>\s*Add new\s*</a>', client.get(base).text)
     assert link, "no Add new link"

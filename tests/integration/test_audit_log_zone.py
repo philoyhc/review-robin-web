@@ -64,8 +64,8 @@ def _setup(
     ).scalar_one()
     user.preferences = {"display_timezone": zone} if zone else {}
     db.commit()
-    url = f"/operator/sys-admin/sessions/{review_session.id}/audit-log"
-    csv_url = f"/operator/sessions/{review_session.id}/export/audit_log.csv"
+    url = f"/operator/sys-admin/sessions/{review_session.public_id}/audit-log"
+    csv_url = f"/operator/sessions/{review_session.public_id}/export/audit_log.csv"
     return bob_client, url, csv_url
 
 

@@ -97,7 +97,7 @@ def test_search_placeholder_names_the_tag_columns(
     _seed(db, review_session)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/{route}"
+        f"/operator/sessions/{review_session.public_id}/{route}"
     ).text
     element = _search_input(body, page=page)
 
@@ -121,7 +121,7 @@ def test_the_relationships_edit_pickers_keep_their_own_help_text(
     _seed(db, review_session)
 
     body = client.get(
-        f"/operator/sessions/{review_session.id}/relationships?add=1"
+        f"/operator/sessions/{review_session.public_id}/relationships?add=1"
     ).text
 
     assert 'placeholder="Search name or email"' in body
