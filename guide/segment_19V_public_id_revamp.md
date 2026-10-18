@@ -1,14 +1,15 @@
-# Public IDs: URLs that don't count the workspace
+# Segment 19V — public IDs: URLs that don't count the workspace
 
 **Opened:** 2026-10-18 · **Theme:** stop URLs and page source exposing
 workspace-wide row counts · **Related:** `spec/architecture.md`
 (domain entities), `spec/participant_model.md` (`/me` routes),
 `spec/reviewer-surface.md` (the review form)
 
-A standalone plan at the author's naming, not a `segment_*.md`, in the
-shape of `guide/archive/pair_context_tags_further_clarify.md`: each item
-carries its own `### Doc impact` and `### Status`, checked by hand at
-close (`tools/close_check.py` reads only `segment_*` files).
+Opened as `guide/public_id_revamp.md` and renamed to a segment at the
+author's word (2026-10-18). **Items close independently**, each with its
+own `### Doc impact` and `### Status`, as in 19U. So there is no
+segment-level `## Doc impact`, and `python3 tools/close_check.py 19V.1`
+reads Item 1's.
 
 ---
 
@@ -53,8 +54,8 @@ one column gives on its own (assessed 2026-10-18).
 ### Semantics
 
 - **An integer in a session URL no longer resolves.** `/me/sessions/12/…`
-  answers 404, as for any unknown session. That is subject to Open
-  question 1.
+  answers 404, as for any unknown session. Old integer URLs stop working,
+  with no redirect (author, 2026-10-18).
 - **Emails are unaffected.** Invitations and reminders link to
   `/me/invite/<token>` (`app/services/invitations.py`), never to a
   session ID.
@@ -63,6 +64,19 @@ one column gives on its own (assessed 2026-10-18).
   (`spec/sessions_overview.md`) and the audit-log filters. They are page
   source on operator pages, not URLs. They may move later, but this item
   does not need it.
+- **The CSVs are unaffected, including the round trip.** No exported
+  file carries `sessions.id`:
+  - the Settings CSV carries `session.code` and the settings, never the
+    row ID (`app/services/session_config_io/_serialize.py`);
+  - roster, relationship and response files key by email or identifier
+    and by positional instrument names (`instrument_{n}`);
+  - download filenames use the code (`extracts.filename`).
+
+  So a file exported before this item imports unchanged after it.
+  `public_id` is not exported either: a session made by Rehydrate or
+  Duplicate is a new session and draws its own ID, and a Settings import
+  onto an existing session leaves the ID alone. Exporting it would invite
+  a collision on reload.
 - **Browser storage keys** built from the session ID
   (`rrw-…-{{ session.id }}`, 7 sites) switch to the public ID. A
   remembered sort or column width resets once per session, which is
@@ -131,16 +145,19 @@ Taken 2026-10-18 at `c39186b4`.
   Session Home, `/me` and a review page, and asserts that no
   `/sessions/<digits>` link appears.
 - `/operator/sessions/<integer>/…` and `/me/sessions/<integer>/…` answer
-  404, pinned by a test (or redirect, if Open question 1 says so).
-- `### Doc impact` is present and current, and `### Status` is compacted
-  at close.
+  404, pinned by a test.
+- A test pins that a session made by Rehydrate gets its own `public_id`,
+  and that a Settings export carries none.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19V.1` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- On the segment's last item: plan moved to `guide/archive/` + index row
 
 ### Open questions
 
-1. **Should old integer URLs redirect?** This affects bookmarks and the
-   author's open tabs. Recommended: no. Pre-Azure sessions are
-   disposable, and an integer route kept alive keeps the counter
-   reachable, even if only for viewers already permitted. Author decides.
+1. ~~Should old integer URLs redirect?~~ No: they stop working (author,
+   2026-10-18; a local database may be wiped if the migration needs it).
 2. **Operator-side instrument IDs** in `?editing=<id>#instrument-<id>` on
    the Instruments page: see Out of scope. Author decides whether they
    join as a later item.

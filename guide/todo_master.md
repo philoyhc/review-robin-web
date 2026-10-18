@@ -63,6 +63,13 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
+3. **19V — Public IDs** (not gated on Azure). Item 1: a random
+   `sessions.public_id` in every session URL, so URLs stop counting the
+   workspace. Item 2, lower priority and waiting on the author: review-form
+   answers keyed off an ordinal, not the assignment ID. Old integer URLs
+   stop working (author, 2026-10-18).
+   **Plan:** `guide/segment_19V_public_id_revamp.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
