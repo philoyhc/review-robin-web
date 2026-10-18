@@ -148,7 +148,7 @@ def _page_changed(
         return False
     return not responses_service.digest_matches(
         form.get(responses_service.PAGE_DIGEST_FIELD),
-        review_session.public_id,
+        review_session,
         page_rows,
     )
 

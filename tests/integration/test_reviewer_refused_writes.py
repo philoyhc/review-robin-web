@@ -275,29 +275,29 @@ def test_a_row_no_get_would_show_is_listed_without_labels(
         assert "<code>" not in by_value[bare], bare
 
 
-def test_another_reviewers_form_never_reaches_their_assignment(
+def test_another_reviewers_form_answers_409_and_names_nobody(
     client: TestClient, db: Session, make_client
 ) -> None:
-    """A form rendered for someone else's page names rows by ordinal and
-    a digest of what the page shows, never an assignment ID (19V Item 2).
-    Posted by Rae, its answer can only land on Rae's own rows: here
-    Sam's page shows the same row Rae's does (Carol, the one
-    instrument), so it saves onto Rae's row and Sam's stays empty."""
+    """A form rendered for someone else's page carries the digest of
+    their assignments, not the reviewer's, so its ordinals would land on
+    the wrong rows: refused with 409, nothing written, and the typed
+    values listed bare (19V Item 2)."""
     review_session = _ready_session(client, db, code="refused-other")
-    sams = _assignment_of(db, review_session, "sam@example.edu")
-    raes = _assignment_of(db, review_session, "rae@example.edu")
+    sams = _assignment_of(db, review_session, "sam@example.edu").id
 
-    resp, _text = _rae_posts(
+    resp, text = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        answer_form(db, {f"response[{sams.id}][comments]": "for sam"}),
+        answer_form(db, {f"response[{sams}][comments]": "for sam"}),
     )
 
-    assert resp.status_code == 303, resp.text
-    written = {
-        r.assignment_id for r in db.execute(select(Response)).scalars()
-    }
-    assert written == {raes.id}
+    assert resp.status_code == 409
+    assert "This page changed after you opened it" in text
+    listed = html.unescape(_unsaved_list(resp.text))
+    assert "for sam" in listed
+    assert "<strong>" not in listed
+    assert "<code>" not in listed
+    assert db.execute(select(Response)).scalars().first() is None
 
 
 def test_an_excluded_row_comes_back_without_labels(

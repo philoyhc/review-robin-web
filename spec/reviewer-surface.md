@@ -316,10 +316,10 @@ back (`responses._form_keys`, `parse_form_payload`); an ordinal the
 page doesn't have is ignored, so a forged one reaches only the
 reviewer's own page.
 
-The form carries a hidden `page_digest`, a keyed digest of the page's
-rows in ID order, built only from what the page shows (each row's
-instrument position and reviewee), never an ID, so even a known key
-gives nothing away. A Save or Submit carrying any answer whose
+The form carries a hidden `page_digest`, an HMAC of that ID set keyed
+by the session's secret `sessions.form_key`, which no page renders, so
+it reveals neither the IDs nor their count and nothing can be guessed
+against it. A Save or Submit carrying any answer whose
 digest doesn't match the page as it stands now (a row joined or left
 the page since it rendered, or no digest at all) is refused with
 **409**: the page re-renders with a "This page changed after you opened

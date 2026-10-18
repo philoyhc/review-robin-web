@@ -734,9 +734,7 @@ def _surface_context(
         "answer_ordinals": responses_service.answer_ordinals(
             [a.id for a in page_rows]
         ),
-        "page_digest": responses_service.page_digest(
-            review_session.public_id, page_rows
-        ),
+        "page_digest": responses_service.page_digest(review_session, page_rows),
         "prev_page_url": prev_page_url,
         "next_page_url": next_page_url,
         "deadline_timezone_label": date_formatting.gmt_offset_zone_label(

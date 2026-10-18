@@ -43,6 +43,7 @@ def test_duplicate_draws_its_own_public_id(db: Session, client: TestClient) -> N
 
     assert _SHAPE.match(clone.public_id)
     assert clone.public_id != source.public_id
+    assert clone.form_key != source.form_key
 
 
 def test_a_settings_export_carries_no_public_id(db: Session, client: TestClient) -> None:
@@ -52,6 +53,9 @@ def test_a_settings_export_carries_no_public_id(db: Session, client: TestClient)
 
     assert not any("public_id" in row.field for row in rows)
     assert not any(row.value == session.public_id for row in rows)
+    # 19V Item 2 — nor the form-digest key.
+    assert not any("form_key" in row.field for row in rows)
+    assert not any(row.value == session.form_key for row in rows)
 
 
 # --- Rung 3: URLs carry the public ID ---------------------------------------

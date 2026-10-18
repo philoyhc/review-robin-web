@@ -47,12 +47,6 @@ _ROLE_PREFIXES: dict[str, str] = {
 }
 
 
-def workspace_salt() -> str:
-    """The workspace-level secret, also the key of the review form's
-    page digest (``responses._form_keys``)."""
-    return os.environ.get(_ENV_SALT_KEY, _DEFAULT_SALT)
-
-
 class ParticipantTokenizer:
     """Bound to one session. Precomputes the per-session salt
     prefix at construction so the per-individual token method
@@ -63,7 +57,7 @@ class ParticipantTokenizer:
     __slots__ = ("_salt_prefix",)
 
     def __init__(self, review_session: "ReviewSession") -> None:
-        env_salt = workspace_salt()
+        env_salt = os.environ.get(_ENV_SALT_KEY, _DEFAULT_SALT)
         created_at = review_session.created_at
         created_token = (
             created_at.isoformat() if created_at is not None else "0"

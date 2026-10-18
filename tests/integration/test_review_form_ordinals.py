@@ -283,26 +283,26 @@ def test_a_group_page_posts_back_the_ordinals_it_rendered(
     assert _rating(db, alone) == "3"
 
 
-def test_the_digest_carries_no_assignment_id() -> None:
-    """Two pages whose rows look the same to the reviewer, under different
-    IDs, digest alike: brute-forcing the digest (its key has a public
-    default) finds nothing the page doesn't show."""
+def test_the_digest_is_keyed_by_a_secret_the_page_never_shows(
+    db: Session, client: TestClient
+) -> None:
+    """The digest covers the page's assignment IDs, so its key must be a
+    secret: the session's ``form_key``, which no page renders. Without it
+    nobody can test guesses of the IDs, or their count, against the
+    digest."""
     from types import SimpleNamespace
 
     from app.services.responses import page_digest
 
-    def row(aid: int, name: str) -> SimpleNamespace:
-        return SimpleNamespace(
-            id=aid,
-            instrument=SimpleNamespace(order=1),
-            reviewee=SimpleNamespace(name=name, email_or_identifier=f"{name}@x.edu"),
-        )
+    session = _session_alice_reviews(db, client)
+    html = client.get(f"/me/sessions/{session.public_id}/1").text
 
-    low = [row(3, "carol"), row(4, "dan")]
-    high = [row(90_001, "carol"), row(90_017, "dan")]
-    assert page_digest("k3m9x2pq7a", low) == page_digest("k3m9x2pq7a", high)
-    assert page_digest("k3m9x2pq7a", low) != page_digest("k3m9x2pq7a", low[::-1])
-    assert page_digest("k3m9x2pq7a", low) != page_digest("k3m9x2pq7a", low[:1])
+    assert len(session.form_key) == 64
+    assert session.form_key not in html
+    rows = [SimpleNamespace(id=7), SimpleNamespace(id=9)]
+    other_key = SimpleNamespace(form_key="0" * 64)
+    assert page_digest(session, rows) != page_digest(other_key, rows)
+    assert page_digest(session, rows) != page_digest(session, rows[:1])
 
 
 def test_a_digest_that_is_not_hex_is_a_mismatch_not_an_error(
