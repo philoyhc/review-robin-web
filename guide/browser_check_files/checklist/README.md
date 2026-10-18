@@ -23,33 +23,39 @@ through its service, not the card.
 - **The run:** local, `uvicorn` with fake auth, so you are
   `operator@example.edu` ("Local Operator"). Start from a fresh database
   (`review_robin_web.db` deleted, then `alembic upgrade head`).
-- **Other people** are a restart of `uvicorn` (stop it, then run one of
-  these lines from the repository root). Variables set on the command
-  line win over `.env`.
+- **Other people** are a restart of `uvicorn`: stop it, then run one of
+  these lines in PowerShell from the repository root. Variables set this
+  way win over `.env`. **They also stay set in that PowerShell window
+  until removed**, so each line starts by removing them all. Without it,
+  a plain `uvicorn` runs as whoever went last. After
+  Alice's line, for instance, `FAKE_AUTH_SUPER_ADMIN=false` lingers and
+  Local Operator is no longer a super admin.
 
-  ```bash
+  ```powershell
   # You (operator@example.edu)
-  uvicorn app.main:app --reload
+  Remove-Item Env:FAKE_AUTH_*, Env:SCHEDULED_OPERATIONAL_LEAD_HOURS, Env:REVIEWER_NOTICE_MIN_HOURS -ErrorAction SilentlyContinue; uvicorn app.main:app --reload
 
   # Bob: operator and admin
-  FAKE_AUTH_EMAIL=bob@example.edu FAKE_AUTH_NAME="Bob Smith" uvicorn app.main:app --reload
+  Remove-Item Env:FAKE_AUTH_*, Env:SCHEDULED_OPERATIONAL_LEAD_HOURS, Env:REVIEWER_NOTICE_MIN_HOURS -ErrorAction SilentlyContinue; $env:FAKE_AUTH_EMAIL="bob@example.edu"; $env:FAKE_AUTH_NAME="Bob Smith"; uvicorn app.main:app --reload
 
   # Alice: participant only
-  FAKE_AUTH_EMAIL=alice@example.edu FAKE_AUTH_NAME="Alice Chan" FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false FAKE_AUTH_SUPER_ADMIN=false uvicorn app.main:app --reload
+  Remove-Item Env:FAKE_AUTH_*, Env:SCHEDULED_OPERATIONAL_LEAD_HOURS, Env:REVIEWER_NOTICE_MIN_HOURS -ErrorAction SilentlyContinue; $env:FAKE_AUTH_EMAIL="alice@example.edu"; $env:FAKE_AUTH_NAME="Alice Chan"; $env:FAKE_AUTH_OPERATOR="false"; $env:FAKE_AUTH_SYS_ADMIN="false"; $env:FAKE_AUTH_SUPER_ADMIN="false"; uvicorn app.main:app --reload
 
   # Olive: participant only
-  FAKE_AUTH_EMAIL=olive@example.edu FAKE_AUTH_NAME="Olive Grant" FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false FAKE_AUTH_SUPER_ADMIN=false uvicorn app.main:app --reload
+  Remove-Item Env:FAKE_AUTH_*, Env:SCHEDULED_OPERATIONAL_LEAD_HOURS, Env:REVIEWER_NOTICE_MIN_HOURS -ErrorAction SilentlyContinue; $env:FAKE_AUTH_EMAIL="olive@example.edu"; $env:FAKE_AUTH_NAME="Olive Grant"; $env:FAKE_AUTH_OPERATOR="false"; $env:FAKE_AUTH_SYS_ADMIN="false"; $env:FAKE_AUTH_SUPER_ADMIN="false"; uvicorn app.main:app --reload
 
   # Nobody: no role
-  FAKE_AUTH_EMAIL=nobody@example.edu FAKE_AUTH_NAME="No Body" FAKE_AUTH_OPERATOR=false FAKE_AUTH_SYS_ADMIN=false FAKE_AUTH_SUPER_ADMIN=false uvicorn app.main:app --reload
+  Remove-Item Env:FAKE_AUTH_*, Env:SCHEDULED_OPERATIONAL_LEAD_HOURS, Env:REVIEWER_NOTICE_MIN_HOURS -ErrorAction SilentlyContinue; $env:FAKE_AUTH_EMAIL="nobody@example.edu"; $env:FAKE_AUTH_NAME="No Body"; $env:FAKE_AUTH_OPERATOR="false"; $env:FAKE_AUTH_SYS_ADMIN="false"; $env:FAKE_AUTH_SUPER_ADMIN="false"; uvicorn app.main:app --reload
 
   # You, for Part 11 (scheduled events)
-  SCHEDULED_OPERATIONAL_LEAD_HOURS=0 REVIEWER_NOTICE_MIN_HOURS=0 uvicorn app.main:app --reload
+  Remove-Item Env:FAKE_AUTH_*, Env:SCHEDULED_OPERATIONAL_LEAD_HOURS, Env:REVIEWER_NOTICE_MIN_HOURS -ErrorAction SilentlyContinue; $env:SCHEDULED_OPERATIONAL_LEAD_HOURS="0"; $env:REVIEWER_NOTICE_MIN_HOURS="0"; uvicorn app.main:app --reload
   ```
 
   Use Alice's, Olive's and Nobody's lines from their **first** sign-in: a
   role is stored then, so an Alice who once signed in as an operator
-  stays one.
+  stays one. Local Operator's super admin is not stored: it holds on any
+  run where `FAKE_AUTH_SUPER_ADMIN` is unset and `FAKE_AUTH_EMAIL` is
+  yours.
 - **Uploads:** "stage" means choosing files in the New session page's
   upload slots before Create; "Quick Setup" means Session Home's card.
   Tick the replacement box if it shows, then Submit. A settings file
@@ -216,7 +222,7 @@ Restart with the Part 11 line from "Before you start".
 | 64 | New session `BC sched`, code `bc-sched`; stage 01–05. Session Home: Start 5 minutes ahead, End a week ahead, Send invites `-PT2M`, reminders `-P2D`; Save. **Prepare**; open the review link. On BC broken (draft) set a Start 5 minutes ahead too. | "Scheduled to open". | M3: scheduled |
 | 65 | After both Starts pass, open the lobby, not Session Home. Then Session Home, reloaded a few times. | BC sched reads Activated; its audit log has `session.activated` (`trigger=scheduled`) and the invitations sent. BC broken logs `session.scheduled_activation_skipped` and its Start is cleared. Home loads each time. | L4 (both); B20 |
 
-Restart as yourself with the plain `uvicorn app.main:app --reload`.
+Restart as yourself with the "You" line, which also removes the two settings.
 
 ## Part 12 — Lobby, archive, codes, zones
 
