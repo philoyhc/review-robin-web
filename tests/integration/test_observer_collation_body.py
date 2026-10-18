@@ -1,6 +1,6 @@
 """Integration tests for the observer collation surface body
 (`/me/sessions/{id}/collation`) and the per-instrument CSV
-download (`.../collation/instruments/{instrument_id}.csv`).
+download (`.../collation/instruments/{instrument_seq}.csv`).
 
 Pins the W17 MVP: per-instrument 3-row tables (reviewer stats /
 reviewee stats / conditional download), cohort filtering, and
@@ -444,7 +444,7 @@ def test_collation_csv_serves_raw_rows_for_cohort(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 200
     assert "text/csv" in response.headers["content-type"]
@@ -527,7 +527,7 @@ def test_collation_leaves_out_fields_marked_not_visible(
     assert "Secret note" not in body
     csv_response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert csv_response.status_code == 200
     csv_body = csv_response.text
@@ -606,7 +606,7 @@ def test_collation_csv_anonymized_swaps_names_for_tokens(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -648,7 +648,7 @@ def test_collation_csv_summarized_returns_404(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 404
 
@@ -664,7 +664,7 @@ def test_collation_csv_cohort_empty_returns_404(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 404
 
@@ -786,7 +786,7 @@ def test_collation_csv_or_rule_per_row_either_side(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{inst.id}.csv"
+        f"{inst.session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -903,7 +903,7 @@ def test_collation_csv_excludes_rows_outside_cohort_rule(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{inst.id}.csv"
+        f"{inst.session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -1013,7 +1013,7 @@ def test_collation_csv_anonymized_excludes_rows_outside_cohort_rule(
 
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{inst.id}.csv"
+        f"{inst.session_seq}.csv"
     )
     assert response.status_code == 200
     body = response.text
@@ -1067,7 +1067,7 @@ def test_collation_csv_raw_filename_prefixes_the_session_code(
     )
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 200
     disposition = response.headers["content-disposition"]
@@ -1107,7 +1107,7 @@ def test_collation_csv_anonymized_filename_carries_anon_suffix(
     )
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 200
     disposition = response.headers["content-disposition"]
@@ -1223,7 +1223,7 @@ def test_collation_csv_404_when_user_is_not_an_observer(
     # Authenticated user isn't on the observer roster.
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 404
 
@@ -1257,7 +1257,7 @@ def _archived_csv_url(client: TestClient, db: Session, *, code: str) -> str:
     )
     url = (
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert client.get(url).status_code == 200
     review_session.status = "archived"

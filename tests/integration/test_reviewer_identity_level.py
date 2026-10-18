@@ -204,7 +204,7 @@ def _download(
     _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
     response = client.get(
         f"/me/sessions/{review_session.public_id}/collation/instruments/"
-        f"{seeded['instrument'].id}.csv"
+        f"{seeded['instrument'].session_seq}.csv"
     )
     assert response.status_code == 200, response.text
     rows = list(csv.reader(io.StringIO(response.text)))

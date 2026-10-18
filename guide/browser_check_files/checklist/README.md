@@ -165,7 +165,7 @@ Leave both tabs; do Part 5 while the deadline approaches.
 | 36 | In the console: `fetch('/operator/sessions/<id>/invitations/regenerate-all', {method: 'POST'})`; reload Invitations. | As the checklist says. | O2 |
 | 37 | Review page: type a Note; in another window **Revert to draft**; Save. Then `/me`. | "This review is not currently open." in the card and the page. BC main's Start reads "—". | P3: reverted; M6: Start after a revert |
 | 38 | **Prepare**, **Activate**. Type a two-line Note; **Close session**; Save. | The amber "This review has closed, so your last changes weren't saved.", the Note under it. | P3: closed mid-edit |
-| 39 | **Release responses**. `/me`; the collation page; Peer's Download CSV. | "Available" (observer); the file is `bc-main_Peer.csv`. | M6: Available (observer); L6: observer CSV |
+| 39 | **Release responses**. `/me`; the collation page; Peer's Download CSV. Then that address with `2.csv` changed to `9.csv`. | "Available" (observer); the link ends `/instruments/2.csv` and the file is `bc-main_Peer.csv`; `9.csv` shows the error page. | M6: Available (observer); L6: observer CSV; 19V: CSV by number |
 | 40 | As Olive: the collation page. | Row 3: "No one in your view takes part in this instrument, so there is nothing to download", no Download CSV. | M13 |
 | 41 | **Revert to draft**; run the two "Session Home Save after Close early" rows. | As the checklist says. | L6 (Session Home) |
 | 42 | Lobby: rename BC main (the oldest); `/me`. | Row order unchanged. | L6: row order |

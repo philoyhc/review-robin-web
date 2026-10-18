@@ -8,9 +8,10 @@ Two routes:
   reviewer-side cohort stats, reviewee-side cohort stats, and
   a conditional download button per the instrument's
   identification mode.
-- ``GET .../collation/instruments/{instrument_id}.csv`` —
+- ``GET .../collation/instruments/{instrument_seq}.csv`` —
   streams the per-instrument CSV scoped to the observer's
-  cohort. Identification mode (Raw / Anonymized) follows
+  cohort. The instrument is named by its per-session
+  ``session_seq``, not its workspace-wide ID (19V Item 3). Identification mode (Raw / Anonymized) follows
   Band 3; ``Summarized`` returns 404 because no per-row
   download is offered.
 
@@ -23,6 +24,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from collections.abc import Iterable
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -56,6 +58,10 @@ from app.web.routes_reviewer._shared import (
 from app.web.downloads import content_disposition
 
 router = APIRouter(prefix="/me")
+
+# An instrument's ``session_seq`` as the CSV address spells it: ASCII
+# digits, short enough to bind on any backend.
+_SEQ_SHAPE = re.compile(r"[0-9]{1,9}")
 
 
 @router.get(
@@ -99,10 +105,10 @@ def observer_collation(
 
 
 @router.get(
-    "/sessions/{session_id}/collation/instruments/{instrument_id}.csv"
+    "/sessions/{session_id}/collation/instruments/{instrument_seq}.csv"
 )
 def observer_collation_instrument_csv(
-    instrument_id: int,
+    instrument_seq: str,
     observer_session: tuple[Observer, ReviewSession] = Depends(
         require_observer_in_session
     ),
@@ -114,9 +120,14 @@ def observer_collation_instrument_csv(
     identification mode the operator set on Band 3."""
     observer, review_session = observer_session
 
+    # The address carries the per-session number (19V Item 3). Anything
+    # not shaped like one names no instrument: a 404, like an unknown
+    # number, rather than FastAPI's 422 or an integer too big to bind.
+    if not _SEQ_SHAPE.fullmatch(instrument_seq):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     instrument = db.execute(
         select(Instrument).where(
-            Instrument.id == instrument_id,
+            Instrument.session_seq == int(instrument_seq),
             Instrument.session_id == review_session.id,
         )
     ).scalar_one_or_none()

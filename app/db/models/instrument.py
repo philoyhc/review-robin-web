@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    UniqueConstraint,
     column,
     func,
     select,
@@ -53,15 +54,30 @@ def _next_session_seq(context: Any) -> int:
     mapped column, so an explicit ``session_seq`` is already in the
     parameters and the default is skipped. That is what preserves a
     source reading 1, 3, 2 as 1, 3, 2.
+
+    **Several rows in one flush are numbered in turn.** The ORM batches
+    them into one ``executemany``, and every row's default runs before
+    any row is written, so each query would read the same ``max``. The
+    numbers already handed out are kept on the execution context, which
+    the batch shares, and a later row continues from them. Before 19V
+    Item 3 the batch took one number twice; ``uq_instruments_session_seq``
+    would now refuse it.
     """
     table = Instrument.__table__
-    params = context.get_current_parameters()
-    highest = context.connection.execute(
-        select(func.max(table.c.session_seq)).where(
-            table.c.session_id == params["session_id"]
-        )
-    ).scalar()
-    return (highest or 0) + 1
+    session_id = context.get_current_parameters()["session_id"]
+    handed_out: dict[int, int] = context.__dict__.setdefault(
+        "_rrw_session_seq", {}
+    )
+    if session_id in handed_out:
+        highest = handed_out[session_id]
+    else:
+        highest = context.connection.execute(
+            select(func.max(table.c.session_seq)).where(
+                table.c.session_id == session_id
+            )
+        ).scalar()
+    handed_out[session_id] = (highest or 0) + 1
+    return handed_out[session_id]
 
 
 def _session_self_reviews_active(context: Any) -> bool:
@@ -91,6 +107,13 @@ def _session_self_reviews_active(context: Any) -> bool:
 
 class Instrument(Base, TimestampMixin):
     __tablename__ = "instruments"
+    __table_args__ = (
+        # The observer's CSV address names an instrument by this pair
+        # (19V Item 3), so two rows must never share it.
+        UniqueConstraint(
+            "session_id", "session_seq", name="uq_instruments_session_seq"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     session_id: Mapped[int] = mapped_column(
@@ -125,6 +148,10 @@ class Instrument(Base, TimestampMixin):
     ``replicate_instrument`` and the config importer all get it free.
     There is no *server* default, so a row inserted outside SQLAlchemy
     still fails loudly instead of minting ``Instrument_0``.
+
+    Unique per session (``uq_instruments_session_seq``, 19V Item 3): the
+    observer's collation CSV is addressed by it, so a duplicate is an
+    insert error rather than two instruments behind one address.
     """
     accepting_responses: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
