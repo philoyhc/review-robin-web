@@ -98,7 +98,7 @@ def test_a_return_to_wins_over_the_remembered_origin(
         "/operator/sessions%0A",
         "/operator/sessions%250A",
         "/operator/sessions/{id}%0A",
-        # A fullwidth digit: ``int()`` reads it, a cookie refuses it.
+        # A fullwidth character: a Unicode class reads it, a cookie refuses it.
         "/operator/sessions/{fw}",
     ],
 )
@@ -106,8 +106,8 @@ def test_a_bad_character_in_return_to_falls_back_to_the_lobby(
     client: TestClient, db: Session, admin: None, entry: str, shape: str
 ) -> None:
     review_session = _session(client, db)
-    fullwidth = "".join(chr(0xFF10 + int(d)) for d in str(review_session.id))
-    raw = shape.format(id=review_session.id, fw=quote(fullwidth))
+    fullwidth = "".join(chr(ord(c) + 0xFEE0) for c in review_session.public_id)
+    raw = shape.format(id=review_session.public_id, fw=quote(fullwidth))
     response = client.get(f"{entry}?return_to={raw}")
     assert response.status_code == 200
     assert _back(response.text) == '/operator/sessions">&larr; Back to Sessions'

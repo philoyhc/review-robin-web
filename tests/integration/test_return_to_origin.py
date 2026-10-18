@@ -76,7 +76,7 @@ def test_a_stranger_is_not_told_a_session_name_by_the_back_link(
             name="Eve", provider="aad",
         )
     )
-    body = stranger.get(f"{page}?return_to={shape.format(id=session.id)}").text
+    body = stranger.get(f"{page}?return_to={shape.format(id=session.public_id)}").text
     assert session.name not in body
     # A participant's fallback is their own dashboard (audit M8). The
     # href and the label are asserted together: About carries a plain

@@ -176,8 +176,9 @@ def test_operator_pages_outside_a_session_resolve_to_their_title(
     assert resolve_return_to(path, db, viewer=None) == ReturnTarget(url=path, label=label)
 
 
-def _fullwidth(digits: str) -> str:
-    return "".join(chr(0xFF10 + int(d)) for d in digits)
+def _fullwidth(text: str) -> str:
+    """Each ASCII digit or lowercase letter as its fullwidth form."""
+    return "".join(chr(ord(c) + 0xFEE0) for c in text)
 
 
 @pytest.mark.parametrize(
@@ -186,7 +187,7 @@ def _fullwidth(digits: str) -> str:
         "/operator/sessions/{id}/a.b",  # outside the segment alphabet
         "/operator/sessions/{id}\n",  # ``$`` matched before a newline
         "/operator/sessions/{id}/instruments\n",
-        "/operator/sessions/{fw}",  # ``\d`` matched any Unicode digit
+        "/operator/sessions/{fw}",  # ``\d`` / ``\w`` matched any Unicode form
         "/operator/sessions/{fw}/assignments",
         "/me/sessions/{fw}",
         # A page a POST rendered: the chrome passes the POST's path, and
@@ -199,7 +200,7 @@ def test_an_existing_session_still_falls_back_on_a_bad_path(
     db: Session, shape: str
 ) -> None:
     session = _seed_session(db)
-    raw = shape.format(id=session.id, fw=_fullwidth(str(session.id)))
+    raw = shape.format(id=session.public_id, fw=_fullwidth(session.public_id))
     assert resolve_return_to(raw, db, viewer=_owner(db, session)) == DEFAULT_TARGET
 
 
@@ -212,7 +213,7 @@ def test_a_stranger_is_not_told_the_session_name(db: Session, shape: str) -> Non
     session that does not exist, so the label confirms nothing."""
     session = _seed_session(db, name="Secret Review")
     stranger = _user(db, "stranger@example.edu")
-    raw = shape.format(id=session.id)
+    raw = shape.format(id=session.public_id)
     assert resolve_return_to(raw, db, viewer=stranger) == PARTICIPANT_DEFAULT
     assert resolve_return_to(raw, db, viewer=None) == PARTICIPANT_DEFAULT
 

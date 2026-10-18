@@ -134,6 +134,12 @@ Taken 2026-10-18 at `c39186b4`.
   Tests hand helpers the integer, so `tests/integration/_public_id.py`
   resolves it; browser tests hold the public ID (`new_session()`) and
   resolve the key with `_builder.session_pk`.
+- **Cumulative read (2026-10-18, one read, `18d9013f..a42b3173`).** No
+  `app/` blocker. It found five tests (enumeration gate, `return_to`)
+  still formatting the integer and so passing vacuously, and a NUL byte
+  in the path reaching Postgres as a 500. Both fixed in a follow-up: the
+  tests use `public_id`, and `sessions.get_by_public_id` checks the shape
+  before it queries, the one lookup every resolver now shares.
 
 ### PR ladder
 

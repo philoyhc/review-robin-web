@@ -35,12 +35,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response, StreamingResponse
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
-from app.services import audit, operator_settings, responses as responses_service
+from app.services import audit, operator_settings, sessions, responses as responses_service
 from app.web import views as audit_views
 from app.services.extracts import filename, stream_csv
 from app.services.extracts.audit_events_extract import serialize_audit_events
@@ -758,9 +757,7 @@ def export_audit_log_csv(
     # log" link lands on the sys-admin-only child page. The
     # CSV route stays at its current URL so existing
     # programmatic consumers keep working, just gated tighter.
-    review_session = db.execute(
-        select(ReviewSession).where(ReviewSession.public_id == session_id)
-    ).scalar_one_or_none()
+    review_session = sessions.get_by_public_id(db, session_id)
     if review_session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     # Filter set shared with the in-app viewer (16C PR 2). The

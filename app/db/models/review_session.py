@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import secrets
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-import secrets
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, false, select, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
