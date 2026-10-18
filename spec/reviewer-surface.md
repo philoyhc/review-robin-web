@@ -1233,11 +1233,11 @@ reviewee-/observer-only rows show `—` in those cells.
   people who run reviews.") from an operator page. Any other value shows
   nothing, so the query string never puts its own text on the page.
 - **Empty state** — when the user has no row to show in any
-  role: a single `.card` (`data-me-empty`) reading "There's
-  nothing here for you right now.", then, muted, "You're signed
-  in as {user.email}. If you expected to see a review here, check
-  that it was sent to this address, or contact the person running
-  it.", then an "About Review Robin" link
+  role: a single `.card` (`data-me-empty`) reading "You're signed
+  in as {user.email} but there's nothing here for you right now.
+  If you expected to see a review here, check that it was sent to
+  this address, or contact the person running it.", then an "About
+  Review Robin" link
   (`/about?return_to=/me`). One wording for everyone it reaches
   (a stranger, a reviewee with no current grant, a deactivated
   roster row, a reviewee under a non-email identifier), so it never

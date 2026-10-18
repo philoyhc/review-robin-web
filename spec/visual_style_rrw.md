@@ -437,7 +437,7 @@ The reviewer's "home" after sign-in. A simple list of pending and recent reviews
   - Deadline.
   - Completion status (e.g., "Not started," "In progress: 2 of 5 reviewees," "Completed").
   - Optional: institution name if relevant for cross-institution reviewers.
-- Empty state when the viewer has nothing to show: "There's nothing here for you right now.", the signed-in address with what to check, and an About link (wording in `spec/reviewer-surface.md`). Not an error; just informational.
+- Empty state when the viewer has nothing to show: the signed-in address, "there's nothing here for you right now", what to check, and an About link (wording in `spec/reviewer-surface.md`). Not an error; just informational.
 
 **Deep-linking behavior:** when a reviewer signs in via a session-specific invitation link and has only one pending review, the sign-in flow can deep-link them past the review list to the response surface directly. The list exists for the cases where it's useful (multiple reviews, returning to find a specific one); it's not a forced waypoint for every visit.
 
