@@ -67,8 +67,9 @@ concluding** (decision 2026-09-05) and independent of each other.
    2026-10-18: session URLs carry a random `sessions.public_id`,
    review-form answers are keyed off an ordinal, and the observer CSV
    address takes the instrument's `session_seq`, now unique. Open:
-   Item 3's question 2 (the review page's sort keys); the segment stays
-   open for follow-ups (author, 2026-10-18).
+   Item 4, the review page's sort keys keyed off `session_seq`, display
+   source and `field_key` (planned 2026-10-18); the segment stays open
+   for follow-ups (author, 2026-10-18).
    **Plan:** `guide/segment_19V_public_id_revamp.md`.
 
 ### Stubs
