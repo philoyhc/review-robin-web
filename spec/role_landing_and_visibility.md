@@ -34,8 +34,7 @@ the tenant can sign in.** Someone with no role lands on `/me` and reads:
 
 > **Your reviews** — You're signed in as their@address but there's
 > nothing here for you right now. If you expected to see a review here,
-> check that it was sent to this address, or contact the person running
-> it. [About Review Robin]
+> contact the person running it. [About Review Robin]
 
 This is the current posture, not an oversight in the gates: the gates
 work, and they run *after* sign-in. Restricting sign-in itself would be
