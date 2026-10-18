@@ -416,8 +416,8 @@ position, which drag-and-drop moves).
   path supplies it and none can forget it. There is no *server*
   default: a row inserted outside SQLAlchemy fails loudly rather than
   minting `Instrument_0`. **Unique per session**:
-  `uq_instruments_session_seq` on `(session_id, session_seq)` (19V
-  Item 3), since the observer's collation CSV is addressed by the
+  `uq_instruments_session_seq` on `(session_id, session_seq)`,
+  since the observer's collation CSV is addressed by the
   number. Rows inserted in one flush are numbered in turn: the default
   keeps the numbers it has handed out for the batch, so a later row
   continues from them rather than reading the same `max + 1`.
