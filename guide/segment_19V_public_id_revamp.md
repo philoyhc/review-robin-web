@@ -122,6 +122,13 @@ Taken 2026-10-18 at `c39186b4`.
 - **Specs:** URL prose uses `{session_id}` / `{id}` placeholders that stay
   true. The specs that state the URL identity are the ones in Doc impact.
 
+### Status
+
+- **Rung 2 (2026-10-18).** Cumulative-read base `18d9013f`. One
+  context-sensitive model default (`_new_public_id`, the
+  `_next_session_seq` pattern) covers Create, Duplicate, Rehydrate and
+  every fixture, so no creator names the column.
+
 ### PR ladder
 
 1. **This plan** (prose).

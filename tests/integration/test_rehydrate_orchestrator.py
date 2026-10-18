@@ -195,6 +195,8 @@ def test_orchestrator_lands_draft_with_note(db: Session) -> None:
     rehyd = outcome.session
     assert rehyd.status == "draft"
     assert rehyd.name == "Spring_REHYD"
+    # 19V Item 1: a rehydrated session is a new one with its own URL ID.
+    assert rehyd.public_id and rehyd.public_id != rs.public_id
     assert "Rehydrated 2026-08-15" in (rehyd.description or "")
     # A clean set places every response, so there is nothing to report.
     assert outcome.dropped == []
