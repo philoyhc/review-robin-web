@@ -66,8 +66,8 @@ concluding** (decision 2026-09-05) and independent of each other.
 3. **19V — Public IDs** (not gated on Azure). Item 1: a random
    `sessions.public_id` in every session URL, so URLs stop counting the
    workspace. Item 2, lower priority and waiting on the author: review-form
-   answers keyed off an ordinal, not the assignment ID. Open question:
-   whether old integer URLs redirect (recommended: no).
+   answers keyed off an ordinal, not the assignment ID. Old integer URLs
+   stop working (author, 2026-10-18).
    **Plan:** `guide/segment_19V_public_id_revamp.md`.
 
 ### Stubs

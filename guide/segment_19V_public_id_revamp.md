@@ -54,8 +54,8 @@ one column gives on its own (assessed 2026-10-18).
 ### Semantics
 
 - **An integer in a session URL no longer resolves.** `/me/sessions/12/…`
-  answers 404, as for any unknown session. That is subject to Open
-  question 1.
+  answers 404, as for any unknown session. Old integer URLs stop working,
+  with no redirect (author, 2026-10-18).
 - **Emails are unaffected.** Invitations and reminders link to
   `/me/invite/<token>` (`app/services/invitations.py`), never to a
   session ID.
@@ -145,7 +145,7 @@ Taken 2026-10-18 at `c39186b4`.
   Session Home, `/me` and a review page, and asserts that no
   `/sessions/<digits>` link appears.
 - `/operator/sessions/<integer>/…` and `/me/sessions/<integer>/…` answer
-  404, pinned by a test (or redirect, if Open question 1 says so).
+  404, pinned by a test.
 - A test pins that a session made by Rehydrate gets its own `public_id`,
   and that a Settings export carries none.
 - `### Doc impact` section present and current
@@ -156,10 +156,8 @@ Taken 2026-10-18 at `c39186b4`.
 
 ### Open questions
 
-1. **Should old integer URLs redirect?** This affects bookmarks and the
-   author's open tabs. Recommended: no. Pre-Azure sessions are
-   disposable, and an integer route kept alive keeps the counter
-   reachable, even if only for viewers already permitted. Author decides.
+1. ~~Should old integer URLs redirect?~~ No: they stop working (author,
+   2026-10-18; a local database may be wiped if the migration needs it).
 2. **Operator-side instrument IDs** in `?editing=<id>#instrument-<id>` on
    the Instruments page: see Out of scope. Author decides whether they
    join as a later item.
