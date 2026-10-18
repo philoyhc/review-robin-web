@@ -634,8 +634,12 @@
                 {% else %}
                   {% set _cell_ops = _ops_full if (_r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") and _r.operand_tag in _stored_operands.keys) else _ops %}
                 {% endif %}
-                {% set _use_tag_operand = _r.op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
-                {% set _no_operand = _r.op in ("IS FILLED", "IS EMPTY") %}
+                {# The operator the cell shows: a default relationship-tag
+                   cell shows IS while ``_r.op`` holds the Link's first, so
+                   the operand widgets follow what is shown. #}
+                {% set _cell_op = _r.op if _r.op in _cell_ops else _cell_ops[0] %}
+                {% set _use_tag_operand = _cell_op in ("IS THE SAME AS", "IS DIFFERENT FROM") %}
+                {% set _no_operand = _cell_op in ("IS FILLED", "IS EMPTY") %}
                 {% set _is_first = loop.first %}
                 <div data-new-model-rule-cell
                      style="display: flex; flex-direction: column; gap: 4px;">
@@ -683,11 +687,11 @@
                             {% if pair_operator_cycle %}data-new-model-operator-cycle-pair="{{ pair_operator_cycle | join('|') }}"
                             data-new-model-operator-cycle-default="{{ _ops | join('|') }}"{% endif %}
                             onclick="newModelCycleOperator(this)"
-                            title="Toggle operator">{{ _r.op if _r.op in _cell_ops else _cell_ops[0] }}</button>
+                            title="Toggle operator">{{ _cell_op }}</button>
                     <input form="dfsave-{{ instrument_id }}" type="hidden"
                            name="{{ link_id }}_op"
                            data-new-model-op-input
-                           value="{{ _r.op if _r.op in _cell_ops else _cell_ops[0] }}">
+                           value="{{ _cell_op }}">
                   </div>
                   {# Optional caption above the operand-tag
                      dropdown (Link 2 only — Link 1 compares with

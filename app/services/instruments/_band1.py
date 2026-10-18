@@ -674,8 +674,11 @@ def unoffered_pair_rule(rules_json: list[dict[str, Any]]) -> str | None:
     for link_id in ("link1", "link2"):
         for predicate in _link_predicates(rules_json, link_id):
             field = str(predicate.get("field", ""))
+            # Only a cross-side operator's operand is a field; an IS
+            # value is free text, whatever it reads.
             operand = predicate.get("operand")
-            operand = operand if isinstance(operand, str) else ""
+            if predicate.get("operator") not in _TAG_OPERAND_OPS or not isinstance(operand, str):
+                operand = ""
             if field.startswith(_PERSON_PAIR_PREFIXES) or operand.startswith(
                 _PERSON_PAIR_PREFIXES
             ):

@@ -190,7 +190,10 @@ def test_every_link2_pair_tag_operator_stores_the_pair(db: Session, client: Test
     page = _page(client, session.id, instrument.id)
     assert "selected data-new-model-stored-only" not in page
     assert len(re.findall(r'<option value="pair_context\.tag1" selected>', page)) == 4
-    assert page.count('data-new-model-operator-cycle="IS|IS NOT|IS FILLED|IS EMPTY"\n') >= 4
+    link2_cycles = re.findall(
+        r'data-new-model-operator-cycle="([^"]*)"\s+data-new-model-operator-cycle-pair=', page
+    )
+    assert link2_cycles == ["IS|IS NOT|IS FILLED|IS EMPTY"] * 4
     assert len(re.findall(r'data-new-model-field-helper-pair="Pairwise tag"[^>]*>Pairwise tag<', page)) == 4
     before = _predicates(db, instrument.id)
     again = client.post(
@@ -431,3 +434,37 @@ def test_link3_pill_follows_a_stored_boundary_with_only_pair_tags(
     page = _page(client, session.id, instrument.id)
     assert page.count('title="No usable tags for this link"') == 1
     assert 'onclick="newModelToggleUnitMode(this)"' in page
+
+
+def test_a_default_link2_cell_on_a_pair_tag_shows_the_value_box(
+    db: Session, client: TestClient
+) -> None:
+    """With untagged reviewees, Link 2's first option is a relationship
+    tag: its default cell shows IS, so the value box shows and the
+    reviewer-tag picker hides, or Save would drop the rule (cold read on
+    #3120)."""
+    session, instrument = _session(db, client, "b1-pc-default")
+    for reviewee in db.execute(select(Reviewee).where(Reviewee.session_id == session.id)).scalars():
+        reviewee.tag_1 = None
+    db.commit()
+
+    page = _page(client, session.id, instrument.id)
+
+    assert re.findall(r'name="link2_op"\s+data-new-model-op-input\s+value="([^"]*)"', page) == ["IS"]
+    operand_tag = re.search(r'<select data-new-model-operand-tag\s+style="([^"]*)"', page)
+    assert operand_tag and "display: none" in operand_tag.group(1)
+    value_boxes = re.findall(
+        r'<input data-new-model-operand-value type="text" placeholder="value"\s+style="([^"]*)"', page
+    )
+    assert len(value_boxes) == 2 and "display: none" not in value_boxes[1]
+
+
+def test_an_is_value_reading_like_a_field_is_free_text(db: Session, client: TestClient) -> None:
+    session, instrument = _session(db, client, "b1-pc-literal")
+
+    saved = client.post(
+        f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
+        data=_form(link1=("reviewer.tag1", "IS", "reviewer.pair_tag1")),
+    )
+
+    assert saved.status_code == 200, saved.text
