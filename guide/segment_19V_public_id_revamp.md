@@ -371,7 +371,7 @@ Taken 2026-10-18 at `e406297e`.
 
 ### Status
 
-**Built 2026-10-18** in one rung, as planned.
+**Closed 2026-10-18** (#3135), one rung as planned; the segment stays open.
 
 - **Decisions confirmed at build.** The route takes the number as a
   string and answers 404 unless it is 1–9 digits, so `abc`, `-1`, an
