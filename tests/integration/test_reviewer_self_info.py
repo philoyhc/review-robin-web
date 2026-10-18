@@ -23,6 +23,7 @@ from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Reviewer, ReviewSession
 from app.web import views
 
+from ._answer_form import answer_form
 from ._unlock_panel import panel_columns
 from .test_reviewer_surface_display_fields import (
     _activate,
@@ -498,7 +499,7 @@ def test_the_summary_shows_the_line_after_the_pills(
     rae_client = make_client(rae)
     submitted = rae_client.post(
         f"/me/sessions/{rs.public_id}/submit",
-        data={f"response[{assignment.id}][rating]": "3"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "3"}, page_n=1),
         follow_redirects=False,
     )
     assert submitted.status_code == 303, submitted.status_code

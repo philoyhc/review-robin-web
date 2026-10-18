@@ -26,6 +26,7 @@ from app.db.models import (
     ReviewSession,
 )
 
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -116,7 +117,7 @@ def test_a_save_past_the_deadline_shows_the_surface_and_what_was_typed(
     resp, text = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{aid}][comments]": TYPED},
+        answer_form(db, {f"response[{aid}][comments]": TYPED}),
     )
 
     assert resp.status_code == 403
@@ -147,7 +148,7 @@ def test_a_submit_after_the_operator_closed_says_so(
     resp, text = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/submit?page=1",
-        {f"response[{aid}][comments]": TYPED},
+        answer_form(db, {f"response[{aid}][comments]": TYPED}),
     )
 
     assert resp.status_code == 403
@@ -166,7 +167,7 @@ def test_a_save_on_a_session_reverted_to_draft_is_not_currently_open(
     resp, text = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{aid}][comments]": TYPED},
+        answer_form(db, {f"response[{aid}][comments]": TYPED}),
     )
 
     assert resp.status_code == 403
@@ -183,13 +184,13 @@ def test_a_reviewer_with_nothing_assigned_is_not_told_no_longer(
 ) -> None:
     review_session = _ready_session(client, db, code="refused-none")
     assignment = _assignment_of(db, review_session, "rae@example.edu")
+    # The form as the page rendered before the operator excluded the row.
+    typed = answer_form(db, {f"response[{assignment.id}][comments]": TYPED})
     assignment.include = False
     db.commit()
 
     resp, text = _rae_posts(
-        make_client,
-        f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{assignment.id}][comments]": TYPED},
+        make_client, f"/me/sessions/{review_session.public_id}/1/save", typed
     )
 
     assert resp.status_code == 403
@@ -232,22 +233,27 @@ def test_a_row_no_get_would_show_is_listed_without_labels(
     client: TestClient, db: Session, make_client
 ) -> None:
     """Every typed value comes back, but only a row the reviewer can see
-    now carries its labels. A hand-made POST against someone else's
-    assignment, or an id that doesn't exist, echoes the value bare, so
-    the card names nobody and doesn't tell which ids are the
-    reviewer's."""
+    now carries its labels. Answers are named by their ordinal on the page
+    (19V Item 2), so a hand-made POST can't name someone else's
+    assignment: a field the row doesn't have, and an ordinal past the
+    page's rows, echo the value bare, naming nobody."""
     review_session = _ready_session(client, db, code="refused-own")
     review_session.deadline = datetime.now(timezone.utc) - timedelta(minutes=1)
     db.commit()
     raes = _assignment_of(db, review_session, "rae@example.edu").id
-    sams = _assignment_of(db, review_session, "sam@example.edu").id
 
     resp, _ = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
         {
-            f"response[{raes}][comments]": "for rae",
-            f"response[{sams}][comments]": "for sam",
+            **answer_form(
+                db,
+                {
+                    f"response[{raes}][comments]": "for rae",
+                    f"response[{raes}][nosuch]": "for no field",
+                },
+            ),
+            "response[2][comments]": "past the page",
             "response[999999][comments]": "for nobody",
         },
     )
@@ -255,18 +261,43 @@ def test_a_row_no_get_would_show_is_listed_without_labels(
     assert resp.status_code == 403
     listed = html.unescape(_unsaved_list(resp.text))
     items = listed.split("<li>")[1:]
-    assert len(items) == 3
+    assert len(items) == 4
     by_value = {
         value: item
         for item in items
-        for value in ("for rae", "for sam", "for nobody")
+        for value in ("for rae", "for no field", "past the page", "for nobody")
         if value in item
     }
     assert "<strong>Carol</strong>" in by_value["for rae"]
     assert "<code>" in by_value["for rae"]
-    for value in ("for sam", "for nobody"):
-        assert "<strong>" not in by_value[value]
-        assert "<code>" not in by_value[value]
+    for bare in ("for no field", "past the page", "for nobody"):
+        assert "<strong>" not in by_value[bare], bare
+        assert "<code>" not in by_value[bare], bare
+
+
+def test_another_reviewers_form_answers_409_and_names_nobody(
+    client: TestClient, db: Session, make_client
+) -> None:
+    """A form rendered for someone else's page carries the digest of
+    their assignments, not the reviewer's, so its ordinals would land on
+    the wrong rows: refused with 409, nothing written, and the typed
+    values listed bare (19V Item 2)."""
+    review_session = _ready_session(client, db, code="refused-other")
+    sams = _assignment_of(db, review_session, "sam@example.edu").id
+
+    resp, text = _rae_posts(
+        make_client,
+        f"/me/sessions/{review_session.public_id}/1/save",
+        answer_form(db, {f"response[{sams}][comments]": "for sam"}),
+    )
+
+    assert resp.status_code == 409
+    assert "This page changed after you opened it" in text
+    listed = html.unescape(_unsaved_list(resp.text))
+    assert "for sam" in listed
+    assert "<strong>" not in listed
+    assert "<code>" not in listed
+    assert db.execute(select(Response)).scalars().first() is None
 
 
 def test_an_excluded_row_comes_back_without_labels(
@@ -274,13 +305,12 @@ def test_an_excluded_row_comes_back_without_labels(
 ) -> None:
     review_session = _ready_session(client, db, code="refused-excl")
     assignment = _assignment_of(db, review_session, "rae@example.edu")
+    typed = answer_form(db, {f"response[{assignment.id}][comments]": "kept text"})
     assignment.include = False
     db.commit()
 
     resp, _ = _rae_posts(
-        make_client,
-        f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{assignment.id}][comments]": "kept text"},
+        make_client, f"/me/sessions/{review_session.public_id}/1/save", typed
     )
 
     listed = _unsaved_list(resp.text)
@@ -301,7 +331,7 @@ def test_a_session_that_never_opened_names_nobody(
     resp, text = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{aid}][comments]": "early"},
+        answer_form(db, {f"response[{aid}][comments]": "early"}),
     )
 
     assert resp.status_code == 403
@@ -342,7 +372,7 @@ def test_a_value_matching_the_stored_answer_is_still_listed(
     rae_client = make_client(RAE)
     saved = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{aid}][comments]": "same answer"},
+        data=answer_form(db, {f"response[{aid}][comments]": "same answer"}),
         follow_redirects=False,
     )
     assert saved.status_code == 303
@@ -351,7 +381,7 @@ def test_a_value_matching_the_stored_answer_is_still_listed(
 
     resp = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{aid}][comments]": "same answer"},
+        data=answer_form(db, {f"response[{aid}][comments]": "same answer"}),
         follow_redirects=False,
     )
     assert resp.status_code == 403
@@ -378,7 +408,7 @@ def test_a_hidden_field_comes_back_without_labels(
     resp, _ = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{assignment.id}][comments]": "hidden text"},
+        answer_form(db, {f"response[{assignment.id}][comments]": "hidden text"}),
     )
 
     listed = _unsaved_list(resp.text)
@@ -400,10 +430,13 @@ def test_typed_text_comes_back_as_typed(
     resp, _ = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        {
-            f"response[{aid}][comments]": "  indented\n    more  ",
-            f"response[{aid}][rating]": "   ",
-        },
+        answer_form(
+            db,
+            {
+                f"response[{aid}][comments]": "  indented\n    more  ",
+                f"response[{aid}][rating]": "   ",
+            },
+        ),
     )
 
     listed = _unsaved_list(resp.text)
@@ -434,7 +467,7 @@ def test_an_accepted_save_shows_no_notice(
     rae_client = make_client(RAE)
     resp = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{aid}][comments]": "kept"},
+        data=answer_form(db, {f"response[{aid}][comments]": "kept"}),
         follow_redirects=False,
     )
     assert resp.status_code == 303
@@ -469,7 +502,7 @@ def test_a_save_the_deadline_overtakes_mid_request_keeps_what_was_typed(
     resp, text = _rae_posts(
         make_client,
         f"/me/sessions/{review_session.public_id}/1/save",
-        {f"response[{aid}][comments]": TYPED},
+        answer_form(db, {f"response[{aid}][comments]": TYPED}),
     )
 
     assert resp.status_code == 403

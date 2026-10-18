@@ -32,6 +32,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -179,7 +180,13 @@ def test_save_still_filters_cross_page_inputs_under_pr_delta(
 
     Migrated for Segment 18L PR 1d: a single-page-default session
     places every instrument on the same page, so we set a page break
-    after the first instrument to carve out two pages."""
+    after the first instrument to carve out two pages.
+
+    19V Item 2: answers are named by their ordinal on the page posted
+    to, so a page-1 post can't name page 2's row by ID any more. The
+    cross-page input is an ordinal page 1 doesn't have (``2``, which
+    page 2's row would be if ordinals ran session-wide), and it is
+    ignored."""
     operator = make_client(alice)
     review_session, first, second = _setup_two_instrument_session(
         operator, db, code="rae-d-save-filter"
@@ -201,8 +208,12 @@ def test_save_still_filters_cross_page_inputs_under_pr_delta(
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
         data={
-            f"response[{page1_assignment.id}][comments]": "page-1 saved",
-            f"response[{page2_assignment.id}][comments]": "page-2 dirty",
+            **answer_form(
+                db,
+                {f"response[{page1_assignment.id}][comments]": "page-1 saved"},
+                page_n=1,
+            ),
+            "response[2][comments]": "page-2 dirty",
         },
         follow_redirects=False,
     )
@@ -258,10 +269,13 @@ def test_submit_persists_inputs_from_every_group(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{page1_assignment.id}][comments]": "page-1 submit",
-            f"response[{page2_assignment.id}][comments]": "page-2 submit",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{page1_assignment.id}][comments]": "page-1 submit",
+                f"response[{page2_assignment.id}][comments]": "page-2 submit",
+            },
+        ),
         follow_redirects=False,
     )
     page1_responses = (

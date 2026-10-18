@@ -149,6 +149,12 @@ the target of every foreign key. Migration `a9d4f2c7e1b8` adds the
 column, backfills existing rows, then makes it `NOT NULL` and unique.
 It is not exported in any CSV.
 
+`sessions.form_key` (`String(64)`, not null; 19V Item 2) is a random
+secret, 32 bytes hex, set by the model default `_new_form_key`: the key
+of the review form's page digest (`spec/reviewer-surface.md`, Form HTML
+mechanics). No page renders it and no CSV exports it; Duplicate and
+Rehydrate draw their own. Migration `c4e8b2f6a1d9` adds and backfills it.
+
 ### §5.5 query-path review (Segment 14A PR 3)
 
 The main workflow queries were reviewed against the indexes

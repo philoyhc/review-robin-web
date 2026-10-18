@@ -27,6 +27,7 @@ from app.db.models import (
     Instrument,
     ReviewSession,
 )
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -161,10 +162,13 @@ def test_submit_missing_names_the_instrument_of_each_gap(
     rae_client = make_client(rae)
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{page1_assignment.id}][comments]": "page-1 only",
-            f"response[{page2_assignment.id}][comments]": "page-2 only",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{page1_assignment.id}][comments]": "page-1 only",
+                f"response[{page2_assignment.id}][comments]": "page-2 only",
+            },
+        ),
         follow_redirects=False,
     )
     body = response.text
@@ -198,9 +202,7 @@ def test_submit_missing_only_on_the_second_instrument_names_it(
     rae_client = make_client(rae)
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{page1_assignment.id}][rating]": "5",
-        },
+        data=answer_form(db, {f"response[{page1_assignment.id}][rating]": "5"}),
         follow_redirects=False,
     )
     body = response.text
@@ -230,7 +232,7 @@ def test_submit_invalid_value_names_the_instrument(
     rae_client = make_client(rae)
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{second_assignment.id}][rating]": "99"},
+        data=answer_form(db, {f"response[{second_assignment.id}][rating]": "99"}),
         follow_redirects=False,
     )
     body = response.text
@@ -264,9 +266,7 @@ def test_missing_required_renders_in_full_width_card(
     rae_client = make_client(rae)
     body = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{page1_assignment.id}][rating]": "5",
-        },
+        data=answer_form(db, {f"response[{page1_assignment.id}][rating]": "5"}),
         follow_redirects=False,
     ).text
     assert 'class="card rs-missing-card"' in body
@@ -300,9 +300,7 @@ def test_missing_required_card_uses_two_column_list(
     rae_client = make_client(rae)
     body = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{page1_assignment.id}][rating]": "5",
-        },
+        data=answer_form(db, {f"response[{page1_assignment.id}][rating]": "5"}),
         follow_redirects=False,
     ).text
     assert 'class="rs-missing-list"' in body
@@ -334,9 +332,7 @@ def test_missing_required_card_carries_cancel_dismiss_button(
     rae_client = make_client(rae)
     body = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{page1_assignment.id}][rating]": "5",
-        },
+        data=answer_form(db, {f"response[{page1_assignment.id}][rating]": "5"}),
         follow_redirects=False,
     ).text
     assert "data-rs-missing-dismiss" in body

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Reviewer, ReviewSession
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -165,7 +166,7 @@ def test_save_post_url_carries_position(
     rae_client = make_client(rae)
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][rating]": "4"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "4"}, page_n=1),
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -212,9 +213,13 @@ def test_submit_redirect_lands_on_summary_when_session_complete(
     # session URL (which 303s on to /1) or /summary when complete.
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 303

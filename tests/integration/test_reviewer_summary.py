@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, ReviewSession
+from ._answer_form import answer_form
 from ._past_draft_setup import past_draft_setup
 
 
@@ -121,9 +122,13 @@ def test_summary_renders_after_full_submission(
     # Submit; the redirect should already point at the summary.
     submit = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "5",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "5",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert submit.status_code == 303
@@ -158,9 +163,13 @@ def test_summary_csv_streams_reviewer_only_rows(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "3",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "3",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     response = rae_client.get(
@@ -204,9 +213,13 @@ def test_dashboard_link_points_at_summary_when_submitted(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     body = rae_client.get("/me").text
@@ -248,9 +261,13 @@ def test_summary_single_instrument_heading_uses_short_label_when_set(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "5",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "5",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     body = rae_client.get(
@@ -295,9 +312,13 @@ def test_summary_single_instrument_heading_uses_operator_label_not_name(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "5",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "5",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     body = rae_client.get(
@@ -414,7 +435,7 @@ def test_summary_multi_instrument_headings_use_page_prefix(
     }
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data=page_data,
+        data=answer_form(db, page_data, page_n=1),
         follow_redirects=False,
     )
     rae_client.post(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -22,8 +22,9 @@ from app.db.models import (
 from app.schemas.responses import ResponseUpsert
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.text import MAX_SQL_INT, decimal_text, pluralize
+from app.services.text import decimal_text, pluralize
 from app.services.responses._branch_rule import drop_closed_branch_answers
+from app.services.responses._form_keys import ANSWER_KEY_PATTERN
 from app.services.responses._branching import (
     DECIMAL_PATTERN,
     may_be_required_field_ids,
@@ -37,33 +38,34 @@ from app.services.responses._group_reconciliation import (
     group_keys,
 )
 
-# ``aid`` is ASCII digits, and ``parse_form_payload`` ignores one past a
-# 64-bit column (``MAX_SQL_INT``), which SQLite answers 500 binding
-# (findings R8), like any other key that doesn't match.
-_FORM_FIELD_PATTERN = re.compile(
-    r"^response\[(?P<aid>[0-9]{1,19})\]\[(?P<key>[^\]]+)\]$"
-)
 _DECIMAL = re.compile(DECIMAL_PATTERN)
 _INTEGER = re.compile(r"[+-]?[0-9]+")
 
 
 def parse_form_payload(
-    form: Mapping[str, str], *, strip: bool = True
+    form: Mapping[str, str],
+    *,
+    page_assignment_ids: Sequence[int],
+    strip: bool = True,
 ) -> list[ResponseUpsert]:
-    """Extract ``response[aid][field_key]=value`` entries from a form mapping.
+    """Extract ``response[n][field_key]=value`` entries from a form mapping.
 
-    Non-matching keys are ignored. Values are stripped, so whitespace-only
-    ones become empty strings; the save layer interprets empty as "delete
-    the row". ``strip=False`` keeps them as typed, for showing a refused
-    write's answers back (participant audit P3)."""
+    ``n`` is the row's ordinal among ``page_assignment_ids``, the page's
+    assignment IDs in ascending order (``_form_keys``); it maps back to
+    the assignment here, so a forged one can only address a row on the
+    reviewer's own page. Non-matching keys and ordinals the page doesn't
+    have are ignored. Values are stripped, so whitespace-only ones become
+    empty strings; the save layer interprets empty as "delete the row".
+    ``strip=False`` keeps them as typed, for showing a refused write's
+    answers back (participant audit P3)."""
     out: list[ResponseUpsert] = []
     for key, value in form.items():
-        match = _FORM_FIELD_PATTERN.match(key)
-        if match is None or int(match["aid"]) > MAX_SQL_INT:
+        match = ANSWER_KEY_PATTERN.match(key)
+        if match is None or not 1 <= int(match["n"]) <= len(page_assignment_ids):
             continue
         out.append(
             ResponseUpsert(
-                assignment_id=int(match["aid"]),
+                assignment_id=page_assignment_ids[int(match["n"]) - 1],
                 field_key=match["key"],
                 value=(value or "").strip() if strip else (value or ""),
             )

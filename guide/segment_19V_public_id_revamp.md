@@ -268,6 +268,25 @@ Taken 2026-10-18 at `c39186b4`.
   (`git grep -ln 'response\[' -- tests`).
 - **Spec:** `spec/reviewer-surface.md` (`response[{rep_id}][{field}]`).
 
+### Status
+
+- **Build (2026-10-18), one rung.** `responses._form_keys` owns the
+  ordinals and the page digest; `parse_form_payload` takes the page's
+  ordered IDs. Save and Submit read the page they were posted from
+  (`?page=` for Submit). The digest is required only when a post
+  carries answers, so Clear and an answerless Submit need none. A
+  stale post reuses the refused-write page (participant audit P3) with
+  a `page_changed` cause and 409, its typed values listed bare. Tests
+  post through `tests/integration/_answer_form.py`.
+- **Digest key (2026-10-18), from the reads.** The first build keyed the
+  digest by `PARTICIPANT_TOKEN_SALT`, which has a public default, so a
+  reviewer could brute-force the IDs back out (`diff-reviewer`); hashing
+  the visible row data instead still exposed hidden identifiers (Codex
+  on #3130). Shipped: the ID set keyed by a per-session secret,
+  `sessions.form_key` (migration `c4e8b2f6a1d9`), never rendered or
+  exported. The read also caught a non-ASCII digest answering 500, and
+  specs still describing ID-keyed form bodies; fixed in #3130.
+
 ### PR ladder
 
 1. **Build:** template, parser mapping, the new page digest and its
@@ -275,8 +294,12 @@ Taken 2026-10-18 at `c39186b4`.
 
 ### Open questions
 
-1. **Build at all?** It waits on the author's word.
+1. ~~Build at all?~~ Yes: "build 19V" (author, 2026-10-18).
 
 ### Doc impact
 
 - `spec/reviewer-surface.md` — response inputs key off the row's position on the page, mapped server-side (Item 2).
+- `docs/database.md` — the `sessions.form_key` column that keys the page digest (Item 2; added at build).
+- `spec/permissions.md` — a reviewer form body carries no assignment ID (Item 2; added at the read).
+- `docs/security_posture.md` — §5.6's reviewer POST note: ordinals, the 409, the service filter (Item 2; added at the read).
+- `spec/architecture.md` — `_form_keys.py` in the module map (Item 2; added at the read).

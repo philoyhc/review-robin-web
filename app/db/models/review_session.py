@@ -51,6 +51,11 @@ def _new_public_id(context: Any) -> str:
             return candidate
 
 
+def _new_form_key() -> str:
+    """Column default for :attr:`ReviewSession.form_key`."""
+    return secrets.token_hex(32)
+
+
 class ReviewSession(Base, TimestampMixin):
     __tablename__ = "sessions"
 
@@ -60,6 +65,12 @@ class ReviewSession(Base, TimestampMixin):
     # once at insert and never changed; not exported.
     public_id: Mapped[str] = mapped_column(
         String(16), unique=True, index=True, nullable=False, default=_new_public_id
+    )
+    # 19V Item 2 — the secret key of the review form's page digest
+    # (``responses._form_keys``). Never rendered or exported; a session
+    # made by Duplicate or Rehydrate draws its own.
+    form_key: Mapped[str] = mapped_column(
+        String(64), nullable=False, default=_new_form_key
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     code: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)

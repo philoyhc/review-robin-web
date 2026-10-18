@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Reviewer, ReviewSession
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -202,7 +203,7 @@ def test_page_status_pill_flips_to_in_progress_after_save(
     # exists, but required-fields-filled doesn't apply).
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][comments]": "first thoughts"},
+        data=answer_form(db, {f"response[{assignment.id}][comments]": "first thoughts"}, page_n=1),
         follow_redirects=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -233,7 +234,7 @@ def test_page_status_pill_flips_to_complete_when_required_filled(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][rating]": "4"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "4"}, page_n=1),
         follow_redirects=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -270,9 +271,13 @@ def test_page_status_pill_flips_to_submitted_after_submit(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -312,7 +317,7 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
 
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][comments]": "thoughts"},
+        data=answer_form(db, {f"response[{assignment.id}][comments]": "thoughts"}, page_n=1),
         follow_redirects=False,
     )
     saved = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -320,9 +325,13 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
 
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     submitted = rae_client.get(
@@ -360,7 +369,7 @@ def test_instrument_card_shows_completion_pills(
 
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][rating]": "4"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "4"}, page_n=1),
         follow_redirects=False,
     )
     after = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text

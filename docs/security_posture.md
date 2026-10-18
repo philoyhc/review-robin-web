@@ -242,10 +242,11 @@ the dependencies above; no route trusts a client-supplied actor id.
 | `/templates/*.zip` | `get_current_user` | Authentication only: the payload is the same constant CSV headers and mock rows for everyone, with no session and no database read. |
 
 POST endpoints verified not to trust client-side identifiers:
-reviewer `save`/`submit` build the assignment index from
-`_reviewer_assignments` (scoped to `reviewer_id`), so a foreign
-`assignment_id` in the form body is silently dropped — never
-written. Operator child-id routes 404 on cross-session ids via the
+reviewer `save`/`submit` name answers by ordinal among the reviewer's
+own assignments on the page (19V Item 2), so a form body carries no
+assignment ID; a form posted against a changed page answers 409, and
+the write service still builds its index from `_reviewer_assignments`
+(scoped to `reviewer_id`), dropping anything else. Operator child-id routes 404 on cross-session ids via the
 `_require_*_in_session` helpers.
 
 **Result:** no route trusts a client-supplied identity. The audit did

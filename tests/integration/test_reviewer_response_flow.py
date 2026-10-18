@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import pytest
@@ -23,6 +24,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
+from ._answer_form import answer_form
 from ._instrument_states import add_group_instrument
 from ._full_matrix import (
     generate_via_page_button,
@@ -697,10 +699,14 @@ def test_save_draft_persists_and_reload_shows_values(
 
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-            f"response[{assignment.id}][comments]": "good work",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+                f"response[{assignment.id}][comments]": "good work",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 303
@@ -910,7 +916,7 @@ def test_save_rejects_out_of_range_integer_and_keeps_typed_value(
     ).scalar_one()
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][rating]": "77"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "77"}, page_n=1),
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -945,10 +951,14 @@ def test_save_persists_valid_and_rejects_invalid_in_same_batch(
     ).scalar_one()
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{assignment.id}][rating]": "9",
-            f"response[{assignment.id}][comments]": "looks good",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "9",
+                f"response[{assignment.id}][comments]": "looks good",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -981,9 +991,13 @@ def test_submit_blocks_on_validation_error(
     ).scalar_one()
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][rating]": "0",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "0",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 400
@@ -1016,7 +1030,7 @@ def test_submit_with_all_required_filled_succeeds_and_writes_audit(
 
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{assignment.id}][rating]": "5"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "5"}, page_n=1),
         follow_redirects=False,
     )
 
@@ -1122,7 +1136,7 @@ def test_clear_all_with_confirm_deletes_responses(
     ).scalar_one()
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{assignment.id}][rating]": "5"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "5"}, page_n=1),
         follow_redirects=False,
     )
 
@@ -1184,7 +1198,7 @@ def test_resubmit_after_edit_refreshes_submitted_at(
     ).scalar_one()
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{assignment.id}][rating]": "3"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "3"}, page_n=1),
         follow_redirects=False,
     )
     first_events = db.execute(
@@ -1194,7 +1208,7 @@ def test_resubmit_after_edit_refreshes_submitted_at(
 
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{assignment.id}][rating]": "5"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "5"}, page_n=1),
         follow_redirects=False,
     )
     later_events = db.execute(
@@ -1223,10 +1237,14 @@ def test_cancel_link_renders_last_saved_values(
     ).scalar_one()
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-            f"response[{assignment.id}][comments]": "saved comment",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+                f"response[{assignment.id}][comments]": "saved comment",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
 
@@ -1298,10 +1316,14 @@ def test_save_drops_foreign_assignment_id_from_post(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """A reviewer save POST must not trust a client-supplied
-    assignment_id: an id belonging to another session's reviewer is
-    silently dropped, never written. Guards the §5.6 "POST endpoints
-    do not trust client-side identifiers" contract.
+    """A reviewer save POST must not trust a client-supplied identifier:
+    an answer can name only a row of the reviewer's own page. Since 19V
+    Item 2 the form names rows by ordinal, so another session's
+    assignment can't be named at all; what's left to prove is that an
+    ordinal past the page is dropped, and that a form rendered for
+    another session (its digest keyed to that session) is refused.
+    Nothing is written either way. Guards the §5.6 "POST endpoints do
+    not trust client-side identifiers" contract.
     """
     op_alice = make_client(alice)
     rae_session = _operator_creates_session_with_pair(
@@ -1324,21 +1346,43 @@ def test_save_drops_foreign_assignment_id_from_post(
             Assignment.session_id == foreign_session.id
         )
     ).scalar_one()
+    rae_assignment = db.execute(
+        select(Assignment).where(Assignment.session_id == rae_session.id)
+    ).scalar_one()
 
     rae_client = make_client(rae)
+    page = rae_client.get(f"/me/sessions/{rae_session.public_id}/1").text
+    digest = re.search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
+    # Rae's page has one row; ordinal 2 is past it.
     response = rae_client.post(
         f"/me/sessions/{rae_session.public_id}/1/save",
         data={
-            f"response[{foreign_assignment.id}][rating]": "4",
-            f"response[{foreign_assignment.id}][comments]": "tampered",
+            "response[2][rating]": "4",
+            "response[2][comments]": "tampered",
+            "page_digest": digest,
         },
         follow_redirects=False,
     )
     assert response.status_code == 303
 
+    foreign_form = answer_form(
+        db,
+        {
+            f"response[{foreign_assignment.id}][rating]": "4",
+            f"response[{foreign_assignment.id}][comments]": "tampered",
+        },
+        page_n=1,
+    )
+    response = rae_client.post(
+        f"/me/sessions/{rae_session.public_id}/1/save",
+        data=foreign_form,
+        follow_redirects=False,
+    )
+    assert response.status_code == 409
+
     written = db.execute(
         select(Response).where(
-            Response.assignment_id == foreign_assignment.id
+            Response.assignment_id.in_([foreign_assignment.id, rae_assignment.id])
         )
     ).scalars().all()
     assert written == []
@@ -1485,10 +1529,14 @@ def test_group_instrument_save_fans_out_to_all_members(
     # on page 1, so /1/save accepts inputs for any instrument.
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{first.id}][rating]": "4",
-            f"response[{first.id}][comments]": "team did well",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{first.id}][rating]": "4",
+                f"response[{first.id}][comments]": "team did well",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1579,7 +1627,7 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     # Answer the Team A group (keyed to Carol's assignment).
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
+        data=answer_form(db, {f"response[{by_reviewee['Carol'].id}][rating]": "5"}, page_n=1),
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1598,7 +1646,7 @@ def test_group_instrument_fan_out_stays_within_boundary_group(
     # Answering the Team B group leaves Team A's answer intact.
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{by_reviewee['Dan'].id}][rating]": "2"},
+        data=answer_form(db, {f"response[{by_reviewee['Dan'].id}][rating]": "2"}, page_n=1),
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
@@ -1682,7 +1730,7 @@ def test_group_boundary_tag_change_keeps_the_group_it_left(
     rae_client = make_client(rae)
     saved = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{by_reviewee['Carol'].id}][rating]": "5"},
+        data=answer_form(db, {f"response[{by_reviewee['Carol'].id}][rating]": "5"}, page_n=1),
         follow_redirects=False,
     )
     assert saved.status_code == 303, saved.text
@@ -1802,10 +1850,14 @@ def test_tag_change_into_answered_group_clears_it(
     # Reviewer answers Team A (via Carol) and Team B (via Dan).
     saved = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{by_reviewee['Carol'].id}][rating]": "5",
-            f"response[{by_reviewee['Dan'].id}][rating]": "3",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{by_reviewee['Carol'].id}][rating]": "5",
+                f"response[{by_reviewee['Dan'].id}][rating]": "3",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert saved.status_code == 303, saved.text
@@ -2630,6 +2682,8 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     assert set(by_reviewee) == {"Carol", "Eve", "Dan"}
 
     eve = by_reviewee["Eve"]
+    # A form rendered while Eve was still on the page.
+    stale = answer_form(db, {f"response[{eve.id}][rating]": "99"}, page_n=1)
     eve.include = False
     db.commit()
 
@@ -2643,7 +2697,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
     for value in ("4", "2"):
         response = rae_client.post(
             f"/me/sessions/{review_session.public_id}/1/save",
-            data={f"response[{by_reviewee['Carol'].id}][rating]": value},
+            data=answer_form(db, {f"response[{by_reviewee['Carol'].id}][rating]": value}, page_n=1),
             follow_redirects=False,
         )
         assert response.status_code == 303, response.text
@@ -2653,13 +2707,30 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
         assert _rating(by_reviewee["Dan"]) is None
     assert db.get(Assignment, eve.id).include is False
 
-    # Posting the excluded row's id directly writes nothing: it is not
-    # the reviewer's to answer, and an out-of-range value must not ride
-    # the group fan-out past validation.
-    for url in ("save", "submit"):
+    # The excluded row is not the reviewer's to answer, and an
+    # out-of-range value must not ride the group fan-out past
+    # validation. It has no ordinal on the page now, so a post can only
+    # reach it from a form rendered before the exclusion, which the page
+    # digest refuses, or by an ordinal past the page's rows, which is
+    # ignored. Neither writes anything.
+    page = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
+    digest = re.search(r'name="page_digest" value="([0-9a-f]+)"', page).group(1)
+    past_the_page = len(
+        db.execute(
+            select(Assignment.id).where(Assignment.session_id == review_session.id)
+        ).all()
+    ) + 1
+    forged = {f"response[{past_the_page}][rating]": "99", "page_digest": digest}
+    for url in ("1/save", "submit?page=1"):
+        refused = rae_client.post(
+            f"/me/sessions/{review_session.public_id}/{url}",
+            data=stale,
+            follow_redirects=False,
+        )
+        assert refused.status_code == 409, url
         rae_client.post(
             f"/me/sessions/{review_session.public_id}/{url}",
-            data={f"response[{eve.id}][rating]": "99"},
+            data=forged,
             follow_redirects=False,
         )
         db.expire_all()
@@ -2700,7 +2771,7 @@ def test_an_excluded_group_member_keeps_the_groups_answers(
 
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{by_reviewee['Carol'].id}][rating]": "1"},
+        data=answer_form(db, {f"response[{by_reviewee['Carol'].id}][rating]": "1"}, page_n=1),
         follow_redirects=False,
     )
     assert not _dan_submitted()
@@ -2844,10 +2915,14 @@ def test_page_save_emits_audit_row_with_counts_keys(
 
     response = make_client(rae).post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{assignment.id}][rating]": "5",
-            f"response[{assignment.id}][comments]": "wonderful",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "5",
+                f"response[{assignment.id}][comments]": "wonderful",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 303
