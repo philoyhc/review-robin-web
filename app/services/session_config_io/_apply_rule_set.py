@@ -55,7 +55,7 @@ def _apply_rule_set_kv(
         # A relationship-tag rule the Band 1 card no longer offers is
         # refused as its Save refuses it, before the engine's own check
         # names a retired field less helpfully
-        # (``guide/pair_context_tags_further_clarify.md`` Item 1).
+        # (``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
         unoffered = unoffered_pair_rule(rules) if isinstance(rules, list) else None
         if unoffered is not None:
             raise _ParseError(f"rules_json is not a valid rule list: {unoffered}")

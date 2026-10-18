@@ -169,10 +169,9 @@ only namespace + slot combinations with at least one populated row
 appear in its dropdowns (`views._instruments.new_model_usable_tags`).
 It offers a relationship tag as a Link 2 field only, as "Pair: <label>",
 and stores it as `pair_context.tagN` under every operator
-(`spec/instruments.md`, Band 1). The person-level pair tags
-(`reviewer.pair_tagN` / `reviewee.pair_tagN`) are retired: the engine
-refuses them, and so do Band 1's Save and the Settings import
-(`guide/pair_context_tags_further_clarify.md` Item 1).
+(`spec/instruments.md`, Band 1). A relationship tag is read per pair
+only: `reviewer.pair_tagN` / `reviewee.pair_tagN` are not fields, and
+the engine, Band 1's Save and the Settings import all refuse them.
 
 **Operators** (UI → engine internal):
 

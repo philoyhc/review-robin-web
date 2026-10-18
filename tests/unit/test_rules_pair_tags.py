@@ -1,5 +1,5 @@
 """A relationship tag judges the pair (author, 2026-10-18;
-``guide/pair_context_tags_further_clarify.md`` Item 1).
+``guide/archive/pair_context_tags_further_clarify.md`` Item 1).
 
 ``pair_context.tagN`` reads the one pair being judged: "Link 2 pair tag
 IS Friend" keeps exactly the Friend pairs, "IS NOT COI" rules out

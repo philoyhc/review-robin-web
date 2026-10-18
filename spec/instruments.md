@@ -518,7 +518,7 @@ spills either.
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee boundary tags |
 
 **Relationship tags** (author, 2026-10-18;
-`guide/pair_context_tags_further_clarify.md` Item 1) are offered under
+`guide/archive/pair_context_tags_further_clarify.md` Item 1) are offered under
 their labels as "Pair: <label>", as a Link 2 field only. A relationship
 pair joins two people, so a rule on one works like a hand-made
 assignment or exclusion of that pair. Every operator on it judges the
@@ -536,18 +536,21 @@ A pair with no relationship, or an inactive one, has no value, so it
 fails `IS` and `IS FILLED` and passes `IS NOT` and `IS EMPTY`. Link 1,
 Link 2's operand list and Link 3 offer roster tags only.
 
-Save refuses three rules the card no longer offers: a relationship tag
+Save refuses three rules the card does not offer: a relationship tag
 in Link 1, a person's relationship tag (`reviewer.pair_tagN` /
-`reviewee.pair_tagN`, which the card once stored) and a relationship tag
+`reviewee.pair_tagN`, not an engine field) and a relationship tag
 beside `IS THE SAME AS` / `IS DIFFERENT FROM`, as field or operand. Such
-a rule, stored before Item 1 or by hand, shows as its stored tag (a
-person's one as "Reviewer's pair tag: <label>" / "Reviewee's pair tag:
-<label>"), and Save answers with a banner naming the problem (422, or
-400 from `/fields/save`), storing nothing, until it is removed. It is
-refused rather than rewritten, because a rewrite would change who
-reviews whom; pre-Azure sessions are disposable, so there is no
-migration (author, 2026-10-17). A Settings import refuses the same
-rules (`spec/csv_contracts.md` §3.3).
+a rule, where one is stored, shows as its stored tag (a person's one as
+"Reviewer's pair tag: <label>" / "Reviewee's pair tag: <label>" while
+that relationship slot is populated, its key otherwise), and Save
+answers with a banner naming the problem (422, or 400 from
+`/fields/save`), storing nothing, until it is removed. It is refused
+rather than rewritten, because a rewrite would change who reviews whom;
+pre-Azure sessions are disposable, so there is no migration (author,
+2026-10-17). Until it is removed, a stored person-level rule also fails
+every reader that loads the rule set through the engine: the
+Assignments page and Validate answer 500, and Prepare reports a failure.
+A Settings import refuses the same rules (`spec/csv_contracts.md` §3.3).
 
 A rule or boundary stored with a tag the card does not offer (a roster
 or relationship slot since emptied, or a relationship-tag boundary)
@@ -668,7 +671,8 @@ Link's namespace and the Link has no stored rule (for Link 3, no
 stored boundary), the pill is permanently stuck on `Not set`
 with `aria-disabled="true"` and the title "No usable tags for
 this link". A Link with stored rules keeps a live pill, so they can
-still be edited. Relationship tags count as usable for Link 2 only. Saving the instrument in that state is fine — the
+still be edited. Relationship tags count as usable for Link 2 only.
+Saving the instrument in that state is fine — the
 service treats an empty filter as "no constraint on this Link"
 and the workflow card still surfaces it as unconfigured until
 the operator clicks the pill (which on a disabled pill is a
@@ -726,7 +730,7 @@ stacked list of MATCH-rule cells. Each cell has:
   reviewer's role" semantics). A Link 2 cell holding a relationship tag
   cycles `IS | IS NOT | IS FILLED | IS EMPTY` instead: moving its field
   onto one swaps the cycle and, from a cross-side operator, opens on
-  `IS`; moving it back restores the full cycle. With no usable reviewer
+  `IS`; moving it back restores the Link's usual cycle. With no usable reviewer
   tag, Link 2's cycle drops the two cross-side operators and opens on
   `IS`, except in a cell holding a stored operand the card no longer
   offers, which keeps the full cycle and its operand.

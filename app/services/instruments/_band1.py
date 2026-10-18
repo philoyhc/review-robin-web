@@ -10,7 +10,7 @@ The new-model instrument card surfaces three Links in Band 1:
 - Both Links also offer ``is_not_empty`` / ``is_empty`` (``IS FILLED``
   / ``IS EMPTY``), which take no operand.
 - **Relationship tags** (author, 2026-10-18;
-  ``guide/pair_context_tags_further_clarify.md`` Item 1). The card
+  ``guide/archive/pair_context_tags_further_clarify.md`` Item 1). The card
   offers a relationship tag (``pair_context.tagN``) as a Link 2 field
   only, under ``IS`` / ``IS NOT`` / ``IS FILLED`` / ``IS EMPTY``, and
   every one judges the pair; it stores as is. A stored rule the card no
@@ -648,7 +648,7 @@ def _build_rules_json(
 
 _PAIR_PREFIX = "pair_context.tag"
 # A person's relationship tag, the reading Item 1 retires
-# (``guide/pair_context_tags_further_clarify.md``).
+# (``guide/archive/pair_context_tags_further_clarify.md``).
 _PERSON_PAIR_PREFIXES: tuple[str, ...] = ("reviewer.pair_tag", "reviewee.pair_tag")
 # Operators that keep pairs one by one on a relationship tag.
 _PAIR_KEEPING_OPS: frozenset[str] = frozenset({"equals", "is_not_empty"})
@@ -675,7 +675,7 @@ def _link_predicates(rules_json: list[Any], link_id: str) -> list[dict[str, Any]
 def unoffered_pair_rule(rules_json: list[Any]) -> str | None:
     """Why a Band 1 rule set holds a relationship-tag rule the card no
     longer offers, or ``None``. A relationship tag is a Link 2 field
-    only, judging the pair (``guide/pair_context_tags_further_clarify.md``
+    only, judging the pair (``guide/archive/pair_context_tags_further_clarify.md``
     Item 1): a Link 1 relationship tag, a person's relationship tag and
     a relationship tag beside ``IS THE SAME AS`` / ``IS DIFFERENT FROM``
     are each refused, not rewritten."""

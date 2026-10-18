@@ -29,7 +29,7 @@ A relationship tag is read per pair only (``pair_context.tagN``). The
 person-level reading ``guide/archive/assignment_rule_clarify.md`` Item 2
 added (``reviewer.pair_tagN`` / ``reviewee.pair_tagN``, every value a
 person held across their pairs) retired with
-``guide/pair_context_tags_further_clarify.md`` Item 1 (author,
+``guide/archive/pair_context_tags_further_clarify.md`` Item 1 (author,
 2026-10-18).
 """
 

@@ -342,7 +342,7 @@ def _one_rule(link: str, predicate: str) -> str:
 def test_settings_import_refuses_a_relationship_rule_the_card_no_longer_offers(
     db: Session, value: str, message: str
 ) -> None:
-    """``guide/pair_context_tags_further_clarify.md`` Item 1: the import
+    """``guide/archive/pair_context_tags_further_clarify.md`` Item 1: the import
     refuses what Band 1's Save refuses, with the same reason."""
     operator, session = _seed_for_import(db, "pt-import")
     rows = _with_cell(serialize_session_config(db, session), ".rules_json", value)

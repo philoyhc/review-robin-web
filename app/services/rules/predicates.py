@@ -7,7 +7,7 @@ The dispatch table at the bottom is what
 Every field reads as a *set* of values (``fields.get_field_values``),
 at most one for a roster or per-pair tag; the set form outlived the
 person-level pair tags it was built for (retired by
-``guide/pair_context_tags_further_clarify.md`` Item 1). An empty string
+``guide/archive/pair_context_tags_further_clarify.md`` Item 1). An empty string
 is no value. The operators over that set (author, 2026-10-17;
 ``guide/archive/assignment_rule_clarify.md`` Item 2):
 

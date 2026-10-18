@@ -298,7 +298,7 @@ def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
 ) -> None:
     """Item 2 (author, 2026-10-17): a Link 2 pair-tag IS picks pairs one
     by one, so the Unit of review pill cycles Individual → Not set,
-    skipping Group; so does IS FILLED (``guide/pair_context_tags_further_clarify.md``
+    skipping Group; so does IS FILLED (``guide/archive/pair_context_tags_further_clarify.md``
     Item 1), and IS NOT leaves Group in the cycle."""
     session_id = new_session()
     _seed(api, session_id)
@@ -336,7 +336,7 @@ def test_link3_skips_group_while_link2_keeps_pairs_by_a_pair_tag(
 def test_a_link2_pair_tag_cell_has_its_own_cycle_and_caption(
     page: Page, api: httpx.Client, live_server: LiveServer, new_session: Callable[[], int]
 ) -> None:
-    """``guide/pair_context_tags_further_clarify.md`` Item 1 (author,
+    """``guide/archive/pair_context_tags_further_clarify.md`` Item 1 (author,
     2026-10-18): a relationship tag cycles IS → IS NOT → IS FILLED → IS
     EMPTY, every one judging the pair under the "Pairwise tag" caption;
     moving the field back to a reviewee tag restores the full cycle."""

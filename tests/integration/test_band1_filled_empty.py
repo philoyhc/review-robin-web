@@ -131,7 +131,7 @@ def _select(page: str, name: str) -> str:
 
 
 def test_pair_tags_are_a_link2_field_only(db: Session, client: TestClient) -> None:
-    """``guide/pair_context_tags_further_clarify.md`` Item 1 (author,
+    """``guide/archive/pair_context_tags_further_clarify.md`` Item 1 (author,
     2026-10-18): a relationship tag is offered, as "Pair: <label>", in
     Link 2's field only; Link 1, Link 2's operand list and Link 3 offer
     roster tags only."""

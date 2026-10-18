@@ -125,7 +125,7 @@ def test_allowed_predicate_fields_match_spec_vocabulary() -> None:
     extends the allow-list with ``pair_context.tag1/2/3`` (per-pair
     attributes living on the new ``relationships`` table), and
     ``guide/archive/assignment_rule_clarify.md`` Item 2 added each person's
-    pair tags, which ``guide/pair_context_tags_further_clarify.md`` Item 1
+    pair tags, which ``guide/archive/pair_context_tags_further_clarify.md`` Item 1
     retired."""
 
     expected = {
