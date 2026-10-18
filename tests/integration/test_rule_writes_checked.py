@@ -161,7 +161,7 @@ def test_band1_card_save_keeps_a_cross_side_rule(db: Session, client: TestClient
 
     response = client.post(
         f"/operator/sessions/{session.id}/instruments/{instrument.id}/save",
-        data=_link2_form("pair_context.tag1", "reviewer.tag1"),
+        data=_link2_form("reviewee.tag1", "reviewer.tag1"),
     )
 
     assert response.status_code == 200, response.text
