@@ -326,21 +326,29 @@ same address; its out-of-scope list ruled out other entities' IDs in
 Address the instrument by its `session_seq`:
 `…/collation/instruments/{session_seq}.csv`. `session_seq` already exists
 (19Q Item 6). It is per session, set once at creation, and never moved by
-drag-and-drop. The route looks the instrument up by
+drag-and-drop. It is not yet unique: nothing constrains
+`(session_id, session_seq)`, and `spec/instruments.md` records that two
+rows in one flush would share a number. So as the address it gets a unique
+index (one migration), and the route looks the instrument up by
 `(session_id, session_seq)`, under the same 404s as today. An integer
 `instruments.id` that happens to match some other instrument's
 `session_seq` in this session reaches that one, which reveals nothing:
 a session's own instruments are already listed on the page.
 
 Rejected: a random `instruments.public_id` like Item 1's. It costs a
-column, a migration and a creator for each path, to hide a number that a
-per-session sequence already hides.
+column and a value from every creation path, to hide a number that a
+per-session sequence already hides once it is unique.
 
 ### Semantics
 
-- **No unique constraint on `(session_id, session_seq)`.** Uniqueness
-  holds by construction (`max + 1` within the session; clone copies
-  values verbatim). A trailing delete hands the number back
+- **Uniqueness.** A unique index on `(session_id, session_seq)` makes a
+  duplicate an insert error instead of a second row that shares an
+  address (Codex on #3133). The migration first renumbers any duplicate
+  above the session's highest number, keeping the lower ID's value.
+  Every creation path already flushes at once, and the instrument
+  writers lock the session row, so a collision means a defect, not a
+  race to retry.
+- **A recycled number.** A trailing delete hands the number back
   (`_next_session_seq`), so after deleting the newest instrument and
   adding one, an old bookmark reaches the new instrument. The 404s
   still apply, so an observer gets only what they could download anyway.
@@ -357,11 +365,14 @@ Taken 2026-10-18 at `e406297e`.
 - **Tests:** 2 files, 16 lines
   (`git grep -n 'instruments/' -- tests/integration/test_observer_collation_body.py tests/integration/test_reviewer_identity_level.py`).
 - **Spec:** `spec/participant_model.md` (the collation row of the route
-  table).
+  table) and `spec/instruments.md` (the "nothing constrains duplicates"
+  note).
+- **Schema:** one migration, the unique index; `docs/database.md`.
 
 ### PR ladder
 
-1. **Build:** route lookup, URL builder, tests and spec, in one rung.
+1. **Build:** the unique index and its migration, route lookup, URL
+   builder, tests and specs, in one rung.
 
 ### Definition of done
 
@@ -396,3 +407,5 @@ Taken 2026-10-18 at `e406297e`.
 ### Doc impact
 
 - `spec/participant_model.md` — the collation CSV route takes the instrument's per-session number, not its ID (Item 3).
+- `spec/instruments.md` — `session_seq` is unique per session, by index (Item 3; added at Codex's read of the plan).
+- `docs/database.md` — the unique index on `instruments (session_id, session_seq)` (Item 3; added at Codex's read of the plan).
