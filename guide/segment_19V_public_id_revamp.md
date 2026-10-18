@@ -385,6 +385,15 @@ Taken 2026-10-18 at `e406297e`.
   flush numbers its rows in turn. Every app creation path already
   flushed per row. One test had written `session_seq=1` into a session
   already holding 1, and now takes the default.
+- **Reads: one** (`diff-reviewer`, `719097ce..ad848f25`). No blocker.
+  It found the other-session test passing with no grant on the other
+  instrument (now granted; the route and the cohort each scope by
+  session, so it fails only with both gone), and leading zeros reaching
+  an instrument (`0002.csv`; the number is now canonical, no leading
+  zero). The plan's "unique index" shipped as a unique constraint. The
+  DoD's "`id` appears nowhere in the page" is pinned as no
+  `instruments/{id}.csv`: a bare integer can match anything on a page.
+  `spec-writer` dropped two provenance tags and flagged nothing else.
 - **The tests live in a new file**, `tests/integration/test_collation_csv_address.py`,
   not the DoD's `test_observer_collation_body.py`, because they pad the
   workspace so that `id` and number differ.

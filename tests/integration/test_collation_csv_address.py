@@ -25,12 +25,17 @@ from .test_observer_collation_body import (
 
 
 def _pad_workspace(client: TestClient, db: Session) -> ReviewSession:
-    """Another session holding five instruments, created first."""
+    """Another session holding five instruments, created first. Its
+    fifth is observed just as the session under test's is, so only the
+    route's session scope keeps it out of that session's reach."""
     other = _make_session(client, db, code="col-addr-padding")
-    for n in range(4):
-        # One flush per row: the number is max + 1, read at insert.
-        db.add(Instrument(session_id=other.id, name=f"Pad {n}", order=n + 1))
-        db.flush()
+    db.add_all(
+        [Instrument(session_id=other.id, name=f"Pad {n}", order=n + 1) for n in range(3)]
+    )
+    db.flush()
+    observed = _seed_one_instrument(db, other)["instrument"]
+    assert observed.session_seq == 5
+    _add_observer(db, other, email="alice@example.edu", cohort_rule=_MATH_RULE)
     return other
 
 
@@ -70,7 +75,7 @@ def test_the_number_reaches_the_csv_and_the_id_does_not(
 
 
 @pytest.mark.parametrize(
-    "handle", ["999", "abc", "1e3", "-1", "99999999999999999999", "2%00"]
+    "handle", ["999", "abc", "1e3", "-1", "0", "02", "99999999999999999999", "2%00"]
 )
 def test_an_unknown_or_malformed_number_answers_404(
     client: TestClient, db: Session, handle: str
@@ -83,8 +88,13 @@ def test_an_unknown_or_malformed_number_answers_404(
 def test_another_sessions_number_reaches_nothing_here(
     client: TestClient, db: Session
 ) -> None:
-    """The padding session's instruments run to number 5; this session's
-    to 2. Its number 5 is someone else's instrument, and out of reach."""
+    """The padding session's instruments run to number 5, the fifth
+    observed by the same address; this session's run to 2. Number 5 is
+    the other session's instrument, and out of reach here.
+
+    Two scopes keep it so, the route's lookup and the cohort's
+    ``Assignment.session_id``; either alone holds this test green, and
+    dropping both turns it red."""
     review_session, _ = _observed_instrument(client, db, "col-addr-other")
 
     assert client.get(_csv(review_session, 5)).status_code == 404

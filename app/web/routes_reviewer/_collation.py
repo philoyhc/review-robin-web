@@ -60,8 +60,9 @@ from app.web.downloads import content_disposition
 router = APIRouter(prefix="/me")
 
 # An instrument's ``session_seq`` as the CSV address spells it: ASCII
-# digits, short enough to bind on any backend.
-_SEQ_SHAPE = re.compile(r"[0-9]{1,9}")
+# digits with no leading zero, so each instrument has one address, and
+# short enough to bind on any backend.
+_SEQ_SHAPE = re.compile(r"[1-9][0-9]{0,8}")
 
 
 @router.get(
