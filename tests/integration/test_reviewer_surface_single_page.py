@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 from app.auth.identity import AuthenticatedUser
 from app.db.models import Assignment, Instrument, ReviewSession
 
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -488,7 +489,9 @@ def test_a_blocked_submit_reopens_the_page_it_came_from(
     ).scalar_one()
     response = rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit?page=2",
-        data={f"response[{assignment.id}][rating]": "9"},
+        data=answer_form(
+            db, {f"response[{assignment.id}][rating]": "9"}, page_n=2
+        ),
         follow_redirects=False,
     )
     assert response.status_code == 400

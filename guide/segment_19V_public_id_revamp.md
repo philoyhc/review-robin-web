@@ -268,6 +268,18 @@ Taken 2026-10-18 at `c39186b4`.
   (`git grep -ln 'response\[' -- tests`).
 - **Spec:** `spec/reviewer-surface.md` (`response[{rep_id}][{field}]`).
 
+### Status
+
+- **Build (2026-10-18), one rung.** `responses._form_keys` owns the
+  ordinals and the page digest (an HMAC keyed by the workspace salt,
+  `participant_tokens.workspace_salt`); `parse_form_payload` takes the
+  page's ordered IDs. Save and Submit read the page they were posted
+  from (`?page=` for Submit). The digest is required only when a post
+  carries answers, so Clear and an answerless Submit need none. A
+  stale post reuses the refused-write page (participant audit P3)
+  with a `page_changed` cause and 409, its typed values listed bare.
+  Tests post through `tests/integration/_answer_form.py`.
+
 ### PR ladder
 
 1. **Build:** template, parser mapping, the new page digest and its
@@ -275,7 +287,7 @@ Taken 2026-10-18 at `c39186b4`.
 
 ### Open questions
 
-1. **Build at all?** It waits on the author's word.
+1. ~~Build at all?~~ Yes: "build 19V" (author, 2026-10-18).
 
 ### Doc impact
 

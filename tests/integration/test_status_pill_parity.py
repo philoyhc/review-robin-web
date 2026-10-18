@@ -23,6 +23,7 @@ from app.db.models import (
 )
 from app.services import monitoring
 from app.services import responses as responses_service
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -144,7 +145,7 @@ def test_submit_with_a_blank_optional_row_reads_submitted_on_both(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{by_name['Carol'].id}][comments]": "good"},
+        data=answer_form(db, {f"response[{by_name['Carol'].id}][comments]": "good"}, page_n=1),
         follow_redirects=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -181,15 +182,19 @@ def test_new_answer_after_submit_is_unsubmitted_on_both(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{by_name['Carol'].id}][comments]": "good"},
+        data=answer_form(db, {f"response[{by_name['Carol'].id}][comments]": "good"}, page_n=1),
         follow_redirects=False,
     )
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{by_name['Carol'].id}][comments]": "good",
-            f"response[{by_name['Dan'].id}][comments]": "late thought",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{by_name['Carol'].id}][comments]": "good",
+                f"response[{by_name['Dan'].id}][comments]": "late thought",
+            },
+            page_n=1,
+        ),
         follow_redirects=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -211,12 +216,12 @@ def test_changed_answer_after_submit_is_unsubmitted_on_both(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/submit",
-        data={f"response[{by_name['Carol'].id}][comments]": "good"},
+        data=answer_form(db, {f"response[{by_name['Carol'].id}][comments]": "good"}, page_n=1),
         follow_redirects=False,
     )
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={f"response[{by_name['Carol'].id}][comments]": "better"},
+        data=answer_form(db, {f"response[{by_name['Carol'].id}][comments]": "better"}, page_n=1),
         follow_redirects=False,
     )
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text

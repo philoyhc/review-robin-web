@@ -37,6 +37,7 @@ from app.db.models import (
 from app.main import app
 from app.web.deps import get_current_user
 
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -123,7 +124,7 @@ def _submit(
         data[f"response[{aid}][comments]"] = "ok"
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data=data,
+        data=answer_form(db, data, page_n=1),
         follow_redirects=False,
     )
     rae_client.post(

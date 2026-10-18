@@ -26,6 +26,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -388,11 +389,13 @@ def test_save_drops_cross_page_assignment_inputs(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Save's per-page filter drops ``response[<aid>][...]`` inputs
-    whose assignment belongs to an instrument on a different page than
-    the URL slot. Defense-in-depth against malformed POSTs (the GET
-    surface already narrows rendering to one page so the form normally
-    only contains its own page's inputs).
+    """Save's per-page filter drops inputs for rows not on the URL
+    slot's page: since 19V Item 2 an answer names its row by ordinal on
+    that page, so an ordinal past the page is ignored and a form
+    rendered for another page (its digest) is refused. Defense-in-depth
+    against malformed POSTs (the GET surface already narrows rendering
+    to one page so the form normally only contains its own page's
+    inputs).
 
     Migrated for Segment 18L PR 1d: a single-page-default session
     places every instrument on the same page, so we set a page break
@@ -418,16 +421,28 @@ def test_save_drops_cross_page_assignment_inputs(
     ).scalar_one()
 
     rae_client = make_client(rae)
-    # POST to /1/save with inputs for both pages — the page-2 entry
-    # must be filtered out.
+    # POST to /1/save with page 1's form plus an input for a second row.
+    # Each page has one row, so the page-2 entry can only be ordinal 2,
+    # past page 1's rows, and must be filtered out.
+    form = answer_form(
+        db, {f"response[{page1_assignment.id}][comments]": "page-1 ok"}, page_n=1
+    )
+    form["response[2][comments]"] = "page-2 leak"
     rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data={
-            f"response[{page1_assignment.id}][comments]": "page-1 ok",
-            f"response[{page2_assignment.id}][comments]": "page-2 leak",
-        },
+        data=form,
         follow_redirects=False,
     )
+    # Page 2's own form sent to page 1's Save: its ordinal 1 would land
+    # on page 1's row, so the page-2 digest refuses it outright.
+    refused = rae_client.post(
+        f"/me/sessions/{review_session.public_id}/1/save",
+        data=answer_form(
+            db, {f"response[{page2_assignment.id}][comments]": "page-2 leak"}, page_n=2
+        ),
+        follow_redirects=False,
+    )
+    assert refused.status_code == 409
 
     page1_responses = (
         db.execute(
@@ -444,7 +459,8 @@ def test_save_drops_cross_page_assignment_inputs(
         .all()
     )
     assert any(r.value == "page-1 ok" for r in page1_responses)
-    # Cross-page leak silently dropped.
+    # Cross-page leak dropped, on neither page.
+    assert not any(r.value == "page-2 leak" for r in page1_responses)
     assert not any(r.value == "page-2 leak" for r in page2_responses)
 
 

@@ -298,11 +298,32 @@ submits to that default action; Submit overrides via
 the **entire** form body — every input on the current page, across
 each of its instruments. The route distinguishes:
 
-- Save keeps only the inputs whose assignment belongs to one of
-  `{page_n}`'s instruments and persists those, ignoring everything
-  else.
+- Save persists the page's inputs; an input can name no row off
+  `{page_n}` (below).
 - Submit accepts the entire form body, persists every value, then
-  applies the session-wide submission semantics.
+  applies the session-wide submission semantics. Its inputs are read
+  against the page Submit was pressed on (`?page={page_n}`).
+
+**Answer names** (19V Item 2). Each input is named
+`response[{ordinal}][{field_key}]`. The ordinal is the row's 1-based
+rank among the page's assignments (the reviewer's included assignments
+on `{page_n}`'s instruments) in assignment-ID order, never the
+assignment ID, which is workspace-wide and would let a reviewer count
+the workspace's assignments from the page source. ID order, not display
+order: a column sort reorders the rows but leaves each row its
+ordinal. The server rebuilds the same ordered set and maps ordinals
+back (`responses._form_keys`, `parse_form_payload`); an ordinal the
+page doesn't have is ignored, so a forged one reaches only the
+reviewer's own page.
+
+The form carries a hidden `page_digest`, a keyed digest of that ID
+set that reveals no count. A Save or Submit carrying any answer whose
+digest doesn't match the page as it stands now (a row joined or left
+the page since it rendered, or no digest at all) is refused with
+**409**: the page re-renders with a "This page changed after you opened
+it" notice and the typed values listed bare to copy, and nothing is
+saved, rather than ordinals landing on the wrong rows. A post with no
+answers needs no digest.
 
 ### Persistence semantics
 
@@ -318,9 +339,9 @@ each of its instruments. The route distinguishes:
   on every member's copy of that field in the group. Blanking a
   submitted answer is a change too ("Submit" below). The
   `responses.saved` event counts the cleared stamps as
-  `submissions_cleared`. The page filter keeps a stale form from
-  touching another page's saved values when only the current page
-  should change.
+  `submissions_cleared`. Answer names map only to the current page's
+  rows, and a stale form is refused by its page digest, so a Save never
+  touches another page's saved values.
 - **Submit** persists pending writes session-wide (treating the
   whole form body as a session-wide save), then validates required
   fields across every instrument. With no required field missing
@@ -830,8 +851,8 @@ reviewer-surface specifics:
   `routes_reviewer/_surface/_group_collapse.py` does the collapse; the
   lowest-id **included** member assignment is the row's
   **representative** —
-  the response inputs key off it (`response[{rep_id}][{field}]`)
-  and the write fan-out spreads the answer to every member of the
+  the response inputs key off its ordinal on the page (Form HTML
+  mechanics) and the write fan-out spreads the answer to every member of the
   group. A branch's cells (above) are judged on the representative's
   own answers, carried into the collapsed row along with its cells.
 - **`Group` identity column** replaces the `Reviewee` column and

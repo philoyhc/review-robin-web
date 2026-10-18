@@ -15,6 +15,7 @@ from app.db.models import (
     Response,
     ReviewSession,
 )
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -456,10 +457,13 @@ def test_past_the_deadline_a_ready_session_still_shows_the_reviewer_their_values
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{session.public_id}/1/save",
-        data={
-            f"response[{assignment.id}][rating]": "4",
-            f"response[{assignment.id}][comments]": "secret-comment",
-        },
+        data=answer_form(
+            db,
+            {
+                f"response[{assignment.id}][rating]": "4",
+                f"response[{assignment.id}][comments]": "secret-comment",
+            },
+        ),
         follow_redirects=False,
     )
 

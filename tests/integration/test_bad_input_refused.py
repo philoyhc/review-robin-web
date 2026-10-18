@@ -146,17 +146,24 @@ def test_a_saved_number_is_stored_canonical(db: Session) -> None:
 
 
 def test_a_form_key_with_an_id_past_a_64_bit_column_is_ignored() -> None:
+    # Since 19V Item 2 a key names a row by its ordinal on the page, not
+    # an id, so no key reaches a column at all: an ordinal the page
+    # doesn't have, however large, is ignored, and the largest 64-bit id
+    # is still reachable by its ordinal.
     upserts = responses_service.parse_form_payload(
         {
             "response[99999999999999999999][rating]": "3",
             f"response[{MAX_SQL_INT + 1}][rating]": "2",
             f"response[{MAX_SQL_INT}][rating]": "5",
-            "response[7][rating]": "4",
-        }
+            "response[0][rating]": "1",
+            "response[3][rating]": "6",
+            "response[1][rating]": "4",
+            "response[2][rating]": "8",
+        },
+        page_assignment_ids=[7, MAX_SQL_INT],
     )
 
-    # The largest 64-bit id (19 digits) is kept; one past it is not.
-    assert [(u.assignment_id, u.value) for u in upserts] == [(MAX_SQL_INT, "5"), (7, "4")]
+    assert [(u.assignment_id, u.value) for u in upserts] == [(7, "4"), (MAX_SQL_INT, "8")]
 
 
 @pytest.mark.parametrize(

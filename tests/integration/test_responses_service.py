@@ -62,14 +62,19 @@ def test_parse_form_payload_extracts_response_entries() -> None:
             "response[1][rating]": "4",
             "response[1][comments]": "good",
             "response[2][rating]": "  ",
+            "response[3][rating]": "5",  # no third row on the page
             "irrelevant": "ignore",
-        }
+        },
+        page_assignment_ids=[10, 20],
     )
 
+    # Ordinals map back to the page's assignment IDs, in order.
     by_key = {(u.assignment_id, u.field_key): u.value for u in upserts}
-    assert by_key[(1, "rating")] == "4"
-    assert by_key[(1, "comments")] == "good"
-    assert by_key[(2, "rating")] == ""  # whitespace normalised to empty
+    assert by_key == {
+        (10, "rating"): "4",
+        (10, "comments"): "good",
+        (20, "rating"): "",  # whitespace normalised to empty
+    }
 
 
 def test_save_draft_with_no_upserts_writes_zero(db: Session) -> None:

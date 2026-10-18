@@ -35,11 +35,11 @@ from app.web.routes_reviewer._shared import (
 )
 
 from ._context import (
-    _load_assignments_with_relations,
     _pages_for_session,
     _race_refusal,
     _surface_context,
     _write_refusal,
+    page_assignment_ids_for,
 )
 
 
@@ -138,6 +138,21 @@ def review_surface_clear_revisited(session_id: str) -> RedirectResponse:
     )
 
 
+def _page_changed(
+    form: Mapping[str, str], review_session: ReviewSession, page_ids: list[int]
+) -> bool:
+    """Whether a post that carries answers was made against a page whose
+    rows have changed since (19V Item 2). A post with no answers names no
+    row, so it needs no digest."""
+    if not any(key.startswith("response[") for key in form):
+        return False
+    return not responses_service.digest_matches(
+        form.get(responses_service.PAGE_DIGEST_FIELD),
+        review_session.public_id,
+        page_ids,
+    )
+
+
 def _pre_open_response(
     request: Request,
     user: User,
@@ -213,6 +228,8 @@ def _refused_write_response(
     action: str,
     page_n: int,
     form: Mapping[str, str],
+    page_assignment_ids: list[int] | None = None,
+    status_code: int = status.HTTP_403_FORBIDDEN,
 ) -> HTMLResponse:
     """A refused Save / Submit / Clear (participant audit P3, author's
     ruling 2026-10-15). Rather than the standalone error page, which
@@ -220,13 +237,20 @@ def _refused_write_response(
     again, read-only as a GET would show it now, with a notice naming
     the cause and the typed answers listed as text to copy. A session
     that is neither ``ready`` nor ``expired`` renders the pre-open
-    page with the same notice. HTTP 403, as before."""
+    page with the same notice. HTTP 403, as before; 409 when the page
+    changed under the post (19V Item 2), whose answers are listed bare
+    because their ordinals no longer name the rows they were typed into.
+    ``page_assignment_ids`` maps the typed answers' ordinals to rows."""
     extra = {
         "write_refused": views.write_refused_notice(
             review_session, cause, action=action
         ),
         "unsaved_answers": views.unsaved_answers(
-            db, review_session, reviewer, form
+            db,
+            review_session,
+            reviewer,
+            form,
+            page_assignment_ids=page_assignment_ids or [],
         ),
     }
     if not (
@@ -239,7 +263,7 @@ def _refused_write_response(
             reviewer,
             review_session,
             extra=extra,
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status_code,
         )
     pages = _pages_for_session(db, review_session.id)
     if not 1 <= page_n <= len(pages):
@@ -260,7 +284,7 @@ def _refused_write_response(
         request,
         "reviewer/review_surface.html",
         context,
-        status_code=status.HTTP_403_FORBIDDEN,
+        status_code=status_code,
     )
 
 
@@ -335,11 +359,11 @@ async def reviewer_save(
     """Save the form's response inputs for the given operator-defined
     page (Segment 18L multi-page replan).
 
-    The form on each page carries only that page's assignment inputs
-    (the GET handler filters ``instrument_groups`` to the current
-    page). A defense-in-depth filter still drops cross-page
-    assignment ids so a stale form posting from a previous render
-    can't accidentally write to other pages.
+    The form on each page carries only that page's answers, each named
+    by its row's ordinal among the page's assignments (19V Item 2), so
+    an answer can only address a row on this page. A post made against
+    a page whose rows have changed since is refused with 409 and saves
+    nothing, rather than mapping ordinals onto the wrong rows.
 
     Server-side value validation rejects per-upsert (Integer /
     Decimal range and step). Invalid upserts are not persisted; the
@@ -350,7 +374,14 @@ async def reviewer_save(
     reviewer, review_session = reviewer_session
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
-    upserts = responses_service.parse_form_payload(string_form)
+    page_ids = page_assignment_ids_for(db, review_session, reviewer, page_n)
+    upserts = responses_service.parse_form_payload(
+        string_form, page_assignment_ids=page_ids
+    )
+    page_changed = _page_changed(string_form, review_session, page_ids)
+    # A refusal lists the typed answers under their rows only when the
+    # form's ordinals still name them.
+    listed_ids = [] if page_changed else page_ids
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
     refusal = await run_in_threadpool(
@@ -368,18 +399,23 @@ async def reviewer_save(
             action="save",
             page_n=page_n,
             form=string_form,
+            page_assignment_ids=listed_ids,
         )
-    pages = _pages_for_session(db, review_session.id)
-    validate_page_n(page_n, pages)
-    target_instrument_ids = {inst.id for inst in pages[page_n - 1]}
-    target_assignment_ids = {
-        a.id
-        for a in _load_assignments_with_relations(
-            db, session_id=review_session.id, reviewer_id=reviewer.id
+    validate_page_n(page_n, _pages_for_session(db, review_session.id))
+    if page_changed:
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            views.REFUSED_PAGE_CHANGED,
+            action="save",
+            page_n=page_n,
+            form=string_form,
+            status_code=status.HTTP_409_CONFLICT,
         )
-        if a.instrument_id in target_instrument_ids
-    }
-    upserts = [u for u in upserts if u.assignment_id in target_assignment_ids]
     # Off the event loop: the save waits on the session row lock to
     # re-check, under it, that the session still accepts (findings L3).
     try:
@@ -407,6 +443,7 @@ async def reviewer_save(
             action="save",
             page_n=page_n,
             form=string_form,
+            page_assignment_ids=listed_ids,
         )
     if result.errors:
         bad_values = {
@@ -459,7 +496,16 @@ async def reviewer_submit(
     reviewer, review_session = reviewer_session
     form = await request.form()
     string_form = {k: v for k, v in form.items() if isinstance(v, str)}
-    upserts = responses_service.parse_form_payload(string_form)
+    # Submit is pressed on a page and carries that page's answers, named
+    # by ordinal like a Save's (19V Item 2).
+    page_ids = page_assignment_ids_for(
+        db, review_session, reviewer, _submitted_from_page(request)
+    )
+    upserts = responses_service.parse_form_payload(
+        string_form, page_assignment_ids=page_ids
+    )
+    page_changed = _page_changed(string_form, review_session, page_ids)
+    listed_ids = [] if page_changed else page_ids
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).
     refusal = await run_in_threadpool(
@@ -477,6 +523,21 @@ async def reviewer_submit(
             action="submit",
             page_n=_submitted_from_page(request),
             form=string_form,
+            page_assignment_ids=listed_ids,
+        )
+    if page_changed:
+        return await run_in_threadpool(
+            _refused_write_response,
+            request,
+            db,
+            user,
+            reviewer,
+            review_session,
+            views.REFUSED_PAGE_CHANGED,
+            action="submit",
+            page_n=_submitted_from_page(request),
+            form=string_form,
+            status_code=status.HTTP_409_CONFLICT,
         )
     # Off the event loop, like the save (findings L3).
     try:
@@ -504,6 +565,7 @@ async def reviewer_submit(
             action="submit",
             page_n=_submitted_from_page(request),
             form=string_form,
+            page_assignment_ids=listed_ids,
         )
     if not result.submitted:
         bad_values = {

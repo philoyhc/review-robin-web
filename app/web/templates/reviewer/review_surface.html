@@ -211,6 +211,7 @@
     {# The session-closed banner now renders inline in the overview
        card above, not as a standalone full-width banner here. #}
     {% if preview_mode %}<div>{% else %}<form method="post" action="/me/sessions/{{ session.public_id }}/{{ current_page_n }}/save">
+      <input type="hidden" name="page_digest" value="{{ page_digest }}">
     {% endif %}
       {# Reviewer-surface form layout — Segment 18L multi-page
          (post-replan + per-instrument-nav retirement):
@@ -465,7 +466,8 @@
                       {% if cell.field.branch_op and row.accepting %}data-rs-branch-parent="{{ cell.field.field_key }}" data-rs-branch-op="{{ cell.field.branch_op }}" data-rs-branch-value="{{ cell.field.branch_value or '' }}"{% if cell.branch_mode == "require" %} data-rs-branch-mode="require"{% endif %}{% endif %}
                       {% if cell.governed_by and row.accepting %}data-rs-governed-by="{{ cell.governed_by }}"{% if cell.may_be_required %} data-rs-required="true"{% endif %}{% endif %}
                       {% if cell.branch_hint %}title="{{ cell.branch_hint }}"{% endif %}>
-                    {% set field_name = "response[" ~ row.assignment.id ~ "][" ~ cell.field.field_key ~ "]" %}
+                    {# 19V Item 2 — the row's ordinal on the page, never its assignment ID. #}
+                    {% set field_name = "response[" ~ answer_ordinals[row.assignment.id] ~ "][" ~ cell.field.field_key ~ "]" %}
                     {% set disabled_attr = "" if row.accepting and cell.branch_open else "disabled" %}
                     {# Each response control names its column and row
                        so a screen-reader user hears "{field} for

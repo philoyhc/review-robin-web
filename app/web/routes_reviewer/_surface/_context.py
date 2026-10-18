@@ -123,6 +123,23 @@ def _reviewer_row_sort_key(row: dict, display_field_id: int) -> object | None:
     return value
 
 
+def page_assignment_ids_for(
+    db: Session, review_session: ReviewSession, reviewer: Reviewer, page_n: int
+) -> list[int]:
+    """The assignment IDs a form posted from page ``page_n`` names by
+    ordinal (19V Item 2), as ``_surface_context`` rendered them; empty for
+    a page the session doesn't have."""
+    pages = _pages_for_session(db, review_session.id)
+    if not 1 <= page_n <= len(pages):
+        return []
+    return responses_service.page_assignment_ids(
+        _load_assignments_with_relations(
+            db, session_id=review_session.id, reviewer_id=reviewer.id
+        ),
+        {inst.id for inst in pages[page_n - 1]},
+    )
+
+
 def _write_refusal(
     db: Session, review_session: ReviewSession, reviewer: Reviewer
 ) -> str | None:
@@ -647,6 +664,10 @@ def _surface_context(
         if g["instrument"].id in current_page_instrument_ids
     ]
     instrument_groups.sort(key=lambda g: g["position"])
+    # 19V Item 2 — answers are named by ordinal, not assignment ID.
+    page_ids = responses_service.page_assignment_ids(
+        assignments, current_page_instrument_ids
+    )
 
     # "Who can see what you wrote" transparency table — one
     # half-width card per instrument, under the heading card in the
@@ -710,6 +731,10 @@ def _surface_context(
         "session_status": _session_status(page_statuses, flat_rows),
         "current_page_n": safe_page_n,
         "page_count": page_count,
+        "answer_ordinals": responses_service.answer_ordinals(page_ids),
+        "page_digest": responses_service.page_digest(
+            review_session.public_id, page_ids
+        ),
         "prev_page_url": prev_page_url,
         "next_page_url": next_page_url,
         "deadline_timezone_label": date_formatting.gmt_offset_zone_label(

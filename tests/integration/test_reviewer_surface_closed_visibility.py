@@ -35,6 +35,7 @@ from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 from app.web.deps import get_current_user
 
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -144,7 +145,7 @@ def _submit_rating(
         data[f"response[{aid}][comments]"] = comments_value
     save_resp = rae_client.post(
         f"/me/sessions/{review_session.public_id}/1/save",
-        data=data,
+        data=answer_form(db, data, page_n=1),
         follow_redirects=False,
     )
     assert save_resp.status_code in (200, 303), save_resp.text[:500]

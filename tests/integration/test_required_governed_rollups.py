@@ -33,6 +33,7 @@ from app.db.models import (
 )
 from app.services import monitoring
 
+from ._answer_form import answer_form
 from .test_monitoring_rollup_parity import (
     REVIEWEE_IMPLEMENTATIONS,
     REVIEWER_IMPLEMENTATIONS,
@@ -204,7 +205,7 @@ def test_a_closed_branch_isnt_reminded(
             AuthenticatedUser(principal_id=email, email=email, name=email, provider="aad")
         ).post(
             f"/me/sessions/{session.public_id}/submit",
-            data={f"response[{assignments[email].id}][rating]": rating},
+            data=answer_form(db, {f"response[{assignments[email].id}][rating]": rating}, page_n=1),
             follow_redirects=False,
         )
 

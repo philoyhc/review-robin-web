@@ -61,6 +61,7 @@ from app.services import monitoring
 from app.services import responses as responses_service
 from app.services.monitoring import _assignment_complete
 
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     mark_band1_touched_on_all_instruments,
@@ -108,10 +109,15 @@ def _activate_and_respond(
                 provider="aad",
             )
         )
+        # This reviewer's rows: a form names only its own page's rows.
         assignment_ids = [
             a.id
             for a in db.execute(
-                select(Assignment).where(Assignment.session_id == session.id)
+                select(Assignment)
+                .join(Reviewer, Assignment.reviewer_id == Reviewer.id)
+                .where(Assignment.session_id == session.id)
+                .where(Reviewer.email == email)
+                .where(Assignment.include.is_(True))
             ).scalars()
         ]
         data: dict[str, str] = {}
@@ -119,7 +125,9 @@ def _activate_and_respond(
             data[f"response[{aid}][rating]"] = "5"
             data[f"response[{aid}][comments]"] = "fine"
         reviewer_client.post(
-            f"/me/sessions/{session.public_id}/1/save", data=data, follow_redirects=False
+            f"/me/sessions/{session.public_id}/1/save",
+            data=answer_form(db, data, page_n=1),
+            follow_redirects=False,
         )
         if index % 2 == 0:
             reviewer_client.post(

@@ -35,6 +35,7 @@ from ._refused_write import (
     REFUSED_CLOSED,
     REFUSED_NO_ASSIGNMENTS,
     REFUSED_NOT_OPEN,
+    REFUSED_PAGE_CHANGED,
     unsaved_answers,
     write_refused_notice,
 )
@@ -307,6 +308,7 @@ __all__ = [
     "REFUSED_CLOSED",
     "REFUSED_NO_ASSIGNMENTS",
     "REFUSED_NOT_OPEN",
+    "REFUSED_PAGE_CHANGED",
     "unsaved_answers",
     "write_refused_notice",
     "masked_email",

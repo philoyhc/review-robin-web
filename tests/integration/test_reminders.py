@@ -18,6 +18,7 @@ from app.db.models import (
 )
 from app.services.invitations import hash_token
 
+from ._answer_form import answer_form
 from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
@@ -446,7 +447,7 @@ def test_remind_incomplete_targets_only_incomplete(
     rae_client = make_client(rae)
     rae_client.post(
         f"/me/sessions/{session.public_id}/submit",
-        data={f"response[{rae_assignment.id}][rating]": "5"},
+        data=answer_form(db, {f"response[{rae_assignment.id}][rating]": "5"}),
         follow_redirects=False,
     )
 
@@ -595,9 +596,7 @@ def test_submitted_with_warn_override_classified_incomplete(
     ).scalar_one()
     rae_client.post(
         f"/me/sessions/{session.public_id}/submit",
-        data={
-            f"response[{assignment.id}][comments]": "fine",
-        },
+        data=answer_form(db, {f"response[{assignment.id}][comments]": "fine"}),
         follow_redirects=False,
     )
 
@@ -641,7 +640,7 @@ def test_remind_incomplete_writes_no_audit_when_zero_targets(
     ).scalar_one()
     rae_client.post(
         f"/me/sessions/{session.public_id}/submit",
-        data={f"response[{assignment.id}][rating]": "5"},
+        data=answer_form(db, {f"response[{assignment.id}][rating]": "5"}),
         follow_redirects=False,
     )
 
