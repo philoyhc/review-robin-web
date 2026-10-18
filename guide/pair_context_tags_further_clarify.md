@@ -114,8 +114,12 @@ Taken 2026-10-18 at `928dbc15`.
   lists them.
 - Settings import: `app/services/session_config_io/_apply_parse.py`.
 - Tests naming `pair_tag`: 8 files (`git grep -l pair_tag -- tests/`).
-- Live specs: `spec/instruments.md`, `spec/assignments.md`
-  (`git grep -l -e pair_tag -e "Pair: " -e "Pairwise tag" -- 'spec/*.md' 'docs/*.md' ':!docs/archive'`).
+- Live specs: `spec/instruments.md`, `spec/assignments.md`,
+  `spec/setup_pages.md` (the Relationships row names Link 1 and Link 2)
+  and `spec/csv_contracts.md` (the grouped-import refusal names `IS`
+  only). The search: `git grep -l -i -e pair_tag -e "Pair: " -e "Pairwise tag" -e "relationship tag" -e "relationship-tag" -- 'spec/*.md' 'docs/*.md' ':!docs/archive' ':!spec/archive'`.
+  It also matches `spec/settings_inventory.md`, for a browser
+  preference only; that one is untouched.
 
 ### PR ladder
 
@@ -160,3 +164,5 @@ Taken 2026-10-18 at `928dbc15`.
 
 - `spec/instruments.md` — Band 1: relationship tags in Link 2 only, the four pair-level operators, the caption, `IS FILLED` in the Group guard, stored-rule refusal (Item 1).
 - `spec/assignments.md` — Predicate vocabulary: Band 1 stores a relationship tag only as `pair_context.tagN`; the person-level fields retired or marked import-only per Open question 1 (Item 1).
+- `spec/setup_pages.md` — Relationships row: its tags are offered in Band 1's Link 2 only (Item 1).
+- `spec/csv_contracts.md` — §3.3: the grouped-import refusal covers a relationship-tag `IS FILLED` as well as `IS`, and a person-level pair field if retired (Item 1).
