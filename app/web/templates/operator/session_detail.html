@@ -556,7 +556,7 @@
          Item 1, reversing the 2026-09-23 ruling): the lock guarded
          nothing the routes did not, and the one accident it still caught
          — a stray one-click Remove of another owner — is the confirm's. #}
-      <div class="card" id="owners-card">
+      <div class="card" id="owners-card" data-banner-landing>
         <h2>Owners</h2>
         <p class="muted">
           Workspace operators with full edit access on this session. The
@@ -785,11 +785,13 @@
       if (typeof y !== 'number') return;
       function apply() {
         // A banner that wants attention wins: base.html scrolls to the
-        // first ``.banner-scroll-target``. Only when it is shown, though —
-        // Quick Setup's error banners render ``hidden`` on every load, and
-        // scrolling to one of those does nothing.
-        var banner = document.querySelector('.banner-scroll-target');
-        if (banner && banner.getClientRects().length) return;
+        // first SHOWN ``.banner-scroll-target`` — Quick Setup renders one
+        // per slot, ``hidden`` unless that slot had a refusal.
+        var shown = Array.prototype.some.call(
+          document.querySelectorAll('.banner-scroll-target'),
+          function (el) { return el.getClientRects().length > 0; }
+        );
+        if (shown) return;
         window.scrollTo(0, y);
       }
       apply();

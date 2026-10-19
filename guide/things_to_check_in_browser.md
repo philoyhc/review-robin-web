@@ -363,7 +363,8 @@ deployment, not a local run.
   gone. A file naming every instrument applies without asking.
 - [ ] **A refused upload stays on Home (O7).** Upload a bad roster or
   Settings file on an existing session: the page re-renders with the
-  banner and the file's lines, scrolled to the banner, and the address
+  banner and the file's lines, scrolled to the Quick Setup card (19X
+  Item 2), and the address
   bar reads the session's Home path. Unlock, Cancel and a reload stay
   on Home.
 - [ ] **No text from a link.** Open Home with
@@ -457,3 +458,15 @@ instrument card unlocked.
   tick `Yes, delete the existing … relationships` and press Delete all:
   the red banner asks, and the delete tick above it is still ticked with
   `Delete all relationships` live.
+
+## A refused Quick Setup submit lands above the card (19X Item 2)
+
+- [ ] **Any slot.** On Session Home, Quick Setup a refused Settings file
+  (or any slot after Reviewers): the page reloads with the Quick Setup
+  card's top border a line below the top of the window, not at the top
+  of the page. A refused Reviewers file lands the same way. On a window
+  taller than the rest of the page, the page scrolls to its foot and the
+  card shows lower down.
+- [ ] **Owners.** Add an owner who already is one: the page lands with
+  the Owners card's top border a line below the top of the window, its
+  heading above the red banner.

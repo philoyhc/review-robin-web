@@ -131,3 +131,32 @@ def test_dismiss_still_navigates_when_the_query_differs(
 
     assert page.evaluate("window.location.search") == ""
     expect(page.locator("[data-quick-setup-reason]")).to_have_count(0)
+
+
+def test_a_refused_later_slot_lands_a_line_above_the_card(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """The page scrolls to the first SHOWN banner, and Quick Setup's
+    lands its card: a refused Settings file (a slot after Reviewers,
+    whose hidden banner used to win the first-match and leave the page
+    at its top) brings the card's top border a line below the viewport's
+    top (segment 19X Item 2)."""
+    page.set_viewport_size({"width": 1280, "height": 500})
+    session_id = new_session()
+    page.goto(f"/operator/sessions/{session_id}")
+    _submit_settings(page, _CHECKLIST / "05_settings.csv")
+    _submit_settings(page, _CHECKLIST / "09_settings_one_instrument.csv")
+    expect(page.locator("#quick-setup-settings-error-banner")).to_be_visible()
+
+    def card_top() -> float:
+        return page.evaluate(
+            "document.getElementById('quick-setup').getBoundingClientRect().top"
+        )
+
+    # The smooth scroll settles over a few frames.
+    page.wait_for_function(
+        "Math.abs(document.getElementById('quick-setup')"
+        ".getBoundingClientRect().top - 24) < 4"
+    )
+    assert page.evaluate("window.scrollY") > 0
+    assert 0 < card_top() < 40

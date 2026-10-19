@@ -1439,6 +1439,12 @@
       .roster-card {
         scroll-margin-top: var(--space-4);
       }
+      /* A card a banner lands on (segment 19X Item 2): its top border
+         a line below the viewport's top, so it reads as the card's
+         start rather than a crop. */
+      [data-banner-landing] {
+        scroll-margin-top: 1.5rem;
+      }
       /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
          `.table-pager-gap`, `.table-pager-jump` — was retired at 19J.9
          rung 2. It could only reach two pages per click whatever the

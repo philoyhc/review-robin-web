@@ -197,3 +197,24 @@ def test_add_and_self_remove_work_without_javascript(
         expect(page).to_have_url("/operator/sessions")
     finally:
         context.close()
+
+
+def test_an_owners_refusal_lands_the_card_not_its_banner(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """The Owners card is a banner landing (segment 19X Item 2): its
+    refusal brings the card's top border a line below the viewport's
+    top, heading above the banner, rather than cropping the heading by
+    scrolling the banner itself."""
+    page.set_viewport_size({"width": 1280, "height": 500})
+    session_id = new_session()
+    page.goto(f"/operator/sessions/{session_id}?owners_error=already_owner#owners-card")
+    expect(page.locator("#owners-card .banner-scroll-target")).to_be_visible()
+    page.wait_for_function(
+        "Math.abs(document.getElementById('owners-card')"
+        ".getBoundingClientRect().top - 24) < 4"
+    )
+    top = page.evaluate(
+        "document.getElementById('owners-card').getBoundingClientRect().top"
+    )
+    assert 0 < top < 40
