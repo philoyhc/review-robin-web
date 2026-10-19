@@ -151,6 +151,19 @@ def _base(session: ReviewSession) -> str:
     return f"/operator/sessions/{session.public_id}/relationships"
 
 
+def _tick_inside_banner(html: str, count: int) -> bool:
+    """The tick the refusal throws up sits inside its red banner, under
+    the message (browser run 2026-10-19), not below it."""
+    banner = re.search(
+        r"<div[^>]*data-group-clear-banner[^>]*>(.*?)</div>", html, re.S
+    )
+    return (
+        banner is not None
+        and 'name="acknowledge_response_loss"' in banner.group(1)
+        and f'value="{count}"' in banner.group(1)
+    )
+
+
 # --- edit ---------------------------------------------------------------
 
 
@@ -354,6 +367,7 @@ def test_delete_all_is_refused_with_the_count_then_goes_through(
     assert refused.status_code == 400
     assert _line(4) in refused.text
     assert _TICK in refused.text and 'value="4"' in refused.text
+    assert _tick_inside_banner(refused.text, 4)
     assert db.execute(select(func.count()).select_from(Relationship)).scalar_one() == 4
 
     accepted = client.post(
@@ -390,6 +404,7 @@ def test_an_import_is_refused_with_the_count_then_goes_through(
     assert refused.status_code == 400
     assert _line(3) in refused.text
     assert _TICK in refused.text and 'value="3"' in refused.text
+    assert _tick_inside_banner(refused.text, 3)
     assert _relationship(db, session.id, "Ann").tag_1 == "x"
     assert _responses(db) == 4
 
