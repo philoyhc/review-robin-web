@@ -157,11 +157,12 @@ def _tick_inside_banner(html: str, count: int) -> bool:
     banner = re.search(
         r"<div[^>]*data-group-clear-banner[^>]*>(.*?)</div>", html, re.S
     )
-    return (
-        banner is not None
-        and 'name="acknowledge_response_loss"' in banner.group(1)
-        and f'value="{count}"' in banner.group(1)
-    )
+    if banner is None:
+        return False
+    body = banner.group(1)
+    line = body.find(_line(count))
+    tick = body.find('name="acknowledge_response_loss"')
+    return 0 <= line < tick and f'value="{count}"' in body[tick:]
 
 
 # --- edit ---------------------------------------------------------------
