@@ -12,7 +12,7 @@ segment-level `## Doc impact`, and `python3 tools/close_check.py 19V.1`
 reads Item 1's.
 
 **Segment closed 2026-10-19 at the author's word**, after the round-2
-browser run checked its rows. All four items had closed (#3126–#3137);
+browser run ("basically everything checked out"). All four items had closed (#3126–#3137);
 no participant page carries a workspace-wide ID. Further refinements go
 to `guide/segment_19X_refinements.md`.
 
@@ -129,8 +129,7 @@ Taken 2026-10-18 at `c39186b4`.
 
 ### Status
 
-**Closed 2026-10-18** (#3126, #3127, #3128); the segment stays open for
-Item 2 and follow-ups.
+**Closed 2026-10-18** (#3126, #3127, #3128).
 
 - **Ladder as planned, plus one fix PR.** Rung 3 landed whole, not split
   by surface. Beyond the measured sites it reached `app/web/return_to.py`
@@ -275,6 +274,8 @@ Taken 2026-10-18 at `c39186b4`.
 
 ### Status
 
+**Closed 2026-10-18** (#3130).
+
 - **Build (2026-10-18), one rung.** `responses._form_keys` owns the
   ordinals and the page digest; `parse_form_payload` takes the page's
   ordered IDs. Save and Submit read the page they were posted from
@@ -376,7 +377,7 @@ Taken 2026-10-18 at `e406297e`.
 
 ### Status
 
-**Closed 2026-10-18** (#3135), one rung as planned; the segment stays open.
+**Closed 2026-10-18** (#3135), one rung as planned.
 
 - **Decisions confirmed at build.** The route takes the number as a
   string and answers 404 unless it is 1–9 digits, so `abc`, `-1`, an
@@ -503,7 +504,7 @@ Taken 2026-10-18 at `eb6c5748`.
 
 ### Status
 
-**Closed 2026-10-19** (#3137), one rung as planned; the segment stays open.
+**Closed 2026-10-19** (#3137), one rung as planned.
 
 - **Decisions confirmed at build.** The decoder maps `display:` keys
   through a source-to-ID table built in display order, so a duplicate
