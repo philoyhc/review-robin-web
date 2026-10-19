@@ -54,7 +54,7 @@ to check by eye.
 - **Preview** means
   `/operator/sessions/<its id>/preview-surface/1?reviewer_email=operator@example.edu`
   (`/2` for page 2). It shows your answers on a draft session too.
-- **An unedited card's Save is greyed out.** Where a step says "Save
+- **An unedited card's Save is grayed out.** Where a step says "Save
   unedited", type a letter into a response field's name, delete it,
   then Save.
 
@@ -128,7 +128,7 @@ Your groups here:
 | 22 | Quick Setup `07`; then `08`. | `07` is refused on `session.reminder_offsets` ("exceeds the 10-day maximum"), and Home loads. `08` applies, with End 2026-09-30. | L1 (both) |
 | 23 | Quick Setup `09`. **Dismiss**. | "Nothing was imported. This settings file deletes 1 instrument…", listing Peer, with `Yes, delete it`. The Settings slot reads "Holding 09_settings_one_instrument.csv", and the replace box stays ticked. Dismiss reloads Home with no banner and no held file. | Dismiss on Home: the deletion ask; 19W rung 4: Dismiss |
 | 24 | Quick Setup `09` again; tick `Yes, delete it`; Submit with nothing chosen. Then Quick Setup `05`. | It asks again; then it applies and Peer is gone. `05` applies without asking, and Peer is back. | S4: deletes are named; 19W rung 4: the deletion ask |
-| 25 | Choose `01` in Reviewers, `02` in Reviewees and `03` in Relationships; untick replace; Submit. Tick replace; Submit. | "Tick the replacement-confirmation box just above Submit…", and each slot reads "Holding …". Then all three apply. (A roster replace drops the relationships, so `03` goes with them for step 31.) | 19W rung 4: a missing replace tick |
+| 25 | Session Home's Quick Setup card (not the Setup pages): choose `01` in Reviewers, `02` in Reviewees and `03` in Relationships, leaving the replace box unticked. Submit stays grayed out without the tick, so in the console run `document.getElementById('quick-setup-submit-all').disabled = false`, then press Submit. Tick replace; Submit. | "Tick the replacement-confirmation box just above Submit…", and each slot reads "Holding …". Then all three apply. (A roster replace drops the relationships, so `03` goes with them for step 31.) | 19W rung 4: a missing replace tick |
 | 26 | Reviewers slot: `10`. Unlock, Cancel, reload. Then open Home with `?quick_setup_error=settings&quick_setup_reason=parse&quick_setup_detail=hello`. | The page scrolls to the banner, "ReviewerEmail is blank (1 row)", with the address Home's throughout. The query string shows no banner. | S4/O7: refused upload stays on Home; no text from a link |
 | 27 | New session `R refused`, code `r-refused`, staging only `10`. Then Quick Setup `10` there. | "The reviewers file was refused, so none of the files uploaded with the new session were saved…", without lines. Quick Setup shows the lines. | S4/O7: new session |
 | 28 | Back in **R import**: **Prepare**. Assignments: turn Team review's Self review off. Rename Bob on Reviewers; **Prepare**. Add reviewer Dev Patel (`dev@example.edu`); **Prepare**. | Team review's self-review rows stay excluded and its chip reads off; Peer's are unaffected. Dev's new self-review rows arrive excluded. | E3: off stays off; new rows |

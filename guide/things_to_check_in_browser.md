@@ -445,7 +445,8 @@ instrument card unlocked.
   box is ticked and Submit is live. Tick `Yes, delete it` and
   Submit, and the file applies with nothing chosen again.
 - [ ] **A missing replace tick.** With rosters in place, choose two
-  files and Submit without the replace tick: both slots name their
-  files; tick replace and Submit, and both apply.
+  files and Submit without the replace tick (Submit is grayed out
+  until the tick, so re-enable it from the console): both slots name
+  their files; tick replace and Submit, and both apply.
 - [ ] **Dismiss.** On either ask, Dismiss reloads Home with no banner
   and no held file named.
