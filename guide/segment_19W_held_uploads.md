@@ -110,6 +110,14 @@ Taken 2026-10-19 at `9b6e0afa`.
 | Specs and docs naming `confirm_replace` or "chosen again" | 7 live (`spec/operator_button_audit.md`, `spec/assignments.md`, `spec/csv_contracts.md`, `spec/setup_pages.md`, `spec/workflow_card.md`, `spec/quick_setup_card_spec.md`, `docs/security_posture.md`) | `grep -rln "Choose the file again\|chosen again\|confirm_replace" spec/ docs/` |
 | Tests naming `confirm_replace` | 30 | `grep -rln "confirm_replace" tests/ \| wc -l` |
 
+## Status
+
+**2026-10-19, rung 2.** The storage landed as planned. Of the docs this
+rung named, only `docs/backup_restore.md` states what happens to an
+upload, so it took the change. `spec/architecture.md`,
+`docs/database.md` and `docs/security_posture.md` are waived in `Doc
+impact`: none lists tables or retained data.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -153,10 +161,9 @@ Taken 2026-10-19 at `9b6e0afa`.
 
 ## Open questions
 
-- **Keep the replace tick ticked on a resubmit?** After an S4 or
-  group-clear ask, the operator had already ticked replace. Recommended:
-  render it ticked again, while a missing-replace ask renders it
-  unticked. Decided by the author before rung 3.
+- ~~Keep the replace tick ticked on a resubmit?~~ **Yes** (author,
+  2026-10-19): after an S4 or group-clear ask the replace tick renders
+  ticked again; after a missing-replace ask it renders unticked.
 
 ## Out of scope
 
@@ -173,6 +180,7 @@ Taken 2026-10-19 at `9b6e0afa`.
 - `spec/setup_pages.md` — the upload cards: an ask holds the file; the held name, the token, Dismiss as a discard (rung 3).
 - `spec/quick_setup_card_spec.md` — Quick Setup's held slots, the S4 sentence, Dismiss (rung 4).
 - `spec/ui_elements.md` — §5a: an upload banner's Dismiss discards a hold (rungs 3–4).
-- `spec/architecture.md` — the `held_uploads` table and `app/services/held_uploads.py` in the module map (rung 2).
-- `docs/database.md` — the `held_uploads` table (rung 2).
-- `docs/security_posture.md` — held uploads: operator and session scope, the one-hour lifetime (rung 2).
+- `docs/backup_restore.md` — "Import files": an upload that asks holds its files in `held_uploads`, its scope, cap, lifetime and deletion (rung 2).
+- `spec/architecture.md` — the `held_uploads` table and `app/services/held_uploads.py` in the module map (rung 2). <!-- doc-impact-waived: the module map lists route modules, not services or tables; rehydrate_stashes is not in it either (rung 2, 2026-10-19) -->
+- `docs/database.md` — the `held_uploads` table (rung 2). <!-- doc-impact-waived: the doc carries no table inventory to add a row to (rung 2, 2026-10-19) -->
+- `docs/security_posture.md` — held uploads: operator and session scope, the one-hour lifetime (rung 2). <!-- doc-impact-waived: it carries no data-at-rest section; docs/backup_restore.md "Import files" is where retained uploads are stated (rung 2, 2026-10-19) -->

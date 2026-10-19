@@ -2,6 +2,7 @@ from app.db.models.assignment import Assignment
 from app.db.models.audit_event import AuditEvent
 from app.db.models.data_shape import DataShape
 from app.db.models.email_outbox import EmailOutbox
+from app.db.models.held_upload import HeldUpload
 from app.db.models.instrument import Instrument
 from app.db.models.instrument_field import InstrumentDisplayField, InstrumentResponseField
 from app.db.models.instrument_view_policy import InstrumentViewPolicy
@@ -32,6 +33,7 @@ __all__ = [
     "AuditEvent",
     "DataShape",
     "EmailOutbox",
+    "HeldUpload",
     "Instrument",
     "InstrumentDisplayField",
     "InstrumentResponseField",
