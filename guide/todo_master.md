@@ -32,10 +32,10 @@ Two sibling registers hold the open work that is not queued here:
   waits on it, until the author lifts the hold. That covers the outline
   `guide/segment_21_domain_retrofit.md`, its sub-segments 21A–21D, and
   the Cordware design documents in `docs/`,
-  `docs/cordware_repository_strategy_v0.7.md` and
-  `docs/cordware_rrw_integration_spec_v0.2.md`. v0.7 (2026-10-18)
-  replaced v0.4, now in `docs/archive/` with v0.5, v0.6 and the planning
-  notes as decision history. The v8 status report,
+  `docs/cordware_repository_strategy_v0.7.md`. v0.7 (2026-10-18)
+  replaced v0.4, now in `docs/archive/` with v0.5, v0.6, the planning
+  notes and integration spec v0.2 (archived 2026-10-19; the outline
+  carries what only it stated) as decision history. The v8 status report,
   `docs/cordware_nus_azure_status_2026-10-16_v8.md`, is the deployment's
   status of record (it replaced `docs/archive/nus_azure_status.md`).
 

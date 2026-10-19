@@ -3,7 +3,8 @@
 > **Needs updating to fit the finalized Cordware spec** (author,
 > 2026-10-16). This outline was written against the v0.1 integration spec
 > and the 15 October addendum, both since replaced by
-> `docs/cordware_rrw_integration_spec_v0.2.md`,
+> `docs/archive/cordware_rrw_integration_spec_v0.2.md` (archived
+> 2026-10-19; see "Carried from integration spec v0.2" below),
 > `docs/cordware_repository_strategy_v0.7.md` and
 > `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Those make RRW a
 > module inside one Cordware App Service rather than its own App Service
@@ -11,6 +12,25 @@
 > RRW at this repository's root and mounts it at `/reviewrobin` from a
 > small `cordware/` host package. Rework the split, the decisions and the audit
 > against the final version before any sub-segment opens.
+
+**Carried from integration spec v0.2** (archived 2026-10-19). v0.7
+is the strategy (author, 2026-10-19), and v0.7 §3–§5 and §8 cover most
+of v0.2. What v0.2 stated and v0.7 does not, kept here for the rework:
+
+- A deep link (`/reviewrobin/sessions/123`) survives the Easy Auth round
+  trip and returns to the full requested path (v0.2 §3, §11).
+- Probe paths need no interactive auth: `/health` for the host, and an
+  optional `/reviewrobin/health` for RRW (v0.2 §12).
+- RRW's error handlers, middleware order and app-wide dependencies still
+  behave correctly when mounted (v0.2 §7).
+- Tests that build RRW as the whole app gain a mounted-mode harness, and
+  CI runs both modes (v0.2 §7, §15–§16).
+- Downloads and every absolute URL, emails included, stay under
+  `/reviewrobin` and never expose the backend `azurewebsites.net` host
+  (v0.2 §10, §18 criterion 14).
+- A user authenticated by Easy Auth but not authorized by RRW is still
+  denied by RRW (v0.2 §18 criterion 7).
+- RRW settings cannot collide with another module's (v0.2 §14).
 
 **Opened:** 2026-10-16 · **Theme:** RRW stops assuming its public root is `/` · **Related:** `docs/cordware_rrw_integration_spec.md`, `docs/nus_azure_status_cordware_addendum.md`, `docs/nus_azure_status.md`, `docs/deployment_nus.md`
 
