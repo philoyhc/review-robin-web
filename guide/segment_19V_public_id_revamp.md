@@ -419,15 +419,8 @@ Taken 2026-10-18 at `e406297e`.
 ### Open questions
 
 1. ~~Build at all?~~ Yes (author, 2026-10-18).
-2. **The review page's sort keys.** Its source also carries
-   workspace-wide IDs. The sort cookie name is
-   `rrw-sort-rs-{public_id}-{instrument.id}`, and the header keys are
-   `display:{field.id}` / `response:{field.id}`
-   (`app/web/templates/reviewer/review_surface.html:333`, `:374`, `:396`).
-   They count instruments and fields, not rows, and the server reads
-   them back for the sort (`app/web/views/_sort.py`). Fold them into this
-   item, or leave them as page source in the way Item 2 first judged
-   its own case? The author decides.
+2. ~~The review page's sort keys?~~ Folded into 19V as Item 4 (author,
+   2026-10-18).
 
 ### Out of scope
 
@@ -438,3 +431,99 @@ Taken 2026-10-18 at `e406297e`.
 - `spec/participant_model.md` — the collation CSV route takes the instrument's per-session number, not its ID (Item 3).
 - `spec/instruments.md` — `session_seq` is unique per session, by index (Item 3; added at Codex's read of the plan).
 - `docs/database.md` — the unique index on `instruments (session_id, session_seq)` (Item 3; added at Codex's read of the plan).
+
+---
+
+## Item 4 — The review page's sort keys stop carrying IDs
+
+Raised 2026-10-18 as Item 3's open question 2, and folded in at the
+author's word.
+
+### Opportunity
+
+After Item 3, the review page is the last participant page whose source
+carries workspace-wide IDs (an audit of `/me` templates, views and
+downloads, 2026-10-18). Its sortable tables name the remembered-sort
+cookie `rrw-sort-rs-{public_id}-{instrument.id}`, and its headers carry
+`display:{field.id}` and `response:{field.id}`
+(`app/web/templates/reviewer/review_surface.html:333`, `:374`, `:396`).
+A reviewer reads off how many instruments and fields the workspace has
+made.
+
+### Decision
+
+Key each on what the page already shows:
+
+- **Cookie:** `rrw-sort-rs-{public_id}-{instrument.session_seq}`. The
+  number is unique per session since Item 3.
+- **Display header:** `display:{source_type}.{source_field}`, e.g.
+  `display:reviewee.tag_1`. The display-field service refuses a second
+  field with the same source on an instrument.
+- **Response header:** `response:{field_key}`. Unique per instrument
+  (`uq_instrument_field_key`), and already in the answer boxes' names.
+
+Rejected: a per-instrument ordinal for fields, as Item 2 did for
+answers. An ordinal shifts when a field is deleted, so a remembered sort
+would move to the next column. A source or key stays with its column
+through reorders and deletes.
+
+### Semantics
+
+- **An old cookie** is forgotten once: its name changes, and its keys
+  match nothing. This is the same as Item 1's address change.
+- **A duplicate source.** The Settings import does not refuse two
+  display fields with one source, so two headers can share a key. Both
+  columns show the same values, so a sort by either is the same. The
+  server maps the key to the first in display order.
+- **A deleted field or column.** Its key matches no header and is
+  dropped, as an unknown key is today. A recycled `session_seq` hands an
+  old instrument's remembered sort to its successor, which keeps only
+  the keys that still match.
+- **The browser script** compares keys as strings (`getAttribute`, never
+  a CSS selector), so a field key containing quotes or colons needs no
+  escaping.
+
+### Blast radius (measured)
+
+Taken 2026-10-18 at `eb6c5748`.
+
+- **App:** 3 template sites (`review_surface.html:333`, `:374`, `:396`),
+  the decoder in `app/web/views/_sort.py` and its one caller
+  (`app/web/routes_reviewer/_surface/_context.py:533`). Base's sort
+  script is key-agnostic: it only matches the `response:` prefix
+  (`app/web/templates/base.html:5425`).
+- **Tests:** 6 files, 29 lines (`grep -rnE "rrw-sort-rs|[\"'](display|response):[^ ]" tests/ --include=*.py`).
+- **Spec:** `spec/sort_by_reviewee.md` (cookie name and keys) and
+  `spec/settings_inventory.md` (cookie inventory row).
+
+### PR ladder
+
+1. **Build:** cookie name, header keys, decoder, tests and specs, in one
+   rung.
+
+### Definition of done
+
+- The review page's source carries no instrument or field ID in a sort
+  key or cookie name; a test pins it with an instrument whose `id`
+  differs from its `session_seq`.
+- A sort stored under the new keys is applied by the server on reload,
+  and `tests/browser/test_reviewer_sort_cookie.py` passes.
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19V.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; on the segment's last item, plan moved to `guide/archive/` + index row
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- **Operator pages**, as in Item 1. Their sort cookies already use the
+  public ID, and their tables are the operator's own.
+
+### Doc impact
+
+- `spec/sort_by_reviewee.md` — the reviewer cookie is named by `session_seq`, and its keys by display source and response `field_key` (Item 4).
+- `spec/settings_inventory.md` — the `rrw-sort-rs` cookie row names the instrument by `session_seq` (Item 4).
