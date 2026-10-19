@@ -786,7 +786,7 @@
       function apply() {
         // A banner that wants attention wins: base.html scrolls to the
         // first SHOWN ``.banner-scroll-target`` — Quick Setup renders one
-        // per slot, ``hidden`` unless that slot was refused.
+        // per slot, ``hidden`` unless that slot had a refusal.
         var shown = Array.prototype.some.call(
           document.querySelectorAll('.banner-scroll-target'),
           function (el) { return el.getClientRects().length > 0; }
