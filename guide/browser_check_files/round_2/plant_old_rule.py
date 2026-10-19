@@ -1,4 +1,4 @@
-"""Store a Band 1 rule the card can no longer save, for Part 6 of this
+"""Store a Band 1 rule the card can no longer save, for Part 5 of this
 folder's README: no route stores one any more, so a fresh database cannot
 hold the case without writing it directly.
 
@@ -9,7 +9,9 @@ database `.env` names (uvicorn can keep running):
     python guide/browser_check_files/round_2/plant_old_rule.py r-pairs retired
 
 The session's first instrument must already have a saved Band 1 rule (Part
-6 saves one). ``same-side`` makes Who is being reviewed compare two
+5 saves one). The rule replaces the whole rule set, so each run wipes what
+was stored before. It refuses any database but a local SQLite file.
+``same-side`` makes Who is being reviewed compare two
 relationship tags; ``retired`` makes Who does the review filter on a
 person-level relationship tag, a field retired on 2026-10-18.
 """
@@ -23,6 +25,7 @@ sys.path.insert(0, str(Path.cwd()))
 
 from sqlalchemy import select  # noqa: E402
 
+from app.config import settings  # noqa: E402
 from app.db.models import Instrument, ReviewSession, SessionRuleSet  # noqa: E402
 from app.db.session import get_sessionmaker  # noqa: E402
 
@@ -44,6 +47,8 @@ RULES = {
 
 def main(code: str, case: str) -> None:
     rule = RULES[case]
+    if not settings.database_url.startswith("sqlite"):
+        sys.exit("This writes rules directly; run it only against local SQLite.")
     with get_sessionmaker()() as db:
         review_session = db.execute(
             select(ReviewSession).where(ReviewSession.code == code)

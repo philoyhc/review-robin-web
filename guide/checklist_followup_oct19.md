@@ -19,7 +19,7 @@ Nothing open: items 1–3 shipped. Item 3 became segment 19W,
   - steps 50–51 (the Team review card's split and merge) are Part 3,
     driven in Chromium on 2026-10-19;
   - step 16's `BC fresh` is Part 1;
-  - the three reopened rows are steps 12, 43 and 44;
+  - the three reopened rows are steps 11, 12, 43 and 44;
   - Parts 9–12 are Parts 4–7.
 - **Still set aside:** the Azure-only rows and D28's Rehydrate row, as
   that README lists them.
