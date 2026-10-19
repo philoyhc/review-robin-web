@@ -153,6 +153,11 @@ class QuickSetupContext:
     description: str
     title: str = "Quick Setup"
     show_confirm_replace: bool = True
+    """Gate the card-level "Yes, replace existing reviewers, reviewees
+    or settings, according to what is uploaded. …" checkbox just above
+    the footer. Suppressed on the new-session
+    Quick Setup variant — there's nothing to replace yet."""
+
     held_token: str | None = None
     """The hold a refused submit's ask left (segment 19W): rides the
     submit-all form as ``held_token``, and makes the banner's Dismiss a
@@ -161,10 +166,11 @@ class QuickSetupContext:
     confirm_replace_checked: bool = False
     """The card-level replace tick renders ticked: after the deletion
     ask the operator had already ticked it (author, 2026-10-19)."""
-    """Gate the card-level "Yes, replace existing reviewers, reviewees
-    or settings, according to what is uploaded. …" checkbox just above
-    the footer. Suppressed on the new-session
-    Quick Setup variant — there's nothing to replace yet."""
+
+    held_lost: bool = False
+    """The submit named a hold that had lapsed (an hour, or not this
+    operator's and session's), so nothing was saved; the card says so
+    above the slots (segment 19W)."""
 
     external_form_id: str | None = None
     """When set, slot inputs are associated with this external form
@@ -186,6 +192,7 @@ def build_quick_setup_context(
     error_count: int = 0,
     held: dict[str, str] | None = None,
     held_token: str | None = None,
+    held_lost: bool = False,
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
 
@@ -377,9 +384,11 @@ def build_quick_setup_context(
         is_locked=not is_available,
         description=description,
         held_token=held_token if held else None,
-        # Only the deletion ask was reached with the replace tick on; a
-        # missing-tick ask leaves it to the operator (author, 2026-10-19).
-        confirm_replace_checked=bool(held) and _deletion_count > 0,
+        # The deletion ask is reached only with the replace tick on, so it
+        # renders ticked again; a missing-tick ask leaves it to the
+        # operator (author, 2026-10-19).
+        confirm_replace_checked=_deletion_count > 0,
+        held_lost=held_lost,
     )
 
 

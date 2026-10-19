@@ -161,3 +161,53 @@ def test_dismiss_ends_the_hold(client: TestClient, db: Session) -> None:
         f"/operator/sessions/{s.public_id}#quick-setup"
     )
     assert _held(db) == 0
+
+
+def test_a_lapsed_hold_saves_nothing_and_says_so(
+    client: TestClient, db: Session
+) -> None:
+    s = _session(client, db, "qs-held-lapsed")
+    _submit(client, s, {"reviewers": ("r.csv", REVIEWERS)}, confirm_replace="true")
+    asked = _submit(client, s, {"reviewers": ("r2.csv", REVIEWERS_2)})
+    token = _token(asked.text)
+    db.execute(HeldUpload.__table__.delete())
+    db.commit()
+
+    tried = _submit(
+        client, s, {"reviewees": ("e.csv", REVIEWEES)},
+        held_token=token, confirm_replace="true",
+    )
+    assert tried.status_code == 422
+    assert "data-quick-setup-held-lost" in tried.text
+    db.expire_all()
+    assert [r.name for r in db.execute(
+        select(Reviewer).where(Reviewer.session_id == s.id)
+    ).scalars()] == ["Ann"]
+    assert db.execute(
+        select(func.count()).select_from(Reviewee).where(Reviewee.session_id == s.id)
+    ).scalar_one() == 0
+
+
+def test_a_new_file_replaces_only_its_slot_of_the_hold(
+    client: TestClient, db: Session
+) -> None:
+    s = _session(client, db, "qs-held-swap")
+    _submit(client, s, {"reviewers": ("r.csv", REVIEWERS)}, confirm_replace="true")
+    asked = _submit(
+        client, s,
+        {"reviewers": ("r2.csv", REVIEWERS_2), "reviewees": ("e.csv", REVIEWEES)},
+    )
+    newer = b"ReviewerName,ReviewerEmail\nDot,dot@example.edu\n"
+    answered = _submit(
+        client, s, {"reviewers": ("r3.csv", newer)},
+        held_token=_token(asked.text), confirm_replace="true",
+    )
+    assert answered.status_code == 303, answered.text[:300]
+    db.expire_all()
+    assert [r.name for r in db.execute(
+        select(Reviewer).where(Reviewer.session_id == s.id)
+    ).scalars()] == ["Dot"]
+    assert [r.name for r in db.execute(
+        select(Reviewee).where(Reviewee.session_id == s.id)
+    ).scalars()] == ["Cy"]
+    assert _held(db) == 0

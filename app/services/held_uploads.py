@@ -85,10 +85,11 @@ def hold(
     """Hold ``files`` (slot → file) and return their token.
 
     With ``token``, the files join that hold, each replacing any file the
-    hold already has for its slot; a token that is not this operator's
-    and this session's starts a new hold instead. A file over
-    :data:`MAX_HELD_BYTES`, or an empty one, is skipped. Returns ``None``
-    when nothing ends up held. Sweeps expired holds first.
+    hold already has for its slot (a skipped file still drops the old
+    one); a token that is not this operator's and this session's starts
+    a new hold instead. A file over :data:`MAX_HELD_BYTES`, or an empty
+    one, is skipped. Returns ``None`` when nothing ends up held. Sweeps
+    expired holds first. :func:`take` says what the hold now holds.
     """
     sweep(db)
     keep = {
@@ -100,16 +101,22 @@ def hold(
         db, token=token, user=user, session_id=session_id
     ):
         token = None
-    if not keep:
-        return token
-    if token is None:
-        token = secrets.token_urlsafe(_TOKEN_BYTES)
-    else:
+    if token is not None:
+        # Every slot this call brings drops what the hold had for it,
+        # kept or not: a file too large to hold must not leave the one it
+        # replaced to be sent again in its place.
         db.execute(
             delete(HeldUpload).where(
-                HeldUpload.token == token, HeldUpload.slot.in_(list(keep))
+                HeldUpload.token == token, HeldUpload.slot.in_(list(files))
             )
         )
+        db.flush()
+    if not keep:
+        return token if token is not None and _rows(
+            db, token=token, user=user, session_id=session_id
+        ) else None
+    if token is None:
+        token = secrets.token_urlsafe(_TOKEN_BYTES)
     for slot, held in keep.items():
         db.add(
             HeldUpload(
@@ -161,11 +168,15 @@ def sweep(db: Session) -> int:
     :func:`hold`, so no scheduler is needed. Compared in Python, as
     ``rehydrate_stash.sweep`` does: SQLite hands back naive datetimes,
     and the table holds at most a few rows per operator at a time."""
-    deleted = 0
-    for row in db.execute(select(HeldUpload)).scalars():
-        if _expired(row):
-            db.delete(row)
-            deleted += 1
-    if deleted:
+    cutoff = _now() - HOLD_TTL
+    stale = [
+        row_id
+        for row_id, created_at in db.execute(
+            select(HeldUpload.id, HeldUpload.created_at)
+        )
+        if _as_aware_utc(created_at) < cutoff
+    ]
+    if stale:
+        db.execute(delete(HeldUpload).where(HeldUpload.id.in_(stale)))
         db.flush()
-    return deleted
+    return len(stale)

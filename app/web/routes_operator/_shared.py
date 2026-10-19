@@ -275,7 +275,14 @@ def hold_for_ask(
     db.commit()
     if token is None:
         return None
-    return {"token": token, "filename": upload.filename or "upload.csv"}
+    # Name what the hold holds, not what was sent: a file it skipped (an
+    # empty or oversized one) is not held, and must not read as held.
+    held = held_uploads.take(
+        db, token=token, user=user, session_id=review_session.id
+    ).get(slot)
+    if held is None:
+        return None
+    return {"token": token, "filename": held.filename}
 
 
 def release_hold(

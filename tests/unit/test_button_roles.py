@@ -98,9 +98,10 @@ def test_every_cancel_is_secondary() -> None:
 #: Since segment 19W the upload card's and Quick Setup's each have two
 #: forms (a link, or a submit that ends a held file's hold), and so does
 #: the Relationships group-clear banner on the Upload card; the Danger
-#: Zone's has the link only.
+#: Zone's has the link only. Quick Setup's third is the lapsed-hold
+#: banner's link.
 PINNED_DISMISSES = {
-    "operator/partials/_quick_setup_card.html": 2,
+    "operator/partials/_quick_setup_card.html": 3,
     "operator/partials/_upload_problems.html": 2,
     "operator/session_relationships.html": 3,
 }

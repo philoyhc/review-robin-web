@@ -456,6 +456,93 @@ class _UnitRefused(Exception):
 _ASKS = frozenset({"needs_confirm", "deletes_instruments"})
 
 
+@dataclass(frozen=True)
+class _Merged:
+    """A submit's files in slot order: the ones chosen now, and for each
+    slot left empty the one a refused submit held (segment 19W).
+    ``token`` is the hold in play; ``lost`` says the page named a hold
+    that has lapsed or is not this operator's and session's."""
+
+    contents: dict[str, bytes]
+    filenames: dict[str, str]
+    token: str | None
+    lost: bool = False
+
+
+def _merge_held(
+    db: Session,
+    *,
+    chosen: dict[str, bytes],
+    chosen_names: dict[str, str],
+    held_token: str | None,
+    user: User,
+    review_session: ReviewSession,
+) -> _Merged:
+    token = (held_token or "").strip() or None
+    held = (
+        held_uploads.take(db, token=token, user=user, session_id=review_session.id)
+        if token
+        else {}
+    )
+    contents: dict[str, bytes] = {}
+    filenames: dict[str, str] = {}
+    for kind in SLOT_ORDER:
+        if kind in chosen:
+            contents[kind] = chosen[kind]
+            filenames[kind] = chosen_names[kind]
+        elif kind in held:
+            contents[kind] = held[kind].content
+            filenames[kind] = held[kind].filename
+    return _Merged(
+        contents=contents,
+        filenames=filenames,
+        token=token if held else None,
+        lost=token is not None and not held,
+    )
+
+
+def _settle_hold(
+    db: Session,
+    *,
+    refusal: _SlotRefusal | None,
+    merged: _Merged,
+    user: User,
+    review_session: ReviewSession,
+) -> tuple[dict[str, str] | None, str | None]:
+    """After the submit: on an ask, hold every file of it and return what
+    the hold now holds, by slot, with its token; otherwise end any hold
+    in play. The names come from the hold itself, so a file it skipped
+    (over the cap) is neither named nor sent again."""
+    if refusal is None or refusal.failure.reason not in _ASKS:
+        release_hold(
+            db, token=merged.token, user=user, review_session=review_session
+        )
+        return None, None
+    # Nothing of the refused unit rides with the hold's commit.
+    db.rollback()
+    token = held_uploads.hold(
+        db,
+        user=user,
+        session_id=review_session.id,
+        files={
+            kind: held_uploads.HeldFile(
+                filename=merged.filenames[kind] or "upload.csv", content=content
+            )
+            for kind, content in merged.contents.items()
+        },
+        token=merged.token,
+    )
+    db.commit()
+    if token is None:
+        return None, None
+    held = held_uploads.take(
+        db, token=token, user=user, session_id=review_session.id
+    )
+    if not held:
+        return None, None
+    return {kind: f.filename for kind, f in held.items()}, token
+
+
 def _attached(**files: UploadFile | None) -> dict[str, UploadFile]:
     """The slots with a file chosen, in dispatch order. A browser posts
     an untouched file input as an empty-named part, so a blank filename
@@ -1113,26 +1200,29 @@ async def quick_setup_submit_all(
         observers=observers_file,
         settings=settings_file,
     )
-    token = (held_token or "").strip() or None
     chosen = {kind: await upload.read() for kind, upload in uploads.items()}
-    held_files = (
-        held_uploads.take(
-            db, token=token, user=user, session_id=review_session.id
-        )
-        if token
-        else {}
+    merged = _merge_held(
+        db,
+        chosen=chosen,
+        chosen_names={k: u.filename or "" for k, u in uploads.items()},
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
     )
-    if not held_files:
-        token = None
-    contents: dict[str, bytes] = {}
-    filenames: dict[str, str] = {}
-    for kind in SLOT_ORDER:
-        if kind in chosen:
-            contents[kind] = chosen[kind]
-            filenames[kind] = uploads[kind].filename or ""
-        elif kind in held_files:
-            contents[kind] = held_files[kind].content
-            filenames[kind] = held_files[kind].filename
+    if merged.lost:
+        # The hold the page named has lapsed: save nothing, rather than
+        # the newly chosen files alone, and say so (segment 19W).
+        return render_session_home(
+            request,
+            db,
+            user=user,
+            review_session=review_session,
+            quick_setup=views.build_quick_setup_context(
+                db, review_session, user=user, held_lost=True
+            ),
+            http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+    contents, filenames = merged.contents, merged.filenames
     refusal = await _run_quick_setup_contents(
         contents=contents,
         filenames=filenames,
@@ -1144,33 +1234,13 @@ async def quick_setup_submit_all(
         replacing=True,
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
-    held_names: dict[str, str] | None = None
-    if refusal is not None and refusal.failure.reason in _ASKS:
-        # Nothing of the refused unit rides with the hold's commit.
-        db.rollback()
-        token = held_uploads.hold(
-            db,
-            user=user,
-            session_id=review_session.id,
-            files={
-                kind: held_uploads.HeldFile(
-                    filename=filenames[kind] or "upload.csv",
-                    content=content,
-                )
-                for kind, content in contents.items()
-            },
-            token=token,
-        )
-        db.commit()
-        if token is not None:
-            held_names = {
-                kind: filenames[kind] or "upload.csv"
-                for kind, content in contents.items()
-                if 0 < len(content) <= held_uploads.MAX_HELD_BYTES
-            }
-    else:
-        release_hold(db, token=token, user=user, review_session=review_session)
-        token = None
+    held_names, token = _settle_hold(
+        db,
+        refusal=refusal,
+        merged=merged,
+        user=user,
+        review_session=review_session,
+    )
     if refusal is not None or contents:
         return _slot_response(
             request,
@@ -1180,7 +1250,7 @@ async def quick_setup_submit_all(
             kind=list(contents)[-1] if contents else "",
             refusal=refusal,
             held=held_names,
-            held_token=token if held_names else None,
+            held_token=token,
         )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.public_id}",
