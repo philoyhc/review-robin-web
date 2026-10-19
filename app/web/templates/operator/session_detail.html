@@ -785,11 +785,13 @@
       if (typeof y !== 'number') return;
       function apply() {
         // A banner that wants attention wins: base.html scrolls to the
-        // first ``.banner-scroll-target``. Only when it is shown, though —
-        // Quick Setup's error banners render ``hidden`` on every load, and
-        // scrolling to one of those does nothing.
-        var banner = document.querySelector('.banner-scroll-target');
-        if (banner && banner.getClientRects().length) return;
+        // first SHOWN ``.banner-scroll-target`` — Quick Setup renders one
+        // per slot, ``hidden`` unless that slot was refused.
+        var shown = Array.prototype.some.call(
+          document.querySelectorAll('.banner-scroll-target'),
+          function (el) { return el.getClientRects().length > 0; }
+        );
+        if (shown) return;
         window.scrollTo(0, y);
       }
       apply();

@@ -1456,6 +1456,12 @@
       .roster-card {
         scroll-margin-top: var(--space-4);
       }
+      /* A card a banner lands on (segment 19X Item 2): its top border
+         a line below the viewport's top, so it reads as the card's
+         start rather than a crop. */
+      [data-banner-landing] {
+        scroll-margin-top: 1.5rem;
+      }
       /* The 19J.5 range strip — `.table-pager`, `.table-pager-link`,
          `.table-pager-gap`, `.table-pager-jump` — was retired at 19J.9
          rung 2. It could only reach two pages per click whatever the
@@ -5790,14 +5796,24 @@
       // navigating away from the banner naturally returns the
       // operator to where they were before the jump. See
       // ``spec/ui_elements.md`` §5a "Banner behaviour conventions".
+      //
+      // The first SHOWN target: a card may render a banner per slot,
+      // hidden unless that slot was refused (Quick Setup does), and
+      // scrolling a hidden one moves nothing. A banner inside a
+      // ``[data-banner-landing]`` lands its card instead, so the card's
+      // heading shows above it (segment 19X Item 2).
       (function () {
         function scrollFirstBannerIntoView() {
-          var banner = document.querySelector(".banner-scroll-target");
+          var banner = Array.prototype.find.call(
+            document.querySelectorAll(".banner-scroll-target"),
+            function (el) { return el.getClientRects().length > 0; }
+          );
           if (!banner) return;
+          var landing = banner.closest("[data-banner-landing]") || banner;
           // ``setTimeout`` lets the browser's native fragment-jump run
           // first; we then override.
           setTimeout(function () {
-            banner.scrollIntoView({ behavior: "smooth", block: "start" });
+            landing.scrollIntoView({ behavior: "smooth", block: "start" });
           }, 0);
         }
         if (document.readyState === "loading") {

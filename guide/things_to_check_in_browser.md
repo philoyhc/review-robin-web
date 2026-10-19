@@ -457,3 +457,10 @@ instrument card unlocked.
   tick `Yes, delete the existing … relationships` and press Delete all:
   the red banner asks, and the delete tick above it is still ticked with
   `Delete all relationships` live.
+
+## A refused Quick Setup submit lands above the card (19X Item 2)
+
+- [ ] **Any slot.** On Session Home, Quick Setup a refused Settings file
+  (or any slot after Reviewers): the page reloads with the Quick Setup
+  card's top border a line below the top of the window, not at the top
+  of the page. A refused Reviewers file lands the same way.

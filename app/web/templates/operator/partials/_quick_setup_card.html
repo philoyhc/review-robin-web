@@ -138,7 +138,7 @@
 {% set submit_all_form_id = quick_setup.external_form_id or "quick-setup-submit-all-form" %}
 {% set is_session_scoped = session is defined and session %}
 {% set has_own_form = is_session_scoped and not quick_setup.external_form_id %}
-<div class="card" id="quick-setup">
+<div class="card" id="quick-setup" data-banner-landing>
   {# The outer submit-all form wraps the body wrapper so file-input
      name attributes survive submission. Rendered as an empty form
      element — the inputs themselves live inside the slots and use
