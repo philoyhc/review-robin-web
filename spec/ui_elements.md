@@ -447,9 +447,11 @@ banner. A card that renders a banner per slot, hidden unless that slot
 was refused (Quick Setup), relies on the "shown": the first in the
 document may be hidden. A banner inside a `[data-banner-landing]`
 element scrolls that element instead, landing with its top border a
-line (`scroll-margin-top: 1.5rem`) below the viewport's top so the
-card's heading reads above the banner; the Quick Setup card is the one
-landing today. Without this the operator can land on a long page with
+line (`scroll-margin-top: 1.5rem`) below the viewport's top, as far as
+the page can scroll, so the card's top border and heading read above
+the banner. Session Home's Quick Setup and Owners cards are the
+landings today; the margin applies to any jump to them, a `#quick-setup`
+or `#owners-card` fragment included. Without this the operator can land on a long page with
 the banner offscreen — common when the redirect URL fragment
 preserves the source row's anchor for the Cancel-return path.
 
@@ -461,7 +463,7 @@ clicks Cancel, the browser navigates to a clean URL (no banner
 flag) and the natural fragment-jump returns them to where they
 were before the banner pulled them up. The auto-scroll script
 doesn't fire on the dismissed page because no
-`banner-scroll-target` exists there.
+`banner-scroll-target` is shown there.
 
 ### 6. Buttons
 

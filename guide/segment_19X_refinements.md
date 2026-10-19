@@ -146,6 +146,15 @@ Taken 2026-10-19 at `8ae50337`.
 
 - None.
 
+### Status
+
+**2026-10-19, build.** One rung as planned, and the Owners card opts in
+too: the read found its banner, which sits after the Quick Setup card on
+Session Home, scrolled itself and cropped the card's heading once the
+first-match no longer stopped on a hidden Quick Setup banner. The
+landing holds as far as the page can scroll; on a window taller than the
+rest of the page the card shows lower down.
+
 ### Out of scope
 
 - Other pages' banners: they keep scrolling to themselves; only a card
