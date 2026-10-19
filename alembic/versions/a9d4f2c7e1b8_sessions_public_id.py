@@ -1,6 +1,6 @@
 """sessions.public_id: a random URL handle for each session
 
-Segment 19V Item 1 (``guide/segment_19V_public_id_revamp.md``): session
+Segment 19V Item 1 (``guide/archive/segment_19V_public_id_revamp.md``): session
 URLs carry a random ``public_id`` instead of the auto-increment ``id``,
 which counts the workspace. The upgrade adds the column nullable,
 backfills every existing session with a fresh random value, then makes

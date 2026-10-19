@@ -61,7 +61,7 @@ class ReviewSession(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     # Carried by every session URL in place of ``id``, which counts the
-    # workspace (``guide/segment_19V_public_id_revamp.md`` Item 1). Set
+    # workspace (``guide/archive/segment_19V_public_id_revamp.md`` Item 1). Set
     # once at insert and never changed; not exported.
     public_id: Mapped[str] = mapped_column(
         String(16), unique=True, index=True, nullable=False, default=_new_public_id

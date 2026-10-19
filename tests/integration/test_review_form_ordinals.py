@@ -1,7 +1,7 @@
 """19V Item 2: the review form names answers by the row's ordinal on the
 page, never by assignment ID, and refuses a post made against a page
 whose rows changed since it rendered
-(``guide/segment_19V_public_id_revamp.md``)."""
+(``guide/archive/segment_19V_public_id_revamp.md``)."""
 
 from __future__ import annotations
 

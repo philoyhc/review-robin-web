@@ -11,6 +11,11 @@ own `### Doc impact` and `### Status`, as in 19U. So there is no
 segment-level `## Doc impact`, and `python3 tools/close_check.py 19V.1`
 reads Item 1's.
 
+**Segment closed 2026-10-19 at the author's word**, after the round-2
+browser run checked its rows. All four items had closed (#3126–#3137);
+no participant page carries a workspace-wide ID. Further refinements go
+to `guide/segment_19X_refinements.md`.
+
 ---
 
 ## Item 1 — A session's URL carries a random public ID
