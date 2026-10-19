@@ -362,7 +362,7 @@ Key landmarks in the codebase:
   `apply_cookie_sort`, so sorting composes with paging over the whole
   matching set instead of reordering one fetched page — see
   `spec/assignments.md` "Sorting the pair list".
-- **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_id}]`
+- **Cookies:** `rrw-sort-{surface}-{session_id}[-{instrument_seq}]`
   carrying the canonical
   `[{"key": "...", "dir": "asc|desc"}, ...]` shape,
   percent-encoded (`encodeURIComponent`) — the SSR decoders
