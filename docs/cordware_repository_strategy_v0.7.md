@@ -216,3 +216,12 @@ The production process still shares Python dependency resolution, startup, compu
 | **`v0.7`** | Evolve RRW in place; minimal Cordware identity/hosting shell; independent Residential development; B/C PostgreSQL shortlist | **Current proposal** |
 
 Historical notes, including `cordware_repo_planning.md`, are decision history rather than concurrent implementation instructions. **Required sequence:** RRW URL prefix → shared identity → Residential development → integrated release.
+
+## Addendum A — carried from integration spec v0.2 (2026-10-19)
+
+Integration spec v0.2 (`docs/archive/cordware_rrw_integration_spec_v0.2.md`) is archived: §3–§5 and §8 above cover most of it, and its sync contract belongs to the v0.4 model. These four requirements appeared only there and still apply to stage 1:
+
+1. **Deep links survive sign-in.** A signed-out user opening `/reviewrobin/sessions/123` goes through Easy Auth and returns to that full path, not to `/` or `/reviewrobin/` (v0.2 §3, §11).
+2. **Probe paths need no interactive sign-in.** `/health` for the host, and an optional `/reviewrobin/health` for RRW (v0.2 §12).
+3. **Mounted RRW keeps its own request handling.** Its error handlers, middleware order and app-wide dependencies behave as they do standalone (v0.2 §7).
+4. **No backend hostname leaks.** Downloads and every absolute URL, invitation emails included, stay under `/reviewrobin` and never carry the App Service's `azurewebsites.net` name (v0.2 §10, §18 criterion 14).

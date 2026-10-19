@@ -34,8 +34,8 @@ Two sibling registers hold the open work that is not queued here:
   the Cordware design documents in `docs/`,
   `docs/cordware_repository_strategy_v0.7.md`. v0.7 (2026-10-18)
   replaced v0.4, now in `docs/archive/` with v0.5, v0.6, the planning
-  notes and integration spec v0.2 (archived 2026-10-19; the outline
-  carries what only it stated) as decision history. The v8 status report,
+  notes and integration spec v0.2 (archived 2026-10-19; v0.7's
+  Addendum A carries what only it stated) as decision history. The v8 status report,
   `docs/cordware_nus_azure_status_2026-10-16_v8.md`, is the deployment's
   status of record (it replaced `docs/archive/nus_azure_status.md`).
 
