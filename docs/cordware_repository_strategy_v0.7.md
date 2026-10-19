@@ -200,7 +200,7 @@ The production process still shares Python dependency resolution, startup, compu
 
 ## 8. Acceptance and open decisions
 
-**Architecture is accepted when:** RRW's existing folders, history, tooling and standalone behavior survive; mounted `/reviewrobin/operator/...` and `/reviewrobin/me` routes and all critical links work; Cordware is stateless and supplies trusted identity, hosting and a simple landing page; both apps independently enforce permissions, own action audits, data and migrations; Residential has its own `spec/docs/guide/tests/tools` and scoped CI; B or C is implemented safely (C preferred); and the integrated artifact is staged, tested and deployed with a documented recovery path.
+**Architecture is accepted when:** RRW's existing folders, history, tooling and standalone behavior survive; mounted `/reviewrobin/operator/...` and `/reviewrobin/me` routes and all critical links work; Cordware is stateless and supplies trusted identity, hosting and a simple landing page; both apps independently enforce permissions, own action audits, data and migrations; Residential has its own `spec/docs/guide/tests/tools` and scoped CI; B or C is implemented safely (C preferred); and the integrated artifact is staged, tested and deployed with a documented recovery path. <!-- path-ref-ok -->
 
 **Implementation decisions still open:** exact app factory/lifespan contract; mount-aware URL approach; trusted-identity adapter; B versus C and DB-role/recovery arrangements with NUS IT; dependency locking/build artifact; CI required-check and release-gate policy; scopes for RRW's repo-wide tooling; repository privacy/rename timing.
 
