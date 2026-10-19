@@ -57,7 +57,7 @@ Taken 2026-10-19 at `8ae50337`.
 - `python3 tools/close_check.py 19X.1` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entry deleted; the item block stays until the segment closes
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
 
 ### Open questions
 
@@ -71,6 +71,7 @@ Taken 2026-10-19 at `8ae50337`.
 
 - `spec/setup_pages.md` — § *The Danger Zone's `delete-all`*: after a group-clear ask the delete tick renders ticked (Item 1).
 - `guide/things_to_check_in_browser.md` — a row for the tick (Item 1).
+- `guide/todo_master.md` — drop Item 1 from the 19X entry when it closes (Item 1).
 
 ## Item 2 — A Quick Setup banner lands just above the card
 
@@ -130,7 +131,7 @@ Taken 2026-10-19 at `8ae50337`.
 - `python3 tools/close_check.py 19X.2` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
 - `## Status` compacted to intended vs done; answered open questions collapsed
-- `guide/todo_master.md` entry deleted; the item block stays until the segment closes
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
 
 ### Open questions
 
@@ -145,3 +146,4 @@ Taken 2026-10-19 at `8ae50337`.
 
 - `spec/ui_elements.md` — §5a *Auto-scroll on display*: the first shown banner, and `data-banner-landing` (Item 2).
 - `guide/things_to_check_in_browser.md` — a row for the landing (Item 2).
+- `guide/todo_master.md` — drop Item 2 from the 19X entry when it closes (Item 2).
