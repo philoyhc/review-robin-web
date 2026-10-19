@@ -427,7 +427,11 @@ replace without its tick), and no edit is held in a form to back out
 of, so their one button reads **Dismiss**. It does what Cancel
 would: it returns to the page without the banner (Quick Setup's, on a 422
 re-render of Session Home, links back to Home's card; the Setup page's,
-a 400 re-render, reopens the upload card).
+a 400 re-render, reopens the upload card). Home has already renamed the
+re-render's address to its own path, so Quick Setup's link would differ
+from it only by fragment and leave the banner up. In that case the
+card's script empties and hides the banner in place, dropping any tick
+it re-offered, and scrolls to the slot.
 
 **Auto-scroll on display.** Every banner card carries the
 `banner-scroll-target` class plus a unique anchor id (e.g.
