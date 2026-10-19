@@ -2,7 +2,7 @@
 (ruling A27).
 
 The server cannot sort by response values. When the reviewer's cookie
-holds a ``response:N`` key it renders the operator default instead, and
+holds a ``response:`` key it renders the operator default instead, and
 the on-load script redraws the badges and re-sorts the rows through the
 click path's ``_rrwApplySort``. Without that step a reload shows ``1↑``
 over rows in server order; with it, but over any order other than the

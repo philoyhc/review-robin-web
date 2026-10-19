@@ -498,12 +498,20 @@ Taken 2026-10-18 at `eb6c5748`.
 
 ### Status
 
-**Built 2026-10-19** in one rung, as planned.
+**Closed 2026-10-19** (#3137), one rung as planned; the segment stays open.
 
 - **Decisions confirmed at build.** The decoder maps `display:` keys
   through a source-to-ID table built in display order, so a duplicate
   source resolves to the first field. A key in the old `display:<id>`
   form names no column and is dropped.
+- **Reads: one** (`diff-reviewer`, `7e02e9bf..ac226b28`). No blocker;
+  three nits, all fixed: a stale cookie-shape comment in `base.html`, a
+  stale browser-test docstring, and the server-side display-key test
+  storing a key no header emits (now the tag header's own). Semantics'
+  "matches no header" is, at build, "matches no display field": a hidden
+  field's key still sorts, as the old `display:N` did, and
+  `spec/sort_by_reviewee.md` says so. `spec-writer` fixed one stale
+  cookie line in the same spec.
 - **Doc impact grew** by `spec/ui_elements.md`, whose `.col-chip-row`
   row named the `response:N` form.
 - **The browser checks** gained a row in

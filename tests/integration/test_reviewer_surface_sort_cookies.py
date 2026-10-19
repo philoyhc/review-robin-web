@@ -30,6 +30,7 @@ from app.db.models import (
     Instrument,
     InstrumentDisplayField,
     InstrumentResponseField,
+    Reviewee,
     ReviewSession,
 )
 
@@ -443,14 +444,47 @@ def test_a_cookie_keyed_by_display_source_applies_server_side(
     rae: AuthenticatedUser,
     make_client,
 ) -> None:
-    """A display key in its source form, stored and read back, replaces
-    the operator default (name descending) on the first render."""
-    body = _render_with_cookie(
-        client, db, rae, make_client,
-        code="ck-dsource",
-        cookie=[{"key": "display:reviewee.email_or_identifier", "dir": "asc"}],
+    """The key a tag header writes, stored and read back, replaces the
+    operator default (name descending) on the first render. The tags run
+    against the names, so only the tag sort gives Charlie, Alpha, Bravo."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="ck-dsource", reviewer_email=rae.email
     )
-    assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
+    instrument = _instrument(db, review_session)
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="Team",
+            source_type="reviewee",
+            source_field="tag_1",
+            order=5,
+            visible=True,
+        )
+    )
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars():
+        reviewee.tag_1 = {"Charlie": "a", "Alpha": "b", "Bravo": "c"}[reviewee.name]
+    name_field = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .where(InstrumentDisplayField.source_field == "name")
+    ).scalar_one()
+    instrument.sort_display_fields = [
+        {"display_field_id": name_field.id, "dir": "desc"}
+    ]
+    db.commit()
+    _activate(client, db, review_session)
+    rae_client = make_client(rae)
+    rae_client.cookies.set(
+        f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}",
+        quote(json.dumps([{"key": "display:reviewee.tag_1", "dir": "asc"}])),
+        path=f"/me/sessions/{review_session.public_id}",
+    )
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
+
+    assert 'data-sort-key="display:reviewee.tag_1"' in body
+    assert body.find("Charlie") < body.find("Alpha") < body.find("Bravo")
 
 
 # --- Base.html primitive guards -----------------------------------------

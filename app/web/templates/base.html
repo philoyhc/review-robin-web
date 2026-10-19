@@ -5363,8 +5363,9 @@
         // Scope per surface so a Reviewers-page sort never bleeds
         // into a Reviewees-page request, and a session-N sort
         // never bleeds into session-M. ``tableId`` shape is
-        // ``rrw-sort-{surface}-{session_id}[-{instrument_id}]``, the
-        // session's URL public ID (19V Item 1);
+        // ``rrw-sort-{surface}-{session_id}[-{instrument_seq}]``, the
+        // session's URL public ID (19V Item 1) and the instrument's
+        // per-session number (19V Item 4);
         // the path mirrors the surface prefix.
         //
         // Map: ``rs`` (reviewer surface) → ``/me/sessions/N``;

@@ -117,8 +117,9 @@ to `/me/sessions/{id}`, the instrument named by its per-session
 `session_seq`. A header's key names its column by what the page already
 shows, never a row ID: `reviewee.name` for the Reviewee column,
 `display:{source_type}.{source_field}` for a display field, and
-`response:{field_key}` for a response field. A key that matches no
-column on the instrument is dropped; two display fields an import gave
+`response:{field_key}` for a response field. A display key is matched
+against every display field on the instrument, hidden ones included,
+and one that matches none is dropped; two display fields an import gave
 one source share a key, which the server reads as the first in display
 order (both show the same values). The cookie carries the canonical
 `[{"key": "...", "dir": "asc|desc"}, ...]` shape, **percent-encoded**
