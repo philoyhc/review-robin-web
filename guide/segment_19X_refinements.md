@@ -148,12 +148,17 @@ Taken 2026-10-19 at `8ae50337`.
 
 ### Status
 
-**2026-10-19, build.** One rung as planned, and the Owners card opts in
-too: the read found its banner, which sits after the Quick Setup card on
-Session Home, scrolled itself and cropped the card's heading once the
-first-match no longer stopped on a hidden Quick Setup banner. The
-landing holds as far as the page can scroll; on a window taller than the
-rest of the page the card shows lower down.
+**Closed 2026-10-19, in one PR.** Scope moved: the Owners card opts in as
+a landing too. The `diff-reviewer` read measured its banner, which sits
+after the Quick Setup card on Session Home, scrolling itself and cropping
+the card's heading once the first match no longer stopped on a hidden
+Quick Setup banner; it has a browser test of its own. The landing holds
+as far as the page can scroll, so on a window taller than the rest of
+the page the card shows lower down; the spec and rows say so. The read's
+other findings were wording (two stale "scrolled to the banner" rows, a
+§5a reason) and are fixed. `spec-writer` at close: no divergence; two
+sentences made exact (the New session page carries the Quick Setup
+landing; the script runs once the document has parsed).
 
 ### Out of scope
 
