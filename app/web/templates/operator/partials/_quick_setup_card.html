@@ -256,7 +256,13 @@
         }
         var slot = document.getElementById(
           new URL(link.href, window.location.href).hash.slice(1));
-        if (slot) slot.scrollIntoView({ block: "start" });
+        if (slot) {
+          slot.scrollIntoView({ block: "start" });
+          // The focused link went with the banner; hand focus to the
+          // slot's file input rather than letting it fall to the body.
+          var input = slot.querySelector("input[type=file]:not([disabled])");
+          if (input) input.focus({ preventScroll: true });
+        }
       });
     });
     // Gate the bottom Submit button on **both** a file being picked
