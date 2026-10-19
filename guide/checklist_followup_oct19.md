@@ -32,15 +32,8 @@ tick and upload, or dismiss outright.
   because the bytes would otherwise sit in one instance's memory or temp
   folder.
 
-**Ruling (author, 2026-10-19): (c).** It holds a file across an ask,
-so it needs a table and a migration, and so a plan before any build. The
-plan settles:
-
-- which surfaces it covers: the Setup pages' upload cards, Quick Setup
-  on Home, the Create page;
-- how long a held file lives;
-- who can use the token;
-- what Dismiss deletes.
+**Ruling (author, 2026-10-19): (c).** Planned as segment 19W,
+`guide/segment_19W_held_uploads.md`; this entry goes when it closes.
 
 ## Set aside
 

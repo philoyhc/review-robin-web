@@ -74,6 +74,12 @@ concluding** (decision 2026-09-05) and independent of each other.
    follow-ups (author, 2026-10-18).
    **Plan:** `guide/segment_19V_public_id_revamp.md`.
 
+4. **19W — A chosen file survives an ask** (not gated on Azure). Opened
+   2026-10-19 from the browser run: an upload that asks a question holds
+   its file on the server for an hour, so the operator ticks and
+   resubmits without choosing it again (author's ruling, option (c)).
+   **Plan:** `guide/segment_19W_held_uploads.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
