@@ -419,14 +419,12 @@ def test_a_fresh_default_counts_as_untouched(client: TestClient, db: Session) ->
 def test_quick_setup_takes_a_fresh_sessions_whole_set_up(
     client: TestClient, db: Session
 ) -> None:
-    """The browser checklist's groups files (01, 12, 13, 14), all in one
-    Quick Setup submit on a blank session, apply as they do on Create."""
+    """The browser checklist's groups files, all in one Quick Setup
+    submit on a blank session, apply as they do on Create. The copies in
+    ``tests/fixtures/quick_setup/`` keep their first run's numbers."""
     import pathlib
 
-    folder = (
-        pathlib.Path(__file__).resolve().parents[2]
-        / "guide/browser_check_files/checklist"
-    )
+    folder = pathlib.Path(__file__).resolve().parents[1] / "fixtures/quick_setup"
     review_session = _fresh_session(client, db, code="s4-checklist")
     slots = {
         "reviewers_file": "01_reviewers.csv",

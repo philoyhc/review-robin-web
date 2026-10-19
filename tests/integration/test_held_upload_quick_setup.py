@@ -13,9 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import HeldUpload, Instrument, Reviewee, Reviewer, ReviewSession
 
-CHECKLIST = (
-    pathlib.Path(__file__).resolve().parents[2] / "guide/browser_check_files/checklist"
-)
+CHECKLIST = pathlib.Path(__file__).resolve().parents[1] / "fixtures/quick_setup"
 REVIEWERS = b"ReviewerName,ReviewerEmail\nAnn,ann@example.edu\n"
 REVIEWERS_2 = b"ReviewerName,ReviewerEmail\nBea,bea@example.edu\n"
 REVIEWEES = b"RevieweeName,RevieweeEmail\nCy,cy@example.edu\n"

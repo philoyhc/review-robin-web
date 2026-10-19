@@ -13,4 +13,4 @@ checks.
 
 | Folder | Sections | Built |
 |---|---|---|
-| `checklist/` | Every open section a local run can settle, 19V included; its README names the rows it skips and why | 2026-10-18 |
+| `round_2/` | Every row still owed after the 2026-10-19 run that a local run can settle; its README names the Azure and Rehydrate rows it sets aside | 2026-10-19 |
