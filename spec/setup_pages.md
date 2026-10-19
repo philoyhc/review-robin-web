@@ -1002,8 +1002,11 @@ references an observer, so the delete destroys no assignment and no
 response — requiring an acknowledgement would ask the operator to
 accept a loss that cannot occur. Relationships has no cascade gate
 either; its group-clear tick is a separate gate (§ *Saves that clear
-group answers*). The cascade requirement stands only where the cascade
-does, on Reviewers and Reviewees.
+group answers*). When that gate refuses a Delete all, the page renders
+the `confirm` tick ticked again, since the operator ticked it to get
+there, so the group-clear tick and the button are all that remain. The
+cascade requirement stands only where the cascade does, on Reviewers and
+Reviewees.
 
 The card itself is hidden whenever the session is not editable, and so
 is the Upload card — both are tenants of the Unlock panel, which is
