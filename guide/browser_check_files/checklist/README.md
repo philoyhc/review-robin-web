@@ -120,7 +120,7 @@ through its service, not the card.
 
 | # | Do | Expect | Ticks |
 |---|---|---|---|
-| 16 | New session `BC groups`, code `bc-groups`, Relationships ticked, Tags `beta`. Stage 01, 12, 13, 14. **Prepare session**, **Activate session**. | Activated. | — |
+| 16 | New session `BC groups`, code `bc-groups`, Relationships ticked, Tags `beta`. Stage 01, 12, 13, 14. **Prepare session**, **Activate session**. Then New session `BC fresh`, code `bc-fresh`, Relationships ticked, nothing staged; on its Session Home, Quick Setup with the same four files, replace box ticked, Submit. Delete `BC fresh` from the lobby. | Activated. `BC fresh`: no banner, and Team review and Studio review in place of `Instrument_1`. | Quick Setup on a fresh session |
 | 17 | `/me/sessions/<id>/2` (Studio). | Before any answer: `#2 Studio: not started`; `/me` "not started". | R7: no answer |
 | 18 | Page 1: Rating Team A 4, Team B 3. Page 2: a comment on each of the three groups (Dev + you; Erin + Fay; Gus alone). Save each. | Saved. | — |
 

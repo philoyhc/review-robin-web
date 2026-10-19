@@ -561,7 +561,13 @@ the round-trip notes below.
    `InstrumentsWouldDelete` naming the instruments the file does not
    bring back (`instruments_deleted_by`, by label: `short_label`, else
    `Instrument_{N}`) unless it equals their count; nothing is applied.
-   A file that deletes no instrument never asks. Quick Setup on an
+   The Default instrument as Create made it is never named: still
+   called `Default`, its default response fields unchanged, its
+   display fields unlabelled and shown (a roster upload seeds those),
+   and no other setting made (`is_untouched_default`). It holds nothing
+   of the operator's, so Quick Setup on a fresh session takes a file as
+   Create does (the author, 2026-10-19). A file that deletes no other
+   instrument never asks. Quick Setup on an
    existing session asks: the Settings banner lists them and offers a
    `Yes, delete` tick carrying the count as
    `acknowledge_instrument_deletion`, and the next submit with the file

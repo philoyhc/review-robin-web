@@ -98,8 +98,13 @@ def instruments_deleted_by(
     rebuilds the file's, so an instrument survives only as a file row
     carrying its ``name`` (the handle the export writes). Each row
     stands for one instrument, so two sharing a name need two rows. A
-    file with no instrument rows deletes them all."""
-    from app.services.instruments import _instrument_label
+    file with no instrument rows deletes them all.
+
+    The Default Instrument as a new session holds it is left out: it
+    holds nothing of the operator's, so Quick Setup on a fresh session
+    applies the file without asking, as Create does
+    (``is_untouched_default``; the author, 2026-10-19)."""
+    from app.services.instruments import _instrument_label, is_untouched_default
 
     unclaimed = Counter(
         spec.name for spec in plan.instruments.values() if spec.name
@@ -113,7 +118,7 @@ def instruments_deleted_by(
     for instrument in existing:
         if unclaimed[instrument.name] > 0:
             unclaimed[instrument.name] -= 1
-        else:
+        elif not is_untouched_default(instrument):
             deleted.append(_instrument_label(instrument))
     return deleted
 

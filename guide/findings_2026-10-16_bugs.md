@@ -112,7 +112,7 @@ the first. **Severity** is the reader's, adjusted where two reads disagreed.
 - ~~**S3**~~ — **Done in #3107**: phase 1 holds each `field_key` to the card's `_validate_field_key` and refuses a bad one as a row error (`spec/csv_contracts.md` §3.3; `tests/unit/test_settings_import_bug_sweep.py`). **The Settings import accepts any `field_key`; one containing `]` can
   never be answered, so a required field blocks Submit**
   (`_apply_instrument.py:116`). *Reproduced.* Code: `_validate_field_key`.
-- ~~**S4**~~ — **Done in #3118** (ruled 2026-10-17, keep replace-all and warn): on an existing session the import refuses a file that does not bring back every instrument by `name`, names those it would delete, and applies only on a resubmit carrying a tick with their count; Create and Rehydrate never ask (`spec/csv_contracts.md` §3.3; `tests/integration/test_settings_import_names_deleted_instruments.py`). A Settings file with no instrument rows deletes every instrument
+- ~~**S4**~~ — **Done in #3118** (ruled 2026-10-17, keep replace-all and warn; narrowed 2026-10-19: the untouched Default instrument is never named, so Quick Setup on a fresh session matches Create): on an existing session the import refuses a file that does not bring back every instrument by `name`, names those it would delete, and applies only on a resubmit carrying a tick with their count; Create and Rehydrate never ask (`spec/csv_contracts.md` §3.3; `tests/integration/test_settings_import_names_deleted_instruments.py`). A Settings file with no instrument rows deletes every instrument
   (`_apply.py:181`), and a direct Prepare POST then creates a Default
   instrument whose Band 1 links are Not set. *Reproduced.* Author: refuse the
   file, or keep instruments it doesn't name.
