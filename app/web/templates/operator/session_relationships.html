@@ -211,20 +211,21 @@
               Other columns are ignored.
             </p>
 
-            {% with upload_problems_cancel_url = relationships_base_url ~ "?unlocked=1#upload-csv" %}
+            {% with upload_problems_cancel_url = relationships_base_url ~ "?unlocked=1#upload-csv", upload_problems_dismiss_url = relationships_base_url ~ "/import/dismiss" %}
               {% include "operator/partials/_upload_problems.html" %}
             {% endwith %}
 
-            <form method="post"
+            <form method="post" id="upload-csv-form"
                   action="{{ relationships_base_url }}/import"
                   enctype="multipart/form-data">
               <input type="file" id="file" name="file" accept=".csv,text/csv"
-                     aria-label="CSV file" required>
+                     aria-label="CSV file"{% if not held_upload %} required{% endif %}>
+              {% include "operator/partials/_held_upload.html" %}
 
               {% if existing_count and existing_count > 0 %}
                 <p>
                   <label class="confirm-label">
-                    <input type="checkbox" name="confirm_replace" value="true" required
+                    <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
                            data-delete-confirm="replace-roster">
                     <span>Yes, replace the existing
                     <span class="pill pill-empty">{{ existing_count }} relationship{% if existing_count != 1 %}s{% endif %}</span>.</span>
@@ -245,6 +246,19 @@
                            value="{{ group_clear.count }}">
                     <span>Yes, clear them</span>
                   </label>
+                  {# Dismiss (segment 19W; `spec/ui_elements.md` §5a): with
+                     the file held it ends the hold, else it reopens the
+                     card without the banner. #}
+                  <div class="banner-actions">
+                    {% if held_upload %}
+                      <button type="submit" class="btn secondary"
+                              formaction="{{ relationships_base_url }}/import/dismiss"
+                              formnovalidate>Dismiss</button>
+                    {% else %}
+                      <a class="btn secondary"
+                         href="{{ relationships_base_url }}?unlocked=1#upload-csv">Dismiss</a>
+                    {% endif %}
+                  </div>
                 </div>
               {% endif %}
 
@@ -293,6 +307,10 @@
                              value="{{ group_clear.count }}">
                       <span>Yes, clear them</span>
                     </label>
+                    <div class="banner-actions">
+                      <a class="btn secondary"
+                         href="{{ relationships_base_url }}?unlocked=1#relationships-danger-h">Dismiss</a>
+                    </div>
                   </div>
                 {% endif %}
                 <div class="unlock-col-actions">

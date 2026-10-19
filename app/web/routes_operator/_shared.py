@@ -40,6 +40,7 @@ from app.services import assignments, csv_imports, date_formatting
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import (
+    held_uploads,
     lifecycle_display,
     operator_settings,
     roster_bulk,
@@ -202,6 +203,98 @@ def acknowledged_loss(raw: object) -> int:
     text = str(raw or "").strip()
     # ``isdecimal``, not ``isdigit``: ``"²"`` is a digit ``int`` refuses.
     return int(text) if text.isdecimal() else 0
+
+
+@dataclass(frozen=True)
+class UploadIn:
+    """The file a Setup upload card sent: the one chosen, or, with
+    none chosen, the one its last ask held (segment 19W). ``token`` is
+    the hold in play, if any; ``lost`` says a hold was named but had
+    expired or was not this operator's and session's."""
+
+    content: bytes
+    filename: str | None
+    token: str | None
+    lost: bool = False
+
+
+async def read_upload(
+    db: Session,
+    *,
+    file: UploadFile | None,
+    held_token: str | None,
+    user: User,
+    review_session: ReviewSession,
+    slot: str,
+) -> UploadIn:
+    """Read a Setup upload card's file, falling back to the held one.
+
+    A newly chosen file wins over the hold. The held bytes are parsed
+    again by the caller, exactly as a fresh upload's would be."""
+    token = (held_token or "").strip() or None
+    content = await file.read() if file is not None else b""
+    if content or token is None:
+        return UploadIn(
+            content=content,
+            filename=file.filename if file is not None else None,
+            token=token,
+        )
+    held = held_uploads.take(
+        db, token=token, user=user, session_id=review_session.id
+    ).get(slot)
+    if held is None:
+        return UploadIn(content=b"", filename=None, token=None, lost=True)
+    return UploadIn(content=held.content, filename=held.filename, token=token)
+
+
+def hold_for_ask(
+    db: Session,
+    *,
+    upload: UploadIn,
+    user: User,
+    review_session: ReviewSession,
+    slot: str,
+) -> dict[str, str] | None:
+    """Hold the file of an upload refused with a question, so the
+    operator answers it without choosing the file again (segment 19W).
+    Commits the hold: the refusal re-renders at 400 without one. Returns
+    the template's ``held_upload`` (token and filename), or ``None`` when
+    nothing could be held (an empty file, or one over the cap)."""
+    token = held_uploads.hold(
+        db,
+        user=user,
+        session_id=review_session.id,
+        files={
+            slot: held_uploads.HeldFile(
+                filename=upload.filename or "upload.csv",
+                content=upload.content,
+            )
+        },
+        token=upload.token,
+    )
+    db.commit()
+    if token is None:
+        return None
+    return {"token": token, "filename": upload.filename or "upload.csv"}
+
+
+def release_hold(
+    db: Session,
+    *,
+    token: str | None,
+    user: User,
+    review_session: ReviewSession,
+) -> None:
+    """End a hold once its upload is done with: saved, refused for good,
+    or dismissed. A token that is not this operator's and this session's
+    deletes nothing."""
+    token = (token or "").strip()
+    if not token:
+        return
+    if held_uploads.discard(
+        db, token=token, user=user, session_id=review_session.id
+    ):
+        db.commit()
 
 
 def observe_scheduled_events_on_load(
@@ -846,10 +939,33 @@ def _instruments_redirect(
     return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
+def dismiss_held_upload(
+    db: Session,
+    *,
+    held_token: str | None,
+    user: User,
+    review_session: ReviewSession,
+    page: str,
+) -> RedirectResponse:
+    """A Setup upload card's Dismiss while its ask holds a file: end the
+    hold, then back to the card with the panel open (segment 19W).
+    ``page`` is the route segment (``reviewers``, ``reviewees``,
+    ``relationships``, ``observers``), never a URL from the form."""
+    release_hold(db, token=held_token, user=user, review_session=review_session)
+    return RedirectResponse(
+        url=(
+            f"/operator/sessions/{review_session.public_id}/{page}"
+            "?unlocked=1#upload-csv"
+        ),
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 async def _handle_import(
     *,
     request: Request,
-    file: UploadFile,
+    file: UploadFile | None,
+    held_token: str | None,
     confirm_replace: str | None,
     acknowledge_response_loss: str | None,
     review_session: ReviewSession,
@@ -866,10 +982,21 @@ async def _handle_import(
     are the matching ``csv_imports`` entry points. On a parse / confirm
     / ack failure it re-renders the Setup page with the reason in the
     upload card's banner; on success it saves and 303s back to the
-    page."""
+    page.
+
+    An ask (the replace tick missing, or the response-loss ack) holds
+    the file, so the next submit answers it with no file chosen
+    (segment 19W); a save or a plain refusal ends the hold."""
     _require_editable(review_session)
-    content = await file.read()
-    result = parse_fn(content)
+    upload = await read_upload(
+        db,
+        file=file,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        slot=kind,
+    )
+    result = parse_fn(upload.content)
     if not result.is_blocked:
         result.issues.extend(
             csv_imports.check_cross_table_identity(
@@ -898,6 +1025,7 @@ async def _handle_import(
         *,
         missing_confirm: bool = False,
         missing_response_ack: bool = False,
+        held_upload: dict[str, str] | None = None,
     ) -> HTMLResponse:
         context: dict[str, object] = {
             # These two are the ids the page's own controls point at.
@@ -952,7 +1080,16 @@ async def _handle_import(
                 missing_confirm=missing_confirm,
                 missing_response_ack=missing_response_ack,
             ),
-            "filename": file.filename,
+            "filename": upload.filename,
+            # Segment 19W: the file an ask holds, named in the card in
+            # place of the empty input; a hold that had lapsed; and the
+            # replace tick, ticked again when the operator had ticked it
+            # (author, 2026-10-19).
+            "held_upload": held_upload,
+            "held_upload_lost": upload.lost,
+            "confirm_replace_checked": (
+                held_upload is not None and confirm_replace == "true"
+            ),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, crumb_label
             ),
@@ -1070,12 +1207,23 @@ async def _handle_import(
             request, template, context, status_code=status_code
         )
 
+    def ask() -> dict[str, str] | None:
+        return hold_for_ask(
+            db, upload=upload, user=user, review_session=review_session,
+            slot=kind,
+        )
+
     if result.is_blocked:
+        release_hold(
+            db, token=upload.token, user=user, review_session=review_session
+        )
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
     if existing > 0 and confirm_replace != "true":
         return render(
-            status_code=status.HTTP_400_BAD_REQUEST, missing_confirm=True
+            status_code=status.HTTP_400_BAD_REQUEST,
+            missing_confirm=True,
+            held_upload=ask(),
         )
 
     # The same gate as `_require_response_loss_ack`, answered in the
@@ -1090,7 +1238,9 @@ async def _handle_import(
         and lifecycle.session_has_responses(db, review_session)
     ):
         return render(
-            status_code=status.HTTP_400_BAD_REQUEST, missing_response_ack=True
+            status_code=status.HTTP_400_BAD_REQUEST,
+            missing_response_ack=True,
+            held_upload=ask(),
         )
 
     # The service locks the session row (findings Bc4): wait for it off
@@ -1101,10 +1251,11 @@ async def _handle_import(
         session=review_session,
         user=user,
         rows=result.rows,
-        filename=file.filename or "",
+        filename=upload.filename or "",
         correlation_id=request_correlation_id(),
         field_labels_captured=result.field_labels,
     )
+    release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.1 rung 3c — a successful import lands back with the panel still
     # open, matching the two controls that moved before it (the labels
     # save and delete-all). The author's rule from the UI pass: a Save

@@ -56,6 +56,10 @@ from app.web.routes_operator._shared import (
     _require_selected_response_loss_ack,
     _require_not_archived,
     _templates,
+    dismiss_held_upload,
+    hold_for_ask,
+    read_upload,
+    release_hold,
     require_observers_enabled_session,
 )
 
@@ -113,6 +117,9 @@ def _render_observers_page(
     issues: list | None = None,
     missing_confirm: bool = False,
     filename: str | None = None,
+    held_upload: dict[str, str] | None = None,
+    held_upload_lost: bool = False,
+    confirm_replace_checked: bool = False,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Observers Setup page.
@@ -313,6 +320,10 @@ def _render_observers_page(
                 "observers", issues, missing_confirm=missing_confirm
             ),
             "filename": filename,
+            # Segment 19W: the file an ask holds, and a hold that lapsed.
+            "held_upload": held_upload,
+            "held_upload_lost": held_upload_lost,
+            "confirm_replace_checked": confirm_replace_checked,
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
@@ -878,7 +889,10 @@ def observers_delete_all(
 )
 async def observers_import_submit(
     request: Request,
-    file: UploadFile = File(...),
+    # Optional since segment 19W: with an ask's file held, the card
+    # submits with no file chosen and ``held_token`` names the hold.
+    file: UploadFile | None = File(default=None),
+    held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
@@ -898,8 +912,15 @@ async def observers_import_submit(
     not follow from it (author's ruling, 2026-09-19).
     """
     _require_not_archived(review_session)
-    content = await file.read()
-    result = csv_imports.parse_observer_csv(content)
+    upload = await read_upload(
+        db,
+        file=file,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        slot="observers",
+    )
+    result = csv_imports.parse_observer_csv(upload.content)
     if not result.is_blocked:
         result.issues.extend(
             csv_imports.check_cross_table_identity(
@@ -912,7 +933,10 @@ async def observers_import_submit(
     existing = csv_imports.existing_observer_count(db, review_session.id)
 
     def render(
-        status_code: int = status.HTTP_200_OK, *, missing_confirm: bool = False
+        status_code: int = status.HTTP_200_OK,
+        *,
+        missing_confirm: bool = False,
+        held_upload: dict[str, str] | None = None,
     ) -> HTMLResponse:
         # `panel_open=True`: this path re-renders the page in place and
         # returns 400 WITH it, so `?unlocked=1` cannot reach it. Left
@@ -934,16 +958,28 @@ async def observers_import_submit(
             panel_open=True,
             issues=result.issues,
             missing_confirm=missing_confirm,
-            filename=file.filename,
+            filename=upload.filename,
+            held_upload=held_upload,
+            held_upload_lost=upload.lost,
             http_status=status_code,
         )
 
     if result.is_blocked:
+        release_hold(
+            db, token=upload.token, user=user, review_session=review_session
+        )
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
     if existing > 0 and confirm_replace != "true":
+        # An ask: hold the file so the tick is all the answer needs
+        # (segment 19W).
         return render(
-            status_code=status.HTTP_400_BAD_REQUEST, missing_confirm=True
+            status_code=status.HTTP_400_BAD_REQUEST,
+            missing_confirm=True,
+            held_upload=hold_for_ask(
+                db, upload=upload, user=user, review_session=review_session,
+                slot="observers",
+            ),
         )
 
     # No response-loss gate here (Segment 19I Item 5), for the same
@@ -961,9 +997,10 @@ async def observers_import_submit(
         session=review_session,
         user=user,
         rows=result.rows,
-        filename=file.filename or "",
+        filename=upload.filename or "",
         correlation_id=request_correlation_id(),
     )
+    release_hold(db, token=upload.token, user=user, review_session=review_session)
     # Open, like the failure path above and like `delete-all`: one rule
     # about the panel rather than three about its controls. A Save does
     # not close this card; the Lock button does.
@@ -973,6 +1010,23 @@ async def observers_import_submit(
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/observers/import/dismiss")
+def observers_import_dismiss(
+    held_token: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(
+        require_observers_enabled_session
+    ),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The upload card's Dismiss while an ask holds its file: end the
+    hold and return to the card (segment 19W)."""
+    return dismiss_held_upload(
+        db, held_token=held_token, user=user,
+        review_session=review_session, page="observers",
     )
 
 

@@ -276,20 +276,21 @@
               Other columns are ignored.
             </p>
 
-            {% with upload_problems_cancel_url = reviewees_base_url ~ "?unlocked=1#upload-csv" %}
+            {% with upload_problems_cancel_url = reviewees_base_url ~ "?unlocked=1#upload-csv", upload_problems_dismiss_url = reviewees_base_url ~ "/import/dismiss" %}
               {% include "operator/partials/_upload_problems.html" %}
             {% endwith %}
 
-            <form method="post"
+            <form method="post" id="upload-csv-form"
                   action="{{ reviewees_base_url }}/import"
                   enctype="multipart/form-data">
               <input type="file" id="file" name="file" accept=".csv,text/csv"
-                     aria-label="CSV file" required>
+                     aria-label="CSV file"{% if not held_upload %} required{% endif %}>
+              {% include "operator/partials/_held_upload.html" %}
 
               {% if existing_count and existing_count > 0 %}
                 <p>
                   <label class="confirm-label">
-                    <input type="checkbox" name="confirm_replace" value="true" required
+                    <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
                            data-delete-confirm="replace-roster">
                     {# Names what the replace destroys, like the
                        Danger Zone and the selected-rows delete

@@ -1072,6 +1072,31 @@ that roster destroys no assignment and no response. It keeps its
 Relationships' import has no cascade gate either, but can be refused for
 clearing group answers (§ *Saves that clear group answers*).
 
+**An ask holds the file** (segment 19W). A refusal that a tick
+answers holds the file of that submit in `held_uploads`, so the
+operator answers with the tick and Upload and chooses nothing again.
+Those refusals are the replace tick missing, the response-loss ack
+missing, and on Relationships a replace that would clear group
+answers.
+
+- **The card.** It names the held file under its input ("Holding
+  `roster.csv` from your last upload…"). The input stops being
+  `required`, and a hidden `held_token` names the hold.
+- **The route.** It takes the held file for an empty input; a newly
+  chosen file wins over it. The held bytes are parsed again as a fresh
+  upload's would be.
+- **The replace tick.** After a group-clear or response-loss ask it
+  renders ticked again, since the operator had ticked it to get there
+  (author, 2026-10-19). After a missing-replace ask it renders unticked.
+- **Ending the hold.** A save ends it, and so does a plain refusal, a
+  blocked file. So does the banner's Dismiss, which submits the form
+  to `…/{roster}/import/dismiss`; that route deletes the hold and lands
+  on `?unlocked=1#upload-csv`.
+- **Scope.** A hold belongs to one operator and one session and lapses
+  after an hour (`docs/backup_restore.md` § *Import files*). A token
+  that names none reads as lapsed: "The file held from your last upload
+  has expired. Choose it again."
+
 **A parse-blocked upload re-renders the page from a context the
 import handler builds itself**, key by key, rather than from the one
 the GET route builds — so every key the confirmation label reads has
@@ -1097,8 +1122,8 @@ nothing, such as a group that only shrank, never asks.
 |---|---|---|
 | Reviewees `…/reviewees/{id}/update` | the row editor, with the typed values, filter, search and offset | on `reviewee-edit-form` |
 | Relationships `…/relationships/create` and `…/relationships/{id}/update` | the row editor, with the typed values and view kept | on `relationship-edit-form` |
-| Relationships `…/relationships/import` | the Upload card, panel open, CSV issues kept; the file is chosen again | inside the red banner, under the line; `confirm_replace` stays where it is |
-| Relationships `…/relationships/delete-all` | the Danger Zone, panel open | inside the red banner, under the line; the `confirm` tick stays where it is |
+| Relationships `…/relationships/import` | the Upload card, panel open, CSV issues kept; the file is held (§ *The Upload card's replace*) and `confirm_replace` renders ticked | inside the red banner, under the line, with Dismiss; `confirm_replace` stays where it is |
+| Relationships `…/relationships/delete-all` | the Danger Zone, panel open | inside the red banner, under the line, with Dismiss; the `confirm` tick stays where it is |
 | Relationships `…/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | the page, with the same rows selected and the view kept | in the row expander, on `relationships-bulk-form` |
 
 On a bulk action the expander shows the line and the tick beside its

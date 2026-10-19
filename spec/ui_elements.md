@@ -431,7 +431,10 @@ a 400 re-render, reopens the upload card). Home has already renamed the
 re-render's address to its own path, so Quick Setup's link would differ
 from it only by fragment and leave the banner up. In that case the
 card's script empties and hides the banner in place, dropping any tick
-it re-offered, and scrolls to the slot.
+it re-offered, and scrolls to the slot. On a Setup page whose refusal
+is an ask that holds the file (segment 19W), Dismiss is instead a
+submit of the card's form to `…/import/dismiss`, which ends the hold
+and reopens the card.
 
 **Auto-scroll on display.** Every banner card carries the
 `banner-scroll-target` class plus a unique anchor id (e.g.

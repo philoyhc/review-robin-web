@@ -351,15 +351,16 @@
              the operator a closed panel and no errors at all. The suite
              cannot see that: with no JS runtime `hidden` is inert, so
              every assertion on these issues passes either way. #}
-          {% with upload_problems_cancel_url = reviewers_base_url ~ "?unlocked=1#upload-csv" %}
+          {% with upload_problems_cancel_url = reviewers_base_url ~ "?unlocked=1#upload-csv", upload_problems_dismiss_url = reviewers_base_url ~ "/import/dismiss" %}
             {% include "operator/partials/_upload_problems.html" %}
           {% endwith %}
 
-          <form method="post"
+          <form method="post" id="upload-csv-form"
                 action="{{ reviewers_base_url }}/import"
                 enctype="multipart/form-data">
             <input type="file" id="file" name="file" accept=".csv,text/csv"
-                   aria-label="CSV file" required>
+                   aria-label="CSV file"{% if not held_upload %} required{% endif %}>
+            {% include "operator/partials/_held_upload.html" %}
 
             {# Gated on `existing_count`, not on `total_row_count`. The
                two are equal — both count the session's whole roster —
@@ -373,7 +374,7 @@
                  19I: the import discards every saved answer under this
                  roster and said nothing. #}
               <label class="confirm-label">
-                <input type="checkbox" name="confirm_replace" value="true" required
+                <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
                        data-delete-confirm="replace-roster">
                 {# Wrapped for the same reason as the Danger Zone's
                    confirm above — see there. This card is where the

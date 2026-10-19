@@ -7,7 +7,12 @@
    Per `spec/ui_elements.md` §5a it scrolls into view and carries a
    Secondary button back to the page without the file, labeled
    Dismiss: nothing is pending to cancel (author, 2026-10-13). The
-   including page sets `upload_problems_cancel_url`. #}
+   including page sets `upload_problems_cancel_url`.
+
+   When the refusal is an ask that holds its file (segment 19W), Dismiss
+   is instead a submit of the card's `upload-csv-form` to
+   `upload_problems_dismiss_url`, which ends the hold and lands back on
+   the card. #}
 {% if upload_problems %}
   <div class="banner banner-error banner-scroll-target"
        id="upload-problems-banner" data-upload-problems>
@@ -18,7 +23,13 @@
       </ul>
     {% endif %}
     <div class="banner-actions">
-      <a class="btn secondary" href="{{ upload_problems_cancel_url }}">Dismiss</a>
+      {% if held_upload %}
+        <button type="submit" class="btn secondary" form="upload-csv-form"
+                formaction="{{ upload_problems_dismiss_url }}"
+                formnovalidate>Dismiss</button>
+      {% else %}
+        <a class="btn secondary" href="{{ upload_problems_cancel_url }}">Dismiss</a>
+      {% endif %}
     </div>
   </div>
 {% endif %}
