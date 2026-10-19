@@ -112,47 +112,43 @@ Taken 2026-10-19 at `9b6e0afa`.
 
 ## Status
 
-**2026-10-19, rung 2.** The storage landed as planned. Of the docs this
-rung named, only `docs/backup_restore.md` states what happens to an
-upload, so it took the change. `spec/architecture.md`,
-`docs/database.md` and `docs/security_posture.md` are waived in `Doc
-impact`: none lists tables or retained data.
+**Closed 2026-10-19.** Shipped as laddered, in #3145 (plan), #3146
+(storage), #3147 (Setup cards) and #3148 (Quick Setup on Home), with
+the one cumulative `diff-reviewer` read for the item on #3148.
 
-**2026-10-19, rung 3.** The four Setup cards hold the file on each ask,
-as planned. Things the plan did not spell out:
+**Intended versus done:**
 
-- The import routes take the file as optional: an empty input arrives
-  as `None`.
-- A plain refusal ends any hold in play, so a hold never outlives a
-  file the operator has replaced.
-- Dismiss posts the card's own form to `…/import/dismiss` through
-  `formaction`, so there is no nested form.
-- The Danger Zone's group-clear banner got the link Dismiss it lacked.
+- **As planned:** a `held_uploads` table and service; an ask holds the
+  file on the four Setup cards and every file of the submit on Quick
+  Setup; Dismiss ends a hold; held bytes are re-parsed every time.
+- **Ending a hold, more widely than planned:**
+  - A plain refusal also ends any hold in play, so a hold never
+    outlives a file the operator has replaced.
+  - On the Setup cards a lifecycle refusal (409) raises before the hold
+    is read, so that hold lapses rather than ends. `docs/backup_restore.md`
+    says so.
+- **Additions the build needed:**
+  - The import routes take the file as optional.
+  - Dismiss submits the card's own form through `formaction`.
+  - `_run_quick_setup` splits so submit-all can feed it bytes.
+  - On Quick Setup a submit naming a lapsed hold saves nothing and says
+    so (cumulative read).
+  - The Relationships group-clear banners gained the Dismiss §5a asks
+    for.
+- **Docs:** `spec/csv_contracts.md` and `spec/operator_button_audit.md`
+  joined `Doc impact` at build; three docs that list no tables were
+  waived.
 
-**2026-10-19, rung 4.** Quick Setup on Home holds every file of a
-refused submit on `needs_confirm` and `deletes_instruments`, as planned.
-`_run_quick_setup` was split so that submit-all can feed it the bytes
-it has already read: the held files beside the ones chosen now. The
-per-slot routes are left alone: nothing in the UI posts to them. Item
-1's in-place Dismiss stays for a banner that holds nothing.
+**Reads.** One cumulative read (rung 4) found two medium bugs, both
+fixed before merge:
+- an oversized Quick Setup file left the file it replaced to be sent
+  again;
+- a lapsed Quick Setup hold looked like success.
 
-**Cumulative read (rung 4, one read for the item).** Two medium findings,
-both fixed in #3148:
-- **A replaced file could ride again.** A Quick Setup file too large to
-  hold left the one it replaced under the token. Now every slot a hold
-  call brings drops its old row, and the card names what the hold holds.
-- **A lapsed hold looked like success.** On Quick Setup it saved the new
-  files alone, or nothing, behind a plain redirect. It now saves nothing
-  and says so.
-
-Smaller fixes, in the same PR:
-- **Specs:** `spec/csv_contracts.md` and `spec/operator_button_audit.md`
-  joined `Doc impact`. The replace box stays ticked on any deletion ask.
-- **Code:** the Quick Setup hold logic moved into helpers, the sweep
-  reads no file contents, and a misplaced docstring was moved back.
-- **Text:** the template comments and `docs/backup_restore.md` were
-  brought up to date.
-- **Tests:** added for the gaps the read named.
+It also found eight low items (spec wording, docstring placement,
+thin routes, a sweep loading contents), all fixed in #3148. The close
+`spec-writer` pass found two wording divergences on how a hold ends and
+the segment provenance in spec prose; both fixed in the close PR.
 
 ## PR ladder
 

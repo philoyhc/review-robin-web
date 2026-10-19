@@ -93,11 +93,11 @@ The card reports failures only: no success message, and no per-row errors for th
 
 A refusal on any slot leaves every slot as it was: no file of the submit is applied, however far down the order the refusal came (**Per-slot dispatch**).
 
-**Held files** (segment 19W). The submit-all route holds every file of a refused submit when the refusal asks a question a tick answers: `needs_confirm` (the replace tick) and `deletes_instruments`. They are held in `held_uploads` under one token, one row per slot.
+**Held files.** The submit-all route holds every file of a refused submit when the refusal asks a question a tick answers: `needs_confirm` (the replace tick) and `deletes_instruments`. They are held in `held_uploads` under one token, one row per slot.
 
 - **The card.** Each held slot names its file under its input ("Holding `x.csv` from your last Submit…"). The form carries a hidden `held_token`, and Submit counts a held slot as a chosen file.
 - **The next submit.** It takes the held file for any slot left empty; a newly chosen one wins.
-- **The replace box.** It renders ticked after the deletion ask, which was reached with it ticked (author, 2026-10-19). After a missing-tick ask it renders unticked.
+- **The replace box.** It renders ticked after the deletion ask, which was reached with it ticked. After a missing-tick ask it renders unticked.
 - **A lapsed hold.** A submit naming a hold that has lapsed saves nothing, newly chosen files included. Home renders at 422 with a banner above the slots: "Nothing was saved. The files held from your last Submit have expired; choose them again."
 - **Ending the hold.** A save ends it, and so does any other refusal. So does the banner's Dismiss, which is then a submit of the card's form to `POST …/quick-setup/dismiss`; that route deletes the hold and lands on `#quick-setup`. A banner with nothing held keeps the in-place Dismiss above.
 - **Not covered.** The per-slot routes, which nothing in the UI posts to, and the New session page, which never asks, hold nothing.
