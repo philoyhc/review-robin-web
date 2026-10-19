@@ -18,7 +18,7 @@ import datetime as dt
 import re
 
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import Engine, event, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -32,6 +32,8 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services import relationships as relationships_service
+
 from ._feature_toggles import enable_relationships
 
 _SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.timezone.utc)
@@ -489,3 +491,28 @@ def test_an_import_is_refused_with_the_count_then_goes_through(
     assert accepted.status_code == 303
     assert _relationship(db, session.id, "Ann").tag_1 == "y"
     assert _responses(db) == 1
+
+
+def test_counting_the_delete_leaves_loaded_rows_loaded(
+    db: Session, client: TestClient, engine: Engine
+) -> None:
+    # The page lists the rows it loaded before counting; the savepoint's
+    # rollback puts them back as they were, so reading them after costs
+    # no query per row (Codex on #3156).
+    session = _seed(db, client, "rgc-delete-all-loaded")
+    db.expire_all()
+    rows = list(
+        db.execute(select(Relationship).where(Relationship.session_id == session.id)).scalars()
+    )
+    assert relationships_service.delete_all_group_loss(db, session_id=session.id) == 4
+    statements: list[str] = []
+
+    def _record(conn, cursor, statement, params, context, executemany) -> None:
+        statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", _record)
+    try:
+        assert sorted(row.tag_1 or "" for row in rows) == ["x", "x", "y", "y"]
+    finally:
+        event.remove(engine, "before_cursor_execute", _record)
+    assert statements == []
