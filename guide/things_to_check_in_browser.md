@@ -17,11 +17,11 @@ It names the rows it skips and why.
 Needs `alembic upgrade head` first (three migrations). A database from
 before them works, but its sessions take new addresses.
 
-- [ ] **Every address carries the public ID.** The lobby's links,
+- [x] **Every address carries the public ID.** The lobby's links,
   Session Home and each of its tabs, `/me`, the review page, Submit and
   Summary all show a 10-character ID of digits and lower-case letters
   where the session's number was.
-- [ ] **The lobby still acts on a session.** The row expander's Save and
+- [x] **The lobby still acts on a session.** The row expander's Save and
   Duplicate, and the bulk panel's tag and archive actions, each act on
   the rows chosen.
 - [ ] **A sort is remembered per session.** Sort a Setup table and a
@@ -30,18 +30,18 @@ before them works, but its sessions take new addresses.
   database cannot show.)
 - [ ] **Extract data.** Each card's download works, and a chip turned
   off stays off after a reload.
-- [ ] **Sys Admin → Sessions.** Outbox, Audit log and Adopt each open the
+- [x] **Sys Admin → Sessions.** Outbox, Audit log and Adopt each open the
   session they name.
-- [ ] **An old address answers 404.** `/operator/sessions/1` and
+- [x] **An old address answers 404.** `/operator/sessions/1` and
   `/me/sessions/1/1` show the error page, with no redirect.
-- [ ] **Back links.** About and Settings, opened from a session page,
+- [x] **Back links.** About and Settings, opened from a session page,
   link back to that page.
-- [ ] **Answers are named by row, not by assignment.** In the review
+- [x] **Answers are named by row, not by assignment.** In the review
   page's source the answer boxes are named `response[1][…]`,
   `response[2][…]` and so on, beside a hidden `page_digest`.
 - [ ] **Save after a sort.** Sort a column, type answers and Save:
   after a reload each answer is on the row it was typed on.
-- [ ] **A stale tab is refused.** Open a review page in two tabs. As the
+- [x] **A stale tab is refused.** Open a review page in two tabs. As the
   operator, Revert, Prepare, inactivate one of that reviewer's rows on
   Assignments, and Activate. Type in the stale tab and Save: "This page
   changed after you opened it, so your last changes weren't saved.
@@ -57,7 +57,7 @@ before them works, but its sessions take new addresses.
   read `display:reviewee.tag_1`-style sources and `response:` plus the
   field key, never a number. A sort set before this change is forgotten
   once; a new one is kept across a reload.
-- [ ] **The observer's CSV names the instrument by its number** (19V
+- [x] **The observer's CSV names the instrument by its number** (19V
   Item 3; needs `alembic upgrade head` again). On the collation page,
   each Download CSV link ends `/instruments/<n>.csv`, where n is the
   instrument's place in the session (1, 2, …), not its database ID.
@@ -84,20 +84,6 @@ before them works, but its sessions take new addresses.
   email for a reviewer who has submitted; `$submitted_at` reads in the
   same zone. *Needs an Azure deployment; not checkable locally (author,
   2026-10-13).*
-
-## A submit queues the confirmation email (G4)
-
-- [x] **On by default.** As a reviewer, submit on an Activated session.
-  In Admin → Sessions, open that session's outbox: one
-  responses-received row for that reviewer, status `queued`, its body
-  naming the submit time.
-- [x] **A second submit refreshes it.** Recall and resubmit: still one
-  queued row for that reviewer, not two.
-- [ ] **Off sends nothing.** On the session's Email Template page,
-  choose Responses received, click the chip to "Don't send response
-  confirmation" and save.
-  Another reviewer's submit adds no row, and the submit itself still
-  succeeds.
 
 ## A failing scheduled send no longer breaks Session Home (B20)
 
@@ -128,21 +114,9 @@ before them works, but its sessions take new addresses.
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
 
-## Revisited POST addresses and the empty-cohort download (M10, M13)
-
-- [ ] **Enter on a refused Submit's address lands on the form.** As a
-  reviewer, press Submit with a required field empty. With the address
-  bar showing `…/submit?page=…`, click into it and press Enter. You land
-  back on the page you pressed Submit on, not an error page.
-- [ ] **No download for an empty cohort.** As an observer whose cohort
-  rule matches nobody, on an instrument released to observers as Raw,
-  open the collation page. Row 3 reads "No one in your view takes part
-  in this instrument, so there is nothing to download", with no
-  Download CSV button.
-
 ## The /me fallback: error page link and empty dashboard (P2)
 
-- [ ] **The error page always has a way out.** Open a bookmark-style URL
+- [x] **The error page always has a way out.** Open a bookmark-style URL
   for a session you're not on, e.g. `/me/sessions/999999/results`, in a
   new tab. The page shows "Go to your reviews" and no "Go back"; the
   link lands on `/me`.
@@ -152,42 +126,25 @@ before them works, but its sessions take new addresses.
   centered under the message. Ctrl-click (open in new tab) the same link
   instead: the new tab shows "Go back" too, and it works. On a
   deployment, open the URL signed out in a fresh tab: after the sign-in
-  redirect, no "Go back" shows.
-- [ ] **The empty dashboard.** Signed in as someone with no role, `/me`
+  redirect, no "Go back" shows. *(Local half checked 2026-10-19; the
+  signed-out half needs a deployment.)*
+- [x] **The empty dashboard.** Signed in as someone with no role, `/me`
   reads "You're signed in as <your address> but there's nothing here
   for you right now.", then who to contact, and links to About.
 
-## A refused write keeps what was typed (P3) and Recall after the deadline (M1)
-
-- [ ] **Closed mid-edit.** As a reviewer, type into a few cells,
-  including a multi-line text answer, then (as the operator, in another
-  window) close the session. Press Save. The review page comes back
-  read-only with an amber card: "This review has closed, so your last
-  changes weren't saved." Under it, what you typed, line breaks kept,
-  and you can select and copy it.
-- [ ] **Past the deadline.** Same, but let the deadline pass instead.
-  The card names the deadline and its zone. Press Submit instead of
-  Save: it says "so your answers weren't submitted".
-- [ ] **Reverted to draft.** Same, but revert the session to draft. The
-  page you land on reads "This review is not currently open.", with the
-  refusal card at the top saying the same.
-- [ ] **Recall is gone past the deadline.** Submit everything, open the
-  summary: "Recall my submission" shows. Let the deadline pass (session
-  still Activated) and reload: the button is gone.
-
 ## `/me` status, the not-open page, archived sessions (M3, M4, M6, M7)
 
-- [ ] **Status labels.** On `/me`, rows read "Not open yet" (draft or
+- [x] **Status labels.** On `/me`, rows read "Not open yet" (draft or
   prepared), "Open" (Activated, before the deadline), "Closed" or
   "Available" after it. Archived sessions are not listed (see "Archived
   sessions are off limits" below). There are no "View responses" or
   "Until" columns.
-- [ ] **Available.** As an observer on a closed session with a release
+- [x] **Available.** As an observer on a closed session with a release
   window open and Band 3 granting observers, the row reads "Available".
   As a reviewer past the deadline who saved an answer, likewise.
-- [ ] **Nothing assigned.** A reviewer whose assignments are all
+- [x] **Nothing assigned.** A reviewer whose assignments are all
   excluded reads "Nothing assigned to you", not "0/0".
-- [ ] **Start after a revert.** Revert an Activated session to draft:
+- [x] **Start after a revert.** Revert an Activated session to draft:
   its row's Start goes back to "—".
 - [ ] **Not open page.** Open a draft and a prepared session's review
   link: each reads "This review is not currently open." A prepared
@@ -195,60 +152,6 @@ before them works, but its sessions take new addresses.
   contact and it shows on both.
 - [ ] **Archived is off limits.** On an archived session, the summary,
   its CSV and an observer's collation page each show the error page.
-
-## Shared pages, the mismatch page and `/me` notices (M8, M9, M11, M12)
-
-- [ ] **Participant top bar on shared pages.** Signed in as a
-  participant, open About, Guide and Sign-in details (`/auth/me/debug`):
-  each shows "Review Robin" with "Your reviews", not the operator bar
-  with its version. As an operator, the operator bar stays.
-- [ ] **Mismatch page.** Follow someone else's invitation link: the
-  invited address shows as `r•••@example.edu`, there is no "Sign-in
-  details" button, the alias sentence reads sensibly, and a help contact
-  shows when the session has one.
-- [ ] **Notices on `/me`.** Open a summary before submitting everything:
-  `/me` says the summary is available once every review is submitted.
-  As a participant, open an operator URL: `/me` says that page is for the
-  people who run reviews.
-- [ ] **Old invitation link.** Send an invitation twice and open the
-  first email's link: the page says it has been replaced by a newer one.
-
-## Participant titles and wording (L2, L3, L4)
-
-- [ ] **Titles.** The tab title on the review surface, the mismatch page,
-  Sign-in details and any error page ends "— Review Robin Web".
-- [ ] **About.** Signed in as a participant, About describes the app
-  without "operator" and says someone who runs reviews lands on the
-  Sessions page.
-- [ ] **Guide.** As a participant, the Guide subtitle reads "What to
-  expect in the reviews you take part in." The reviewer card mentions
-  "Recall my submission", reading answers until the review closes, and
-  after that only if the people running it allow it; the observer card says a summary
-  can show while the review is still open. As an operator, the subtitle is unchanged.
-
-## Email copy (L5)
-
-- [ ] **Default invitation and reminder.** On Invitations, open a
-  reviewer's preview: each email greets the reviewer by name, gives the
-  deadline with its zone (e.g. "(GMT+8 Asia/Singapore)"), says to sign
-  in with the institutional MS365 account, and ends with the help
-  contact. Clear the help contact and the deadline: those lines go,
-  with no "Contact ." or "by .".
-- [ ] **Override fallbacks.** Override the reminder body with
-  "Ask $help_contact" on a session with no help contact: the preview
-  reads "Ask the person running this review". Override the invitation
-  body with text that has no `$invite_url`: the preview still ends with
-  "Open this link: …".
-
-## Small participant defects (L6)
-
-- [ ] **Timezone hover.** On `/me`, hover the Timezone chip of a UTC
-  session: it reads "UTC", not "UTC UTC". A GMT+8 session reads
-  "GMT+8 Asia/Singapore".
-- [ ] **Row order.** With two sessions on `/me`, edit the older one as
-  an operator: the rows keep their order (newest-created first).
-- [ ] **Observer CSV name.** Download an observer's per-instrument CSV:
-  the file is named after the session code, not the observer's address.
 
 ## Band 1 rules and the Settings import refuse what the engine rejects (S2, E1)
 
@@ -311,15 +214,15 @@ before them works, but its sessions take new addresses.
   when asked, below): the merged group shows no answer, and the audit log's `instrument.group_boundary_updated` row
   counts `defuncted_group_responses`. Add a boundary tag that splits a
   group: both halves still show its answer.
-- [ ] **A tag edit clears only the group joined.** Edit one reviewee's
+- [x] **A tag edit clears only the group joined.** Edit one reviewee's
   team tag to another answered team: that team shows unanswered, and
   the team they left keeps its answer.
-- [ ] **Prepare asks before clearing a joined group.** Add a reviewee
+- [x] **Prepare asks before clearing a joined group.** Add a reviewee
   to an answered team and click `Prepare session`: the card's banner
   reads "Preparing will delete N saved responses" with a line that
   they are "on groups it adds members to". `Regenerate & prepare` then
   shows that team unanswered; a team nobody joined keeps its answer.
-- [ ] **Deleting a reviewee keeps their group's answer.** Delete one
+- [x] **Deleting a reviewee keeps their group's answer.** Delete one
   member of an answered team on Reviewees: the members who remain still
   show the team's answer.
 
@@ -337,47 +240,6 @@ before them works, but its sessions take new addresses.
 - [ ] **A split or an unchanged Save never asks.** Add a boundary tag
   that splits a group, or Save the card unedited: no banner, and every
   answer stays.
-
-## A reviewee tag edit asks before it clears group answers
-
-- [ ] **A move into an answered group is refused with the count.** On a
-  draft session with answers on a `Group using tags` instrument, edit
-  one reviewee's boundary tag to another answered team and Save: the
-  row editor stays open with what you typed, and its bar reads "This
-  change clears N saved responses on groups whose members it changes."
-  beside an unticked `Yes, clear them`. Nothing was saved.
-- [ ] **Ticked, it goes through.** Tick `Yes, clear them` and Save: the
-  team joined shows unanswered and the team left keeps its answer.
-- [ ] **A rename, or a move to a team of their own, never asks.**
-
-## Relationships changes ask before they clear group answers
-
-On a draft session with answers on a `Group using tags` instrument that
-groups by a pair tag:
-
-- [ ] **Edit and add.** Edit a relationship's tag into another answered
-  group, or add one into it, and Save: the row editor stays open with
-  what you typed, reads "This change clears N saved responses on groups
-  whose members it changes." and offers an unticked `Yes, clear them`.
-  Tick it and Save: it goes through.
-- [ ] **Inactivate, Activate and Delete.** Select a relationship whose
-  change moves its pair into an answered group, and click `Inactivate`
-  (or `Activate`, or tick and `Delete`): the page comes back with the
-  same rows selected, and the panel shows the line and the tick. Tick it
-  and click the same button again: it goes through.
-- [ ] **Delete all and Upload.** Delete all relationships, or upload a
-  replacement CSV that moves a pair: the Danger Zone (or the upload
-  card, with the file chosen again) shows the line and the tick; ticked,
-  it goes through.
-- [ ] **A change that clears nothing never asks.**
-
-## Invitations after Regenerate all reads pending (O2)
-
-- [ ] **The table and the counter reset.** On an activated session, Send
-  an invitation, then POST `/operator/sessions/{id}/invitations/regenerate-all`
-  (it has no button: `fetch(url, {method: "POST"})` from the console).
-  Reload Invitations: the row's Email Status reads `not sent`, Sent reads
-  `—`, and *Invitations sent* reads 0.
 
 ## Error banners show only fixed copy (O7)
 
@@ -400,16 +262,6 @@ groups by a pair tag:
   column wider, Save, reload, then unlock and Save again without
   touching the columns: the widths are still the dragged ones.
 
-## Session Home Save after Close early, Release, Revert (L6)
-
-- [ ] **An untouched schedule saves.** Activate a session whose End is a
-  week out, Close session, Release responses, then Revert to draft. On
-  Session Home unlock the details card, change only the name, and Save:
-  it saves.
-- [ ] **An edited pair is still checked.** Move Release responses from
-  to a moment before End and Save: refused with "Release responses from
-  must be on or after End".
-
 ## Purge rosters takes observers too (L7)
 
 - [ ] **Observers are gone.** On a session with observers, Purge and
@@ -426,7 +278,7 @@ groups by a pair tag:
   session with all four dates set, change Timezone and Save without
   touching the dates: the instants are unchanged (the lobby and the
   audit log's UTC view agree).
-- [ ] **An edit after the change reads in the new zone.** Change
+- [x] **An edit after the change reads in the new zone.** Change
   Timezone, then type a new End and Save: End is that wall-clock time
   in the new zone.
 
@@ -456,7 +308,7 @@ groups by a pair tag:
   the comment, saving, and then emptying it in a second Save.
 - [ ] **Re-saving unchanged keeps it.** After Submit, press Save
   without editing: everything still reads submitted.
-- [ ] **No answer is not started.** On an instrument with nothing
+- [x] **No answer is not started.** On an instrument with nothing
   required, leave a row blank: its pill reads `not started`, as the
   dashboard does.
 
@@ -469,7 +321,7 @@ groups by a pair tag:
   Activated, and the audit log shows `session.activated` with
   `trigger=scheduled`. Repeat with a `draft` session: it logs
   `session.scheduled_activation_skipped` and clears Start.
-- [ ] **Duplicate leaves a trace on the original (P2).** As a non-owner
+- [x] **Duplicate leaves a trace on the original (P2).** As a non-owner
   sys-admin, Duplicate someone else's session from the lobby: the
   original's audit log lists `session.duplicated` naming you and the
   new code.
