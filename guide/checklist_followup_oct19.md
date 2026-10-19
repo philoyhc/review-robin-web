@@ -38,8 +38,11 @@ ask sits outside the red banner:
 - **Quick Setup on Home:** the deletion tick is inside the banner, but it
   also asks the operator to re-tick the replace box below the slots.
 
-Make it one shape everywhere: the message, then its tick, inside the
-banner. Before building, inventory every ask. These are not checked yet:
+**Ruling (author, 2026-10-19):** a tick the banner throws up sits
+inside the banner, under its message. A tick the card already had, such
+as `Yes, replace the existing N relationships`, stays where it is.
+
+Before building, inventory every ask. These are not checked yet:
 
 - the Reviewees and Reviewers pages;
 - the row editors' `group_clear` "editor" surface;
@@ -70,8 +73,15 @@ tick and upload, or dismiss outright.
   because the bytes would otherwise sit in one instance's memory or temp
   folder.
 
-**Needs a ruling** on the option, and on which surfaces it covers: the
-Setup pages' upload cards, Quick Setup on Home, the Create page.
+**Ruling (author, 2026-10-19): (c).** It holds a file across an ask,
+so it needs a table and a migration, and so a plan before any build. The
+plan settles:
+
+- which surfaces it covers: the Setup pages' upload cards, Quick Setup
+  on Home, the Create page;
+- how long a held file lives;
+- who can use the token;
+- what Dismiss deletes.
 
 ## Set aside
 
