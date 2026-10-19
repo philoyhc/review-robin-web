@@ -51,6 +51,12 @@ before them works, but its sessions take new addresses.
   and reload: it shows on the row, and the responses CSV holds it on one
   row naming every member, e.g. "Team A (Dev Patel, Erin Walsh, Local
   Operator)".
+- [ ] **Sort keys name no ID** (19V Item 4). In the review page's
+  source, each table's `data-rrw-sortable` ends with the instrument's
+  place in the session (`-1`, `-2`), and the headers' `data-sort-key`
+  read `display:reviewee.tag_1`-style sources and `response:` plus the
+  field key, never a number. A sort set before this change is forgotten
+  once; a new one is kept across a reload.
 - [ ] **The observer's CSV names the instrument by its number** (19V
   Item 3; needs `alembic upgrade head` again). On the collation page,
   each Download CSV link ends `/instruments/<n>.csv`, where n is the

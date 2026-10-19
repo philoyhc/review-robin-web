@@ -4,7 +4,7 @@ Segment 13B Part 2 PR 5.
 Pins:
 
 - The cookie name follows the
-  ``rrw-sort-rs-{public_id}-{instrument_id}`` convention so the
+  ``rrw-sort-rs-{public_id}-{instrument_seq}`` convention so the
   SSR layer can find it for the right instrument.
 - The route reads the cookie at render time and threads the
   decoded spec through ``views.order_rows_by_sort_spec`` so the
@@ -26,7 +26,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Instrument, InstrumentDisplayField, ReviewSession
+from app.db.models import (
+    Instrument,
+    InstrumentDisplayField,
+    InstrumentResponseField,
+    Reviewee,
+    ReviewSession,
+)
 
 from ._full_matrix import (
     generate_via_page_button,
@@ -124,7 +130,7 @@ def test_table_marker_uses_cookie_name_shape(
     make_client,
 ) -> None:
     """The ``data-rrw-sortable`` attribute value is the cookie
-    name. Shape: ``rrw-sort-rs-{public_id}-{instrument_id}``."""
+    name. Shape: ``rrw-sort-rs-{public_id}-{instrument_seq}``."""
     review_session = _setup_session_with_three_reviewees(
         client, db, code="ck-marker", reviewer_email=rae.email
     )
@@ -138,7 +144,7 @@ def test_table_marker_uses_cookie_name_shape(
     body = response.text
     expected = (
         f'data-rrw-sortable="rrw-sort-rs-{review_session.public_id}'
-        f'-{instrument.id}"'
+        f'-{instrument.session_seq}"'
     )
     assert expected in body
 
@@ -161,7 +167,7 @@ def test_cookie_drives_ssr_initial_row_order(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}"
     rae_client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewee.name", "dir": "desc"}]),
@@ -191,7 +197,7 @@ def test_percent_encoded_cookie_drives_ssr_row_order(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}"
     rae_client.cookies.set(
         cookie_name,
         quote(json.dumps([{"key": "reviewee.name", "dir": "desc"}])),
@@ -227,7 +233,7 @@ def test_cookie_overrides_operator_default(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}"
     rae_client.cookies.set(
         cookie_name,
         json.dumps([{"key": "reviewee.name", "dir": "asc"}]),
@@ -266,7 +272,7 @@ def test_malformed_cookie_falls_back_to_operator_default(
     _activate(client, db, review_session)
 
     rae_client = make_client(rae)
-    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.id}"
+    cookie_name = f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}"
     rae_client.cookies.set(
         cookie_name,
         "not-json{",
@@ -309,7 +315,7 @@ def _render_with_cookie(
     _activate(client, db, review_session)
     rae_client = make_client(rae)
     rae_client.cookies.set(
-        f"rrw-sort-rs-{review_session.public_id}-{instrument.id}",
+        f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}",
         quote(json.dumps(cookie)),
         path=f"/me/sessions/{review_session.public_id}",
     )
@@ -331,7 +337,7 @@ def test_response_only_cookie_renders_operator_default(
     body = _render_with_cookie(
         client, db, rae, make_client,
         code="ck-rkey-only",
-        cookie=[{"key": "response:99", "dir": "asc"}],
+        cookie=[{"key": "response:score", "dir": "asc"}],
     )
     # Operator default (name desc).
     assert body.find("Charlie") < body.find("Bravo") < body.find("Alpha")
@@ -351,7 +357,7 @@ def test_mixed_cookie_with_response_key_renders_operator_default(
         client, db, rae, make_client,
         code="ck-rkey-mixed",
         cookie=[
-            {"key": "response:99", "dir": "asc"},
+            {"key": "response:score", "dir": "asc"},
             {"key": "reviewee.name", "dir": "asc"},
         ],
     )
@@ -373,6 +379,112 @@ def test_display_only_cookie_still_applies_server_side(
         cookie=[{"key": "reviewee.name", "dir": "asc"}],
     )
     assert body.find("Alpha") < body.find("Bravo") < body.find("Charlie")
+
+
+# --- 19V Item 4: keys name no row of the workspace -----------------------
+
+
+def test_sort_keys_carry_no_instrument_or_field_id(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """The cookie name takes the instrument's number in its session, a
+    display header its source and a response header its ``field_key``.
+    A session made first pads the workspace, so every ID differs from
+    what replaces it."""
+    _setup_session_with_three_reviewees(
+        client, db, code="ck-pad", reviewer_email=rae.email
+    )
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="ck-no-ids", reviewer_email=rae.email
+    )
+    instrument = _instrument(db, review_session)
+    # Name is the Reviewee column, keyed ``reviewee.name``; a tag is the
+    # kind of display field that gets a header of its own.
+    tag = InstrumentDisplayField(
+        instrument_id=instrument.id,
+        label="Team",
+        source_type="reviewee",
+        source_field="tag_1",
+        order=5,
+        visible=True,
+    )
+    db.add(tag)
+    db.commit()
+    displays = list(instrument.display_fields)
+    responses = list(
+        db.execute(
+            select(InstrumentResponseField).where(
+                InstrumentResponseField.instrument_id == instrument.id
+            )
+        ).scalars()
+    )
+    assert instrument.id != instrument.session_seq
+    assert displays and responses
+    _activate(client, db, review_session)
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
+
+    marker = f"rrw-sort-rs-{review_session.public_id}"
+    assert f'"{marker}-{instrument.session_seq}"' in body
+    assert f'"{marker}-{instrument.id}"' not in body
+    for df in displays:
+        assert f'"display:{df.id}"' not in body
+    assert 'data-sort-key="display:reviewee.tag_1"' in body
+    for field in responses:
+        assert f'"response:{field.id}"' not in body
+        assert f'"response:{field.field_key}"' in body
+
+
+def test_a_cookie_keyed_by_display_source_applies_server_side(
+    db: Session,
+    client: TestClient,
+    rae: AuthenticatedUser,
+    make_client,
+) -> None:
+    """The key a tag header writes, stored and read back, replaces the
+    operator default (name descending) on the first render. The tags run
+    against the names, so only the tag sort gives Charlie, Alpha, Bravo."""
+    review_session = _setup_session_with_three_reviewees(
+        client, db, code="ck-dsource", reviewer_email=rae.email
+    )
+    instrument = _instrument(db, review_session)
+    db.add(
+        InstrumentDisplayField(
+            instrument_id=instrument.id,
+            label="Team",
+            source_type="reviewee",
+            source_field="tag_1",
+            order=5,
+            visible=True,
+        )
+    )
+    for reviewee in db.execute(
+        select(Reviewee).where(Reviewee.session_id == review_session.id)
+    ).scalars():
+        reviewee.tag_1 = {"Charlie": "a", "Alpha": "b", "Bravo": "c"}[reviewee.name]
+    name_field = db.execute(
+        select(InstrumentDisplayField)
+        .where(InstrumentDisplayField.instrument_id == instrument.id)
+        .where(InstrumentDisplayField.source_field == "name")
+    ).scalar_one()
+    instrument.sort_display_fields = [
+        {"display_field_id": name_field.id, "dir": "desc"}
+    ]
+    db.commit()
+    _activate(client, db, review_session)
+    rae_client = make_client(rae)
+    rae_client.cookies.set(
+        f"rrw-sort-rs-{review_session.public_id}-{instrument.session_seq}",
+        quote(json.dumps([{"key": "display:reviewee.tag_1", "dir": "asc"}])),
+        path=f"/me/sessions/{review_session.public_id}",
+    )
+    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
+
+    assert 'data-sort-key="display:reviewee.tag_1"' in body
+    assert body.find("Charlie") < body.find("Alpha") < body.find("Bravo")
 
 
 # --- Base.html primitive guards -----------------------------------------

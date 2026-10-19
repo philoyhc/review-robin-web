@@ -527,13 +527,13 @@ def _surface_context(
             # Both shapes are ``[{"display_field_id": int, "dir":
             # "asc|desc"}, ...]`` once normalised. The cookie keys
             # arrive as opaque strings (e.g. ``"reviewee.name"``,
-            # ``"display:7"``); the helper decodes them against the
+            # ``"display:reviewee.tag_1"``); the helper decodes them against the
             # instrument's display-field set + the locked Reviewee
             # identity row.
             cookie_spec = views.decode_cookie_sort_spec_for_reviewer_surface(
                 cookies=cookies or {},
                 session_id=review_session.public_id,
-                instrument_id=instrument_id,
+                instrument_seq=instrument.session_seq,
                 display_fields=all_display_fields_by_instrument.get(
                     instrument_id, []
                 ),

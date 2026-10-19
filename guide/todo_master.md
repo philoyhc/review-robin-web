@@ -63,13 +63,13 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **19V — Public IDs** (not gated on Azure). Items 1–3 shipped
-   2026-10-18: session URLs carry a random `sessions.public_id`,
-   review-form answers are keyed off an ordinal, and the observer CSV
-   address takes the instrument's `session_seq`, now unique. Open:
-   Item 4, the review page's sort keys keyed off `session_seq`, display
-   source and `field_key` (planned 2026-10-18); the segment stays open
-   for follow-ups (author, 2026-10-18).
+3. **19V — Public IDs** (not gated on Azure). Items 1–4 shipped
+   2026-10-18/19: session URLs carry a random `sessions.public_id`,
+   review-form answers are keyed off an ordinal, the observer CSV
+   address takes the instrument's `session_seq`, now unique, and the
+   review page's sort keys name no instrument or field ID. No participant
+   page carries a workspace-wide ID; the segment stays open for
+   follow-ups (author, 2026-10-18).
    **Plan:** `guide/segment_19V_public_id_revamp.md`.
 
 ### Stubs

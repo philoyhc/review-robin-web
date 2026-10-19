@@ -164,9 +164,10 @@ def apply_cookie_sort(
 # order without waiting for the JS to re-shuffle.
 
 # Cookie name convention:
-#   ``rrw-sort-rs-{session_id}-{instrument_id}`` for the reviewer surface.
+#   ``rrw-sort-rs-{session_id}-{instrument_seq}`` for the reviewer surface.
 #   ``rrw-sort-{surface}-{session_id}`` for operator setup tables.
-# ``session_id`` is the session's URL public ID (19V Item 1).
+# ``session_id`` is the session's URL public ID (19V Item 1);
+# ``instrument_seq`` the instrument's per-session number (19V Item 4).
 _REVIEWER_COOKIE_PREFIX = "rrw-sort-rs"
 
 
@@ -174,7 +175,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     *,
     cookies: dict[str, str],
     session_id: str,
-    instrument_id: int,
+    instrument_seq: int,
     display_fields,
 ) -> list[dict[str, object]] | None:
     """Translate the reviewer-surface cookie into a
@@ -183,7 +184,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
 
     Returns ``None`` — the caller falls back to the operator-default
     ``instrument.sort_display_fields`` — when the cookie is missing,
-    is not valid JSON, is not a list, or holds any ``response:N``
+    is not valid JSON, is not a list, or holds any ``response:``
     key (below). Otherwise returns the decoded display-key spec,
     which *replaces* the operator default: an empty list means "the
     reviewer cleared the sort" and renders insertion order, distinct
@@ -195,8 +196,10 @@ def decode_cookie_sort_spec_for_reviewer_surface(
       locked Name display field's ``display_field_id``.
     - ``reviewee.email_or_identifier`` → locked Email display
       field's ``display_field_id``.
-    - ``display:N`` → ``int(N)``.
-    - ``response:N`` → the server doesn't sort by response values;
+    - ``display:<source_type>.<source_field>`` → the display field
+      with that source, the first in display order if an import gave
+      two the same one (both show the same values).
+    - ``response:<field_key>`` → the server doesn't sort by response values;
       the page's on-load script re-sorts by the whole spec instead
       (ruling A27). A cookie holding any response key therefore
       returns ``None``: the server renders the operator default,
@@ -215,7 +218,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
     from urllib.parse import unquote
 
     cookie_name = (
-        f"{_REVIEWER_COOKIE_PREFIX}-{session_id}-{instrument_id}"
+        f"{_REVIEWER_COOKIE_PREFIX}-{session_id}-{instrument_seq}"
     )
     raw = cookies.get(cookie_name)
     if not raw:
@@ -231,7 +234,13 @@ def decode_cookie_sort_spec_for_reviewer_surface(
         for df in display_fields
         if df.source_type == "reviewee"
     }
-    display_ids = {df.id for df in display_fields}
+    # 19V Item 4: a display header is keyed by its source, not its
+    # ID, so the page names no row of the workspace.
+    id_by_display_key: dict[str, int] = {}
+    for df in sorted(display_fields, key=lambda df: (df.order, df.id)):
+        id_by_display_key.setdefault(
+            f"display:{df.source_type}.{df.source_field}", df.id
+        )
     # Drop malformed entries, then cap — the order ``_rrwReadCookie``
     # uses, so the server and the browser keep the same entries.
     entries = [
@@ -254,12 +263,7 @@ def decode_cookie_sort_spec_for_reviewer_surface(
         elif key == "reviewee.email_or_identifier":
             df_id = name_id_by_source.get("email_or_identifier")
         elif key.startswith("display:"):
-            try:
-                candidate = int(key.split(":", 1)[1])
-            except ValueError:
-                continue
-            if candidate in display_ids:
-                df_id = candidate
+            df_id = id_by_display_key.get(key)
         # Any other opaque key → skip.
         if df_id is None:
             continue

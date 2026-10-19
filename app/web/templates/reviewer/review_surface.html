@@ -330,7 +330,7 @@
              when at least one width is persisted; otherwise we keep
              today's auto-layout behaviour (Individual mode) or the
              rs-group-table's existing fixed-layout (Group mode). #}
-          <table{% if group.is_group %} class="rs-group-table"{% endif %}{% if group.has_custom_widths and not group.is_group %} style="table-layout: fixed;"{% endif %} data-rrw-sortable="rrw-sort-rs-{{ session.public_id }}-{{ group.instrument.id }}">
+          <table{% if group.is_group %} class="rs-group-table"{% endif %}{% if group.has_custom_widths and not group.is_group %} style="table-layout: fixed;"{% endif %} data-rrw-sortable="rrw-sort-rs-{{ session.public_id }}-{{ group.instrument.session_seq }}">
             {% if group.has_custom_widths %}
               {# Emit a <col> for every column in the table so
                  table-layout: fixed has a complete column map. Cols
@@ -371,7 +371,7 @@
               {% endif %}
               {% for header in group.display_fields %}
                 <th scope="col"{% if header.is_profile_link %} class="rs-narrow rrw-sortable"{% else %} class="rrw-sortable"{% endif %}
-                    data-sort-key="display:{{ header.field.id }}">{{ header.label }}<button type="button" class="rrw-sort-btn"
+                    data-sort-key="display:{{ header.field.source_type }}.{{ header.field.source_field }}">{{ header.label }}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ header.label }}"
                     onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>
               {% endfor %}
@@ -393,7 +393,7 @@
                 {% set col_width = numeric_column_ch_width(cell.field, required=cell.may_be_required) if group.is_group else none %}
                 <th scope="col" class="{{ col_class }}"
                     {% if col_width %}style="width: {{ col_width }}ch"{% endif %}
-                    data-sort-key="response:{{ cell.field.id }}"
+                    data-sort-key="response:{{ cell.field.field_key }}"
                     data-sort-type="{{ cell.field.data_type }}">{{ cell.field.label }}{% if cell.may_be_required %} *{% endif %}<button type="button" class="rrw-sort-btn"
                     aria-label="Sort by {{ cell.field.label }}"
                     onclick="rrwSortHeaderClick(event, this)"><span class="rrw-sort-badge" aria-hidden="true">↕</span></button></th>

@@ -496,6 +496,28 @@ Taken 2026-10-18 at `eb6c5748`.
 - **Spec:** `spec/sort_by_reviewee.md` (cookie name and keys) and
   `spec/settings_inventory.md` (cookie inventory row).
 
+### Status
+
+**Closed 2026-10-19** (#3137), one rung as planned; the segment stays open.
+
+- **Decisions confirmed at build.** The decoder maps `display:` keys
+  through a source-to-ID table built in display order, so a duplicate
+  source resolves to the first field. A key in the old `display:<id>`
+  form names no column and is dropped.
+- **Reads: one** (`diff-reviewer`, `7e02e9bf..ac226b28`). No blocker;
+  three nits, all fixed: a stale cookie-shape comment in `base.html`, a
+  stale browser-test docstring, and the server-side display-key test
+  storing a key no header emits (now the tag header's own). Semantics'
+  "matches no header" is, at build, "matches no display field": a hidden
+  field's key still sorts, as the old `display:N` did, and
+  `spec/sort_by_reviewee.md` says so. `spec-writer` fixed one stale
+  cookie line in the same spec.
+- **Doc impact grew** by `spec/ui_elements.md`, whose `.col-chip-row`
+  row named the `response:N` form.
+- **The browser checks** gained a row in
+  `guide/things_to_check_in_browser.md`, and step 8 of the checklist run
+  order now checks the keys.
+
 ### PR ladder
 
 1. **Build:** cookie name, header keys, decoder, tests and specs, in one
@@ -527,3 +549,4 @@ None.
 
 - `spec/sort_by_reviewee.md` — the reviewer cookie is named by `session_seq`, and its keys by display source and response `field_key` (Item 4).
 - `spec/settings_inventory.md` — the `rrw-sort-rs` cookie row names the instrument by `session_seq` (Item 4).
+- `spec/ui_elements.md` — the `.col-chip-row` row's `response:N` key becomes `response:` (Item 4; added at build).

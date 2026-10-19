@@ -95,12 +95,12 @@ def test_a_column_sort_leaves_the_ordinals_on_the_same_rows(
     """A sort reorders the rows; each row keeps its ordinal, because the
     ordinal follows assignment-ID order, not display order."""
     session = _session_alice_reviews(db, client)
-    instrument_id = _assignments(db, session)[0].instrument_id
+    instrument_seq = _assignments(db, session)[0].instrument.session_seq
 
     def names_by_reviewee(cookie_dir: str | None) -> tuple[list[str], dict[str, str]]:
         if cookie_dir:
             client.cookies.set(
-                f"rrw-sort-rs-{session.public_id}-{instrument_id}",
+                f"rrw-sort-rs-{session.public_id}-{instrument_seq}",
                 quote(json.dumps([{"key": "reviewee.name", "dir": cookie_dir}])),
             )
         html = client.get(f"/me/sessions/{session.public_id}/1").text

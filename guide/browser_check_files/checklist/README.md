@@ -107,7 +107,7 @@ through its service, not the card.
 | # | Do | Expect | Ticks |
 |---|---|---|---|
 | 7 | `/me/sessions/<your id>/summary`. | Back on `/me`: "Your summary is available once every review is submitted." | M11: summary notice |
-| 8 | On the review page, view source. | Boxes named `response[1][rating]`, `response[2][rating]`, `response[6][score]` … `response[10][notes]` (a group row takes its first member's number), and a hidden `page_digest`. | 19V: named by row |
+| 8 | On the review page, view source. | Boxes named `response[1][rating]`, `response[2][rating]`, `response[6][score]` … `response[10][notes]` (a group row takes its first member's number), and a hidden `page_digest`. The two tables' `data-rrw-sortable` end `-1` and `-2`; the headers' `data-sort-key` read `response:rating`, `response:score`, `response:notes`, with no number after `display:` or `response:`. | 19V: named by row, sort keys |
 | 9 | Press Submit with Scores empty, then Enter on `…/submit?page=1` in the address bar. | The missing-answers card; Enter lands back on page 1. | M10: Enter |
 | 10 | Click Score's header to sort; type Scores 3, 1, 5, 2, 4 and Ratings Team A 4, Team B 3; Save; reload. | Each answer on its row; the sort kept. The responses CSV holds the Rating once, on "Team A (Dev Patel, Erin Walsh, Local Operator)". | 19V: save after a sort, group answer, sort memory |
 | 11 | Run "A change after Submit needs a new Submit" rows 1–3 as written (Team A's Comments). | As the checklist says. | R1, R7 (rows 1–3) |
