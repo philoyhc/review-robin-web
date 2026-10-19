@@ -496,6 +496,20 @@ Taken 2026-10-18 at `eb6c5748`.
 - **Spec:** `spec/sort_by_reviewee.md` (cookie name and keys) and
   `spec/settings_inventory.md` (cookie inventory row).
 
+### Status
+
+**Built 2026-10-19** in one rung, as planned.
+
+- **Decisions confirmed at build.** The decoder maps `display:` keys
+  through a source-to-ID table built in display order, so a duplicate
+  source resolves to the first field. A key in the old `display:<id>`
+  form names no column and is dropped.
+- **Doc impact grew** by `spec/ui_elements.md`, whose `.col-chip-row`
+  row named the `response:N` form.
+- **The browser checks** gained a row in
+  `guide/things_to_check_in_browser.md`, and step 8 of the checklist run
+  order now checks the keys.
+
 ### PR ladder
 
 1. **Build:** cookie name, header keys, decoder, tests and specs, in one
@@ -527,3 +541,4 @@ None.
 
 - `spec/sort_by_reviewee.md` — the reviewer cookie is named by `session_seq`, and its keys by display source and response `field_key` (Item 4).
 - `spec/settings_inventory.md` — the `rrw-sort-rs` cookie row names the instrument by `session_seq` (Item 4).
+- `spec/ui_elements.md` — the `.col-chip-row` row's `response:N` key becomes `response:` (Item 4; added at build).

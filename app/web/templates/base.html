@@ -5389,7 +5389,7 @@
       // Called at load, and **callable again**: a re-rendered table
       // arrives with no sort badges, because they are painted from
       // cookies rather than carried in the markup — and, when the
-      // stored spec holds a `response:N` key, in server order rather
+      // stored spec holds a `response:<field_key>` key, in server order rather
       // than the sorted one, so this re-sorts it too. `spec/ui_elements.md`
       // §10 names this and `_rrwHydrateColToggles` as the two hooks a
       // re-render owes the table (19K.2). This block binds nothing —
@@ -5407,7 +5407,7 @@
           _rrwSortState[tableId] = state;
           _rrwRefreshSortBadges(table, state);
           // The server orders display keys, so a display-only spec
-          // needs no re-sort. It cannot order `response:N` keys
+          // needs no re-sort. It cannot order `response:` keys
           // (ruling A27), so a spec holding one re-sorts here, through
           // the click path's own routine, or the badges would claim a
           // sort the rows don't follow. For such a spec the server

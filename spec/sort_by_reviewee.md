@@ -112,8 +112,15 @@ appears only for a key in the reviewer's own cascade.
 The reviewer's override **spans both display and response columns**. Sort by display field is a read on existing reviewee data; sort by response field is a read on the reviewer's own response values (their `100int` rating, their `Yes_no` choice, etc.).
 
 **Persistence: per-browser cookie.** The reviewer-side override
-persists in a `rrw-sort-rs-{session_id}-{instrument_id}` cookie scoped
-to `/me/sessions/{id}`. The cookie carries the canonical
+persists in a `rrw-sort-rs-{session_id}-{instrument_seq}` cookie scoped
+to `/me/sessions/{id}`, the instrument named by its per-session
+`session_seq`. A header's key names its column by what the page already
+shows, never a row ID: `reviewee.name` for the Reviewee column,
+`display:{source_type}.{source_field}` for a display field, and
+`response:{field_key}` for a response field. A key that matches no
+column on the instrument is dropped; two display fields an import gave
+one source share a key, which the server reads as the first in display
+order (both show the same values). The cookie carries the canonical
 `[{"key": "...", "dir": "asc|desc"}, ...]` shape, **percent-encoded**
 (the browser primitive writes it via `encodeURIComponent`); the server
 reads it at render time, `unquote()`-s the raw value before
@@ -128,11 +135,12 @@ sort by response values, so the work splits by what the stored spec
 holds:
 
 - **A display-only spec is applied by the server** (`reviewee.name`,
-  `reviewee.email_or_identifier`, `display:N`). It replaces the
+  `reviewee.email_or_identifier`, `display:{source_type}.{source_field}`).
+  It replaces the
   operator default rather than tie-breaking with it, so rows tied on
   every cookie key stay in insertion order. The page lands in it with
   no client reorder.
-- **A spec holding any `response:N` key is applied by the on-load
+- **A spec holding any `response:` key is applied by the on-load
   script.** The decoder returns no override for it, so the server
   renders the operator default. `_rrwHydrateFromCookies` in
   `base.html` then re-sorts the rows by the whole spec, display keys
@@ -274,7 +282,7 @@ A group-scoped instrument (`Instrument.group_kind` set; `spec/instruments.md`) r
 
 - **Default order.** `_collapse_group_rows` (`app/web/routes_reviewer/_surface/_group_collapse.py`) emits the group rows in ascending order of their group key — the tuple of boundary tag values from `responses.group_keys`, or `()` when the instrument has no boundary tag. A group row carries no per-reviewee display cells or sort values, so display-field entries in the spec are not applied.
 - **The `-1` key.** `GROUP_IDENTITY_SORT_KEY` (`-1`, in `app/services/instruments/_display_fields.py`) is a sentinel `display_field_id` for the composed Group cell, not an `instrument_display_fields` row. `set_sort_display_fields` keeps it where it would drop an unknown id, and `order_rows_by_sort_spec` exempts it from the known-id filter. The operator sets it from the sort badge on the Group header of Band 2's group preview. On a group instrument it is the only entry the reviewer surface reads (`app/web/routes_reviewer/_surface/_context.py`): `"dir": "desc"` reverses the default group-key order, `"asc"` keeps it. On a per-reviewee instrument it resolves to no value on every row and changes nothing.
-- **No server-side reviewer override.** The Group header carries no `↕` button, and the server does not read the `rrw-sort-rs-{session_id}-{instrument_id}` cookie for a group instrument. Its response-column headers keep their `↕` buttons, so a reviewer can still reorder the group rows in the browser by their own answers, and the on-load script re-applies that order from the cookie on the next visit.
+- **No server-side reviewer override.** The Group header carries no `↕` button, and the server does not read the `rrw-sort-rs-{session_id}-{instrument_seq}` cookie for a group instrument. Its response-column headers keep their `↕` buttons, so a reviewer can still reorder the group rows in the browser by their own answers, and the on-load script re-applies that order from the cookie on the next visit.
 
 ---
 

@@ -54,11 +54,12 @@ def _save_ratings(
     ratings: dict[str, str],
     *,
     operator_default_name_dir: str | None = None,
-) -> tuple[int, int]:
+) -> tuple[int, str]:
     """Write the default instrument's Integer 1-5 "Rating" answers (and,
     if asked, an operator-default sort by reviewee name) directly, as
     ``_builder.pin_full_matrix`` writes its pin. A reviewee missing from
-    ``ratings`` has a blank cell. Returns (instrument id, Rating field id).
+    ``ratings`` has a blank cell. Returns the instrument's number and the
+    Rating's field key, which the page's sort keys name (19V Item 4).
     """
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
@@ -108,7 +109,7 @@ def _save_ratings(
                     {"display_field_id": name_field.id, "dir": operator_default_name_dir}
                 ]
             db.commit()
-            return instrument.id, rating.id
+            return instrument.session_seq, rating.field_key
     finally:
         engine.dispose()
 
@@ -119,9 +120,9 @@ def _row_names(reviewer: Page) -> list[str]:
     )
 
 
-def _badge(reviewer: Page, rating_id: int) -> Locator:
+def _badge(reviewer: Page, rating_key: str) -> Locator:
     return reviewer.locator(
-        f"th[data-sort-key='response:{rating_id}'] .rrw-sort-badge"
+        f"th[data-sort-key='response:{rating_key}'] .rrw-sort-badge"
     )
 
 
@@ -147,7 +148,7 @@ def test_a_response_only_sort_cookie_orders_rows_on_load(
     session_id = new_session()
     _seed(api, session_id)
     activate(api, live_server.database_url, session_id)
-    instrument_id, rating_id = _save_ratings(
+    instrument_seq, rating_key = _save_ratings(
         live_server.database_url,
         session_id,
         {"Alpha": "5", "Bravo": "4", "Charlie": "2"},
@@ -162,9 +163,9 @@ def test_a_response_only_sort_cookie_orders_rows_on_load(
     reviewer.context.add_cookies(
         [
             {
-                "name": f"rrw-sort-rs-{session_id}-{instrument_id}",
+                "name": f"rrw-sort-rs-{session_id}-{instrument_seq}",
                 "value": quote(
-                    json.dumps([{"key": f"response:{rating_id}", "dir": direction}]),
+                    json.dumps([{"key": f"response:{rating_key}", "dir": direction}]),
                     safe="",
                 ),
                 "url": f"{live_server.base_url}/me/sessions/{session_id}",
@@ -172,7 +173,7 @@ def test_a_response_only_sort_cookie_orders_rows_on_load(
         ]
     )
     reviewer.goto(url)
-    expect(_badge(reviewer, rating_id)).to_have_text("1↑" if direction == "asc" else "1↓")
+    expect(_badge(reviewer, rating_key)).to_have_text("1↑" if direction == "asc" else "1↓")
     assert _row_names(reviewer) == expected
 
 
@@ -198,7 +199,7 @@ def test_a_reload_orders_tied_rows_as_the_click_did(
     session_id = new_session()
     _seed(api, session_id)
     activate(api, live_server.database_url, session_id)
-    _, rating_id = _save_ratings(
+    _, rating_key = _save_ratings(
         live_server.database_url,
         session_id,
         {"Alpha": "4", "Bravo": "4", "Charlie": "2"},
@@ -208,13 +209,13 @@ def test_a_reload_orders_tied_rows_as_the_click_did(
     reviewer = page_as(REVIEWER_EMAIL)
     reviewer.goto(f"/me/sessions/{session_id}/1")
     assert _row_names(reviewer) == ["Echo", "Delta", "Charlie", "Bravo", "Alpha"]
-    button = reviewer.locator(f"th[data-sort-key='response:{rating_id}'] .rrw-sort-btn")
+    button = reviewer.locator(f"th[data-sort-key='response:{rating_key}'] .rrw-sort-btn")
     for _ in range(clicks):
         button.click()
     badge_text = "1↑" if clicks == 1 else "1↓"
-    expect(_badge(reviewer, rating_id)).to_have_text(badge_text)
+    expect(_badge(reviewer, rating_key)).to_have_text(badge_text)
     assert _row_names(reviewer) == expected
 
     reviewer.reload()
-    expect(_badge(reviewer, rating_id)).to_have_text(badge_text)
+    expect(_badge(reviewer, rating_key)).to_have_text(badge_text)
     assert _row_names(reviewer) == expected

@@ -1894,7 +1894,7 @@ def test_tag_change_into_answered_group_clears_it(
     page = rae_client.get(
         f"/me/sessions/{review_session.public_id}/1"
     )
-    marker = f"rrw-sort-rs-{review_session.public_id}-{group.id}"
+    marker = f"rrw-sort-rs-{review_session.public_id}-{group.session_seq}"
     table = page.text[
         page.text.index(marker) : page.text.index(
             "</table>", page.text.index(marker)
@@ -2389,7 +2389,7 @@ def test_group_instrument_surface_renders_one_row_per_group(
     assert page.status_code == 200
 
     # Isolate the group instrument's table from the rendered surface.
-    marker = f"rrw-sort-rs-{review_session.public_id}-{group.id}"
+    marker = f"rrw-sort-rs-{review_session.public_id}-{group.session_seq}"
     start = page.text.index(marker)
     table = page.text[start : page.text.index("</table>", start)]
 
