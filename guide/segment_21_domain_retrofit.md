@@ -4,10 +4,12 @@
 > 2026-10-16). This outline was written against the v0.1 integration spec
 > and the 15 October addendum, both since replaced by
 > `docs/cordware_rrw_integration_spec_v0.2.md`,
-> `docs/cordware_repository_strategy_v0.4.md` and
+> `docs/cordware_repository_strategy_v0.7.md` and
 > `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Those make RRW a
 > module inside one Cordware App Service rather than its own App Service
-> behind a shared gateway. Rework the split, the decisions and the audit
+> behind a shared gateway. v0.7 (2026-10-18, replacing v0.4) also keeps
+> RRW at this repository's root and mounts it at `/reviewrobin` from a
+> small `cordware/` host package. Rework the split, the decisions and the audit
 > against the final version before any sub-segment opens.
 
 **Opened:** 2026-10-16 · **Theme:** RRW stops assuming its public root is `/` · **Related:** `docs/cordware_rrw_integration_spec.md`, `docs/nus_azure_status_cordware_addendum.md`, `docs/nus_azure_status.md`, `docs/deployment_nus.md`
