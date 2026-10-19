@@ -11,7 +11,10 @@
 > behind a shared gateway. v0.7 (2026-10-18, replacing v0.4) also keeps
 > RRW at this repository's root and mounts it at `/reviewrobin` from a
 > small `cordware/` host package. Rework the split, the decisions and the audit
-> against the final version before any sub-segment opens.
+> against the final version before any sub-segment opens. v0.7's
+> Addendum B (2026-10-19) already settles three of them: the mount
+> replaces the `BASE_PATH` shim, RRW is constructed once with logging
+> owned by the host, and Azure sees only the assembled app.
 
 **Opened:** 2026-10-16 · **Theme:** RRW stops assuming its public root is `/` · **Related:** `docs/cordware_rrw_integration_spec.md`, `docs/nus_azure_status_cordware_addendum.md`, `docs/nus_azure_status.md`, `docs/deployment_nus.md`
 
