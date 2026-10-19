@@ -211,7 +211,15 @@ Taken 2026-10-19 at `6d84b80d`.
 **Closed 2026-10-19, in one PR.** Driven in Chromium on the round-2
 `R groups` setup: the tick reads "… 12 relationships and the 4 reviewer
 responses on the groups they form", and one tick deletes with no
-banner. Planned, built and closed in the same PR.
+banner. Planned, built and closed in the same PR. One `diff-reviewer`
+read: the dry run leaks nothing and no path sends two counts; it found
+the count also ran on row-editor renders (now skipped), two spec lines
+to sharpen, and run-order steps 19 and 21 and a checklist row still
+describing the ask; all fixed. Judgment call: on Postgres the dry run's
+DELETE takes the session's relationship row locks for the length of the
+GET, so a page load can wait on a concurrent import; accepted for a
+single-operator Setup page. The Item 2 checklist section went in the
+same PR, the author having cleared it.
 
 ### PR ladder
 

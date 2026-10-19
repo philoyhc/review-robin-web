@@ -403,7 +403,10 @@ def test_delete_all_names_the_answers_it_clears_on_its_tick(
     # tick names the four answers, and the count rides with it, so the
     # page's own form deletes without the ask.
     session = _seed(db, client, "rgc-delete-all-named")
-    form = _delete_all_form(client.get(f"{_base(session)}?unlocked=1").text)
+    page = client.get(f"{_base(session)}?unlocked=1").text
+    form = _delete_all_form(page)
+    # The table still lists every row the dry run deleted and rolled back.
+    assert len(set(re.findall(r'id="relationship-row-(\d+)"', page))) == 4
     label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", form))
     assert "Yes, delete the existing 4 relationships and the 4 reviewer responses on the groups they form." in label
     assert re.findall(r'name="acknowledge_response_loss"[^>]*value="(\d+)"', form) == ["4"]

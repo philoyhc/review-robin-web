@@ -422,8 +422,6 @@ instrument card unlocked.
 - [ ] **Upload.** On Relationships, a replace that clears group answers
   (ticking the replace box): the red banner holds the line and
   `Yes, clear them` under it; the replace tick stays above.
-- [ ] **Delete all.** The Danger Zone's ask: the same, with the
-  `Yes, delete the existing …` tick staying above the banner.
 
 ## A Setup upload's ask keeps the file (19W rung 3)
 
