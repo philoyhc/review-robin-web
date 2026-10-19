@@ -113,7 +113,8 @@
       </p>
     {% endif %}
     <div class="banner-actions">
-      <a class="btn secondary" href="{{ slot.cancel_url }}">Dismiss</a>
+      <a class="btn secondary" href="{{ slot.cancel_url }}"
+         data-quick-setup-dismiss>Dismiss</a>
     </div>
   {% endif %}
 </div>
@@ -233,6 +234,31 @@
         if (hidden) hidden.value = toggle.checked ? "true" : "";
       });
     }
+    // Dismiss links to Home plus the slot's fragment. After a refusal,
+    // Home's script has already renamed the address to Home's own path
+    // (findings O7), so following the link would only scroll to the
+    // fragment and leave the banner up (browser run 2026-10-19, steps
+    // 52 and 56). When only the fragment differs, empty the banner here,
+    // which also drops a re-offered tick, then scroll to the slot.
+    document.querySelectorAll("[data-quick-setup-dismiss]").forEach(function (link) {
+      link.addEventListener("click", function (event) {
+        var target = new URL(link.href, window.location.href);
+        var here = new URL(window.location.href);
+        target.hash = "";
+        here.hash = "";
+        if (target.href !== here.href) return;
+        event.preventDefault();
+        var banner = link.closest(".banner");
+        if (banner) {
+          banner.innerHTML = "";
+          banner.removeAttribute("data-quick-setup-reason");
+          banner.hidden = true;
+        }
+        var slot = document.getElementById(
+          new URL(link.href, window.location.href).hash.slice(1));
+        if (slot) slot.scrollIntoView({ block: "start" });
+      });
+    });
     // Gate the bottom Submit button on **both** a file being picked
     // and the confirm-replace checkbox being ticked (when it
     // renders — only the existing-session variant carries it; the

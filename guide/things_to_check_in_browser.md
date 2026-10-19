@@ -405,3 +405,13 @@ instrument card unlocked.
   500. Open its Instruments card: the rule shows as "Reviewer's pair
   tag: …" / "Reviewee's pair tag: …"; Save is refused until it is
   removed, after which both pages load.
+
+## Dismiss clears a Quick Setup banner on Home (2026-10-19 run, steps 52 and 56)
+
+- [ ] **A refusal.** On Session Home, Quick Setup a file that is
+  refused (step 52's `06`, or a reviewers file with a blank email):
+  Dismiss hides the banner, the page scrolls to the slot, and the
+  address stays Home's.
+- [ ] **The deletion ask.** Step 54's `09`: Dismiss hides the banner
+  and its `Yes, delete it` tick. Submitting `09` again asks again
+  rather than deleting.

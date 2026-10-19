@@ -7,26 +7,6 @@ goes once it is empty.
 
 ## To fix first
 
-### 1. Dismiss doesn't clear a Quick Setup banner on Home
-
-**Seen at:** steps 52 and 56. Every refusal on Session Home's Quick Setup
-card has the same problem, including step 54's ask about deleting
-instruments.
-
-**Cause (traced, not yet fixed):**
-
-- A refused upload re-renders Home at the POST's address, and a script
-  in `app/web/templates/operator/session_detail.html` then rewrites the
-  address to Home's own path (findings O7).
-- The banner's Dismiss is a link to that same path plus
-  `#quick-setup-<slot>` (`cancel_url_for` in
-  `app/web/views/_quick_setup.py`).
-- Because only the fragment differs, the browser jumps to the anchor
-  instead of reloading, so the banner stays.
-
-**Setup pages:** their upload banners (`_upload_problems.html`) are not
-rewritten this way, so they should be unaffected. Confirm while fixing.
-
 ### 2. An ask's tick belongs inside its red banner
 
 **Seen at:** steps 47 and 54. On some cards, the tick that answers an
