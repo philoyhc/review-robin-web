@@ -42,6 +42,15 @@ Taken 2026-10-19 at `8ae50337`.
 | Routes rendering it | 1 | `grep -rn 'surface="delete_all"' app/web/routes_operator` |
 | Tests on the delete-all ask | 1 | `grep -ln "delete-all" tests/integration/test_relationship_group_clear_asks_first.py` |
 
+### Status
+
+**Closed 2026-10-19, as planned, in one PR.** Driven in Chromium: after
+the ask the tick is ticked and `Delete all relationships` live; with
+`Yes, clear them` ticked the delete goes through. One `diff-reviewer`
+read: three prose findings (the run order's step 19, a test comment, the
+group-clear table's row), all fixed, plus an import-ask guard that the
+Danger Zone's tick stays unticked. `spec-writer` at close: no divergence.
+
 ### PR ladder
 
 1. **PR 1 — the tick.** `session_relationships.html` and a test in
