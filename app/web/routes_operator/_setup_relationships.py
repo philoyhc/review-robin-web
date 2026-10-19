@@ -48,6 +48,10 @@ from app.web.routes_operator._shared import (
     _save_field_labels,
     require_relationships_enabled_session,
     _templates,
+    dismiss_held_upload,
+    hold_for_ask,
+    read_upload,
+    release_hold,
 )
 
 router = APIRouter()
@@ -103,7 +107,10 @@ def relationships_list(
 )
 async def relationships_import_submit(
     request: Request,
-    file: UploadFile = File(...),
+    # Optional since segment 19W: with an ask's file held, the card
+    # submits with no file chosen and ``held_token`` names the hold.
+    file: UploadFile | None = File(default=None),
+    held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
@@ -111,11 +118,18 @@ async def relationships_import_submit(
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     _require_editable(review_session)
-    content = await file.read()
+    upload = await read_upload(
+        db,
+        file=file,
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+        slot="relationships",
+    )
     reviewers = assignments.list_reviewers(db, review_session.id)
     reviewees = assignments.list_reviewees(db, review_session.id)
     result = relationships_service.parse_relationship_csv(
-        content, reviewers=reviewers, reviewees=reviewees
+        upload.content, reviewers=reviewers, reviewees=reviewees
     )
 
     existing = relationships_service.existing_count(db, review_session.id)
@@ -132,14 +146,28 @@ async def relationships_import_submit(
     #
     # Two such paths, as in the shared handler — a blocked CSV, and the
     # replace-confirmation state.
+    #
+    # Segment 19W: each ask (the replace tick, the group-clear count)
+    # holds the file, so the tick is all its answer needs; a save or a
+    # plain refusal ends the hold.
+    def ask() -> dict[str, str] | None:
+        return hold_for_ask(
+            db, upload=upload, user=user, review_session=review_session,
+            slot="relationships",
+        )
+
     if result.is_blocked:
+        release_hold(
+            db, token=upload.token, user=user, review_session=review_session
+        )
         return _render_relationships_page(
             request=request,
             review_session=review_session,
             user=user,
             db=db,
             issues=result.issues,
-            filename=file.filename,
+            filename=upload.filename,
+            held_upload_lost=upload.lost,
             panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -150,8 +178,9 @@ async def relationships_import_submit(
             user=user,
             db=db,
             issues=result.issues,
-            filename=file.filename,
+            filename=upload.filename,
             missing_confirm=True,
+            held_upload=ask(),
             panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -165,20 +194,26 @@ async def relationships_import_submit(
             session=review_session,
             user=user,
             rows=result.rows,
-            filename=file.filename or "",
+            filename=upload.filename or "",
             correlation_id=request_correlation_id(),
             field_labels_captured=result.field_labels,
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except responses_service.GroupAnswersWouldClear as exc:
         # The replace rolled back in its own unit; the upload card offers
-        # the count and a tick beside ``confirm_replace``, and the file
-        # is chosen again, as on every refused upload.
+        # the count and a tick inside its banner. Roll back before the
+        # hold commits, so nothing of the refused replace rides with it.
+        # The replace tick was ticked to get here, so it stays ticked
+        # (author, 2026-10-19).
+        db.rollback()
+        held = ask()
         return _refuse_group_clear(
             request, review_session, user, db, exc,
             surface="import", panel_open=True,
-            issues=result.issues, filename=file.filename,
+            issues=result.issues, filename=upload.filename,
+            held_upload=held, confirm_replace_checked=held is not None,
         )
+    release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
     # the Unlock panel now, and a bare redirect closes the panel the
     # operator was working in: a Save does not close the card, the Lock
@@ -190,6 +225,21 @@ async def relationships_import_submit(
             "?unlocked=1#roster-card"
         ),
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/relationships/import/dismiss")
+def relationships_import_dismiss(
+    held_token: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_relationships_enabled_session),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The upload card's Dismiss while an ask holds its file: end the
+    hold and return to the card (segment 19W)."""
+    return dismiss_held_upload(
+        db, held_token=held_token, user=user,
+        review_session=review_session, page="relationships",
     )
 
 
@@ -659,6 +709,11 @@ def _render_relationships_page(
     # line, and ``surface`` — "editor", "import", "delete_all" or
     # "bulk" — the control that offers it back with a tick.
     group_clear: dict[str, object] | None = None,
+    # Segment 19W: the file an ask holds, a hold that lapsed, and the
+    # replace tick shown ticked again after a group-clear ask.
+    held_upload: dict[str, str] | None = None,
+    held_upload_lost: bool = False,
+    confirm_replace_checked: bool = False,
     selected_ids: set[int] | None = None,
     # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
     # open. Server state, not a second source of truth for the JS
@@ -924,6 +979,9 @@ def _render_relationships_page(
             ),
             "missing_confirm": missing_confirm,
             "filename": filename,
+            "held_upload": held_upload,
+            "held_upload_lost": held_upload_lost,
+            "confirm_replace_checked": confirm_replace_checked,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Relationships"
             ),

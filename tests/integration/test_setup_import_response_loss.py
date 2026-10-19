@@ -13,6 +13,8 @@ supposed to take.
 """
 from __future__ import annotations
 
+import re
+
 import datetime as _dt
 
 import pytest
@@ -256,24 +258,27 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
         "roster would discard."
     ) in response.text
     assert "acknowledge response loss" not in response.text
+    # The ask holds the file (segment 19W), so Dismiss ends the hold.
     assert (
-        f'href="/operator/sessions/{s.public_id}/{page}?unlocked=1#upload-csv">Dismiss</a>'
+        f'formaction="/operator/sessions/{s.public_id}/{page}/import/dismiss"'
     ) in response.text
     form = _upload_form(response.text, page)
     assert "2 reviewer responses" in form
     assert 'name="acknowledge_response_loss"' in form
+    token = re.search(r'name="held_token" value="([^"]+)"', form)
+    assert token is not None
     db.expire_all()
     assert len(db.execute(select(Response)).scalars().all()) == 2
     model = Reviewer if page == "reviewers" else Reviewee
     assert [r.name for r in db.execute(select(model)).scalars()] == ["Old" if page == "reviewers" else "Old E"]
 
-    # The second tick, posting exactly what the re-rendered card carries.
-    data = {"confirm_replace": "true"}
+    # The second tick, posting exactly what the re-rendered card carries:
+    # no file chosen, the held one named by its token.
+    data = {"confirm_replace": "true", "held_token": token.group(1)}
     if 'name="acknowledge_response_loss"' in form:
         data["acknowledge_response_loss"] = "true"
     retry = client.post(
         f"/operator/sessions/{s.public_id}/{page}/import",
-        files={"file": ("new.csv", CSV[page], "text/csv")},
         data=data,
         follow_redirects=False,
     )

@@ -38,6 +38,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _setup_row_window,
     _handle_import,
+    dismiss_held_upload,
     _redirect_keeping_selection,
     _row_action_anchor,
     _require_delete_confirm,
@@ -70,7 +71,10 @@ def _reviewer_sort_value(reviewer, key: str):
 )
 async def reviewers_import_submit(
     request: Request,
-    file: UploadFile = File(...),
+    # Optional since segment 19W: with an ask's file held, the card
+    # submits with no file chosen and ``held_token`` names the hold.
+    file: UploadFile | None = File(default=None),
+    held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
@@ -80,6 +84,7 @@ async def reviewers_import_submit(
     return await _handle_import(
         request=request,
         file=file,
+        held_token=held_token,
         confirm_replace=confirm_replace,
         acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
@@ -89,6 +94,21 @@ async def reviewers_import_submit(
         existing_count_fn=csv_imports.existing_reviewer_count,
         parse_fn=csv_imports.parse_reviewer_csv,
         save_fn=csv_imports.save_reviewers,
+    )
+
+
+@router.post("/sessions/{session_id}/reviewers/import/dismiss")
+def reviewers_import_dismiss(
+    held_token: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """The upload card's Dismiss while an ask holds its file: end the
+    hold and return to the card (segment 19W)."""
+    return dismiss_held_upload(
+        db, held_token=held_token, user=user,
+        review_session=review_session, page="reviewers",
     )
 
 

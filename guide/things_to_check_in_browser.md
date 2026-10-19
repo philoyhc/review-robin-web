@@ -423,3 +423,17 @@ instrument card unlocked.
   line and `Yes, clear them` under it; the replace tick stays above.
 - [ ] **Delete all.** The Danger Zone's ask: the same, with the
   `Yes, delete the existing …` tick staying above the banner.
+
+## A Setup upload's ask keeps the file (19W rung 3)
+
+- [ ] **Missing replace tick.** On Reviewers with a roster, choose a
+  file and press Upload without ticking replace (the browser stops
+  you, so untick after choosing on a stale tab, or use a direct POST).
+  The card names the file as held and the file box is empty; tick and
+  Upload, and the roster is replaced.
+- [ ] **Group clear.** Run step 47's Relationships replace: the ask
+  holds the file and the replace tick comes back ticked. Tick
+  `Yes, clear them` and press Upload with no file chosen; it goes
+  through.
+- [ ] **Dismiss.** On either ask, Dismiss returns to the card with no
+  banner and no held file named.

@@ -118,6 +118,17 @@ upload, so it took the change. `spec/architecture.md`,
 `docs/database.md` and `docs/security_posture.md` are waived in `Doc
 impact`: none lists tables or retained data.
 
+**2026-10-19, rung 3.** The four Setup cards hold the file on each ask,
+as planned. Things the plan did not spell out:
+
+- The import routes take the file as optional: an empty input arrives
+  as `None`.
+- A plain refusal ends any hold in play, so a hold never outlives a
+  file the operator has replaced.
+- Dismiss posts the card's own form to `…/import/dismiss` through
+  `formaction`, so there is no nested form.
+- The Danger Zone's group-clear banner got the link Dismiss it lacked.
+
 ## PR ladder
 
 1. **This plan.** Prose only.

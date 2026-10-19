@@ -1,0 +1,18 @@
+{# The file an upload card's ask holds (segment 19W,
+   `guide/segment_19W_held_uploads.md`). Included inside the card's
+   import form, after its file input: the hidden token sends the held
+   file with the next submit, so ticking and uploading is the whole
+   answer, and a newly chosen file replaces it. A hold that lapsed (an
+   hour, or another operator's token) says so instead. #}
+{% if held_upload %}
+  <input type="hidden" name="held_token" value="{{ held_upload.token }}">
+  <p class="form-help" data-held-upload>
+    Holding <strong>{{ held_upload.filename }}</strong> from your last
+    upload, so the tick and Upload are enough. Choose a file only to
+    upload a different one.
+  </p>
+{% elif held_upload_lost %}
+  <p class="form-help" data-held-upload-lost>
+    The file held from your last upload has expired. Choose it again.
+  </p>
+{% endif %}

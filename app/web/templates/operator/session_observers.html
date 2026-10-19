@@ -385,20 +385,21 @@
                holds — which is why a failed import must arrive with
                the panel open (`_setup_observers.py`, the import
                route's `render`). #}
-            {% with upload_problems_cancel_url = observers_base_url ~ "?unlocked=1#upload-csv" %}
+            {% with upload_problems_cancel_url = observers_base_url ~ "?unlocked=1#upload-csv", upload_problems_dismiss_url = observers_base_url ~ "/import/dismiss" %}
               {% include "operator/partials/_upload_problems.html" %}
             {% endwith %}
 
-            <form method="post"
+            <form method="post" id="upload-csv-form"
                   action="{{ observers_base_url }}/import"
                   enctype="multipart/form-data">
               <input type="file" id="file" name="file" accept=".csv,text/csv"
-                     aria-label="CSV file" required>
+                     aria-label="CSV file"{% if not held_upload %} required{% endif %}>
+              {% include "operator/partials/_held_upload.html" %}
 
               {% if existing_count and existing_count > 0 %}
                 <p>
                   <label class="confirm-label">
-                    <input type="checkbox" name="confirm_replace" value="true" required
+                    <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
                            data-delete-confirm="replace-observers">
                     {# One <span>, so the sentence is ONE flex item.
                        `.confirm-label` is `display: flex`, and without
