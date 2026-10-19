@@ -18,6 +18,21 @@ the Instrument card's Band 1 builder, sort memory or downloads; those
 are the parts to check by eye. The card's boundary Save was driven
 through its service, not the card.
 
+## Progress
+
+**2026-10-19:** Parts 1–8 are done, with three exceptions:
+
+- **Set aside for a later pass:** steps 10–13 (sort memory and CSV
+  downloads).
+- **Need more work:** steps 50–51 (the Team review card's boundary split
+  and merge).
+- **Not run yet:** step 16's `BC fresh` Quick Setup, which was added
+  after the run.
+
+Parts 9–12 are not started. Sections whose rows are all ticked are
+deleted from `guide/things_to_check_in_browser.md`, so a step's Ticks
+may name a section that is gone.
+
 ## Before you start
 
 - **The run:** local, `uvicorn` with fake auth, so you are
