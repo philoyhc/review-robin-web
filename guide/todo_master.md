@@ -65,7 +65,14 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **19V — Public IDs** (not gated on Azure). Items 1–4 shipped
+3. **19X — Refinements from browser runs** (not gated on Azure). A
+   standing segment for small follow-ups from the author's browser
+   runs, one item each. Open: Item 1, Delete all keeps its tick after
+   the group-clear ask; Item 2, a refused Quick Setup submit lands a
+   line above the card.
+   **Plan:** `guide/segment_19X_refinements.md`.
+
+4. **19V — Public IDs** (not gated on Azure). Items 1–4 shipped
    2026-10-18/19: session URLs carry a random `sessions.public_id`,
    review-form answers are keyed off an ordinal, the observer CSV
    address takes the instrument's `session_seq`, now unique, and the
