@@ -1126,7 +1126,7 @@ nothing, such as a group that only shrank, never asks.
 | Reviewees `…/reviewees/{id}/update` | the row editor, with the typed values, filter, search and offset | on `reviewee-edit-form` |
 | Relationships `…/relationships/create` and `…/relationships/{id}/update` | the row editor, with the typed values and view kept | on `relationship-edit-form` |
 | Relationships `…/relationships/import` | the Upload card, panel open, CSV issues kept; the file is held (§ *The Upload card's replace*) and `confirm_replace` renders ticked | inside the red banner, under the line, with Dismiss; `confirm_replace` stays where it is |
-| Relationships `…/relationships/delete-all` | the Danger Zone, panel open | inside the red banner, under the line, with Dismiss; the `confirm` tick stays where it is |
+| Relationships `…/relationships/delete-all` | the Danger Zone, panel open, and `confirm` renders ticked | inside the red banner, under the line, with Dismiss; the `confirm` tick stays where it is |
 | Relationships `…/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | the page, with the same rows selected and the view kept | in the row expander, on `relationships-bulk-form` |
 
 On a bulk action the expander shows the line and the tick beside its

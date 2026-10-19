@@ -456,5 +456,4 @@ instrument card unlocked.
 - [ ] **The tick stays.** On Relationships, with group answers saved,
   tick `Yes, delete the existing … relationships` and press Delete all:
   the red banner asks, and the delete tick above it is still ticked with
-  `Delete all relationships` live. Tick `Yes, clear them` and press it:
-  everything is deleted.
+  `Delete all relationships` live.
