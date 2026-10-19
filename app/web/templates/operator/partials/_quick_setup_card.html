@@ -58,6 +58,14 @@
              form="{{ form_id }}"
              data-quick-setup-file
              {% if locked %}disabled aria-disabled="true"{% endif %}>
+      {# Segment 19W: the file a refused submit's ask holds, sent again
+         by the next Submit unless a new file is chosen here. #}
+      {% if slot.held_filename %}
+        <p class="form-help" data-quick-setup-held>
+          Holding <strong>{{ slot.held_filename }}</strong> from your last
+          Submit. Choose a file only to upload a different one.
+        </p>
+      {% endif %}
     </div>
   {% else %}
     {# Inert slot (``is_wired=False``) — no route renders one today;
@@ -85,9 +93,9 @@
 
    A Settings file refused for the instruments it would delete re-offers
    the import (findings S4): the tick rides the submit-all form and
-   carries the count the banner named, so the next Submit with the file
-   chosen again applies it. #}
-{% macro quick_setup_slot_banner(slot, form_id) -%}
+   carries the count the banner named, so the next Submit applies it, with
+   the file held since segment 19W. #}
+{% macro quick_setup_slot_banner(slot, form_id, held_token=None, dismiss_url=None) -%}
 <div class="banner banner-error banner-scroll-target"
      id="quick-setup-{{ slot.key }}-error-banner"
      {% if slot.error_message %}data-quick-setup-reason="{{ slot.error_reason or '' }}"{% else %}hidden{% endif %}>
@@ -107,14 +115,20 @@
                  form="{{ form_id }}"
                  data-quick-setup-confirm-deletion>
           Yes, delete {{ "it" if slot.deletion_count == 1 else "them" }}.
-          Choose the file again, tick the replace box below again, then
-          Submit.
+          {% if slot.held_filename %}Then Submit.{% else %}Choose the file
+          again, then Submit.{% endif %}
         </label>
       </p>
     {% endif %}
     <div class="banner-actions">
-      <a class="btn secondary" href="{{ slot.cancel_url }}"
-         data-quick-setup-dismiss>Dismiss</a>
+      {% if held_token and dismiss_url %}
+        {# A held file (segment 19W): Dismiss ends the hold. #}
+        <button type="submit" class="btn secondary" form="{{ form_id }}"
+                formaction="{{ dismiss_url }}" formnovalidate>Dismiss</button>
+      {% else %}
+        <a class="btn secondary" href="{{ slot.cancel_url }}"
+           data-quick-setup-dismiss>Dismiss</a>
+      {% endif %}
     </div>
   {% endif %}
 </div>
@@ -143,6 +157,9 @@
           enctype="multipart/form-data"
           style="margin: 0;">
       <input type="hidden" name="confirm_replace" value="">
+      {% if quick_setup.held_token %}
+        <input type="hidden" name="held_token" value="{{ quick_setup.held_token }}">
+      {% endif %}
     </form>
   {% endif %}
 
@@ -159,8 +176,24 @@
        error-banner`` id (used by the scroll-into-view JS). Banners
        with no current ``error_message`` render hidden so the layout
        doesn't shift when the JS re-checks. #}
+    {# A submit that named a lapsed hold saved nothing (segment 19W). #}
+    {% if quick_setup.held_lost %}
+      <div class="banner banner-error banner-scroll-target"
+           id="quick-setup-held-lost-banner" data-quick-setup-held-lost>
+        <p class="banner-lead">Nothing was saved. The files held from your
+          last Submit have expired; choose them again.</p>
+        <div class="banner-actions">
+          <a class="btn secondary"
+             href="/operator/sessions/{{ session.public_id }}#quick-setup"
+             data-quick-setup-dismiss>Dismiss</a>
+        </div>
+      </div>
+    {% endif %}
     {% for slot in quick_setup.slots %}
-      {{ quick_setup_slot_banner(slot, submit_all_form_id) }}
+      {{ quick_setup_slot_banner(
+           slot, submit_all_form_id, quick_setup.held_token,
+           ("/operator/sessions/" ~ session.public_id ~ "/quick-setup/dismiss")
+             if has_own_form else None) }}
     {% endfor %}
     {# Slot layout: Reviewers + Reviewees on the left, the remaining
        slots (Relationships, Observers, Session settings) on the
@@ -191,6 +224,7 @@
       <p class="form-help quick-setup-confirm-replace">
         <label style="font-weight: normal;">
           <input type="checkbox" id="quick-setup-confirm-replace-toggle"
+                 {% if quick_setup.confirm_replace_checked %}checked{% endif %}
                  {% if quick_setup.is_locked %}disabled aria-disabled="true"{% endif %}>
           Yes, replace existing reviewers, reviewees or settings,
           according to what is uploaded. A settings file rebuilds every
@@ -275,7 +309,9 @@
     if (submit) {
       var inputs = document.querySelectorAll("[data-quick-setup-file]");
       function refresh() {
-        var anyFile = false;
+        // A slot holding a file from a refused submit counts as one
+        // chosen (segment 19W): the next Submit sends it again.
+        var anyFile = !!document.querySelector("[data-quick-setup-held]");
         inputs.forEach(function (i) {
           if (i.files && i.files.length > 0) anyFile = true;
         });

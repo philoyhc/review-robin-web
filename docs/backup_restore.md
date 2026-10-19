@@ -78,9 +78,10 @@ clear group answers, or a Settings file that would delete instruments.
 It holds the files of that submit in the `held_uploads` table so the
 operator can answer without choosing them again. A held file belongs to
 one operator and one session, is capped at 1 MiB, and lasts an hour. It
-is deleted once the import goes through or the operator dismisses the
-ask, with its session or its operator's `users` row, and by the sweep
-each new hold runs first.
+is deleted once the import goes through, when the upload is refused for
+any other reason, or when the operator dismisses the ask; with its
+session or its operator's `users` row; and by the sweep each new hold
+runs first.
 
 ## Data retention
 

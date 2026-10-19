@@ -267,6 +267,8 @@ def test_a_replace_without_the_acknowledgment_says_so_on_the_card(
     assert 'name="acknowledge_response_loss"' in form
     token = re.search(r'name="held_token" value="([^"]+)"', form)
     assert token is not None
+    # The replace tick was ticked to reach this ask, so it stays ticked.
+    assert re.search(r'name="confirm_replace"[^>]*\bchecked\b', form)
     db.expire_all()
     assert len(db.execute(select(Response)).scalars().all()) == 2
     model = Reviewer if page == "reviewers" else Reviewee

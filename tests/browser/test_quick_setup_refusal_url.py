@@ -67,12 +67,13 @@ def _submit_settings(page: Page, path: Path) -> None:
     page.wait_for_load_state("load")
 
 
-def test_dismiss_drops_the_deletion_tick(
+def test_the_deletion_ask_holds_the_file_and_dismiss_ends_it(
     page: Page, new_session: Callable[[], str]
 ) -> None:
-    """The S4 ask's tick rides the submit-all form through ``form=``;
-    Dismiss takes it out of the page with the banner, so a later Submit
-    cannot carry it."""
+    """The S4 ask holds the Settings file (segment 19W), so the slot
+    names it, the replace tick stays ticked, and the tick and Submit are
+    the whole answer. Dismiss on such an ask ends the hold and reloads
+    Home without the banner or its tick."""
     session_id = new_session()
     page.goto(f"/operator/sessions/{session_id}")
     _submit_settings(page, _CHECKLIST / "05_settings.csv")
@@ -81,11 +82,34 @@ def test_dismiss_drops_the_deletion_tick(
     banner = page.locator("#quick-setup-settings-error-banner")
     tick = page.locator('input[name="acknowledge_instrument_deletion"]')
     expect(tick).to_have_count(1)
-    tick.check()
-    banner.get_by_role("link", name="Dismiss").click()
+    expect(page.locator("[data-quick-setup-held]")).to_contain_text(
+        "09_settings_one_instrument.csv"
+    )
+    expect(page.locator("#quick-setup-confirm-replace-toggle")).to_be_checked()
+    expect(page.locator("#quick-setup-submit-all")).to_be_enabled()
 
-    expect(banner).to_be_hidden()
+    with page.expect_navigation():
+        banner.get_by_role("button", name="Dismiss").click()
+    page.wait_for_load_state("load")
+    expect(page.locator("[data-quick-setup-reason]")).to_have_count(0)
     expect(tick).to_have_count(0)
+    expect(page.locator("[data-quick-setup-held]")).to_have_count(0)
+
+
+def test_the_held_settings_file_applies_with_the_tick_alone(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    session_id = new_session()
+    page.goto(f"/operator/sessions/{session_id}")
+    _submit_settings(page, _CHECKLIST / "05_settings.csv")
+    _submit_settings(page, _CHECKLIST / "09_settings_one_instrument.csv")
+
+    page.locator('input[name="acknowledge_instrument_deletion"]').check()
+    with page.expect_navigation():
+        page.locator("#quick-setup-submit-all").click()
+    page.wait_for_load_state("load")
+    expect(page.locator("[data-quick-setup-reason]")).to_have_count(0)
+    expect(page.locator("[data-quick-setup-held]")).to_have_count(0)
 
 
 def test_dismiss_still_navigates_when_the_query_differs(

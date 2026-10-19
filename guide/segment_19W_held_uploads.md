@@ -129,6 +129,31 @@ as planned. Things the plan did not spell out:
   `formaction`, so there is no nested form.
 - The Danger Zone's group-clear banner got the link Dismiss it lacked.
 
+**2026-10-19, rung 4.** Quick Setup on Home holds every file of a
+refused submit on `needs_confirm` and `deletes_instruments`, as planned.
+`_run_quick_setup` was split so that submit-all can feed it the bytes
+it has already read: the held files beside the ones chosen now. The
+per-slot routes are left alone: nothing in the UI posts to them. Item
+1's in-place Dismiss stays for a banner that holds nothing.
+
+**Cumulative read (rung 4, one read for the item).** Two medium findings,
+both fixed in #3148:
+- **A replaced file could ride again.** A Quick Setup file too large to
+  hold left the one it replaced under the token. Now every slot a hold
+  call brings drops its old row, and the card names what the hold holds.
+- **A lapsed hold looked like success.** On Quick Setup it saved the new
+  files alone, or nothing, behind a plain redirect. It now saves nothing
+  and says so.
+
+Smaller fixes, in the same PR:
+- **Specs:** `spec/csv_contracts.md` and `spec/operator_button_audit.md`
+  joined `Doc impact`. The replace box stays ticked on any deletion ask.
+- **Code:** the Quick Setup hold logic moved into helpers, the sweep
+  reads no file contents, and a misplaced docstring was moved back.
+- **Text:** the template comments and `docs/backup_restore.md` were
+  brought up to date.
+- **Tests:** added for the gaps the read named.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -191,6 +216,8 @@ as planned. Things the plan did not spell out:
 - `spec/setup_pages.md` — the upload cards: an ask holds the file; the held name, the token, Dismiss as a discard (rung 3).
 - `spec/quick_setup_card_spec.md` — Quick Setup's held slots, the S4 sentence, Dismiss (rung 4).
 - `spec/ui_elements.md` — §5a: an upload banner's Dismiss discards a hold (rungs 3–4).
+- `spec/csv_contracts.md` — §3.3's S4 note: the held file applies with the tick alone (rung 4).
+- `spec/operator_button_audit.md` — the Dismiss forms on the upload banners and #160 (rungs 3–4).
 - `docs/backup_restore.md` — "Import files": an upload that asks holds its files in `held_uploads`, its scope, cap, lifetime and deletion (rung 2).
 - `spec/architecture.md` — the `held_uploads` table and `app/services/held_uploads.py` in the module map (rung 2). <!-- doc-impact-waived: the module map lists route modules, not services or tables; rehydrate_stashes is not in it either (rung 2, 2026-10-19) -->
 - `docs/database.md` — the `held_uploads` table (rung 2). <!-- doc-impact-waived: the doc carries no table inventory to add a row to (rung 2, 2026-10-19) -->

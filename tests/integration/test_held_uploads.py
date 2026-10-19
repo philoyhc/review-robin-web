@@ -193,3 +193,30 @@ def test_deleting_the_session_drops_its_holds(db: Session) -> None:
     db.delete(review_session)
     db.flush()
     assert _count(db) == 0
+
+
+def test_an_oversized_file_still_drops_the_one_it_replaces(db: Session) -> None:
+    """A file too large to hold is not held, and must not leave the
+    file it replaces to be sent again in its place."""
+    user = _user(db, "op@e.edu")
+    review_session = _session(db, user, "held-k")
+    token = held_uploads.hold(
+        db,
+        user=user,
+        session_id=review_session.id,
+        files={"reviewers": _ROSTER, "settings": _SETTINGS},
+    )
+    big = HeldFile(
+        filename="big.csv", content=b"x" * (held_uploads.MAX_HELD_BYTES + 1)
+    )
+    again = held_uploads.hold(
+        db,
+        user=user,
+        session_id=review_session.id,
+        files={"settings": big},
+        token=token,
+    )
+    assert again == token
+    assert held_uploads.take(
+        db, token=token, user=user, session_id=review_session.id
+    ) == {"reviewers": _ROSTER}

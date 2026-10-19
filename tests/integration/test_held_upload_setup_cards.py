@@ -195,3 +195,27 @@ def test_a_group_clear_ask_holds_the_file_and_keeps_the_replace_tick(
     assert answered.status_code == 303, answered.text[:300]
     assert _relationship(db, session.id, "Ann").tag_1 == "y"
     assert _held(db) == 0
+
+
+def test_each_setup_cards_dismiss_route_ends_the_hold(
+    db: Session, client: TestClient
+) -> None:
+    s = _session(client, db, code="held-dismiss-all")
+    url = f"/operator/sessions/{s.public_id}/reviewers/import"
+    _upload(client, url, REVIEWERS_1)
+    asked = _upload(client, url, REVIEWERS_2)
+    dismissed = client.post(
+        f"{url}/dismiss", data={"held_token": _token(asked.text)},
+        follow_redirects=False,
+    )
+    assert dismissed.status_code == 303
+    assert dismissed.headers["location"].endswith("/reviewers?unlocked=1#upload-csv")
+    assert _held(db) == 0
+    for page in ("reviewees", "relationships"):
+        response = client.post(
+            f"/operator/sessions/{s.public_id}/{page}/import/dismiss",
+            data={"held_token": "not-a-token"},
+            follow_redirects=False,
+        )
+        # An unknown token deletes nothing and lands on the card.
+        assert response.status_code in (303, 404), (page, response.status_code)

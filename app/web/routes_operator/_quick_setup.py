@@ -46,7 +46,7 @@ from app.services import (
     session_tags,
     sessions,
 )
-from app.services import session_guard, unit_of_work
+from app.services import held_uploads, session_guard, unit_of_work
 from app.services import session_lifecycle as lifecycle
 from app.web import views
 from app.web.deps import (
@@ -58,6 +58,7 @@ from app.web.deps import (
 from app.web.routes_operator._shared import (
     _require_response_loss_ack,
     acknowledged_loss,
+    release_hold,
     render_session_home,
     session_payload_error,
 )
@@ -449,6 +450,99 @@ class _UnitRefused(Exception):
         self.refusal = refusal
 
 
+#: The refusals a tick answers, which hold the submit's files (segment
+#: 19W): the replace tick (or the response-loss ack it stands for), and
+#: the Settings file's deletion count (findings S4).
+_ASKS = frozenset({"needs_confirm", "deletes_instruments"})
+
+
+@dataclass(frozen=True)
+class _Merged:
+    """A submit's files in slot order: the ones chosen now, and for each
+    slot left empty the one a refused submit held (segment 19W).
+    ``token`` is the hold in play; ``lost`` says the page named a hold
+    that has lapsed or is not this operator's and session's."""
+
+    contents: dict[str, bytes]
+    filenames: dict[str, str]
+    token: str | None
+    lost: bool = False
+
+
+def _merge_held(
+    db: Session,
+    *,
+    chosen: dict[str, bytes],
+    chosen_names: dict[str, str],
+    held_token: str | None,
+    user: User,
+    review_session: ReviewSession,
+) -> _Merged:
+    token = (held_token or "").strip() or None
+    held = (
+        held_uploads.take(db, token=token, user=user, session_id=review_session.id)
+        if token
+        else {}
+    )
+    contents: dict[str, bytes] = {}
+    filenames: dict[str, str] = {}
+    for kind in SLOT_ORDER:
+        if kind in chosen:
+            contents[kind] = chosen[kind]
+            filenames[kind] = chosen_names[kind]
+        elif kind in held:
+            contents[kind] = held[kind].content
+            filenames[kind] = held[kind].filename
+    return _Merged(
+        contents=contents,
+        filenames=filenames,
+        token=token if held else None,
+        lost=token is not None and not held,
+    )
+
+
+def _settle_hold(
+    db: Session,
+    *,
+    refusal: _SlotRefusal | None,
+    merged: _Merged,
+    user: User,
+    review_session: ReviewSession,
+) -> tuple[dict[str, str] | None, str | None]:
+    """After the submit: on an ask, hold every file of it and return what
+    the hold now holds, by slot, with its token; otherwise end any hold
+    in play. The names come from the hold itself, so a file it skipped
+    (over the cap) is neither named nor sent again."""
+    if refusal is None or refusal.failure.reason not in _ASKS:
+        release_hold(
+            db, token=merged.token, user=user, review_session=review_session
+        )
+        return None, None
+    # Nothing of the refused unit rides with the hold's commit.
+    db.rollback()
+    token = held_uploads.hold(
+        db,
+        user=user,
+        session_id=review_session.id,
+        files={
+            kind: held_uploads.HeldFile(
+                filename=merged.filenames[kind] or "upload.csv", content=content
+            )
+            for kind, content in merged.contents.items()
+        },
+        token=merged.token,
+    )
+    db.commit()
+    if token is None:
+        return None, None
+    held = held_uploads.take(
+        db, token=token, user=user, session_id=review_session.id
+    )
+    if not held:
+        return None, None
+    return {kind: f.filename for kind, f in held.items()}, token
+
+
 def _attached(**files: UploadFile | None) -> dict[str, UploadFile]:
     """The slots with a file chosen, in dispatch order. A browser posts
     an untouched file input as an empty-named part, so a blank filename
@@ -492,14 +586,45 @@ async def _run_quick_setup(
     requests hold that lock until their teardown runs on the same loop
     (findings Bc3)."""
 
-    if not uploads:
+    contents = {kind: await upload.read() for kind, upload in uploads.items()}
+    filenames = {kind: upload.filename or "" for kind, upload in uploads.items()}
+    return await _run_quick_setup_contents(
+        contents=contents,
+        filenames=filenames,
+        review_session=review_session,
+        user=user,
+        db=db,
+        confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
+        replacing=replacing,
+        correlation_id=correlation_id,
+        acknowledge_instrument_deletion=acknowledge_instrument_deletion,
+    )
+
+
+async def _run_quick_setup_contents(
+    *,
+    contents: dict[str, bytes],
+    filenames: dict[str, str],
+    review_session: ReviewSession,
+    user: User,
+    db: Session,
+    confirm_replace: str | None,
+    acknowledge_response_loss: str | None,
+    replacing: bool,
+    correlation_id: str | None = None,
+    acknowledge_instrument_deletion: str | None = None,
+) -> _SlotRefusal | None:
+    """:func:`_run_quick_setup` on bytes already read, in slot order:
+    the submit-all route feeds it files a refused submit held (segment
+    19W) beside the ones chosen now."""
+
+    if not contents:
         return None
-    first = next(iter(uploads))
+    first = next(iter(contents))
     if not lifecycle.is_editable(review_session):
         return _SlotRefusal(first, _SlotFailure("lifecycle"))
 
-    contents = {kind: await upload.read() for kind, upload in uploads.items()}
-    filenames = {kind: upload.filename or "" for kind, upload in uploads.items()}
     staged = _check_uploads(
         db,
         review_session=review_session,
@@ -856,10 +981,14 @@ def _slot_response(
     review_session: ReviewSession,
     kind: str,
     refusal: _SlotRefusal | None,
+    held: dict[str, str] | None = None,
+    held_token: str | None = None,
 ) -> HTMLResponse | RedirectResponse:
     """Back to the slot on Session Home on success; on a refusal, Session
     Home rendered again at 422 with the slot's banner and the file's own
-    lines, which a URL therefore never carries (findings O7)."""
+    lines, which a URL therefore never carries (findings O7). ``held``
+    names the files an ask held, by slot, under ``held_token``
+    (segment 19W)."""
 
     if refusal is None:
         return RedirectResponse(
@@ -879,6 +1008,8 @@ def _slot_response(
             error_reason=refusal.failure.reason,
             error_details=tuple(refusal.failure.details),
             error_count=refusal.failure.count,
+            held=held,
+            held_token=held_token,
         ),
         http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
@@ -1038,6 +1169,7 @@ async def quick_setup_submit_all(
     relationships_file: UploadFile | None = File(default=None),
     observers_file: UploadFile | None = File(default=None),
     settings_file: UploadFile | None = File(default=None),
+    held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     acknowledge_instrument_deletion: str | None = Form(default=None),
@@ -1053,7 +1185,13 @@ async def quick_setup_submit_all(
     (``_run_quick_setup``): a refusal names its slot and leaves every
     slot unsaved, answered by Session Home rendered again at 422 with
     the slot's banner (findings O7). Success 303s to Home at the last
-    slot's fragment, or the card root when nothing was attached."""
+    slot's fragment, or the card root when nothing was attached.
+
+    Segment 19W: a refusal that asks a question (``needs_confirm``,
+    ``deletes_instruments``) holds every file of the submit under one
+    token, so the next Submit answers it with nothing chosen again; a
+    slot left empty then takes its held file, and a newly chosen one
+    wins. A save or any other refusal ends the hold."""
 
     uploads = _attached(
         reviewers=reviewers_file,
@@ -1062,8 +1200,32 @@ async def quick_setup_submit_all(
         observers=observers_file,
         settings=settings_file,
     )
-    refusal = await _run_quick_setup(
-        uploads=uploads,
+    chosen = {kind: await upload.read() for kind, upload in uploads.items()}
+    merged = _merge_held(
+        db,
+        chosen=chosen,
+        chosen_names={k: u.filename or "" for k, u in uploads.items()},
+        held_token=held_token,
+        user=user,
+        review_session=review_session,
+    )
+    if merged.lost:
+        # The hold the page named has lapsed: save nothing, rather than
+        # the newly chosen files alone, and say so (segment 19W).
+        return render_session_home(
+            request,
+            db,
+            user=user,
+            review_session=review_session,
+            quick_setup=views.build_quick_setup_context(
+                db, review_session, user=user, held_lost=True
+            ),
+            http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+    contents, filenames = merged.contents, merged.filenames
+    refusal = await _run_quick_setup_contents(
+        contents=contents,
+        filenames=filenames,
         review_session=review_session,
         user=user,
         db=db,
@@ -1072,17 +1234,42 @@ async def quick_setup_submit_all(
         replacing=True,
         acknowledge_instrument_deletion=acknowledge_instrument_deletion,
     )
-    if refusal is not None or uploads:
+    held_names, token = _settle_hold(
+        db,
+        refusal=refusal,
+        merged=merged,
+        user=user,
+        review_session=review_session,
+    )
+    if refusal is not None or contents:
         return _slot_response(
             request,
             db,
             user=user,
             review_session=review_session,
-            kind=list(uploads)[-1] if uploads else "",
+            kind=list(contents)[-1] if contents else "",
             refusal=refusal,
+            held=held_names,
+            held_token=token,
         )
     return RedirectResponse(
         url=f"/operator/sessions/{review_session.public_id}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/sessions/{session_id}/quick-setup/dismiss")
+def quick_setup_dismiss(
+    held_token: str | None = Form(default=None),
+    review_session: ReviewSession = Depends(require_session_operator),
+    user: User = Depends(get_or_create_user),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    """A Quick Setup banner's Dismiss while its ask holds the submit's
+    files: end the hold and land on the card (segment 19W)."""
+    release_hold(db, token=held_token, user=user, review_session=review_session)
+    return RedirectResponse(
+        url=f"/operator/sessions/{review_session.public_id}#quick-setup",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

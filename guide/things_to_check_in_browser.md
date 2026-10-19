@@ -437,3 +437,15 @@ instrument card unlocked.
   through.
 - [ ] **Dismiss.** On either ask, Dismiss returns to the card with no
   banner and no held file named.
+
+## Quick Setup's ask keeps the files (19W rung 4)
+
+- [ ] **The deletion ask.** Step 54's `09` on `BC import`: the
+  Settings slot names `09_settings_one_instrument.csv` as held, the
+  replace box is ticked and Submit is live. Tick `Yes, delete it` and
+  Submit, and the file applies with nothing chosen again.
+- [ ] **A missing replace tick.** With rosters in place, choose two
+  files and Submit without the replace tick: both slots name their
+  files; tick replace and Submit, and both apply.
+- [ ] **Dismiss.** On either ask, Dismiss reloads Home with no banner
+  and no held file named.
