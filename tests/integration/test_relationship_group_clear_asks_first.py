@@ -357,6 +357,12 @@ def test_a_bulk_delete_into_an_answered_group_is_refused_then_goes_through(
 # --- Delete all and import ------------------------------------------------
 
 
+def _delete_tick_checked(body: str) -> bool:
+    match = re.search(r'<input[^>]*data-delete-confirm="delete-all"[^>]*>', body)
+    assert match is not None, "no Delete all tick on the page"
+    return re.search(r"\bchecked\b", match.group(0)) is not None
+
+
 def test_delete_all_is_refused_with_the_count_then_goes_through(
     db: Session, client: TestClient
 ) -> None:
@@ -370,6 +376,10 @@ def test_delete_all_is_refused_with_the_count_then_goes_through(
     assert _TICK in refused.text and 'value="4"' in refused.text
     assert _tick_inside_banner(refused.text, 4)
     assert db.execute(select(func.count()).select_from(Relationship)).scalar_one() == 4
+    # The delete tick the operator ticked to get here comes back ticked
+    # (segment 19X Item 1); a plain load of the page renders it unticked.
+    assert _delete_tick_checked(refused.text) is True
+    assert _delete_tick_checked(client.get(f"{_base(session)}?unlocked=1").text) is False
 
     accepted = client.post(
         url,
@@ -406,6 +416,8 @@ def test_an_import_is_refused_with_the_count_then_goes_through(
     assert _line(3) in refused.text
     assert _TICK in refused.text and 'value="3"' in refused.text
     assert _tick_inside_banner(refused.text, 3)
+    # Another surface's ask leaves the Danger Zone's tick alone.
+    assert _delete_tick_checked(refused.text) is False
     assert _relationship(db, session.id, "Ann").tag_1 == "x"
     assert _responses(db) == 4
 

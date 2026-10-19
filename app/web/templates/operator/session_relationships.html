@@ -292,8 +292,11 @@
               <form method="post" action="{{ relationships_base_url }}/delete-all">
                 <p>
                   <label class="confirm-label">
+                    {# Ticked again after the group-clear ask below: the
+                       operator ticked it to get there, as the upload card's
+                       replace tick does (segment 19X Item 1). #}
                     <input type="checkbox" name="confirm" value="true" required
-                           data-delete-confirm="delete-all">
+                           data-delete-confirm="delete-all"{% if group_clear and group_clear.surface == "delete_all" %} checked{% endif %}>
                     <span>Yes, delete the existing
                     <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.</span>
                   </label>

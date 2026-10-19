@@ -450,3 +450,10 @@ instrument card unlocked.
   their files; tick replace and Submit, and both apply.
 - [ ] **Dismiss.** On either ask, Dismiss reloads Home with no banner
   and no held file named.
+
+## Delete all keeps its tick after the group-clear ask (19X Item 1)
+
+- [ ] **The tick stays.** On Relationships, with group answers saved,
+  tick `Yes, delete the existing … relationships` and press Delete all:
+  the red banner asks, and the delete tick above it is still ticked with
+  `Delete all relationships` live.
