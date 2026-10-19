@@ -123,6 +123,77 @@ def ensure_default_instrument(
     return instrument
 
 
+def is_untouched_default(instrument: Instrument) -> bool:
+    """Whether ``instrument`` is still the Default Instrument exactly as
+    :func:`ensure_default_instrument` made it: its name, its Display
+    Fields rows unlabelled, shown and in the order they were added, the
+    default response fields unchanged, its Self review flag the
+    session's, and every optional setting still unset.
+
+    The Settings import deletes such an instrument without asking,
+    because it holds nothing of the operator's: Quick Setup on a session
+    nobody has set up then behaves as Create does (the author, 2026-10-19,
+    narrowing findings S4). Responses are not checked: the import asks
+    about them separately (``acknowledge_response_loss``).
+    """
+    from app.services.instruments._response_fields import (
+        _inline_kwargs_from_default_spec,
+        _validation_block_from_default_spec,
+    )
+
+    if instrument.name != DEFAULT_INSTRUMENT_NAME or any(
+        (
+            instrument.short_label,
+            instrument.description,
+            instrument.starts_new_page,
+            instrument.sort_display_fields,
+            instrument.group_kind,
+            instrument.rule_set_id,
+            instrument.band1_touched_links,
+            instrument.column_widths,
+            instrument.band2_state,
+            instrument.view_policies,
+        )
+    ):
+        return False
+    # Seeded from the session's flag at creation; the Assignments page's
+    # Self review chip sets it per instrument.
+    if instrument.self_reviews_active != instrument.session.self_reviews_active:
+        return False
+    # A roster upload seeds a Display Fields row for each populated tag
+    # column, unlabelled and shown; only a label or a hidden row is the
+    # operator's.
+    # Every seed appends, so in creation order the rows' places rise; a
+    # reorder (the Band 2 pill drag) breaks that.
+    displays = sorted(instrument.display_fields, key=lambda f: f.id)
+    if any(f.label or not f.visible for f in displays) or any(
+        a.order >= b.order for a, b in zip(displays, displays[1:])
+    ):
+        return False
+    fields = sorted(instrument.response_fields, key=lambda f: f.order)
+    if len(fields) != len(DEFAULT_RESPONSE_FIELDS):
+        return False
+    for field, spec in zip(fields, DEFAULT_RESPONSE_FIELDS):
+        expected = {
+            "field_key": spec["field_key"],
+            "label": spec["label"],
+            "required": spec["required"],
+            "order": spec["order"],
+            "validation": _validation_block_from_default_spec(spec),
+            "help_text": None,
+            "help_text_visible": True,
+            "visible": True,
+            "branch_parent_id": None,
+            "branch_op": None,
+            "branch_value": None,
+            "branch_mode": None,
+            **_inline_kwargs_from_default_spec(spec),
+        }
+        if any(getattr(field, key) != value for key, value in expected.items()):
+            return False
+    return True
+
+
 def ensure_locked_display_fields(
     db: Session, *, instrument: Instrument
 ) -> int:

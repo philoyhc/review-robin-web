@@ -64,6 +64,17 @@ before them works, but its sessions take new addresses.
   Change n in the address to one the session doesn't have, or to `abc`:
   the error page.
 
+## Quick Setup on a fresh session takes the files as Create does (S4, narrowed)
+
+- [ ] **No question about the untouched default.** Create a session
+  with nothing staged; on Session Home's Quick Setup choose reviewers,
+  reviewees, relationships and a settings file, tick the replace box,
+  Submit. Nothing asks about `Instrument_1`; the file's instruments
+  replace it.
+- [ ] **A default you changed still asks.** On another fresh session,
+  give `Instrument_1` a short label on the Instruments page, then do
+  the same: the red banner names it, and the tick applies the file.
+
 ## Email dates in the session's zone (#2720)
 
 - [x] **The deadline reads in the session's zone.** On a session whose
