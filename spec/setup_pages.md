@@ -1072,7 +1072,7 @@ that roster destroys no assignment and no response. It keeps its
 Relationships' import has no cascade gate either, but can be refused for
 clearing group answers (§ *Saves that clear group answers*).
 
-**An ask holds the file** (segment 19W). A refusal that a tick
+**An ask holds the file.** A refusal that a tick
 answers holds the file of that submit in `held_uploads`, so the
 operator answers with the tick and Upload and chooses nothing again.
 Those refusals are the replace tick missing, the response-loss ack
@@ -1086,10 +1086,10 @@ answers.
   chosen file wins over it. The held bytes are parsed again as a fresh
   upload's would be.
 - **The replace tick.** After a group-clear or response-loss ask it
-  renders ticked again, since the operator had ticked it to get there
-  (author, 2026-10-19). After a missing-replace ask it renders unticked.
-- **Ending the hold.** A save ends it, and so does a plain refusal, a
-  blocked file. So does the banner's Dismiss, which submits the form
+  renders ticked again, since the operator had ticked it to get there.
+  After a missing-replace ask it renders unticked.
+- **Ending the hold.** A save ends it, and so does a blocked file (the
+  card's parse and validation refusals). So does the banner's Dismiss, which submits the form
   to `…/{roster}/import/dismiss`; that route deletes the hold and lands
   on `?unlocked=1#upload-csv`.
 - **Scope.** A hold belongs to one operator and one session and lapses

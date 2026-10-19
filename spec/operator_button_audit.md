@@ -221,7 +221,7 @@ session** button submits both halves.
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 31 | Quick Setup footer | Submit | `<button type="submit">` | `btn secondary` | Secondary | Disabled until ≥1 file selected; posts `/quick-setup/submit-all` |
-| 160 | Quick Setup slot | Dismiss | `<a>`, or `<button type="submit" formaction>` while files are held | `btn secondary` | **Secondary** | Per-slot dismiss on an inline `.banner.banner-error` — the banner convention of #155, labeled Dismiss as an upload banner (`spec/ui_elements.md` §5a). While the banner's ask holds the submit's files (segment 19W) it submits the card's form to `/quick-setup/dismiss`, ending the hold; the lapsed-hold banner above the slots carries the link form. |
+| 160 | Quick Setup slot | Dismiss | `<a>`, or `<button type="submit" formaction>` while files are held | `btn secondary` | **Secondary** | Per-slot dismiss on an inline `.banner.banner-error` — the banner convention of #155, labeled Dismiss as an upload banner (`spec/ui_elements.md` §5a). While the banner's ask holds the submit's files it submits the card's form to `/quick-setup/dismiss`, ending the hold; the lapsed-hold banner above the slots carries the link form. |
 
 ### 5d — Extract Data — not on this page
 
@@ -371,7 +371,7 @@ row expander for #137, #138 and #163, beside the line. On the Upload
 card (#43) and in the Danger Zone (#45) the line is a red banner and the
 tick sits inside it, under the line; `confirm_replace` and the Danger
 Zone's `confirm` tick stay where they are. Both banners carry a
-Secondary Dismiss (segment 19W): the Upload card's submits its form to
+Secondary Dismiss: the Upload card's submits its form to
 `/relationships/import/dismiss` while the file is held, else links back
 to the card, as the Danger Zone's does. Every Setup page's
 upload-problems banner Dismiss takes the same two forms, ending the hold

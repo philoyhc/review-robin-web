@@ -7,33 +7,8 @@ goes once it is empty.
 
 ## To fix first
 
-### 3. The chosen file stays chosen after an ask
-
-**Problem:** after an ask, the operator has to choose the file again
-before they can tick and resubmit. A browser cannot refill a file input
-on a page the server renders. The operator should be able to either
-tick and upload, or dismiss outright.
-
-**Options:**
-
-- **(a) Echo the file back (recommended).** The ask re-renders with the
-  file's bytes in a hidden field (base64) and its name shown as kept.
-  The route takes the uploaded file or the kept one, and checks it in
-  full either way.
-  - Stateless, so it works across App Service instances and without
-    JavaScript.
-  - The page carries the operator's own upload, which they can already
-    see on the roster pages.
-  - Dismiss drops the kept file.
-- **(b) Submit through `fetch`.** A script posts the form and swaps the
-  banner into the page, so the file input is never cleared. This needs
-  JavaScript, and every card would need its own swap.
-- **(c) Keep the file on the server** under a token. This needs a table,
-  because the bytes would otherwise sit in one instance's memory or temp
-  folder.
-
-**Ruling (author, 2026-10-19): (c).** Planned as segment 19W,
-`guide/segment_19W_held_uploads.md`; this entry goes when it closes.
+Nothing open: items 1–3 shipped. Item 3 became segment 19W,
+`guide/archive/segment_19W_held_uploads.md`.
 
 ## Set aside
 

@@ -571,7 +571,8 @@ the round-trip notes below.
    instrument never asks. Quick Setup on an
    existing session asks: the Settings banner lists them and offers a
    `Yes, delete` tick carrying the count as
-   `acknowledge_instrument_deletion`. The file is held, so the next
+   `acknowledge_instrument_deletion`. The file is held (up to the 1 MiB
+   hold cap), so the next
    submit applies it with the tick alone (`spec/quick_setup_card_spec.md`,
    "Result reporting" and **Held files**). Create and Rehydrate pass nothing and never ask.
    Atomic transaction. On any apply error, raise; the caller's
