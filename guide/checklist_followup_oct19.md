@@ -7,27 +7,6 @@ goes once it is empty.
 
 ## To fix first
 
-### 2. An ask's tick belongs inside its red banner
-
-**Seen at:** steps 47 and 54. On some cards, the tick that answers an
-ask sits outside the red banner:
-
-- **Relationships, Upload** (`session_relationships.html`): the
-  `group_clear` "import" banner, with `Yes, clear them` under it.
-- **Relationships, Danger Zone:** the "delete_all" banner, likewise.
-- **Quick Setup on Home:** the deletion tick is inside the banner, but it
-  also asks the operator to re-tick the replace box below the slots.
-
-**Ruling (author, 2026-10-19):** a tick the banner throws up sits
-inside the banner, under its message. A tick the card already had, such
-as `Yes, replace the existing N relationships`, stays where it is.
-
-Before building, inventory every ask. These are not checked yet:
-
-- the Reviewees and Reviewers pages;
-- the row editors' `group_clear` "editor" surface;
-- `instruments_index.html`'s scripted ask on Save.
-
 ### 3. The chosen file stays chosen after an ask
 
 **Problem:** after an ask, the operator has to choose the file again

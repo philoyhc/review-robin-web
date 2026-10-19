@@ -232,17 +232,20 @@
                 </p>
               {% endif %}
 
-              {# A replace refused for clearing group answers: the count and
-                 a tick beside `confirm_replace`; the file is chosen again. #}
+              {# A replace refused for clearing group answers: the count,
+                 and the tick that answers it inside the same banner
+                 (browser run 2026-10-19); `confirm_replace` above stays
+                 where it is. The file is chosen again. #}
               {% if group_clear and group_clear.surface == "import" %}
-                <p class="banner banner-error" role="alert">{{ group_clear.message }}</p>
-                <p>
+                <div class="banner banner-error" role="alert"
+                     data-group-clear-banner>
+                  <p class="banner-lead">{{ group_clear.message }}</p>
                   <label class="confirm-label">
                     <input type="checkbox" name="acknowledge_response_loss"
                            value="{{ group_clear.count }}">
                     <span>Yes, clear them</span>
                   </label>
-                </p>
+                </div>
               {% endif %}
 
               <div class="unlock-col-actions">
@@ -282,14 +285,15 @@
                   </label>
                 </p>
                 {% if group_clear and group_clear.surface == "delete_all" %}
-                  <p class="banner banner-error" role="alert">{{ group_clear.message }}</p>
-                  <p>
+                  <div class="banner banner-error" role="alert"
+                       data-group-clear-banner>
+                    <p class="banner-lead">{{ group_clear.message }}</p>
                     <label class="confirm-label">
                       <input type="checkbox" name="acknowledge_response_loss"
                              value="{{ group_clear.count }}">
                       <span>Yes, clear them</span>
                     </label>
-                  </p>
+                  </div>
                 {% endif %}
                 <div class="unlock-col-actions">
                   <button class="btn destructive" type="submit"

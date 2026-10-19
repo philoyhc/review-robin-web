@@ -415,3 +415,11 @@ instrument card unlocked.
 - [ ] **The deletion ask.** Step 54's `09`: Dismiss hides the banner
   and its `Yes, delete it` tick. Submitting `09` again asks again
   rather than deleting.
+
+## A group-clear tick sits inside its red banner (2026-10-19 run, step 47)
+
+- [ ] **Upload.** On Relationships, a replace that clears group answers
+  (step 47's `15`, ticking the replace box): the red banner holds the
+  line and `Yes, clear them` under it; the replace tick stays above.
+- [ ] **Delete all.** The Danger Zone's ask: the same, with the
+  `Yes, delete the existing …` tick staying above the banner.

@@ -366,9 +366,11 @@ the control that was used offers `Yes, clear them`
 (`acknowledge_response_loss`, valued at the count shown) beside the line
 "This change clears N saved responses on groups whose members it changes."
 It is a checkbox on an existing row, not a new button role. It sits on
-`relationship-edit-form` (#142), beside `confirm_replace` on the Upload
-card (#43), in the Danger Zone (#45), and on `relationships-bulk-form`
-in the row expander for #137, #138 and #163. It is absent until a
+`relationship-edit-form` (#142) and on `relationships-bulk-form` in the
+row expander for #137, #138 and #163, beside the line. On the Upload
+card (#43) and in the Danger Zone (#45) the line is a red banner and the
+tick sits inside it, under the line; `confirm_replace` and the Danger
+Zone's `confirm` tick stay where they are. It is absent until a
 Save is refused. `spec/setup_pages.md` § *Saves that clear group answers*
 has the surfaces.
 
