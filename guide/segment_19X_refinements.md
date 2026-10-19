@@ -218,7 +218,8 @@ to sharpen, and run-order steps 19 and 21 and a checklist row still
 describing the ask; all fixed. Judgment call: on Postgres the dry run's
 DELETE takes the session's relationship row locks for the length of the
 GET, so a page load can wait on a concurrent import; accepted for a
-single-operator Setup page. The Item 2 checklist section went in the
+single-operator Setup page. `spec-writer` at close: one word (the
+banner's tick carries the field). The Item 2 checklist section went in the
 same PR, the author having cleared it.
 
 ### PR ladder

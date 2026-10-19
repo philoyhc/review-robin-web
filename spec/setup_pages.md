@@ -1009,7 +1009,7 @@ above 0. The page counts them by running the delete in a savepoint it
 rolls back, and the tick carries the count as a hidden
 `acknowledge_response_loss`, so the page's own form deletes without an
 ask; while the ask shows, the field is left out, since the banner's
-`Yes, clear them` carries the name. The ask is left for a post with no
+`Yes, clear them` carries that field. The ask is left for a post with no
 count or a stale one, such as a count that moved after the page rendered:
 then the page renders the `confirm` tick ticked again, since the
 operator ticked it to get there, so the group-clear tick and the button
