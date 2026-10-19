@@ -21,9 +21,9 @@ before them works, but its sessions take new addresses.
   Session Home and each of its tabs, `/me`, the review page, Submit and
   Summary all show a 10-character ID of digits and lower-case letters
   where the session's number was.
-- [x] **The lobby still acts on a session.** The row expander's Save and
+- [ ] **The lobby still acts on a session.** The row expander's Save and
   Duplicate, and the bulk panel's tag and archive actions, each act on
-  the rows chosen.
+  the rows chosen. *(2026-10-19: all but the bulk archive checked.)*
 - [ ] **A sort is remembered per session.** Sort a Setup table and a
   review page, then reload: each keeps its sort. (A sort remembered
   under the old numeric address is forgotten once, which a fresh
@@ -57,12 +57,13 @@ before them works, but its sessions take new addresses.
   read `display:reviewee.tag_1`-style sources and `response:` plus the
   field key, never a number. A sort set before this change is forgotten
   once; a new one is kept across a reload.
-- [x] **The observer's CSV names the instrument by its number** (19V
+- [ ] **The observer's CSV names the instrument by its number** (19V
   Item 3; needs `alembic upgrade head` again). On the collation page,
   each Download CSV link ends `/instruments/<n>.csv`, where n is the
   instrument's place in the session (1, 2, …), not its database ID.
   Change n in the address to one the session doesn't have, or to `abc`:
-  the error page.
+  the error page. *(2026-10-19: the link and `9.csv` checked; `abc` not
+  yet.)*
 
 ## Quick Setup on a fresh session takes the files as Create does (S4, narrowed)
 
@@ -134,11 +135,12 @@ before them works, but its sessions take new addresses.
 
 ## `/me` status, the not-open page, archived sessions (M3, M4, M6, M7)
 
-- [x] **Status labels.** On `/me`, rows read "Not open yet" (draft or
+- [ ] **Status labels.** On `/me`, rows read "Not open yet" (draft or
   prepared), "Open" (Activated, before the deadline), "Closed" or
   "Available" after it. Archived sessions are not listed (see "Archived
   sessions are off limits" below). There are no "View responses" or
-  "Until" columns.
+  "Until" columns. *(2026-10-19: Not open yet, Open, Available and the
+  columns checked; Closed and archived not yet.)*
 - [x] **Available.** As an observer on a closed session with a release
   window open and Band 3 granting observers, the row reads "Available".
   As a reviewer past the deadline who saved an answer, likewise.
