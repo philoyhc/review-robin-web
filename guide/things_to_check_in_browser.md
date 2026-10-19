@@ -9,8 +9,8 @@ section may point to upload files under `guide/browser_check_files/`;
 delete them once no remaining section points to them.
 
 **One run order covers every open section:**
-`guide/browser_check_files/checklist/README.md`, with its upload files.
-It names the rows it skips and why.
+`guide/browser_check_files/round_2/README.md`, with its upload files.
+It names the rows it sets aside and why.
 
 ## Sessions and answers are named without database IDs (19V, #3126–#3130)
 
@@ -406,21 +406,21 @@ instrument card unlocked.
   tag: …" / "Reviewee's pair tag: …"; Save is refused until it is
   removed, after which both pages load.
 
-## Dismiss clears a Quick Setup banner on Home (2026-10-19 run, steps 52 and 56)
+## Dismiss clears a Quick Setup banner on Home (2026-10-19 run)
 
 - [ ] **A refusal.** On Session Home, Quick Setup a file that is
-  refused (step 52's `06`, or a reviewers file with a blank email):
-  Dismiss hides the banner, the page scrolls to the slot, and the
-  address stays Home's.
-- [ ] **The deletion ask.** Step 54's `09`: Dismiss hides the banner
-  and its `Yes, delete it` tick. Submitting `09` again asks again
-  rather than deleting.
+  refused (a Settings file with a bad `rules_json`, or a reviewers file
+  with a blank email): Dismiss hides the banner, the page scrolls to
+  the slot, and the address stays Home's.
+- [ ] **The deletion ask.** A Settings file naming one of two
+  instruments: Dismiss hides the banner and its `Yes, delete it` tick.
+  Submitting the file again asks again rather than deleting.
 
-## A group-clear tick sits inside its red banner (2026-10-19 run, step 47)
+## A group-clear tick sits inside its red banner (2026-10-19 run)
 
 - [ ] **Upload.** On Relationships, a replace that clears group answers
-  (step 47's `15`, ticking the replace box): the red banner holds the
-  line and `Yes, clear them` under it; the replace tick stays above.
+  (ticking the replace box): the red banner holds the line and
+  `Yes, clear them` under it; the replace tick stays above.
 - [ ] **Delete all.** The Danger Zone's ask: the same, with the
   `Yes, delete the existing …` tick staying above the banner.
 
@@ -431,18 +431,18 @@ instrument card unlocked.
   you, so untick after choosing on a stale tab, or use a direct POST).
   The card names the file as held and the file box is empty; tick and
   Upload, and the roster is replaced.
-- [ ] **Group clear.** Run step 47's Relationships replace: the ask
-  holds the file and the replace tick comes back ticked. Tick
-  `Yes, clear them` and press Upload with no file chosen; it goes
-  through.
+- [ ] **Group clear.** A Relationships replace that clears group
+  answers: the ask holds the file and the replace tick comes back
+  ticked. Tick `Yes, clear them` and press Upload with no file chosen;
+  it goes through.
 - [ ] **Dismiss.** On either ask, Dismiss returns to the card with no
   banner and no held file named.
 
 ## Quick Setup's ask keeps the files (19W rung 4)
 
-- [ ] **The deletion ask.** Step 54's `09` on `BC import`: the
-  Settings slot names `09_settings_one_instrument.csv` as held, the
-  replace box is ticked and Submit is live. Tick `Yes, delete it` and
+- [ ] **The deletion ask.** A Settings file naming one of two
+  instruments: the Settings slot names the file as held, the replace
+  box is ticked and Submit is live. Tick `Yes, delete it` and
   Submit, and the file applies with nothing chosen again.
 - [ ] **A missing replace tick.** With rosters in place, choose two
   files and Submit without the replace tick: both slots name their

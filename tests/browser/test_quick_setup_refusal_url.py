@@ -56,7 +56,7 @@ def test_dismiss_clears_the_banner_on_homes_own_path(
     assert page.evaluate("window.location.pathname") == f"/operator/sessions/{session_id}"
 
 
-_CHECKLIST = Path(__file__).resolve().parents[2] / "guide/browser_check_files/checklist"
+_CHECKLIST = Path(__file__).resolve().parents[1] / "fixtures/quick_setup"
 
 
 def _submit_settings(page: Page, path: Path) -> None:

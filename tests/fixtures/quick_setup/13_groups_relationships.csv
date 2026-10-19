@@ -1,0 +1,13 @@
+ReviewerEmail,RevieweeEmail,PairContextTag1.Studio
+operator@example.edu,operator@example.edu,North
+operator@example.edu,dev@example.edu,North
+operator@example.edu,erin@example.edu,South
+operator@example.edu,fay@example.edu,South
+alice@example.edu,operator@example.edu,North
+alice@example.edu,dev@example.edu,North
+alice@example.edu,erin@example.edu,South
+alice@example.edu,fay@example.edu,South
+bob@example.edu,operator@example.edu,North
+bob@example.edu,dev@example.edu,North
+bob@example.edu,erin@example.edu,South
+bob@example.edu,fay@example.edu,South
