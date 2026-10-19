@@ -225,3 +225,11 @@ Integration spec v0.2 (`docs/archive/cordware_rrw_integration_spec_v0.2.md`) is 
 2. **Probe paths need no interactive sign-in.** `/health` for the host, and an optional `/reviewrobin/health` for RRW (v0.2 §12).
 3. **Mounted RRW keeps its own request handling.** Its error handlers, middleware order and app-wide dependencies behave as they do standalone (v0.2 §7).
 4. **No backend hostname leaks.** Downloads and every absolute URL, invitation emails included, stay under `/reviewrobin` and never carry the App Service's `azurewebsites.net` name (v0.2 §10, §18 criterion 14).
+
+## Addendum B — stage 1 decisions (author, 2026-10-19)
+
+Three implementation decisions for stage 1 (mount RRW at `/reviewrobin`), settled ahead of the Segment 21 rework:
+
+1. **The mount supplies the prefix.** `host.mount("/reviewrobin", …)` strips the prefix before RRW sees a request and sets `root_path`, so route-aware URLs (`url_for`, `request.url_for`) gain `/reviewrobin` without help. The `BASE_PATH` setting and ASGI shim proposed in `guide/segment_21_domain_retrofit.md` are dropped, and that outline's rejection of a fixed mount is reversed: it rested only on the gateway's keep-or-strip behavior, which Cordware now owns. The sweep of literal root paths in templates, Python, inline scripts and cookies is still required.
+2. **RRW is constructed once, and the host owns logging.** The module-level `app = create_app()` moves out of `app/main.py` into a small entry module of its own, so importing the factory has no side effects. Standalone start commands and the docs that name them (`app.main:app` today) move to that entry module. Process-wide logging setup moves to the Cordware host, and RRW's factory stops configuring the root logger when it is mounted.
+3. **Azure sees only the assembled app; old root links are not kept.** Nothing is deployed to the NUS host until this repository runs as Cordware with RRW mounted, so its first deploy uses the Cordware entry point and RRW is never deployed there standalone. The personal dev slot switches to the Cordware entry point when stage 1 lands, as the live check of Addendum A's deep-link and hostname requirements under real Easy Auth. No redirects from old root paths (`/operator/...`, `/me`) to `/reviewrobin/...`: nothing consequential links to them.
