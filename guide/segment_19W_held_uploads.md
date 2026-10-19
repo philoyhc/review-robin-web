@@ -129,6 +129,13 @@ as planned. Things the plan did not spell out:
   `formaction`, so there is no nested form.
 - The Danger Zone's group-clear banner got the link Dismiss it lacked.
 
+**2026-10-19, rung 4.** Quick Setup on Home holds every file of a
+refused submit on `needs_confirm` and `deletes_instruments`, as planned.
+`_run_quick_setup` was split so that submit-all can feed it the bytes
+it has already read: the held files beside the ones chosen now. The
+per-slot routes are left alone: nothing in the UI posts to them. Item
+1's in-place Dismiss stays for a banner that holds nothing.
+
 ## PR ladder
 
 1. **This plan.** Prose only.

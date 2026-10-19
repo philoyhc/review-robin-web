@@ -95,11 +95,12 @@ def test_every_cancel_is_secondary() -> None:
 
 #: The upload banners' one button reads Dismiss, not Cancel: Quick Setup's
 #: slot banner and the Setup pages' upload card (spec/ui_elements.md §5a).
-#: The upload card's has two forms since segment 19W (a link, or a submit
-#: that ends a held file's hold), and so do the Relationships group-clear
-#: banner on the Upload card; the Danger Zone's has the link only.
+#: Since segment 19W the upload card's and Quick Setup's each have two
+#: forms (a link, or a submit that ends a held file's hold), and so does
+#: the Relationships group-clear banner on the Upload card; the Danger
+#: Zone's has the link only.
 PINNED_DISMISSES = {
-    "operator/partials/_quick_setup_card.html": 1,
+    "operator/partials/_quick_setup_card.html": 2,
     "operator/partials/_upload_problems.html": 2,
     "operator/session_relationships.html": 3,
 }

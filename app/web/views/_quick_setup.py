@@ -107,6 +107,11 @@ class QuickSetupSlot:
     submit sends as ``acknowledge_instrument_deletion``. ``0`` renders
     no tick."""
 
+    held_filename: str | None = None
+    """The file this slot holds from a refused submit that asked a
+    question (segment 19W), named in place of the empty input; the
+    next Submit sends it again unless a new file is chosen."""
+
 
 @dataclass(frozen=True)
 class QuickSetupContext:
@@ -148,6 +153,14 @@ class QuickSetupContext:
     description: str
     title: str = "Quick Setup"
     show_confirm_replace: bool = True
+    held_token: str | None = None
+    """The hold a refused submit's ask left (segment 19W): rides the
+    submit-all form as ``held_token``, and makes the banner's Dismiss a
+    submit that ends the hold."""
+
+    confirm_replace_checked: bool = False
+    """The card-level replace tick renders ticked: after the deletion
+    ask the operator had already ticked it (author, 2026-10-19)."""
     """Gate the card-level "Yes, replace existing reviewers, reviewees
     or settings, according to what is uploaded. …" checkbox just above
     the footer. Suppressed on the new-session
@@ -171,6 +184,8 @@ def build_quick_setup_context(
     error_reason: str | None = None,
     error_details: tuple[str, ...] = (),
     error_count: int = 0,
+    held: dict[str, str] | None = None,
+    held_token: str | None = None,
 ) -> QuickSetupContext:
     """Build the Quick Setup card context for Session Home.
 
@@ -260,6 +275,7 @@ def build_quick_setup_context(
             error_details=_details_for("reviewers"),
             error_reason=_reason_for("reviewers"),
             cancel_url=cancel_url_for("reviewers"),
+            held_filename=(held or {}).get("reviewers"),
         ),
         QuickSetupSlot(
             key="reviewees",
@@ -273,6 +289,7 @@ def build_quick_setup_context(
             error_details=_details_for("reviewees"),
             error_reason=_reason_for("reviewees"),
             cancel_url=cancel_url_for("reviewees"),
+            held_filename=(held or {}).get("reviewees"),
         ),
         QuickSetupSlot(
             key="relationships",
@@ -286,6 +303,7 @@ def build_quick_setup_context(
             error_details=_details_for("relationships"),
             error_reason=_reason_for("relationships"),
             cancel_url=cancel_url_for("relationships"),
+            held_filename=(held or {}).get("relationships"),
         ),
     ]
     # Observers slot — always shown, as on the New session card
@@ -305,6 +323,7 @@ def build_quick_setup_context(
             error_details=_details_for("observers"),
             error_reason=_reason_for("observers"),
             cancel_url=cancel_url_for("observers"),
+            held_filename=(held or {}).get("observers"),
         )
     )
     slots.append(
@@ -320,6 +339,7 @@ def build_quick_setup_context(
             error_details=_details_for("settings"),
             error_reason=_reason_for("settings"),
             cancel_url=cancel_url_for("settings"),
+            held_filename=(held or {}).get("settings"),
             deletion_count=_deletion_count,
         )
     )
@@ -356,6 +376,10 @@ def build_quick_setup_context(
         is_disabled=is_disabled,
         is_locked=not is_available,
         description=description,
+        held_token=held_token if held else None,
+        # Only the deletion ask was reached with the replace tick on; a
+        # missing-tick ask leaves it to the operator (author, 2026-10-19).
+        confirm_replace_checked=bool(held) and _deletion_count > 0,
     )
 
 
