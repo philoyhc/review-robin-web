@@ -3,7 +3,8 @@
 > **Needs updating to fit the finalized Cordware spec** (author,
 > 2026-10-16). This outline was written against the v0.1 integration spec
 > and the 15 October addendum, both since replaced by
-> `docs/cordware_rrw_integration_spec_v0.2.md`,
+> `docs/archive/cordware_rrw_integration_spec_v0.2.md` (archived
+> 2026-10-19; what only it stated is v0.7's Addendum A),
 > `docs/cordware_repository_strategy_v0.7.md` and
 > `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Those make RRW a
 > module inside one Cordware App Service rather than its own App Service

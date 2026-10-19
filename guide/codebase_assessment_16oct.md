@@ -251,7 +251,7 @@ it.
 | Email dispatch | `spec/email_infra_options.md` | ⛔ blocked. Nothing in `app/` calls a transport. Segment 14B needs institutional Azure |
 | Rehydrate | `spec/rehydrate.md` | ⏸ gated off. `rehydrate_enabled` defaults to `False` |
 | Blob storage | `guide/blob_storage_candidates.md` | ⏸ not built |
-| Base path (`/reviewrobin`) | `docs/cordware_rrw_integration_spec_v0.2.md` | ⏸ on hold, speculative (author, 2026-10-16). Segment 21, outline only, to be reworked against the v0.2 spec |
+| Base path (`/reviewrobin`) | `docs/cordware_rrw_integration_spec_v0.2.md` | ⏸ on hold, speculative (author, 2026-10-16). Segment 21, outline only, to be reworked against the v0.2 spec | <!-- path-ref-ok -->
 | Operator theming | `spec/visual_style_rrw.md` | ⏸ planned. `guide/deferred_consolidated.md` Part A |
 
 **Doc drift: two registers closed, no corpus sweep since 2026-10-07.** The
