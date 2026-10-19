@@ -383,7 +383,7 @@ Ten routes carry it. Surfaces and ticks are in `spec/setup_pages.md`
 | `POST …/reviewees/{id}/update` | 400, row editor re-rendered |
 | `POST …/relationships/create` and `…/relationships/{id}/update` | 400, row editor re-rendered |
 | `POST …/relationships/import` | 400, upload card re-rendered |
-| `POST …/relationships/delete-all` | 400, Danger Zone re-rendered |
+| `POST …/relationships/delete-all` | 400, Danger Zone re-rendered; the page's own form sends the count its tick named, so this is a post with no count or a stale one |
 | `POST …/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | 400, page re-rendered with the selection kept |
 
 ### 3.3 `_require_validated_or_ready(session)`

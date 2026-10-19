@@ -422,8 +422,6 @@ instrument card unlocked.
 - [ ] **Upload.** On Relationships, a replace that clears group answers
   (ticking the replace box): the red banner holds the line and
   `Yes, clear them` under it; the replace tick stays above.
-- [ ] **Delete all.** The Danger Zone's ask: the same, with the
-  `Yes, delete the existing …` tick staying above the banner.
 
 ## A Setup upload's ask keeps the file (19W rung 3)
 
@@ -452,21 +450,11 @@ instrument card unlocked.
 - [ ] **Dismiss.** On either ask, Dismiss reloads Home with no banner
   and no held file named.
 
-## Delete all keeps its tick after the group-clear ask (19X Item 1)
+## Relationships' Delete all names the group answers (19X Item 3)
 
-- [ ] **The tick stays.** On Relationships, with group answers saved,
-  tick `Yes, delete the existing … relationships` and press Delete all:
-  the red banner asks, and the delete tick above it is still ticked with
-  `Delete all relationships` live.
-
-## A refused Quick Setup submit lands above the card (19X Item 2)
-
-- [ ] **Any slot.** On Session Home, Quick Setup a refused Settings file
-  (or any slot after Reviewers): the page reloads with the Quick Setup
-  card's top border a line below the top of the window, not at the top
-  of the page. A refused Reviewers file lands the same way. On a window
-  taller than the rest of the page, the page scrolls to its foot and the
-  card shows lower down.
-- [ ] **Owners.** Add an owner who already is one: the page lands with
-  the Owners card's top border a line below the top of the window, its
-  heading above the red banner.
+- [ ] **One tick, no banner.** On Relationships, with group answers
+  saved on an instrument grouped by a relationship tag, open the Danger
+  Zone: the tick reads "Yes, delete the existing … relationships and the
+  N reviewer responses on the groups they form". Tick it and press
+  Delete all: everything goes, with no banner. On a session with no
+  such answers, the tick names only the relationships.

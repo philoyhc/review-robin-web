@@ -863,6 +863,20 @@ def _render_relationships_page(
             # ``cascade_counts``.
             "delete_discards_assignments": False,
             "roster_response_count": 0,
+            # What Delete all would clear on pair-context groups, named
+            # on its tick as the other rosters name theirs (19X Item 3).
+            # Counted only where the Danger Zone can render: the template's
+            # ``unlock_available``, editable and no row editor open.
+            "delete_all_group_loss": (
+                relationships_service.delete_all_group_loss(
+                    db, session_id=review_session.id
+                )
+                if all_rows
+                and lifecycle.is_editable(review_session)
+                and edit_id is None
+                and not add_mode
+                else 0
+            ),
             "delete_discards_responses": False,
             "displayed_row_count": displayed_row_count,
             # Segment 19I Item 10 — the one preview-count

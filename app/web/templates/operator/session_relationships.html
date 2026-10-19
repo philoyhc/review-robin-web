@@ -297,9 +297,21 @@
                        replace tick does (segment 19X Item 1). #}
                     <input type="checkbox" name="confirm" value="true" required
                            data-delete-confirm="delete-all"{% if group_clear and group_clear.surface == "delete_all" %} checked{% endif %}>
+                    {# Names the group answers it clears, as Reviewers and
+                       Reviewees name theirs, with the acknowledgement
+                       riding on the tick (19X Item 3). The ask below is
+                       left for a count that changed after the page
+                       rendered. #}
                     <span>Yes, delete the existing
-                    <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>.</span>
+                    <span class="pill pill-empty">{{ total_row_count }} relationship{% if total_row_count != 1 %}s{% endif %}</span>{% if delete_all_group_loss > 0 %}
+                    and the
+                    <span class="pill pill-empty">{{ delete_all_group_loss }} reviewer response{% if delete_all_group_loss != 1 %}s{% endif %}</span>
+                    on the groups they form{% endif %}.</span>
                   </label>
+                  {% if delete_all_group_loss > 0 and not (group_clear and group_clear.surface == "delete_all") %}
+                    <input type="hidden" name="acknowledge_response_loss"
+                           value="{{ delete_all_group_loss }}">
+                  {% endif %}
                 </p>
                 {% if group_clear and group_clear.surface == "delete_all" %}
                   <div class="banner banner-error" role="alert"

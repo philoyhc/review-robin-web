@@ -552,6 +552,36 @@ def delete_all_relationships(
     return deleted
 
 
+def delete_all_group_loss(db: Session, *, session_id: int) -> int:
+    """The saved responses ``delete_all_relationships`` would clear on
+    pair-context groups, counted without deleting anything, so the
+    Danger Zone's tick can name them up front as the other rosters'
+    do (segment 19X Item 3). The delete runs inside a savepoint that is
+    rolled back. 0 when no pair-context group instrument has an answer."""
+    from app.services import responses as responses_service
+
+    before = pair_context_groups_before(db, session_id=session_id)
+    if not before:
+        return 0
+    savepoint = db.begin_nested()
+    try:
+        for row in db.execute(
+            select(Relationship).where(Relationship.session_id == session_id)
+        ).scalars():
+            db.delete(row)
+        db.flush()
+        try:
+            # An acknowledged count of 0 refuses any loss, with the count.
+            clear_redrawn_groups(
+                db, session_id=session_id, before=before, acknowledged_loss=0
+            )
+        except responses_service.GroupAnswersWouldClear as exc:
+            return exc.count
+        return 0
+    finally:
+        savepoint.rollback()
+
+
 # --------------------------------------------------------------------------- #
 # Per-row CRUD — Segment 15F PR 5 stage 2.
 #

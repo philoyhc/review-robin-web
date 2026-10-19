@@ -18,7 +18,7 @@ import datetime as dt
 import re
 
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import Engine, event, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -32,6 +32,8 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
 )
+from app.services import relationships as relationships_service
+
 from ._feature_toggles import enable_relationships
 
 _SAVED = dt.datetime(2026, 10, 17, tzinfo=dt.timezone.utc)
@@ -390,6 +392,70 @@ def test_delete_all_is_refused_with_the_count_then_goes_through(
     assert _responses(db) == 0
 
 
+def _delete_all_form(body: str) -> str:
+    match = re.search(r'<form method="post" action="[^"]*/delete-all">(.*?)</form>', body, re.S)
+    assert match is not None, "no Delete all form on the page"
+    return match.group(1)
+
+
+def test_delete_all_names_the_answers_it_clears_on_its_tick(
+    db: Session, client: TestClient
+) -> None:
+    # As Reviewers and Reviewees name theirs (segment 19X Item 3): the
+    # tick names the four answers, and the count rides with it, so the
+    # page's own form deletes without the ask.
+    session = _seed(db, client, "rgc-delete-all-named")
+    page = client.get(f"{_base(session)}?unlocked=1").text
+    form = _delete_all_form(page)
+    # The table still lists every row the dry run deleted and rolled back.
+    assert len(set(re.findall(r'id="relationship-row-(\d+)"', page))) == 4
+    label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", form))
+    assert "Yes, delete the existing 4 relationships and the 4 reviewer responses on the groups they form." in label
+    assert re.findall(r'name="acknowledge_response_loss"[^>]*value="(\d+)"', form) == ["4"]
+    # Counting deleted nothing.
+    assert db.execute(select(func.count()).select_from(Relationship)).scalar_one() == 4
+    assert _responses(db) == 4
+
+    accepted = client.post(
+        f"{_base(session)}/delete-all",
+        data={"confirm": "true", "acknowledge_response_loss": "4"},
+        follow_redirects=False,
+    )
+    assert accepted.status_code == 303
+    assert _responses(db) == 0
+    assert db.execute(select(func.count()).select_from(Relationship)).scalar_one() == 0
+
+
+def test_delete_all_with_nothing_to_clear_names_only_the_relationships(
+    db: Session, client: TestClient
+) -> None:
+    session = _seed(db, client, "rgc-delete-all-bare")
+    db.execute(Response.__table__.delete())
+    db.commit()
+    form = _delete_all_form(client.get(f"{_base(session)}?unlocked=1").text)
+    label = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", form))
+    assert "Yes, delete the existing 4 relationships ." in label
+    assert "reviewer response" not in label
+    assert _TICK not in form
+
+
+def test_delete_all_asks_when_the_count_moved_after_the_page_rendered(
+    db: Session, client: TestClient
+) -> None:
+    # A tick shown 2 answers cannot approve clearing 4: the ask comes
+    # back, carrying only the banner's own tick.
+    session = _seed(db, client, "rgc-delete-all-moved")
+    refused = client.post(
+        f"{_base(session)}/delete-all",
+        data={"confirm": "true", "acknowledge_response_loss": "2"},
+        follow_redirects=False,
+    )
+    assert refused.status_code == 400
+    assert _tick_inside_banner(refused.text, 4)
+    assert _delete_all_form(refused.text).count(_TICK) == 1
+    assert _responses(db) == 4
+
+
 def test_an_import_is_refused_with_the_count_then_goes_through(
     db: Session, client: TestClient
 ) -> None:
@@ -425,3 +491,28 @@ def test_an_import_is_refused_with_the_count_then_goes_through(
     assert accepted.status_code == 303
     assert _relationship(db, session.id, "Ann").tag_1 == "y"
     assert _responses(db) == 1
+
+
+def test_counting_the_delete_leaves_loaded_rows_loaded(
+    db: Session, client: TestClient, engine: Engine
+) -> None:
+    # The page lists the rows it loaded before counting; the savepoint's
+    # rollback puts them back as they were, so reading them after costs
+    # no query per row (Codex on #3156).
+    session = _seed(db, client, "rgc-delete-all-loaded")
+    db.expire_all()
+    rows = list(
+        db.execute(select(Relationship).where(Relationship.session_id == session.id)).scalars()
+    )
+    assert relationships_service.delete_all_group_loss(db, session_id=session.id) == 4
+    statements: list[str] = []
+
+    def _record(conn, cursor, statement, params, context, executemany) -> None:
+        statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", _record)
+    try:
+        assert sorted(row.tag_1 or "" for row in rows) == ["x", "x", "y", "y"]
+    finally:
+        event.remove(engine, "before_cursor_execute", _record)
+    assert statements == []
