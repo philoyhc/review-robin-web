@@ -1001,12 +1001,18 @@ delete a roster that has responses.
 references an observer, so the delete destroys no assignment and no
 response — requiring an acknowledgement would ask the operator to
 accept a loss that cannot occur. Relationships has no cascade gate
-either; its group-clear tick is a separate gate (§ *Saves that clear
-group answers*). When that gate refuses a Delete all, the page renders
-the `confirm` tick ticked again, since the operator ticked it to get
-there, so the group-clear tick and the button are all that remain. The
-cascade requirement stands only where the cascade does, on Reviewers and
-Reviewees.
+either; its loss is the group answers the delete clears (§ *Saves that
+clear group answers*), and its tick names them as the other rosters name
+theirs: "Yes, delete the existing 12 relationships and the 4 reviewer
+responses on the groups they form", the clause only when the count is
+above 0. The page counts them by running the delete in a savepoint it
+rolls back, and the tick carries the count as a hidden
+`acknowledge_response_loss`, so the page's own form deletes without an
+ask. The ask is left for a count that moved after the page rendered:
+then the page renders the `confirm` tick ticked again, since the
+operator ticked it to get there, so the group-clear tick and the button
+are all that remain. The cascade requirement stands only where the
+cascade does, on Reviewers and Reviewees.
 
 The card itself is hidden whenever the session is not editable, and so
 is the Upload card — both are tenants of the Unlock panel, which is
@@ -1126,7 +1132,7 @@ nothing, such as a group that only shrank, never asks.
 | Reviewees `…/reviewees/{id}/update` | the row editor, with the typed values, filter, search and offset | on `reviewee-edit-form` |
 | Relationships `…/relationships/create` and `…/relationships/{id}/update` | the row editor, with the typed values and view kept | on `relationship-edit-form` |
 | Relationships `…/relationships/import` | the Upload card, panel open, CSV issues kept; the file is held (§ *The Upload card's replace*) and `confirm_replace` renders ticked | inside the red banner, under the line, with Dismiss; `confirm_replace` stays where it is |
-| Relationships `…/relationships/delete-all` | the Danger Zone, panel open, and `confirm` renders ticked | inside the red banner, under the line, with Dismiss; the `confirm` tick stays where it is |
+| Relationships `…/relationships/delete-all`, when the count moved after the page rendered (the Danger Zone's tick names it up front, § *The Danger Zone's `delete-all`*) | the Danger Zone, panel open, and `confirm` renders ticked | inside the red banner, under the line, with Dismiss; the `confirm` tick stays where it is |
 | Relationships `…/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | the page, with the same rows selected and the view kept | in the row expander, on `relationships-bulk-form` |
 
 On a bulk action the expander shows the line and the tick beside its

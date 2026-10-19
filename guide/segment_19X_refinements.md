@@ -170,3 +170,77 @@ landing; the script runs once the document has parsed).
 - `spec/ui_elements.md` — §5a *Auto-scroll on display*: the first shown banner, and `data-banner-landing` (Item 2).
 - `guide/things_to_check_in_browser.md` — a row for the landing (Item 2).
 - `guide/todo_master.md` — drop Item 2 from the 19X entry when it closes (Item 2).
+
+## Item 3 — Relationships' Delete all names the group answers on its tick
+
+### Opportunity
+
+The author's browser check of Item 1, 2026-10-19: Delete all went
+through with no banner, and the author asked that Relationships' Danger
+Zone "just follow Reviewers and Reviewees", whose one tick names what
+goes ("Yes, delete the existing 5 reviewees and their associated 30
+assignments and 5 reviewer responses"). Relationships named only the
+relationships, and found out about the group answers it clears after
+the operator pressed the button.
+
+### Decision
+
+The tick names the answers up front: "Yes, delete the existing 12
+relationships and the 4 reviewer responses on the groups they form",
+the clause only when the count is above 0, and the count rides with the
+tick as a hidden `acknowledge_response_loss`, as on Reviewees. The page
+counts with `relationships.delete_all_group_loss`, which runs the delete
+in a savepoint and rolls it back. The route is unchanged: the Item 1 ask
+stays for a count that moved after the page rendered. Rejected: a pure
+count without the dry run — which groups clear is decided by the
+regrouping (`clear_changed_groups`), and a second copy of that rule
+would drift from it.
+
+### Blast radius (measured)
+
+Taken 2026-10-19 at `6d84b80d`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates with a Delete all tick (only Relationships changes) | 4 | `grep -rln 'data-delete-confirm="delete-all"' app/web/templates` |
+| Routes rendering the Relationships page | 1 | `grep -rn "def _render_relationships_page" app/web/routes_operator` |
+| Specs naming `delete-all` | 7 | `grep -rln "delete-all" spec` |
+
+### Status
+
+**Closed 2026-10-19, in one PR.** Driven in Chromium on the round-2
+`R groups` setup: the tick reads "… 12 relationships and the 4 reviewer
+responses on the groups they form", and one tick deletes with no
+banner. Planned, built and closed in the same PR.
+
+### PR ladder
+
+1. **PR 1 — the named tick.** The service count, the page's context,
+   the template's clause and hidden field, tests, the two specs, a
+   browser-check row. Must not touch the route.
+
+### Definition of done
+
+- The page names the count and sends it; the page's own form deletes
+  without an ask; a page with nothing to clear names only the
+  relationships; a moved count still asks (tests).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Reviewers and Reviewees: already name their losses.
+
+### Doc impact
+
+- `spec/setup_pages.md` — § *The Danger Zone's `delete-all`*: Relationships' tick names the group answers; the group-clear table's delete-all row is the moved-count case (Item 3).
+- `spec/lifecycle.md` — §3.2's route table: delete-all's refusal is the moved-count case (Item 3).
+- `guide/things_to_check_in_browser.md` — the Item 1 section becomes Item 3's row (Item 3).
+- `guide/todo_master.md` — Item 3 in the 19X entry (Item 3).
