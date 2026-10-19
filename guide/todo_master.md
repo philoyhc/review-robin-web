@@ -71,15 +71,6 @@ concluding** (decision 2026-09-05) and independent of each other.
    2026-10-19; add one per finding.
    **Plan:** `guide/segment_19X_refinements.md`.
 
-4. **19V — Public IDs** (not gated on Azure). Items 1–4 shipped
-   2026-10-18/19: session URLs carry a random `sessions.public_id`,
-   review-form answers are keyed off an ordinal, the observer CSV
-   address takes the instrument's `session_seq`, now unique, and the
-   review page's sort keys name no instrument or field ID. No participant
-   page carries a workspace-wide ID; the segment stays open for
-   follow-ups (author, 2026-10-18).
-   **Plan:** `guide/segment_19V_public_id_revamp.md`.
-
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits

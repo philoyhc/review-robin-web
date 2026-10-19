@@ -1,6 +1,6 @@
 """sessions.form_key: the secret key of the review form's page digest
 
-Segment 19V Item 2 (``guide/segment_19V_public_id_revamp.md``): the
+Segment 19V Item 2 (``guide/archive/segment_19V_public_id_revamp.md``): the
 review form carries a digest of its page's assignment-ID set, so a post
 against a page that changed since it rendered is refused. The digest is
 keyed by this per-session secret, never rendered, so it reveals neither

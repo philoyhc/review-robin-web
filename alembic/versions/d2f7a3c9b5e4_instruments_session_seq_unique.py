@@ -1,6 +1,6 @@
 """instruments (session_id, session_seq) unique
 
-Segment 19V Item 3 (``guide/segment_19V_public_id_revamp.md``): the
+Segment 19V Item 3 (``guide/archive/segment_19V_public_id_revamp.md``): the
 observer's collation CSV is addressed by the instrument's per-session
 ``session_seq``, so no two instruments in a session may share one. The
 column has been unconstrained since 19Q Item 6, so the upgrade first

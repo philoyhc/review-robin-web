@@ -1,5 +1,5 @@
 """19V Item 1 rung 2: every path that makes a session gives it its own
-``public_id`` (``guide/segment_19V_public_id_revamp.md``)."""
+``public_id`` (``guide/archive/segment_19V_public_id_revamp.md``)."""
 
 from __future__ import annotations
 
