@@ -126,14 +126,15 @@ def ensure_default_instrument(
 def is_untouched_default(instrument: Instrument) -> bool:
     """Whether ``instrument`` is still the Default Instrument exactly as
     :func:`ensure_default_instrument` made it: its name, its Display
-    Fields rows unlabelled and shown, the default response fields
-    unchanged, and every optional setting still unset.
+    Fields rows unlabelled, shown and in the order they were added, the
+    default response fields unchanged, its Self review flag the
+    session's, and every optional setting still unset.
 
     The Settings import deletes such an instrument without asking,
     because it holds nothing of the operator's: Quick Setup on a session
     nobody has set up then behaves as Create does (the author, 2026-10-19,
-    narrowing findings S4). Responses are not checked; Quick Setup is
-    unavailable once a session has any.
+    narrowing findings S4). Responses are not checked: the import asks
+    about them separately (``acknowledge_response_loss``).
     """
     from app.services.instruments._response_fields import (
         _inline_kwargs_from_default_spec,
@@ -155,10 +156,19 @@ def is_untouched_default(instrument: Instrument) -> bool:
         )
     ):
         return False
+    # Seeded from the session's flag at creation; the Assignments page's
+    # Self review chip sets it per instrument.
+    if instrument.self_reviews_active != instrument.session.self_reviews_active:
+        return False
     # A roster upload seeds a Display Fields row for each populated tag
     # column, unlabelled and shown; only a label or a hidden row is the
     # operator's.
-    if any(f.label or not f.visible for f in instrument.display_fields):
+    # Every seed appends, so in creation order the rows' places rise; a
+    # reorder (the Band 2 pill drag) breaks that.
+    displays = sorted(instrument.display_fields, key=lambda f: f.id)
+    if any(f.label or not f.visible for f in displays) or any(
+        a.order >= b.order for a, b in zip(displays, displays[1:])
+    ):
         return False
     fields = sorted(instrument.response_fields, key=lambda f: f.order)
     if len(fields) != len(DEFAULT_RESPONSE_FIELDS):
