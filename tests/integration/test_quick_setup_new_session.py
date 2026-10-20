@@ -190,6 +190,9 @@ def test_create_session_with_quick_setup_files_processes_uploads(
     ).scalars().all()
     assert len(reviewers) == 1
     assert len(reviewees) == 1
+    # Lands at the top of Session Home, not at the last slot that ran
+    # (author, 19X Item 5).
+    assert response.headers["location"] == f"/operator/sessions/{review_session.public_id}"
 
 
 def test_create_session_with_no_quick_setup_files_still_works(

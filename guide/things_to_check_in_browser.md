@@ -57,3 +57,11 @@ deployment, not a local run.
   part in this instrument, so there is nothing to download.", with no
   table. Set the cohort back to one that matches (e.g. Team CONTAINS
   `Team`): the tables return.
+
+## A Create with staged files lands at the top of Home (19X Item 5)
+
+- [ ] **No slot fragment.** New session with files staged (say
+  reviewers, reviewees and a settings file): after Create, Session Home
+  opens at the top and the address ends at the session's id, with no
+  `#quick-setup-…`. A Create with nothing staged still opens the
+  details card for editing.
