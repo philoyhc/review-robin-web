@@ -105,7 +105,7 @@ def create_app() -> FastAPI:
 
 Cordware owns `/` (the landing page) and `/health`. Easy Auth's `/.auth/*` paths stay at the host level.
 
-**The mount supplies the prefix.** `host.mount("/reviewrobin", …)` strips the prefix before RRW sees a request and sets `root_path`, so route-aware URLs (`url_for`, `request.url_for`) gain `/reviewrobin` without help. No `BASE_PATH` setting or path-rewriting shim is needed: the gateway's keep-or-strip behavior no longer matters, because Cordware does the routing.
+**The mount supplies the prefix.** `host.mount("/reviewrobin", …)` strips the prefix before RRW sees a request and sets `root_path`, so route-aware URLs (`url_for`, `request.url_for`) gain `/reviewrobin` without help. No `BASE_PATH` setting or path-rewriting shim is needed, on one condition: **Application Gateway forwards the public path unchanged**, with no path override in its backend settings, so a request for `/reviewrobin/...` reaches Cordware with its prefix intact. A gateway that stripped the prefix would leave Cordware nothing to route on. The production listener and backend settings still to be configured (v8 status report §8.1) must preserve the path.
 
 **Mounting is not URL rewriting.** RRW still writes many links as literal root paths, such as `/operator/sessions` and `/me`. Every redirect, template link, form action, script request path, static URL, cookie path, auth return link and emailed link is swept onto route-aware generation. Links are never written with a hard-coded `/reviewrobin` prefix.
 
@@ -254,4 +254,6 @@ All earlier versions, `cordware_repo_planning.md` and integration spec v0.2 are 
 - **Standalone compatibility replaced by independence (§3).** v0.7 required RRW to "work both standalone locally and mounted". v0.8 requires that Cordware plus any single application runs, with the mounted set named by `CORDWARE_APPS` and Cordware runnable alone. Packages stay shared. There is no supported standalone RRW runtime, so RRW keeps no second identity parser.
 - **v0.7 Addendum A folded into §3** as "Behavior under the mount": deep links, auth-free probes, mounted request handling, no backend-host leak.
 - **v0.7 Addendum B folded into §3 and §5:** the mount replaces the `BASE_PATH` shim; each application is constructed once, with host-owned logging and the module-level app removed; NUS sees only the assembled application; the dev slot switches at stage 1; old root links are not kept.
+- **Gateway path forwarding stated (§3):** the mount needs Application Gateway to forward the public path unchanged; v0.7 had called keep-or-strip irrelevant.
+- **The v8 status report marked superseded in part:** its source-control and deployment model (independent repos synced into `philoyhc/cordware`) conflicts with this strategy, and the report now says so.
 - **Consistency fixes:** identity extraction ahead of Residential is explained (§1); the landing page lists mounted applications (§1, §3); the stage 1 and stage 3 gates name the independence checks (§5); the status line records adoption, and the broken version-history pointer is fixed.
