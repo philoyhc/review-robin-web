@@ -30,8 +30,12 @@ so later layouts append to the cycle.
 
 | Layout | Left column | Right column |
 |---|---|---|
-| **Layout 1** (today, the default) | heading, visibility | help cards |
-| **Layout 2** | heading, help cards | visibility |
+| **Layout 1** (the default) | heading, help cards | visibility |
+| **Layout 2** (today's) | heading, visibility | help cards |
+
+The author swapped the numbering the same day and made the new
+arrangement the default, so every instrument, existing ones included,
+moves to Layout 1 when PR 2 lands.
 
 The chip repaints the preview at once and the card's Save stores it
 (it rides `dfsave-<id>`, as Band 2's chips do). Stored as
@@ -42,19 +46,25 @@ guesses wrong, and the operator cannot see why).
 
 ### Semantics
 
-- **Values.** `layout_1` (default; every existing instrument) and
-  `layout_2`, shown as "Layout 1" / "Layout 2"; each carries a `title`
-  naming its arrangement. Any other stored or imported value is refused
+- **Values.** `layout_1` (default; every existing instrument, so the
+  migration changes what reviewers see) and `layout_2`, shown as
+  "Layout 1" / "Layout 2"; each carries a `title` naming its arrangement. Any other stored or imported value is refused
   on import and reads as `layout_1` if found.
-- **Narrow screens** (≤ 800px, one column): reading order — Layout 1
-  heading, visibility, help; Layout 2 heading, help, visibility.
-- **Missing cards.** No help cards: both layouts render as today (the
-  heading and visibility alone). No visibility rows: Layout 2's right
-  column is empty and leaves the grid as the help column does today.
+- **Narrow screens** (≤ 800px, one column): every layout stacks
+  heading, visibility, help, as today (author, 2026-10-20), so the
+  setting changes the wide view only.
+- **Missing cards.** No help cards: both layouts render the heading and
+  visibility in one column, as today. No visibility rows: Layout 1's
+  right column is empty and leaves the grid as the help column does today.
 - **Where it shows.** The reviewer surface and the operator's preview,
   which render the same intro markup.
-- **Audit.** The Save's existing instrument event names the change
-  (`EVENT_SCHEMAS` registers the field).
+- **Audit.** No existing event fires for a layout-only Save, so a new
+  setter `set_intro_layout` in `app/services/instruments/` writes
+  `instrument.intro_layout_updated` (`audit.changes` + `refs`), registered
+  in `EVENT_SCHEMAS`, and skips a no-op. It is display-only, like
+  `instrument.column_widths_updated`: no lifecycle demotion.
+- **Both Saves.** `dfsave-<id>` posts to `/fields/save` without JavaScript
+  and the script re-points it at the JSON `/save`; both call the setter.
 
 ### Blast radius (measured)
 
@@ -65,7 +75,7 @@ Taken 2026-10-20 at `ea52fa8a`.
 | Templates rendering the intro columns | 2 (+ `base.html` CSS) | `grep -rln "rs-intro-col" app/web/templates` |
 | Code touches of the closest analog, `self_reviews_active` (models, instrument services, clone, CSV) | 8 files | `grep -rln --include=*.py "self_reviews_active" app/db app/services/instruments app/services/session_clone.py app/services/session_config_io` |
 | Specs naming that analog | 5 live | `grep -rln "self_reviews_active" spec --exclude-dir=archive` |
-| Instrument card Save route | 1 | `grep -n 'instruments/{instrument_id}/save' app/web/routes_operator/_instruments.py` |
+| Instrument card Save routes (no-JS `/fields/save`, JSON `/save`) | 2 | `grep -nE 'instruments/\{instrument_id\}/(fields/)?save"' app/web/routes_operator/_instruments.py` |
 
 ### PR ladder
 
@@ -73,18 +83,21 @@ Taken 2026-10-20 at `ea52fa8a`.
    inert ("Layout 1", no input). Must not touch storage or the intro.
 2. **PR 2 — the setting.** Migration (`instruments.intro_layout`,
    not null, default `layout_1`), model, the chip live with a hidden
-   input on `dfsave-<id>`, the Save and its audit field, the intro's
-   Layout 2 arrangement on the reviewer surface and the preview,
-   Duplicate and Replicate. Browser test: cycle, preview, save, reload,
-   narrow order.
-3. **PR 3 — CSV, specs, close.** The Settings CSV field (serialize,
-   apply, refusal), `spec/roundtrip_coverage.md`, the specs below,
-   browser-check rows; `spec-writer`; close.
+   input on `dfsave-<id>`, the setter and its event, both Saves, the
+   intro's two arrangements on the reviewer surface and the preview,
+   Duplicate, Replicate and the Settings CSV field (serialize, apply,
+   refusal), so no landed rung stores a value a backup drops. Browser
+   test: cycle, preview, save, reload, narrow order.
+3. **PR 3 — specs, close.** `spec/roundtrip_coverage.md`, the specs
+   below, browser-check rows; `spec-writer`; close.
 
 ### Definition of done
 
-- An instrument saved at Layout 2 renders heading + help left and
-  visibility right on the reviewer surface and the preview (tests).
+- An instrument at Layout 1 renders heading + help left and visibility
+  right, and one saved at Layout 2 renders today's arrangement, on the
+  reviewer surface and the preview (tests).
+- A layout-only Save writes `instrument.intro_layout_updated` through
+  both `/fields/save` and `/save` (tests).
 - The setting survives Duplicate, Replicate and a Settings CSV round
   trip (tests).
 - `## Doc impact` section present and current
