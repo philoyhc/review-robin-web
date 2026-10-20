@@ -371,8 +371,9 @@ and close in one, as laddered.
 - **Decisions confirmed at build.** `window.rrwIntroSnap` is the one
   entry point; the Instruments page calls it after lock and unlock. A
   pass clears, reads, then writes every intro it covers, one reflow
-  however many instruments the reviewer surface draws. The tests nudge the shorter side's `min-height` to a set gap
-  (6px near, a line and 8px far) rather than craft content to a pixel.
+  however many instruments the reviewer surface draws. The tests nudge
+  the shorter side's `min-height` to a set gap (6px near, a line and
+  8px far) rather than craft content to a pixel.
 - **Reads.** One `diff-reviewer` read on the build: no correctness
   defect; six smaller findings, all acted on before the PR opened (the
   Layout 2 visibility-card grow untested, the missing-card wording, the
