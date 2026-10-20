@@ -217,7 +217,7 @@ def test_surface_help_text_renders_as_inline_list(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Help text renders as ``<ul><li><strong>Label</strong> — text</li>``."""
+    """Help text renders as a row: ``<strong>Label</strong> — text``."""
     from app.db.models import InstrumentResponseField
 
     operator = make_client(alice)
@@ -243,13 +243,15 @@ def test_surface_help_text_renders_as_inline_list(
     body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
     del rae_client
 
-    # Single help item still renders as a half-width card in the
-    # per-instrument intro's columns (the lone-help case used to expand
-    # to full width via `rs-help-card-solo`; it always stays half width,
-    # in whichever column the split gives it, 19T Item 17).
-    assert 'class="card rs-help-card"' in body
-    assert "rs-help-card-solo" not in body
-    assert "<strong>Rating</strong> — 1 (poor) to 5 (excellent)." in body
+    # 19Y Item 2 — a help text is a row in a card, not a card of its
+    # own (the retired `rs-help-card-solo` and per-field
+    # `rs-help-card` are both gone from the intro).
+    assert (
+        '<div class="rs-help-row"><strong>Rating</strong> — '
+        "1 (poor) to 5 (excellent).</div>"
+    ) in body
+    assert 'class="card rs-help-card"' not in body
+    assert 'class="card rs-help-card rs-help-card-solo"' not in body
     assert "<dl class=\"help-block\">" not in body
     assert '<ul class="help-block">' not in body
 
@@ -296,25 +298,9 @@ def intro_columns(body: str) -> dict[str, str]:
     return {k: "".join(v) for k, v in parser.cols.items()}
 
 
-def test_surface_help_text_multi_items_render_in_grid(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """Two+ help items render as half-width cards in the per-instrument
-    intro's columns; no solo-card branch."""
+def _two_help_texts(db: Session, review_session, **instrument_attrs):
     from app.db.models import InstrumentResponseField
 
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-helpgrid",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-        activate=False,
-    )
     instrument = db.execute(
         select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalar_one()
@@ -325,88 +311,130 @@ def test_surface_help_text_multi_items_render_in_grid(
             .order_by(InstrumentResponseField.id)
         ).scalars()
     )
-    fields[0].help_text = "Rating help."
+    fields[0].help_text = instrument_attrs.pop("rating_help", "Rating help.")
     fields[0].help_text_visible = True
     fields[1].help_text = "Comments help."
     fields[1].help_text_visible = True
+    for name, value in instrument_attrs.items():
+        setattr(instrument, name, value)
     db.commit()
+
+
+def test_surface_help_rows_sit_in_the_heading_card_in_layout_1(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19Y Item 2 — Layout 1 (the default): every help text is a row
+    inside the heading card, under the description, in field order; the
+    right column draws no help card. A lone untitled instrument still
+    draws the heading card, for the rows."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helprows1",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    _two_help_texts(db, review_session)
     _activate(operator, db, review_session)
 
-    rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
-
-    # 19T Item 17 — the intro is two columns: the left stacks the
-    # heading card over the visibility card, the right every help card
-    # in field order. The markup is the same for every layout; the
-    # instrument's (19Y Item 1, default ``layout_1``) is CSS's to place.
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
     opening = '<div class="rs-intro-columns" data-intro-layout="layout_1">'
     assert opening in body
-    cols = intro_columns(body)
-    body = body[body.index(opening) :]
-    # A lone untitled instrument renders no heading card.
-    assert 'class="card rs-instrument-card rs-intro-name"' not in body
-    assert "data-rs-visibility-policy-card" in cols["left"]
-    assert "rs-help-card" not in cols["left"]
-    assert "data-rs-help-stack" in cols["right"]
-    assert cols["right"].index("Rating help.") < cols["right"].index("Comments help.")
-    assert cols["right"].count('class="card rs-help-card"') == 2
-    assert body.count('class="card rs-help-card"') == 2
-    assert body.count("data-rs-help-stack") == 1
-    assert "rs-help-grid" not in body and "rs-intro-grid" not in body
-    # The retired `rs-help-card-solo` modifier no longer renders.
-    assert "rs-help-card-solo" not in body
-
-
-def test_surface_help_cards_all_go_right(
-    db: Session,
-    alice: AuthenticatedUser,
-    rae: AuthenticatedUser,
-    make_client: Callable[[AuthenticatedUser], TestClient],
-) -> None:
-    """19T Item 17 rung 4: the left column is the heading card over the
-    visibility card, the right every help card in field order, whatever
-    their length — nothing is measured or split."""
-    from app.db.models import InstrumentResponseField
-
-    operator = make_client(alice)
-    review_session = _operator_creates_session_with_pair(
-        operator,
-        db,
-        code="rae-helpgrid",
-        reviewer_email="rae@example.edu",
-        reviewee_ident="carol@example.edu",
-        activate=False,
-    )
-    instrument = db.execute(
-        select(Instrument).where(Instrument.session_id == review_session.id)
-    ).scalar_one()
-    fields = list(
-        db.execute(
-            select(InstrumentResponseField)
-            .where(InstrumentResponseField.instrument_id == instrument.id)
-            .order_by(InstrumentResponseField.id)
-        ).scalars()
-    )
-    fields[0].help_text = "Rating help. " + "x" * 800
-    fields[0].help_text_visible = True
-    fields[1].help_text = "Comments help."
-    fields[1].help_text_visible = True
-    instrument.short_label = "Group Peer Review"
-    instrument.description = "Your impression of the candidate."
-    db.commit()
-    _activate(operator, db, review_session)
-
-    rae_client = make_client(rae)
-    body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
     cols = intro_columns(body)
     left = cols["left"]
     assert left.index('class="card rs-instrument-card rs-intro-name"') < left.index(
         "data-rs-visibility-policy-card"
     )
-    assert "rs-help-card" not in left
-    assert cols["right"].index("Rating help.") < cols["right"].index("Comments help.")
-    assert "rs-intro-name" not in cols["right"]
-    assert "data-rs-visibility-policy-card" not in cols["right"]
+    heading = left[: left.index("data-rs-visibility-policy-card")]
+    assert "<h2>" not in heading  # untitled: the card holds the rows alone
+    assert heading.index("Rating help.") < heading.index("Comments help.")
+    assert heading.count('class="rs-help-row"') == 2
+    assert "rs-intro-help" not in cols["right"]
+    assert "rs-help-row" not in cols["right"]
+    assert 'class="card rs-help-card"' not in body
+
+
+def test_surface_help_rows_follow_the_description_in_layout_1(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19Y Item 2 — a titled Layout 1 instrument: the rows sit in the
+    heading card after its title and description."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helprows1t",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    _two_help_texts(
+        db,
+        review_session,
+        short_label="Group Peer Review",
+        description="Your impression of the candidate.",
+    )
+    _activate(operator, db, review_session)
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
+    left = intro_columns(body)["left"]
+    heading = left[: left.index("data-rs-visibility-policy-card")]
+    assert (
+        heading.index("<h2>")
+        < heading.index("Your impression of the candidate.")
+        < heading.index('class="rs-help-row"')
+    )
+    assert heading.count('class="rs-help-row"') == 2
+
+
+def test_surface_help_rows_share_one_card_in_layout_2(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19Y Item 2 — Layout 2: the left column is the heading card over
+    the visibility card, the right one help card holding every help row
+    in field order, whatever their length."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helprows2",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    _two_help_texts(
+        db,
+        review_session,
+        short_label="Group Peer Review",
+        description="Your impression of the candidate.",
+        intro_layout="layout_2",
+        rating_help="Rating help. " + "x" * 800,
+    )
+    _activate(operator, db, review_session)
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
+    cols = intro_columns(body)
+    left, right = cols["left"], cols["right"]
+    assert left.index('class="card rs-instrument-card rs-intro-name"') < left.index(
+        "data-rs-visibility-policy-card"
+    )
+    assert "rs-help-row" not in left
+    assert right.count('class="card rs-instrument-card rs-intro-help"') == 1
+    assert right.count('class="rs-help-row"') == 2
+    assert right.index("Rating help.") < right.index("Comments help.")
+    assert "rs-intro-name" not in right
+    assert "data-rs-visibility-policy-card" not in right
 
 
 def test_surface_does_not_wrap_groups_in_outer_card(

@@ -6194,14 +6194,14 @@ def test_lock_scaffold_seeds_locked_state_and_lock_regions(
     )
     assert 'data-instrument-locked="true"' in view
     assert "data-lock-region" in view
-    # Six lock regions (the Band 1 grid; Band 2's intro card, visibility
-    # editor and preview; Band 3's two tables — the pieces, not the bands,
-    # so their scrollers stay scrollable, 19T Item 12A), each carrying the
-    # ``inert aria-hidden="true"`` attribute pair in the locked render.
-    # Markup only: the card's scripts may spell the pair too (19T Item 17's
-    # JS-built help cards carry it when locked).
+    # Seven lock regions (the Band 1 grid; Band 2's intro card, help card
+    # (19Y Item 2), visibility editor and preview; Band 3's two tables —
+    # the pieces, not the bands, so their scrollers stay scrollable, 19T
+    # Item 12A), each carrying the ``inert aria-hidden="true"`` attribute
+    # pair in the locked render. Markup only: the card's scripts may spell
+    # the pair too.
     view_markup = re.sub(r"<script>.*?</script>", "", view)
-    assert view_markup.count('inert aria-hidden="true"') == 6
+    assert view_markup.count('inert aria-hidden="true"') == 7
 
     # Edit mode — unlocked. The regions drop inert (interactive).
     edit = _card_slice(

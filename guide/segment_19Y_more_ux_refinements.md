@@ -264,5 +264,6 @@ Taken 2026-10-20 at `925efad3`.
 - `spec/instruments.md` — the preview's help rows, locked and unlocked (Item 2).
 - `spec/ui_elements.md` — the help-card blockquote: the intro's help is rows in a card, not a card per field (Item 2).
 - `spec/settings_inventory.md` — the `intro_layout` row says help texts, not help cards (Item 2; added at Codex's read of the plan).
-- `guide/things_to_check_in_browser.md` — rows for both layouts' help (Item 2).
+- `spec/color_tokens.md` — `--card-help-*` no longer paints an Instruments-page slab; `.rs-help-card` is the lobby's and the Guide's (Item 2; added at the build read).
+- `guide/things_to_check_in_browser.md` — rows for both layouts' help; the Item 1 screencap reshoot's alt text describes the rows, not help cards (Item 2; the alt-text note added at the build read).
 - `guide/todo_master.md` — the 19Y entry (Item 2).

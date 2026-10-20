@@ -401,18 +401,18 @@ def component_sections():
       </div>
       <div class="card rs-help-card"><strong>Rating</strong> — Help card,
         the read view.</div>
-      <!-- The unlocked state on the operator Instruments page: the same card
-           hosting a textarea for editing the help text. Markup and inline styles
-           mirror buildResponseFieldHelpCards() in instruments_index.html, so the
-           edit box is designed against the slab it actually sits on — its own
-           border is --border-default, which is the only thing delineating it.
-           `ph-help-edit` is a harness-only marker (like ph-tint / ph-anno) so the
-           two help cards are separately pickable in Part C. -->
-      <div class="card rs-help-card ph-help-edit" style="position: relative;">
-        <strong>Rating</strong>
-        <textarea maxlength="1000" style="display: block; width: 100%; margin-top: 6px;
-          min-height: 60px; box-sizing: border-box; font: inherit; padding: 4px 6px;"
-          >Rate 1-5 on clarity of the written feedback.</textarea>
+      <!-- The unlocked state on the operator Instruments page (19Y Item 2): an
+           instrument's help texts are rows in a normal card, each a label over a
+           textarea. Markup and inline styles mirror buildResponseFieldHelpRows()
+           in instruments_index.html, so the edit box is designed against the card
+           it actually sits on — its own border is --border-default, which is the
+           only thing delineating it. `ph-help-edit` is a harness-only marker
+           (like ph-tint / ph-anno) so the sample is pickable on its own in Part C. -->
+      <div class="card rs-instrument-card rs-intro-help ph-help-edit">
+        <div class="rs-help-rows"><div class="rs-help-row"><strong>Rating</strong>
+          <textarea maxlength="1000" style="display: block; width: 100%; margin-top: 4px;
+            min-height: 60px; box-sizing: border-box; font: inherit; padding: 4px 6px;"
+            >Rate 1-5 on clarity of the written feedback.</textarea></div></div>
       </div>
       <p class="muted ph-anno" style="margin: 16px 0 6px;">Instrument card tints</p>
       <div class="ph-row">

@@ -242,7 +242,7 @@
         --card-warning-bg: var(--amber-pale);
         --card-warning-border: var(--amber-deep);
         --card-warning-fg: var(--amber-deep);
-        /* Help cards — the Instruments page's slabs (`.rs-help-card`)
+        /* Help cards — the lobby's tiles and the Guide's callouts (`.rs-help-card`)
            and the Setup pages' guidance disclosure (`.page-guidance`).
            Border is two palette steps off the fill (darker in light,
            lighter in dark): a soft edge against the page in both themes, which
@@ -4527,12 +4527,13 @@
         overflow-wrap: anywhere;
       }
       /* Per-instrument intro — two independent columns (19T Item 17).
-         The left column stacks the name / description card over the
-         "Who can see what you wrote" card; the right stacks every help
-         card in field order. `align-items: start` and a flex stack per
-         column let every card keep its own height. At 800px or narrower
-         the two columns stack into one: name, visibility, then the help
-         cards. */
+         The markup's left column stacks the name / description card over
+         the "Who can see what you wrote" card; the right holds the one
+         help card. The help texts are rows (`.rs-help-row`, 19Y Item 2):
+         in Layout 2 inside that help card, in Layout 1 inside the name
+         card under its description. `align-items: start` and a flex
+         stack per column let every card keep its own height. At 800px or
+         narrower the two columns stack into one in the markup's order. */
       body.ui-v2 .rs-intro-columns {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -4540,72 +4541,62 @@
         align-items: start;
         margin: var(--space-6) 0 var(--space-3) 0;
       }
-      body.ui-v2 .rs-intro-col,
-      body.ui-v2 .rs-help-stack {
+      body.ui-v2 .rs-intro-col {
         display: flex;
         flex-direction: column;
         gap: var(--space-3);
         min-width: 0;
       }
-      body.ui-v2 .rs-help-stack:empty { display: none; }
-      /* No help cards: the right column leaves the grid, so the one-column
-         layout below adds no gap under the visibility card; at two columns
-         the left keeps its half and the right half stays empty. */
-      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-card)) { display: none; }
+      /* The help rows: a field's label in bold, its help text after a
+         dash when locked or in a textarea under it when the Instruments
+         card is unlocked. The help card takes the normal card infill
+         (the author, 2026-10-20), not `.rs-help-card`'s tint. */
+      body.ui-v2 .rs-help-rows {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      body.ui-v2 .rs-help-rows:not(:has(.rs-help-row)),
+      body.ui-v2 .rs-intro-help:not(:has(.rs-help-row)) { display: none; }
+      body.ui-v2 .rs-intro-name .rs-help-rows:not(:first-child) {
+        margin-top: var(--space-3);
+      }
+      /* No help rows in the help card: the right column leaves the grid,
+         so the one-column layout below adds no gap under the visibility
+         card; at two columns the left keeps its half and the right half
+         stays empty. */
+      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-row)) { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
         body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
       }
-      /* Layout 1 (19Y Item 1; ``Instrument.intro_layout``): the heading
-         and help cards left, the visibility card right. The two column
-         wrappers step out of the grid (`display: contents`) so their
-         cards place themselves. The visibility card spans both rows and
-         the second row takes any extra height, so the help cards start
-         right under the heading. Above 800px only: the markup's order —
-         heading, visibility, help — is the one-column order of every
-         layout. With no help card the heading stays left and the
-         visibility card right (the author, 2026-10-20); Layout 2 keeps
-         them stacked on the left. Written as the negation of the 800px query
-         so a fractional width between the two (browser zoom) takes one. */
+      /* Layout 1 (19Y Item 1; ``Instrument.intro_layout``): the name card,
+         holding the help rows, left; the visibility card right. The left
+         column wrapper steps out of the grid (`display: contents`) so its
+         two cards sit side by side on one row; the right column, whose
+         help card is empty in this layout, leaves the grid. Above 800px
+         only: narrow, the name card (help and all) stacks over the
+         visibility card (the author, 2026-10-20). Written as the
+         negation of the 800px query so a fractional width between the
+         two (browser zoom) takes one. */
       @media not all and (max-width: 800px) {
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] {
-          grid-template-rows: auto 1fr;
-        }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] > .rs-intro-col {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] > .rs-intro-col[data-rs-intro-col="left"] {
           display: contents;
         }
         body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-intro-name {
           grid-column: 1;
           grid-row: 1;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-help-stack {
-          grid-column: 1;
-          grid-row: 2;
-        }
         body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-intro-visibility {
           grid-column: 2;
-          grid-row: 1 / span 2;
-        }
-        /* No heading card drawn (the reviewer surface draws none without
-           a title; a locked preview hides an empty one): the help cards
-           take the top row too, level with the visibility card. */
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-intro-name)) .rs-help-stack,
-        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
-          grid-row: 1 / span 2;
-        }
-        /* No help card: one row, heading left and visibility right, with
-           no empty second row adding its gap under the taller card. */
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)) {
-          grid-template-rows: auto;
-        }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)) .rs-intro-visibility {
           grid-row: 1;
         }
-        /* Neither a heading nor a help card drawn: the visibility card
-           has nothing to sit beside, so it keeps the left half, as in
-           Layout 2. */
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)):not(:has(.rs-intro-name)) .rs-intro-visibility,
-        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)):has(.rs-intro-name[data-intro-empty]) .rs-intro-visibility {
+        /* No name card drawn (the reviewer surface draws none without a
+           title or a help row; a locked preview hides an empty one): the
+           visibility card has nothing to sit beside, so it keeps the left
+           half, as in Layout 2. */
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-intro-name)) .rs-intro-visibility,
+        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]):not(:has(.rs-intro-name .rs-help-row)) .rs-intro-visibility {
           grid-column: 1;
         }
       }
@@ -4867,7 +4858,10 @@
       /* 19T Item 16 entry 6 — locked, an intro card with neither a heading
          nor a subtitle is not drawn, as the reviewer surface draws none;
          unlocked it holds the description box. */
-      [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] { display: none; }
+      [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty]:not(:has(.rs-help-row)) { display: none; }
+      /* ...and with help rows (19Y Item 2, Layout 1) it draws for them
+         alone, so they start at the card's top. */
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] .rs-help-rows { margin-top: 0; }
       /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
          Rendered per card (hidden until a fetch-Save comes back with
          validation errors); lists the blocking issues at the top of the

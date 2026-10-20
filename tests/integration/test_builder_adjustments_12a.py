@@ -387,17 +387,21 @@ def test_band_1_scrolls_rather_than_spilling(
 def test_band_2s_intro_is_two_columns(client: TestClient, db: Session) -> None:
     """19T Item 17: Band 2's intro mirrors the reviewer surface's two
     columns — the name card over the visibility card on the left, and
-    the JS-built help cards in the right column's one stack, out of the
-    preview. Rung 4 retired the measured split, so nothing re-places them."""
+    the one help card on the right. 19Y Item 2: the JS-built help rows go
+    in the name card (Layout 1) or that help card (Layout 2), out of the
+    preview container."""
     _, _, card, _ = _page(client, db, "17-intro-columns")
     cols = intro_columns(card)
     assert cols["left"].index("rs-intro-name") < cols["left"].index("rs-intro-visibility")
-    assert "data-rs-help-stack" not in cols["left"]
-    assert '<div class="rs-help-stack" data-rs-help-stack>' in cols["right"]
+    left_name = cols["left"][: cols["left"].index("rs-intro-visibility")]
+    assert '<div class="rs-help-rows" data-rs-help-rows="heading">' in left_name
+    assert '<div class="rs-help-rows" data-rs-help-rows="card">' in cols["right"]
+    assert "rs-intro-help" in cols["right"]
     assert "rs-intro-name" not in cols["right"] and "rs-intro-visibility" not in cols["right"]
     assert "rs-intro-grid" not in card and "rs-help-grid" not in card
-    # The help cards are placed in the stack, not the preview container.
-    assert "helpStack.innerHTML = buildResponseFieldHelpCards(card)" in card
-    assert "container.innerHTML = buildResponseFieldHelpCards(card)" not in card
+    # The help rows are placed in their home, not the preview container.
+    assert "placeHelpRows(card);" in card
+    assert "container.innerHTML = buildResponseFieldHelpRows(card)" not in card
+    assert "buildResponseFieldHelpCards" not in card
     for retired in ("data-rs-intro-js", "rrwIntro", "data-rs-intro-split"):
         assert retired not in card

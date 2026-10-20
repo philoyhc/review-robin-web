@@ -141,7 +141,7 @@ TARGETS = [
     (".muted:not(.ph-anno)", "Muted text", [("text", "fg", "--text-subtle")]),
     # Cards, in the gallery's own order: plain, danger zone, help, help+edit.
     # a plain .card fills with --surface-page (raised via its border), not --surface-card
-    (".card:not(.rs-help-card):not(.danger-zone)", "Plain card",
+    (".card:not(.rs-help-card):not(.danger-zone):not(.ph-help-edit)", "Plain card",
      [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
       ("border", "border", "--border-default")]),
     (".danger-zone", "Danger zone card",
@@ -154,16 +154,18 @@ TARGETS = [
     # --card-help-* tokens also paint the page-guidance disclosure on every
     # Setup page, so a facet named after one caller would misdescribe what
     # editing it changes.
-    (".rs-help-card:not(.ph-help-edit)", "Help card",
+    (".rs-help-card", "Help card",
      [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
       ("border", "border", "--card-help-border")]),
-    (".rs-help-card.ph-help-edit", "Help card with edit box",
-     [("background", "bg", "--card-help-bg"), ("text", "fg", "--card-help-fg"),
-      ("border", "border", "--card-help-border")]),
+    # An instrument's help texts are rows in a normal card (19Y Item 2), so
+    # the card takes the plain card's tokens, not --card-help-*.
+    (".rs-intro-help.ph-help-edit", "Instrument help texts with edit box",
+     [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
+      ("border", "border", "--border-default")]),
     # The edit box itself: on the operator Instruments page the only thing
-    # separating it from the slab is its own border, so it is pickable in place
+    # separating it from the card is its own border, so it is pickable in place
     # rather than only via the Forms section's standalone textarea.
-    (".rs-help-card.ph-help-edit textarea", "Help-card edit box",
+    (".rs-intro-help.ph-help-edit textarea", "Help-text edit box",
      [("background", "bg", "--surface-page"), ("text", "fg", "--text-body"),
       ("border", "border", "--border-default")]),
     _pill("error", "Error pill"),
