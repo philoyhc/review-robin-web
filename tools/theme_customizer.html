@@ -648,7 +648,16 @@
         gap: 4px;
         position: relative;
       }
-      .dt-field > input[data-dt-text] { flex: 1 1 auto; min-width: 0; }
+      /* The box and its two buttons share one explicit height (19X Item
+         8), so the squares stay square at any browser font size: a
+         height left to the box's own font and 8px padding scales apart
+         from a width in rem. */
+      .dt-field { --dt-field-size: 2.25rem; }
+      .dt-field > input[data-dt-text] {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: var(--dt-field-size);
+      }
       /* Specific enough to beat the text-input rules, which also name
          `datetime-local` (`body.ui-v2 input[type="datetime-local"]`). */
       body .dt-field > input.dt-field-picker[type="datetime-local"] {
@@ -665,11 +674,24 @@
         border: 0;
         padding: 0;
       }
-      .dt-field .dt-field-btn {
+      /* Both buttons are squares as tall as the box (19X Item 8): both
+         sides are the field's shared size, and the glyph centers, so the
+         wider calendar glyph does not widen its button.
+         Specific enough to beat `body.ui-v2 .btn`'s padding. */
+      body .dt-field .btn.dt-field-btn {
         flex: 0 0 auto;
-        padding: 4px 8px;
-        line-height: 1.2;
+        width: var(--dt-field-size);
+        height: var(--dt-field-size);
+        min-width: 0;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
       }
+      /* Its own display outranks `.btn[hidden]`, so it restores hidden
+         (the buttons render hidden until the script reveals them). */
+      body .dt-field .btn.dt-field-btn[hidden] { display: none; }
       /* 18R Item 4 — Session config card in-place display <-> edit swap.
          The card carries data-config-mode; each field renders a
          data-display-only value and a data-edit-only input in the same

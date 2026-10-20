@@ -474,7 +474,8 @@ takes the amber outline, never a fill, so it never reads louder than Destructive
 Every `.btn` shares one shape: `var(--space-2) var(--space-4)`
 padding, `var(--radius-button)` radius, `--fs-small` at weight 500, a 1px
 border, single-line label. **Roles differ by token, not by shape**, so a
-role change is a colour change and nothing else. If a button does not fit
+role change is a colour change and nothing else. The one exception is the
+date-time field's pair of square buttons (§8). If a button does not fit
 one of the five, ask before inventing a sixth.
 The Guide's "Reading the controls" card (`app/web/templates/guide.html`)
 shows one sample of each role on the classes in the table below, so a
@@ -630,8 +631,10 @@ everywhere, so "you can click this" reads the same way on every control.
 >   24-hour. The button appears only where `showPicker` exists.
 > - **A ✕ button** that empties the box.
 >
-> Both buttons render `hidden` and the script in `base.html` reveals them;
-> without script the text box still types and submits. Neither button
+> Both are Secondary `.btn`s drawn as squares as tall as the box, the
+> glyph centered, so the wider 📅 does not widen its button (the exception
+> to §6's one `.btn` shape). Both render `hidden` and the script in
+> `base.html` reveals them; without script the text box still types and submits. Neither button
 > acts while the box is disabled or read-only. Edits made through a button
 > fire the box's `input` and `change` events, so a page's own listeners
 > (dirty flag, ordering check, timezone conversion) see them. A field
