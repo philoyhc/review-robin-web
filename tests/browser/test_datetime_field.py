@@ -191,3 +191,15 @@ def test_a_zone_change_leaves_an_impossible_time_as_typed(page: Page) -> None:
         page.locator("#display_timezone").fill("Asia/Singapore")
         expect(page.locator("#deadline")).to_have_value(text)
         page.locator("#display_timezone").fill("UTC")
+
+
+def test_both_buttons_are_squares_as_tall_as_the_box(page: Page) -> None:
+    """The calendar glyph is wider than ✕; neither widens its button
+    (19X Item 8)."""
+    page.goto("/operator/sessions/new")
+    field = page.locator("[data-dt-field]", has=page.locator("#deadline"))
+    box = page.locator("#deadline").bounding_box()
+    for which in ("[data-dt-pick]", "[data-dt-clear]"):
+        button = field.locator(which).bounding_box()
+        assert abs(button["width"] - button["height"]) < 1, which
+        assert abs(button["height"] - box["height"]) < 1, which

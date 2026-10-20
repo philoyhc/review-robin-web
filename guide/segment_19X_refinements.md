@@ -636,3 +636,61 @@ close aligned all six specs, with no code divergence.
 - `spec/operator_button_audit.md` — the details card's address (Item 7).
 - `guide/things_to_check_in_browser.md` — a row (Item 7).
 - `guide/todo_master.md` — Item 7 in the 19X entry (Item 7).
+
+## Item 8 — The date-time field's buttons are squares
+
+### Opportunity
+
+The author, 2026-10-20, on Item 6's field: "Make the button for calling
+out the picker square? Same size as the one for X." Measured on New
+session: the 📅 button 51 × 37 px, the ✕ 46 × 37, the box 36 tall; the
+emoji is wider than ✕, and `body.ui-v2 .btn`'s 16px side padding wins
+over the field's own.
+
+### Decision
+
+Both buttons become 2.25rem squares, stretched to the box's height
+(36px), padding off, glyph centered, under a selector specific enough
+to beat `body.ui-v2 .btn`. Rejected: `aspect-ratio: 1` on a stretched
+flex item — Chromium sized the width from the content, measured 19 and
+14 px wide.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `9fc6d187`: one CSS rule in `base.html`
+(`.dt-field .dt-field-btn`), the regenerated `tools/theme_customizer.html`,
+one spec paragraph.
+
+### Status
+
+**Closed 2026-10-20, in one PR.** Measured after: 36 × 36 on New
+session, Session Home and the lobby expander, level with the box. A
+browser test pins it.
+
+### PR ladder
+
+1. **PR 1 — the rule**, a browser test, the spec line. Must not touch
+   the field's markup or script.
+
+### Definition of done
+
+- Both buttons measure square and as tall as the box (browser test).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Any other `.btn`.
+
+### Doc impact
+
+- `spec/ui_elements.md` — the date-time field's buttons are squares (Item 8).
+- `guide/todo_master.md` — Item 8 in the 19X entry (Item 8).
+

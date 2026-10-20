@@ -665,10 +665,21 @@
         border: 0;
         padding: 0;
       }
-      .dt-field .dt-field-btn {
+      /* Both buttons are squares as tall as the box (19X Item 8): the
+         height stretches to the row (the 36px text box), the width is set
+         to match, and the glyph centers, so the wider calendar glyph does
+         not widen its button.
+         Specific enough to beat `body.ui-v2 .btn`'s padding. */
+      body .dt-field .btn.dt-field-btn {
         flex: 0 0 auto;
-        padding: 4px 8px;
-        line-height: 1.2;
+        align-self: stretch;
+        width: 2.25rem;
+        min-width: 0;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
       }
       /* 18R Item 4 — Session config card in-place display <-> edit swap.
          The card carries data-config-mode; each field renders a

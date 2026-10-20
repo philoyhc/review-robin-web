@@ -630,7 +630,9 @@ everywhere, so "you can click this" reads the same way on every control.
 >   24-hour. The button appears only where `showPicker` exists.
 > - **A ✕ button** that empties the box.
 >
-> Both buttons render `hidden` and the script in `base.html` reveals them;
+> Both are Secondary `.btn`s drawn as squares as tall as the box, the
+> glyph centered, so the wider 📅 does not widen its button. Both render
+> `hidden` and the script in `base.html` reveals them;
 > without script the text box still types and submits. Neither button
 > acts while the box is disabled or read-only. Edits made through a button
 > fire the box's `input` and `change` events, so a page's own listeners
