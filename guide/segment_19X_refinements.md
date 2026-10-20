@@ -294,7 +294,9 @@ unchanged, and found two stale view docstrings (comment-only edits to
 the view), `spec/visibility_policy.md`'s observer row, a wrong test
 count here, and a checklist row whose one setup could not show both
 cases; all fixed. `spec/audience_and_identity_model.md` describes the
-3-row table only in general terms and stays as is.
+3-row table only in general terms and stays as is. `spec-writer` at
+close: both spec rows now say "in any identification mode" and that the
+heading and description stay.
 
 ### PR ladder
 
