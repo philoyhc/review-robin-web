@@ -77,6 +77,11 @@ Taken 2026-10-20 at `ea52fa8a`.
 | Specs naming that analog | 5 live | `grep -rln "self_reviews_active" spec --exclude-dir=archive` |
 | Instrument card Save routes (no-JS `/fields/save`, JSON `/save`) | 2 | `grep -nE 'instruments/\{instrument_id\}/(fields/)?save"' app/web/routes_operator/_instruments.py` |
 
+### Status
+
+- 2026-10-20, PR 1 (#3170): the scaffold chip shipped as the plain pill, not the cycle chip's dark fill, after Codex: an inert chip shouldn't offer a click.
+- 2026-10-20, PR 2: one read on the item's cumulative diff (from `a727b148`): no correctness defect; seven smaller findings acted on in the PR — one rule for a stray value (`effective_intro_layout`, the chip, surface and CSV export alike), the locked chip out of the tab order, the 800px gap closed, `autocomplete="off"` on the input, browser tests for the no-help, no-heading and reviewer-surface branches, and two Doc impact bullets above.
+
 ### PR ladder
 
 1. **PR 1 — scaffold.** The chip beside "Preview review instrument",
@@ -122,5 +127,7 @@ Taken 2026-10-20 at `ea52fa8a`.
 - `spec/settings_inventory.md` — `Instrument.intro_layout` (Item 1).
 - `spec/csv_contracts.md` — the Settings CSV field (Item 1).
 - `spec/roundtrip_coverage.md` — the field's round trip (Item 1).
+- `spec/visibility_policy.md` — the visibility card's column follows the instrument's layout (Item 1; added at the PR 2 read).
+- `app/web/templates/guide.html` — the preview screencap's alt text names the default layout; the screencap itself (`app/web/static/guide/instrument-card-preview.png` and `-dark`) is the author's to reshoot (Item 1; added at the PR 2 read).
 - `guide/things_to_check_in_browser.md` — rows for the chip and both layouts (Item 1).
 - `guide/todo_master.md` — the 19Y entry (Item 1).

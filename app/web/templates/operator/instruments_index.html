@@ -1604,20 +1604,23 @@
              takes. A click moves to the next layout
              (``newModelCycleIntroLayout``), repaints the preview's
              intro below and writes the hidden input, which rides the
-             card's Save. Locked, it is the plain pill and does
-             nothing. A stored value outside the cycle reads as the
-             first layout. #}
-          {% set _intro_layout = (intro_layout_choices | selectattr("value", "equalto", instrument.intro_layout) | first) or intro_layout_choices[0] %}
+             card's Save. Locked, it is the plain pill, out of the tab
+             order and ``aria-disabled`` (``newModelSetLock`` keeps
+             both in step), and does nothing. ``autocomplete="off"``
+             keeps a reload from restoring a value the label didn't
+             follow. #}
+          {% set _intro_layout = intro_layout_choice_by_instrument[instrument.id] %}
           <span class="pill pill-count tag-chip is-selected"
                 data-intro-layout-chip
                 data-intro-layout-choices='{{ intro_layout_choices | tojson }}'
-                role="button" tabindex="0"
+                role="button"
+                {% if is_editing %}tabindex="0"{% else %}aria-disabled="true"{% endif %}
                 onclick="newModelCycleIntroLayout(this)"
                 onkeydown="newModelChipKey(this, event)"
                 title="{{ _intro_layout.title }}">{{ _intro_layout.label }}</span>
           <input type="hidden" form="dfsave-{{ instrument.id }}"
                  name="intro_layout" value="{{ _intro_layout.value }}"
-                 data-intro-layout-input>
+                 autocomplete="off" data-intro-layout-input>
           {# Refresh only makes sense once the operator has
              deliberately set every Band 1 link — running the
              engine on a "Not set" link silently uses an empty
@@ -3819,6 +3822,17 @@
               } else {
                 region.removeAttribute('inert');
                 region.removeAttribute('aria-hidden');
+              }
+            });
+            // 19Y Item 1 — the intro layout chip sits outside the lock
+            // regions; locked, it leaves the tab order and reads disabled.
+            card.querySelectorAll('[data-intro-layout-chip]').forEach(function (chip) {
+              if (locked) {
+                chip.removeAttribute('tabindex');
+                chip.setAttribute('aria-disabled', 'true');
+              } else {
+                chip.setAttribute('tabindex', '0');
+                chip.removeAttribute('aria-disabled');
               }
             });
             // Keep the Band 2 edit-mode flag in sync so its preview

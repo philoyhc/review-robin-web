@@ -1320,6 +1320,18 @@ class IntroLayoutError(ValueError):
     """A layout that is not one of :data:`INTRO_LAYOUTS`."""
 
 
+def effective_intro_layout(instrument: Instrument) -> str:
+    """The layout the instrument's intro takes: its stored
+    ``intro_layout``, or the default for a value outside
+    :data:`INTRO_LAYOUTS` (segment 19Y Item 1, "Values"). Every reader
+    goes through this — the reviewer surface, the card's chip and the
+    Settings CSV export — so a stray value renders, cycles and exports
+    as the default rather than as something the import would refuse."""
+    if instrument.intro_layout in INTRO_LAYOUTS:
+        return instrument.intro_layout
+    return INTRO_LAYOUT_DEFAULT
+
+
 def set_intro_layout(
     db: Session,
     *,

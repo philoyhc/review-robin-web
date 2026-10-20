@@ -79,11 +79,16 @@ INTRO_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
 
 
 def intro_layout_for(instrument: Instrument) -> str:
-    """The layout the instrument's intro renders in: its stored
-    ``intro_layout``, or the first layout for a value outside the cycle
-    (segment 19Y Item 1, "Values")."""
-    values = [choice["value"] for choice in INTRO_LAYOUT_CHOICES]
-    return instrument.intro_layout if instrument.intro_layout in values else values[0]
+    """The layout the instrument's intro renders in
+    (``instruments.effective_intro_layout``)."""
+    return instruments_service.effective_intro_layout(instrument)
+
+
+def intro_layout_choice_for(instrument: Instrument) -> dict[str, str]:
+    """The layout chip's state for the instrument: the
+    :data:`INTRO_LAYOUT_CHOICES` row of its effective layout."""
+    layout = intro_layout_for(instrument)
+    return next(c for c in INTRO_LAYOUT_CHOICES if c["value"] == layout)
 
 
 @dataclass(frozen=True)
@@ -1135,6 +1140,10 @@ def build_instruments_context(
         # "Reviewer name, email, profile" only when some reviewer has a link.
         "reviewer_identity_labels": REVIEWER_IDENTITY_LABELS,
         "intro_layout_choices": INTRO_LAYOUT_CHOICES,
+        "intro_layout_choice_by_instrument": {
+            instrument.id: intro_layout_choice_for(instrument)
+            for instrument in instruments
+        },
         "reviewers_have_profile_link": _reviewers_have_profile_link(
             db, review_session
         ),

@@ -21,6 +21,7 @@ from app.db.models import (
     SessionTag,
 )
 from app.services.date_formatting import iso_in_zone
+from app.services.instruments._instrument_crud import effective_intro_layout
 from app.services.instruments._field_refs import (
     sort_to_positions,
     widths_to_positions,
@@ -433,7 +434,7 @@ def _instrument_rows(
         # Segment 19Y Item 1 — the intro layout chip.
         Row(
             f"{prefix}.intro_layout",
-            _str(instrument.intro_layout),
+            _str(effective_intro_layout(instrument)),
             "enum",
         ),
         Row(

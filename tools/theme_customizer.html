@@ -4547,8 +4547,9 @@
          right under the heading. Above 800px only: the markup's order —
          heading, visibility, help — is the one-column order of every
          layout. With no help card the intro keeps the arrangement above,
-         which is Layout 2's. */
-      @media (min-width: 801px) {
+         which is Layout 2's. Written as the negation of the 800px query
+         so a fractional width between the two (browser zoom) takes one. */
+      @media not all and (max-width: 800px) {
         body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) {
           grid-template-rows: auto 1fr;
         }

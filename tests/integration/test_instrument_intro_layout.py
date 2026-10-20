@@ -137,9 +137,12 @@ def test_the_card_renders_the_chip_input_and_preview_attribute(
     assert chip is not None and chip.start() > heading
     assert chip.group(1) == "Layout 2"
     assert 'role="button"' in chip.group(0)
+    # The card renders locked: out of the tab order, read disabled.
+    assert 'aria-disabled="true"' in chip.group(0)
+    assert "tabindex" not in chip.group(0)
     assert re.search(
         rf'<input type="hidden" form="dfsave-{instrument.id}" name="intro_layout" '
-        r'value="layout_2" data-intro-layout-input>',
+        r'value="layout_2" autocomplete="off" data-intro-layout-input>',
         flat,
     )
     assert re.search(
@@ -302,3 +305,26 @@ def test_the_settings_csv_refuses_an_unknown_layout(db: Session) -> None:
     )
     assert not result.ok
     assert any("intro_layout" in str(error) for error in result.errors)
+
+
+def test_a_stray_stored_value_reads_exports_and_cycles_as_layout_1(
+    client: TestClient, db: Session
+) -> None:
+    """A value outside ``INTRO_LAYOUTS`` (a later build's layout, say) is
+    the default everywhere it is read, so a backup of it still imports."""
+    review_session = _make_session(client, db, code="19y-stray")
+    instrument = _instrument(db, review_session)
+    instrument.intro_layout = "layout_9"
+    db.commit()
+
+    flat = " ".join(
+        client.get(
+            f"/operator/sessions/{review_session.public_id}/instruments"
+        ).text.split()
+    )
+    chip = re.search(r"<span [^>]*data-intro-layout-chip[^>]*>([^<]*)</span>", flat)
+    assert chip is not None and chip.group(1) == "Layout 1"
+    assert 'name="intro_layout" value="layout_1"' in flat
+
+    rows = serialize_session_config(db, review_session)
+    assert {r.field: r.value for r in rows}["instruments[1].intro_layout"] == "layout_1"
