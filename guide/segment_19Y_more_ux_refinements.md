@@ -442,7 +442,7 @@ reviewer can resize anyway.
 
 ### Semantics
 
-- Only the preview table's response textareas (`buildResponseInput`
+- Only the preview table's response textareas (`buildResponseFieldPreviewCell`
   in `instruments_index.html`) take `resize: none`; the help and
   description boxes are real inputs and keep theirs (help: Item 5).
 - The reviewer surface (`review_surface.html`) and the app-wide rule
