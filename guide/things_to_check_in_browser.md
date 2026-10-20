@@ -101,6 +101,14 @@ deployment, not a local run.
   corner handle. The reviewer's Comments box still has one and drags
   taller.
 
+## A help text's edit box grows with its text (19Y Item 5)
+
+- [ ] **The box fits its text.** Unlock an instrument card whose
+  Comments help runs several lines: its edit box shows the whole text,
+  no scrollbar, no corner handle. Type more lines: it grows; delete
+  them: it shrinks back, never below its one-line-plus floor. Click the
+  layout chip and narrow the window: the box re-fits each time.
+
 ## Arriving on a page carries no fragment (19X Item 7)
 
 - [ ] **No `#…` on arrival.** New session with nothing staged → Create:

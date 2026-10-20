@@ -3040,6 +3040,7 @@
                   + 'maxlength="1000" '
                   + 'style="display: block; width: 100%; margin-top: 4px; '
                   + 'min-height: 60px; box-sizing: border-box; '
+                  + 'resize: none; overflow: hidden; '
                   + 'font: inherit; padding: 4px 6px;">'
                   + esc(helpText) + '</textarea>';
               } else if (helpText) {
@@ -3061,7 +3062,33 @@
             var helpCard = intro.querySelector('[data-rs-help-rows="card"]');
             if (heading) { heading.innerHTML = inCard ? '' : html; }
             if (helpCard) { helpCard.innerHTML = inCard ? html : ''; }
+            intro.querySelectorAll('[data-help-card-textarea]').forEach(function (ta) {
+              fitHelpBox(ta);
+              if (helpBoxWatch) { helpBoxWatch.observe(ta); }
+            });
           }
+          // 19Y Item 5 — a help text's edit box grows with its text (the
+          // author, 2026-10-20): its height follows its content above the
+          // 60px floor, on build, on each keystroke and when its width
+          // changes. Not drawn (a hidden card) leaves it for the watch.
+          function fitHelpBox(ta) {
+            if (!ta.getClientRects().length) { return; }
+            var cs = getComputedStyle(ta);
+            var borders = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+            ta.style.height = 'auto';
+            ta.style.height = (ta.scrollHeight + borders) + 'px';
+          }
+          // A width change rewraps the text; the fit waits a frame so the
+          // box never resizes inside the observer's own callback.
+          var helpBoxWatch = window.ResizeObserver ? new ResizeObserver(function (entries) {
+            entries.forEach(function (entry) {
+              var ta = entry.target;
+              var width = entry.contentRect.width;
+              if (ta.__rrwFitWidth === width) { return; }
+              ta.__rrwFitWidth = width;
+              window.requestAnimationFrame(function () { fitHelpBox(ta); });
+            });
+          }) : null;
           // The layout chip's script lives outside this closure.
           window.newModelPlaceHelpRows = placeHelpRows;
           // Refresh the intro card's "Required items completed"
@@ -3131,6 +3158,7 @@
             if (!key || !band2) { return; }
             var row = rfRowByKey(band2, key);
             if (row) { row.setAttribute('data-help-text', ta.value); }
+            fitHelpBox(ta);
           };
           // Render a disabled placeholder input/textarea/select for
           // a selected response-field cell in the preview row. Shape
