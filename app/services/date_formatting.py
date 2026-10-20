@@ -254,8 +254,9 @@ def format_datetime_local(
 ) -> str:
     """Render a stored UTC datetime as a browser ``datetime-local``
     value (``YYYY-MM-DDTHH:MM``) in ``tz_name``'s zone — the inverse
-    of :func:`parse_local_datetime`, used to pre-fill a deadline
-    picker. ``""`` for ``None``. Segment 18B PR 5.
+    of :func:`parse_local_datetime`. Session Home's ``data-tz-utc``
+    seeds use it; a box's own text is :func:`format_datetime_box`.
+    ``""`` for ``None``. Segment 18B PR 5.
     """
     if value is None:
         return ""

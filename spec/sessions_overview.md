@@ -248,7 +248,9 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
 - **Row expander.** Ticking a single row's checkbox opens an
   inline expander row beneath it (the `single-session-expander`
   `<template>`) carrying Name / Code / Deadline / Tags
-  fields plus action buttons: Save (POSTs `{id}/lobby-edit`),
+  fields (Deadline is the date-time field of `spec/ui_elements.md` §8,
+  seeded from the row's `data-deadline` as `YYYY-MM-DD HH:MM` in the
+  session zone) plus action buttons: Save (POSTs `{id}/lobby-edit`),
   Cancel, Duplicate / Duplicate settings only (POST `{id}/clone`),
   Purge and archive (POST `bulk-archive`), and a Delete button
   gated behind a "Yes, delete" checkbox (POST `bulk-delete`).
@@ -289,7 +291,8 @@ The trailing column has `class="col-shrink"` (auto-narrow CSS).
   the reminders already sent on the new End (`spec/lifecycle.md`
   §8.2.6), and each stored reminder offset re-resolved on the new End. An unchanged
   deadline skips it, and a deadline box whose text is still the stored
-  deadline as the box renders it, in the session zone, counts as
+  deadline as the box renders it, in the session zone (`T` or a space
+  between date and time alike), counts as
   unchanged (`sessions.datetime_box_unedited`), so re-saving a stored
   value with seconds, or one in the repeated hour after a DST fall-back,
   is not an edit.
@@ -613,7 +616,7 @@ lobby's `Go to Archive`. Breadcrumb:
   would otherwise fire the form's first submit button (a row or bulk
   expander action) from an unrelated field. Two guards: the first
   submit button in the form ships `disabled`, and a keydown guard sits
-  on every other input, since a checkbox or `datetime-local` field can
+  on every other input, since a checkbox or date-time field can
   submit past a disabled default button in some browsers. The tag
   boxes are exempt — their Enter picks a typeahead suggestion instead
   (`tests/integration/test_lobby_enter_does_not_submit.py`).
