@@ -194,7 +194,7 @@ Top-to-bottom, the page renders:
      counter (not a button). There is no per-instrument page button
      and no client-side page swap — every page change is a server
      GET.
-6. **Instrument body** — heading, help-text card(s), reviewer table,
+6. **Instrument body** — heading, help-text rows, reviewer table,
    once for each instrument on the page, in position order.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
    below the overview card, two-column flow. Renders only after a
@@ -556,40 +556,48 @@ together on every Band 3 / R toggle).
 - **Intro and help cards** above the table, as two columns
   (`.rs-intro-columns`, two `.rs-intro-col`), each a start-aligned stack
   so every card is as tall as its own text. In the markup **the left
-  column** stacks the heading card (short label and description,
-  rendered only when there is a title) over "Who can see what you wrote"
+  column** stacks the heading card (short label and description) over
+  "Who can see what you wrote"
   (after a Raw Reviewees cell it also shows the reviewer-identity level,
   `spec/participant_model.md` §4.2, and its Responses released column
   widens to make room: `table.vp-grid`, `spec/instruments.md`). **The
-  right column** holds one `.rs-help-stack`: a `.rs-help-card` for each
+  help texts are rows, not a card each.** A **help row** is one
   response field that has both `help_text` set and
-  `help_text_visible=true`, in field order. Which card goes where never
-  depends on text length or window width: nothing is measured or split.
-  - **The instrument's `intro_layout` picks the wide arrangement**
-    (`Instrument.intro_layout`, `spec/instruments.md`; the markup carries
-    it as `.rs-intro-columns[data-intro-layout]` and `base.html` places
-    the cards):
+  `help_text_visible=true`, in field order, drawn
+  `<div class="rs-help-row"><strong>Label</strong> — text</div>` inside a
+  `.rs-help-rows` container (`help_block_items`,
+  `app/web/routes_reviewer/_surface/_context.py`). The rows take the
+  normal card infill, not the `.rs-help-card` tint. Nothing is measured or
+  split: which home the rows take never depends on text length or window
+  width.
+  - **The instrument's `intro_layout` picks the arrangement and the
+    rows' home** (`Instrument.intro_layout`, `spec/instruments.md`; the
+    markup carries it as `.rs-intro-columns[data-intro-layout]` and
+    `base.html` places the cards):
 
-    | `intro_layout` | Left | Right |
-    |---|---|---|
-    | `layout_1` (default) | heading card, help cards | visibility card |
-    | `layout_2` | heading card, visibility card | help cards |
+    | `intro_layout` | Left | Right | Help rows |
+    |---|---|---|---|
+    | `layout_1` (default) | heading card | visibility card | inside the heading card, under the description, parted from it by a horizontal rule (`[data-rs-help-rows="heading"]`) |
+    | `layout_2` | heading card, visibility card | one help card (`.card.rs-instrument-card.rs-intro-help`) | all in that card (`[data-rs-help-rows="card"]`) |
 
     A stored value outside `INTRO_LAYOUTS` renders as `layout_1`
-    (`instruments.effective_intro_layout`). The help cards still take
-    their column's width, and the preview on the Instruments page renders
-    the same markup.
-  - **With no help cards** Layout 1 keeps the heading card left and the
-    visibility card right; Layout 2 stacks both in the left column, the
-    right half empty. With neither a help card nor a heading card, the
-    visibility card keeps the left half in both layouts. **With no heading
-    card** Layout 1's help cards start level with the visibility card.
-    **With no visibility card** Layout 1's right half is empty.
+    (`instruments.effective_intro_layout`). The preview on the
+    Instruments page renders the same markup.
+  - **With no help rows** Layout 1's heading card ends at its
+    description and the visibility card stays right; Layout 2 draws no
+    help card and stacks heading and visibility in the left column, the
+    right half empty. With neither a help row nor a heading card, the
+    visibility card keeps the left half in both layouts. **With no
+    title** Layout 1 still draws the heading card when
+    there are rows, holding the rows alone, with no rule, so the help
+    never moves to the right. Layout 2's help card has no rule. **With no visibility card** Layout 1's right half is empty.
   - **At 800px or narrower** the two columns stack into one in every
-    layout: the heading card, the visibility card, then the help cards in
-    field order, which is also the DOM order.
-  - **No solo variant.** A help card takes its column's width, never a
-    wider one of its own; `.rs-help-card-solo` is not part of the
+    layout. Layout 1: the heading card (rows inside it), then the
+    visibility card. Layout 2: the heading card, the visibility card,
+    then the help card.
+  - **No solo variant.** The intro draws no `.rs-help-card`; the class
+    belongs to the lobby's first-run tiles and the Guide's callout
+    (`spec/ui_elements.md` §4). `.rs-help-card-solo` is not part of the
     contract, and its absence is asserted by
     `tests/integration/test_reviewer_response_flow.py`.
 

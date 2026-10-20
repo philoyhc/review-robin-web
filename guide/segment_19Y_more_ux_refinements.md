@@ -225,6 +225,38 @@ Taken 2026-10-20 at `925efad3`.
 | Prose naming the per-field help cards without the class (Codex on #3173) | 2 | the layout chip's titles (`app/web/views/_instruments.py` `INTRO_LAYOUT_CHOICES`), `Instrument.intro_layout`'s docstring |
 | Theme-customizer samples mirroring the help editor (Codex on #3173) | 2 | `tools/_harness_common.py` (`ph-help-edit`), `tools/theme_customizer.gen.py` ("Help card with edit box") |
 
+### Status
+
+**Closed 2026-10-20** in two PRs as laddered: #3174 (both surfaces) and
+the close.
+
+- **What moved from the plan.** None of the intent. The preview's help
+  card is its own lock region, so a locked card counts seven, not six.
+  Locked, the preview skips a row whose ≡ is on but whose text is empty,
+  as the reviewer surface always had (found at the read: the old
+  per-field cards drew a bare label there too). Each row's textarea is
+  named for its field (`aria-label`), which the old cards lacked. At
+  the close the author added a rule parting Layout 1's heading from its
+  rows (`--border-default`, as the Quick Setup slots are parted); rows
+  alone in the card take none. That CSS rides the close PR.
+- **Decisions confirmed at build.** Layout 1 is one grid row, heading
+  card left and visibility right; the old row-span stack is gone.
+  `.rs-help-card` keeps only the lobby's tiles and the Guide's callout.
+- **Reads.** Two `diff-reviewer` reads. The first, on the cumulative diff from
+  `2617ca09`: no correctness defect; five smaller findings, all acted
+  on in #3174 (the empty row, the textarea's name, a stale CSS comment,
+  two tests, and two Doc impact additions: `spec/color_tokens.md` and
+  the screencap's alt text). Codex: no findings. The second, on the
+  close slice (it reopened `app/` for the rule): no defect; four low
+  findings, all acted on in #3175 (the rule's tie to §10 in
+  `spec/ui_elements.md`, a test for the locked titled preview, the
+  lock-dependent wording in `spec/instruments.md`, this count).
+  `spec-writer` at the close wrote the five specs, the rule included;
+  no code-versus-plan flag.
+- **Owed by the author:** the browser-check rows in
+  `guide/things_to_check_in_browser.md`; the Item 1 screencap reshoot
+  now shows Item 2's rows, and its alt text says so.
+
 ### PR ladder
 
 1. **PR 1 — both surfaces.** The reviewer surface renders the rows in

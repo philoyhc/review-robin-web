@@ -299,13 +299,13 @@ before it is made. The panel and the test derive their pairs from the
 same function.
 
 **Border colours do not paint fills.** A surface takes a token from the
-Surfaces cluster. `.rs-help-card` fills with `--card-help-bg` — its own
-token, not a borrowed one, so the next change to a border token cannot reach
+Surfaces cluster. `.rs-help-card` (the lobby's first-run tiles and the Guide's
+callout) fills with `--card-help-bg` — its own token, not a borrowed one, so the next change to a border token cannot reach
 it (`--gray-mist` light / `--ink-muted` dark, carrying body text at 14.3:1 and
 11.7:1). Filled with `--border-default` instead it would read acceptably only
 while that token stayed very light, and at 3:1-plus the body text on it falls
 to 4.14:1 light / 3.55:1 dark, both under AA. See "Card accents" below and
-`spec/ui_elements.md` §"Reviewer help cards".
+`spec/ui_elements.md` §4 "Help cards".
 
 ### Buttons [P]
 
@@ -418,11 +418,12 @@ to 4.14:1 light / 3.55:1 dark, both under AA. See "Card accents" below and
 
 
 **One token set, more than one caller.** `--card-help-*` paints both
-`.rs-help-card` (the Instruments page's help slabs) and
+`.rs-help-card` (the lobby's first-run tiles and the Guide's callout) and
 `.page-guidance` (the `What this page is for` disclosure on every Setup
-page). The theme customizer's facet is therefore named **`Help card`**,
-not `Instrument help card` — a facet named after one caller would
-misdescribe what editing it changes.
+page). The instrument intro's help rows are not among them: they take the
+normal card infill. The theme customizer's facet is therefore named
+**`Help card`** — a facet named after one caller would misdescribe what
+editing it changes.
 
 **`--card-help-border` is two palette steps off `--card-help-bg`** —
 darker in light (`--gray` over `--gray-mist`), lighter in dark
