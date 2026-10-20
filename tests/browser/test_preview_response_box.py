@@ -1,6 +1,6 @@
 """The Band 2 preview's long-text response box takes no resize handle,
 while the reviewer surface's keeps one (segment 19Y Item 4): a drag in
-the preview would persist nowhere, and both start at the same height.
+the preview would persist nowhere.
 """
 
 from __future__ import annotations
