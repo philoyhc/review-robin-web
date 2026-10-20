@@ -673,7 +673,7 @@ def test_retired_edit_url_redirects_to_home_config(
     )
     assert resp.status_code == 308
     assert resp.headers["location"] == (
-        f"/operator/sessions/{review_session.public_id}?editing=1#session-config"
+        f"/operator/sessions/{review_session.public_id}?editing=1"
     )
 
 

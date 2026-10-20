@@ -383,9 +383,9 @@ def clone_session_submit(
     # 18R Item 4 Slice 5 — land on Session Home with the Session details
     # card open in edit mode (the Edit page is retired). The operator's
     # first task on a clone is to rename it, then review the cloned setup
-    # on the same page.
+    # on the same page. No fragment (19X Item 7).
     return RedirectResponse(
-        url=f"/operator/sessions/{clone.public_id}?editing=1#session-config",
+        url=f"/operator/sessions/{clone.public_id}?editing=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 

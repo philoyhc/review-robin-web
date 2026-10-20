@@ -154,7 +154,7 @@ Source: `app/web/templates/operator/session_new.html`.
 
 **There is no Edit session page.**
 `GET /operator/sessions/{id}/edit` is a **308 permanent redirect** to
-`/operator/sessions/{id}?editing=1#session-config`
+`/operator/sessions/{id}?editing=1`
 (`app/web/routes_operator/_session_home.py`), keeping the
 `require_session_operator` gate so a stale bookmark from a non-owner is
 refused rather than bounced. **No buttons render on this path.**

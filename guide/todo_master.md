@@ -66,8 +66,8 @@ concluding** (decision 2026-09-05) and independent of each other.
 
 3. **19X — Refinements from browser runs** (not gated on Azure). A
    standing segment for small follow-ups from the author's browser
-   runs, one item each. None open: Items 1–3 closed 2026-10-19 and
-   Items 4–6 on 2026-10-20; add one per finding.
+   runs, one item each. Items 1–3 closed 2026-10-19 and Items 4–7 on
+   2026-10-20; add one per finding.
    **Plan:** `guide/segment_19X_refinements.md`.
 
 ### Stubs

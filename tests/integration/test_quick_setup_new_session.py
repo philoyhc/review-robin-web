@@ -215,7 +215,7 @@ def test_create_session_with_no_quick_setup_files_still_works(
     # is retired) so the operator continues filling in session details.
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.public_id}?editing=1#session-config"
+        == f"/operator/sessions/{review_session.public_id}?editing=1"
     )
 
 

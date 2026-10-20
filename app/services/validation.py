@@ -993,8 +993,9 @@ def _check_instruments_no_display_fields(
 def _session_edit_url(s: ReviewSession) -> str:
     # 18R Item 4 Slice 5 — the Edit page is retired from the UI; session
     # config is edited in place on Session Home's Session details card.
-    # "Fix" links open that card in edit mode.
-    return f"/operator/sessions/{s.public_id}?editing=1#session-config"
+    # "Fix" links open that card in edit mode, with no fragment (19X
+    # Item 7); the row-level Fix links keep theirs.
+    return f"/operator/sessions/{s.public_id}?editing=1"
 
 
 def _reviewers_url(s: ReviewSession) -> str:

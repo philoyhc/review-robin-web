@@ -206,7 +206,7 @@ def new_session(api: httpx.Client) -> Callable[[], str]:
             follow_redirects=False,
         )
         assert response.status_code == 303, response.text
-        # Location: /operator/sessions/<public_id>?editing=1#session-config
+        # Location: /operator/sessions/<public_id>?editing=1
         return response.headers["location"].split("?")[0].rsplit("/", 1)[1]
 
     return make

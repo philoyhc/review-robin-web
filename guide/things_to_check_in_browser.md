@@ -84,3 +84,11 @@ deployment, not a local run.
   expander's Deadline shows 24-hour text with 📅 and ✕. ✕ empties it;
   type a new time and Save: the row shows it. On an active session the
   box and both buttons are greyed out.
+
+## Arriving on a page carries no fragment (19X Item 7)
+
+- [ ] **No `#…` on arrival.** New session with nothing staged → Create:
+  the address ends `?editing=1` and the details card is open for
+  editing. The lobby's Duplicate does the same on the copy. A Create
+  with a bad reviewers
+  file lands on its red banner, with no `#quick-setup-…` in the address.

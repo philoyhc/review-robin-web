@@ -267,8 +267,9 @@ async def create_session(
     home_url = f"/operator/sessions/{review_session.public_id}"
     # 18R Item 4 Slice 5 — the Edit page is retired; a bare create lands on
     # Session Home with the Session details card open in edit mode so the
-    # operator can continue filling in details in place.
-    edit_url = f"{home_url}?editing=1#session-config"
+    # operator can continue filling in details in place. No fragment: the
+    # address ends at the session, as Save's does (19X Item 7).
+    edit_url = f"{home_url}?editing=1"
 
     def write_typed_tags() -> None:
         """Apply the Create page's Tags box, if the operator typed one.
@@ -335,9 +336,11 @@ async def create_session(
         # refresh. So the file's lines are not carried, only the fixed
         # ``refused`` code; uploading the file again in Quick Setup shows
         # them (findings O7).
+        # No slot fragment (19X Item 7): Home's banner script scrolls
+        # to the shown banner on load.
         query = _quick_setup_error_query(kind, "refused")
         return RedirectResponse(
-            url=f"{home_url}?{query}#quick-setup-{kind}",
+            url=f"{home_url}?{query}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
 

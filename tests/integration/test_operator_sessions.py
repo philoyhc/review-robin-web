@@ -24,8 +24,9 @@ def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
     """18R Item 4 Slice 5 — a bare Create (no Quick Setup uploads) lands on
     Session Home with the Session details card open in edit mode (the Edit
     page is retired); the operator's natural next step is to fill in the
-    rest of the details in place. A Create with Quick Setup uploads anchors
-    back to the relevant card on Home (separate test path)."""
+    rest of the details in place. No fragment: the address ends at
+    ``?editing=1``, as Save's does (19X Item 7). A Create with Quick Setup
+    uploads lands at Home's top (separate test path)."""
     response = client.post(
         "/operator/sessions",
         data={"name": "Spring Reviews", "code": "spring-2026"},
@@ -38,7 +39,7 @@ def test_create_redirects_to_edit(client: TestClient, db: Session) -> None:
     ).scalar_one()
     assert (
         response.headers["location"]
-        == f"/operator/sessions/{review_session.public_id}?editing=1#session-config"
+        == f"/operator/sessions/{review_session.public_id}?editing=1"
     )
 
 
