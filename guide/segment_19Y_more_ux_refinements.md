@@ -368,7 +368,7 @@ and close in one, as laddered.
   snaps (the visibility card alone is its left side), and Layout 2
   without a visibility card does not (nothing would take the slack).
   The chip's re-measure was dropped: it only works unlocked.
-- **Decisions confirmed at build.** `window.rrwIntroSnap` is the one
+- **Decisions confirmed at build.** `window.rrwLevelIntros` is the one
   entry point; the Instruments page calls it after lock and unlock. A
   pass clears, reads, then writes every intro it covers, one reflow
   however many instruments the reviewer surface draws. The tests nudge

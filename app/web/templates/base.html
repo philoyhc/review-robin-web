@@ -5972,7 +5972,7 @@
         }
         // The Instruments page calls this after a lock and an unlock,
         // whose effect on any box may be nil.
-        window.rrwIntroSnap = snapWithin;
+        window.rrwLevelIntros = snapWithin;
         var intros = document.querySelectorAll(".rs-intro-columns");
         if (!intros.length) { return; }
         var WATCHED = ".rs-intro-name, .rs-intro-visibility, .rs-intro-help, .rs-intro-col";

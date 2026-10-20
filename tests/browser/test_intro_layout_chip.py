@@ -495,7 +495,7 @@ _SNAP_AT = """(intro, [how, run]) => {
     (r.height + tall.getBoundingClientRect().bottom - r.bottom - want) + 'px';
   [a, b] = bottoms();
   const before = Math.abs(a - b);
-  if (run) { window.rrwIntroSnap(intro.parentElement); }
+  if (run) { window.rrwLevelIntros(intro.parentElement); }
   [a, b] = bottoms();
   return {snapped: intro.hasAttribute('data-intro-snap'),
           before: before, after: Math.abs(a - b), lh: lh,
@@ -607,7 +607,7 @@ def test_a_locked_preview_snaps_and_an_unlocked_one_does_not(
 
     card.locator("[data-instrument-unlock-toggle]:visible").first.click()
     expect(card).to_have_attribute("data-instrument-locked", "false")
-    page.evaluate("window.rrwIntroSnap()")
+    page.evaluate("window.rrwLevelIntros()")
     assert not intro.evaluate("el => el.hasAttribute('data-intro-snap')")
 
     # Locking again re-measures: the locked nudge still leaves 6px.
@@ -645,7 +645,7 @@ def test_a_missing_side_never_snaps(
     intro = card.locator("[data-new-model-band2-intro-card]")
     for layout in ("layout_1", "layout_2"):
         intro.evaluate("(el, l) => el.setAttribute('data-intro-layout', l)", layout)
-        page.evaluate("window.rrwIntroSnap()")
+        page.evaluate("window.rrwLevelIntros()")
         assert not intro.evaluate("el => el.hasAttribute('data-intro-snap')"), layout
 
 
