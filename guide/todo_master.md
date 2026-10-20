@@ -72,7 +72,8 @@ concluding** (decision 2026-09-05) and independent of each other.
 
 4. **19Y — More UX refinements** (not gated on Azure). A standing
    segment for refinements that need a plan of their own. Item 1 closed
-   2026-10-20; nothing open, add one per refinement.
+   2026-10-20. Open: Item 2, the help texts gather into one card (two
+   PRs).
    **Plan:** `guide/segment_19Y_more_ux_refinements.md`.
 
 ### Stubs

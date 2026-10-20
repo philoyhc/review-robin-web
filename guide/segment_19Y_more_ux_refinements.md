@@ -165,3 +165,99 @@ on the plan), and the close.
 - `app/web/templates/guide.html` — the preview screencap's alt text names the default layout (Item 1; added at the PR 2 read). <!-- doc-impact-waived: the alt text describes the image, so it changes with the author's reshoot of the screencap, owed as a row in guide/things_to_check_in_browser.md -->
 - `guide/things_to_check_in_browser.md` — rows for the chip and both layouts (Item 1).
 - `guide/todo_master.md` — the 19Y entry (Item 1).
+
+## Item 2 — The help texts gather into one card
+
+### Opportunity
+
+The author, 2026-10-20, with mockups of the instrument preview: each
+response field's help text is its own card, so an instrument with two
+one-line help texts draws two slabs for what reads as one paragraph of
+guidance. Item 1's Layout 1 sets the heading and help side by side with
+the visibility card; the help belongs with the heading it explains.
+
+### Decision
+
+The author's rulings, 2026-10-20:
+
+| Layout | Help texts |
+|---|---|
+| **Layout 1** | inside the heading (label / description) card, under the description: one row per field |
+| **Layout 2** | all in one card in the right column |
+
+Locked, a row reads **Label** — help text; unlocked, the label over its
+textarea, as the separate cards' editors are today. Each field's ≡ in
+Band 3 still shows or hides its row. Both use the normal card infill
+(the author: "ignore the bicolor infill"), not the help-card tint.
+Rejected: keeping a card per field (the opportunity), and a split
+heading-plus-help-strip card (the mockup's two-tone fill).
+
+### Semantics
+
+- **Rows.** One per field whose ≡ is on and whose help text is set, in
+  field order (today's `help_block_items`); the preview also needs the
+  field selected into it, as today.
+- **No rows.** Layout 1's heading card ends at its description; Layout
+  2 draws no help card, and Item 1's no-help arrangements hold.
+- **No heading card** (a lone untitled instrument; a locked preview
+  with nothing in it): Layout 1's rows still form a card in the heading
+  card's place, so the help never moves to the right.
+- **Narrow** (≤ 800px): Layout 1 keeps the card whole — heading and
+  help, then visibility (the author, 2026-10-20); Layout 2 stacks
+  heading, visibility, help card, as today.
+- **The layout chip** moves the rows between the two homes at once in
+  the preview, unsaved edits in their textareas kept.
+- **Elsewhere.** `.rs-help-card` stays the class of the lobby's
+  first-run tiles and the Guide's callout; only the intro stops using
+  it per field.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `925efad3`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates drawing the intro's help | 2 (+ `base.html` CSS, 14 lines naming the help classes) | `grep -rln "rs-help-stack" app/web/templates`; `grep -c "rs-help-card\|rs-help-stack" app/web/templates/base.html` |
+| Other `.rs-help-card` users, unchanged | 2 | `sessions_list.html`, `guide.html` |
+| Python building the rows | 1 | `grep -rln --include=*.py "help_block_items" app` |
+| Tests naming the help cards or stack | 5 | `grep -rln --include=*.py "rs-help-card\|rs-help-stack\|help_block_items\|data-help-card" tests` |
+| Specs on the intro's help | 3 | `spec/reviewer-surface.md`, `spec/instruments.md`, `spec/ui_elements.md` |
+
+### PR ladder
+
+1. **PR 1 — both surfaces.** The reviewer surface renders the rows in
+   the heading card (Layout 1) or one help card (Layout 2); the
+   preview's `rebuildPreview` builds the same, locked and unlocked, and
+   the chip re-homes them; CSS; integration and browser tests. One
+   PR so the preview never disagrees with the surface. Must not touch
+   storage or the ≡ toggle's meaning.
+2. **PR 2 — specs and close.** The specs below, browser-check rows;
+   `spec-writer`; close.
+
+### Definition of done
+
+- A reviewer sees an instrument's help rows inside its heading card
+  in Layout 1 and in one card in Layout 2; the preview shows the same,
+  locked and unlocked, and ≡ toggles a row (tests).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.2` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None (the infill and the narrow order ruled 2026-10-20).
+
+### Out of scope
+
+- The lobby's and the Guide's `.rs-help-card` uses; the help text's
+  storage and its 1000-character limit.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the help rows' home per layout (Item 2).
+- `spec/instruments.md` — the preview's help rows, locked and unlocked (Item 2).
+- `spec/ui_elements.md` — the help-card blockquote: the intro's help is rows in a card, not a card per field (Item 2).
+- `guide/things_to_check_in_browser.md` — rows for both layouts' help (Item 2).
+- `guide/todo_master.md` — the 19Y entry (Item 2).
