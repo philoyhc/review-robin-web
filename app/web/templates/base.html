@@ -698,6 +698,9 @@
         justify-content: center;
         line-height: 1;
       }
+      /* Its own display outranks `.btn[hidden]`, so it restores hidden
+         (the buttons render hidden until the script reveals them). */
+      body .dt-field .btn.dt-field-btn[hidden] { display: none; }
       /* 18R Item 4 — Session config card in-place display <-> edit swap.
          The card carries data-config-mode; each field renders a
          data-display-only value and a data-edit-only input in the same

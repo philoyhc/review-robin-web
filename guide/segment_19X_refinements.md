@@ -665,7 +665,12 @@ one spec paragraph.
 
 **Closed 2026-10-20, in one PR.** Measured after: 36 × 36 on New
 session, Session Home and the lobby expander, level with the box. A
-browser test pins it.
+browser test pins it. One `diff-reviewer` read: no defect; it found that
+the rule's `display` outranked `.btn[hidden]` (latent off `ui-v2`;
+`tests/unit/test_btn_hidden_hides.py` failed on it too), now restored by
+the field's own `[hidden]` rule, and that §6's one-shape claim needed
+this exception named (done). `spec-writer` at close: no divergence;
+it added the pointer from §6 to the exception.
 
 ### PR ladder
 
