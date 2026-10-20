@@ -65,3 +65,13 @@ deployment, not a local run.
   opens at the top and the address ends at the session's id, with no
   `#quick-setup-…`. A Create with nothing staged still opens the
   details card for editing.
+
+## Session Home's date-time boxes take 24-hour text (19X Item 6, rung 1)
+
+- [ ] **Text, picker and clear.** Unlock Session Home's details card:
+  Start, End, Release from and Release until each show `YYYY-MM-DD
+  HH:MM` in 24-hour time with a 📅 and a ✕ beside them. Select the
+  whole box and delete it in one press; ✕ empties it too. 📅 opens the
+  browser's calendar, and the time picked lands in the box as 24-hour
+  text. Lock the card: the boxes and both buttons hide. Save keeps
+  what was typed.
