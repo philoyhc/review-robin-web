@@ -1,0 +1,27 @@
+{# A date-time field (segment 19X Item 6): a 24-hour `YYYY-MM-DD HH:MM`
+   text box, so paste, select-all and delete work as in any field and
+   the text reads as every display does (`format_datetime`). Beside it,
+   a calendar button that opens the browser's own picker (a visually
+   hidden native `datetime-local`, written back into the box) and a ✕
+   that clears it; both render hidden, and base.html's date-time field
+   script reveals them, so without script the box still types and
+   submits. The server reads `T` or a space between date and time
+   (`date_formatting.box_text`).
+
+   `attrs` go on the text box (its `form`, `data-tz-utc`…), `wrap_attrs`
+   on the wrapper (Session Home's `data-edit-only`, so the buttons hide
+   with the box). #}
+{% macro datetime_field(id, name, value="", attrs={}, wrap_attrs={}) -%}
+<span class="dt-field" data-dt-field{{ wrap_attrs | xmlattr }}>
+  <input type="text" id="{{ id }}" name="{{ name }}" value="{{ value }}"
+         data-dt-text autocomplete="off" spellcheck="false"
+         placeholder="YYYY-MM-DD HH:MM" pattern="\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}"
+         title="A date and a 24-hour time, e.g. 2026-10-27 16:00"{{ attrs | xmlattr }}>
+  <input type="datetime-local" class="dt-field-picker" data-dt-picker
+         tabindex="-1" aria-hidden="true">
+  <button type="button" class="btn secondary dt-field-btn" data-dt-pick hidden
+          aria-label="Choose a date and time" title="Choose a date and time">&#128197;</button>
+  <button type="button" class="btn secondary dt-field-btn" data-dt-clear hidden
+          aria-label="Clear" title="Clear">&#10005;</button>
+</span>
+{%- endmacro %}

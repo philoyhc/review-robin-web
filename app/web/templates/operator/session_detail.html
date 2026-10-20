@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_datetime_field.html" import datetime_field %}
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -279,28 +280,23 @@
           <div>
             <label for="mock-start">Start (optional)</label>
             <div class="config-value" data-display-only>{{ (session.scheduled_activate_at | format_datetime) if session.scheduled_activate_at else "—" }}</div>
-            <input type="datetime-local" id="mock-start"
-                   name="scheduled_activate_at" data-edit-only
-                   form="config-save-{{ session.id }}"
-                   value="{{ scheduled_activate_at_input_value }}"
-                   data-tz-utc="{{ format_datetime_local(session.scheduled_activate_at, 'UTC') }}">
+            {{ datetime_field("mock-start", "scheduled_activate_at", scheduled_activate_at_input_value,
+                 attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.scheduled_activate_at, 'UTC')},
+                 wrap_attrs={"data-edit-only": ""}) }}
           </div>
           <div>
             <label for="mock-end">End (optional)</label>
             <div class="config-value" data-display-only>{{ (session.deadline | format_datetime) if session.deadline else "—" }}</div>
-            <input type="datetime-local" id="mock-end" name="deadline"
-                   data-edit-only form="config-save-{{ session.id }}"
-                   value="{{ deadline_input_value }}"
-                   data-tz-utc="{{ format_datetime_local(session.deadline, 'UTC') }}">
+            {{ datetime_field("mock-end", "deadline", deadline_input_value,
+                 attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.deadline, 'UTC')},
+                 wrap_attrs={"data-edit-only": ""}) }}
           </div>
           <div>
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
-            <input type="datetime-local" id="mock-release-from"
-                   name="responses_release_at" data-edit-only
-                   form="config-save-{{ session.id }}"
-                   value="{{ responses_release_at_input_value }}"
-                   data-tz-utc="{{ format_datetime_local(session.responses_release_at, 'UTC') }}">
+            {{ datetime_field("mock-release-from", "responses_release_at", responses_release_at_input_value,
+                 attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_at, 'UTC')},
+                 wrap_attrs={"data-edit-only": ""}) }}
           </div>
           <div>
             <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
@@ -346,11 +342,9 @@
           <div>
             <label for="mock-release-until">Release responses until (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
-            <input type="datetime-local" id="mock-release-until"
-                   name="responses_release_until" data-edit-only
-                   form="config-save-{{ session.id }}"
-                   value="{{ responses_release_until_input_value }}"
-                   data-tz-utc="{{ format_datetime_local(session.responses_release_until, 'UTC') }}">
+            {{ datetime_field("mock-release-until", "responses_release_until", responses_release_until_input_value,
+                 attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_until, 'UTC')},
+                 wrap_attrs={"data-edit-only": ""}) }}
           </div>
         </div>
         {# Save / Cancel / Lock cluster at the foot of the right column,

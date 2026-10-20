@@ -240,18 +240,21 @@ def _as_utc(value: datetime) -> datetime:
 def datetime_box_unedited(
     stored: datetime | None, submitted: str | None, tz_name: str | None
 ) -> bool:
-    """Whether a ``datetime-local`` box still holds the value it was
-    seeded with for ``stored``.
+    """Whether a date-time box still holds the value it was seeded with
+    for ``stored``.
 
-    Compared as the box's own text (``format_datetime_local`` in the
-    session zone), not by parsing ``submitted`` back to an instant: the
+    Compared as the box's own text (``format_datetime_box`` in the
+    session zone, ``T`` or a space between date and time alike), not by
+    parsing ``submitted`` back to an instant: the
     box carries minutes only, so a stored value with seconds (a Settings
     CSV can write one) parses one truncation away from itself, and in
     the repeated hour after a DST fall-back the wall-clock text names
     two instants and the parse picks the first. A form that only
     re-submits the seeded value must not count as an edit, or the
     stored value moves (findings B2, Cc6)."""
-    return submitted == date_formatting.format_datetime_local(stored, tz_name)
+    return date_formatting.box_text(submitted) == date_formatting.format_datetime_box(
+        stored, tz_name
+    )
 
 
 def converted_box_names(tz_converted: str) -> frozenset[str]:

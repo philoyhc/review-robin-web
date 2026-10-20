@@ -1,7 +1,7 @@
 {# A timezone change keeps the instants — progressive enhancement,
    shared by the Create Session form and Session Home's details card
    (findings L8, author's ruling). As the operator picks a zone, every
-   `datetime-local` box that holds a value is re-rendered as the same
+   date box that holds a value is re-rendered as the same
    instant's wall-clock in the new zone, so a Save stores the instants
    the boxes showed before the change.
 
@@ -25,7 +25,9 @@
     var boxes = {{ tz_box_ids | default(["scheduled_activate_at", "deadline", "responses_release_at", "responses_release_until"]) | tojson }}
       .map(function (id) { return document.getElementById(id); })
       .filter(function (box) { return box; });
-    var WALL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+    // `T` (a native box, `data-tz-utc`) or a space (a date-time
+    // field's text box, 19X Item 6) between date and time.
+    var WALL = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/;
 
     // The IANA id is the label's last whitespace-separated token.
     function ianaFromValue(value) {
@@ -64,12 +66,15 @@
       var w = wallParts(ms, zone);
       return w ? utcMs(w[0], w[1], w[2], w[3], w[4]) : null;
     }
-    function textOf(ms, zone) {
+    function textOf(ms, zone, box) {
       var w = wallParts(ms, zone);
       if (!w) return null;
       function pad(n, size) { return ("000" + n).slice(-size); }
+      // Each box keeps its own form: `T` in a native box, which reads
+      // no other, a space in a text box.
+      var sep = box.type === "datetime-local" ? "T" : " ";
       return pad(w[0], 4) + "-" + pad(w[1], 2) + "-" + pad(w[2], 2)
-        + "T" + pad(w[3], 2) + ":" + pad(w[4], 2);
+        + sep + pad(w[3], 2) + ":" + pad(w[4], 2);
     }
     function parse(text) {
       var m = WALL.exec(text || "");
@@ -136,7 +141,7 @@
         if (!box.value) return;
         var ms = (known[i] && known[i].text === box.value)
           ? known[i].ms : instantOf(box.value, zone);
-        var text = ms === null ? null : textOf(ms, next);
+        var text = ms === null ? null : textOf(ms, next, box);
         if (text === null) { known[i] = null; return; }
         if (box.value !== text) moved.push(box);
         box.value = text;

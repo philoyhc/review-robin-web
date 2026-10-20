@@ -6,7 +6,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.services.date_formatting import format_datetime_local
-from app.services.sessions import converted_box_names, datetime_box_kept
+from app.services.sessions import (
+    converted_box_names,
+    datetime_box_kept,
+    datetime_box_unedited,
+)
 
 _STORED = datetime(2027, 3, 1, 2, 0, 45, tzinfo=timezone.utc)
 _SGT = format_datetime_local(_STORED, "Asia/Singapore")
@@ -45,3 +49,16 @@ def test_converted_box_names_ignores_blanks_and_spaces() -> None:
     assert converted_box_names(" deadline, ,responses_release_at") == frozenset(
         {"deadline", "responses_release_at"}
     )
+
+
+def test_either_separator_is_the_seeded_text() -> None:
+    """Session Home's box holds `YYYY-MM-DD HH:MM`; Create's native box
+    `YYYY-MM-DDTHH:MM` (19X Item 6). Both read as the seeded value."""
+    assert _SGT[10] == "T"
+    spaced = f"{_SGT[:10]} {_SGT[11:]}"
+    assert _kept(spaced, converted=False)
+    assert _kept(f"  {spaced} ", converted=False)
+    assert datetime_box_unedited(_STORED, spaced, "Asia/Singapore")
+    assert datetime_box_unedited(_STORED, _SGT, "Asia/Singapore")
+    assert not datetime_box_unedited(_STORED, "", "Asia/Singapore")
+    assert datetime_box_unedited(None, "", "Asia/Singapore")

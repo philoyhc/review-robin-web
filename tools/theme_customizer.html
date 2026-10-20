@@ -637,6 +637,34 @@
         font-family: inherit;
       }
       textarea { min-height: 80px; }
+      /* A date-time field (segment 19X Item 6,
+         operator/partials/_datetime_field.html): the 24-hour text box
+         fills the row, the calendar and clear buttons sit at its end,
+         and the native picker the calendar opens is kept rendered
+         (showPicker needs that) but invisible, under the buttons. */
+      .dt-field {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        position: relative;
+      }
+      .dt-field > input[data-dt-text] { flex: 1 1 auto; min-width: 0; }
+      .dt-field-picker {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+        border: 0;
+        padding: 0;
+      }
+      .dt-field .dt-field-btn {
+        flex: 0 0 auto;
+        padding: 4px 8px;
+        line-height: 1.2;
+      }
       /* 18R Item 4 — Session config card in-place display <-> edit swap.
          The card carries data-config-mode; each field renders a
          data-display-only value and a data-edit-only input in the same
