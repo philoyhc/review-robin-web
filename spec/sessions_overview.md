@@ -187,6 +187,15 @@ operator learns one page rather than two — neither card belongs inside
 the populated branch, where it would vanish with the table. What varies
 is which Filter controls are live:
 
+The `Sessions` card's count pills — `N sessions`, `N draft`,
+`N activated`, `N archived` — count the sessions the lobby lists (every
+one not archived; a closed session counts only in `N sessions`), and
+the `N archived` pill alone counts the archived ones, which the lobby
+does not list. Its tag chips likewise come from the listed sessions.
+Sessions Diagnostics' Sessions Overview reads the same helper
+(`views.session_status_counts`) but counts every session in its total,
+since its table lists them all.
+
 | Lobby holds | `Sessions` card | Filter box + Clear | `Add new session` · `Rehydrate` · `Go to Archive` |
 |---|---|---|---|
 | Live sessions (± archived) | counts + tag filter | **active** | active |

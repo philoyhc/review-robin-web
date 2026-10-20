@@ -135,18 +135,23 @@ def diagnostics_filter_text(review_session: ReviewSession, owners: Iterable[User
     return "\n".join(part for part in parts if part).lower()
 
 
-def session_status_counts(rows: Iterable[ReviewSession]) -> dict[str, int]:
+def session_status_counts(
+    rows: Iterable[ReviewSession], *, archived_in_total: bool = True
+) -> dict[str, int]:
     """The count pills over a session table, shared by the lobby's
     Sessions card and Sessions Diagnostics' Sessions Overview card:
     every session, then draft (``validated`` counts as draft, as its
     label does), activated (``ready``) and archived. Closed
-    (``expired``) sessions count only in the total."""
+    (``expired``) sessions count only in the total. The lobby passes
+    ``archived_in_total=False``: its card counts the sessions it lists,
+    the Archived pill aside (19X Item 9)."""
     rows = list(rows)
+    archived = sum(1 for s in rows if s.status == "archived")
     return {
-        "total": len(rows),
+        "total": len(rows) if archived_in_total else len(rows) - archived,
         "draft": sum(1 for s in rows if s.status in ("draft", "validated")),
         "activated": sum(1 for s in rows if s.status == "ready"),
-        "archived": sum(1 for s in rows if s.status == "archived"),
+        "archived": archived,
     }
 
 
