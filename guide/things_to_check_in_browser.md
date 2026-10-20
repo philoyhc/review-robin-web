@@ -66,7 +66,7 @@ deployment, not a local run.
   `#quick-setup-…`. A Create with nothing staged still opens the
   details card for editing.
 
-## Session Home's date-time boxes take 24-hour text (19X Item 6, rung 1)
+## Date-time boxes take 24-hour text, with a picker and a clear (19X Item 6)
 
 - [ ] **Text, picker and clear.** Unlock Session Home's details card:
   Start, End, Release from and Release until each show `YYYY-MM-DD
@@ -75,3 +75,12 @@ deployment, not a local run.
   browser's calendar, and the time picked lands in the box as 24-hour
   text. Lock the card: the boxes and both buttons hide. Save keeps
   what was typed.
+- [ ] **New session, the same four.** On New session the four schedule
+  boxes look and behave as Session Home's. Put End before Start and
+  press Create: the browser stops it at End with "End must be on or
+  after Start."; 📅 on End offers nothing before Start. Put them in
+  order and Create: Session Home shows the times you typed.
+- [ ] **The lobby's Deadline.** Tick one session in the lobby: the
+  expander's Deadline shows 24-hour text with 📅 and ✕. ✕ empties it;
+  type a new time and Save: the row shows it. On an active session the
+  box and both buttons are greyed out.
