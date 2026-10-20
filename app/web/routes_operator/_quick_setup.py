@@ -362,15 +362,16 @@ async def create_session(
     )
     if refusal is not None:
         return quick_setup_error_redirect(refusal.kind)
-    last_fragment = f"#quick-setup-{list(uploads)[-1]}" if uploads else ""
 
     write_typed_tags()
     write_staged_owners()
 
-    # Quick Setup uploads anchor at their fragment on Session Home;
-    # a bare create (no uploads) opens the Session details card in edit
+    # Staged files that all applied land at the top of Session Home, the
+    # new session as a whole, rather than at the last slot that ran
+    # (author, 19X Item 5); a refusal above lands on its slot's banner.
+    # A bare create (no uploads) opens the Session details card in edit
     # mode (``edit_url``) so the operator continues setting up details.
-    target_url = f"{home_url}{last_fragment}" if last_fragment else edit_url
+    target_url = home_url if uploads else edit_url
     return RedirectResponse(
         url=target_url,
         status_code=status.HTTP_303_SEE_OTHER,

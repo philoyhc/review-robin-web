@@ -327,3 +327,79 @@ heading and description stay.
 - `spec/visibility_policy.md` — the Observer `/collation` body row: an empty cohort shows only the line (Item 4).
 - `guide/things_to_check_in_browser.md` — a row for the line (Item 4).
 - `guide/todo_master.md` — Item 4 in the 19X entry (Item 4).
+
+## Item 5 — A Create with staged files lands at the top of Session Home
+
+### Opportunity
+
+The author, 2026-10-20: after Create, Session Home's address "sometimes"
+gains a fragment such as `#quick-setup-settings`. It is every Create
+that staged a file: the success redirect named the last slot that ran
+(`#quick-setup-<slot>`, Settings whenever a settings file was staged), so the page
+opened scrolled to the bottom of the Quick Setup card. A refused file
+lands on its slot (`?quick_setup_error=…#quick-setup-<slot>`) and a
+bare Create on `?editing=1#session-config`.
+
+### Decision
+
+A Create whose staged files all applied lands at the top of Home with
+no fragment (the author's pick of three, 2026-10-20). Unchanged: the
+refused-file landing (the banner is there), the bare Create (the
+details card is what comes next) and Home's own Submit (the operator is
+working in the card). Rejected: `#quick-setup`, the card's top — the
+new session as a whole is what Create made.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `ea454951`.
+
+| What | Count | Command |
+|---|---|---|
+| Redirects in the Create module (only `create_session`'s success one changes) | 5 | `grep -c 'RedirectResponse(' app/web/routes_operator/_quick_setup.py` |
+| Test files posting a Create, most as fixtures | 209 | `grep -rlzP --include=*.py 'post\(\s*"/operator/sessions"\s*,' tests/integration \| wc -l` |
+| Specs on the New-session variant | 2 | `grep -rln "Create session submits the uploads\|New-session variant" spec` |
+
+### Status
+
+**Closed 2026-10-20, in one PR.** As planned. No test pinned the old
+fragment; the Create-with-files test now pins the bare Home address.
+One `diff-reviewer` read: nothing depends on the old fragment (no
+browser test stages files on Create; the slot-fragment asserts are all
+Home's Submit); it found two blast-radius counts that did not measure
+what they said (re-taken above), this Status, and
+`spec/operator_ui_concept.md`'s Create landing, which also missed the
+bare Create's `?editing=1#session-config` (stale since 18R); all fixed.
+`spec-writer` at close: no divergence.
+
+### PR ladder
+
+1. **PR 1 — the landing.** `create_session`'s success redirect, the
+   test, the spec sentence, a browser-check row. Must not touch Home's
+   Submit or the refusal path.
+
+### Definition of done
+
+- A Create with staged files that apply redirects to Home's bare
+  address (test).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Other redirects to Home that carry a fragment (Owners, the details
+  card, a Quick Setup Dismiss): each lands on the card it acted on.
+
+### Doc impact
+
+- `spec/quick_setup_card_spec.md` — § *New-session variant*, Submission semantics: a successful Create lands at Home's top (Item 5).
+- `spec/operator_ui_concept.md` — the Create form's landing: Home's top with files, the details card without (Item 5).
+- `guide/things_to_check_in_browser.md` — a row for the landing (Item 5).
+- `guide/todo_master.md` — Item 5 in the 19X entry (Item 5).
+
