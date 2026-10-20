@@ -68,7 +68,7 @@ Rough rungs, each one reviewable PR. RRW's segment plan, when the author opens i
 
 **C. Shared identity**
 1. `cordware/identity.py`, with fake identity and its guard moved from RRW's settings; `app/auth/identity.py` re-exports it.
-2. RRW's fake roles stay in RRW; tests for the trusted-identity interface on its own.
+2. RRW's fake roles stay in RRW, but they read the fake-auth state from Cordware's identity instead of RRW's settings. Today `app/web/deps.py` grants the fake operator and admin roles on `allow_fake_auth` plus the user's `is_fake` flag, and `app/auth/roles.py` derives the fake super-admin from `allow_fake_auth` and `fake_auth_email`. After the move, both key off the identity Cordware supplies (its fake marker and fake email), which Cordware's guard never sets outside local development. RRW keeps only the role flags (`fake_auth_operator`, `fake_auth_sys_admin`, `fake_auth_super_admin`), so there is one source for "is this the fake user" and the two can't disagree. Plus tests for the trusted-identity interface on its own, and for the fake user keeping its roles.
 3. Optional: repoint the 78 importers and drop the re-export.
 
 **D. Prefix flip**

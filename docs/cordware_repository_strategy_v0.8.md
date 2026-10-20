@@ -142,7 +142,7 @@ These requirements, carried from the archived integration spec v0.2, apply from 
 
 Microsoft Entra / Azure Easy Auth performs institutional sign-in. In stage 2, Cordware takes over interpreting the **trusted** claims at the protected ingress and exposes a small request-level identity: principal/object ID where available, email/UPN, display name and provider. It never trusts spoofable identity headers from outside the protected ingress. Fake local identity is Cordware's alone, and is refused outside local development.
 
-RRW maps that identity to its own user and permission records; Residential does its own mapping. Neither receives an authorization decision from Cordware. Fake *roles* (RRW's operator, admin and super-admin flags, for example) stay with each application, because they are authorization, not identity.
+RRW maps that identity to its own user and permission records; Residential does its own mapping. Neither receives an authorization decision from Cordware. Fake *roles* (RRW's operator, admin and super-admin flags, for example) stay with each application, because they are authorization, not identity. An application's role resolution reads whether the user is the fake one, and the fake email, from Cordware's identity, never from its own copy of the fake-auth settings, so there is one source for both.
 
 RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the host exists (stage 1), and before RRW moves to `/reviewrobin`, so the dev slot's one live check at the prefix flip covers the new identity and the new prefix together. Identity parsing reads headers, not paths, so it doesn't depend on the mount. Because RRW has no standalone runtime, it keeps no second parser of its own.
 
