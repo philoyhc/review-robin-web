@@ -1413,20 +1413,20 @@ def render_session_home(
             # Schedule input-value prefills for the Session config card
             # mock-up (18R Item 4 Slice 2) — mirror the Edit route.
             "scheduled_activate_at_input_value": (
-                date_formatting.format_datetime_local(
+                date_formatting.format_datetime_box(
                     review_session.scheduled_activate_at, session_tz
                 )
             ),
-            "deadline_input_value": date_formatting.format_datetime_local(
+            "deadline_input_value": date_formatting.format_datetime_box(
                 review_session.deadline, session_tz
             ),
             "responses_release_at_input_value": (
-                date_formatting.format_datetime_local(
+                date_formatting.format_datetime_box(
                     review_session.responses_release_at, session_tz
                 )
             ),
             "responses_release_until_input_value": (
-                date_formatting.format_datetime_local(
+                date_formatting.format_datetime_box(
                     review_session.responses_release_until, session_tz
                 )
             ),

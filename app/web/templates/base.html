@@ -654,6 +654,34 @@
         font-family: inherit;
       }
       textarea { min-height: 80px; }
+      /* A date-time field (segment 19X Item 6,
+         operator/partials/_datetime_field.html): the 24-hour text box
+         fills the row, the calendar and clear buttons sit at its end,
+         and the native picker the calendar opens is kept rendered
+         (showPicker needs that) but invisible, under the buttons. */
+      .dt-field {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        position: relative;
+      }
+      .dt-field > input[data-dt-text] { flex: 1 1 auto; min-width: 0; }
+      .dt-field-picker {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+        border: 0;
+        padding: 0;
+      }
+      .dt-field .dt-field-btn {
+        flex: 0 0 auto;
+        padding: 4px 8px;
+        line-height: 1.2;
+      }
       /* 18R Item 4 — Session config card in-place display <-> edit swap.
          The card carries data-config-mode; each field renders a
          data-display-only value and a data-edit-only input in the same
@@ -6133,6 +6161,65 @@
           var summary = open[0].querySelector("summary");
           closeAll(null);
           if (summary && summary.focus) summary.focus();
+        });
+      })();
+    </script>
+    {# Date-time fields (segment 19X Item 6,
+       operator/partials/_datetime_field.html). The text box is the
+       field; this adds the calendar button, which opens the browser's
+       own picker on a hidden native box and writes its choice back as
+       `YYYY-MM-DD HH:MM`, and the clear button. Both write through
+       `put`, which fires input and change so a page's own listeners
+       (Session Home's dirty flag, Create's ordering check, the zone
+       conversion) see the edit. A `T` typed or pasted between date and
+       time reads as a space on change. #}
+    <script>
+      (function () {
+        var WALL = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/;
+        document.querySelectorAll("[data-dt-field]").forEach(function (wrap) {
+          var box = wrap.querySelector("[data-dt-text]");
+          var picker = wrap.querySelector("[data-dt-picker]");
+          var pick = wrap.querySelector("[data-dt-pick]");
+          var clear = wrap.querySelector("[data-dt-clear]");
+          if (!box) return;
+          function editable() { return !box.disabled && !box.readOnly; }
+          function put(text) {
+            if (box.value === text) return;
+            box.value = text;
+            box.dispatchEvent(new Event("input", { bubbles: true }));
+            box.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+          box.addEventListener("change", function () {
+            var m = WALL.exec(box.value.trim());
+            if (m) put(m[1] + " " + m[2]);
+          });
+          if (pick && picker && typeof picker.showPicker === "function") {
+            pick.hidden = false;
+            pick.addEventListener("click", function () {
+              if (!editable()) return;
+              var m = WALL.exec(box.value.trim());
+              picker.value = m ? m[1] + "T" + m[2] : "";
+              try { picker.showPicker(); } catch (e) { box.focus(); }
+            });
+            // The picker is a stand-in: its own events stop here, and
+            // the box carries the edit.
+            ["input", "change"].forEach(function (type) {
+              picker.addEventListener(type, function (event) {
+                event.stopPropagation();
+                if (type !== "change") return;
+                var m = WALL.exec(picker.value);
+                if (m) put(m[1] + " " + m[2]);
+              });
+            });
+          }
+          if (clear) {
+            clear.hidden = false;
+            clear.addEventListener("click", function () {
+              if (!editable()) return;
+              put("");
+              box.focus();
+            });
+          }
         });
       })();
     </script>

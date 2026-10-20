@@ -192,9 +192,10 @@ def gmt_offset_zone_label(tz_name: str | None, at: datetime | None = None) -> st
 
 
 def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
-    """Parse a browser ``datetime-local`` string (``YYYY-MM-DDTHH:MM``)
-    as wall-clock in ``tz_name``'s zone and return the equivalent UTC
-    instant, naive (matching how stored timestamps are kept).
+    """Parse a date-time box's text (``YYYY-MM-DD HH:MM``, or a browser
+    ``datetime-local`` string's ``YYYY-MM-DDTHH:MM``) as wall-clock in
+    ``tz_name``'s zone and return the equivalent UTC instant, naive
+    (matching how stored timestamps are kept).
 
     Raises ``ValueError`` for an unparseable string — callers turn
     that into a 4xx. Segment 18B PR 4. A moment within a day of the
@@ -224,6 +225,28 @@ def iso_in_zone(
     if value is None:
         return ""
     return _in_zone(value, tz_name).isoformat(timespec=timespec)
+
+
+def format_datetime_box(value: datetime | None, tz_name: str | None) -> str:
+    """Render a stored UTC datetime as a date-time field's text
+    (``YYYY-MM-DD HH:MM``, 24-hour) in ``tz_name``'s zone: the text box
+    of a date-time field (segment 19X Item 6), the displays' format
+    without a zone token. ``""`` for ``None``.
+    :func:`parse_local_datetime` reads it back."""
+    if value is None:
+        return ""
+    return _in_zone(value, tz_name).strftime(_DATETIME_FORMAT)
+
+
+def box_text(value: str | None) -> str:
+    """A date-time box's submitted text with ``T`` or a space between
+    date and time read alike, so a native ``datetime-local`` value and
+    the text box's compare as one (19X Item 6). Surrounding space is
+    dropped; any other text is returned as it came."""
+    text = (value or "").strip()
+    if len(text) > 10 and text[10] == "T":
+        text = f"{text[:10]} {text[11:]}"
+    return text
 
 
 def format_datetime_local(

@@ -55,6 +55,11 @@ def test_create_re_renders_every_box_and_stores_the_instants(page: Page) -> None
         expect(page.locator(box)).to_have_attribute("data-tz-utc", value)
 
 
+def _box(text: str) -> str:
+    """A `T`-form wall-clock as Session Home's text box holds it."""
+    return text.replace("T", " ", 1)
+
+
 def _second_half_hour_after_fall_back() -> tuple[str, str]:
     """The second 01:30 in New York on next year's fall-back day (the
     first Sunday of November), as UTC and as New York wall-clock."""
@@ -90,24 +95,26 @@ def test_session_home_re_renders_from_the_stored_instant(
     save("America/New_York")  # the UTC text, untouched: the instant stays
     page.goto(f"/operator/sessions/{session_id}?editing=1")
     end = page.locator("#mock-end")
-    expect(end).to_have_value(in_new_york)
+    # Session Home's boxes hold 24-hour text with a space; `data-tz-utc`
+    # keeps the `T` form, which the zone script reads either way.
+    expect(end).to_have_value(_box(in_new_york))
     expect(end).to_have_attribute("data-tz-utc", in_utc)
 
     zone = page.locator("#mock-timezone")
     zone.fill("UTC")
     # Read from its text, 01:30 would be the first one, 05:30 UTC.
-    expect(end).to_have_value(in_utc)
+    expect(end).to_have_value(_box(in_utc))
 
     # Cancel resets the boxes and the zone, and the script with them;
     # Unlock reopens the card in place.
     page.locator("[data-config-cancel]").click()
     page.locator("[data-config-lock-toggle]").click()
-    expect(end).to_have_value(in_new_york)
+    expect(end).to_have_value(_box(in_new_york))
     converted = page.locator('input[name="tz_converted"]')
     expect(converted).to_have_value("")
     zone.fill("Asia/Tokyo")
     tokyo = in_utc.replace("T06:30", "T15:30")
-    expect(end).to_have_value(tokyo)
+    expect(end).to_have_value(_box(tokyo))
     # The form names the boxes the script re-rendered, so the server reads
     # old-zone text typed back into one as an edit (the read of #3113).
     expect(converted).to_have_value("deadline")
@@ -116,7 +123,7 @@ def test_session_home_re_renders_from_the_stored_instant(
         page.locator("[data-config-save]").click()
     page.wait_for_load_state("load")
     expect(end).to_have_attribute("data-tz-utc", in_utc)
-    expect(end).to_have_value(tokyo)
+    expect(end).to_have_value(_box(tokyo))
 
 
 def test_create_reads_a_skipped_day_as_the_server_does(page: Page) -> None:

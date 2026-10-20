@@ -263,15 +263,15 @@ def test_edit_form_renders_ordered_chain_prefills(
         f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
     # All four datetime inputs render, each prefilled with its saved
-    # value in the local-input format.
+    # value as the box's 24-hour text (19X Item 6).
     assert 'name="scheduled_activate_at"' in body
-    assert 'value="2027-01-01T09:00"' in body
+    assert 'value="2027-01-01 09:00"' in body
     assert 'name="deadline"' in body
-    assert 'value="2027-01-15T09:00"' in body
+    assert 'value="2027-01-15 09:00"' in body
     assert 'name="responses_release_at"' in body
-    assert 'value="2027-01-20T09:00"' in body
+    assert 'value="2027-01-20 09:00"' in body
     assert 'name="responses_release_until"' in body
-    assert 'value="2027-01-30T09:00"' in body
+    assert 'value="2027-01-30 09:00"' in body
 
 
 def test_new_session_form_includes_live_update_script(

@@ -176,3 +176,38 @@ def test_parse_local_datetime_utc_is_identity() -> None:
 def test_parse_local_datetime_rejects_unparseable_string() -> None:
     with pytest.raises(ValueError):
         parse_local_datetime("not-a-date", "UTC")
+
+
+def test_format_datetime_box_is_24_hour_text_in_zone() -> None:
+    """The date-time field's text (19X Item 6): the displays' format,
+    no zone token, seconds dropped; `parse_local_datetime` reads it back."""
+    stored = datetime(2027, 3, 1, 9, 5, 45)
+    text = date_formatting.format_datetime_box(stored, "Asia/Singapore")
+    assert text == "2027-03-01 17:05"
+    assert date_formatting.parse_local_datetime(text, "Asia/Singapore") == datetime(
+        2027, 3, 1, 9, 5
+    )
+    assert date_formatting.format_datetime_box(None, "UTC") == ""
+
+
+def test_format_datetime_box_ignores_the_zone_token_switch(monkeypatch) -> None:
+    monkeypatch.setattr(date_formatting, "SHOW_ZONE_TOKEN", True)
+    assert date_formatting.format_datetime_box(datetime(2027, 3, 1, 9, 5), "UTC") == (
+        "2027-03-01 09:05"
+    )
+
+
+@pytest.mark.parametrize(
+    ("submitted", "expected"),
+    [
+        ("2027-03-01T17:05", "2027-03-01 17:05"),
+        ("2027-03-01 17:05", "2027-03-01 17:05"),
+        ("  2027-03-01 17:05 ", "2027-03-01 17:05"),
+        ("", ""),
+        (None, ""),
+        ("2027-03-01", "2027-03-01"),
+        ("tomorrow", "tomorrow"),
+    ],
+)
+def test_box_text_reads_either_separator_alike(submitted, expected) -> None:
+    assert date_formatting.box_text(submitted) == expected

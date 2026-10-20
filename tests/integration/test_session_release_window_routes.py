@@ -261,21 +261,61 @@ def test_edit_form_prefills_saved_release_window_values(
     body = client.get(
         f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
-    # Both inputs prefilled in session zone (UTC).
-    assert 'value="2027-03-01T10:00"' in body
-    assert 'value="2027-03-15T10:00"' in body
+    # Both inputs prefilled in session zone (UTC), as 24-hour text.
+    assert 'value="2027-03-01 10:00"' in body
+    assert 'value="2027-03-15 10:00"' in body
 
 
-def test_edit_until_renders_as_datetime_local_input(
+def test_edit_until_renders_as_a_date_time_field(
     client: TestClient, db: Session
 ) -> None:
-    """S12 swapped the text+ISO-duration input to a
-    ``datetime-local``. The text input shape is gone."""
+    """S12 swapped the text+ISO-duration input to a date-time box; 19X
+    Item 6 made it the 24-hour text field. The offset shape is gone."""
     review_session = _make_session(client, db, code="rw-shape")
     body = client.get(
         f"/operator/sessions/{review_session.public_id}?editing=1"
     ).text
-    assert (
-        'type="datetime-local" id="mock-release-until"' in body
-    )
+    assert 'type="text" id="mock-release-until"' in body
+    assert 'type="datetime-local" id="mock-release-until"' not in body
     assert 'name="release_until_offset"' not in body
+
+
+def test_home_boxes_are_date_time_fields_and_a_spaced_save_keeps_them(
+    client: TestClient, db: Session
+) -> None:
+    """Each of Session Home's four boxes renders as the 19X Item 6 field
+    (text box, picker, clear), and re-submitting its 24-hour text keeps
+    the stored instant."""
+    review_session = _make_session(
+        client,
+        db,
+        code="rw-field",
+        data={
+            "responses_release_at": "2027-03-01T10:00",
+            "display_timezone": "UTC",
+        },
+    )
+    body = client.get(
+        f"/operator/sessions/{review_session.public_id}?editing=1"
+    ).text
+    for box in ("mock-start", "mock-end", "mock-release-from", "mock-release-until"):
+        assert f'type="text" id="{box}"' in body
+    assert body.count('class="dt-field" data-dt-field') == 4
+    assert body.count('data-dt-pick hidden') == 4
+    assert body.count('data-dt-clear hidden') == 4
+    # The data-tz-utc seed keeps its `T` form for the zone script.
+    assert 'data-tz-utc="2027-03-01T10:00"' in body
+
+    # The box's own text saves as no change; a typed one reads either way.
+    assert _submit_edit(
+        client, review_session, display_timezone="UTC",
+        responses_release_at="2027-03-01 10:00",
+    ) == 303
+    db.refresh(review_session)
+    assert _naive_utc(review_session.responses_release_at) == datetime(2027, 3, 1, 10, 0)
+    assert _submit_edit(
+        client, review_session, display_timezone="UTC",
+        responses_release_at="2027-03-02 08:30",
+    ) == 303
+    db.refresh(review_session)
+    assert _naive_utc(review_session.responses_release_at) == datetime(2027, 3, 2, 8, 30)
