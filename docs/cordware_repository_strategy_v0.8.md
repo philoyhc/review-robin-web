@@ -1,11 +1,11 @@
 # Cordware Repository and Deployment Strategy
 
-**Version:** 0.8, 20 October 2026  
+**Version:** 0.8, 20 October 2026; stages 1 and 2 resequenced the same day (§5)  
 **Status:** The adopted strategy (author, 2026-10-19). The direction is decided; smaller details may still shift, and each shift is recorded here. This is not authorization for any single production change.  
 **Source of truth:** this file, in `philoyhc/review-robin-web`. The `philoyhc/cordware` planning repo stands down later and is not updated.  
 **Deployment:** One integrated application on one Azure App Service, at `https://cordware.nus.edu.sg`.
 
-> **Decision:** Evolve RRW's existing repository **in place** into an asymmetric monorepo. RRW keeps its root-level source and development folders. A deliberately small, stateless `cordware/` host package supplies trusted Entra identity and mounts each application under its own path. Residential Apps follows later in a self-contained `residentialapps/` area. The sequence is **mount RRW at `/reviewrobin` → extract shared identity → establish Residential Apps → integrate and deploy**, and both RRW stages land before Residential Apps arrives.
+> **Decision:** Evolve RRW's existing repository **in place** into an asymmetric monorepo. RRW keeps its root-level source and development folders. A deliberately small, stateless `cordware/` host package supplies trusted Entra identity and mounts each application under its own path. Residential Apps follows later in a self-contained `residentialapps/` area. The sequence is **build the host with RRW still at `/` and sweep RRW's links → extract shared identity, then move RRW to `/reviewrobin` → establish Residential Apps → integrate and deploy**, and both RRW stages land before Residential Apps arrives.
 
 v0.8 replaces v0.7. It folds v0.7's two addenda into the body, replaces v0.7's standalone-compatibility requirement with the independence requirement in §3, and makes the rest of the document consistent with both. §9 has the version history.
 
@@ -131,7 +131,7 @@ Cordware owns `/` (the landing page) and `/health`. Easy Auth's `/.auth/*` paths
 
 ### Behavior under the mount
 
-These requirements, carried from the archived integration spec v0.2, apply from stage 1:
+These requirements, carried from the archived integration spec v0.2, apply from the prefix flip at the end of stage 2:
 
 1. **Deep links survive sign-in.** A signed-out user opening `/reviewrobin/sessions/123` goes through Easy Auth and returns to that full path, not to `/` or `/reviewrobin/`.
 2. **Probe paths need no interactive sign-in.** `/health` for the host, and an optional `/reviewrobin/health` for RRW.
@@ -144,7 +144,7 @@ Microsoft Entra / Azure Easy Auth performs institutional sign-in. In stage 2, Co
 
 RRW maps that identity to its own user and permission records; Residential does its own mapping. Neither receives an authorization decision from Cordware. Fake *roles* (RRW's operator, admin and super-admin flags, for example) stay with each application, because they are authorization, not identity.
 
-RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the mounted URL behavior is established. Because RRW has no standalone runtime, it keeps no second parser of its own.
+RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the host exists (stage 1), and before RRW moves to `/reviewrobin`, so the dev slot's one live check at the prefix flip covers the new identity and the new prefix together. Identity parsing reads headers, not paths, so it doesn't depend on the mount. Because RRW has no standalone runtime, it keeps no second parser of its own.
 
 ## 4. Audit and persistence
 
@@ -183,13 +183,13 @@ Settings are namespaced: `RRW_DATABASE_URL` and `RES_DATABASE_URL`. Under B they
 
 ## 5. Implementation pathway and stage gates
 
-Make small, reviewable changes. **Nothing is deployed to the NUS host until this repository runs as Cordware with RRW mounted**, so RRW is never deployed there on its own and the first NUS deploy uses the Cordware entry point.
+Make small, reviewable changes. **Nothing is deployed to the NUS host until this repository runs as Cordware with RRW mounted at `/reviewrobin`**, so RRW is never deployed there on its own and the first NUS deploy uses the Cordware entry point.
 
 | Stage | Work | Gate before the next stage |
 |---|---|---|
 | **0. Baseline and privacy** | Record RRW and Residential source SHAs, tests, migration heads, launch and deploy configuration. Make this repository **private before importing Residential's private material**, then check Actions, access and integrations after the change. | Known-good RRW baseline, provenance kept |
-| **1. Mount RRW** | Add the minimal `cordware/main.py` and the `CORDWARE_APPS` setting; mount RRW at `/reviewrobin`; move the module-level app out of `app/main.py` and host-owned logging into Cordware; sweep root-relative URLs onto route-aware generation; add the import-boundary test; test mounted routes, redirects, static assets, deep links and authorization. The personal dev slot switches to the Cordware entry point here, as the live check of §3's behavior requirements under real Easy Auth. | RRW behavior unchanged at `/reviewrobin`; Cordware alone and Cordware + RRW both run |
-| **2. Extract shared identity** | Move RRW's tested Easy Auth claims parsing into `cordware/identity.py`, with fake local identity; RRW consumes it and keeps its `users`, roles and audits. No Cordware database. | Trusted-identity interface tested on its own; RRW permission behavior unchanged |
+| **1. Host skeleton and URL sweep** | Two workstreams, each behavior-neutral while RRW stays at `/`. **Host skeleton (first):** add `cordware/main.py` and the `CORDWARE_APPS` setting, with Cordware alone serving `/health`; mount RRW **at `/`** for now; move the module-level app out of `app/main.py` and every start command to the Cordware entry point; move root-logger setup into Cordware; add the import-boundary test. The personal dev slot's start command switches to the Cordware entry point here. **URL sweep:** move every literal root path in templates, Python, inline scripts, path comparisons and cookies onto route-aware generation; add a test harness that mounts RRW under `/reviewrobin` and a leak-check test that becomes a hard gate once the sweep is done. | Cordware alone and Cordware + RRW both run; RRW behavior unchanged at `/`; no root-path leak under the test mount |
+| **2. Shared identity, then the prefix flip** | **Shared identity** may start as soon as the host skeleton lands, in parallel with the sweep: move RRW's tested Easy Auth claims parsing into `cordware/identity.py`, with fake local identity and its guard; RRW consumes it through a re-export and keeps its fake roles, `users`, permissions and audits. No Cordware database. **Prefix flip (last, after the sweep):** mount RRW at `/reviewrobin`, serve the Cordware landing page at `/`, and fix the `/.auth/*` login and logout return paths. The personal dev slot then serves the assembled app, as the live check of §3's behavior requirements and the new identity under real Easy Auth. | Trusted-identity interface tested on its own; RRW permission behavior unchanged; RRW behavior unchanged at `/reviewrobin` |
 | **3. Establish Residential** | Import its skeleton, architectural decisions, specs, plans, tests, tools, agent guidance and Alembic; re-namespace `app`; consume Cordware identity; mount at `/residentialapps`. Settle B or C **before production database setup**, not necessarily before the code import. | Cordware + Residential runs without RRW; both applications coexist |
 | **4. Integrated release** | Resolve the one dependency environment; package the applications and assets; run each mounted application's migrations with its own database and credentials; verify in staging, then a controlled production cutover. | One validated build and release, with documented rollback and recovery |
 
@@ -253,7 +253,8 @@ All earlier versions, `cordware_repo_planning.md` and integration spec v0.2 are 
 
 - **Standalone compatibility replaced by independence (§3).** v0.7 required RRW to "work both standalone locally and mounted". v0.8 requires that Cordware plus any single application runs, with the mounted set named by `CORDWARE_APPS` and Cordware runnable alone. Packages stay shared. There is no supported standalone RRW runtime, so RRW keeps no second identity parser.
 - **v0.7 Addendum A folded into §3** as "Behavior under the mount": deep links, auth-free probes, mounted request handling, no backend-host leak.
-- **v0.7 Addendum B folded into §3 and §5:** the mount replaces the `BASE_PATH` shim; each application is constructed once, with host-owned logging and the module-level app removed; NUS sees only the assembled application; the dev slot switches at stage 1; old root links are not kept.
+- **v0.7 Addendum B folded into §3 and §5:** the mount replaces the `BASE_PATH` shim; each application is constructed once, with host-owned logging and the module-level app removed; NUS sees only the assembled application; the dev slot switches to the Cordware entry point; old root links are not kept.
 - **Gateway path forwarding stated (§3):** the mount needs Application Gateway to forward the public path unchanged; v0.7 had called keep-or-strip irrelevant.
 - **The v8 status report marked superseded in part:** its source-control and deployment model (independent repos synced into `philoyhc/cordware`) conflicts with this strategy, and the report now says so.
+- **Stages 1 and 2 resequenced (§5, same day):** v0.8 first put the whole mount, sweep included, in stage 1 and identity after it. Stage 1 is now the host skeleton (RRW still at `/`) and the URL sweep, both behavior-neutral. Stage 2 is shared identity, which may run alongside the sweep, then the prefix flip, which is the only step that changes URLs and comes last. The behavior requirements apply from the flip; the dev slot changes its start command in stage 1 and its served path in stage 2.
 - **Consistency fixes:** identity extraction ahead of Residential is explained (§1); the landing page lists mounted applications (§1, §3); the stage 1 and stage 3 gates name the independence checks (§5); the status line records adoption, and the broken version-history pointer is fixed.
