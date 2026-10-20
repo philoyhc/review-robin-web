@@ -284,9 +284,11 @@ def test_an_empty_cohort_gets_no_download_link(
     )
 
     body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
-    assert "0 Reviewers in cohort" in body
     assert "Download CSV" not in body
     assert "data-collation-nothing-to-download" in body
+    # Only the line: no table of empty rows (19X Item 4).
+    assert "Reviewers in cohort" not in body
+    assert 'class="rs-reviewee">Cohort' not in body
 
 
 def test_collation_numbers_instruments_from_one(

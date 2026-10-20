@@ -8,8 +8,8 @@ section (git history keeps it), so this file lists only what is owed. A
 section may point to upload files under `guide/browser_check_files/`;
 delete them once no remaining section points to them.
 
-**What is left needs more than a local run:** an Azure deployment
-(#2720, P2's signed-out row, P5) or the Rehydrate round trip (D28).
+**Some rows need more than a local run:** an Azure deployment (#2720,
+P2's signed-out row, P5) or the Rehydrate round trip (D28).
 
 ## Email dates in the session's zone (#2720)
 
@@ -47,3 +47,12 @@ deployment, not a local run.
 - [ ] **An invited user's first sign-in binds them.** Invite a new
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
+
+## An instrument nobody in view takes part in shows only its line (19X Item 4)
+
+- [ ] **No empty table.** As an observer whose cohort takes in no one
+  on an instrument (a cohort rule matching no roster row), open
+  `/collation`: that instrument's card shows its heading and "No one in
+  your view takes part in this instrument, so there is nothing to
+  download.", with no table. An instrument the cohort does reach still
+  shows its table.

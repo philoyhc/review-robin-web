@@ -59,6 +59,15 @@
           <p class="muted">{{ section.description }}</p>
         {% endif %}
 
+        {# A cohort that takes in no one on this instrument has only
+           empty rows to show, so the card says why instead (19X
+           Item 4). #}
+        {% if not section.cohort_has_rows %}
+          <p class="muted" data-collation-nothing-to-download>
+            No one in your view takes part in this instrument, so there
+            is nothing to download.
+          </p>
+        {% else %}
         {# `.table-scroll` (base.html): a table wider than its card
            scrolls inside the card rather than pushing the page sideways. #}
         <div class="table-scroll">
@@ -103,17 +112,13 @@
                     Only the summary above is shown for this
                     instrument, so there is no download.
                   </span>
-                {% elif not section.cohort_has_rows %}
-                  <span class="muted" data-collation-nothing-to-download>
-                    No one in your view takes part in this
-                    instrument, so there is nothing to download.
-                  </span>
                 {% endif %}
               </td>
             </tr>
           </tbody>
         </table>
         </div>
+        {% endif %}
       </div>
     {% endfor %}
   {% endif %}
