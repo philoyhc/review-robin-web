@@ -79,7 +79,7 @@ then a two-column bottom row.
 > **There are five cards on Home and no more.** There is no
 > standalone Edit page — session config is displayed *and* edited on
 > the Session details card, and `GET /operator/sessions/{id}/edit`
-> is a redirect to `…?editing=1#session-config`. There is no
+> is a redirect to `…?editing=1`. There is no
 > separate read-only metadata card and no Schedule-timeline card:
 > the config card carries those fields, and resolved fire-moments
 > show inline next to each offset. The Extract Setup card lives on
@@ -509,9 +509,14 @@ no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
   Name or Code longer than its column (255 / 64), which the browser's
   `maxlength` otherwise prevents.
 - `GET /operator/sessions/{id}/edit` exists only as a **308
-  permanent redirect** to `…?editing=1#session-config` for stale
+  permanent redirect** to `…?editing=1` (no fragment) for stale
   bookmarks. It keeps the `require_session_operator` gate, so a
   non-owner is refused rather than bounced.
+- **Arriving at the card carries no fragment.** A bare Create, the
+  lobby's Duplicate / Duplicate config, Validate's session-level Fix
+  links and the `/edit` redirect all land on `?editing=1` alone, and
+  the page opens at its top. A fragment belongs only where it returns
+  the operator to what they just acted on or points at a named row.
 
 Lifecycle state is shown in the chrome status strip and (on Home)
 in the Workflow card's body copy when relevant.

@@ -25,6 +25,8 @@ def test_a_bare_create_opens_the_details_card_with_no_fragment(page: Page) -> No
     assert page.url.endswith("?editing=1"), page.url
     assert "#" not in page.url
     expect(page.locator("#session-config")).to_have_attribute("data-config-mode", "edit")
+    # The page opens at its top: nothing scrolls it to the card.
+    assert page.evaluate("window.scrollY") == 0
 
 
 def test_a_refused_file_on_create_lands_on_its_banner_with_no_fragment(

@@ -573,6 +573,9 @@ as well — several PRs for no reported problem.
 
 - The Guide links keep `#guide-…` (2026-10-20): each points at the
   section its text names on a long page, as a Fix row anchor does.
+- Assignments' "Edit on Instruments page" keeps `#instrument-N`
+  (2026-10-20, found by the read): it names one instrument, as a Fix
+  row anchor does.
 
 ### Blast radius (measured)
 
@@ -587,7 +590,16 @@ Taken 2026-10-20 at `6af85064`.
 
 ### Status
 
-*(Filled at close.)*
+**Closed 2026-10-20, in one PR.** As planned: five redirects lost their
+fragment; Validate's rules assert no `fix_url` carries one; a browser
+test pins both Create landings. One `diff-reviewer` read: no defect in
+the change; it found one arrival fragment the inventory missed,
+Assignments' "Edit on Instruments page" (kept, judgment call above);
+that the Save seat check no longer tells an arrival from Save's own
+landing (the 15 s freshness still does; comment updated, cosmetic); a
+stale test comment; and that without script a refused Create no longer
+scrolls to its banner (the plan accepts the script). `spec-writer` at
+close aligned all six specs, with no code divergence.
 
 ### PR ladder
 
@@ -598,7 +610,8 @@ Taken 2026-10-20 at `6af85064`.
 ### Definition of done
 
 - No redirect or link that opens a page from elsewhere carries a
-  fragment, the Fix row anchors and Guide links aside (grep; tests).
+  fragment, the anchors that name one row, instrument or Guide section
+  aside (grep; tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19X.7` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
