@@ -10326,4 +10326,5 @@ def test_preview_heading_carries_inert_layout_chip(
     assert chip.start() > heading
     assert chip.group(1) == "Layout 1"
     assert 'aria-disabled="true"' in chip.group(0)
+    assert "tag-chip" not in chip.group(0)  # no clickable chip styling yet
     assert 'name="intro_layout"' not in card
