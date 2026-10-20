@@ -87,62 +87,12 @@ deployment, not a local run.
 
 ## An instrument's intro picks its layout (19Y Item 1)
 
-- [ ] **The chip and the preview.** Unlock an instrument card whose
-  fields have help text: the chip beside "Preview review instrument"
-  reads **Layout 1**, and the preview shows the heading card (with the
-  help texts, since Item 2) on the left, "Who can see what you wrote"
-  on the right. Click it: **Layout 2**, with the visibility card back
-  under the heading and the help texts on the right. Save, reload: Layout 2 stays. Lock the card:
-  the chip is a plain pill and a click does nothing.
-- [ ] **The reviewer sees the same.** Activate and open the session as a
-  reviewer: each instrument's intro takes its layout, in light and dark.
-  An instrument with no help text keeps the heading left and the
-  visibility card right in Layout 1, and stacks them left in Layout 2.
-- [ ] **Narrow.** At 800px or narrower, on the reviewer surface and the
-  preview, Layout 1 stacks the heading card (help inside) over
-  visibility, and Layout 2 stacks heading, visibility, help (Item 2).
 - [ ] **The Guide's screencap.** Reshoot
   `app/web/static/guide/instrument-card-preview.png` and `-dark` with the
   new default and the chip, and update their alt text in
   `app/web/templates/guide.html` to say the help texts sit as rows in
   the heading card on the left and the visibility table on the right
   (Item 2: rows, not help cards).
-
-## The help texts gather into one card (19Y Item 2)
-
-- [ ] **Layout 1, locked.** An instrument card with two fields whose ≡
-  is on and help text set: the preview's heading card shows, under the
-  description, a horizontal rule, then one row per field reading
-  **Label** — text, in field order, on the normal card fill (no help
-  tint). No separate help cards. An untitled instrument's rows sit alone
-  in the card, with no rule; Layout 2's help card has none either.
-- [ ] **Unlocked.** Unlock: each row becomes its label over a textarea.
-  Type in one, then click the chip to **Layout 2**: the rows move into
-  one card on the right, your typing kept. Back to Layout 1: they
-  return. Click a field's ≡ in Band 3: its row goes; again, it returns.
-- [ ] **Empty help.** Turn ≡ on for a field with no help text: unlocked
-  it shows an empty textarea; locked, and on the reviewer surface, no
-  row.
-- [ ] **The reviewer sees the same.** Activate and open as a reviewer,
-  light and dark: Layout 1 rows in the heading card (drawn for the rows
-  alone on an untitled instrument), Layout 2 one help card on the right.
-- [ ] **Narrow.** At 800px or narrower: Layout 1 is the heading card
-  with its rows, then visibility; Layout 2 heading, visibility, then
-  the help card.
-
-## Near-equal intro columns end level (19Y Item 3)
-
-- [ ] **Near ends level.** A locked instrument card whose Layout 1
-  heading card (with its help rows) and "Who can see what you wrote"
-  card end within about a line of each other: both now end on one
-  line. The reviewer sees the same.
-- [ ] **Far keeps its heights.** Lengthen a help text by two or more
-  lines: the cards end at their own heights again, no stretched slack.
-- [ ] **Layout 2.** The heading and visibility cards' column against the
-  help card: within a line, the visibility card (or the help card)
-  stretches so both columns end level; further apart, they don't.
-- [ ] **Unlocked and narrow.** Unlock: the cards keep their own heights
-  as you type. At 800px or narrower nothing stretches.
 
 ## Arriving on a page carries no fragment (19X Item 7)
 

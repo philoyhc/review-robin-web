@@ -419,3 +419,143 @@ and close in one, as laddered.
 - `spec/instruments.md` — the locked preview snaps, the unlocked one does not (Item 3).
 - `guide/things_to_check_in_browser.md` — rows for both layouts, near and far (Item 3).
 - `guide/todo_master.md` — the 19Y entry (Item 3).
+
+## Item 4 — The preview's response boxes don't resize
+
+### Opportunity
+
+The author, 2026-10-20: a long-text response field (Comments) in Band 2's
+preview table keeps the app-wide vertical resize handle
+(`body.ui-v2 textarea { resize: vertical }`), but a drag there persists
+nowhere, so the handle promises a setting that does not exist.
+
+### Decision
+
+The author's ruling, 2026-10-20, on a recommendation: **no resize in
+the preview**; the reviewer surface keeps its handle. The preview
+already shows the reviewer's starting height: both size the box by the
+same rule (`textarea_rows_for`, from `max_length` and the column
+width). Rejected: a stored per-field height (a column, both Saves, the
+Settings CSV, Duplicate and Replicate, an audit event, and a rule for
+which wins when it disagrees with the derived rows) for a box the
+reviewer can resize anyway.
+
+### Semantics
+
+- Only the preview table's response textareas (`buildResponseFieldPreviewCell`
+  in `instruments_index.html`) take `resize: none`; the help and
+  description boxes are real inputs and keep theirs (help: Item 5).
+- The reviewer surface (`review_surface.html`) and the app-wide rule
+  are unchanged.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `7d9f1042`.
+
+| What | Count | Command |
+|---|---|---|
+| Preview builder setting the handle | 1 line | `grep -n "resize: vertical" app/web/templates/operator/instruments_index.html` |
+| Specs naming the textarea resize rule | 2 | `grep -n "resize" spec/ui_elements.md spec/reviewer-surface.md` (§ textarea rule; the field-type table) |
+
+### PR ladder
+
+1. **PR 1 — build, specs, close.** `resize: none` on the preview's
+   response textareas; a browser test (preview `none`, reviewer
+   surface `vertical`); specs; checklist row; one `diff-reviewer`
+   read; close. Must not touch the reviewer surface.
+
+### Definition of done
+
+- The preview's long-text response box has no resize handle; the
+  reviewer surface's keeps one (browser test).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None (ruled 2026-10-20).
+
+### Out of scope
+
+- A stored response-box height; the derived rows rule itself.
+
+### Doc impact
+
+- `spec/instruments.md` — the preview's response boxes take no resize handle (Item 4).
+- `spec/ui_elements.md` — the textarea resize rule's one exception (Item 4).
+- `guide/things_to_check_in_browser.md` — a row for the handle (Item 4).
+- `guide/todo_master.md` — the 19Y entry (Item 4).
+
+## Item 5 — A help text's edit box grows with its text
+
+### Opportunity
+
+The author, 2026-10-20, with two screenshots of an unlocked Layout 2
+card: a long help text sits in a fixed 60px textarea behind a
+scrollbar, so the operator edits it a few lines at a time while the
+locked card shows it whole.
+
+### Decision
+
+The author's ruling, 2026-10-20: the help text's edit box grows with
+its text. Its height is set to its content on build, on every
+keystroke, and when its width changes (window, layout chip, column).
+Judgment call: the box loses its resize handle and scrollbar
+(`resize: none; overflow: hidden`), since its height now follows the
+text and a drag would be undone by the next keystroke. Rejected: a
+larger fixed height (still scrolls past it, and wastes space on a
+one-line help).
+
+### Semantics
+
+- **Floor.** Today's 60px minimum stays; a short or empty help keeps it.
+- **Ceiling.** None needed: `maxlength` 1000 bounds it.
+- **Where.** The help rows' textareas (`buildResponseFieldHelpRows`),
+  in either home (Item 2). The description box is not in scope.
+- **Unsaved text** survives the re-fit: the fit reads the box, never
+  rebuilds it.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `7d9f1042`.
+
+| What | Count | Command |
+|---|---|---|
+| Builder of the help textarea | 1 function | `grep -n "function buildResponseFieldHelpRows" app/web/templates/operator/instruments_index.html` |
+| Its input handler | 1 | `grep -n "newModelHelpCardInput = " app/web/templates/operator/instruments_index.html` |
+| Tests touching the help textarea | 1 browser file | `grep -rln "data-help-card-textarea" tests --include=*.py` |
+
+### PR ladder
+
+1. **PR 1 — build, specs, close.** The fit on build, input and width
+   change; browser tests (long text shows whole, typing grows it,
+   short text keeps the floor, a move between homes re-fits); specs;
+   checklist row; one `diff-reviewer` read; close. Lands after Item 4.
+
+### Definition of done
+
+- An unlocked help box shows its whole text with no scrollbar, grows as
+  the operator types, and keeps 60px for a short text (browser tests).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.5` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None (ruled 2026-10-20).
+
+### Out of scope
+
+- The description box; the help text's 1000-character limit.
+
+### Doc impact
+
+- `spec/instruments.md` — the help row's edit box grows with its text (Item 5).
+- `spec/ui_elements.md` — the textarea resize rule's second exception (Item 5).
+- `guide/things_to_check_in_browser.md` — a row for the growing box (Item 5).
+- `guide/todo_master.md` — the 19Y entry (Item 5).
