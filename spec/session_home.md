@@ -358,7 +358,9 @@ plain `<label>` above its value:
   Asia/Singapore") via `date_formatting.gmt_offset_zone_label`;
   edit mode is a datalist typeahead over the timezone options.
 - **Schedule fields** — Start / End / Release-responses-from /
-  Release-responses-until (`datetime-local` in edit mode) plus
+  Release-responses-until (a date-time field in edit mode: 24-hour
+  `YYYY-MM-DD HH:MM` text with a picker and a clear button,
+  `spec/ui_elements.md` §8) plus
   the **Send invites** (offset from Start) and **Send reminders**
   (offset from End) offset lists. In display mode each offset
   shows as a pill next to its **resolved send datetime**
@@ -367,13 +369,17 @@ plain `<label>` above its value:
   Schedule-timeline card. Each box is seeded with its stored value in
   the session's zone. **A timezone change keeps the stored instants**
   (findings L8): as the Timezone field changes, the card's script
-  re-renders every filled box as the same instant in the new zone
+  re-renders every filled box, as 24-hour text, as the same instant in
+  the new zone
   (`app/web/templates/operator/partials/_timezone_preview.html`, which
   Create shares). On Save a box still holding its stored value, rendered
   in the seeded zone (a page without script leaves it so) or in the
   submitted zone (as the script re-renders it), keeps the stored instant,
   seconds included (`sessions.datetime_box_kept`); any other text is
-  an edit, read as wall-clock in the submitted zone. The script posts
+  an edit, read as wall-clock in the submitted zone; `T` or a space
+  between date and time compares alike. The card runs no client-side
+  ordering check: `scheduled_events.validate_schedule_ordering` is the
+  gate (`spec/lifecycle.md` §8.2.7). The script posts
   `tz_converted`, the boxes it re-rendered, and for those only the
   submitted-zone match counts: old-zone text typed back into one is an
   edit. The check compares

@@ -260,7 +260,7 @@ def parse_and_validate_scheduled_activate_at(
     min_lead_hours: int | None = None,
     aged_exempt: bool = False,
 ) -> datetime | None:
-    """Parse a ``datetime-local`` form value into a UTC-aware datetime
+    """Parse a date-time box's form value into a UTC-aware datetime
     and enforce the operational lead-time floor (Part 1 minimum
     lead time, defaulted to ``settings.scheduled_operational_lead_hours``).
 

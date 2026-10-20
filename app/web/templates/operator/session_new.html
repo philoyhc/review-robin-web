@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_datetime_field.html" import datetime_field %}
 
 {% block title %}Create New Session — Review Robin Web{% endblock %}
 
@@ -82,19 +83,17 @@
                       margin: 0;">
             <div>
               <label for="scheduled_activate_at">Start (optional)</label>
-              <input type="datetime-local" id="scheduled_activate_at"
-                     name="scheduled_activate_at">
+              {{ datetime_field("scheduled_activate_at", "scheduled_activate_at", label="Start") }}
             </div>
 
             <div>
               <label for="deadline">End (optional)</label>
-              <input type="datetime-local" id="deadline" name="deadline">
+              {{ datetime_field("deadline", "deadline", label="End") }}
             </div>
 
             <div>
               <label for="responses_release_at">Release responses from (optional)</label>
-              <input type="datetime-local" id="responses_release_at"
-                     name="responses_release_at">
+              {{ datetime_field("responses_release_at", "responses_release_at", label="Release responses from") }}
             </div>
 
             <div>
@@ -111,8 +110,7 @@
 
             <div>
               <label for="responses_release_until">Release responses until (optional)</label>
-              <input type="datetime-local" id="responses_release_until"
-                     name="responses_release_until">
+              {{ datetime_field("responses_release_until", "responses_release_until", label="Release responses until") }}
             </div>
           </div>
         </div>

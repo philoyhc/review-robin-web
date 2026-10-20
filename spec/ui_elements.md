@@ -609,6 +609,35 @@ everywhere, so "you can click this" reads the same way on every control.
 > a text-entry field or a `select` too, so a clicked file input is the
 > only one left with the halo alone. Both focus rules name every input
 > type the text-input rule does.
+>
+> **Date-time field** — every date-time box is the one macro
+> `datetime_field` (`operator/partials/_datetime_field.html`); a page
+> never writes a bare `type="datetime-local"` box. The browser's native
+> control follows the computer's regional format (AM/PM on a 12-hour
+> region) and clears only segment by segment, and HTML can set neither,
+> so the field is:
+>
+> - **A text box** holding `YYYY-MM-DD HH:MM` in 24-hour time, the format
+>   every display uses (`format_datetime`), with a `pattern` for it (no
+>   seconds), so paste, select-all and delete work as in any field. A `T` between date and time, typed or pasted, becomes a
+>   space on change; the server reads either
+>   (`date_formatting.parse_local_datetime`) and renders the box with
+>   `date_formatting.format_datetime_box`.
+> - **A 📅 button** that opens the browser's own picker: a visually hidden
+>   native `datetime-local` inside the field, opened with `showPicker()`,
+>   whose choice is written back into the text box as 24-hour text. The
+>   picker's pop-up is the browser's and may show AM/PM; what it writes is
+>   24-hour. The button appears only where `showPicker` exists.
+> - **A ✕ button** that empties the box.
+>
+> Both buttons render `hidden` and the script in `base.html` reveals them;
+> without script the text box still types and submits. Neither button
+> acts while the box is disabled or read-only. Edits made through a button
+> fire the box's `input` and `change` events, so a page's own listeners
+> (dirty flag, ordering check, timezone conversion) see them. A field
+> added after load is wired with `window.rrwDateTimeFields(node)`. The
+> hidden picker is why the text-input rule above names `datetime-local`.
+>
 > **`textarea` resizes vertically only** — a long entry grows downward; a
 > horizontal drag would pull it wider than its column and break the page
 > grid.

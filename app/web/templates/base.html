@@ -666,12 +666,17 @@
         position: relative;
       }
       .dt-field > input[data-dt-text] { flex: 1 1 auto; min-width: 0; }
-      .dt-field-picker {
+      /* Specific enough to beat the text-input rules, which also name
+         `datetime-local` (`body.ui-v2 input[type="datetime-local"]`). */
+      body .dt-field > input.dt-field-picker[type="datetime-local"] {
         position: absolute;
         right: 0;
         bottom: 0;
         width: 1px;
+        min-width: 0;
         height: 1px;
+        min-height: 0;
+        margin: 0;
         opacity: 0;
         pointer-events: none;
         border: 0;
@@ -6172,16 +6177,19 @@
        `put`, which fires input and change so a page's own listeners
        (Session Home's dirty flag, Create's ordering check, the zone
        conversion) see the edit. A `T` typed or pasted between date and
-       time reads as a space on change. #}
+       time reads as a space on change. A field added after load (the
+       lobby expander's End, cloned from a template) is wired by
+       `window.rrwDateTimeFields(node)`; wiring a field twice is a no-op. #}
     <script>
       (function () {
         var WALL = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/;
-        document.querySelectorAll("[data-dt-field]").forEach(function (wrap) {
+        function wire(wrap) {
           var box = wrap.querySelector("[data-dt-text]");
           var picker = wrap.querySelector("[data-dt-picker]");
           var pick = wrap.querySelector("[data-dt-pick]");
           var clear = wrap.querySelector("[data-dt-clear]");
-          if (!box) return;
+          if (!box || wrap.hasAttribute("data-dt-wired")) return;
+          wrap.setAttribute("data-dt-wired", "");
           function editable() { return !box.disabled && !box.readOnly; }
           function put(text) {
             if (box.value === text) return;
@@ -6195,6 +6203,7 @@
           });
           if (pick && picker && typeof picker.showPicker === "function") {
             pick.hidden = false;
+            pick.disabled = box.disabled;
             pick.addEventListener("click", function () {
               if (!editable()) return;
               var m = WALL.exec(box.value.trim());
@@ -6202,25 +6211,35 @@
               try { picker.showPicker(); } catch (e) { box.focus(); }
             });
             // The picker is a stand-in: its own events stop here, and
-            // the box carries the edit.
+            // the box carries the edit. Its value lives only while it is
+            // open, so a stale one never sits under bounds Create's
+            // ordering check moves (it is outside any form as well).
             ["input", "change"].forEach(function (type) {
               picker.addEventListener(type, function (event) {
                 event.stopPropagation();
                 if (type !== "change") return;
                 var m = WALL.exec(picker.value);
                 if (m) put(m[1] + " " + m[2]);
+                picker.value = "";
               });
             });
+            picker.addEventListener("blur", function () { picker.value = ""; });
           }
           if (clear) {
             clear.hidden = false;
+            clear.disabled = box.disabled;
             clear.addEventListener("click", function () {
               if (!editable()) return;
               put("");
               box.focus();
             });
           }
-        });
+        }
+        window.rrwDateTimeFields = function (root) {
+          if (root.matches && root.matches("[data-dt-field]")) wire(root);
+          root.querySelectorAll("[data-dt-field]").forEach(wire);
+        };
+        window.rrwDateTimeFields(document);
       })();
     </script>
   </body>

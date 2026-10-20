@@ -282,21 +282,21 @@
             <div class="config-value" data-display-only>{{ (session.scheduled_activate_at | format_datetime) if session.scheduled_activate_at else "—" }}</div>
             {{ datetime_field("mock-start", "scheduled_activate_at", scheduled_activate_at_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.scheduled_activate_at, 'UTC')},
-                 wrap_attrs={"data-edit-only": ""}) }}
+                 wrap_attrs={"data-edit-only": ""}, label="Start") }}
           </div>
           <div>
             <label for="mock-end">End (optional)</label>
             <div class="config-value" data-display-only>{{ (session.deadline | format_datetime) if session.deadline else "—" }}</div>
             {{ datetime_field("mock-end", "deadline", deadline_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.deadline, 'UTC')},
-                 wrap_attrs={"data-edit-only": ""}) }}
+                 wrap_attrs={"data-edit-only": ""}, label="End") }}
           </div>
           <div>
             <label for="mock-release-from">Release responses from (optional)</label>
             <div class="config-value" data-display-only>{{ (session.responses_release_at | format_datetime) if session.responses_release_at else "—" }}</div>
             {{ datetime_field("mock-release-from", "responses_release_at", responses_release_at_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_at, 'UTC')},
-                 wrap_attrs={"data-edit-only": ""}) }}
+                 wrap_attrs={"data-edit-only": ""}, label="Release responses from") }}
           </div>
           <div>
             <label for="mock-invite-offsets">Send invites (offset from Start; optional)</label>
@@ -344,7 +344,7 @@
             <div class="config-value" data-display-only>{{ (session.responses_release_until | format_datetime) if session.responses_release_until else "—" }}</div>
             {{ datetime_field("mock-release-until", "responses_release_until", responses_release_until_input_value,
                  attrs={"form": "config-save-" ~ session.id, "data-tz-utc": format_datetime_local(session.responses_release_until, 'UTC')},
-                 wrap_attrs={"data-edit-only": ""}) }}
+                 wrap_attrs={"data-edit-only": ""}, label="Release responses until") }}
           </div>
         </div>
         {# Save / Cancel / Lock cluster at the foot of the right column,

@@ -31,6 +31,8 @@ these helpers only take the resolved zone name.
 
 from __future__ import annotations
 
+import re
+
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -191,6 +193,11 @@ def gmt_offset_zone_label(tz_name: str | None, at: datetime | None = None) -> st
     return f"{offset} {zone}"
 
 
+# A date-time box's text: date, `T` or a space, 24-hour time to the
+# minute (19X Item 6).
+_BOX_SHAPE = re.compile(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}")
+
+
 def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     """Parse a date-time box's text (``YYYY-MM-DD HH:MM``, or a browser
     ``datetime-local`` string's ``YYYY-MM-DDTHH:MM``) as wall-clock in
@@ -201,9 +208,14 @@ def parse_local_datetime(value: str, tz_name: str | None) -> datetime:
     that into a 4xx. Segment 18B PR 4. A moment within a day of the
     edge of ``datetime``'s range is refused the same way: converting
     it, now or for display in another zone, would overflow
-    (findings L2).
+    (findings L2). So is any other shape — seconds, a date alone, an
+    offset — which ``fromisoformat`` would read (the box is free text,
+    so a typed value reaches here as typed; 19X Item 6).
     """
-    naive = datetime.fromisoformat(value)
+    text = value.strip()
+    if not _BOX_SHAPE.fullmatch(text):
+        raise ValueError(f"not a YYYY-MM-DD HH:MM date and time: {value!r}")
+    naive = datetime.fromisoformat(text)
     local = naive.replace(tzinfo=resolve_zone(tz_name))
     if not in_entry_range(local):
         raise ValueError(f"datetime out of range: {value!r}")
@@ -254,8 +266,9 @@ def format_datetime_local(
 ) -> str:
     """Render a stored UTC datetime as a browser ``datetime-local``
     value (``YYYY-MM-DDTHH:MM``) in ``tz_name``'s zone — the inverse
-    of :func:`parse_local_datetime`, used to pre-fill a deadline
-    picker. ``""`` for ``None``. Segment 18B PR 5.
+    of :func:`parse_local_datetime`. Session Home's ``data-tz-utc``
+    seeds use it; a box's own text is :func:`format_datetime_box`.
+    ``""`` for ``None``. Segment 18B PR 5.
     """
     if value is None:
         return ""

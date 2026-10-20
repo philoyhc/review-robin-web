@@ -784,7 +784,7 @@ in-memory archive timestamp) also serve as anchors for offsets:
 | Auto-send invites | `invite_offsets` | `scheduled_activate_at` | JSON list of ISO 8601 durations, e.g. `["-P1D", "-PT2H"]` | empty (no auto-send) | live (`app/services/scheduled_events/_invites.py`) |
 | Auto-send reminders | `reminder_offsets` | `deadline` | JSON list of ISO 8601 durations, e.g. `["-P2D", "-PT4H"]` | empty (no auto-send) | live (`app/services/scheduled_events/_reminders.py`) |
 | Auto-archive | `archive_offset` | `deadline` | single ISO 8601 duration, e.g. `"P30D"` | intended **`P30D`** once auto-archive is wired (gives the operator time to download data post-deadline before the session leaves the active lobby); the column has no default today, so it stays NULL unless a Settings CSV import sets it | deferred — column only (`guide/deferred_consolidated.md`) |
-| Release-until | `responses_release_until` — an absolute datetime, not an offset | n/a — column carries the absolute close time | DateTime(tz) | unset | Live. The form input is a `datetime-local`; the save-time validator enforces ordering (must close after `responses_release_at`) + a 365-day magnitude check. The Workflow card's **Stop releasing** button writes the same column (`= now()`). The reviewee and observer surfaces consume it inside their per-instrument window gates; there is no route-level gate on it. |
+| Release-until | `responses_release_until` — an absolute datetime, not an offset | n/a — column carries the absolute close time | DateTime(tz) | unset | Live. The form input is a date-time field (`spec/ui_elements.md` §8); the save-time validator enforces ordering (must close after `responses_release_at`) + a 365-day magnitude check. The Workflow card's **Stop releasing** button writes the same column (`= now()`). The reviewee and observer surfaces consume it inside their per-instrument window gates; there is no route-level gate on it. |
 | Auto-delete after archive | `retention_overrides.delete_after_archive` (JSON key inside `retention_overrides`) | archive timestamp | single ISO 8601 duration | unset (use deployment env-var default) | deferred — column only (`guide/deferred_consolidated.md`) |
 
 The "End" anchor (`deadline`) is also the anchor for the lazy
@@ -960,15 +960,17 @@ holds Release-from before End (**Release responses** stamps the moment
 of release), so its own export is refused until Release-from is
 cleared or moved in the file (`spec/csv_contracts.md`).
 
-The create form (`session_new.html`) also pins the same chain
-client-side via `min` / `max` attributes on each `datetime-local`
-input and a small partial
-(`operator/partials/_schedule_ordering_js.html`) that live-updates
-the bounds as the operator types, so invalid choices grey out in
-the picker. Session Home's Details card sets no bounds on its
-inputs. Either way the server check is the load-bearing safety net
-(mobile pickers silently round around `min` / `max` in some
-browsers, and direct POSTs bypass the picker entirely).
+The create form (`session_new.html`) also checks the same chain
+client-side, in a small partial
+(`operator/partials/_schedule_ordering_js.html`). As the operator types
+it compares each adjacent pair (Start ≤ End, End ≤ Release-from,
+Release-from < Release-until) only when both boxes hold a time, as the
+server does, and marks the later box invalid with the table's wording
+(`setCustomValidity`), so the browser blocks the submit. It sets no
+`min` / `max` on the text boxes; it bounds each box's hidden picker to
+its neighbors. Session Home's Details card runs no client check. Either
+way the server check is the load-bearing safety net: direct POSTs bypass
+the page entirely.
 
 ### 8.3 Implementation notes
 

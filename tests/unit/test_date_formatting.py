@@ -211,3 +211,21 @@ def test_format_datetime_box_ignores_the_zone_token_switch(monkeypatch) -> None:
 )
 def test_box_text_reads_either_separator_alike(submitted, expected) -> None:
     assert date_formatting.box_text(submitted) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["2027-04-02", "2027-04-02 11:15:30", "2027-04-02 11", "2027-04-02T11:15+09:00",
+     "2027-04-02T11:15:00.5", "tomorrow", ""],
+)
+def test_parse_local_datetime_refuses_any_other_shape(text) -> None:
+    """The box is free text (19X Item 6): only `YYYY-MM-DD HH:MM`, with a
+    `T` or a space, parses; `fromisoformat`'s other forms do not."""
+    with pytest.raises(ValueError):
+        date_formatting.parse_local_datetime(text, "UTC")
+
+
+def test_parse_local_datetime_reads_either_separator_and_trims() -> None:
+    expected = datetime(2027, 4, 2, 3, 15)
+    for text in ("2027-04-02 11:15", "2027-04-02T11:15", " 2027-04-02 11:15 "):
+        assert date_formatting.parse_local_datetime(text, "Asia/Singapore") == expected

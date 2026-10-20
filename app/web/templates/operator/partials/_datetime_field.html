@@ -10,18 +10,25 @@
 
    `attrs` go on the text box (its `form`, `data-tz-utc`…), `wrap_attrs`
    on the wrapper (Session Home's `data-edit-only`, so the buttons hide
-   with the box). #}
-{% macro datetime_field(id, name, value="", attrs={}, wrap_attrs={}) -%}
+   with the box). `id` and `name` may be empty for a box a script reads
+   and posts itself (the lobby expander's End). `label` names the field
+   in the buttons' accessible names ("Clear End").
+
+   The picker carries `form=""`, which ties it to no form, so its value
+   and bounds never take part in a form's validity check. #}
+{% macro datetime_field(id, name, value="", attrs={}, wrap_attrs={}, label="") -%}
 <span class="dt-field" data-dt-field{{ wrap_attrs | xmlattr }}>
-  <input type="text" id="{{ id }}" name="{{ name }}" value="{{ value }}"
+  <input type="text"{% if id %} id="{{ id }}"{% endif %}{% if name %} name="{{ name }}"{% endif %} value="{{ value }}"
          data-dt-text autocomplete="off" spellcheck="false"
          placeholder="YYYY-MM-DD HH:MM" pattern="\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}"
          title="A date and a 24-hour time, e.g. 2026-10-27 16:00"{{ attrs | xmlattr }}>
-  <input type="datetime-local" class="dt-field-picker" data-dt-picker
+  <input type="datetime-local" class="dt-field-picker" data-dt-picker form=""
          tabindex="-1" aria-hidden="true">
+  {%- set pick_name = ("Choose " ~ label ~ " date and time") if label else "Choose a date and time" %}
+  {%- set clear_name = ("Clear " ~ label) if label else "Clear" %}
   <button type="button" class="btn secondary dt-field-btn" data-dt-pick hidden
-          aria-label="Choose a date and time" title="Choose a date and time">&#128197;</button>
+          aria-label="{{ pick_name }}" title="{{ pick_name }}">&#128197;</button>
   <button type="button" class="btn secondary dt-field-btn" data-dt-clear hidden
-          aria-label="Clear" title="Clear">&#10005;</button>
+          aria-label="{{ clear_name }}" title="{{ clear_name }}">&#10005;</button>
 </span>
 {%- endmacro %}
