@@ -59,6 +59,11 @@ Rough rungs, each one reviewable PR. RRW's segment plan, when the author opens i
 **A. Host skeleton**
 1. `cordware/` package: `main.py` with `CORDWARE_APPS` (empty runs Cordware alone), host `/health`, RRW mounted at `/`. Tests: Cordware alone, Cordware + RRW.
 2. Construct once: remove the module-level `app = create_app()`; move start commands to `cordware.main:app` (docs, devcontainer, deploy workflows). The dev slot's startup command is an Azure setting the author changes by hand.
+   The module-level `app` has consumers that must move in the same rung, or RRW breaks at runtime:
+   - `app/web/return_to.py` imports `app.main.app` while handling a request, to check which GET routes exist. It must use the RRW application the request is running in (`request.app`, which inside a mount is RRW's sub-app, not the host) rather than a module global.
+   - 15 test and tool files import `app.main.app`. They move to one test fixture built from `create_app()`, so the suite builds RRW once per session as before.
+   - `tests/browser/conftest.py` starts `uvicorn app.main:app`; it starts the Cordware entry point instead.
+   A test that imports `app.main` and asserts it builds no application keeps the rule from creeping back.
 3. Host-owned logging, and the import-boundary test.
 
 **B. URL sweep** (runs while C lands)
