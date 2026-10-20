@@ -12,6 +12,8 @@
 **Monitoring RG:** `rg-nrrw-prd-monitor-01`  
 **Region:** Southeast Asia
 
+> **Superseded in part by `docs/cordware_repository_strategy_v0.8.md`** (2026-10-20). The Azure infrastructure facts here remain the status of record: the resources, network, gateway, App Service, Easy Auth, PostgreSQL, Key Vault, monitoring and runner state, and the external IT work. The **source-control and deployment model does not**. §5, §15.1, §17, the project-side items in §20, the Cordware-repo rows of §21, steps 5–7 of §22 and §23's source-control line describe independent application repositories synced into a separate `philoyhc/cordware` repo that holds the production workflow and secrets. Under v0.8, `philoyhc/review-robin-web` is the single source; the production workflow, its secrets and the OIDC subject stay with it; and NUS is deployed only as the assembled Cordware application.
+
 ---
 
 ## 1. Executive summary

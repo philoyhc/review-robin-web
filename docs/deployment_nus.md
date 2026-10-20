@@ -22,10 +22,11 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > this runbook and the status doc disagree, the status doc is current; the
 > §1 checklist and §13 below mark what it has settled.
 >
-> **Superseded in part (2026-10-16).** The v8 report's §17 moves the
-> production workflow and its Azure secrets to a Cordware integration
-> repository, which deploys one Cordware App Service. §§6 and 9 below
-> configure and deploy `review-robin-web` directly, so do not cut over from
+> **Superseded in part (2026-10-16; revised 2026-10-20).** Under
+> `docs/cordware_repository_strategy_v0.8.md` §5 the production workflow
+> and its Azure secrets stay in this repository, but NUS is deployed only
+> as the assembled Cordware application, never as RRW alone. §§6 and 9
+> below configure and deploy RRW on its own, so do not cut over from
 > them; they await a rewrite with the Cordware integration (Segment 21, on
 > hold).
 
