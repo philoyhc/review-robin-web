@@ -29,7 +29,7 @@ def parse_and_validate_responses_release_at(
     *,
     timezone_name: str,
 ) -> datetime | None:
-    """Parse a ``datetime-local`` form value into a UTC-aware datetime.
+    """Parse a date-time box's form value into a UTC-aware datetime.
 
     Returns ``None`` when ``raw`` is empty (operator cleared the
     field). Raises :class:`ScheduledActivateError` on a malformed
@@ -60,7 +60,7 @@ def parse_and_validate_responses_release_until(
     timezone_name: str,
     responses_release_at: datetime | None,
 ) -> datetime | None:
-    """Parse a ``datetime-local`` form value into a UTC-aware
+    """Parse a date-time box's form value into a UTC-aware
     datetime for the responses-release close.
 
     Returns ``None`` when ``raw`` is empty. Raises

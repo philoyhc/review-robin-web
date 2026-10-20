@@ -123,11 +123,14 @@ _templates.env.globals["gmt_offset_label"] = date_formatting.gmt_offset_label
 _templates.env.globals["gmt_offset_zone_label"] = (
     date_formatting.gmt_offset_zone_label
 )
-# datetime-local input value (wall-clock in a session's zone) — used
-# by the sessions-lobby inline expander's Deadline edit box.
+# ``YYYY-MM-DDTHH:MM`` wall-clock in a session's zone — Session Home's
+# ``data-tz-utc`` seeds, which the zone-conversion script reads.
 _templates.env.globals["format_datetime_local"] = (
     date_formatting.format_datetime_local
 )
+# A date-time field's 24-hour text (19X Item 6) — the sessions-lobby
+# inline expander's Deadline box seeds from it.
+_templates.env.globals["format_datetime_box"] = date_formatting.format_datetime_box
 # Per-numeric-column ``ch`` width for the fixed-layout group-scoped
 # instrument table (Segment 13C). Registered on the reviewer
 # ``_templates`` as well; the operator preview route

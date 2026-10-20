@@ -10,10 +10,11 @@
 
    `attrs` go on the text box (its `form`, `data-tz-utc`…), `wrap_attrs`
    on the wrapper (Session Home's `data-edit-only`, so the buttons hide
-   with the box). #}
+   with the box). `id` and `name` may be empty for a box a script reads
+   and posts itself (the lobby expander's End). #}
 {% macro datetime_field(id, name, value="", attrs={}, wrap_attrs={}) -%}
 <span class="dt-field" data-dt-field{{ wrap_attrs | xmlattr }}>
-  <input type="text" id="{{ id }}" name="{{ name }}" value="{{ value }}"
+  <input type="text"{% if id %} id="{{ id }}"{% endif %}{% if name %} name="{{ name }}"{% endif %} value="{{ value }}"
          data-dt-text autocomplete="off" spellcheck="false"
          placeholder="YYYY-MM-DD HH:MM" pattern="\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}"
          title="A date and a 24-hour time, e.g. 2026-10-27 16:00"{{ attrs | xmlattr }}>

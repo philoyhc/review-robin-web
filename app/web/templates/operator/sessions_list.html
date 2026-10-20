@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_datetime_field.html" import datetime_field %}
 
 {% block title %}Sessions — Review Robin Web{% endblock %}
 
@@ -172,7 +173,7 @@
             <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'
                 data-session-id="{{ s.public_id }}"
                 data-status="{{ s.status }}"
-                data-deadline="{{ format_datetime_local(s.deadline, session_timezone(s)) }}">
+                data-deadline="{{ format_datetime_box(s.deadline, session_timezone(s)) }}">
               <td>
                 <a href="/operator/sessions/{{ s.public_id }}">{{ s.name }}</a>
               </td>
@@ -276,7 +277,7 @@
                 <input type="text" data-expander-field="code">
               </label>
               <label class="exp-field-deadline">Deadline
-                <input type="datetime-local" data-expander-field="deadline">
+                {{ datetime_field("", "", attrs={"data-expander-field": "deadline"}) }}
               </label>
               <label class="exp-field-tags">Tags
                 <input type="text" data-expander-field="tags"
@@ -538,20 +539,22 @@
               // (19O Item 4). Written here because this is the one
               // place a single-selection field is seeded.
               //
-              // Reads back `input.value`, NOT `fields[key]`, and the
-              // order is load-bearing: assigning to a `datetime-local`
-              // runs the browser's value sanitizer, so
-              // `2026-01-01T10:00:00` becomes `2026-01-01T10:00` and an
-              // unparseable value becomes `""`. Seeding the baseline
-              // from the raw dict would leave every deadline field
-              // permanently unequal to itself, and every sort on a
-              // lobby with a selection would prompt.
+              // Reads back `input.value`, NOT `fields[key]`: when
+              // Deadline was a `datetime-local`, assigning ran the
+              // browser's value sanitizer, and a baseline seeded from
+              // the raw dict left the field permanently unequal to
+              // itself, so every sort on a lobby with a selection
+              // prompted. Deadline is a text box now (19X Item 6); the
+              // read-back keeps any input type honest.
               input.setAttribute("data-seeded-value", input.value);
               // Name / Code / Deadline edit in draft or validated;
               // Tags always.
               if (key !== "tags" && !isEditable) input.disabled = true;
             }
           );
+          // Deadline's calendar and clear buttons (19X Item 6), wired
+          // once the box's disabled state is set so they follow it.
+          if (window.rrwDateTimeFields) window.rrwDateTimeFields(node);
           function fieldValue(key) {
             var el = node.querySelector(
               "[data-expander-field='" + key + "']"

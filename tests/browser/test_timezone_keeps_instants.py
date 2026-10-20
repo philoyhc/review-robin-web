@@ -39,12 +39,15 @@ def test_create_re_renders_every_box_and_stores_the_instants(page: Page) -> None
 
     singapore = ("2027-03-01T17:00", "2027-03-01T20:00", "2027-03-02T17:00", "2027-03-05T17:00")
     for box, value in zip(_CREATE_BOXES, singapore):
-        expect(page.locator(box)).to_have_value(value)
-    # The ordering script's bounds moved with the boxes: Start's max is
-    # End's new text, not its old one, or the submit would be blocked.
-    expect(page.locator("#scheduled_activate_at")).to_have_attribute(
-        "max", "2027-03-01T20:00"
-    )
+        expect(page.locator(box)).to_have_value(_box(value))
+    # The ordering script's bounds moved with the boxes: Start's picker
+    # tops out at End's new text, not its old one, and no box is out of
+    # order, or the submit would be blocked.
+    expect(
+        page.locator("[data-dt-field]", has=page.locator("#scheduled_activate_at"))
+        .locator("[data-dt-picker]")
+    ).to_have_attribute("max", "2027-03-01T20:00")
+    assert page.evaluate("document.querySelector('form:has(#deadline)').checkValidity()")
     with page.expect_navigation():
         page.locator("#create-session-submit").click()
     page.wait_for_load_state("load")
@@ -134,4 +137,4 @@ def test_create_reads_a_skipped_day_as_the_server_does(page: Page) -> None:
     page.locator("#display_timezone").fill("Pacific/Apia")
     page.locator("#responses_release_at").fill("2011-12-30T22:00")
     page.locator("#display_timezone").fill("UTC")
-    expect(page.locator("#responses_release_at")).to_have_value("2011-12-31T08:00")
+    expect(page.locator("#responses_release_at")).to_have_value("2011-12-31 08:00")

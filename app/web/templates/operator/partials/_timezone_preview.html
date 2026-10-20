@@ -25,8 +25,8 @@
     var boxes = {{ tz_box_ids | default(["scheduled_activate_at", "deadline", "responses_release_at", "responses_release_until"]) | tojson }}
       .map(function (id) { return document.getElementById(id); })
       .filter(function (box) { return box; });
-    // `T` (a native box, `data-tz-utc`) or a space (a date-time
-    // field's text box, 19X Item 6) between date and time.
+    // A space (a date-time field's text, 19X Item 6) or `T`
+    // (`data-tz-utc`, or text typed that way) between date and time.
     var WALL = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/;
 
     // The IANA id is the label's last whitespace-separated token.
@@ -66,15 +66,13 @@
       var w = wallParts(ms, zone);
       return w ? utcMs(w[0], w[1], w[2], w[3], w[4]) : null;
     }
-    function textOf(ms, zone, box) {
+    // A date-time field's 24-hour text (19X Item 6).
+    function textOf(ms, zone) {
       var w = wallParts(ms, zone);
       if (!w) return null;
       function pad(n, size) { return ("000" + n).slice(-size); }
-      // Each box keeps its own form: `T` in a native box, which reads
-      // no other, a space in a text box.
-      var sep = box.type === "datetime-local" ? "T" : " ";
       return pad(w[0], 4) + "-" + pad(w[1], 2) + "-" + pad(w[2], 2)
-        + sep + pad(w[3], 2) + ":" + pad(w[4], 2);
+        + " " + pad(w[3], 2) + ":" + pad(w[4], 2);
     }
     function parse(text) {
       var m = WALL.exec(text || "");
@@ -141,7 +139,7 @@
         if (!box.value) return;
         var ms = (known[i] && known[i].text === box.value)
           ? known[i].ms : instantOf(box.value, zone);
-        var text = ms === null ? null : textOf(ms, next, box);
+        var text = ms === null ? null : textOf(ms, next);
         if (text === null) { known[i] = null; return; }
         if (box.value !== text) moved.push(box);
         box.value = text;

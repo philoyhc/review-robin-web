@@ -1,20 +1,22 @@
-{# Live-updates ``min`` / ``max`` on the four schedule
-   datetime-local inputs as the operator types, keeping the
-   ordering chain
-   ``scheduled_activate_at ≤ deadline ≤ responses_release_at ≤
-   responses_release_until`` enforceable by the browser picker.
+{# Checks the ordering chain on the four schedule date-time fields
+   as the operator types:
+   ``scheduled_activate_at ≤ deadline ≤ responses_release_at <
+   responses_release_until``, each pair checked only when both of its
+   boxes hold a time, as the server's
+   ``scheduled_events.validate_schedule_ordering`` does, with its
+   wording. A pair out of order marks the later box invalid
+   (``setCustomValidity``), so the browser's form-validity check stops
+   the submit and names the problem there; the server re-runs the check
+   as the load-bearing gate. The calendar picker behind each field gets
+   its neighbors as ``min`` / ``max``, so it offers only in-order times.
 
-   Page-load values for the bounds come from the prefill on
-   each input's own ``min`` / ``max`` attribute; this script
-   handles every subsequent edit. The browser's native form-
-   validity check stops submission on a violation; the server
-   re-runs ``scheduled_events.validate_schedule_ordering`` as
-   the load-bearing safety net.
+   The boxes are 24-hour text fields (segment 19X Item 6); their text
+   compares in time order once the separator is one form, as
+   ``YYYY-MM-DDTHH:MM``.
 
    Used by ``session_new.html`` (the create form). The Session Home
-   config card (#session-config, 18R Item 4) uses its own inline
-   ``sessionConfig`` script instead; the server-side
-   ``validate_schedule_ordering`` remains the load-bearing gate for both. #}
+   config card (#session-config, 18R Item 4) does not run it;
+   ``validate_schedule_ordering`` is the gate for both. #}
 <script>
   (function () {
     var IDS = [
@@ -23,12 +25,38 @@
       "responses_release_at",
       "responses_release_until",
     ];
+    // The message on the later box of each adjacent pair, and whether
+    // the pair may be equal.
+    var PAIRS = [
+      { message: "End must be on or after Start.", equal: true },
+      {
+        message: "Release responses from must be on or after End — " +
+          "reviewees can only view results after the review window closes.",
+        equal: true,
+      },
+      {
+        message: "Release responses until must be after Release responses from.",
+        equal: false,
+      },
+    ];
+    var WALL = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/;
     var inputs = IDS.map(function (id) {
       return document.getElementById(id);
     });
     if (inputs.some(function (el) { return !el; })) return;
 
+    function wall(el) {
+      var m = WALL.exec((el.value || "").trim());
+      return m ? m[1] + "T" + m[2] : "";
+    }
+
+    function pickerOf(el) {
+      var wrap = el.closest("[data-dt-field]");
+      return wrap ? wrap.querySelector("[data-dt-picker]") : null;
+    }
+
     function setBound(el, attr, value) {
+      if (!el) return;
       if (value) {
         el.setAttribute(attr, value);
       } else {
@@ -37,20 +65,20 @@
     }
 
     function refresh() {
-      var values = inputs.map(function (el) { return el.value || ""; });
-      // Each input's ``max`` = next non-empty downstream value.
-      // Each input's ``min`` = previous non-empty upstream value.
+      var values = inputs.map(wall);
       for (var i = 0; i < inputs.length; i++) {
-        var minValue = "";
-        for (var j = i - 1; j >= 0; j--) {
-          if (values[j]) { minValue = values[j]; break; }
+        var message = "";
+        if (i > 0 && values[i] && values[i - 1]) {
+          var pair = PAIRS[i - 1];
+          var outOfOrder = pair.equal
+            ? values[i] < values[i - 1]
+            : values[i] <= values[i - 1];
+          if (outOfOrder) message = pair.message;
         }
-        var maxValue = "";
-        for (var k = i + 1; k < inputs.length; k++) {
-          if (values[k]) { maxValue = values[k]; break; }
-        }
-        setBound(inputs[i], "min", minValue);
-        setBound(inputs[i], "max", maxValue);
+        inputs[i].setCustomValidity(message);
+        var picker = pickerOf(inputs[i]);
+        setBound(picker, "min", i > 0 ? values[i - 1] : "");
+        setBound(picker, "max", i < inputs.length - 1 ? values[i + 1] : "");
       }
     }
 
@@ -58,9 +86,6 @@
       el.addEventListener("input", refresh);
       el.addEventListener("change", refresh);
     });
-    // One initial refresh so any server-rendered bounds tighten
-    // against each other (e.g. End's ``max`` becomes Release-
-    // from when both were prefilled separately).
     refresh();
   })();
 </script>

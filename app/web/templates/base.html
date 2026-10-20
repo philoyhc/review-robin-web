@@ -6172,16 +6172,19 @@
        `put`, which fires input and change so a page's own listeners
        (Session Home's dirty flag, Create's ordering check, the zone
        conversion) see the edit. A `T` typed or pasted between date and
-       time reads as a space on change. #}
+       time reads as a space on change. A field added after load (the
+       lobby expander's End, cloned from a template) is wired by
+       `window.rrwDateTimeFields(node)`; wiring a field twice is a no-op. #}
     <script>
       (function () {
         var WALL = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})$/;
-        document.querySelectorAll("[data-dt-field]").forEach(function (wrap) {
+        function wire(wrap) {
           var box = wrap.querySelector("[data-dt-text]");
           var picker = wrap.querySelector("[data-dt-picker]");
           var pick = wrap.querySelector("[data-dt-pick]");
           var clear = wrap.querySelector("[data-dt-clear]");
-          if (!box) return;
+          if (!box || wrap.hasAttribute("data-dt-wired")) return;
+          wrap.setAttribute("data-dt-wired", "");
           function editable() { return !box.disabled && !box.readOnly; }
           function put(text) {
             if (box.value === text) return;
@@ -6195,6 +6198,7 @@
           });
           if (pick && picker && typeof picker.showPicker === "function") {
             pick.hidden = false;
+            pick.disabled = box.disabled;
             pick.addEventListener("click", function () {
               if (!editable()) return;
               var m = WALL.exec(box.value.trim());
@@ -6214,13 +6218,19 @@
           }
           if (clear) {
             clear.hidden = false;
+            clear.disabled = box.disabled;
             clear.addEventListener("click", function () {
               if (!editable()) return;
               put("");
               box.focus();
             });
           }
-        });
+        }
+        window.rrwDateTimeFields = function (root) {
+          if (root.matches && root.matches("[data-dt-field]")) wire(root);
+          root.querySelectorAll("[data-dt-field]").forEach(wire);
+        };
+        window.rrwDateTimeFields(document);
       })();
     </script>
   </body>
