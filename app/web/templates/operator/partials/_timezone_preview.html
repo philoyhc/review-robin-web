@@ -74,10 +74,18 @@
       return pad(w[0], 4) + "-" + pad(w[1], 2) + "-" + pad(w[2], 2)
         + " " + pad(w[3], 2) + ":" + pad(w[4], 2);
     }
+    // null for text that names no real moment (2027-02-31, 10:99): the
+    // Date setters would roll it into another day, so the box is left as
+    // typed for the server to refuse.
     function parse(text) {
-      var m = WALL.exec(text || "");
+      var m = WALL.exec((text || "").trim());
       if (!m || +m[1] < 2 || +m[1] > 9998) return null;
-      return utcMs(+m[1], +m[2], +m[3], +m[4], +m[5]);
+      var ms = utcMs(+m[1], +m[2], +m[3], +m[4], +m[5]);
+      var t = new Date(ms);
+      if (t.getUTCFullYear() !== +m[1] || t.getUTCMonth() + 1 !== +m[2]
+          || t.getUTCDate() !== +m[3] || t.getUTCHours() !== +m[4]
+          || t.getUTCMinutes() !== +m[5]) return null;
+      return ms;
     }
     // The instant a box's text names in a zone, read as the server
     // reads it (`parse_local_datetime`, fold 0): the wall-clock less the

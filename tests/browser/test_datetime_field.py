@@ -179,3 +179,15 @@ def test_a_pick_then_a_zone_change_leaves_create_submittable(page: Page) -> None
     expect(page.locator("#scheduled_activate_at")).to_have_value("2027-03-01 16:00")
     expect(page.locator("#deadline")).to_have_value("2027-03-01 17:00")
     assert page.evaluate("document.getElementById('deadline').form.checkValidity()")
+
+
+def test_a_zone_change_leaves_an_impossible_time_as_typed(page: Page) -> None:
+    """Text that names no real moment is left for the server to refuse,
+    not rolled by the zone conversion into another day."""
+    page.goto("/operator/sessions/new")
+    page.locator("#display_timezone").fill("UTC")
+    for text in ("2027-02-31 10:00", "2027-13-01 10:00", "2027-01-01 10:99"):
+        page.locator("#deadline").fill(text)
+        page.locator("#display_timezone").fill("Asia/Singapore")
+        expect(page.locator("#deadline")).to_have_value(text)
+        page.locator("#display_timezone").fill("UTC")
