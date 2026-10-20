@@ -332,7 +332,10 @@ to CSS classes.
 > callout (`guide.html`). **The per-instrument intro does not use them.**
 > Its help texts are rows (`.rs-help-row`) in a normal-infill card, not a
 > card per field: inside the heading card under the description (parted
-> from it by a 1px `--border-default` rule, none when the rows sit alone) in
+> from it by a 1px `--border-default` rule, none when the rows sit alone;
+> the author's ruling, 2026-10-20, drawn as the `.quick-setup-slot` rule in
+> §10, not a `.col-divider`: it marks where the guidance starts, not a
+> misattribution) in
 > Layout 1, the default, or all in one `.rs-intro-help` card in the right
 > column in Layout 2 (`spec/reviewer-surface.md`, "Intro and help cards").
 > There is no full-width variant: `test_reviewer_response_flow.py`

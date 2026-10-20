@@ -997,8 +997,9 @@ row whose text is empty is skipped, as on the reviewer surface.
 (`aria-label="Help text for <field>"`, `maxlength` 1000) on `dfsave-{id}`;
 an empty row stays, to be typed into. `placeHelpRows` puts them in the home the
 instrument's `intro_layout` names, as on the reviewer surface: inside the
-heading card under the description (parted by a rule, none when the rows sit
-alone in a card with no heading or description) in Layout 1, in the one help card
+heading card under the description (parted by a rule; unlocked the
+description box is always above them, so the rule always shows; locked, none
+when the instrument has neither heading nor description) in Layout 1, in the one help card
 (`.rs-intro-help`) in Layout 2, the other home emptied. The layout chip
 re-homes the rows at once, unsaved textarea edits kept (each keystroke is
 staged into the field's Band 3 row). The help card is its own lock region, as

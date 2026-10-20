@@ -588,7 +588,7 @@ together on every Band 3 / R toggle).
     help card and stacks heading and visibility in the left column, the
     right half empty. With neither a help row nor a heading card, the
     visibility card keeps the left half in both layouts. **With no
-    heading card** (no title) Layout 1 still draws the heading card when
+    title** Layout 1 still draws the heading card when
     there are rows, holding the rows alone, with no rule, so the help
     never moves to the right. Layout 2's help card has no rule. **With no visibility card** Layout 1's right half is empty.
   - **At 800px or narrower** the two columns stack into one in every

@@ -238,16 +238,19 @@ the close.
   named for its field (`aria-label`), which the old cards lacked. At
   the close the author added a rule parting Layout 1's heading from its
   rows (`--border-default`, as the Quick Setup slots are parted); rows
-  alone in the card take none. That CSS rides the close PR, which took
-  its own read.
+  alone in the card take none. That CSS rides the close PR.
 - **Decisions confirmed at build.** Layout 1 is one grid row, heading
   card left and visibility right; the old row-span stack is gone.
   `.rs-help-card` keeps only the lobby's tiles and the Guide's callout.
-- **Reads.** One `diff-reviewer` read on the cumulative diff from
+- **Reads.** Two `diff-reviewer` reads. The first, on the cumulative diff from
   `2617ca09`: no correctness defect; five smaller findings, all acted
   on in #3174 (the empty row, the textarea's name, a stale CSS comment,
   two tests, and two Doc impact additions: `spec/color_tokens.md` and
-  the screencap's alt text). Codex: no findings.
+  the screencap's alt text). Codex: no findings. The second, on the
+  close slice (it reopened `app/` for the rule): no defect; four low
+  findings, all acted on in #3175 (the rule's tie to §10 in
+  `spec/ui_elements.md`, a test for the locked titled preview, the
+  lock-dependent wording in `spec/instruments.md`, this count).
   `spec-writer` at the close wrote the five specs, the rule included;
   no code-versus-plan flag.
 - **Owed by the author:** the browser-check rows in
