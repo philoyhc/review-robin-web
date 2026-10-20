@@ -75,8 +75,8 @@ The on-page model maps onto these:
   vs Group). Together these define **the assignment rule** for
   this instrument (`SessionRuleSet` row materialised lazily on
   first non-empty filter).
-- **Band 2.** What the reviewer sees: an intro (the name, visibility
-  and help cards, arranged by the instrument's intro layout) above
+- **Band 2.** What the reviewer sees: an intro (the name and visibility
+  cards and the help rows, arranged by the instrument's intro layout) above
   a preview row of the display fields (Name and Email on an Individual
   instrument, plus the reviewee / pair-context tag fields the operator
   picks in Band 3's display-field table) and the response fields.
@@ -166,9 +166,9 @@ The intro's arrangement is a per-instrument string:
   `c4e9a2f7b1d3`; server default `layout_1`, which existing rows took).
   One of `INTRO_LAYOUTS` (`app/db/models/instrument.py`): `layout_1`
   (the default) or `layout_2`, shown as "Layout 1" / "Layout 2". The
-  value picks where the heading, visibility and help cards sit in the
-  intro on the reviewer surface and the preview (`spec/reviewer-surface.md`,
-  "Intro and help cards"). A stored value outside `INTRO_LAYOUTS` reads
+  value picks where the heading and visibility cards and the help rows sit
+  in the intro on the reviewer surface and the preview
+  (`spec/reviewer-surface.md`, "Intro and help cards"). A stored value outside `INTRO_LAYOUTS` reads
   as `layout_1` everywhere (`instruments.effective_intro_layout`: the
   surface, the chip, the Settings CSV export). Written by
   `instruments.set_intro_layout`; carried by Replicate, Duplicate and
@@ -236,7 +236,7 @@ Order of stripes (each separated by a horizontal rule):
 │ Who does the review │ Who is being reviewed │ Unit of review   │
 │  (three columns, vertical rules between)                       │
 ├────────────────────────────────────────────────────────────────┤
-│ Band 2 — intro (name, visibility, help cards), preview row     │
+│ Band 2 — intro (name, visibility, help rows), preview row      │
 ├────────────────────────────────────────────────────────────────┤
 │ Band 3 — display-field table │ response-field table            │
 ├────────────────────────────────────────────────────────────────┤
@@ -985,15 +985,25 @@ them. A cycle also repaints the locked table's matching pill
 reloads.
 
 Locked, the card is not inside a lock region: Band 2's are the intro
-card, this card's editor, the preview and each help card, so the locked
+card, this card's editor, the preview and the help card, so the locked
 table, which holds no control, keeps a `.table-scroll` that scrolls. The
 card fades with the intro card.
 
-The help cards, JS-built by `rebuildPreview`, stack in field order in
-the column the instrument's `intro_layout` gives them, as on the
-reviewer surface. Nothing is measured, so they
-stay put as the operator types into their textareas, locks or unlocks
-the card, or resizes the window.
+**Help rows.** The help texts are rows, not a card each, built by
+`buildResponseFieldHelpRows` in field order, one per field whose ≡ is on
+(Band 3's ≡ toggles each row). **Locked**, a row reads **Label** — text, and a
+row whose text is empty is skipped, as on the reviewer surface.
+**Unlocked**, the row is the label over a `help_text` textarea
+(`aria-label="Help text for <field>"`, `maxlength` 1000) on `dfsave-{id}`;
+an empty row stays, to be typed into. `placeHelpRows` puts them in the home the
+instrument's `intro_layout` names, as on the reviewer surface: inside the
+heading card under the description (parted by a rule, none when the rows sit
+alone in a card with no heading or description) in Layout 1, in the one help card
+(`.rs-intro-help`) in Layout 2, the other home emptied. The layout chip
+re-homes the rows at once, unsaved textarea edits kept (each keystroke is
+staged into the field's Band 3 row). The help card is its own lock region, as
+the heading card is. Nothing is measured, so the rows stay put as the operator
+types, locks or unlocks the card, or resizes the window.
 
 #### Display-field table
 
@@ -1145,7 +1155,7 @@ leading columns on every row — see
 | Type (`<select>`) | `_inline_data_type` | `String / Integer / Decimal / List`, plus a `Quick fill (List)` `<optgroup>` of pre-filled presets (Boolean / Agreement / Grades) — see [Type presets](#type-presets) below. Disabled when the row has saved responses; the inline title pins the reason ("Cannot change — this field has saved responses. Clear them first."). |
 | Bounds (inline inputs) | `_inline_min` / `_inline_max` / `_inline_step` / `_inline_list_csv` | For `Integer` / `Decimal`: a 3-cell grid of `min` / `max` / `step`. For `List`: a single comma-separated `list_options` input spanning the grid. For `String`: bounds default to length min / max (same `min` / `max` fields). Disabled when the row has saved responses (same reason / title as Type). |
 | **R** button | `required` | Toggle. Active = required for reviewers to submit; the reviewer surface blocks submission and names the missing fields. Stages Band 2 state directly, so Save alone persists a toggle. Grayed out on a row a Require branch governs, where the condition decides (see ["Branching between response fields"](#branching-between-response-fields)). |
-| **≡** button | `help_text_visible` | Toggle. Active = render a tinted help-text card for this field in Band 2's intro columns, above the reviewer-surface preview table. The help-text *text* is a plain `help_text` textarea on that card (shown when the instrument card is unlocked, `data-lock-only` read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
+| **≡** button | `help_text_visible` | Toggle. Active = render a help row for this field in Band 2's intro, above the reviewer-surface preview table (**Help rows** under "Visibility card"). The help-text *text* is a plain `help_text` textarea in that row (shown when the instrument card is unlocked, read view when locked), bound to the `dfsave-{id}` form, so it commits with the bulk Save. Stages Band 2 state directly, like R. |
 | **▲ / ▼** | — | Full-size `btn secondary` buttons (not `btn-short` — that size is the display-field table's, see "Display-field table" above) that swap this row's `<tbody>` group with its neighbor. They move a **group**, not a row; a governed row moves its unit (itself, its condition row and any branch inside it) past the neighboring unit within its branch instead — see ["Branching between response fields"](#branching-between-response-fields). |
 | **X** button (`.btn.destructive`) | — | Drops this row (its `<tbody>`), matching Band 1's rule/unit X. Disabled when the row has saved responses (title pins the reason), or when it is the only row left. In a branch, deletion runs bottom-up — see ["Branching between response fields"](#branching-between-response-fields). |
 

@@ -142,6 +142,15 @@ _BOXES = """intro => {
 }"""
 
 
+def _rule_above_rows(intro: Locator) -> str:
+    """The top border of Layout 1's rows in the heading card: the rule
+    that parts them from the heading above (the author, 2026-10-20)."""
+    return intro.evaluate(
+        """intro => getComputedStyle(intro.querySelector(
+             '.rs-intro-name .rs-help-rows')).borderTopWidth"""
+    )
+
+
 def _boxes(card: Locator) -> dict:
     """Where the preview's intro cards and first help row sit; ``None``
     for one not drawn. ``rowHome`` names the card holding the rows."""
@@ -170,6 +179,8 @@ def test_the_chip_moves_the_help_rows_and_saves(
     assert boxes["help"] is None, boxes
     assert boxes["visibility"]["x"] > boxes["heading"]["x"], boxes
     assert boxes["visibility"]["y"] == boxes["heading"]["y"], boxes
+    intro_card = card.locator("[data-new-model-band2-intro-card]")
+    assert _rule_above_rows(intro_card) == "1px"
 
     first_help.fill("Typed before the move.")
     chip.click()
@@ -295,6 +306,8 @@ def test_a_locked_untitled_preview_draws_the_heading_card_for_its_rows(
         boxes["row"]["y"] - boxes["heading"]["y"]
         == boxes["visibilityTitle"]["y"] - boxes["visibility"]["y"]
     ), boxes
+    intro_card = card.locator("[data-new-model-band2-intro-card]")
+    assert _rule_above_rows(intro_card) == "0px"  # nothing above to part from
 
 
 def test_the_reviewer_surface_takes_the_instruments_layout(
@@ -319,6 +332,7 @@ def test_the_reviewer_surface_takes_the_instruments_layout(
     assert boxes["rowHome"] == "heading", boxes
     assert boxes["heading"]["y"] == boxes["visibility"]["y"], boxes
     assert boxes["heading"]["x"] < boxes["visibility"]["x"], boxes
+    assert _rule_above_rows(intro) == "0px"  # the rows alone
 
     _describe_instrument(live_server.database_url, session_id)
     reviewer.reload()
@@ -330,6 +344,7 @@ def test_the_reviewer_surface_takes_the_instruments_layout(
     assert boxes["rowHome"] == "heading", boxes
     assert boxes["row"]["y"] > title_bottom, boxes
     assert boxes["visibility"]["x"] > boxes["heading"]["x"], boxes
+    assert _rule_above_rows(intro) == "1px"
 
 
 def test_the_chip_leaves_the_tab_order_while_locked(

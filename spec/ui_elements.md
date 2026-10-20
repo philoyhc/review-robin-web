@@ -327,17 +327,16 @@ to CSS classes.
 > stays next to the checkbox it gates while the submit sits in the bottom
 > row.
 
-> **Reviewer help cards (`.rs-help-card` family)** — tinted slabs
-> listing per-instrument response-field help text, in `base.html`.
-> **Always stacked in one column of the per-instrument intro, as wide
-> as it** (`.rs-intro-columns`: the markup's heading card over the
-> visibility card in one `.rs-intro-col`, one `.rs-help-stack` in the
-> other), whatever the count. Which side the stack takes is the
-> instrument's `intro_layout`: right in Layout 2, under the heading card
-> on the left in Layout 1, the default (`spec/reviewer-surface.md`,
-> "Intro and help cards"). There is no full-width variant:
-> `test_reviewer_response_flow.py` asserts that no `rs-help-card-solo`
-> renders.
+> **Help cards (`.rs-help-card` family)** — tinted slabs in `base.html`:
+> the lobby's first-run tiles (`sessions_list.html`) and the Guide's
+> callout (`guide.html`). **The per-instrument intro does not use them.**
+> Its help texts are rows (`.rs-help-row`) in a normal-infill card, not a
+> card per field: inside the heading card under the description (parted
+> from it by a 1px `--border-default` rule, none when the rows sit alone) in
+> Layout 1, the default, or all in one `.rs-intro-help` card in the right
+> column in Layout 2 (`spec/reviewer-surface.md`, "Intro and help cards").
+> There is no full-width variant: `test_reviewer_response_flow.py`
+> asserts that no `rs-help-card-solo` renders.
 >
 > **Its own token family, not borrowed ones** — `--card-help-bg` /
 > `-border` / `-fg` (`#e5e7eb` / `#9ca3af` / `#111827` light,
@@ -357,10 +356,10 @@ to CSS classes.
 > themes deliberately do not match by the numbers — each ramp has one
 > shared step available at that end.
 >
-> **One token set, two callers**: `.rs-help-card` and `.page-guidance`
+> **One token set, more than one caller**: `.rs-help-card` and `.page-guidance`
 > (the Setup pages' guidance disclosure). That is why the theme
-> customizer's facet is named `Help card` rather than `Instrument help
-> card` — a facet named after one caller would misdescribe what editing it
+> customizer's facet is named `Help card` rather than naming one caller —
+> a facet named after one caller would misdescribe what editing it
 > changes. See `spec/color_tokens.md` "Card accents".
 
 ### 5. Banners

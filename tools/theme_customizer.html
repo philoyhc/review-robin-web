@@ -4541,8 +4541,13 @@
       }
       body.ui-v2 .rs-help-rows:not(:has(.rs-help-row)),
       body.ui-v2 .rs-intro-help:not(:has(.rs-help-row)) { display: none; }
+      /* Layout 1: a rule parts the heading from the help rows under it
+         (the author, 2026-10-20), as the Quick Setup slots are parted;
+         rows alone in the card take none. */
       body.ui-v2 .rs-intro-name .rs-help-rows:not(:first-child) {
         margin-top: var(--space-3);
+        padding-top: var(--space-3);
+        border-top: 1px solid var(--border-default);
       }
       /* No help rows in the help card: the right column leaves the grid,
          so the one-column layout below adds no gap under the visibility
@@ -4844,7 +4849,11 @@
       [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty]:not(:has(.rs-help-row)) { display: none; }
       /* ...and with help rows (19Y Item 2, Layout 1) it draws for them
          alone, so they start at the card's top. */
-      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] .rs-help-rows { margin-top: 0; }
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-name[data-intro-empty] .rs-help-rows {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+      }
       /* Segment 18R Item 2 PR 3 — consolidated Save summary banner.
          Rendered per card (hidden until a fetch-Save comes back with
          validation errors); lists the blocking issues at the top of the
