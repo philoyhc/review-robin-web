@@ -4534,7 +4534,7 @@
       /* No help cards: the right column leaves the grid, so the one-column
          layout below adds no gap under the visibility card; at two columns
          the left keeps its half and the right half stays empty. */
-      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not() { display: none; }
+      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-card)) { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
         body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
@@ -4575,6 +4575,21 @@
         body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-intro-name)) .rs-help-stack,
         body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
           grid-row: 1 / span 2;
+        }
+        /* No help card: one row, heading left and visibility right, with
+           no empty second row adding its gap under the taller card. */
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)) {
+          grid-template-rows: auto;
+        }
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)) .rs-intro-visibility {
+          grid-row: 1;
+        }
+        /* Neither a heading nor a help card drawn: the visibility card
+           has nothing to sit beside, so it keeps the left half, as in
+           Layout 2. */
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)):not(:has(.rs-intro-name)) .rs-intro-visibility,
+        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)):has(.rs-intro-name[data-intro-empty]) .rs-intro-visibility {
+          grid-column: 1;
         }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }

@@ -94,7 +94,9 @@ on the plan), and the close.
   today for a missing help column. With no help cards Layout 1 keeps
   the visibility card right rather than falling back to one column (the
   author, at the close, from a screenshot of the preview); the close PR
-  carries that CSS change and took its own read.
+  carries that CSS change and took its own read. With neither a help
+  nor a heading card, the visibility card keeps the left half (judgment
+  call: nothing to sit beside).
 - **Decisions confirmed at build.** The layout is a display setting: no
   lifecycle demotion, like `column_widths`. Locked, the chip is the
   plain pill, out of the tab order and `aria-disabled`. A Layout 2
@@ -105,7 +107,11 @@ on the plan), and the close.
   `autocomplete="off"`, browser tests for the no-help, no-heading and
   reviewer-surface branches, two Doc impact bullets).
   `spec-writer` at the close wrote the seven specs; its one flag is the
-  missing-visibility-card wording above.
+  missing-visibility-card wording above. A second read, on the close
+  slice, caught an invalid `:not()` the no-help edit had left on the
+  right-column hide rule (a 12px gap under no-help intros at ≤ 800px),
+  an empty-row gap and two stale spec phrases; all fixed, with browser
+  tests for the narrow no-help and no-heading-no-help cases.
 - **Owed by the author:** the browser-check rows in
   `guide/things_to_check_in_browser.md`, including reshooting the Guide's
   preview screencap and its alt text.

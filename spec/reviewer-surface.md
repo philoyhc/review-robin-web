@@ -581,7 +581,8 @@ together on every Band 3 / R toggle).
     the same markup.
   - **With no help cards** Layout 1 keeps the heading card left and the
     visibility card right; Layout 2 stacks both in the left column, the
-    right half empty. **With no heading
+    right half empty. With neither a help card nor a heading card, the
+    visibility card keeps the left half in both layouts. **With no heading
     card** Layout 1's help cards start level with the visibility card.
     **With no visibility card** Layout 1's right half is empty.
   - **At 800px or narrower** the two columns stack into one in every

@@ -952,7 +952,7 @@ intro card in Band 2's intro, placed by the instrument's `intro_layout`
 as on the reviewer surface (`spec/reviewer-surface.md`, "Intro and help
 cards"), and is both the reviewer-surface preview and
 the visibility editor — the same locked / unlocked swap as the
-description box above it. **Locked**, it renders the
+intro card's description box. **Locked**, it renders the
 reviewer's own two-row table (`data-lock-only`), each mode as a
 display-only pill (`pill pill-count`, carrying
 `data-new-model-vp-preview-cell`), as the reviewer's card shows it — see
@@ -987,7 +987,7 @@ reloads.
 Locked, the card is not inside a lock region: Band 2's are the intro
 card, this card's editor, the preview and each help card, so the locked
 table, which holds no control, keeps a `.table-scroll` that scrolls. The
-card fades with the intro card above it.
+card fades with the intro card.
 
 The help cards, JS-built by `rebuildPreview`, stack in field order in
 the column the instrument's `intro_layout` gives them, as on the

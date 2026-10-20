@@ -259,3 +259,50 @@ def test_the_chip_leaves_the_tab_order_while_locked(
     expect(card).to_have_attribute("data-instrument-locked", "false")
     expect(chip).to_have_attribute("tabindex", "0")
     expect(chip).not_to_have_attribute("aria-disabled", "true")
+
+
+def _stray_gap(intro: Locator) -> float:
+    """How far the intro's box runs below its lowest drawn card."""
+    return intro.evaluate(
+        """intro => {
+          const bottoms = [...intro.querySelectorAll('.card')]
+            .filter(el => el.offsetParent)
+            .map(el => el.getBoundingClientRect().bottom);
+          return intro.getBoundingClientRect().bottom - Math.max(...bottoms);
+        }"""
+    )
+
+
+def test_narrow_with_no_help_card_leaves_no_stray_gap(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """The empty help column leaves the grid, so a one-column intro ends
+    at its last card in either layout."""
+    session_id = new_session()
+    _hide_help_text(live_server.database_url, session_id)
+    page.set_viewport_size({"width": 700, "height": 1000})
+    card = open_unlocked(page, session_id)
+    chip = card.locator("[data-intro-layout-chip]")
+    intro = card.locator("[data-new-model-band2-intro-card]")
+    for label in ("Layout 1", "Layout 2"):
+        expect(chip).to_have_text(label)
+        assert _stray_gap(intro) == 0, label
+        chip.click()
+
+
+def test_with_neither_heading_nor_help_card_visibility_keeps_the_left_half(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """A locked preview of a lone untitled instrument with no help text
+    draws only the visibility card; Layout 1 leaves it on the left, with
+    no gap below it."""
+    session_id = new_session()
+    _hide_help_text(live_server.database_url, session_id)
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_card(page, session_id)
+    intro = card.locator("[data-new-model-band2-intro-card]")
+    boxes = intro.evaluate(_BOXES)
+    assert boxes["heading"] is None and boxes["help"] is None, boxes
+    left = intro.evaluate("el => el.getBoundingClientRect().left")
+    assert boxes["visibility"]["x"] == left, boxes
+    assert _stray_gap(intro) == 0
