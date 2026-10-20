@@ -75,8 +75,8 @@ The on-page model maps onto these:
   vs Group). Together these define **the assignment rule** for
   this instrument (`SessionRuleSet` row materialised lazily on
   first non-empty filter).
-- **Band 2.** What the reviewer sees: an intro (the name card over
-  the visibility card on the left, the help cards on the right) above
+- **Band 2.** What the reviewer sees: an intro (the name, visibility
+  and help cards, arranged by the instrument's intro layout) above
   a preview row of the display fields (Name and Email on an Individual
   instrument, plus the reviewee / pair-context tag fields the operator
   picks in Band 3's display-field table) and the response fields.
@@ -160,6 +160,20 @@ is the Assignments page's per-instrument **Self review** toggle:
   `assignments.set_instrument_self_reviews_active`; carried by
   Replicate, Duplicate and the Settings CSV.
 
+The intro's arrangement is a per-instrument string:
+
+- **`intro_layout: String(16) NOT NULL`** (Alembic revision
+  `c4e9a2f7b1d3`; server default `layout_1`, which existing rows took).
+  One of `INTRO_LAYOUTS` (`app/db/models/instrument.py`): `layout_1`
+  (the default) or `layout_2`, shown as "Layout 1" / "Layout 2". The
+  value picks where the heading, visibility and help cards sit in the
+  intro on the reviewer surface and the preview (`spec/reviewer-surface.md`,
+  "Intro and help cards"). A stored value outside `INTRO_LAYOUTS` reads
+  as `layout_1` everywhere (`instruments.effective_intro_layout`: the
+  surface, the chip, the Settings CSV export). Written by
+  `instruments.set_intro_layout`; carried by Replicate, Duplicate and
+  the Settings CSV (`spec/csv_contracts.md`).
+
 The other carries the operator-controlled page-break layout:
 
 - **`starts_new_page: Boolean NOT NULL`** (Alembic
@@ -222,7 +236,7 @@ Order of stripes (each separated by a horizontal rule):
 │ Who does the review │ Who is being reviewed │ Unit of review   │
 │  (three columns, vertical rules between)                       │
 ├────────────────────────────────────────────────────────────────┤
-│ Band 2 — intro (name, visibility │ help cards), preview row    │
+│ Band 2 — intro (name, visibility, help cards), preview row     │
 ├────────────────────────────────────────────────────────────────┤
 │ Band 3 — display-field table │ response-field table            │
 ├────────────────────────────────────────────────────────────────┤
@@ -876,7 +890,27 @@ live preview of one sample row inline.
 > See `spec/assignments.md` § *Self-review policy* for the two
 > supported ways to suppress self-reviews.
 
-#### Intro card (top of the left column)
+#### Intro layout chip
+
+Beside the "Preview review instrument" heading, a cycle chip
+(`spec/ui_elements.md` §9, `data-intro-layout-chip`) names the layout
+the instrument's intro takes: "Layout 1" or "Layout 2", each with a
+`title` naming its arrangement (`views.INTRO_LAYOUT_CHOICES`). A click
+or Enter / Space advances to the next layout in `INTRO_LAYOUTS` and wraps;
+it writes the hidden `intro_layout` input on `dfsave-{id}`, sets
+`data-intro-layout` on the preview's intro so it repaints at once, and
+marks the card dirty. Locked, the chip is the plain pill, out of the tab
+order, `aria-disabled`, and does nothing; unlocking restores it
+(`newModelSetLock`).
+
+**Both Saves store it** through `instruments.set_intro_layout`: the
+consolidated `/save` answers 422 on an unknown value and the no-JS
+`/fields/save` fallback 400, storing nothing. An absent input keeps the
+stored layout. A change writes `instrument.intro_layout_updated`
+(`changes` + `refs`); a no-op writes nothing. It is a display setting,
+like `column_widths`: it does not demote a validated session.
+
+#### Intro card
 
 Top-of-band intro card carrying:
 
@@ -911,11 +945,11 @@ Identity edits ride the bulk-save form: one Save commits identity
 together with Band 1 and Band 3, and the page issues no separate
 `/identity` POST.
 
-#### Visibility card (under the intro card)
+#### Visibility card
 
-The "Who can see what you wrote (other than admin)" card sits under the
-intro card in the left column of Band 2's intro, laid out as the
-reviewer surface's are (`spec/reviewer-surface.md`, "Intro and help
+The "Who can see what you wrote (other than admin)" card follows the
+intro card in Band 2's intro, placed by the instrument's `intro_layout`
+as on the reviewer surface (`spec/reviewer-surface.md`, "Intro and help
 cards"), and is both the reviewer-surface preview and
 the visibility editor — the same locked / unlocked swap as the
 description box above it. **Locked**, it renders the
@@ -955,8 +989,9 @@ card, this card's editor, the preview and each help card, so the locked
 table, which holds no control, keeps a `.table-scroll` that scrolls. The
 card fades with the intro card above it.
 
-The help cards, JS-built by `rebuildPreview`, fill the right column in
-field order, as on the reviewer surface. Nothing is measured, so they
+The help cards, JS-built by `rebuildPreview`, stack in field order in
+the column the instrument's `intro_layout` gives them, as on the
+reviewer surface. Nothing is measured, so they
 stay put as the operator types into their textareas, locks or unlocks
 the card, or resizes the window.
 
@@ -1711,6 +1746,7 @@ key, the `order` slot, `session_seq` (a fresh one), `starts_new_page`,
 - `accepting_responses` — copied as-is.
 - `self_reviews_active` — copied as-is: the copy's self-review rows
   start in the source's Self review state.
+- `intro_layout` — copied as-is.
 - Visibility policies — copied row for row: the copy shows its responses to the same audiences,
   in the same modes, as its source. Each row goes through
   `visibility_policies.upsert_policy`, so it is checked against the

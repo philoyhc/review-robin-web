@@ -68,6 +68,7 @@ responses. See `spec/rehydrate.md`.
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it**: the `instruments[n]` number decides, stored as its 0-based rank. The cell round-trips because the export writes the 0-based position, not the stored value |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |
 | **`self_reviews_active`** (the Assignments page's Self review toggle) | ✅ | ✅ | `instruments[n].self_reviews_active` in the Settings CSV; an older file without the row, or a blank cell, seeds it from the file's `session.self_reviews_active`. Clone copies the column (findings E3) |
+| **`intro_layout`** (the Instruments card's layout chip) | ✅ | ✅ | `instruments[n].intro_layout` in the Settings CSV, an `enum` row; an absent row or blank cell leaves the default `layout_1`, an unknown value is refused. A stored value outside `INTRO_LAYOUTS` exports as `layout_1`. Clone copies the column |
 | `session_seq` (the stable `Instrument_{N}` number) | ⚠️ | ✅ | Not in the Settings CSV. Import rebuilds the instruments and the column default numbers them 1…n in file order, so a gap (1, 3) or a post-drag sequence (1, 3, 2) comes back renumbered. Clone copies the value verbatim |
 | `deadline_closed_at`, `cached_group_pair_count/_stamp` | — | — | Runtime / cache |
 

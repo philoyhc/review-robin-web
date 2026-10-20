@@ -4551,7 +4551,7 @@
       /* No help cards: the right column leaves the grid, so the one-column
          layout below adds no gap under the visibility card; at two columns
          the left keeps its half and the right half stays empty. */
-      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not(:has(.rs-help-card)) { display: none; }
+      body.ui-v2 .rs-intro-col[data-rs-intro-col="right"]:not() { display: none; }
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
         body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
@@ -4563,33 +4563,34 @@
          the second row takes any extra height, so the help cards start
          right under the heading. Above 800px only: the markup's order —
          heading, visibility, help — is the one-column order of every
-         layout. With no help card the intro keeps the arrangement above,
-         which is Layout 2's. Written as the negation of the 800px query
+         layout. With no help card the heading stays left and the
+         visibility card right (the author, 2026-10-20); Layout 2 keeps
+         them stacked on the left. Written as the negation of the 800px query
          so a fractional width between the two (browser zoom) takes one. */
       @media not all and (max-width: 800px) {
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] {
           grid-template-rows: auto 1fr;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) > .rs-intro-col {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] > .rs-intro-col {
           display: contents;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-intro-name {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-intro-name {
           grid-column: 1;
           grid-row: 1;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-help-stack {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-help-stack {
           grid-column: 1;
           grid-row: 2;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-intro-visibility {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-intro-visibility {
           grid-column: 2;
           grid-row: 1 / span 2;
         }
         /* No heading card drawn (the reviewer surface draws none without
            a title; a locked preview hides an empty one): the help cards
            take the top row too, level with the visibility card. */
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card):not(:has(.rs-intro-name)) .rs-help-stack,
-        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card):has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-intro-name)) .rs-help-stack,
+        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
           grid-row: 1 / span 2;
         }
       }

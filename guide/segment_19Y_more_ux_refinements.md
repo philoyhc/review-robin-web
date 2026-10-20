@@ -53,8 +53,10 @@ guesses wrong, and the operator cannot see why).
 - **Narrow screens** (≤ 800px, one column): every layout stacks
   heading, visibility, help, as today (author, 2026-10-20), so the
   setting changes the wide view only.
-- **Missing cards.** No help cards: both layouts render the heading and
-  visibility in one column, as today. No visibility rows: Layout 1's
+- **Missing cards.** ~~No help cards: both layouts render the heading and
+  visibility in one column, as today.~~ No help cards: Layout 1 keeps the
+  heading left and visibility right; Layout 2 stacks them left (the
+  author, 2026-10-20, at the close). No visibility rows: Layout 1's
   right column is empty and leaves the grid as the help column does today.
 - **Where it shows.** The reviewer surface and the operator's preview,
   which render the same intro markup.
@@ -79,8 +81,34 @@ Taken 2026-10-20 at `ea52fa8a`.
 
 ### Status
 
-- 2026-10-20, PR 1 (#3170): the scaffold chip shipped as the plain pill, not the cycle chip's dark fill, after Codex: an inert chip shouldn't offer a click.
-- 2026-10-20, PR 2: one read on the item's cumulative diff (from `a727b148`): no correctness defect; seven smaller findings acted on in the PR — one rule for a stray value (`effective_intro_layout`, the chip, surface and CSV export alike), the locked chip out of the tab order, the 800px gap closed, `autocomplete="off"` on the input, browser tests for the no-help, no-heading and reviewer-surface branches, and two Doc impact bullets above.
+**Closed 2026-10-20** in three PRs as laddered: #3170 (scaffold), #3171
+(the setting, with the Settings CSV field moved in from PR 3 per Codex
+on the plan), and the close.
+
+- **What moved from the plan.** The scaffold chip shipped as the plain
+  pill, not the cycle chip's fill (Codex on #3170: an inert chip
+  shouldn't offer a click). One rule, `effective_intro_layout`, makes a
+  stray stored value `layout_1` on the surface, the chip *and* the CSV
+  export, so its backup still imports. A missing visibility card leaves
+  Layout 1's right half empty: the grid keeps both columns, as it does
+  today for a missing help column. With no help cards Layout 1 keeps
+  the visibility card right rather than falling back to one column (the
+  author, at the close, from a screenshot of the preview); the close PR
+  carries that CSS change and took its own read.
+- **Decisions confirmed at build.** The layout is a display setting: no
+  lifecycle demotion, like `column_widths`. Locked, the chip is the
+  plain pill, out of the tab order and `aria-disabled`. A Layout 2
+  instrument is not the untouched default for the Settings import.
+- **Reads.** One `diff-reviewer` read on the cumulative diff from
+  `a727b148`: no correctness defect; seven smaller findings, all acted
+  on in #3171 (the stray-value rule, tab order, the 800px gap,
+  `autocomplete="off"`, browser tests for the no-help, no-heading and
+  reviewer-surface branches, two Doc impact bullets).
+  `spec-writer` at the close wrote the seven specs; its one flag is the
+  missing-visibility-card wording above.
+- **Owed by the author:** the browser-check rows in
+  `guide/things_to_check_in_browser.md`, including reshooting the Guide's
+  preview screencap and its alt text.
 
 ### PR ladder
 

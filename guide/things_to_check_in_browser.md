@@ -96,8 +96,8 @@ deployment, not a local run.
   the chip is a plain pill and a click does nothing.
 - [ ] **The reviewer sees the same.** Activate and open the session as a
   reviewer: each instrument's intro takes its layout, in light and dark.
-  An instrument with no help text shows the heading and visibility in
-  one column, as before.
+  An instrument with no help text keeps the heading left and the
+  visibility card right in Layout 1, and stacks them left in Layout 2.
 - [ ] **Narrow.** At 800px or narrower, both layouts stack heading,
   visibility, help, on the reviewer surface and the preview.
 - [ ] **The Guide's screencap.** Reshoot

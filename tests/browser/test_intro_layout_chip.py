@@ -176,18 +176,26 @@ def test_a_locked_cards_chip_is_a_plain_pill_that_does_not_cycle(
     expect(card.locator("[data-intro-layout-input]")).to_have_value("layout_1")
 
 
-def test_with_no_help_card_layout_1_keeps_one_column(
+def test_with_no_help_card_layout_1_keeps_visibility_right(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
-    """No help card: the heading and visibility stay stacked in the left
-    column, as today, whatever the layout."""
+    """No help card (the author, 2026-10-20): Layout 1 keeps the heading
+    left and the visibility card right, level with it; Layout 2 stacks
+    them in the left column, as before."""
     session_id = new_session()
     _hide_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_unlocked(page, session_id)
-    expect(card.locator("[data-intro-layout-chip]")).to_have_text("Layout 1")
+    chip = card.locator("[data-intro-layout-chip]")
+    expect(chip).to_have_text("Layout 1")
     boxes = _boxes(card)
     assert boxes["help"] is None, boxes
+    assert boxes["visibility"]["x"] > boxes["heading"]["x"], boxes
+    assert boxes["visibility"]["y"] == boxes["heading"]["y"], boxes
+
+    chip.click()
+    expect(chip).to_have_text("Layout 2")
+    boxes = _boxes(card)
     assert boxes["visibility"]["x"] == boxes["heading"]["x"], boxes
     assert boxes["visibility"]["y"] >= boxes["heading"]["bottom"], boxes
 

@@ -555,21 +555,38 @@ together on every Band 3 / R toggle).
 
 - **Intro and help cards** above the table, as two columns
   (`.rs-intro-columns`, two `.rs-intro-col`), each a start-aligned stack
-  so every card is as tall as its own text. **The left column** stacks
-  the heading card (short label and description, rendered only when
-  there is a title) over "Who can see what you wrote" (after a Raw
-  Reviewees cell it also shows the reviewer-identity level,
+  so every card is as tall as its own text. In the markup **the left
+  column** stacks the heading card (short label and description,
+  rendered only when there is a title) over "Who can see what you wrote"
+  (after a Raw Reviewees cell it also shows the reviewer-identity level,
   `spec/participant_model.md` §4.2, and its Responses released column
-  widens to make room: `table.vp-grid`, `spec/instruments.md`). **The right
-  column** holds one `.rs-help-stack`: a `.rs-help-card` for each
+  widens to make room: `table.vp-grid`, `spec/instruments.md`). **The
+  right column** holds one `.rs-help-stack`: a `.rs-help-card` for each
   response field that has both `help_text` set and
   `help_text_visible=true`, in field order. Which card goes where never
   depends on text length or window width: nothing is measured or split.
-  With no help cards the right column is hidden (`display: none`) and
-  the left keeps its half, the right half empty.
-  - **At 800px or narrower** the two columns stack into one: the
-    heading card, the visibility card, then the help cards in field
-    order, which is also the DOM order.
+  - **The instrument's `intro_layout` picks the wide arrangement**
+    (`Instrument.intro_layout`, `spec/instruments.md`; the markup carries
+    it as `.rs-intro-columns[data-intro-layout]` and `base.html` places
+    the cards):
+
+    | `intro_layout` | Left | Right |
+    |---|---|---|
+    | `layout_1` (default) | heading card, help cards | visibility card |
+    | `layout_2` | heading card, visibility card | help cards |
+
+    A stored value outside `INTRO_LAYOUTS` renders as `layout_1`
+    (`instruments.effective_intro_layout`). The help cards still take
+    their column's width, and the preview on the Instruments page renders
+    the same markup.
+  - **With no help cards** Layout 1 keeps the heading card left and the
+    visibility card right; Layout 2 stacks both in the left column, the
+    right half empty. **With no heading
+    card** Layout 1's help cards start level with the visibility card.
+    **With no visibility card** Layout 1's right half is empty.
+  - **At 800px or narrower** the two columns stack into one in every
+    layout: the heading card, the visibility card, then the help cards in
+    field order, which is also the DOM order.
   - **No solo variant.** A help card takes its column's width, never a
     wider one of its own; `.rs-help-card-solo` is not part of the
     contract, and its absence is asserted by
