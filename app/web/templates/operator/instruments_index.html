@@ -3060,6 +3060,12 @@
             var inCard = intro.getAttribute('data-intro-layout') === 'layout_2';
             var heading = intro.querySelector('[data-rs-help-rows="heading"]');
             var helpCard = intro.querySelector('[data-rs-help-rows="card"]');
+            // The boxes about to be replaced leave the watch with them.
+            if (helpBoxWatch) {
+              intro.querySelectorAll('[data-help-card-textarea]').forEach(function (ta) {
+                helpBoxWatch.unobserve(ta);
+              });
+            }
             if (heading) { heading.innerHTML = inCard ? '' : html; }
             if (helpCard) { helpCard.innerHTML = inCard ? html : ''; }
             intro.querySelectorAll('[data-help-card-textarea]').forEach(function (ta) {
@@ -3075,8 +3081,12 @@
             if (!ta.getClientRects().length) { return; }
             var cs = getComputedStyle(ta);
             var borders = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+            // Measuring collapses the box for one layout, which can pull a
+            // page scrolled near its foot upward; put the scroll back.
+            var scrollY = window.scrollY;
             ta.style.height = 'auto';
             ta.style.height = (ta.scrollHeight + borders) + 'px';
+            if (window.scrollY !== scrollY) { window.scrollTo(window.scrollX, scrollY); }
           }
           // A width change rewraps the text; the fit waits a frame so the
           // box never resizes inside the observer's own callback.

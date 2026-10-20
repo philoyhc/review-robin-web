@@ -16,6 +16,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from ._builder import (
     REVIEWER_EMAIL,
+    give_a_field_help_text,
     activate,
     open_card,
     open_unlocked,
@@ -25,32 +26,6 @@ from ._builder import (
     session_pk,
 )
 from .conftest import LiveServer
-
-
-def _give_a_field_help_text(
-    database_url: str, session_id: str, text: str = "Score 1 to 5."
-) -> None:
-    """A visible help card for certain, written directly: the preview
-    builds its help cards from the response fields' help text."""
-    from sqlalchemy import create_engine, select
-    from sqlalchemy.orm import Session
-
-    from app.db.models import Instrument, InstrumentResponseField
-
-    engine = create_engine(database_url)
-    try:
-        with Session(engine) as db:
-            field = db.execute(
-                select(InstrumentResponseField)
-                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
-                .where(Instrument.session_id == session_pk(database_url, session_id))
-                .order_by(InstrumentResponseField.order)
-            ).scalars().first()
-            field.help_text = text
-            field.help_text_visible = True
-            db.commit()
-    finally:
-        engine.dispose()
 
 
 def _hide_help_text(database_url: str, session_id: str) -> None:
@@ -166,7 +141,7 @@ def test_the_chip_moves_the_help_rows_and_saves(
     card beside it. Layout 2: they move into one help card on the right,
     an unsaved edit in a row's textarea going with them."""
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_unlocked(page, session_id)
     chip = card.locator("[data-intro-layout-chip]")
@@ -212,7 +187,7 @@ def test_the_help_toggle_shows_and_hides_a_row(
 ) -> None:
     """Each field's ≡ in Band 3 still decides whether its row shows."""
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     card = open_unlocked(page, session_id)
     before = _boxes(card)["rowCount"]
     assert before >= 1
@@ -230,7 +205,7 @@ def test_narrow_layout_1_keeps_the_heading_card_whole(
     over the visibility card (the author, 2026-10-20); Layout 2 stacks
     heading, visibility, then the help card."""
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 700, "height": 1000})
     card = open_unlocked(page, session_id)
     chip = card.locator("[data-intro-layout-chip]")
@@ -295,7 +270,7 @@ def test_a_locked_untitled_preview_draws_the_heading_card_for_its_rows(
     help rows for it: then it holds them alone, starting at its top as
     the visibility card's title does, with the visibility card beside it."""
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_card(page, session_id)
     expect(card).to_have_attribute("data-instrument-locked", "true")
@@ -326,7 +301,7 @@ def test_the_reviewer_surface_takes_the_instruments_layout(
     untitled instrument and under the description once there is one."""
     session_id = new_session()
     seed_rosters(api, session_id)
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     activate(api, live_server.database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
     reviewer.goto(f"/me/sessions/{session_id}")
@@ -441,7 +416,7 @@ def test_a_locked_described_preview_parts_heading_from_rows(
     it and the help rows, as the reviewer surface does (the author,
     2026-10-20)."""
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     _describe_instrument(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_card(page, session_id)
@@ -517,7 +492,7 @@ def _reviewer_intro(
     help_text: str = "Score 1 to 5.",
 ) -> Locator:
     seed_rosters(api, session_id)
-    _give_a_field_help_text(database_url, session_id, help_text)
+    give_a_field_help_text(database_url, session_id, help_text)
     _describe_instrument(database_url, session_id)
     activate(api, database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
@@ -593,7 +568,7 @@ def test_a_locked_preview_snaps_and_an_unlocked_one_does_not(
     textareas grow as the operator types, so the sides keep their own
     heights."""
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     _describe_instrument(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_card(page, session_id)
@@ -620,7 +595,7 @@ def test_a_locked_layout_2_preview_snaps(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    _give_a_field_help_text(live_server.database_url, session_id)
+    give_a_field_help_text(live_server.database_url, session_id)
     _describe_instrument(live_server.database_url, session_id)
     _set_intro_layout(live_server.database_url, session_id, "layout_2")
     page.set_viewport_size({"width": 1400, "height": 1000})

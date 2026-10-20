@@ -107,7 +107,9 @@ deployment, not a local run.
   Comments help runs several lines: its edit box shows the whole text,
   no scrollbar, no corner handle. Type more lines: it grows; delete
   them: it shrinks back, never below its one-line-plus floor. Click the
-  layout chip and narrow the window: the box re-fits each time.
+  layout chip and narrow the window: the box re-fits each time. On the
+  last instrument card, scrolled to the page's foot, typing in the box
+  doesn't make the page jump.
 
 ## Arriving on a page carries no fragment (19X Item 7)
 

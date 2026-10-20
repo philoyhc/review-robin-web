@@ -660,9 +660,11 @@ everywhere, so "you can click this" reads the same way on every control.
 >
 > **`textarea` resizes vertically only** — a long entry grows downward; a
 > horizontal drag would pull it wider than its column and break the page
-> grid. One exception: the Band 2 preview's disabled response boxes take
+> grid. Two exceptions: the Band 2 preview's disabled response boxes take
 > `resize: none` (`spec/instruments.md`, "Preview row"), because a drag
-> there persists nowhere.
+> there persists nowhere; and the instrument card's help-text edit box takes
+> `resize: none; overflow: hidden` (`spec/instruments.md`, "Help rows"),
+> because it grows with its text instead.
 > **`input[type="number"]` hides its native spinners** — the reviewer
 > surface uses numeric inputs for HTML5 `min` / `max` enforcement, not for
 > spinner-driven entry.

@@ -189,3 +189,29 @@ def branch_rating(page: Page, session_id: str, *, op: str = "ge", value: str = "
     card.locator("[data-new-model-rf-governed] [data-new-model-rf-name]").fill("Why")
     save(page, card)
     return card
+
+
+def give_a_field_help_text(
+    database_url: str, session_id: str, text: str = "Score 1 to 5."
+) -> None:
+    """The first response field's help text, shown, written directly:
+    the preview and the reviewer surface build their help rows from it."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            field = db.execute(
+                select(InstrumentResponseField)
+                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+                .where(Instrument.session_id == session_pk(database_url, session_id))
+                .order_by(InstrumentResponseField.order)
+            ).scalars().first()
+            field.help_text = text
+            field.help_text_visible = True
+            db.commit()
+    finally:
+        engine.dispose()

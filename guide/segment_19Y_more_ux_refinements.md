@@ -554,8 +554,14 @@ the build, specs and close in one, as laddered.
   the content plus borders; it runs in `placeHelpRows` (so the chip's
   move and every rebuild re-fit), in the input handler, and from a
   `ResizeObserver` on each box that re-fits a frame later when its
-  width changes, never inside the observer's callback.
-- **Reads.** READS_LINE
+  width changes, never inside the observer's callback. A fit restores
+  the window's scroll, since measuring collapses the box for one layout;
+  a rebuild unobserves the boxes it replaces.
+- **Reads.** One `diff-reviewer` read: no correctness defect; four
+  findings, all acted on before the PR opened (the scroll restore, the
+  unobserve, a width test that compared two layouts rather than one box
+  before and after, and the help-text helper moved to `_builder.py`).
+  `spec-writer` at the close wrote the two specs; no flag.
 - **Owed by the author:** the browser-check row in
   `guide/things_to_check_in_browser.md`.
 
