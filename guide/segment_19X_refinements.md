@@ -263,7 +263,8 @@ instrument whose cohort takes in no one renders the full table, with "0
 Reviewers in cohort", "0 Reviewees in cohort", every statistic "—", and
 under it "No one in your view takes part in this instrument, so there
 is nothing to download." The author: the table is dispensable there;
-show just the explanation line.
+show just the explanation line. (A Summarized instrument showed its
+"Only the summary above is shown" note there instead of that line.)
 
 ### Decision
 
@@ -280,12 +281,20 @@ Taken 2026-10-20 at `5d0b6a07`.
 | What | Count | Command |
 |---|---|---|
 | Templates reading `cohort_has_rows` | 1 | `grep -rln "cohort_has_rows" app/web/templates` |
-| Tests on the line | 2 | `grep -rln "data-collation-nothing-to-download" tests` |
+| Tests on the line | 1 | `grep -rln "data-collation-nothing-to-download" tests` |
 | Specs describing the table's rows | 3 | `grep -rln "Row 3 conditional" spec` |
 
 ### Status
 
-**Closed 2026-10-20, in one PR.** As planned.
+**Closed 2026-10-20, in one PR.** As planned; a Summarized
+instrument with an empty cohort now shows the same line rather than its
+summary-only note (pinned by a test). One `diff-reviewer` read: it
+confirmed the Download button and the non-empty Summarized case are
+unchanged, and found two stale view docstrings (comment-only edits to
+the view), `spec/visibility_policy.md`'s observer row, a wrong test
+count here, and a checklist row whose one setup could not show both
+cases; all fixed. `spec/audience_and_identity_model.md` describes the
+3-row table only in general terms and stays as is.
 
 ### PR ladder
 
@@ -313,5 +322,6 @@ Taken 2026-10-20 at `5d0b6a07`.
 ### Doc impact
 
 - `spec/participant_model.md` — §4's observer collation row: an empty cohort shows only the line (Item 4).
+- `spec/visibility_policy.md` — the Observer `/collation` body row: an empty cohort shows only the line (Item 4).
 - `guide/things_to_check_in_browser.md` — a row for the line (Item 4).
 - `guide/todo_master.md` — Item 4 in the 19X entry (Item 4).

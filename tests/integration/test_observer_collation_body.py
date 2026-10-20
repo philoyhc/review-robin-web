@@ -291,6 +291,42 @@ def test_an_empty_cohort_gets_no_download_link(
     assert 'class="rs-reviewee">Cohort' not in body
 
 
+def test_an_empty_cohort_on_a_summarized_instrument_shows_only_the_line(
+    client: TestClient, db: Session
+) -> None:
+    """19X Item 4: an empty cohort has nothing to summarize either, so a
+    Summarized instrument shows the same line, not its summary-only
+    note under empty rows."""
+    review_session = _make_session(client, db, code="col-body-empty-summarized")
+    _seed_one_instrument(
+        db,
+        review_session,
+        while_ongoing_granularity="aggregated",
+        while_ongoing_identification="deidentified",
+    )
+    _add_observer(
+        db,
+        review_session,
+        email="alice@example.edu",
+        cohort_rule={
+            "combinator": "AND",
+            "rules": [
+                {
+                    "field": "reviewer.tag1",
+                    "op": "IS",
+                    "operand_tag": "",
+                    "operand_value": "no-such-cohort",
+                }
+            ],
+        },
+    )
+
+    body = client.get(f"/me/sessions/{review_session.public_id}/collation").text
+    assert "data-collation-nothing-to-download" in body
+    assert "Only the summary above is shown" not in body
+    assert 'class="rs-reviewee">Cohort' not in body
+
+
 def test_collation_numbers_instruments_from_one(
     client: TestClient, db: Session
 ) -> None:

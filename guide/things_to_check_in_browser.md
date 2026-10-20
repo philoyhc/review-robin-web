@@ -50,9 +50,10 @@ deployment, not a local run.
 
 ## An instrument nobody in view takes part in shows only its line (19X Item 4)
 
-- [ ] **No empty table.** As an observer whose cohort takes in no one
-  on an instrument (a cohort rule matching no roster row), open
-  `/collation`: that instrument's card shows its heading and "No one in
-  your view takes part in this instrument, so there is nothing to
-  download.", with no table. An instrument the cohort does reach still
-  shows its table.
+- [ ] **No empty table.** On a session where you are an observer, set
+  your own Observers row's cohort to a rule that matches no one (e.g.
+  Team IS `Team Z`) and open `/me/sessions/<its id>/collation`: each
+  instrument's card shows its heading and "No one in your view takes
+  part in this instrument, so there is nothing to download.", with no
+  table. Set the cohort back to one that matches (e.g. Team CONTAINS
+  `Team`): the tables return.
