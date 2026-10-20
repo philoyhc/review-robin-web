@@ -2,7 +2,7 @@
 
 **Opened:** 2026-10-19 · **Theme:** small follow-ups the author's browser
 runs turn up, one item each · **Related:**
-`guide/browser_check_files/round_2/README.md`, `spec/setup_pages.md`,
+`guide/things_to_check_in_browser.md`, `spec/setup_pages.md`,
 `spec/ui_elements.md`
 
 A standing home for refinements too small for a segment of their own
