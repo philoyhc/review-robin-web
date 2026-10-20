@@ -369,6 +369,7 @@ Home's Submit); it found two blast-radius counts that did not measure
 what they said (re-taken above), this Status, and
 `spec/operator_ui_concept.md`'s Create landing, which also missed the
 bare Create's `?editing=1#session-config` (stale since 18R); all fixed.
+`spec-writer` at close: no divergence.
 
 ### PR ladder
 
