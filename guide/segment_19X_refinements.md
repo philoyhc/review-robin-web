@@ -651,7 +651,10 @@ over the field's own.
 
 Both buttons become 2.25rem squares, stretched to the box's height
 (36px), padding off, glyph centered, under a selector specific enough
-to beat `body.ui-v2 .btn`. Rejected: `aspect-ratio: 1` on a stretched
+to beat `body.ui-v2 .btn`. *(At build: the box takes the same explicit 2.25rem
+height, `--dt-field-size`, since a stretched height built from a rem
+font and 8px padding drifts from a rem width at a non-default browser
+font size — Codex on #3167.)* Rejected: `aspect-ratio: 1` on a stretched
 flex item — Chromium sized the width from the content, measured 19 and
 14 px wide.
 
@@ -670,7 +673,9 @@ the rule's `display` outranked `.btn[hidden]` (latent off `ui-v2`;
 `tests/unit/test_btn_hidden_hides.py` failed on it too), now restored by
 the field's own `[hidden]` rule, and that §6's one-shape claim needed
 this exception named (done). `spec-writer` at close: no divergence;
-it added the pointer from §6 to the exception.
+it added the pointer from §6 to the exception. Codex on #3167: the squares held only
+at the default font size; the shared size fixes it, and the browser
+test now runs at 13, 16 and 20px root sizes.
 
 ### PR ladder
 

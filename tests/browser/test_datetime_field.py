@@ -9,6 +9,7 @@ import uuid
 from collections.abc import Callable
 
 import httpx
+import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -193,10 +194,16 @@ def test_a_zone_change_leaves_an_impossible_time_as_typed(page: Page) -> None:
         page.locator("#display_timezone").fill("UTC")
 
 
-def test_both_buttons_are_squares_as_tall_as_the_box(page: Page) -> None:
+@pytest.mark.parametrize("root_font", [None, "20px", "13px"])
+def test_both_buttons_are_squares_as_tall_as_the_box(
+    page: Page, root_font: str | None
+) -> None:
     """The calendar glyph is wider than ✕; neither widens its button
-    (19X Item 8)."""
+    (19X Item 8), at the default font size and at a larger or smaller
+    one (Codex on #3167)."""
     page.goto("/operator/sessions/new")
+    if root_font:
+        page.add_style_tag(content=f"html {{ font-size: {root_font}; }}")
     field = page.locator("[data-dt-field]", has=page.locator("#deadline"))
     box = page.locator("#deadline").bounding_box()
     for which in ("[data-dt-pick]", "[data-dt-clear]"):
