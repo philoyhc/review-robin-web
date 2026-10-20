@@ -312,10 +312,10 @@ def test_home_boxes_are_date_time_fields_and_a_spaced_save_keeps_them(
         responses_release_at="2027-03-01 10:00",
     ) == 303
     db.refresh(review_session)
-    assert review_session.responses_release_at == datetime(2027, 3, 1, 10, 0)
+    assert _naive_utc(review_session.responses_release_at) == datetime(2027, 3, 1, 10, 0)
     assert _submit_edit(
         client, review_session, display_timezone="UTC",
         responses_release_at="2027-03-02 08:30",
     ) == 303
     db.refresh(review_session)
-    assert review_session.responses_release_at == datetime(2027, 3, 2, 8, 30)
+    assert _naive_utc(review_session.responses_release_at) == datetime(2027, 3, 2, 8, 30)
