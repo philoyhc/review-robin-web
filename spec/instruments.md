@@ -1095,6 +1095,14 @@ fixed, as saving a width will turn the surface's. A group-flavor
 preview is always fixed, as the surface's group table is, its number
 columns starting the same way. A dragged width wins.
 
+**The preview's long-text response box has no resize handle.** A `String`
+over 100 characters previews as a disabled `<textarea>` whose `rows` come
+from `textareaRowsFor` (the mirror of `views.textarea_rows_for`), so it
+starts at the height the reviewer surface renders. It takes `resize: none`
+(`buildResponseFieldPreviewCell`): a drag there persists nowhere, so a handle would
+promise a setting that does not exist. The reviewer surface keeps its
+vertical handle (`spec/reviewer-surface.md`; `spec/ui_elements.md` §8).
+
 Widths never POST on their own. A resize stages the live widths
 into a hidden `column_widths_snapshot` input (JSON); the bulk
 Save reads that snapshot and commits it through the consolidated

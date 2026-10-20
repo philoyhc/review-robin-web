@@ -457,6 +457,22 @@ Taken 2026-10-20 at `7d9f1042`.
 | Preview builder setting the handle | 1 line | `grep -n "resize: vertical" app/web/templates/operator/instruments_index.html` |
 | Specs naming the textarea resize rule | 2 | `grep -n "resize" spec/ui_elements.md spec/reviewer-surface.md` (§ textarea rule; the field-type table) |
 
+### Status
+
+**Closed 2026-10-20** in two PRs: #3178 (the plan, with Item 5's) and
+the build, specs and close in one, as laddered.
+
+- **What moved from the plan.** Nothing. The full reviewer-surface
+  preview (18Q, `preview_mode`) keeps its handle: it renders the
+  interactive reviewer surface, which the plan leaves unchanged.
+- **Reads.** One `diff-reviewer` read: no defect; the builder is the
+  one place the preview draws a response textarea, no CSS overrides the
+  inline style, and the test's selector matches only it. A docstring
+  that claimed an unchecked height was trimmed. `spec-writer` at the
+  close wrote the two specs; no flag beyond a section number.
+- **Owed by the author:** the browser-check row in
+  `guide/things_to_check_in_browser.md`.
+
 ### PR ladder
 
 1. **PR 1 — build, specs, close.** `resize: none` on the preview's
