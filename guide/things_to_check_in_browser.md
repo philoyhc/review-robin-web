@@ -85,6 +85,27 @@ deployment, not a local run.
   type a new time and Save: the row shows it. On an active session the
   box and both buttons are greyed out.
 
+## An instrument's intro picks its layout (19Y Item 1)
+
+- [ ] **The chip and the preview.** Unlock an instrument card whose
+  fields have help text: the chip beside "Preview review instrument"
+  reads **Layout 1**, and the preview shows the heading and help cards
+  on the left, "Who can see what you wrote" on the right. Click it:
+  **Layout 2**, with the visibility card back under the heading and the
+  help cards on the right. Save, reload: Layout 2 stays. Lock the card:
+  the chip is a plain pill and a click does nothing.
+- [ ] **The reviewer sees the same.** Activate and open the session as a
+  reviewer: each instrument's intro takes its layout, in light and dark.
+  An instrument with no help text shows the heading and visibility in
+  one column, as before.
+- [ ] **Narrow.** At 800px or narrower, both layouts stack heading,
+  visibility, help, on the reviewer surface and the preview.
+- [ ] **The Guide's screencap.** Reshoot
+  `app/web/static/guide/instrument-card-preview.png` and `-dark` with the
+  new default and the chip, and update their alt text in
+  `app/web/templates/guide.html` to say the help cards sit on the left
+  under the heading and the visibility table on the right.
+
 ## Arriving on a page carries no fragment (19X Item 7)
 
 - [ ] **No `#…` on arrival.** New session with nothing staged → Create:

@@ -128,6 +128,6 @@ Taken 2026-10-20 at `ea52fa8a`.
 - `spec/csv_contracts.md` — the Settings CSV field (Item 1).
 - `spec/roundtrip_coverage.md` — the field's round trip (Item 1).
 - `spec/visibility_policy.md` — the visibility card's column follows the instrument's layout (Item 1; added at the PR 2 read).
-- `app/web/templates/guide.html` — the preview screencap's alt text names the default layout; the screencap itself (`app/web/static/guide/instrument-card-preview.png` and `-dark`) is the author's to reshoot (Item 1; added at the PR 2 read).
+- `app/web/templates/guide.html` — the preview screencap's alt text names the default layout (Item 1; added at the PR 2 read). <!-- doc-impact-waived: the alt text describes the image, so it changes with the author's reshoot of the screencap, owed as a row in guide/things_to_check_in_browser.md -->
 - `guide/things_to_check_in_browser.md` — rows for the chip and both layouts (Item 1).
 - `guide/todo_master.md` — the 19Y entry (Item 1).
