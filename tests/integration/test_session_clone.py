@@ -356,7 +356,7 @@ def test_clone_route_redirects_to_the_clone(
     # details card open in edit mode so the operator can rename the clone
     # immediately (the Edit page is retired).
     assert location.startswith("/operator/sessions/")
-    assert location.endswith("?editing=1#session-config")
+    assert location.endswith("?editing=1")
     clone_public_id = location.split("/operator/sessions/")[1].split("?")[0]
     assert clone_public_id != source.public_id
     clone = db.execute(

@@ -163,9 +163,9 @@ def test_the_new_session_page_says_the_file_was_refused_without_its_lines(
     )
     assert response.status_code == 303
     location = response.headers["location"]
+    # No slot fragment (19X Item 7): Home's banner script lands it.
     assert location.endswith(
         "?quick_setup_error=reviewers&quick_setup_reason=refused"
-        "#quick-setup-reviewers"
     )
     body = client.get(location).text
     assert (

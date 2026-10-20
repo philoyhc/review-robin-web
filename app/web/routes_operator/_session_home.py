@@ -164,7 +164,7 @@ def session_edit_redirect(
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     return RedirectResponse(
-        url=f"/operator/sessions/{review_session.public_id}?editing=1#session-config",
+        url=f"/operator/sessions/{review_session.public_id}?editing=1",
         # 308 (not 301) preserves the GET method and matches the other
         # legacy-URL shim (``/preview`` → operations); audit R11.
         status_code=status.HTTP_308_PERMANENT_REDIRECT,

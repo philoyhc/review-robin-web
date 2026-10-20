@@ -535,3 +535,91 @@ code divergence.
 - `spec/settings_inventory.md` — the release-window rows' editor (Item 6).
 - `guide/things_to_check_in_browser.md` — rows for each surface (Item 6).
 - `guide/todo_master.md` — Item 6 in the 19X entry (Item 6).
+
+## Item 7 — Arriving on a page carries no fragment
+
+### Opportunity
+
+The author, 2026-10-20, after Item 5: a Create with nothing staged
+still lands on `?editing=1#session-config`; "are there other fragments
+like this? Let's be thorough." An inventory found two kinds. *Arrival*
+fragments only dress the address of a page reached from elsewhere:
+`?editing=1#session-config` from a bare Create, the lobby's Duplicate,
+Validate's "Fix on Session details" and the retired `/edit` bookmark;
+`#quick-setup-<slot>` from a Create whose staged file is refused.
+*Stay-in-place* fragments return the operator to what they just acted
+on (roster rows, instruments, the Owners card, Home's own Quick Setup
+Submit, pagers).
+
+### Decision
+
+The author's ruling, 2026-10-20: drop the arrival fragments and keep
+the stay-in-place ones, and keep Validate's row-level Fix anchors
+(`#reviewer-row-N`, `#instrument-N`: pointing at the row is the link's
+purpose). Session Home's Save already lands without one (19U Item 4).
+Rejected: replacing every stay-in-place fragment with a scroll restore
+as well — several PRs for no reported problem.
+
+### Semantics
+
+- `?editing=1` alone opens the details card in edit mode; the page
+  opens at its top, the details card under the Workflow card.
+- A refused file on Create lands on `?quick_setup_error=…` alone; Home's
+  banner script scrolls to the shown banner on load.
+- Unchanged: the Guide links' `#guide-…` (a judgment call below), and
+  every stay-in-place fragment.
+
+### Judgment calls — decided
+
+- The Guide links keep `#guide-…` (2026-10-20): each points at the
+  section its text names on a long page, as a Fix row anchor does.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `6af85064`.
+
+| What | Count | Command |
+|---|---|---|
+| Arrival redirects to `#session-config` | 4 | `grep -rn '#session-config"' app --include=*.py \| wc -l` |
+| Create's refusal slot fragment | 1 | `grep -rn 'query}#quick-setup' app --include=*.py \| wc -l` |
+| Test files pinning either | 8 | `grep -rlzP --include=*.py 'editing=1#session-config\|refused"\s*\n\s*"#quick-setup' tests \| wc -l` |
+| Specs naming `editing=1#session-config` | 6 | `grep -rl 'editing=1#session-config' spec \| wc -l` |
+
+### Status
+
+*(Filled at close.)*
+
+### PR ladder
+
+1. **PR 1 — the landings.** The five redirects, their tests, a browser
+   test, the specs, a browser-check row. Must not touch a stay-in-place
+   fragment.
+
+### Definition of done
+
+- No redirect or link that opens a page from elsewhere carries a
+  fragment, the Fix row anchors and Guide links aside (grep; tests).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Stay-in-place fragments (the author's ruling above).
+
+### Doc impact
+
+- `spec/session_home.md` — the `/edit` redirect and the arrivals (Item 7).
+- `spec/operator_ui_concept.md` — Create's landings and the `/edit` redirect (Item 7).
+- `spec/quick_setup_card_spec.md` — the New-session variant's landings (Item 7).
+- `spec/visual_style_rrw.md` — the `/edit` redirect (Item 7).
+- `spec/settings_inventory.md` — the details card's address (Item 7).
+- `spec/operator_button_audit.md` — the details card's address (Item 7).
+- `guide/things_to_check_in_browser.md` — a row (Item 7).
+- `guide/todo_master.md` — Item 7 in the 19X entry (Item 7).

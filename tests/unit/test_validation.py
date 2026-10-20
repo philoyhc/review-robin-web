@@ -109,9 +109,12 @@ def test_registry_rules_have_non_empty_metadata() -> None:
         assert rule.fix_page_label
         url = rule.fix_url(fake_session)
         # Some fix links target a sub-path (…/k3m9x2pq7a/reviewers), others
-        # the Session Home config card (…/k3m9x2pq7a?editing=1#session-config)
-        # after the Edit page was retired (18R Item 4 Slice 5).
+        # the Session Home config card (…/k3m9x2pq7a?editing=1) after the
+        # Edit page was retired (18R Item 4 Slice 5).
         assert url and url.startswith("/operator/sessions/k3m9x2pq7a")
+        # Opening a page carries no fragment (19X Item 7); a row-level
+        # Fix link adds its anchor separately (``fix_anchor``).
+        assert "#" not in url, rule.key
 
 
 def test_validate_stamps_rule_key_and_fix_url(db: Session) -> None:

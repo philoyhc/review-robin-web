@@ -398,7 +398,6 @@ def test_settings_errors_reach_the_slot_from_submit_all_but_not_create(
     assert response.status_code == 303
     assert response.headers["location"].endswith(
         "?quick_setup_error=settings&quick_setup_reason=refused"
-        "#quick-setup-settings"
     )
     page = client.get(response.headers["location"])
     assert "The session settings file was refused" in page.text
