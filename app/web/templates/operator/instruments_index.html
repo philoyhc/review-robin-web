@@ -1576,6 +1576,15 @@
         <div style="display: flex; align-items: center; gap: 12px;
                     margin: 0 0 12px 0;">
           <h3 style="margin: 0;">Preview review instrument</h3>
+          {# 19Y Item 1 PR 1 — the intro layout chip, a cycle chip
+             (``spec/ui_elements.md`` §9) reading the layout the intro
+             takes: Layout 1 puts the heading and help cards left and
+             visibility right. Inert scaffold: no input, no click,
+             the intro unchanged; PR 2 makes it cycle and Save it. #}
+          <span class="pill pill-count tag-chip is-selected"
+                data-intro-layout-chip
+                aria-disabled="true"
+                title="Layout 1: heading and help cards on the left, visibility on the right">Layout 1</span>
           {# Refresh only makes sense once the operator has
              deliberately set every Band 1 link — running the
              engine on a "Not set" link silently uses an empty

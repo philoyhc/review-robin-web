@@ -10304,3 +10304,26 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
         r'<option value="pair_context\.tag1"\s+selected\s+data-new-model-stored-only>',
         page,
     )
+
+
+def test_preview_heading_carries_inert_layout_chip(
+    client: TestClient, db: Session
+) -> None:
+    """19Y Item 1 PR 1 — every instrument card shows the intro layout
+    chip beside "Preview review instrument", reading "Layout 1", with
+    no input behind it yet."""
+    review_session = _make_session(client, db, code="layout-chip")
+    instrument = _instrument(db, review_session.id)
+    flat = " ".join(
+        client.get(
+            f"/operator/sessions/{review_session.public_id}/instruments"
+        ).text.split()
+    )
+    card = _card_slice(flat, instrument.id)
+    heading = card.index("Preview review instrument</h3>")
+    chip = re.search(r"<span [^>]*data-intro-layout-chip[^>]*>([^<]*)</span>", card)
+    assert chip is not None
+    assert chip.start() > heading
+    assert chip.group(1) == "Layout 1"
+    assert 'aria-disabled="true"' in chip.group(0)
+    assert 'name="intro_layout"' not in card
