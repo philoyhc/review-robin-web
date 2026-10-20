@@ -4546,34 +4546,50 @@
          the second row takes any extra height, so the help cards start
          right under the heading. Above 800px only: the markup's order —
          heading, visibility, help — is the one-column order of every
-         layout. With no help card the intro keeps the arrangement above,
-         which is Layout 2's. Written as the negation of the 800px query
+         layout. With no help card the heading stays left and the
+         visibility card right (the author, 2026-10-20); Layout 2 keeps
+         them stacked on the left. Written as the negation of the 800px query
          so a fractional width between the two (browser zoom) takes one. */
       @media not all and (max-width: 800px) {
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] {
           grid-template-rows: auto 1fr;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) > .rs-intro-col {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] > .rs-intro-col {
           display: contents;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-intro-name {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-intro-name {
           grid-column: 1;
           grid-row: 1;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-help-stack {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-help-stack {
           grid-column: 1;
           grid-row: 2;
         }
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-intro-visibility {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"] .rs-intro-visibility {
           grid-column: 2;
           grid-row: 1 / span 2;
         }
         /* No heading card drawn (the reviewer surface draws none without
            a title; a locked preview hides an empty one): the help cards
            take the top row too, level with the visibility card. */
-        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card):not(:has(.rs-intro-name)) .rs-help-stack,
-        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card):has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-intro-name)) .rs-help-stack,
+        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
           grid-row: 1 / span 2;
+        }
+        /* No help card: one row, heading left and visibility right, with
+           no empty second row adding its gap under the taller card. */
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)) {
+          grid-template-rows: auto;
+        }
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)) .rs-intro-visibility {
+          grid-row: 1;
+        }
+        /* Neither a heading nor a help card drawn: the visibility card
+           has nothing to sit beside, so it keeps the left half, as in
+           Layout 2. */
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)):not(:has(.rs-intro-name)) .rs-intro-visibility,
+        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:not(:has(.rs-help-card)):has(.rs-intro-name[data-intro-empty]) .rs-intro-visibility {
+          grid-column: 1;
         }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }

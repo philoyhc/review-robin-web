@@ -564,7 +564,7 @@ the round-trip notes below.
    The Default instrument as Create made it is never named: still
    called `Default`, its default response fields unchanged, its
    display fields unlabelled, shown and in the order added (a roster
-   upload seeds those), its Self review flag the session's, and no
+   upload seeds those), its Self review flag the session's, its intro layout `layout_1`, and no
    other setting made (`is_untouched_default`). It holds nothing
    of the operator's, so Quick Setup on a fresh session takes a file as
    Create does (the author, 2026-10-19). A file that deletes no other
@@ -765,6 +765,11 @@ import leaves as stored, on an unchanged anchor, is not checked.
   without the row, or with a blank cell, leaves the instrument to seed
   from `session.self_reviews_active`, as a new instrument does, so an
   older bundle imports as it did before the row existed.
+- **`instruments[n].intro_layout` is the intro layout chip** (`spec/instruments.md`),
+  an `enum` row: `layout_1` or `layout_2` (`INTRO_LAYOUTS`). An unknown value
+  is refused. A file without the
+  row, or with a blank cell, leaves the instrument at the default `layout_1`.
+  The export writes a stored value outside `INTRO_LAYOUTS` as `layout_1`.
 - **`instruments[n].order` is informational.** Apply ignores the `order`
   cell — **the `[n]` number is authoritative**, not the rows' place in
   the file. Each instrument is stored at its 0-based rank among the

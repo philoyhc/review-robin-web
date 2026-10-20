@@ -329,11 +329,13 @@ to CSS classes.
 
 > **Reviewer help cards (`.rs-help-card` family)** — tinted slabs
 > listing per-instrument response-field help text, in `base.html`.
-> **Always stacked in the per-instrument intro's right column, as wide
-> as it** (`.rs-intro-columns`: two `.rs-intro-col`, the heading card
-> over the visibility card on the left, one `.rs-help-stack` on the
-> right), whatever the count (`spec/reviewer-surface.md`, "Intro and
-> help cards"). There is no full-width variant:
+> **Always stacked in one column of the per-instrument intro, as wide
+> as it** (`.rs-intro-columns`: the markup's heading card over the
+> visibility card in one `.rs-intro-col`, one `.rs-help-stack` in the
+> other), whatever the count. Which side the stack takes is the
+> instrument's `intro_layout`: right in Layout 2, under the heading card
+> on the left in Layout 1, the default (`spec/reviewer-surface.md`,
+> "Intro and help cards"). There is no full-width variant:
 > `test_reviewer_response_flow.py` asserts that no `rs-help-card-solo`
 > renders.
 >
@@ -808,7 +810,7 @@ new type adds a row there too:
 | **On/off** | selected, not selected; the label doesn't change | solid when on, faint when off | the Setup pages' column chips |
 | **On/off with a status color** | selected, not selected, where each chip stands for a status; the label doesn't change | the status's pale tint when off, as the matching pill (`--status-*-bg` with `--status-*-fg`; info's text is `--text-body`, as `.pill-info`); solid when on: `--status-warning-solid-*` and `--status-error-solid-*`, info taking the blue chip's own `--selected-*` (`.tag-chip.status-chip-info` / `-warning` / `-error`) | the audit log's Severity filter; Validate's severity chips |
 | **On/off with a partial state** | all, none, or some of a set; the label counts how many are on | solid when all, faint when none, amber (`pill-empty`) when some; a click on faint or amber turns all on | the Assignments page's "Include N self reviews" |
-| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always solid (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews"; the Email Template page's "Send ↔ Don't send response confirmation"; Accounts' "Invite as operator ↔ Invite as sys-admin"; the audit log's Settings zone ↔ "UTC", a link rather than a box |
+| **Cycle** | every state a positive choice, a deliberate "off" included; the label names the state | always solid (on a locked Instruments card, the plain pill, unfaded) | Extract's Data shaper "All rows ↔ Rows with data"; the Instruments card's "Include ↔ Exclude self reviews" and its intro layout chip "Layout 1 ↔ Layout 2" (`spec/instruments.md` "Preview review instrument"); the Email Template page's "Send ↔ Don't send response confirmation"; Accounts' "Invite as operator ↔ Invite as sys-admin"; the audit log's Settings zone ↔ "UTC", a link rather than a box |
 | **Cycle with an unset state** | one "not configured yet" state, the rest positive | amber (`pill-empty`) when unset, solid otherwise (on a locked Instruments card, the plain pill when set; amber stays) | the Instruments page's Band 1 link chips |
 | **Fixed** | one switch held at its value while the chips beside it stay live | its siblings' fill for the held state (solid when on), with no edge or pointer and a lock glyph before the label (`.tag-chip.is-fixed`) | Session Home's optional tab once it holds data |
 
