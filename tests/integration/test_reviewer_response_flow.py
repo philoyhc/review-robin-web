@@ -311,7 +311,7 @@ def _two_help_texts(db: Session, review_session, **instrument_attrs):
             .order_by(InstrumentResponseField.id)
         ).scalars()
     )
-    fields[0].help_text = "Rating help."
+    fields[0].help_text = instrument_attrs.pop("rating_help", "Rating help.")
     fields[0].help_text_visible = True
     fields[1].help_text = "Comments help."
     fields[1].help_text_visible = True
@@ -359,6 +359,42 @@ def test_surface_help_rows_sit_in_the_heading_card_in_layout_1(
     assert 'class="card rs-help-card"' not in body
 
 
+def test_surface_help_rows_follow_the_description_in_layout_1(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19Y Item 2 — a titled Layout 1 instrument: the rows sit in the
+    heading card after its title and description."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-helprows1t",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        activate=False,
+    )
+    _two_help_texts(
+        db,
+        review_session,
+        short_label="Group Peer Review",
+        description="Your impression of the candidate.",
+    )
+    _activate(operator, db, review_session)
+
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
+    left = intro_columns(body)["left"]
+    heading = left[: left.index("data-rs-visibility-policy-card")]
+    assert (
+        heading.index("<h2>")
+        < heading.index("Your impression of the candidate.")
+        < heading.index('class="rs-help-row"')
+    )
+    assert heading.count('class="rs-help-row"') == 2
+
+
 def test_surface_help_rows_share_one_card_in_layout_2(
     db: Session,
     alice: AuthenticatedUser,
@@ -383,6 +419,7 @@ def test_surface_help_rows_share_one_card_in_layout_2(
         short_label="Group Peer Review",
         description="Your impression of the candidate.",
         intro_layout="layout_2",
+        rating_help="Rating help. " + "x" * 800,
     )
     _activate(operator, db, review_session)
 

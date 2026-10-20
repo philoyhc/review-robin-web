@@ -3026,12 +3026,16 @@
             pills.forEach(function (p) {
               var keyAttr = esc(p.key || '');
               var helpText = p.helpText || '';
+              // Locked, a row with no text is skipped, as the reviewer
+              // surface skips it; unlocked it stays, to be typed into.
+              if (!unlocked && !helpText) { return; }
               html += '<div class="rs-help-row" '
                 + 'data-help-card-key="' + keyAttr + '">';
               html += '<strong>' + esc(p.label || '') + '</strong>';
               if (unlocked) {
                 html += '<textarea data-help-card-textarea '
                   + 'data-help-card-key="' + keyAttr + '" '
+                  + 'aria-label="Help text for ' + esc(p.label || '') + '" '
                   + 'oninput="newModelHelpCardInput(this)" '
                   + 'maxlength="1000" '
                   + 'style="display: block; width: 100%; margin-top: 4px; '

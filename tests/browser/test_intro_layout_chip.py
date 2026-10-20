@@ -1,12 +1,14 @@
 """The Instruments card's intro layout chip (segment 19Y Item 1): a cycle
 chip beside "Preview review instrument" reading "Layout 1" / "Layout 2".
-Layout 1 (the default) puts the heading and help cards left and the
-visibility card right; Layout 2 the heading and visibility left and the
-help cards right. Narrow, both stack heading, visibility, help.
+Layout 1 (the default) puts the help texts as rows in the heading card,
+left, and the visibility card right; Layout 2 the heading and visibility
+left and one help card of rows right (Item 2). Narrow, Layout 1 stacks
+the heading card over visibility; Layout 2 heading, visibility, help.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 import httpx
@@ -65,6 +67,31 @@ def _hide_help_text(database_url: str, session_id: str) -> None:
                 .where(Instrument.session_id == session_pk(database_url, session_id))
             ).scalars():
                 field.help_text_visible = False
+            db.commit()
+    finally:
+        engine.dispose()
+
+
+def _show_one_empty_help_text(database_url: str, session_id: str) -> None:
+    """One field's ≡ on but its help text empty; every other field's off."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            fields = db.execute(
+                select(InstrumentResponseField)
+                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+                .where(Instrument.session_id == session_pk(database_url, session_id))
+                .order_by(InstrumentResponseField.order)
+            ).scalars().all()
+            for field in fields:
+                field.help_text_visible = False
+            fields[0].help_text = ""
+            fields[0].help_text_visible = True
             db.commit()
     finally:
         engine.dispose()
@@ -364,3 +391,25 @@ def test_with_neither_heading_nor_help_row_visibility_keeps_the_left_half(
     left = intro.evaluate("el => el.getBoundingClientRect().left")
     assert boxes["visibility"]["x"] == left, boxes
     assert _stray_gap(intro) == 0
+
+
+def test_a_row_with_no_help_text_shows_only_while_unlocked(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """A field whose ≡ is on but whose help text is empty draws no row
+    locked, as the reviewer surface draws none; unlocked its row is
+    there to be typed into, the textarea named for its field."""
+    session_id = new_session()
+    _show_one_empty_help_text(live_server.database_url, session_id)
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_card(page, session_id)
+    expect(card).to_have_attribute("data-instrument-locked", "true")
+    assert _boxes(card)["rowCount"] == 0
+
+    card.locator("[data-instrument-unlock-toggle]:visible").first.click()
+    expect(card).to_have_attribute("data-instrument-locked", "false")
+    textarea = card.locator(
+        "[data-new-model-band2-intro-card] [data-help-card-textarea]"
+    )
+    expect(textarea).to_have_count(1)
+    expect(textarea).to_have_attribute("aria-label", re.compile(r"^Help text for \S"))
