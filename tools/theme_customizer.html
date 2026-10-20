@@ -4587,6 +4587,16 @@
         body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]):not(:has(.rs-intro-name .rs-help-row)) .rs-intro-visibility {
           grid-column: 1;
         }
+        /* 19Y Item 3 — near-equal sides end level. The foot script sets
+           ``data-intro-snap`` when the two sides, read from their own
+           heights, end within one line of each other (the author,
+           2026-10-20): Layout 1's two cards stretch to their shared row,
+           Layout 2's two columns to theirs, the bottom card of each
+           taking the slack. Display only: an unlocked preview never
+           carries it. */
+        body.ui-v2 .rs-intro-columns[data-intro-snap] { align-items: stretch; }
+        body.ui-v2 .rs-intro-columns[data-intro-snap] .rs-intro-visibility,
+        body.ui-v2 .rs-intro-columns[data-intro-snap] .rs-intro-help { flex-grow: 1; }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {

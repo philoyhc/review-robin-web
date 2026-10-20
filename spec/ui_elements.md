@@ -327,6 +327,19 @@ to CSS classes.
 > stays next to the checkbox it gates while the submit sits in the bottom
 > row.
 
+> **Intro columns (`.rs-intro-columns`)** — the per-instrument intro's
+> grid of two start-aligned `.rs-intro-col` stacks, one column at 800px or
+> narrower; its arrangement per `intro_layout` is
+> `spec/reviewer-surface.md` "Intro and help cards". **Near-equal sides
+> snap level:** `[data-intro-snap]`, set by the `base.html` foot script
+> when the two compared sides' bottom edges differ by more than zero and
+> no more than one text line (the intro's computed `line-height`), sets
+> `align-items: stretch` and lets `.rs-intro-visibility` /
+> `.rs-intro-help` grow, so the shorter side ends level and its content
+> stays at the top. The rules sit inside the above-800px media block, so
+> a stacked intro never stretches, and an unlocked Instruments preview
+> never carries the attribute.
+
 > **Help cards (`.rs-help-card` family)** — tinted slabs in `base.html`:
 > the lobby's first-run tiles (`sessions_list.html`) and the Guide's
 > callout (`guide.html`). **The per-instrument intro does not use them.**

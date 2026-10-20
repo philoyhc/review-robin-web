@@ -1003,8 +1003,15 @@ when the instrument has neither heading nor description) in Layout 1, in the one
 (`.rs-intro-help`) in Layout 2, the other home emptied. The layout chip
 re-homes the rows at once, unsaved textarea edits kept (each keystroke is
 staged into the field's Band 3 row). The help card is its own lock region, as
-the heading card is. Nothing is measured, so the rows stay put as the operator
-types, locks or unlocks the card, or resizes the window.
+the heading card is. Nothing is measured to place them, so the rows stay put as
+the operator types, locks or unlocks the card, or resizes the window.
+
+**Level ends.** The intro's near-equal sides end level (within one text line;
+`spec/reviewer-surface.md`, "Intro and help cards") **only while the card is
+locked**: the unlocked preview never snaps, because its textareas change
+height as the operator types. Locking and unlocking re-run the snap
+(`window.rrwLevelIntros`), since no box may resize to trigger it; the layout
+chip works only while unlocked, so it has nothing to snap.
 
 #### Display-field table
 

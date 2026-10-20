@@ -555,7 +555,8 @@ together on every Band 3 / R toggle).
 
 - **Intro and help cards** above the table, as two columns
   (`.rs-intro-columns`, two `.rs-intro-col`), each a start-aligned stack
-  so every card is as tall as its own text. In the markup **the left
+  so every card is as tall as its own text, bar the near-equal snap
+  below. In the markup **the left
   column** stacks the heading card (short label and description) over
   "Who can see what you wrote"
   (after a Raw Reviewees cell it also shows the reviewer-identity level,
@@ -595,6 +596,25 @@ together on every Band 3 / R toggle).
     layout. Layout 1: the heading card (rows inside it), then the
     visibility card. Layout 2: the heading card, the visibility card,
     then the help card.
+  - **Near-equal sides end level.** Side by side, when the two sides'
+    bottom edges differ by no more than **one text line** (the intro's
+    computed `line-height`), the shorter side grows to end level with the
+    taller, its content staying at the top; further apart, each keeps its
+    own height, which reads as two cards of different length rather than
+    a ragged edge. The sides are Layout 1's heading card against the
+    visibility card, and Layout 2's left column against the help card
+    (the visibility card takes the slack). A script in `base.html`
+    measures each intro and sets `data-intro-snap` on
+    `.rs-intro-columns`; CSS cannot compare two heights against a
+    threshold. It measures from the natural heights, so a snap never
+    feeds its own measurement, and again on load, on fonts loading and
+    whenever the intro or either side resizes; one pass clears, reads and
+    then sets every intro it covers, so the page reflows once. **No snap**
+    when stacked (≤ 800px), when Layout 1 lacks its heading or visibility
+    card, or when Layout 2 lacks its help card or its visibility card (the
+    card that takes the left side's slack). Layout 2 with no heading card
+    still snaps, the visibility card alone being its left side. It applies here and to a locked
+    Instruments preview, never an unlocked one (`spec/instruments.md`).
   - **No solo variant.** The intro draws no `.rs-help-card`; the class
     belongs to the lobby's first-run tiles and the Guide's callout
     (`spec/ui_elements.md` §4). `.rs-help-card-solo` is not part of the

@@ -3885,6 +3885,9 @@
             // consistent with how the other controls keep their edited
             // state while locked.
             if (locked) { window.newModelSyncTextViews(card); }
+            // 19Y Item 3 — near-equal intro sides end level while locked
+            // only; the intro's box may not resize to say so.
+            if (window.rrwLevelIntros) { window.rrwLevelIntros(card); }
             // 19T Item 2 — an in-page Lock drops ``?editing=<this card>``
             // from the URL, so a reload lands locked rather than back in
             // the server's edit mode.

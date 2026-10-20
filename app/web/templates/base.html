@@ -4604,6 +4604,16 @@
         body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-intro-name[data-intro-empty]):not(:has(.rs-intro-name .rs-help-row)) .rs-intro-visibility {
           grid-column: 1;
         }
+        /* 19Y Item 3 — near-equal sides end level. The foot script sets
+           ``data-intro-snap`` when the two sides, read from their own
+           heights, end within one line of each other (the author,
+           2026-10-20): Layout 1's two cards stretch to their shared row,
+           Layout 2's two columns to theirs, the bottom card of each
+           taking the slack. Display only: an unlocked preview never
+           carries it. */
+        body.ui-v2 .rs-intro-columns[data-intro-snap] { align-items: stretch; }
+        body.ui-v2 .rs-intro-columns[data-intro-snap] .rs-intro-visibility,
+        body.ui-v2 .rs-intro-columns[data-intro-snap] .rs-intro-help { flex-grow: 1; }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {
@@ -5900,6 +5910,103 @@
 
         window._rrwHydrateColToggles = hydrate;
         hydrate();
+      })();
+    </script>
+
+    <script>
+      // 19Y Item 3 — an instrument intro whose two sides end within one
+      // line of each other ends them level (the author, 2026-10-20);
+      // further apart, each keeps its own height. Layout 1 sets the
+      // heading card against the visibility card, Layout 2 the left
+      // column against the help card. Display only: the reviewer
+      // surface and a locked Instruments preview. Each pass clears every
+      // snap it covers, then reads every natural height, then writes:
+      // one reflow per pass however many intros, and a snap never
+      // measures itself. The ResizeObserver watches the intro and both
+      // compared sides (a rebuild can move one side with the intro's
+      // box unchanged) and defers to the next frame: the snap's own
+      // resize brings one more pass, which lands where the first did,
+      // and nothing resizes inside the observer's callback.
+      (function () {
+        var SNAP = "data-intro-snap";
+        function drawn(el) {
+          return !!el && el.getClientRects().length > 0;
+        }
+        function sides(intro) {
+          if (intro.getAttribute("data-intro-layout") === "layout_2") {
+            // The visibility card takes the left side's slack; without
+            // it the column would stretch with nothing in it growing.
+            if (!drawn(intro.querySelector(".rs-intro-visibility"))) { return null; }
+            return [intro.querySelector('[data-rs-intro-col="left"]'),
+                    intro.querySelector(".rs-intro-help")];
+          }
+          return [intro.querySelector(".rs-intro-name"),
+                  intro.querySelector(".rs-intro-visibility")];
+        }
+        function lineHeight(el) {
+          var cs = getComputedStyle(el);
+          var lh = parseFloat(cs.lineHeight);
+          return isNaN(lh) ? 1.2 * parseFloat(cs.fontSize) : lh;
+        }
+        function near(intro) {
+          if (intro.closest('[data-instrument-card][data-instrument-locked="false"]')) { return false; }
+          var pair = sides(intro);
+          if (!pair || !drawn(pair[0]) || !drawn(pair[1])) { return false; }
+          var a = pair[0].getBoundingClientRect();
+          var b = pair[1].getBoundingClientRect();
+          if (b.left < a.right) { return false; }  // stacked: one column
+          var gap = Math.abs(a.bottom - b.bottom);
+          return gap > 0 && gap <= lineHeight(intro);
+        }
+        function snapAll(list) {
+          var i;
+          for (i = 0; i < list.length; i++) { list[i].removeAttribute(SNAP); }
+          var level = [];
+          for (i = 0; i < list.length; i++) { level.push(near(list[i])); }
+          for (i = 0; i < list.length; i++) {
+            if (level[i]) { list[i].setAttribute(SNAP, ""); }
+          }
+        }
+        function snapWithin(root) {
+          snapAll((root || document).querySelectorAll(".rs-intro-columns"));
+        }
+        // The Instruments page calls this after a lock and an unlock,
+        // whose effect on any box may be nil.
+        window.rrwLevelIntros = snapWithin;
+        var intros = document.querySelectorAll(".rs-intro-columns");
+        if (!intros.length) { return; }
+        var WATCHED = ".rs-intro-name, .rs-intro-visibility, .rs-intro-help, .rs-intro-col";
+        var queued = [];
+        function flush() {
+          var list = queued;
+          queued = [];
+          for (var i = 0; i < list.length; i++) { list[i].__rrwSnapQueued = false; }
+          snapAll(list);
+        }
+        function queue(intro) {
+          if (!intro || intro.__rrwSnapQueued) { return; }
+          intro.__rrwSnapQueued = true;
+          queued.push(intro);
+          if (queued.length === 1) { window.requestAnimationFrame(flush); }
+        }
+        if (window.ResizeObserver) {
+          var ro = new ResizeObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+              queue(entries[i].target.closest(".rs-intro-columns"));
+            }
+          });
+          for (var i = 0; i < intros.length; i++) {
+            ro.observe(intros[i]);
+            var parts = intros[i].querySelectorAll(WATCHED);
+            for (var j = 0; j < parts.length; j++) { ro.observe(parts[j]); }
+          }
+        } else {
+          snapWithin();
+          window.addEventListener("resize", function () { snapWithin(); });
+        }
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function () { snapWithin(); });
+        }
       })();
     </script>
 

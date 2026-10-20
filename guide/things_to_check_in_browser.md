@@ -130,6 +130,20 @@ deployment, not a local run.
   with its rows, then visibility; Layout 2 heading, visibility, then
   the help card.
 
+## Near-equal intro columns end level (19Y Item 3)
+
+- [ ] **Near ends level.** A locked instrument card whose Layout 1
+  heading card (with its help rows) and "Who can see what you wrote"
+  card end within about a line of each other: both now end on one
+  line. The reviewer sees the same.
+- [ ] **Far keeps its heights.** Lengthen a help text by two or more
+  lines: the cards end at their own heights again, no stretched slack.
+- [ ] **Layout 2.** The heading and visibility cards' column against the
+  help card: within a line, the visibility card (or the help card)
+  stretches so both columns end level; further apart, they don't.
+- [ ] **Unlocked and narrow.** Unlock: the cards keep their own heights
+  as you type. At 800px or narrower nothing stretches.
+
 ## Arriving on a page carries no fragment (19X Item 7)
 
 - [ ] **No `#…` on arrival.** New session with nothing staged → Create:
