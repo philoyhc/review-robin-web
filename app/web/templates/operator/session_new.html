@@ -83,17 +83,17 @@
                       margin: 0;">
             <div>
               <label for="scheduled_activate_at">Start (optional)</label>
-              {{ datetime_field("scheduled_activate_at", "scheduled_activate_at") }}
+              {{ datetime_field("scheduled_activate_at", "scheduled_activate_at", label="Start") }}
             </div>
 
             <div>
               <label for="deadline">End (optional)</label>
-              {{ datetime_field("deadline", "deadline") }}
+              {{ datetime_field("deadline", "deadline", label="End") }}
             </div>
 
             <div>
               <label for="responses_release_at">Release responses from (optional)</label>
-              {{ datetime_field("responses_release_at", "responses_release_at") }}
+              {{ datetime_field("responses_release_at", "responses_release_at", label="Release responses from") }}
             </div>
 
             <div>
@@ -110,7 +110,7 @@
 
             <div>
               <label for="responses_release_until">Release responses until (optional)</label>
-              {{ datetime_field("responses_release_until", "responses_release_until") }}
+              {{ datetime_field("responses_release_until", "responses_release_until", label="Release responses until") }}
             </div>
           </div>
         </div>

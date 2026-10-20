@@ -277,7 +277,10 @@
                 <input type="text" data-expander-field="code">
               </label>
               <label class="exp-field-deadline">Deadline
-                {{ datetime_field("", "", attrs={"data-expander-field": "deadline"}) }}
+                {# `form=""`: the script reads and posts this box itself, so
+                   half-typed text never stops the list form's Archive or
+                   Delete (19X Item 6). #}
+                {{ datetime_field("", "", attrs={"data-expander-field": "deadline", "form": ""}, label="Deadline") }}
               </label>
               <label class="exp-field-tags">Tags
                 <input type="text" data-expander-field="tags"

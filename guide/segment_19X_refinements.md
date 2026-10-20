@@ -439,6 +439,10 @@ date-picker library (no front-end dependencies, `CLAUDE.md`).
   `datetime-local` does today (the route's 4xx); the box's `pattern`
   flags it before submit.
 - **Empty** clears the field, as now. Seconds are not accepted.
+  *(At build: the box's `pattern` alone did not make that true — a
+  direct POST, or the lobby's script-posted End, reached
+  `fromisoformat`, which reads seconds, a bare date or an offset; so
+  `parse_local_datetime` now refuses any other shape.)*
 - **Without script** the text box still types and submits; the picker
   and ✕ render hidden and the script reveals them.
 - **Ordering.** Create's Start ≤ End ≤ Release-from ≤ Release-until
@@ -459,6 +463,34 @@ Taken 2026-10-20 at `642a8827`.
 | `parse_local_datetime` callers | 5 | `grep -rn 'parse_local_datetime(' app --include=*.py \| grep -v 'def parse_local_datetime' \| wc -l` |
 | Test files naming either | 9 | `grep -rln --include=*.py 'datetime-local\|format_datetime_local\|parse_local_datetime' tests \| wc -l` |
 | Specs naming `datetime-local` | 7 | `grep -rln 'datetime-local' spec docs \| wc -l` |
+
+### Status
+
+**Closed 2026-10-20, in two PRs as laddered** (rung 1 #3163, Session
+Home; rung 2, Create, the lobby's End, specs). All nine boxes are the
+`datetime_field` macro; no bare `datetime-local` renders
+(`tests/integration/test_datetime_fields.py`).
+
+One cumulative `diff-reviewer` read, at rung 2, on `c6912062..`. It
+found, all fixed in rung 2:
+- **High:** a picked value stayed in the hidden picker, under the
+  `min`/`max` the ordering check moves, and blocked Create's submit on
+  an invisible control after a zone change or a retype. The picker now
+  carries `form=""` and empties once its choice is written.
+- **Medium:** the server read any `fromisoformat` shape (above); and
+  the "picker fill" browser test the ladder named was missing.
+- **Low:** the picker's 1px CSS lost to the text-input rules
+  (specificity raised); the lobby End's `pattern` could block the list
+  form's Archive / Delete (the box carries `form=""`); the buttons'
+  names now carry the field's label.
+
+Also at build: the Create check mirrors the server pair by pair
+(`validate_schedule_ordering`, in its words) rather than the old
+nearest-filled-box bounds; a field added after load wires through
+`window.rrwDateTimeFields`. Rung 1's first push compared an aware
+Postgres instant with a naive one (`ci-postgres` red; fixed).
+`spec-writer` at close aligned all seven Doc impact specs, with no
+code divergence.
 
 ### PR ladder
 

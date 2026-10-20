@@ -88,8 +88,7 @@ def test_create_flags_an_out_of_order_box_and_saves_text(page: Page) -> None:
     expect(
         page.locator("[data-dt-field]", has=end).locator("[data-dt-picker]")
     ).to_have_attribute("min", "2027-03-02T09:00")
-    page.locator("#create-session-submit").click()
-    assert "/operator/sessions/new" in page.url
+    assert not page.evaluate("document.getElementById('deadline').form.checkValidity()")
 
     end.fill("2027-03-02T17:30")
     end.press("Tab")
@@ -136,3 +135,47 @@ def test_the_lobby_expanders_end_is_the_field(
     expect(page.locator('[data-expander-field="deadline"]')).to_have_value(
         "2027-04-02 11:15"
     )
+
+
+def _pick(page: Page, box: str, value: str) -> None:
+    """What the browser's picker does on a choice: set its value and fire
+    change. A headless run cannot open the pop-up itself."""
+    page.locator("[data-dt-field]", has=page.locator(box)).locator(
+        "[data-dt-picker]"
+    ).evaluate(
+        "(el, v) => { el.value = v; el.dispatchEvent(new Event('change', {bubbles: true})); }",
+        value,
+    )
+
+
+def test_a_pick_writes_24_hour_text_and_counts_as_an_edit(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    session_id = new_session()
+    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    save = page.locator("[data-config-save]")
+    expect(save).to_be_disabled()
+    _pick(page, "#mock-end", "2027-05-06T21:45")
+    expect(page.locator("#mock-end")).to_have_value("2027-05-06 21:45")
+    expect(save).to_be_enabled()
+    picker = page.locator("[data-dt-field]", has=page.locator("#mock-end")).locator(
+        "[data-dt-picker]"
+    )
+    # The picker keeps nothing once its choice is written.
+    expect(picker).to_have_value("")
+
+
+def test_a_pick_then_a_zone_change_leaves_create_submittable(page: Page) -> None:
+    """The read of this item: a picked End used to stay in its picker,
+    under bounds the zone change then moved, and blocked the submit on
+    an invisible control."""
+    page.goto("/operator/sessions/new")
+    page.locator("#name").fill("Picked")
+    page.locator("#code").fill(f"pk{uuid.uuid4().hex[:8]}")
+    page.locator("#display_timezone").fill("UTC")
+    page.locator("#scheduled_activate_at").fill("2027-03-01 08:00")
+    _pick(page, "#deadline", "2027-03-01T09:00")
+    page.locator("#display_timezone").fill("Asia/Singapore")
+    expect(page.locator("#scheduled_activate_at")).to_have_value("2027-03-01 16:00")
+    expect(page.locator("#deadline")).to_have_value("2027-03-01 17:00")
+    assert page.evaluate("document.getElementById('deadline').form.checkValidity()")

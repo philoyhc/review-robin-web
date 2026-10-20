@@ -666,12 +666,17 @@
         position: relative;
       }
       .dt-field > input[data-dt-text] { flex: 1 1 auto; min-width: 0; }
-      .dt-field-picker {
+      /* Specific enough to beat the text-input rules, which also name
+         `datetime-local` (`body.ui-v2 input[type="datetime-local"]`). */
+      body .dt-field > input.dt-field-picker[type="datetime-local"] {
         position: absolute;
         right: 0;
         bottom: 0;
         width: 1px;
+        min-width: 0;
         height: 1px;
+        min-height: 0;
+        margin: 0;
         opacity: 0;
         pointer-events: none;
         border: 0;
@@ -6206,15 +6211,19 @@
               try { picker.showPicker(); } catch (e) { box.focus(); }
             });
             // The picker is a stand-in: its own events stop here, and
-            // the box carries the edit.
+            // the box carries the edit. Its value lives only while it is
+            // open, so a stale one never sits under bounds Create's
+            // ordering check moves (it is outside any form as well).
             ["input", "change"].forEach(function (type) {
               picker.addEventListener(type, function (event) {
                 event.stopPropagation();
                 if (type !== "change") return;
                 var m = WALL.exec(picker.value);
                 if (m) put(m[1] + " " + m[2]);
+                picker.value = "";
               });
             });
+            picker.addEventListener("blur", function () { picker.value = ""; });
           }
           if (clear) {
             clear.hidden = false;

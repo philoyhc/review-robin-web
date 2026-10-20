@@ -649,12 +649,17 @@
         position: relative;
       }
       .dt-field > input[data-dt-text] { flex: 1 1 auto; min-width: 0; }
-      .dt-field-picker {
+      /* Specific enough to beat the text-input rules, which also name
+         `datetime-local` (`body.ui-v2 input[type="datetime-local"]`). */
+      body .dt-field > input.dt-field-picker[type="datetime-local"] {
         position: absolute;
         right: 0;
         bottom: 0;
         width: 1px;
+        min-width: 0;
         height: 1px;
+        min-height: 0;
+        margin: 0;
         opacity: 0;
         pointer-events: none;
         border: 0;

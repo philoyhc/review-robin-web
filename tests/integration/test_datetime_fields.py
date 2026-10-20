@@ -14,6 +14,11 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession
 
 
+def _naive_utc(value: datetime | None) -> datetime | None:
+    """Postgres hands back aware UTC, SQLite naive."""
+    return value.replace(tzinfo=None) if value is not None else None
+
+
 def _native_boxes(body: str) -> list[str]:
     return [
         tag
@@ -52,7 +57,7 @@ def test_the_lobby_seeds_end_as_24_hour_text_and_keeps_it(
     client: TestClient, db: Session
 ) -> None:
     review_session = _create(client, db, "dt-lobby")
-    assert review_session.deadline == datetime(2027, 4, 1, 10, 0)
+    assert _naive_utc(review_session.deadline) == datetime(2027, 4, 1, 10, 0)
     body = client.get("/operator/sessions").text
     assert 'data-deadline="2027-04-01 10:00"' in body
 
@@ -67,8 +72,48 @@ def test_the_lobby_seeds_end_as_24_hour_text_and_keeps_it(
         db.refresh(review_session)
 
     save("2027-04-01 10:00")
-    assert review_session.deadline == datetime(2027, 4, 1, 10, 0)
+    assert _naive_utc(review_session.deadline) == datetime(2027, 4, 1, 10, 0)
     save("2027-04-02 11:15")
-    assert review_session.deadline == datetime(2027, 4, 2, 11, 15)
+    assert _naive_utc(review_session.deadline) == datetime(2027, 4, 2, 11, 15)
     save("")
     assert review_session.deadline is None
+
+
+def test_the_lobby_and_home_refuse_text_that_is_not_a_box_time(
+    client: TestClient, db: Session
+) -> None:
+    """A typed box reaches the server as typed; seconds, a bare date or
+    an offset answer 422 and change nothing."""
+    review_session = _create(client, db, "dt-shape")
+    for bad in ("2027-04-02", "2027-04-02 11:15:30", "2027-04-02T11:15+09:00"):
+        lobby = client.post(
+            f"/operator/sessions/{review_session.public_id}/lobby-edit",
+            data={"name": "Fields", "code": "dt-shape", "deadline": bad, "tags": ""},
+            follow_redirects=False,
+        )
+        assert lobby.status_code == 422, bad
+        home = client.post(
+            f"/operator/sessions/{review_session.public_id}/config",
+            data={"name": "Fields", "code": "dt-shape", "display_timezone": "UTC",
+                  "deadline": bad},
+            follow_redirects=False,
+        )
+        assert home.status_code == 422, bad
+        db.refresh(review_session)
+        assert _naive_utc(review_session.deadline) == datetime(2027, 4, 1, 10, 0)
+
+
+def test_the_pickers_and_the_lobby_box_belong_to_no_form(
+    client: TestClient, db: Session
+) -> None:
+    """`form=""` keeps a picker's value and bounds, and the lobby box's
+    half-typed text, out of every form's validity check."""
+    _create(client, db, "dt-form")
+    for url in ("/operator/sessions/new", "/operator/sessions"):
+        body = client.get(url).text
+        pickers = [t for t in re.findall(r"<input[^>]*>", body) if "data-dt-picker" in t]
+        assert pickers and all('form=""' in t for t in pickers), url
+    body = client.get("/operator/sessions").text
+    assert re.search(r'<input[^>]*data-expander-field="deadline"[^>]*form=""', body) or re.search(
+        r'<input[^>]*form=""[^>]*data-expander-field="deadline"', body
+    )
