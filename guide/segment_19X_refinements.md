@@ -253,3 +253,77 @@ same PR, the author having cleared it.
 - `spec/lifecycle.md` — §3.2's route table: delete-all's refusal is the moved-count case (Item 3).
 - `guide/things_to_check_in_browser.md` — the Item 1 section becomes Item 3's row (Item 3).
 - `guide/todo_master.md` — Item 3 in the 19X entry (Item 3).
+
+## Item 4 — An instrument nobody in view takes part in shows only its line
+
+### Opportunity
+
+The author's screenshot, 2026-10-20: on an observer's `/collation`, an
+instrument whose cohort takes in no one renders the full table, with "0
+Reviewers in cohort", "0 Reviewees in cohort", every statistic "—", and
+under it "No one in your view takes part in this instrument, so there
+is nothing to download." The author: the table is dispensable there;
+show just the explanation line. (A Summarized instrument showed its
+"Only the summary above is shown" note there instead of that line.)
+
+### Decision
+
+When the cohort takes in no assignment (`cohort_has_rows` false), the
+card shows its heading, description and the line, and no table; in any
+identification mode, since an empty cohort has nothing to summarize
+either. Rejected: keeping the table with a note above it — every cell
+in it is empty by construction.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `5d0b6a07`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates reading `cohort_has_rows` | 1 | `grep -rln "cohort_has_rows" app/web/templates` |
+| Tests on the line | 1 | `grep -rln "data-collation-nothing-to-download" tests` |
+| Specs describing the table's rows | 3 | `grep -rln "Row 3 conditional" spec` |
+
+### Status
+
+**Closed 2026-10-20, in one PR.** As planned; a Summarized
+instrument with an empty cohort now shows the same line rather than its
+summary-only note (pinned by a test). One `diff-reviewer` read: it
+confirmed the Download button and the non-empty Summarized case are
+unchanged, and found two stale view docstrings (comment-only edits to
+the view), `spec/visibility_policy.md`'s observer row, a wrong test
+count here, and a checklist row whose one setup could not show both
+cases; all fixed. `spec/audience_and_identity_model.md` describes the
+3-row table only in general terms and stays as is. `spec-writer` at
+close: both spec rows now say "in any identification mode" and that the
+heading and description stay.
+
+### PR ladder
+
+1. **PR 1 — the line alone.** `reviewer/collation.html`, the test in
+   `test_observer_collation_body.py`, the spec line, a browser-check
+   row. Must not touch the view.
+
+### Definition of done
+
+- An empty cohort's card renders the line and no table (test).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.4` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The reviewee `/results` page: it renders only sections with values.
+
+### Doc impact
+
+- `spec/participant_model.md` — §4's observer collation row: an empty cohort shows only the line (Item 4).
+- `spec/visibility_policy.md` — the Observer `/collation` body row: an empty cohort shows only the line (Item 4).
+- `guide/things_to_check_in_browser.md` — a row for the line (Item 4).
+- `guide/todo_master.md` — Item 4 in the 19X entry (Item 4).

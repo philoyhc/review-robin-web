@@ -85,8 +85,9 @@ class InstrumentCollationSection:
 
     cohort_has_rows: bool
     """Whether the observer's cohort takes in any assignment on this
-    instrument. Row 3 says there is nothing to download when it does
-    not, rather than offering a link that 404s."""
+    instrument. When it does not, the card shows only a line saying
+    there is nothing to download, no table and no link that 404s
+    (19X Item 4)."""
 
 
 @dataclass(frozen=True)
@@ -97,9 +98,9 @@ class ObserverCollationContext:
     cohort_empty: bool
     """True when the observer hasn't authored a cohort rule yet.
     The template shows the empty-cohort message instead of the
-    section list. Sections that render with zero counts (rule
-    exists but matches nothing on a given instrument) are still
-    legitimate sections; only the "no rule at all" case is
+    section list. A section whose rule matches nothing on a given
+    instrument is still a legitimate section, rendered as its
+    nothing-to-download line; only the "no rule at all" case is
     treated as empty here."""
 
 
