@@ -354,6 +354,26 @@ Taken 2026-10-20 at `6d7dac65`.
 | Tests on the intro's arrangement | 4 integration, 1 browser | `grep -rln "rs-intro-columns\|intro_columns" tests --include=*.py` |
 | Specs on the intro | 2 | `grep -rln "rs-intro-columns\|intro columns" spec` (`spec/reviewer-surface.md`, `spec/visibility_policy.md`) |
 
+### Status
+
+**Closed 2026-10-20** in two PRs: #3176 (the plan) and the build, specs
+and close in one, as laddered.
+
+- **What moved from the plan.** Codex on #3176: the observer watches
+  both compared sides as well as the intro, since a side can resize
+  with the intro's box unchanged; each pass is deferred a frame so the
+  snap's own resize settles in one more pass. Layout 1 stretches both
+  cards to their row; only the shorter visibly grows.
+- **Decisions confirmed at build.** `window.rrwIntroSnap` is the one
+  entry point; the Instruments page calls it after lock, unlock and the
+  chip. The tests nudge the shorter side's `min-height` to a set gap
+  (6px near, a line and 8px far) rather than craft content to a pixel.
+- **Reads.** READS_LINE
+  `spec-writer` at the close wrote the three specs (a new intro-columns
+  blockquote in `spec/ui_elements.md`); no code-versus-plan flag.
+- **Owed by the author:** the browser-check rows in
+  `guide/things_to_check_in_browser.md`.
+
 ### PR ladder
 
 1. **PR 1 — build, specs, close.** The foot script, the CSS, browser

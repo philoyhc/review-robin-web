@@ -447,3 +447,165 @@ def test_a_locked_described_preview_parts_heading_from_rows(
     intro = card.locator("[data-new-model-band2-intro-card]")
     expect(intro.locator(".rs-intro-name .rs-help-row").first).to_be_visible()
     assert _rule_above_rows(intro) == "1px"
+
+
+def _set_intro_layout(database_url: str, session_id: str, layout: str) -> None:
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            instrument = db.execute(
+                select(Instrument).where(
+                    Instrument.session_id == session_pk(database_url, session_id)
+                )
+            ).scalar_one()
+            instrument.intro_layout = layout
+            db.commit()
+    finally:
+        engine.dispose()
+
+
+# 19Y Item 3 — set the two sides' natural gap to ``near`` (6px) or
+# ``far`` (one line and 8px) by giving the shorter side a min-height,
+# re-run the snap (or leave it to the page's observer), and report it
+# and the bottoms' gap after.
+_SNAP_AT = """(intro, [how, run]) => {
+  intro.removeAttribute('data-intro-snap');
+  const pair = intro.getAttribute('data-intro-layout') === 'layout_2'
+    ? [intro.querySelector('[data-rs-intro-col="left"]'),
+       intro.querySelector('.rs-intro-help')]
+    : [intro.querySelector('.rs-intro-name'),
+       intro.querySelector('.rs-intro-visibility')];
+  const lh = parseFloat(getComputedStyle(intro).lineHeight);
+  const want = how === 'near' ? 6 : lh + 8;
+  const bottoms = () => pair.map(el => el.getBoundingClientRect().bottom);
+  let [a, b] = bottoms();
+  const [short, tall] = a < b ? pair : [pair[1], pair[0]];
+  const r = short.getBoundingClientRect();
+  short.style.boxSizing = 'border-box';
+  short.style.minHeight =
+    (r.height + tall.getBoundingClientRect().bottom - r.bottom - want) + 'px';
+  [a, b] = bottoms();
+  const before = Math.abs(a - b);
+  if (run) { window.rrwIntroSnap(intro.parentElement); }
+  [a, b] = bottoms();
+  return {snapped: intro.hasAttribute('data-intro-snap'),
+          before: before, after: Math.abs(a - b), lh: lh};
+}"""
+
+
+def _snap_at(intro: Locator, how: str, *, run: bool = True) -> dict:
+    """``run=False`` leaves the re-measure to the page's own observer."""
+    return intro.evaluate(_SNAP_AT, [how, run])
+
+
+def _reviewer_intro(
+    page_as: Callable[..., Page], api: httpx.Client, database_url: str, session_id: str
+) -> Locator:
+    seed_rosters(api, session_id)
+    _give_a_field_help_text(database_url, session_id)
+    _describe_instrument(database_url, session_id)
+    activate(api, database_url, session_id)
+    reviewer = page_as(REVIEWER_EMAIL)
+    reviewer.set_viewport_size({"width": 1400, "height": 1000})
+    reviewer.goto(f"/me/sessions/{session_id}")
+    return reviewer.locator(".rs-intro-columns").first
+
+
+def test_near_equal_sides_end_level_on_the_reviewer_surface(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Layout 1: a heading card and a visibility card ending within one
+    line end level; a line and more apart, each keeps its height (the
+    author, 2026-10-20)."""
+    session_id = new_session()
+    intro = _reviewer_intro(page_as, api, live_server.database_url, session_id)
+    near = _snap_at(intro, "near")
+    assert abs(near["before"] - 6) < 1, near
+    assert near["snapped"] and near["after"] < 1, near
+    far = _snap_at(intro, "far")
+    assert abs(far["before"] - far["lh"] - 8) < 1, far
+    assert not far["snapped"] and far["after"] > far["lh"], far
+
+
+def test_layout_2_levels_the_left_column_with_the_help_card(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """Layout 2: the heading and visibility cards' column against the
+    help card, by the same one-line rule."""
+    session_id = new_session()
+    _set_intro_layout(live_server.database_url, session_id, "layout_2")
+    intro = _reviewer_intro(page_as, api, live_server.database_url, session_id)
+    expect(intro).to_have_attribute("data-intro-layout", "layout_2")
+    near = _snap_at(intro, "near")
+    assert near["snapped"] and near["after"] < 1, near
+    far = _snap_at(intro, "far")
+    assert not far["snapped"] and far["after"] > far["lh"], far
+
+
+def test_a_locked_preview_snaps_and_an_unlocked_one_does_not(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """The locked preview follows the reviewer surface; unlocked, the
+    textareas grow as the operator types, so the sides keep their own
+    heights."""
+    session_id = new_session()
+    _give_a_field_help_text(live_server.database_url, session_id)
+    _describe_instrument(live_server.database_url, session_id)
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_card(page, session_id)
+    expect(card).to_have_attribute("data-instrument-locked", "true")
+    intro = card.locator("[data-new-model-band2-intro-card]")
+    near = _snap_at(intro, "near")
+    assert near["snapped"] and near["after"] < 1, near
+
+    card.locator("[data-instrument-unlock-toggle]:visible").first.click()
+    expect(card).to_have_attribute("data-instrument-locked", "false")
+    assert not intro.evaluate("el => el.hasAttribute('data-intro-snap')")
+    assert not _snap_at(intro, "near")["snapped"]
+
+
+def test_narrow_never_snaps(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """At 800px or narrower the sides stack, so there is nothing to level;
+    the intro's resize alone re-measures it."""
+    session_id = new_session()
+    intro = _reviewer_intro(page_as, api, live_server.database_url, session_id)
+    assert _snap_at(intro, "near")["snapped"]
+    intro.page.set_viewport_size({"width": 700, "height": 1000})
+    expect(intro).not_to_have_attribute("data-intro-snap", "")
+
+
+def test_a_side_resizing_alone_re_measures(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """One side growing or shrinking while the intro's own box holds
+    still (Codex on #3176) still re-measures: the observer watches the
+    compared sides, not only the intro."""
+    session_id = new_session()
+    intro = _reviewer_intro(page_as, api, live_server.database_url, session_id)
+    _snap_at(intro, "near", run=False)
+    expect(intro).to_have_attribute("data-intro-snap", "")
+    _snap_at(intro, "far", run=False)
+    expect(intro).not_to_have_attribute("data-intro-snap", "")
