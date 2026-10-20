@@ -182,6 +182,14 @@ first-time operator.
 
 ## Lobby states — one shape, three fillings
 
+The `Sessions` card's `N sessions`, `N draft` and `N activated` pills
+count the sessions the lobby lists — every one not archived; a closed
+session counts only in `N sessions` — and its tag chips come from them
+too. The `N archived` pill alone counts the archived sessions, which the
+lobby does not list. Sessions Diagnostics' Sessions Overview reads the
+same helper (`views.session_status_counts`) but counts every session in
+its total, since its table lists them all.
+
 The `Sessions` and `Filter` cards render on **every** lobby, so an
 operator learns one page rather than two — neither card belongs inside
 the populated branch, where it would vanish with the table. What varies

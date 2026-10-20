@@ -57,10 +57,11 @@ def list_sessions(
         db,
         [s for s in all_sessions if s.status not in ("archived", "expired")],
     )
-    lobby_stats = views.session_status_counts(all_sessions)
     # The main lobby table shows only non-archived sessions; archived
-    # ones live on their own child page (Segment 18A Part 3). The
-    # stats above still count them so the "archived" pill is accurate.
+    # ones live on their own child page (Segment 18A Part 3). Every pill
+    # counts what the lobby lists but the Archived pill, which counts
+    # them (19X Item 9).
+    lobby_stats = views.session_status_counts(all_sessions, archived_in_total=False)
     review_sessions = [s for s in all_sessions if s.status != "archived"]
     sort_spec = views.decode_cookie_sort_spec(
         cookies=dict(request.cookies),

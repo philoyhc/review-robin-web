@@ -174,8 +174,9 @@ def test_the_lobby_count_pills_come_from_the_shared_helper(
 ) -> None:
     """The lobby's Sessions card and Sessions Diagnostics' Sessions
     Overview read `views.session_status_counts` (2026-10-15). Validated
-    counts as draft; Closed counts only in the total; archived counts
-    though its row is not on the lobby table."""
+    counts as draft; Closed counts only in the total; archived counts in
+    its own pill only, not in the lobby's total (19X Item 9), though
+    Diagnostics' total still holds it (test_sys_admin_sessions_table)."""
     for code, status in (
         ("zz-a", "draft"), ("zz-b", "validated"), ("zz-c", "ready"),
         ("zz-d", "expired"), ("zz-e", "archived"),
@@ -184,7 +185,7 @@ def test_the_lobby_count_pills_come_from_the_shared_helper(
     body = client.get("/operator/sessions").text
     pills = body.split('<div class="sessions-lobby-pills">', 1)[1].split("</div>", 1)[0]
     for pill in (
-        '<span class="pill pill-count">5 sessions</span>',
+        '<span class="pill pill-count">4 sessions</span>',
         '<span class="pill pill-lifecycle-draft">2 draft</span>',
         '<span class="pill pill-lifecycle-ready">1 activated</span>',
         '<span class="pill pill-lifecycle-archived">1 archived</span>',

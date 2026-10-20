@@ -288,6 +288,8 @@ def test_an_all_archived_lobby_keeps_the_route_to_the_archive(
     flat = " ".join(client.get("/operator/sessions").text.split())
 
     assert "1 archived" in flat
+    # The archived session counts in its own pill only (19X Item 9).
+    assert '<span class="pill pill-count">0 sessions</span>' in flat
     assert 'href="/operator/sessions/archived">Go to Archive</a>' in flat
     # Still nothing live to search.
     assert (

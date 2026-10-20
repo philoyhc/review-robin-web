@@ -704,3 +704,68 @@ test now runs at 13, 16 and 20px root sizes.
 - `spec/ui_elements.md` — the date-time field's buttons are squares (Item 8).
 - `guide/todo_master.md` — Item 8 in the 19X entry (Item 8).
 
+## Item 9 — The lobby's counts leave archived sessions out
+
+### Opportunity
+
+The author, 2026-10-20, with a screenshot of a lobby holding 14
+archived sessions and nothing else: the Sessions card read
+`14 SESSIONS · 0 DRAFT · 0 ACTIVATED · 14 ARCHIVED`. Every count and
+chip there should reflect the sessions the lobby lists, the Archived
+pill aside. Only the total was wrong: draft and activated never count
+archived sessions, and the tag chips come from the listed rows.
+
+### Decision
+
+`views.session_status_counts` takes `archived_in_total`; the lobby
+passes `False`, so `N sessions` counts the non-archived sessions (a
+closed one still counts there) while `N archived` keeps counting the
+archive. Sessions Diagnostics keeps every session in its total, since
+its table lists them all. Rejected: a second helper for the lobby —
+the pills stay one shape on both pages.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `5092e25d`: 2 callers of `session_status_counts`
+(`grep -rn "session_status_counts(" app --include=*.py | grep -v def`);
+3 test files naming the pills (`grep -rln "sessions</span>" tests
+--include=*.py`, plus `test_lobby_first_run_card.py` for the
+all-archived lobby).
+
+### Status
+
+**Closed 2026-10-20, in one PR.** As planned; the all-archived lobby now
+reads `0 sessions · 0 draft · 0 activated · N archived`, and Diagnostics
+is unchanged (its test still pins its total). One `diff-reviewer` read: no
+defect in the code; it found the new spec paragraph splitting a lead-in
+from its table (moved) and a test name that claimed the lobby's total
+(renamed; it now pins both flags). `spec-writer` at close: no divergence.
+
+### PR ladder
+
+1. **PR 1 — the total.** The helper's flag, the lobby's call, tests,
+   the spec paragraph. Must not touch Diagnostics' counts.
+
+### Definition of done
+
+- The lobby's `N sessions` excludes archived sessions; Diagnostics'
+  does not (tests).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.9` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Sessions Diagnostics' Sessions Overview (it lists every session).
+
+### Doc impact
+
+- `spec/sessions_overview.md` — what the Sessions card's pills count (Item 9).
+- `guide/todo_master.md` — Item 9 in the 19X entry (Item 9).
+
