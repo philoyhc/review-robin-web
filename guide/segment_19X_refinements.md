@@ -335,7 +335,7 @@ heading and description stay.
 The author, 2026-10-20: after Create, Session Home's address "sometimes"
 gains a fragment such as `#quick-setup-settings`. It is every Create
 that staged a file: the success redirect named the last slot that ran
-(`#quick-setup-<slot>`, Settings when 01–05 are staged), so the page
+(`#quick-setup-<slot>`, Settings whenever a settings file was staged), so the page
 opened scrolled to the bottom of the Quick Setup card. A refused file
 lands on its slot (`?quick_setup_error=…#quick-setup-<slot>`) and a
 bare Create on `?editing=1#session-config`.
@@ -355,14 +355,20 @@ Taken 2026-10-20 at `ea454951`.
 
 | What | Count | Command |
 |---|---|---|
-| Route modules naming the redirect (only `_quick_setup.py`'s `create_session` changes) | 3 | `grep -rln "_quick_setup.py" app/web/routes_operator` |
-| Tests posting a Create | 5 | `grep -rln 'post(\s*"/operator/sessions",' tests/integration` |
+| Redirects in the Create module (only `create_session`'s success one changes) | 5 | `grep -c 'RedirectResponse(' app/web/routes_operator/_quick_setup.py` |
+| Test files posting a Create, most as fixtures | 209 | `grep -rlzP --include=*.py 'post\(\s*"/operator/sessions"\s*,' tests/integration \| wc -l` |
 | Specs on the New-session variant | 2 | `grep -rln "Create session submits the uploads\|New-session variant" spec` |
 
 ### Status
 
 **Closed 2026-10-20, in one PR.** As planned. No test pinned the old
 fragment; the Create-with-files test now pins the bare Home address.
+One `diff-reviewer` read: nothing depends on the old fragment (no
+browser test stages files on Create; the slot-fragment asserts are all
+Home's Submit); it found two blast-radius counts that did not measure
+what they said (re-taken above), this Status, and
+`spec/operator_ui_concept.md`'s Create landing, which also missed the
+bare Create's `?editing=1#session-config` (stale since 18R); all fixed.
 
 ### PR ladder
 
@@ -392,5 +398,7 @@ fragment; the Create-with-files test now pins the bare Home address.
 ### Doc impact
 
 - `spec/quick_setup_card_spec.md` — § *New-session variant*, Submission semantics: a successful Create lands at Home's top (Item 5).
+- `spec/operator_ui_concept.md` — the Create form's landing: Home's top with files, the details card without (Item 5).
 - `guide/things_to_check_in_browser.md` — a row for the landing (Item 5).
 - `guide/todo_master.md` — Item 5 in the 19X entry (Item 5).
+
