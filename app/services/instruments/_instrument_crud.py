@@ -40,6 +40,7 @@ from app.db.models import (
     SessionRuleSet,
     User,
 )
+from app.db.models.instrument import INTRO_LAYOUT_DEFAULT, INTRO_LAYOUTS
 from app.services import session_guard
 from app.services import session_lifecycle as lifecycle
 from app.services import audit
@@ -159,6 +160,8 @@ def is_untouched_default(instrument: Instrument) -> bool:
     # Seeded from the session's flag at creation; the Assignments page's
     # Self review chip sets it per instrument.
     if instrument.self_reviews_active != instrument.session.self_reviews_active:
+        return False
+    if instrument.intro_layout != INTRO_LAYOUT_DEFAULT:
         return False
     # A roster upload seeds a Display Fields row for each populated tag
     # column, unlabelled and shown; only a label or a hidden row is the
@@ -424,7 +427,7 @@ def replicate_instrument(
     the response fields (incl. help text, ``visible`` and branches),
     the display fields (incl. each row's ``visible``), ``group_kind``,
     ``band1_touched_links``, ``band2_state``, ``self_reviews_active``
-    (the Self review toggle, findings E3) and
+    (the Self review toggle, findings E3), ``intro_layout`` (19Y Item 1) and
     ``accepting_responses`` as-is. ``starts_new_page`` is not copied: it marks a break
     before the instrument, a fact about position, and the copy
     continues the source's page like any new instrument. The source's Band 1 rule set is
@@ -475,6 +478,7 @@ def replicate_instrument(
         band1_touched_links=_copy.deepcopy(source.band1_touched_links),
         band2_state=_copy.deepcopy(source.band2_state),
         self_reviews_active=source.self_reviews_active,
+        intro_layout=source.intro_layout,
     )
     db.add(instrument)
     db.flush()
@@ -1307,6 +1311,61 @@ def set_column_widths(
         payload=audit.changes(
             {"column_widths": [old_value, new_value]}
         ),
+        refs={"instrument_id": instrument.id},
+    )
+    return instrument
+
+
+class IntroLayoutError(ValueError):
+    """A layout that is not one of :data:`INTRO_LAYOUTS`."""
+
+
+def effective_intro_layout(instrument: Instrument) -> str:
+    """The layout the instrument's intro takes: its stored
+    ``intro_layout``, or the default for a value outside
+    :data:`INTRO_LAYOUTS` (segment 19Y Item 1, "Values"). Every reader
+    goes through this — the reviewer surface, the card's chip and the
+    Settings CSV export — so a stray value renders, cycles and exports
+    as the default rather than as something the import would refuse."""
+    if instrument.intro_layout in INTRO_LAYOUTS:
+        return instrument.intro_layout
+    return INTRO_LAYOUT_DEFAULT
+
+
+def set_intro_layout(
+    db: Session,
+    *,
+    instrument: Instrument,
+    layout: str,
+    actor: User,
+) -> Instrument:
+    """Store which arrangement the instrument's intro takes (segment 19Y
+    Item 1) — the instrument card's layout chip, which rides both Saves.
+
+    ``layout`` must be one of :data:`INTRO_LAYOUTS`; anything else raises
+    :class:`IntroLayoutError`. A display setting, like the column widths:
+    it changes nothing the validation snapshot reads, so it does not
+    demote a validated session. A no-op save skips the audit event.
+    """
+    lifecycle.require_editable(db, instrument.session)
+    value = (layout or "").strip()
+    if value not in INTRO_LAYOUTS:
+        raise IntroLayoutError(f"Unknown intro layout {layout!r}.")
+    if instrument.intro_layout == value:
+        return instrument
+    old_value = instrument.intro_layout
+    instrument.intro_layout = value
+    db.flush()
+    audit.write_event(
+        db,
+        event_type="instrument.intro_layout_updated",
+        summary=(
+            f"Set the intro layout on instrument "
+            f"{_instrument_label(instrument)} to {value}"
+        ),
+        actor_user_id=actor.id if actor else None,
+        session=instrument.session,
+        payload=audit.changes({"intro_layout": [old_value, value]}),
         refs={"instrument_id": instrument.id},
     )
     return instrument

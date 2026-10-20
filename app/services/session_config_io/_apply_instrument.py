@@ -69,6 +69,7 @@ from ._apply_shared import (
     _parse_decimal,
     _parse_group_kind,
     _parse_int,
+    _parse_intro_layout,
     _parse_json,
 )
 
@@ -285,6 +286,8 @@ def _apply_instrument_kv(
         instrument.self_reviews_active = (
             _parse_bool(value) if value else None
         )
+    elif attr == "intro_layout":
+        instrument.intro_layout = _parse_intro_layout(value)
     elif attr == "band2_state":
         state = _parse_json(value, default={})
         # The Instruments page reads this as an object; anything else
@@ -476,6 +479,8 @@ def _apply_instruments(
         # seeds it from the session's flag, applied above.
         if spec.self_reviews_active is not None:
             instrument.self_reviews_active = spec.self_reviews_active
+        if spec.intro_layout is not None:
+            instrument.intro_layout = spec.intro_layout
         db.add(instrument)
         db.flush()  # populate ``instrument.id``
         counts["instruments"] += 1

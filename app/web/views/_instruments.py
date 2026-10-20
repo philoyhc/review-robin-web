@@ -61,6 +61,36 @@ from ._setup import session_status_pills
 RULE_PICKER_NO_RULE_VALUE = ""
 
 
+# Segment 19Y Item 1 — the intro layout chip's states, in the cycle's
+# order (``INTRO_LAYOUTS``): the label it reads and the title naming
+# the arrangement. A layout added to ``INTRO_LAYOUTS`` adds a row here.
+INTRO_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
+    {
+        "value": "layout_1",
+        "label": "Layout 1",
+        "title": "Layout 1: heading and help cards on the left, visibility on the right",
+    },
+    {
+        "value": "layout_2",
+        "label": "Layout 2",
+        "title": "Layout 2: heading and visibility on the left, help cards on the right",
+    },
+)
+
+
+def intro_layout_for(instrument: Instrument) -> str:
+    """The layout the instrument's intro renders in
+    (``instruments.effective_intro_layout``)."""
+    return instruments_service.effective_intro_layout(instrument)
+
+
+def intro_layout_choice_for(instrument: Instrument) -> dict[str, str]:
+    """The layout chip's state for the instrument: the
+    :data:`INTRO_LAYOUT_CHOICES` row of its effective layout."""
+    layout = intro_layout_for(instrument)
+    return next(c for c in INTRO_LAYOUT_CHOICES if c["value"] == layout)
+
+
 @dataclass(frozen=True)
 class InstrumentHeading:
     """Title + optional subtitle for the per-instrument heading card.
@@ -1109,6 +1139,11 @@ def build_instruments_context(
         # ProfileLink updates Item 2 — the identity chip offers
         # "Reviewer name, email, profile" only when some reviewer has a link.
         "reviewer_identity_labels": REVIEWER_IDENTITY_LABELS,
+        "intro_layout_choices": INTRO_LAYOUT_CHOICES,
+        "intro_layout_choice_by_instrument": {
+            instrument.id: intro_layout_choice_for(instrument)
+            for instrument in instruments
+        },
         "reviewers_have_profile_link": _reviewers_have_profile_link(
             db, review_session
         ),

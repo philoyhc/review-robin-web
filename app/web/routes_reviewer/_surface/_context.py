@@ -604,6 +604,7 @@ def _surface_context(
                 "instrument": instrument,
                 "is_group": is_group,
                 "heading": heading,
+                "intro_layout": views.intro_layout_for(instrument),
                 "position": position_by_id[instrument_id],
                 "rows": group_rows,
                 "help_block_items": help_block_items,
