@@ -457,7 +457,7 @@ Taken 2026-10-20 at `642a8827`.
 | Date-time inputs (`base.html`'s style selectors aside, 9 boxes in 3 templates) | 13 | `grep -rn 'type="datetime-local"' app/web/templates --include=*.html \| wc -l` |
 | `format_datetime_local` callers | 14 | `grep -rn 'format_datetime_local' app --include=*.py --include=*.html \| grep -v 'def format_datetime_local' \| wc -l` |
 | `parse_local_datetime` callers | 5 | `grep -rn 'parse_local_datetime(' app --include=*.py \| grep -v 'def parse_local_datetime' \| wc -l` |
-| Tests naming either | 9 | `grep -rln 'datetime-local\|format_datetime_local\|parse_local_datetime' tests \| wc -l` |
+| Test files naming either | 9 | `grep -rln --include=*.py 'datetime-local\|format_datetime_local\|parse_local_datetime' tests \| wc -l` |
 | Specs naming `datetime-local` | 7 | `grep -rln 'datetime-local' spec docs \| wc -l` |
 
 ### PR ladder
