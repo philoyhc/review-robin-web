@@ -2904,6 +2904,15 @@
         border-color: transparent;
         box-shadow: none;
       }
+      /* The intro layout chip (19Y Item 1) sits in the preview's heading
+         row, outside the lock regions; locked, it is the plain pill. */
+      body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .tag-chip[data-intro-layout-chip] {
+        cursor: default;
+        border-color: transparent;
+        box-shadow: none;
+        background: var(--status-info-bg);
+        color: var(--text-body);
+      }
       body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] .tag-chip.is-selected[data-new-model-rule-mode],
       body.ui-v2 [data-instrument-card][data-instrument-locked="true"] [data-lock-region] .tag-chip.is-selected[data-new-model-unit-mode] {
         background: var(--status-info-bg);
@@ -4546,6 +4555,42 @@
       body.ui-v2 .rs-intro-columns .card { margin: 0; }
       @media (max-width: 800px) {
         body.ui-v2 .rs-intro-columns { grid-template-columns: 1fr; }
+      }
+      /* Layout 1 (19Y Item 1; ``Instrument.intro_layout``): the heading
+         and help cards left, the visibility card right. The two column
+         wrappers step out of the grid (`display: contents`) so their
+         cards place themselves. The visibility card spans both rows and
+         the second row takes any extra height, so the help cards start
+         right under the heading. Above 800px only: the markup's order —
+         heading, visibility, help — is the one-column order of every
+         layout. With no help card the intro keeps the arrangement above,
+         which is Layout 2's. */
+      @media (min-width: 801px) {
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) {
+          grid-template-rows: auto 1fr;
+        }
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) > .rs-intro-col {
+          display: contents;
+        }
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-intro-name {
+          grid-column: 1;
+          grid-row: 1;
+        }
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-help-stack {
+          grid-column: 1;
+          grid-row: 2;
+        }
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card) .rs-intro-visibility {
+          grid-column: 2;
+          grid-row: 1 / span 2;
+        }
+        /* No heading card drawn (the reviewer surface draws none without
+           a title; a locked preview hides an empty one): the help cards
+           take the top row too, level with the visibility card. */
+        body.ui-v2 .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card):not(:has(.rs-intro-name)) .rs-help-stack,
+        body.ui-v2 [data-instrument-card][data-instrument-locked="true"] .rs-intro-columns[data-intro-layout="layout_1"]:has(.rs-help-card):has(.rs-intro-name[data-intro-empty]) .rs-help-stack {
+          grid-row: 1 / span 2;
+        }
       }
       body.ui-v2 .rs-instrument-card h2 { margin: 0; }
       body.ui-v2 .rs-instrument-card .rs-instrument-subtitle {

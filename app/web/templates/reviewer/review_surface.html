@@ -235,12 +235,15 @@
         <section class="rs-instrument-group"
                  data-rs-position="{{ group.position }}">
         {# Per-instrument intro (19T Item 17): two independent columns.
-           The left stacks the heading card (short label + description)
-           over the "Who can see what you wrote" transparency card; the
-           right stacks every help card in field order. Each card is its
-           own height. #}
+           The markup's left column stacks the heading card (short label
+           + description) over the "Who can see what you wrote"
+           transparency card; the right stacks every help card in field
+           order. Each card is its own height. The instrument's
+           ``intro_layout`` (19Y Item 1) picks the wide arrangement in
+           CSS: ``layout_1`` moves the help cards under the heading and
+           the visibility card to the right. #}
         {% if group.heading.title or group.visibility_rows or group.help_block_items %}
-          <div class="rs-intro-columns">
+          <div class="rs-intro-columns" data-intro-layout="{{ group.intro_layout }}">
             <div class="rs-intro-col" data-rs-intro-col="left">
               {% if group.heading.title %}
                 <div class="card rs-instrument-card rs-intro-name">

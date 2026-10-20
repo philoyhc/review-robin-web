@@ -32,6 +32,11 @@ if TYPE_CHECKING:
     from app.db.models.instrument_view_policy import InstrumentViewPolicy
     from app.db.models.review_session import ReviewSession
 
+# Segment 19Y Item 1 — the intro layouts an instrument may take, in the
+# order the instrument card's chip cycles them. A later layout appends.
+INTRO_LAYOUTS: tuple[str, ...] = ("layout_1", "layout_2")
+INTRO_LAYOUT_DEFAULT = "layout_1"
+
 
 def _next_session_seq(context: Any) -> int:
     """``max(session_seq) + 1`` within the row's session, 19Q Item 6.
@@ -187,6 +192,19 @@ class Instrument(Base, TimestampMixin):
     Seeded from ``ReviewSession.self_reviews_active`` at creation
     (``_session_self_reviews_active``); backfilled the same way by
     revision ``f3a7c1e9d5b2``."""
+    intro_layout: Mapped[str] = mapped_column(
+        String(16),
+        default=INTRO_LAYOUT_DEFAULT,
+        server_default=INTRO_LAYOUT_DEFAULT,
+        nullable=False,
+    )
+    """Which arrangement the instrument's intro takes on the reviewer
+    surface and the Instruments page preview (segment 19Y Item 1):
+    ``layout_1`` puts the heading and help cards left and the visibility
+    card right, ``layout_2`` the heading and visibility left and the help
+    cards right. One of :data:`INTRO_LAYOUTS`; the instrument card's
+    layout chip sets it (``instruments.set_intro_layout``). Revision
+    ``c4e9a2f7b1d3`` gave every existing row the default."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )

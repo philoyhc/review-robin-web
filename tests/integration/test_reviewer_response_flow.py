@@ -337,10 +337,12 @@ def test_surface_help_text_multi_items_render_in_grid(
 
     # 19T Item 17 — the intro is two columns: the left stacks the
     # heading card over the visibility card, the right every help card
-    # in field order.
-    assert '<div class="rs-intro-columns">' in body
+    # in field order. The markup is the same for every layout; the
+    # instrument's (19Y Item 1, default ``layout_1``) is CSS's to place.
+    opening = '<div class="rs-intro-columns" data-intro-layout="layout_1">'
+    assert opening in body
     cols = intro_columns(body)
-    body = body[body.index('<div class="rs-intro-columns">') :]
+    body = body[body.index(opening) :]
     # A lone untitled instrument renders no heading card.
     assert 'class="card rs-instrument-card rs-intro-name"' not in body
     assert "data-rs-visibility-policy-card" in cols["left"]

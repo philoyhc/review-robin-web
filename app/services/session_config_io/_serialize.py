@@ -430,6 +430,12 @@ def _instrument_rows(
             _bool(instrument.self_reviews_active),
             "boolean",
         ),
+        # Segment 19Y Item 1 — the intro layout chip.
+        Row(
+            f"{prefix}.intro_layout",
+            _str(instrument.intro_layout),
+            "enum",
+        ),
         Row(
             f"{prefix}.band2_state",
             _json(instrument.band2_state or {}),

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field as _dataclass_field
 from datetime import datetime
 from typing import Any
 
+from app.db.models.instrument import INTRO_LAYOUTS
 from app.services import date_formatting
 
 from app.services.instruments import (
@@ -99,6 +100,9 @@ class _InstrumentSpec:
     # file from before the row existed) leaves the instrument to seed
     # from the session's ``self_reviews_active``, as a new one does.
     self_reviews_active: bool | None = None
+    # Segment 19Y Item 1 — the intro layout chip. ``None`` (a file from
+    # before the row existed) leaves the column default.
+    intro_layout: str | None = None
     # Segment 18P PR D2 — the Band 1 "set"-pill state, dropped by the
     # pre-D2 settings CSV.
     band1_touched_links: list[str] | None = None
@@ -287,3 +291,19 @@ def _parse_group_kind(value: str) -> str | None:
             f"p1/p2/p3 for pair-context tags)"
         )
     return encode_group_kind(decode_group_kind(value))
+
+
+def _parse_intro_layout(value: str) -> str | None:
+    """Parse an ``instruments[].intro_layout`` config value (segment 19Y
+    Item 1). Empty = an older file without the row, which leaves the
+    instrument at the default; anything not in ``INTRO_LAYOUTS`` is
+    refused."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    if value not in INTRO_LAYOUTS:
+        raise _ParseError(
+            f"invalid instrument intro_layout {value!r}; expected one of "
+            + ", ".join(repr(v) for v in INTRO_LAYOUTS)
+        )
+    return value

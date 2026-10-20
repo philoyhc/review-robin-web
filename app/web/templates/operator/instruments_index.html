@@ -1240,6 +1240,29 @@
             btn.click();
           }
         };
+        // 19Y Item 1 — the intro layout chip. Each click moves to the
+        // next layout in the cycle, writes the card's hidden input,
+        // repaints the preview's intro and marks the card dirty (a
+        // hidden input's value fires no input event). A locked card's
+        // chip does nothing.
+        window.newModelCycleIntroLayout = window.newModelCycleIntroLayout || function (chip) {
+          var card = chip.closest('[data-instrument-card]');
+          if (!card || card.getAttribute('data-instrument-locked') === 'true') { return; }
+          var input = card.querySelector('[data-intro-layout-input]');
+          var choices = JSON.parse(chip.getAttribute('data-intro-layout-choices') || '[]');
+          if (!input || !choices.length) { return; }
+          var at = 0;
+          for (var i = 0; i < choices.length; i++) {
+            if (choices[i].value === input.value) { at = i; }
+          }
+          var next = choices[(at + 1) % choices.length];
+          input.value = next.value;
+          chip.textContent = next.label;
+          chip.title = next.title;
+          var intro = card.querySelector('[data-new-model-band2-intro-card]');
+          if (intro) { intro.setAttribute('data-intro-layout', next.value); }
+          if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
+        };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
           // 3-state cycle: not_set → all → filter → not_set → …
           // Each click advances one step; the cycle wraps so the
@@ -1576,17 +1599,25 @@
         <div style="display: flex; align-items: center; gap: 12px;
                     margin: 0 0 12px 0;">
           <h3 style="margin: 0;">Preview review instrument</h3>
-          {# 19Y Item 1 PR 1 — the intro layout chip, a cycle chip
-             (``spec/ui_elements.md`` §9) reading the layout the intro
-             takes: Layout 1 puts the heading and help cards left and
-             visibility right. Inert scaffold: no input, no click,
-             the intro unchanged; PR 2 makes it cycle and Save it.
-             Until then it is the plain pill, without the chip's edge
-             and pointer, so it doesn't offer a click it can't take. #}
-          <span class="pill pill-count"
+          {# 19Y Item 1 — the intro layout chip, a cycle chip
+             (``spec/ui_elements.md`` §9) naming the layout the intro
+             takes. A click moves to the next layout
+             (``newModelCycleIntroLayout``), repaints the preview's
+             intro below and writes the hidden input, which rides the
+             card's Save. Locked, it is the plain pill and does
+             nothing. A stored value outside the cycle reads as the
+             first layout. #}
+          {% set _intro_layout = (intro_layout_choices | selectattr("value", "equalto", instrument.intro_layout) | first) or intro_layout_choices[0] %}
+          <span class="pill pill-count tag-chip is-selected"
                 data-intro-layout-chip
-                aria-disabled="true"
-                title="Layout 1: heading and help cards on the left, visibility on the right">Layout 1</span>
+                data-intro-layout-choices='{{ intro_layout_choices | tojson }}'
+                role="button" tabindex="0"
+                onclick="newModelCycleIntroLayout(this)"
+                onkeydown="newModelChipKey(this, event)"
+                title="{{ _intro_layout.title }}">{{ _intro_layout.label }}</span>
+          <input type="hidden" form="dfsave-{{ instrument.id }}"
+                 name="intro_layout" value="{{ _intro_layout.value }}"
+                 data-intro-layout-input>
           {# Refresh only makes sense once the operator has
              deliberately set every Band 1 link — running the
              engine on a "Not set" link silently uses an empty
@@ -1779,6 +1810,7 @@
           {% set _required_count = (_rf_list | selectattr('required') | rejectattr('branch_parent_id') | list | length) %}
           <div class="rs-intro-columns"
                data-new-model-band2-intro-card
+               data-intro-layout="{{ _intro_layout.value }}"
                data-instrument-id="{{ instrument.id }}"
                data-session-id="{{ session.public_id }}"
                style="margin-top: 16px;">

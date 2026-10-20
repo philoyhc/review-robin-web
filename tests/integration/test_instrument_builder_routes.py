@@ -10306,25 +10306,25 @@ def test_pair_context_link3_boundary_round_trips_through_the_card(
     )
 
 
-def test_preview_heading_carries_inert_layout_chip(
-    client: TestClient, db: Session
+def test_reviewer_surface_intro_carries_the_instruments_layout(
+    db: Session,
+    alice: AuthenticatedUser,
+    reviewer_user: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """19Y Item 1 PR 1 — every instrument card shows the intro layout
-    chip beside "Preview review instrument", reading "Layout 1", with
-    no input behind it yet."""
-    review_session = _make_session(client, db, code="layout-chip")
+    """19Y Item 1 — the intro's wide arrangement follows
+    ``Instrument.intro_layout``, which CSS reads off the columns."""
+    operator = make_client(alice)
+    review_session = _make_session(operator, db, code="rev-layout")
+    _populate_rosters(operator, review_session.id)
+    _generate_full_matrix(operator, db, review_session.id)
     instrument = _instrument(db, review_session.id)
-    flat = " ".join(
-        client.get(
-            f"/operator/sessions/{review_session.public_id}/instruments"
-        ).text.split()
-    )
-    card = _card_slice(flat, instrument.id)
-    heading = card.index("Preview review instrument</h3>")
-    chip = re.search(r"<span [^>]*data-intro-layout-chip[^>]*>([^<]*)</span>", card)
-    assert chip is not None
-    assert chip.start() > heading
-    assert chip.group(1) == "Layout 1"
-    assert 'aria-disabled="true"' in chip.group(0)
-    assert "tag-chip" not in chip.group(0)  # no clickable chip styling yet
-    assert 'name="intro_layout"' not in card
+    instrument.description = "Peer review"
+    instrument.intro_layout = "layout_2"
+    db.flush()
+    _activate(operator, db, review_session.id)
+
+    body = make_client(reviewer_user).get(
+        f"/me/sessions/{review_session.public_id}"
+    ).text
+    assert '<div class="rs-intro-columns" data-intro-layout="layout_2">' in body
