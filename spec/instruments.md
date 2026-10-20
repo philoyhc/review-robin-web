@@ -995,7 +995,12 @@ card fades with the intro card.
 row whose text is empty is skipped, as on the reviewer surface.
 **Unlocked**, the row is the label over a `help_text` textarea
 (`aria-label="Help text for <field>"`, `maxlength` 1000) on `dfsave-{id}`;
-an empty row stays, to be typed into. `placeHelpRows` puts them in the home the
+an empty row stays, to be typed into. The box grows with its text: its height
+is its content's, above a 60px floor, with no ceiling (`maxlength` bounds it),
+and it takes no resize handle and no scrollbar (`resize: none; overflow:
+hidden`), since a drag would be undone by the next keystroke. It re-fits on
+build and rebuild (the layout chip's move included), on each keystroke and
+when its width changes; a box not drawn is fitted once it is. `placeHelpRows` puts them in the home the
 instrument's `intro_layout` names, as on the reviewer surface: inside the
 heading card under the description (parted by a rule; unlocked the
 description box is always above them, so the rule always shows; locked, none
