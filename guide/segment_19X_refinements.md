@@ -736,7 +736,10 @@ all-archived lobby).
 
 **Closed 2026-10-20, in one PR.** As planned; the all-archived lobby now
 reads `0 sessions · 0 draft · 0 activated · N archived`, and Diagnostics
-is unchanged (its test still pins its total).
+is unchanged (its test still pins its total). One `diff-reviewer` read: no
+defect in the code; it found the new spec paragraph splitting a lead-in
+from its table (moved) and a test name that claimed the lobby's total
+(renamed; it now pins both flags). `spec-writer` at close: no divergence.
 
 ### PR ladder
 

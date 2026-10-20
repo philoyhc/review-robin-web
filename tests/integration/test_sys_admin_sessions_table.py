@@ -268,11 +268,16 @@ def test_an_empty_workspace_keeps_the_cards_with_a_disabled_filter(
     assert "No sessions in this workspace yet." in body
 
 
-def test_session_status_counts_matches_the_lobby_pills() -> None:
+def test_session_status_counts_shared_by_the_lobby_and_diagnostics() -> None:
     rows = [ReviewSession(status=s) for s in
             ("draft", "validated", "ready", "ready", "expired", "archived")]
+    # Diagnostics: the total holds every session it lists.
     assert views.session_status_counts(rows) == {
         "total": 6, "draft": 2, "activated": 2, "archived": 1,
+    }
+    # The lobby: archived sessions count in their own pill only (19X Item 9).
+    assert views.session_status_counts(rows, archived_in_total=False) == {
+        "total": 5, "draft": 2, "activated": 2, "archived": 1,
     }
     assert views.session_status_counts([]) == {
         "total": 0, "draft": 0, "activated": 0, "archived": 0,
