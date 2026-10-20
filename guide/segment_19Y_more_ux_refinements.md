@@ -299,3 +299,93 @@ the close.
 - `spec/color_tokens.md` — `--card-help-*` no longer paints an Instruments-page slab; `.rs-help-card` is the lobby's and the Guide's (Item 2; added at the build read).
 - `guide/things_to_check_in_browser.md` — rows for both layouts' help; the Item 1 screencap reshoot's alt text describes the rows, not help cards (Item 2; the alt-text note added at the build read).
 - `guide/todo_master.md` — the 19Y entry (Item 2).
+
+## Item 3 — Near-equal intro columns end level
+
+### Opportunity
+
+The author, 2026-10-20, with two screenshots of a locked Layout 1
+preview: when the heading card and the visibility card end a few pixels
+apart, the ragged bottom edge reads as a mistake; when they end a few
+lines apart, it reads as two cards of different length, which is right.
+The intro's columns keep their own heights today (`align-items: start`,
+19T Item 17), so a near miss is never closed.
+
+### Decision
+
+The author's ruling, 2026-10-20: in lock / display mode, when the two
+sides' bottom edges are within **one text line's height**, the shorter
+side grows to end level with the taller; otherwise both keep their own
+heights. **Layout 1:** the heading card against the visibility card.
+**Layout 2:** the left column (heading card over visibility card)
+against the help card. A shared script in `base.html`'s foot measures
+each intro and sets `data-intro-snap`; CSS stretches the shorter side.
+Rejected: always equal heights (the second screenshot, where the gap is
+lines, keeps its own heights), and a pure-CSS rule (CSS cannot compare
+two heights against a threshold).
+
+### Semantics
+
+- **Threshold.** The intro's computed `line-height` in pixels; a
+  difference of zero needs nothing, one at or under the threshold snaps.
+- **Which card grows.** The shorter side, its content staying at the
+  top: Layout 1 either card; Layout 2 the visibility card (left shorter)
+  or the help card (right shorter).
+- **Where.** The reviewer surface (display) and a locked preview. An
+  unlocked preview never snaps: its textareas change height as the
+  operator types.
+- **Not side by side.** Narrow (≤ 800px, one column), a missing card
+  (no help rows in Layout 2, no heading card, no visibility card): no
+  snap.
+- **Re-measured** on load, on fonts loading, and whenever the intro or
+  either compared side resizes (width, a rebuild, the layout chip, lock
+  and unlock; a side can change with the intro's box unchanged, Codex on
+  #3176), each time from the natural heights, so a snap never feeds its
+  own measurement. The page also re-measures after lock, unlock and the
+  chip, whose effect on any box may be nil.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `6d7dac65`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates drawing the intro | 2 (+ `base.html` CSS and the new foot script) | `grep -rln "rs-intro-columns" app/web/templates` |
+| Tests on the intro's arrangement | 4 integration, 1 browser | `grep -rln "rs-intro-columns\|intro_columns" tests --include=*.py` |
+| Specs on the intro | 2 | `grep -rln "rs-intro-columns\|intro columns" spec` (`spec/reviewer-surface.md`, `spec/visibility_policy.md`) |
+
+### PR ladder
+
+1. **PR 1 — build, specs, close.** The foot script, the CSS, browser
+   tests for both layouts (near → level; lines apart → own heights;
+   unlocked and narrow → own heights), the specs and checklist rows;
+   one cumulative `diff-reviewer` read; `spec-writer`; close. One PR:
+   a single mechanism on markup that already exists. Must not touch
+   the intro's markup order or the layouts' arrangement.
+
+### Definition of done
+
+- Near-equal sides end level and far-apart sides keep their heights,
+  in both layouts, on the reviewer surface and a locked preview; an
+  unlocked or narrow preview never snaps (browser tests).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.3` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None (the threshold and both layouts ruled 2026-10-20).
+
+### Out of scope
+
+- The unlocked preview; the Band 3 table and anything below the intro.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the intro's near-equal columns end level (Item 3).
+- `spec/ui_elements.md` — the intro columns primitive: the snap and its threshold (Item 3).
+- `spec/instruments.md` — the locked preview snaps, the unlocked one does not (Item 3).
+- `guide/things_to_check_in_browser.md` — rows for both layouts, near and far (Item 3).
+- `guide/todo_master.md` — the 19Y entry (Item 3).
