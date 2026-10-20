@@ -70,6 +70,11 @@ concluding** (decision 2026-09-05) and independent of each other.
    2026-10-20; add one per finding.
    **Plan:** `guide/segment_19X_refinements.md`.
 
+4. **19Y — More UX refinements** (not gated on Azure). A standing
+   segment for refinements that need a plan of their own. Open: Item 1,
+   an instrument's intro picks its layout (three PRs).
+   **Plan:** `guide/segment_19Y_more_ux_refinements.md`.
+
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
