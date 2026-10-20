@@ -3208,9 +3208,12 @@
                 if (cw > 0) { colPx = cw; }
               }
               var rows = textareaRowsFor(maxLenInt, colPx);
+              // 19Y Item 4 — no resize handle in the preview: a drag here
+              // would persist nowhere. The reviewer surface keeps its own,
+              // from the same starting height (textareaRowsFor).
               return '<textarea ' + commonAttrs.replace(
                 'width: 100%;',
-                'width: 100%; min-height: 44px; resize: vertical;'
+                'width: 100%; min-height: 44px; resize: none;'
               ) + ' rows="' + rows + '"'
                 + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
                 + (maxLenInt ? ' maxlength="' + maxLenInt + '"' : '')

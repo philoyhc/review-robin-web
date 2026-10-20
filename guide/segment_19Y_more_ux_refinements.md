@@ -457,6 +457,16 @@ Taken 2026-10-20 at `7d9f1042`.
 | Preview builder setting the handle | 1 line | `grep -n "resize: vertical" app/web/templates/operator/instruments_index.html` |
 | Specs naming the textarea resize rule | 2 | `grep -n "resize" spec/ui_elements.md spec/reviewer-surface.md` (§ textarea rule; the field-type table) |
 
+### Status
+
+**Closed 2026-10-20** in two PRs: #3178 (the plan, with Item 5's) and
+the build, specs and close in one, as laddered.
+
+- **What moved from the plan.** Nothing.
+- **Reads.** READS_LINE
+- **Owed by the author:** the browser-check row in
+  `guide/things_to_check_in_browser.md`.
+
 ### PR ladder
 
 1. **PR 1 — build, specs, close.** `resize: none` on the preview's

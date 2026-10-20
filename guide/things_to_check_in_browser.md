@@ -94,6 +94,13 @@ deployment, not a local run.
   the heading card on the left and the visibility table on the right
   (Item 2: rows, not help cards).
 
+## The preview's response boxes don't resize (19Y Item 4)
+
+- [ ] **No handle in the preview.** On an instrument card, locked and
+  unlocked, the Comments box in "Preview review instrument" shows no
+  corner handle. The reviewer's Comments box still has one and drags
+  taller.
+
 ## Arriving on a page carries no fragment (19X Item 7)
 
 - [ ] **No `#…` on arrival.** New session with nothing staged → Create:
