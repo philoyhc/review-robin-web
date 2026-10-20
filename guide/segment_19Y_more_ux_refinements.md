@@ -337,10 +337,12 @@ two heights against a threshold).
 - **Not side by side.** Narrow (≤ 800px, one column), a missing card
   (no help rows in Layout 2, no heading card, no visibility card): no
   snap.
-- **Re-measured** on load, on fonts loading, and whenever the intro's
-  box resizes (width, a rebuild, the layout chip, lock and unlock),
-  each time from the natural heights, so a snap never feeds its own
-  measurement.
+- **Re-measured** on load, on fonts loading, and whenever the intro or
+  either compared side resizes (width, a rebuild, the layout chip, lock
+  and unlock; a side can change with the intro's box unchanged, Codex on
+  #3176), each time from the natural heights, so a snap never feeds its
+  own measurement. The page also re-measures after lock, unlock and the
+  chip, whose effect on any box may be nil.
 
 ### Blast radius (measured)
 
