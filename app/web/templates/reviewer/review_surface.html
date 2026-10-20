@@ -235,21 +235,29 @@
         <section class="rs-instrument-group"
                  data-rs-position="{{ group.position }}">
         {# Per-instrument intro (19T Item 17): two independent columns.
-           The markup's left column stacks the heading card (short label
-           + description) over the "Who can see what you wrote"
-           transparency card; the right stacks every help card in field
-           order. Each card is its own height. The instrument's
-           ``intro_layout`` (19Y Item 1) picks the wide arrangement in
-           CSS: ``layout_1`` moves the help cards under the heading and
-           the visibility card to the right. #}
+           The markup's left column stacks the heading card (short label +
+           description) over the "Who can see what you wrote" transparency
+           card; the right holds one help card. Each card is its own
+           height. The help texts are rows (19Y Item 2): in Layout 2 in that
+           help card, in Layout 1 inside the heading card under its
+           description, which then draws even with no title. The
+           instrument's ``intro_layout`` (19Y Item 1) also picks the wide
+           arrangement in CSS: ``layout_1`` puts the heading card left and
+           the visibility card right. #}
+        {% set _help_in_heading = group.intro_layout != "layout_2" and group.help_block_items %}
         {% if group.heading.title or group.visibility_rows or group.help_block_items %}
           <div class="rs-intro-columns" data-intro-layout="{{ group.intro_layout }}">
             <div class="rs-intro-col" data-rs-intro-col="left">
-              {% if group.heading.title %}
+              {% if group.heading.title or _help_in_heading %}
                 <div class="card rs-instrument-card rs-intro-name">
-                  <h2>{{ group.heading.title }}</h2>
-                  {% if group.heading.subtitle %}
-                    <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+                  {% if group.heading.title %}
+                    <h2>{{ group.heading.title }}</h2>
+                    {% if group.heading.subtitle %}
+                      <p class="rs-instrument-subtitle muted">{{ group.heading.subtitle }}</p>
+                    {% endif %}
+                  {% endif %}
+                  {% if _help_in_heading %}
+                    <div class="rs-help-rows" data-rs-help-rows="heading">{% for field in group.help_block_items %}<div class="rs-help-row"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
                   {% endif %}
                 </div>
               {% endif %}
@@ -297,7 +305,11 @@
               {% endif %}
             </div>
             <div class="rs-intro-col" data-rs-intro-col="right">
-              <div class="rs-help-stack" data-rs-help-stack>{% for field in group.help_block_items %}<div class="card rs-help-card"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
+              {% if not _help_in_heading and group.help_block_items %}
+                <div class="card rs-instrument-card rs-intro-help">
+                  <div class="rs-help-rows" data-rs-help-rows="card">{% for field in group.help_block_items %}<div class="rs-help-row"><strong>{{ field.label }}</strong> — {{ field.help_text }}</div>{% endfor %}</div>
+                </div>
+              {% endif %}
             </div>
           </div>
         {% endif %}

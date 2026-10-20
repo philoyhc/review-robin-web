@@ -17,6 +17,7 @@ from ._builder import (
     activate,
     open_card,
     open_unlocked,
+    rows,
     save,
     seed_rosters,
     session_pk,
@@ -91,73 +92,117 @@ def _describe_instrument(database_url: str, session_id: str) -> None:
 
 
 _BOXES = """intro => {
-  const box = sel => {
-    const el = intro.querySelector(sel);
+  const box = el => {
     if (!el || !el.offsetParent) { return null; }
     const r = el.getBoundingClientRect();
     return {x: r.left, y: r.top, bottom: r.bottom};
   };
+  const row = intro.querySelector('.rs-help-row');
+  const home = row && row.offsetParent
+    ? (row.closest('.rs-intro-name') ? 'heading'
+       : row.closest('.rs-intro-help') ? 'card' : 'elsewhere')
+    : null;
   return {
-    heading: box('.rs-intro-name'),
-    visibility: box('.rs-intro-visibility'),
-    help: box('.rs-help-card'),
+    heading: box(intro.querySelector('.rs-intro-name')),
+    visibility: box(intro.querySelector('.rs-intro-visibility')),
+    visibilityTitle: box(intro.querySelector('.rs-intro-visibility h3')),
+    help: box(intro.querySelector('.rs-intro-help')),
+    row: box(row),
+    rowHome: home,
+    rowCount: [...intro.querySelectorAll('.rs-help-row')]
+      .filter(el => el.offsetParent).length,
   };
 }"""
 
 
-def _boxes(card: Locator) -> dict[str, dict[str, float] | None]:
-    """Where the preview's intro cards sit; ``None`` for one not drawn."""
+def _boxes(card: Locator) -> dict:
+    """Where the preview's intro cards and first help row sit; ``None``
+    for one not drawn. ``rowHome`` names the card holding the rows."""
     return card.locator("[data-new-model-band2-intro-card]").evaluate(_BOXES)
 
 
-def test_the_chip_switches_the_preview_and_saves(
+def test_the_chip_moves_the_help_rows_and_saves(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
+    """Layout 1: the help rows sit in the heading card, the visibility
+    card beside it. Layout 2: they move into one help card on the right,
+    an unsaved edit in a row's textarea going with them."""
     session_id = new_session()
     _give_a_field_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_unlocked(page, session_id)
     chip = card.locator("[data-intro-layout-chip]")
     expect(chip).to_have_text("Layout 1")
-    expect(
-        card.locator("[data-new-model-band2-intro-card] .rs-help-card").first
-    ).to_be_visible()
+    first_help = card.locator(
+        "[data-new-model-band2-intro-card] [data-help-card-textarea]"
+    ).first
+    expect(first_help).to_be_visible()
 
     boxes = _boxes(card)
-    assert boxes["visibility"]["x"] > boxes["help"]["x"], boxes
-    assert boxes["help"]["x"] == boxes["heading"]["x"], boxes
-    assert boxes["help"]["y"] >= boxes["heading"]["bottom"], boxes
+    assert boxes["rowHome"] == "heading", boxes
+    assert boxes["help"] is None, boxes
+    assert boxes["visibility"]["x"] > boxes["heading"]["x"], boxes
+    assert boxes["visibility"]["y"] == boxes["heading"]["y"], boxes
 
+    first_help.fill("Typed before the move.")
     chip.click()
     expect(chip).to_have_text("Layout 2")
     expect(card.locator("[data-new-model-band2-intro-card]")).to_have_attribute(
         "data-intro-layout", "layout_2"
     )
     boxes = _boxes(card)
+    assert boxes["rowHome"] == "card", boxes
     assert boxes["help"]["x"] > boxes["visibility"]["x"], boxes
     assert boxes["visibility"]["x"] == boxes["heading"]["x"], boxes
+    expect(
+        card.locator("[data-new-model-band2-intro-card] [data-help-card-textarea]").first
+    ).to_have_value("Typed before the move.")
     save(page, card)
 
     card = open_unlocked(page, session_id)
     expect(card.locator("[data-intro-layout-chip]")).to_have_text("Layout 2")
     expect(card.locator("[data-intro-layout-input]")).to_have_value("layout_2")
+    assert _boxes(card)["rowHome"] == "card"
 
 
-def test_narrow_both_layouts_stack_heading_visibility_help(
+def test_the_help_toggle_shows_and_hides_a_row(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
+    """Each field's ≡ in Band 3 still decides whether its row shows."""
+    session_id = new_session()
+    _give_a_field_help_text(live_server.database_url, session_id)
+    card = open_unlocked(page, session_id)
+    before = _boxes(card)["rowCount"]
+    assert before >= 1
+    toggle = rows(card).first.locator("[data-new-model-rf-help-visible]")
+    toggle.click()
+    assert _boxes(card)["rowCount"] == before - 1
+    toggle.click()
+    assert _boxes(card)["rowCount"] == before
+
+
+def test_narrow_layout_1_keeps_the_heading_card_whole(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Narrow: Layout 1 stacks the heading card, help rows inside it,
+    over the visibility card (the author, 2026-10-20); Layout 2 stacks
+    heading, visibility, then the help card."""
     session_id = new_session()
     _give_a_field_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 700, "height": 1000})
     card = open_unlocked(page, session_id)
     chip = card.locator("[data-intro-layout-chip]")
-    for label in ("Layout 1", "Layout 2"):
-        expect(chip).to_have_text(label)
-        boxes = _boxes(card)
-        assert (
-            boxes["heading"]["y"] < boxes["visibility"]["y"] < boxes["help"]["y"]
-        ), (label, boxes)
-        chip.click()
+    expect(chip).to_have_text("Layout 1")
+    boxes = _boxes(card)
+    assert boxes["rowHome"] == "heading", boxes
+    assert boxes["heading"]["y"] < boxes["visibility"]["y"], boxes
+    assert boxes["row"]["bottom"] <= boxes["visibility"]["y"], boxes
+
+    chip.click()
+    expect(chip).to_have_text("Layout 2")
+    boxes = _boxes(card)
+    assert boxes["rowHome"] == "card", boxes
+    assert boxes["heading"]["y"] < boxes["visibility"]["y"] < boxes["help"]["y"], boxes
 
 
 def test_a_locked_cards_chip_is_a_plain_pill_that_does_not_cycle(
@@ -176,12 +221,12 @@ def test_a_locked_cards_chip_is_a_plain_pill_that_does_not_cycle(
     expect(card.locator("[data-intro-layout-input]")).to_have_value("layout_1")
 
 
-def test_with_no_help_card_layout_1_keeps_visibility_right(
+def test_with_no_help_row_layout_1_keeps_visibility_right(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
-    """No help card (the author, 2026-10-20): Layout 1 keeps the heading
+    """No help row (the author, 2026-10-20): Layout 1 keeps the heading
     left and the visibility card right, level with it; Layout 2 stacks
-    them in the left column, as before."""
+    them in the left column and draws no help card."""
     session_id = new_session()
     _hide_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
@@ -189,32 +234,40 @@ def test_with_no_help_card_layout_1_keeps_visibility_right(
     chip = card.locator("[data-intro-layout-chip]")
     expect(chip).to_have_text("Layout 1")
     boxes = _boxes(card)
-    assert boxes["help"] is None, boxes
+    assert boxes["rowCount"] == 0 and boxes["help"] is None, boxes
     assert boxes["visibility"]["x"] > boxes["heading"]["x"], boxes
     assert boxes["visibility"]["y"] == boxes["heading"]["y"], boxes
 
     chip.click()
     expect(chip).to_have_text("Layout 2")
     boxes = _boxes(card)
+    assert boxes["help"] is None, boxes
     assert boxes["visibility"]["x"] == boxes["heading"]["x"], boxes
     assert boxes["visibility"]["y"] >= boxes["heading"]["bottom"], boxes
 
 
-def test_a_locked_preview_without_a_heading_lifts_the_help_cards(
+def test_a_locked_untitled_preview_draws_the_heading_card_for_its_rows(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
-    """Locked, an empty heading card is not drawn; in Layout 1 the help
-    cards then start level with the visibility card, not one gap lower."""
+    """Locked, an empty heading card is not drawn, unless Layout 1 has
+    help rows for it: then it holds them alone, starting at its top as
+    the visibility card's title does, with the visibility card beside it."""
     session_id = new_session()
     _give_a_field_help_text(live_server.database_url, session_id)
     page.set_viewport_size({"width": 1400, "height": 1000})
     card = open_card(page, session_id)
     expect(card).to_have_attribute("data-instrument-locked", "true")
-    expect(card.locator("[data-new-model-band2-intro-card] .rs-help-card").first).to_be_visible()
+    expect(
+        card.locator("[data-new-model-band2-intro-card] .rs-help-row").first
+    ).to_be_visible()
     boxes = _boxes(card)
-    assert boxes["heading"] is None, boxes
-    assert boxes["help"]["y"] == boxes["visibility"]["y"], boxes
-    assert boxes["help"]["x"] < boxes["visibility"]["x"], boxes
+    assert boxes["rowHome"] == "heading", boxes
+    assert boxes["heading"]["y"] == boxes["visibility"]["y"], boxes
+    assert boxes["heading"]["x"] < boxes["visibility"]["x"], boxes
+    assert (
+        boxes["row"]["y"] - boxes["heading"]["y"]
+        == boxes["visibilityTitle"]["y"] - boxes["visibility"]["y"]
+    ), boxes
 
 
 def test_the_reviewer_surface_takes_the_instruments_layout(
@@ -224,8 +277,9 @@ def test_the_reviewer_surface_takes_the_instruments_layout(
     live_server: LiveServer,
     new_session: Callable[[], str],
 ) -> None:
-    """The reviewer meets the same arrangement: Layout 1 by default, with
-    no heading card (a lone untitled instrument) and with one."""
+    """The reviewer meets the same arrangement: Layout 1 by default, the
+    help rows in the heading card, drawn for them alone on a lone
+    untitled instrument and under the description once there is one."""
     session_id = new_session()
     seed_rosters(api, session_id)
     _give_a_field_help_text(live_server.database_url, session_id)
@@ -235,16 +289,20 @@ def test_the_reviewer_surface_takes_the_instruments_layout(
     intro = reviewer.locator(".rs-intro-columns").first
     expect(intro).to_have_attribute("data-intro-layout", "layout_1")
     boxes = intro.evaluate(_BOXES)
-    assert boxes["heading"] is None, boxes
-    assert boxes["help"]["y"] == boxes["visibility"]["y"], boxes
-    assert boxes["help"]["x"] < boxes["visibility"]["x"], boxes
+    assert boxes["rowHome"] == "heading", boxes
+    assert boxes["heading"]["y"] == boxes["visibility"]["y"], boxes
+    assert boxes["heading"]["x"] < boxes["visibility"]["x"], boxes
 
     _describe_instrument(live_server.database_url, session_id)
     reviewer.reload()
-    boxes = reviewer.locator(".rs-intro-columns").first.evaluate(_BOXES)
-    assert boxes["help"]["x"] == boxes["heading"]["x"], boxes
-    assert boxes["help"]["y"] >= boxes["heading"]["bottom"], boxes
-    assert boxes["visibility"]["x"] > boxes["help"]["x"], boxes
+    intro = reviewer.locator(".rs-intro-columns").first
+    boxes = intro.evaluate(_BOXES)
+    title_bottom = intro.evaluate(
+        "el => el.querySelector('.rs-intro-name h2').getBoundingClientRect().bottom"
+    )
+    assert boxes["rowHome"] == "heading", boxes
+    assert boxes["row"]["y"] > title_bottom, boxes
+    assert boxes["visibility"]["x"] > boxes["heading"]["x"], boxes
 
 
 def test_the_chip_leaves_the_tab_order_while_locked(
@@ -273,7 +331,7 @@ def _stray_gap(intro: Locator) -> float:
     )
 
 
-def test_narrow_with_no_help_card_leaves_no_stray_gap(
+def test_narrow_with_no_help_row_leaves_no_stray_gap(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """The empty help column leaves the grid, so a one-column intro ends
@@ -290,7 +348,7 @@ def test_narrow_with_no_help_card_leaves_no_stray_gap(
         chip.click()
 
 
-def test_with_neither_heading_nor_help_card_visibility_keeps_the_left_half(
+def test_with_neither_heading_nor_help_row_visibility_keeps_the_left_half(
     page: Page, live_server: LiveServer, new_session: Callable[[], str]
 ) -> None:
     """A locked preview of a lone untitled instrument with no help text

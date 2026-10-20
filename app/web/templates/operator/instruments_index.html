@@ -1261,6 +1261,10 @@
           chip.title = next.title;
           var intro = card.querySelector('[data-new-model-band2-intro-card]');
           if (intro) { intro.setAttribute('data-intro-layout', next.value); }
+          // 19Y Item 2 — the help rows move between the heading card and
+          // the help card with the layout.
+          var band2 = card.querySelector('[data-new-model-band2]');
+          if (band2 && window.newModelPlaceHelpRows) { window.newModelPlaceHelpRows(band2); }
           if (window.newModelMarkCardDirty) { window.newModelMarkCardDirty(card); }
         };
         window.newModelToggleRuleMode = window.newModelToggleRuleMode || function (btn) {
@@ -1858,6 +1862,10 @@
                                  min-height: 6.5em; box-sizing: border-box;
                                  font: inherit; padding: 4px 6px;">{{ instrument.description or '' }}</textarea>
               </div>
+              {# 19Y Item 2 — in Layout 1 the help rows sit here, under the
+                 description, JS-built by ``rebuildPreview``
+                 (``placeHelpRows``); empty in Layout 2. #}
+              <div class="rs-help-rows" data-rs-help-rows="heading"></div>
             </div>
             {# Reviewer-surface preview — "Who can see what you
                wrote (other than admin)". Mirrors the read-only
@@ -2022,9 +2030,15 @@
               </div>
             </div>
             <div class="rs-intro-col" data-rs-intro-col="right">
-            {# 19T Item 17 — every help card, JS-built by ``rebuildPreview``
-               in field order, as on the reviewer surface. #}
-              <div class="rs-help-stack" data-rs-help-stack></div>
+            {# 19Y Item 2 — in Layout 2 every help row sits in this one
+               card, JS-built by ``rebuildPreview`` in field order, as on
+               the reviewer surface; empty (and hidden) in Layout 1. Its
+               own lock region, as the heading card is. #}
+              <div class="card rs-instrument-card rs-intro-help"
+                   data-lock-region
+                   {% if not is_editing %}inert aria-hidden="true"{% endif %}>
+                <div class="rs-help-rows" data-rs-help-rows="card"></div>
+              </div>
             </div>
           </div>
           {# Response field details now live as editable rows
@@ -2039,8 +2053,9 @@
              The initial server render seeds the progress pills
              only — JS rebuildPreview replaces all of it on
              DOMContentLoaded + on every R / chip / Band 3 row
-             toggle, picking up the constraints; the help cards it
-             builds go to the intro's right column (19T Item 17). #}
+             toggle, picking up the constraints; the help rows it
+             builds go to the heading card or the help card, as the
+             intro's layout says (19Y Item 2). #}
           {# `.table-scroll`: the container is filled by ``rebuildPreview``
              with a table laid out as the reviewer surface's is (fixed
              once operator-set column widths exist), so the wrapper goes directly around the
@@ -2998,29 +3013,28 @@
           // Band 2 state flush) and rendered read-only text when the
           // card is locked. Keyed on the band2 edit-mode flag, which
           // newModelSetLock keeps in sync with the card lock state.
-          function buildResponseFieldHelpCards(card) {
+          // 19Y Item 2 — one row per field, not a card per field: the
+          // label in bold, then " — text" locked or a textarea under it
+          // unlocked. ``placeHelpRows`` puts them in the heading card
+          // (Layout 1) or the one help card (Layout 2); each is inside a
+          // lock region already.
+          function buildResponseFieldHelpRows(card) {
             var pills = helpVisibleResponsePills(card);
             if (pills.length === 0) { return ''; }
             var unlocked = card.getAttribute('data-new-model-band2-edit-mode') === '1';
-            // 19T Item 17 — the cards alone, no grid wrapper: the caller
-            // places them in the intro's help stack. Each card is its own
-            // lock region (the stack is layout only).
             var html = '';
-            var lockAttrs = unlocked ? '' : ' inert aria-hidden="true"';
             pills.forEach(function (p) {
               var keyAttr = esc(p.key || '');
               var helpText = p.helpText || '';
-              html += '<div class="card rs-help-card" '
-                + 'data-help-card-key="' + keyAttr + '" '
-                + 'data-lock-region' + lockAttrs + ' '
-                + 'style="position: relative;">';
+              html += '<div class="rs-help-row" '
+                + 'data-help-card-key="' + keyAttr + '">';
               html += '<strong>' + esc(p.label || '') + '</strong>';
               if (unlocked) {
                 html += '<textarea data-help-card-textarea '
                   + 'data-help-card-key="' + keyAttr + '" '
                   + 'oninput="newModelHelpCardInput(this)" '
                   + 'maxlength="1000" '
-                  + 'style="display: block; width: 100%; margin-top: 6px; '
+                  + 'style="display: block; width: 100%; margin-top: 4px; '
                   + 'min-height: 60px; box-sizing: border-box; '
                   + 'font: inherit; padding: 4px 6px;">'
                   + esc(helpText) + '</textarea>';
@@ -3031,6 +3045,21 @@
             });
             return html;
           }
+          // 19Y Item 2 — fill the home the intro's layout names and empty
+          // the other. Unsaved help edits survive a move: each keystroke
+          // already staged the text into its Band 3 row.
+          function placeHelpRows(card) {
+            var intro = card.querySelector('[data-new-model-band2-intro-card]');
+            if (!intro) { return; }
+            var html = buildResponseFieldHelpRows(card);
+            var inCard = intro.getAttribute('data-intro-layout') === 'layout_2';
+            var heading = intro.querySelector('[data-rs-help-rows="heading"]');
+            var helpCard = intro.querySelector('[data-rs-help-rows="card"]');
+            if (heading) { heading.innerHTML = inCard ? '' : html; }
+            if (helpCard) { helpCard.innerHTML = inCard ? html : ''; }
+          }
+          // The layout chip's script lives outside this closure.
+          window.newModelPlaceHelpRows = placeHelpRows;
           // Refresh the intro card's "Required items completed"
           // and "All items completed" pill counts in place. Reads
           // the current state from Band 3 rows (the source of
@@ -3298,10 +3327,9 @@
             } else {
               tableHtml = buildIndividualPreview(card, selected);
             }
-            // 19T Item 17 — the help cards are rebuilt into the intro's
-            // right column, in field order.
-            var helpStack = card.querySelector('[data-rs-help-stack]');
-            if (helpStack) { helpStack.innerHTML = buildResponseFieldHelpCards(card); }
+            // 19Y Item 2 — the help rows, in field order, into the home
+            // the intro's layout names.
+            placeHelpRows(card);
             container.innerHTML = buildProgressAndConstraintsRow(card)
               + tableHtml;
             // Post-render adjustment: the initial ``rows`` baked into

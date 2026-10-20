@@ -68,12 +68,12 @@ INTRO_LAYOUT_CHOICES: tuple[dict[str, str], ...] = (
     {
         "value": "layout_1",
         "label": "Layout 1",
-        "title": "Layout 1: heading and help cards on the left, visibility on the right",
+        "title": "Layout 1: heading with the help texts on the left, visibility on the right",
     },
     {
         "value": "layout_2",
         "label": "Layout 2",
-        "title": "Layout 2: heading and visibility on the left, help cards on the right",
+        "title": "Layout 2: heading and visibility on the left, the help texts on the right",
     },
 )
 

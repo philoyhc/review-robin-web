@@ -200,9 +200,9 @@ class Instrument(Base, TimestampMixin):
     )
     """Which arrangement the instrument's intro takes on the reviewer
     surface and the Instruments page preview (segment 19Y Item 1):
-    ``layout_1`` puts the heading and help cards left and the visibility
-    card right, ``layout_2`` the heading and visibility left and the help
-    cards right. One of :data:`INTRO_LAYOUTS`; the instrument card's
+    ``layout_1`` puts the heading card, holding the help texts, left and
+    the visibility card right; ``layout_2`` the heading and visibility left
+    and one card of help texts right (19Y Item 2). One of :data:`INTRO_LAYOUTS`; the instrument card's
     layout chip sets it (``instruments.set_intro_layout``). Revision
     ``c4e9a2f7b1d3`` gave every existing row the default."""
     deadline_closed_at: Mapped[datetime | None] = mapped_column(
