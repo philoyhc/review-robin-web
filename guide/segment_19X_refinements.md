@@ -403,3 +403,103 @@ bare Create's `?editing=1#session-config` (stale since 18R); all fixed.
 - `guide/things_to_check_in_browser.md` — a row for the landing (Item 5).
 - `guide/todo_master.md` — Item 5 in the 19X entry (Item 5).
 
+## Item 6 — Date-time boxes take 24-hour text, with a picker and a clear
+
+### Opportunity
+
+The author, 2026-10-20: Session Home's locked details card shows times
+in 24-hour form (every display does: `format_datetime`,
+`%Y-%m-%d %H:%M`, the audit log included), but the edit boxes, and the
+New session page's, show AM/PM. And a box empties only segment by
+segment (year, month, day, hour…), though a whole value pastes in. Both
+come from the browser's native `datetime-local` control, which follows
+the computer's regional time format and has no clear-all; HTML cannot
+set either.
+
+### Decision
+
+The author's pick of three, 2026-10-20: each of the 9 boxes becomes one
+shared control, a text box reading `YYYY-MM-DD HH:MM` (24-hour, as the
+displays), so paste, select-all and delete work as in any field; beside
+it a calendar button that opens the browser's own picker (a visually
+hidden native `datetime-local`, opened with `showPicker()`, its choice
+written into the text box) and a ✕ that clears it. One Jinja macro, one
+script in `base.html`, one CSS class. Rejected: keeping the native box
+and adding ✕ (AM/PM stays wherever the region is 12-hour), and a
+date-picker library (no front-end dependencies, `CLAUDE.md`).
+
+### Semantics
+
+- **Format.** The box renders and submits `YYYY-MM-DD HH:MM`; the
+  server accepts `T` or a space between date and time (`fromisoformat`
+  does) and compares a box with its seeded text after normalizing the
+  separator, so Session Home's "box unchanged" rule (`tz_converted`,
+  findings L8) holds.
+- **Bad text.** Unparseable text answers as an unparseable
+  `datetime-local` does today (the route's 4xx); the box's `pattern`
+  flags it before submit.
+- **Empty** clears the field, as now. Seconds are not accepted.
+- **Without script** the text box still types and submits; the picker
+  and ✕ render hidden and the script reveals them.
+- **Ordering.** Create's Start ≤ End ≤ Release-from ≤ Release-until
+  check moves from `min`/`max` (native boxes only) to
+  `setCustomValidity` on the text boxes; the server's
+  `validate_schedule_ordering` stays the gate.
+- **The picker's pop-up** is the browser's and may still show AM/PM;
+  what it writes into the box is 24-hour.
+
+### Blast radius (measured)
+
+Taken 2026-10-20 at `642a8827`.
+
+| What | Count | Command |
+|---|---|---|
+| Date-time inputs (`base.html`'s style selectors aside, 9 boxes in 3 templates) | 13 | `grep -rn 'type="datetime-local"' app/web/templates --include=*.html \| wc -l` |
+| `format_datetime_local` callers | 14 | `grep -rn 'format_datetime_local' app --include=*.py --include=*.html \| grep -v 'def format_datetime_local' \| wc -l` |
+| `parse_local_datetime` callers | 5 | `grep -rn 'parse_local_datetime(' app --include=*.py \| grep -v 'def parse_local_datetime' \| wc -l` |
+| Test files naming either | 9 | `grep -rln --include=*.py 'datetime-local\|format_datetime_local\|parse_local_datetime' tests \| wc -l` |
+| Specs naming `datetime-local` | 7 | `grep -rln 'datetime-local' spec docs \| wc -l` |
+
+### PR ladder
+
+1. **PR 1 — the control, on Session Home.** The macro, script and CSS;
+   the box format and the separator-tolerant parse and comparison;
+   Session Home's 4 boxes and the timezone-conversion script; unit,
+   integration and browser tests (paste, clear, picker fill, a zone
+   change, an unchanged Save). Must not touch Create or the lobby.
+2. **PR 2 — Create and the lobby.** New session's 4 boxes with the
+   ordering check on `setCustomValidity`, and the lobby expander's End;
+   the specs; browser-check rows; close.
+
+### Definition of done
+
+- Every one of the 9 boxes is the shared control; no
+  `type="datetime-local"` remains outside it (grep).
+- A box seeded and saved unchanged stores nothing new; a pasted value
+  saves; ✕ clears (tests).
+- `spec/ui_elements.md` names the control.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- The audit log's date filters (`type="date"`, no time): no AM/PM.
+
+### Doc impact
+
+- `spec/ui_elements.md` — the date-time field: text box, picker, ✕ (Item 6).
+- `spec/session_home.md` — the details card's date boxes (Item 6).
+- `spec/operator_ui_concept.md` — the New session form's date fields (Item 6).
+- `spec/sessions_overview.md` — the lobby expander's End (Item 6).
+- `spec/lifecycle.md` — the ordering chain's client check (Item 6).
+- `spec/participant_model.md` — the release-window field rows (Item 6).
+- `spec/settings_inventory.md` — the release-window rows' editor (Item 6).
+- `guide/things_to_check_in_browser.md` — rows for each surface (Item 6).
+- `guide/todo_master.md` — Item 6 in the 19X entry (Item 6).
