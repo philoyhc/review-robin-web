@@ -5919,59 +5919,75 @@
       // further apart, each keeps its own height. Layout 1 sets the
       // heading card against the visibility card, Layout 2 the left
       // column against the help card. Display only: the reviewer
-      // surface and a locked Instruments preview. Each pass reads the
-      // natural heights with the snap off, so a snap never measures
-      // itself. The ResizeObserver watches the intro and both compared
-      // sides (a rebuild can move one side with the intro's box
-      // unchanged) and defers each pass to the next frame: the snap's
-      // own resize brings one more pass, which lands where the first
-      // did, and nothing resizes inside the observer's callback.
+      // surface and a locked Instruments preview. Each pass clears every
+      // snap it covers, then reads every natural height, then writes:
+      // one reflow per pass however many intros, and a snap never
+      // measures itself. The ResizeObserver watches the intro and both
+      // compared sides (a rebuild can move one side with the intro's
+      // box unchanged) and defers to the next frame: the snap's own
+      // resize brings one more pass, which lands where the first did,
+      // and nothing resizes inside the observer's callback.
       (function () {
         var SNAP = "data-intro-snap";
+        function drawn(el) {
+          return !!el && el.getClientRects().length > 0;
+        }
         function sides(intro) {
           if (intro.getAttribute("data-intro-layout") === "layout_2") {
+            // The visibility card takes the left side's slack; without
+            // it the column would stretch with nothing in it growing.
+            if (!drawn(intro.querySelector(".rs-intro-visibility"))) { return null; }
             return [intro.querySelector('[data-rs-intro-col="left"]'),
                     intro.querySelector(".rs-intro-help")];
           }
           return [intro.querySelector(".rs-intro-name"),
                   intro.querySelector(".rs-intro-visibility")];
         }
-        function drawn(el) {
-          return !!el && el.getClientRects().length > 0;
-        }
         function lineHeight(el) {
           var cs = getComputedStyle(el);
           var lh = parseFloat(cs.lineHeight);
           return isNaN(lh) ? 1.2 * parseFloat(cs.fontSize) : lh;
         }
-        function snap(intro) {
-          intro.removeAttribute(SNAP);
-          if (intro.closest('[data-instrument-card][data-instrument-locked="false"]')) { return; }
+        function near(intro) {
+          if (intro.closest('[data-instrument-card][data-instrument-locked="false"]')) { return false; }
           var pair = sides(intro);
-          if (!drawn(pair[0]) || !drawn(pair[1])) { return; }
+          if (!pair || !drawn(pair[0]) || !drawn(pair[1])) { return false; }
           var a = pair[0].getBoundingClientRect();
           var b = pair[1].getBoundingClientRect();
-          if (b.left < a.right) { return; }  // stacked: one column
+          if (b.left < a.right) { return false; }  // stacked: one column
           var gap = Math.abs(a.bottom - b.bottom);
-          if (gap > 0 && gap <= lineHeight(intro)) { intro.setAttribute(SNAP, ""); }
+          return gap > 0 && gap <= lineHeight(intro);
+        }
+        function snapAll(list) {
+          var i;
+          for (i = 0; i < list.length; i++) { list[i].removeAttribute(SNAP); }
+          var level = [];
+          for (i = 0; i < list.length; i++) { level.push(near(list[i])); }
+          for (i = 0; i < list.length; i++) {
+            if (level[i]) { list[i].setAttribute(SNAP, ""); }
+          }
         }
         function snapWithin(root) {
-          var intros = (root || document).querySelectorAll(".rs-intro-columns");
-          for (var i = 0; i < intros.length; i++) { snap(intros[i]); }
+          snapAll((root || document).querySelectorAll(".rs-intro-columns"));
         }
-        // The Instruments page calls this after a lock, an unlock and
-        // the layout chip, whose effect on the box may be nil.
+        // The Instruments page calls this after a lock and an unlock,
+        // whose effect on any box may be nil.
         window.rrwIntroSnap = snapWithin;
         var intros = document.querySelectorAll(".rs-intro-columns");
         if (!intros.length) { return; }
         var WATCHED = ".rs-intro-name, .rs-intro-visibility, .rs-intro-help, .rs-intro-col";
+        var queued = [];
+        function flush() {
+          var list = queued;
+          queued = [];
+          for (var i = 0; i < list.length; i++) { list[i].__rrwSnapQueued = false; }
+          snapAll(list);
+        }
         function queue(intro) {
           if (!intro || intro.__rrwSnapQueued) { return; }
           intro.__rrwSnapQueued = true;
-          window.requestAnimationFrame(function () {
-            intro.__rrwSnapQueued = false;
-            snap(intro);
-          });
+          queued.push(intro);
+          if (queued.length === 1) { window.requestAnimationFrame(flush); }
         }
         if (window.ResizeObserver) {
           var ro = new ResizeObserver(function (entries) {

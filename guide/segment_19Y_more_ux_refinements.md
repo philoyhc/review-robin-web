@@ -363,12 +363,21 @@ and close in one, as laddered.
   both compared sides as well as the intro, since a side can resize
   with the intro's box unchanged; each pass is deferred a frame so the
   snap's own resize settles in one more pass. Layout 1 stretches both
-  cards to their row; only the shorter visibly grows.
+  cards to their row; only the shorter visibly grows. Against the
+  Semantics' missing-card bullet: Layout 2 with no heading card still
+  snaps (the visibility card alone is its left side), and Layout 2
+  without a visibility card does not (nothing would take the slack).
+  The chip's re-measure was dropped: it only works unlocked.
 - **Decisions confirmed at build.** `window.rrwIntroSnap` is the one
-  entry point; the Instruments page calls it after lock, unlock and the
-  chip. The tests nudge the shorter side's `min-height` to a set gap
+  entry point; the Instruments page calls it after lock and unlock. A
+  pass clears, reads, then writes every intro it covers, one reflow
+  however many instruments the reviewer surface draws. The tests nudge the shorter side's `min-height` to a set gap
   (6px near, a line and 8px far) rather than craft content to a pixel.
-- **Reads.** READS_LINE
+- **Reads.** One `diff-reviewer` read on the build: no correctness
+  defect; six smaller findings, all acted on before the PR opened (the
+  Layout 2 visibility-card grow untested, the missing-card wording, the
+  chip's no-op call, a reflow per intro per pass, five uncovered cases,
+  `before` unchecked in two tests).
   `spec-writer` at the close wrote the three specs (a new intro-columns
   blockquote in `spec/ui_elements.md`); no code-versus-plan flag.
 - **Owed by the author:** the browser-check rows in

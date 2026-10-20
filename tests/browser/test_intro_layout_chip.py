@@ -27,7 +27,9 @@ from ._builder import (
 from .conftest import LiveServer
 
 
-def _give_a_field_help_text(database_url: str, session_id: str) -> None:
+def _give_a_field_help_text(
+    database_url: str, session_id: str, text: str = "Score 1 to 5."
+) -> None:
     """A visible help card for certain, written directly: the preview
     builds its help cards from the response fields' help text."""
     from sqlalchemy import create_engine, select
@@ -44,7 +46,7 @@ def _give_a_field_help_text(database_url: str, session_id: str) -> None:
                 .where(Instrument.session_id == session_pk(database_url, session_id))
                 .order_by(InstrumentResponseField.order)
             ).scalars().first()
-            field.help_text = "Score 1 to 5."
+            field.help_text = text
             field.help_text_visible = True
             db.commit()
     finally:
@@ -475,8 +477,10 @@ def _set_intro_layout(database_url: str, session_id: str, layout: str) -> None:
 # and the bottoms' gap after.
 _SNAP_AT = """(intro, [how, run]) => {
   intro.removeAttribute('data-intro-snap');
+  // The visible cards, not the page's own pick: in Layout 2 the left
+  // side's edge is the visibility card's, the card that takes its slack.
   const pair = intro.getAttribute('data-intro-layout') === 'layout_2'
-    ? [intro.querySelector('[data-rs-intro-col="left"]'),
+    ? [intro.querySelector('.rs-intro-visibility'),
        intro.querySelector('.rs-intro-help')]
     : [intro.querySelector('.rs-intro-name'),
        intro.querySelector('.rs-intro-visibility')];
@@ -494,7 +498,9 @@ _SNAP_AT = """(intro, [how, run]) => {
   if (run) { window.rrwIntroSnap(intro.parentElement); }
   [a, b] = bottoms();
   return {snapped: intro.hasAttribute('data-intro-snap'),
-          before: before, after: Math.abs(a - b), lh: lh};
+          before: before, after: Math.abs(a - b), lh: lh,
+          grew: short.classList.contains('rs-intro-visibility') ? 'visibility'
+            : short.classList.contains('rs-intro-help') ? 'help' : 'heading'};
 }"""
 
 
@@ -504,10 +510,14 @@ def _snap_at(intro: Locator, how: str, *, run: bool = True) -> dict:
 
 
 def _reviewer_intro(
-    page_as: Callable[..., Page], api: httpx.Client, database_url: str, session_id: str
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    database_url: str,
+    session_id: str,
+    help_text: str = "Score 1 to 5.",
 ) -> Locator:
     seed_rosters(api, session_id)
-    _give_a_field_help_text(database_url, session_id)
+    _give_a_field_help_text(database_url, session_id, help_text)
     _describe_instrument(database_url, session_id)
     activate(api, database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
@@ -544,15 +554,36 @@ def test_layout_2_levels_the_left_column_with_the_help_card(
     new_session: Callable[[], str],
 ) -> None:
     """Layout 2: the heading and visibility cards' column against the
-    help card, by the same one-line rule."""
+    help card, by the same one-line rule; a short help card grows."""
     session_id = new_session()
     _set_intro_layout(live_server.database_url, session_id, "layout_2")
     intro = _reviewer_intro(page_as, api, live_server.database_url, session_id)
     expect(intro).to_have_attribute("data-intro-layout", "layout_2")
     near = _snap_at(intro, "near")
+    assert abs(near["before"] - 6) < 1 and near["grew"] == "help", near
     assert near["snapped"] and near["after"] < 1, near
     far = _snap_at(intro, "far")
+    assert abs(far["before"] - far["lh"] - 8) < 1, far
     assert not far["snapped"] and far["after"] > far["lh"], far
+
+
+def test_layout_2_grows_the_visibility_card_when_the_left_is_short(
+    page: Page,
+    page_as: Callable[..., Page],
+    api: httpx.Client,
+    live_server: LiveServer,
+    new_session: Callable[[], str],
+) -> None:
+    """A long help text makes the left column the short side: the
+    visibility card, at its foot, takes the slack."""
+    session_id = new_session()
+    _set_intro_layout(live_server.database_url, session_id, "layout_2")
+    intro = _reviewer_intro(
+        page_as, api, live_server.database_url, session_id, help_text="Long. " * 300
+    )
+    near = _snap_at(intro, "near")
+    assert abs(near["before"] - 6) < 1 and near["grew"] == "visibility", near
+    assert near["snapped"] and near["after"] < 1, near
 
 
 def test_a_locked_preview_snaps_and_an_unlocked_one_does_not(
@@ -568,13 +599,54 @@ def test_a_locked_preview_snaps_and_an_unlocked_one_does_not(
     card = open_card(page, session_id)
     expect(card).to_have_attribute("data-instrument-locked", "true")
     intro = card.locator("[data-new-model-band2-intro-card]")
+    far = _snap_at(intro, "far")
+    assert abs(far["before"] - far["lh"] - 8) < 1 and not far["snapped"], far
     near = _snap_at(intro, "near")
+    assert abs(near["before"] - 6) < 1, near
     assert near["snapped"] and near["after"] < 1, near
 
     card.locator("[data-instrument-unlock-toggle]:visible").first.click()
     expect(card).to_have_attribute("data-instrument-locked", "false")
+    page.evaluate("window.rrwIntroSnap()")
     assert not intro.evaluate("el => el.hasAttribute('data-intro-snap')")
-    assert not _snap_at(intro, "near")["snapped"]
+
+    # Locking again re-measures: the locked nudge still leaves 6px.
+    card.evaluate("c => window.newModelSetLock(c, true)")
+    expect(card).to_have_attribute("data-instrument-locked", "true")
+    expect(intro).to_have_attribute("data-intro-snap", "")
+
+
+def test_a_locked_layout_2_preview_snaps(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    session_id = new_session()
+    _give_a_field_help_text(live_server.database_url, session_id)
+    _describe_instrument(live_server.database_url, session_id)
+    _set_intro_layout(live_server.database_url, session_id, "layout_2")
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_card(page, session_id)
+    expect(card).to_have_attribute("data-instrument-locked", "true")
+    intro = card.locator("[data-new-model-band2-intro-card]")
+    expect(intro).to_have_attribute("data-intro-layout", "layout_2")
+    near = _snap_at(intro, "near")
+    assert abs(near["before"] - 6) < 1, near
+    assert near["snapped"] and near["after"] < 1, near
+
+
+def test_a_missing_side_never_snaps(
+    page: Page, live_server: LiveServer, new_session: Callable[[], str]
+) -> None:
+    """Locked with no help rows: Layout 2 has no help card, and Layout 1
+    of an untitled instrument no heading card; neither snaps."""
+    session_id = new_session()
+    _hide_help_text(live_server.database_url, session_id)
+    page.set_viewport_size({"width": 1400, "height": 1000})
+    card = open_card(page, session_id)
+    intro = card.locator("[data-new-model-band2-intro-card]")
+    for layout in ("layout_1", "layout_2"):
+        intro.evaluate("(el, l) => el.setAttribute('data-intro-layout', l)", layout)
+        page.evaluate("window.rrwIntroSnap()")
+        assert not intro.evaluate("el => el.hasAttribute('data-intro-snap')"), layout
 
 
 def test_narrow_never_snaps(
@@ -605,7 +677,8 @@ def test_a_side_resizing_alone_re_measures(
     compared sides, not only the intro."""
     session_id = new_session()
     intro = _reviewer_intro(page_as, api, live_server.database_url, session_id)
-    _snap_at(intro, "near", run=False)
+    assert abs(_snap_at(intro, "near", run=False)["before"] - 6) < 1
     expect(intro).to_have_attribute("data-intro-snap", "")
-    _snap_at(intro, "far", run=False)
+    far = _snap_at(intro, "far", run=False)
+    assert abs(far["before"] - far["lh"] - 8) < 1, far
     expect(intro).not_to_have_attribute("data-intro-snap", "")

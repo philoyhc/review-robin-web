@@ -1009,9 +1009,9 @@ the operator types, locks or unlocks the card, or resizes the window.
 **Level ends.** The intro's near-equal sides end level (within one text line;
 `spec/reviewer-surface.md`, "Intro and help cards") **only while the card is
 locked**: the unlocked preview never snaps, because its textareas change
-height as the operator types. Locking and unlocking, and the layout chip,
-re-run the snap (`window.rrwIntroSnap`), since the intro's box may not resize
-to trigger it.
+height as the operator types. Locking and unlocking re-run the snap
+(`window.rrwIntroSnap`), since no box may resize to trigger it; the layout
+chip works only while unlocked, so it has nothing to snap.
 
 #### Display-field table
 

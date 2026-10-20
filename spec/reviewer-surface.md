@@ -608,9 +608,12 @@ together on every Band 3 / R toggle).
     `.rs-intro-columns`; CSS cannot compare two heights against a
     threshold. It measures from the natural heights, so a snap never
     feeds its own measurement, and again on load, on fonts loading and
-    whenever the intro or either side resizes. **No snap** when stacked
-    (≤ 800px) or when either side is not drawn (no help rows in Layout 2,
-    no heading card, no visibility card). It applies here and to a locked
+    whenever the intro or either side resizes; one pass clears, reads and
+    then sets every intro it covers, so the page reflows once. **No snap**
+    when stacked (≤ 800px), when Layout 1 lacks its heading or visibility
+    card, or when Layout 2 lacks its help card or its visibility card (the
+    card that takes the left side's slack). Layout 2 with no heading card
+    still snaps, the visibility card alone being its left side. It applies here and to a locked
     Instruments preview, never an unlocked one (`spec/instruments.md`).
   - **No solo variant.** The intro draws no `.rs-help-card`; the class
     belongs to the lobby's first-run tiles and the Guide's callout
