@@ -11,6 +11,4 @@ checks.
 
 ## Current sets
 
-| Folder | Sections | Built |
-|---|---|---|
-| `round_2/` | The 19X Item 3 check and the rows the 2026-10-19 run set aside that a local run can settle (narrowed 2026-10-19 after that run); its README names the Azure and Rehydrate rows it leaves out | 2026-10-19 |
+None open: `round_2/`, the last, went on 2026-10-20 once its run passed.
