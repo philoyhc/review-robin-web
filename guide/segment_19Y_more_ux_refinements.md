@@ -221,16 +221,20 @@ Taken 2026-10-20 at `925efad3`.
 | Other `.rs-help-card` users, unchanged | 2 | `sessions_list.html`, `guide.html` |
 | Python building the rows | 1 | `grep -rln --include=*.py "help_block_items" app` |
 | Tests naming the help cards or stack | 5 | `grep -rln --include=*.py "rs-help-card\|rs-help-stack\|help_block_items\|data-help-card" tests` |
-| Specs on the intro's help | 3 | `spec/reviewer-surface.md`, `spec/instruments.md`, `spec/ui_elements.md` |
+| Specs on the intro's help | 4 | `spec/reviewer-surface.md`, `spec/instruments.md`, `spec/ui_elements.md`; `spec/settings_inventory.md` (the `intro_layout` row's "help cards") |
+| Prose naming the per-field help cards without the class (Codex on #3173) | 2 | the layout chip's titles (`app/web/views/_instruments.py` `INTRO_LAYOUT_CHOICES`), `Instrument.intro_layout`'s docstring |
+| Theme-customizer samples mirroring the help editor (Codex on #3173) | 2 | `tools/_harness_common.py` (`ph-help-edit`), `tools/theme_customizer.gen.py` ("Help card with edit box") |
 
 ### PR ladder
 
 1. **PR 1 — both surfaces.** The reviewer surface renders the rows in
    the heading card (Layout 1) or one help card (Layout 2); the
    preview's `rebuildPreview` builds the same, locked and unlocked, and
-   the chip re-homes them; CSS; integration and browser tests. One
-   PR so the preview never disagrees with the surface. Must not touch
-   storage or the ≡ toggle's meaning.
+   the chip re-homes them; CSS; the chip's titles and the model
+   docstring say "help texts"; the theme-customizer's help-editor sample
+   becomes a row in a normal card (regenerated); integration and browser
+   tests. One PR so the preview never disagrees with the surface. Must
+   not touch storage or the ≡ toggle's meaning.
 2. **PR 2 — specs and close.** The specs below, browser-check rows;
    `spec-writer`; close.
 
@@ -259,5 +263,6 @@ Taken 2026-10-20 at `925efad3`.
 - `spec/reviewer-surface.md` — the help rows' home per layout (Item 2).
 - `spec/instruments.md` — the preview's help rows, locked and unlocked (Item 2).
 - `spec/ui_elements.md` — the help-card blockquote: the intro's help is rows in a card, not a card per field (Item 2).
+- `spec/settings_inventory.md` — the `intro_layout` row says help texts, not help cards (Item 2; added at Codex's read of the plan).
 - `guide/things_to_check_in_browser.md` — rows for both layouts' help (Item 2).
 - `guide/todo_master.md` — the 19Y entry (Item 2).
