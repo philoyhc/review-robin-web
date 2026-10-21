@@ -1,0 +1,209 @@
+# Segment 21D — Prefix flip
+
+**Opened:** 2026-10-21 · **Outline:** `guide/segment_21_domain_retrofit.md`
+(sub-segment 21D) · **Strategy:** `docs/cordware_repository_strategy_v0.8.md`
+§3 "Behavior under the mount" · **Sequence:**
+`docs/cordware_implementation_sequence.md` §5 D1–D2 · **Hold:** lifted for
+21D by the author at 21C's close (2026-10-21).
+
+This is the last step of v0.8's stage 2, and the only one that changes
+URLs. RRW moves from `/` to `/reviewrobin` and Cordware's landing page
+takes `/`. 21A–21C made the move a one-line change in `REGISTRY`; this
+plan adds the landing page and the tests that pin v0.8 §3's four
+behavior requirements. It also settles the two questions the outline
+carried here: the public host for absolute links, and how browser tests
+run under the mount.
+
+## Opportunity
+
+- **RRW still answers at `/`** (`cordware/main.py` `REGISTRY`). v0.8 §3
+  puts it at `/reviewrobin` so a second application can mount beside
+  it, and stage 3 (Residential Apps) cannot start until it moves.
+- **`/` has no host page.** v0.8 §1 gives Cordware a landing page that
+  lists the mounted applications. None exists: with `CORDWARE_APPS`
+  empty, `/` answers 404.
+- **Two of the four behavior requirements have no test under the
+  mount.** 21B's crawl proves every emitted path carries the prefix, but:
+  - no test shows an absolute URL (an invitation link) carrying the
+    request's host and `/reviewrobin` (requirement 4);
+  - no test shows RRW's error handlers answering under the mount
+    (requirement 3).
+- **The browser suite runs RRW at `/`** (`tests/browser/conftest.py`).
+  After the flip, it would either stop matching what runs or stop
+  running.
+
+## Decision
+
+- **The flip is one line:** `REGISTRY["reviewrobin"].path` becomes
+  `"/reviewrobin"`. It stays a constant, so no configuration can move it.
+  The host registers `/` and `/health` ahead of every mount.
+- **The landing page is the host's,** in `cordware/web/`:
+  - one server-rendered page at `/`, listing each mounted application
+    with a link to its path and its display name;
+  - `AppEntry` gains a `title`;
+  - a host-level `Sign out` (`/.auth/logout`);
+  - no identity check and no roles: each application gates its own
+    routes (v0.8 §1).
+  
+  It lands scaffold-first (`CLAUDE.md` "Consequential UI lands
+  scaffold-first"): D1 serves it while RRW is still at `/`, at `/` only
+  when no application is mounted there.
+- **Absolute URLs use the request's own host** (Open question 1,
+  recommended). Every one is already `request.url_for(...)` (5 sites),
+  which carries `root_path`. No `PUBLIC_BASE_URL` is added. The gateway's
+  host header is stage 4's to check.
+- **Browser tests run under the real mount** (Open question 2,
+  recommended):
+  - the harness's base URL gains `/reviewrobin`;
+  - a `page` fixture prefixes app-relative paths passed to `goto`;
+  - URL assertions read through one helper.
+
+**Rejected:**
+- *A `PUBLIC_BASE_URL` setting:* it can drift from the gateway, and
+  nothing yet needs a URL built outside a request.
+- *A browser harness that mounts RRW at `/`:* the browser tests would
+  stop exercising client-built URLs under the prefix, which is the one
+  thing the static checks cannot see at runtime.
+- *Redirects from the old root paths:* a v0.8 non-goal. Nothing is in
+  the wild.
+
+## Semantics
+
+- **`/reviewrobin` without a slash** redirects (307, Starlette's slash
+  redirect, measured) to `/reviewrobin/`, which
+  is RRW's role-aware root (`app/main.py` `root`). Old root paths such
+  as `/operator/sessions` answer the host's 404.
+- **`/.auth/*` stays host-level.** `url()` already passes it through
+  unprefixed (`app/web/urls.py`). Its 6 references need no change; a
+  test pins them unprefixed under the mount.
+- **Deep links through sign-in (requirement 1)** are Easy Auth's: the
+  platform redirects an unauthenticated request and returns it to the
+  original path. Nothing in RRW builds that redirect, so the live check
+  is the dev slot's when it resumes.
+- **Probes (requirement 2):** `/health` is the host's;
+  `/reviewrobin/health` is RRW's. Easy Auth's exclusion list gains the
+  second when the slot resumes (`docs/deployment_dev.md`).
+- **Request handling (requirement 3):** RRW's error handlers, middleware
+  and app-wide dependencies run inside the mounted application. A test
+  shows a 404, a 403 and a 422 rendered by RRW under the mount.
+- **Absolute URLs (requirement 4):**
+  - Invitation and reminder links come from the request's scheme, host
+    and `root_path`.
+  - A test with `Host: reviews.example.edu` shows an invite link of
+    `http://reviews.example.edu/reviewrobin/invite/…`, never the
+    App Service name.
+  - A scheduled send outside a request has no URL builder and sends no
+    invites, as today (`app/services/scheduled_events/__init__.py`).
+- **TestClient tests stay at `/`.** `rrw_app` builds RRW alone, so their
+  3,422 calls are unchanged. 21B's crawl remains the mount's
+  route-complete gate.
+
+## Judgment calls — decided
+
+- D1 adds the landing page without touching `/`'s behavior while RRW is
+  there, so it is behavior-neutral and reviewable alone.
+- `title` goes on `AppEntry` rather than into a separate map: one entry
+  per application stays the registry's shape.
+- The landing page is a template in `cordware/web/templates/`, with its
+  own small inline style. RRW's `base.html` is RRW's, and Cordware
+  imports no application.
+
+## Blast radius (measured)
+
+Taken 2026-10-21 at `d3420be9`.
+
+| What | Count | Command |
+|---|---|---|
+| Registry entry | 1 line, `cordware/main.py` | `grep -n 'path="/"' cordware/main.py` |
+| Host tests assuming RRW at `/` | 3 in `cordware/tests/test_host.py` (at root, shadows nothing, registry) | `grep -n "def test" cordware/tests/test_host.py` |
+| `/.auth/` references | 6: `base.html`, `reviewer/_top_bar.html`, `me_debug.html`, `error.html` ×2, `error_handlers.py` | `grep -rn "/\.auth" app --include=*.py --include=*.html` |
+| Absolute-URL builders | 5 `request.url_for("reviewer_invite", …)`: `_shared.py` ×1, `_operations.py` ×4 | `grep -rn 'url_for("reviewer_invite"' app` |
+| Browser suite | 49 files; 99 `page.goto`, 31 URL assertions, 11 `live_server.base_url` uses | `grep -rn "page.goto(" tests/browser \| wc -l`; `grep -rn "to_have_url\|page.url\|wait_for_url" tests/browser` |
+| Docs naming the local URL | 7 lines in `README.md`, `CLAUDE.md`, `docs/local_setup.md`, `docs/security_posture.md` | `grep -rn "127.0.0.1:8000" README.md CLAUDE.md docs/*.md` |
+| TestClient calls at root | 3,422, unchanged by design | outline § Blast radius |
+
+## PR ladder
+
+1. **D0, this plan**, prose only.
+2. **D1, the landing page scaffold.**
+   - Adds `cordware/web/` (page and template) and `AppEntry.title`. The
+     page is served at `/` only when no application is mounted there,
+     so it shows today with `CORDWARE_APPS` empty.
+   - Tests: the page lists exactly the mounted set, with links and
+     titles; the host alone serves it; RRW at `/` still owns `/`.
+   - **Must not change** any response with RRW mounted.
+3. **D2, the flip.**
+   - `REGISTRY` path `/reviewrobin`; the landing page always at `/`.
+   - Host tests move to the mount. The browser harness moves to the
+     mount, through the fixture, with every browser test passing.
+   - Docs that name the local URL say `/reviewrobin/`.
+   - The `.env.example` and start commands are unchanged.
+4. **D3, the behavior requirements pinned.**
+   - Tests under the mount:
+     - requirement 3: RRW's own 404, 403 and 422;
+     - requirement 4: an invite link on a non-backend `Host`;
+     - `/.auth/*` unprefixed;
+     - `/reviewrobin` redirects to `/reviewrobin/`;
+     - both health probes.
+   - `docs/deployment_dev.md`'s resumption steps gain
+     `/reviewrobin/health` on the Easy Auth exclusion list and the
+     four-requirement live check.
+   - This is the item's last build rung: the cumulative `diff-reviewer`
+     read runs here, from D1's base.
+5. **Close:** the author's localhost check of all four requirements, then
+   the specs (§ Doc impact), v0.8 §8, the outline's close, archive.
+
+## Definition of done
+
+- With `CORDWARE_APPS` empty, `/` serves the landing page and `/health`
+  answers; with RRW mounted, `/` lists Review Robin, linking to
+  `/reviewrobin/` (D1, D2).
+- `REGISTRY["reviewrobin"].path == "/reviewrobin"`, pinned by a host
+  test (D2).
+- The full browser suite passes under the mount (D2).
+- A test under the mount shows an invite link carrying the request's
+  host and `/reviewrobin`, and RRW's own 404, 403 and 422 pages (D3).
+- Every local URL that `grep -rn "127.0.0.1:8000" README.md CLAUDE.md docs/*.md`
+  finds is a `/reviewrobin/` form (D2).
+- The author has checked all four requirements on localhost (close). The
+  real-Easy-Auth check waits for the dev slot (outline § Definition of
+  done).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 21D` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+## Open questions
+
+1. **The public host for absolute links** (carried from the outline,
+   Open question 3). Recommended: the request's own host, which the code
+   already uses, with no configured base. If the NUS gateway rewrites
+   `Host`, stage 4 adds forwarded-header handling, not a setting. The
+   author decides.
+2. **Browser tests under the mount** (outline, Open question 9).
+   Recommended: the real mount, through a prefixing `page` fixture. The
+   alternative, a harness at `/`, loses runtime coverage of client-built
+   URLs. The author decides.
+3. **The landing page with one application.** Recommended: list it (one
+   link), with no automatic redirect to `/reviewrobin/`, so `/` behaves
+   the same once Residential arrives. The author decides.
+
+## Out of scope
+
+- **The dev slot's live check** under real Easy Auth: when it resumes
+  (`docs/deployment_dev.md` "Resuming the dev slot").
+- **The NUS gateway's path forwarding and host header:** stage 4.
+- **Repointing RRW's 77 identity importers:** the re-export stays (21C).
+- **Residential Apps:** stage 3, after this closes.
+
+## Doc impact
+
+- `spec/architecture.md` — RRW served at `/reviewrobin`; old root paths answer the host's 404; absolute URLs from the request's host (close).
+- `docs/local_setup.md` — the local URL is `http://127.0.0.1:8000/reviewrobin/`; `/` is the landing page (D2).
+- `docs/deployment_dev.md` — `/reviewrobin/health` excluded from Easy Auth; the four-requirement live check (D3).
+- `docs/security_posture.md` — `/health` and `/reviewrobin/health` as the unauthenticated probes; sign-out stays host-level (close).
+- `docs/cordware_repository_strategy_v0.8.md` — §8: the public host and the browser harness settled (close).
+- `README.md` — the local URL (D2).
+- `CLAUDE.md` — the local URL the author checks at (D2). `AGENTS.md` twinned.
+- `cordware/spec/host.md` — the landing page, `AppEntry.title`, RRW at `/reviewrobin` (close); checked by hand.

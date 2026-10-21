@@ -182,7 +182,8 @@ holds only the gates between them and the constraints a rung must carry.
 4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
    rung. **Closed 2026-10-21**: `guide/archive/segment_21C_shared_identity.md`.
 5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
-   D2 is the author's live check (§ Definition of done).
+   D2 is the author's live check (§ Definition of done). Plan:
+   `guide/segment_21D_prefix_flip.md`.
 
 ## Definition of done
 
