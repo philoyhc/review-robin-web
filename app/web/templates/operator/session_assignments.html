@@ -105,7 +105,7 @@
                    on a dark one excludes them all. #}
                 {% set _sr_n = block.self_review_active_count %}
                 <form method="post"
-                      action="{{ block.self_review_toggle_url }}"
+                      action="{{ url(block.self_review_toggle_url) }}"
                       id="sr-form-{{ block.instrument_id }}"
                       style="display: inline;">
                   <input type="hidden" name="active" value="true">
@@ -132,7 +132,7 @@
               {% endif %}
             </td>
             <td>
-              <a href="{{ block.edit_url }}">Edit on Instruments page</a>
+              <a href="{{ url(block.edit_url) }}">Edit on Instruments page</a>
             </td>
           </tr>
         {% endfor %}
@@ -154,7 +154,7 @@
       </p>
       <div class="banner-actions">
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.public_id }}/assignments">Cancel</a>
+           href="{{ url('/operator/sessions/' ~ session.public_id ~ '/assignments') }}">Cancel</a>
       </div>
     </div>
   {% endif %}
@@ -188,7 +188,7 @@
        term rides along so a bulk action redirects back to the
        same filtered view. #}
     <form id="assignments-bulk-form" method="post"
-          action="/operator/sessions/{{ session.public_id }}/assignments/bulk-inactivate">
+          action="{{ url('/operator/sessions/' ~ session.public_id ~ '/assignments/bulk-inactivate') }}">
       <input type="hidden" name="filter_q" value="{{ filter_q }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_search_by"
@@ -271,7 +271,7 @@
              away from the rows they were filtering, which is what this
              form did from its old home in the card. #}
           <form method="get"
-                action="/operator/sessions/{{ session.public_id }}/assignments#{{ pager_anchor }}"
+                action="{{ url('/operator/sessions/' ~ session.public_id ~ '/assignments') }}#{{ pager_anchor }}"
                 class="operator-actions-filter">
             <div class="filter-row">
               {# Segment 19I Item 9 — the status filter, in the roster
@@ -327,7 +327,7 @@
             <div class="filter-actions">
               {% if filter_q or filter_status != "all" %}
                 <a class="btn secondary"
-                   href="/operator/sessions/{{ session.public_id }}/assignments#{{ pager_anchor }}">Clear</a>
+                   href="{{ url('/operator/sessions/' ~ session.public_id ~ '/assignments') }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
             </div>

@@ -58,7 +58,7 @@
               </span>
               {% if issue.fix_url %}
                 <a class="issue-fix-link"
-                   href="{{ issue.fix_url }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
+                   href="{{ url(issue.fix_url) }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
               {% endif %}
             </li>
           {% endfor %}
@@ -80,7 +80,7 @@
               </span>
               {% if issue.fix_url %}
                 <a class="issue-fix-link"
-                   href="{{ issue.fix_url }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
+                   href="{{ url(issue.fix_url) }}{{ issue.fix_anchor or '' }}">Fix on {{ issue.fix_page_label }} ↗</a>
               {% endif %}
             </li>
           {% endfor %}

@@ -4,7 +4,7 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
+  <a class="back-link" href="{{ url(return_to_url) }}">&larr; Back to {{ return_to_label }}</a>
 
   <h1>Admin</h1>
 
@@ -49,7 +49,7 @@
       operator lobby directly.
     </p>
     <form method="post"
-          action="/operator/sys-admin/users/invite"
+          action="{{ url('/operator/sys-admin/users/invite') }}"
           id="invite-form">
       <p>
         <label>
@@ -166,7 +166,7 @@
 
         <div class="toolbar-pane toolbar-right">
           <form method="get"
-                action="{{ accounts_base_url }}#{{ pager_anchor }}"
+                action="{{ url(accounts_base_url) }}#{{ pager_anchor }}"
                 id="accounts-filter"
                 class="operator-actions-filter">
             <input type="hidden" name="show" value="">
@@ -198,7 +198,7 @@
               {% if account_view.is_filtered %}
                 {# Clears the role and the search; the chips stay. #}
                 <a class="btn secondary"
-                   href="{{ accounts_base_url }}?{{ account_view_query_chips }}#{{ pager_anchor }}">Clear</a>
+                   href="{{ url(accounts_base_url) }}?{{ account_view_query_chips }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
             </div>
@@ -266,7 +266,7 @@
          checkboxes join it through `form=` + `name="user_ids"`, so the
          expander's buttons need only say where to send the selection
          (`formaction`). It retired the single-row toolbar. #}
-      <form id="users-bulk-form" method="post" action="{{ accounts_base_url }}/bulk-admit">
+      <form id="users-bulk-form" method="post" action="{{ url(accounts_base_url) }}/bulk-admit">
         <input type="hidden" name="view" value="{{ account_view_query }}">
       </form>
       {# `.table-scroll` (base.html): a table wider than its card

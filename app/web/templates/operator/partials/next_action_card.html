@@ -54,18 +54,18 @@
 #}
 {% set _next_action_return_to = next_action_return_to | default(none) %}
 {% set _activate_warns_href = (
-  "/operator/sessions/" ~ session.public_id ~ "/validate?activate=1&return_to=" ~ _next_action_return_to
+  url("/operator/sessions/" ~ session.public_id ~ "/validate?activate=1&return_to=" ~ _next_action_return_to)
   if _next_action_return_to
-  else "/operator/sessions/" ~ session.public_id ~ "/validate?activate=1"
+  else url("/operator/sessions/" ~ session.public_id ~ "/validate?activate=1")
 ) %}
 {# Host page the workflow card renders on — where the saved-response
    confirmation's Cancel link returns. ``home`` (and no slug)
    resolve to the session root; the other slugs are Operations-row
    children. #}
 {% set _next_action_page_href = (
-  "/operator/sessions/" ~ session.public_id ~ "/" ~ _next_action_return_to
+  url("/operator/sessions/" ~ session.public_id ~ "/" ~ _next_action_return_to)
   if _next_action_return_to and _next_action_return_to != "home"
-  else "/operator/sessions/" ~ session.public_id
+  else url("/operator/sessions/" ~ session.public_id)
 ) %}
 {# W-overlay warnings-detour gate — Activate links to
    /validate?activate=1 when there are non-blocking warnings the
@@ -116,7 +116,7 @@
                   form="next-action-prepare-regenerate-form">
             Regenerate &amp; prepare
           </button>
-          <a class="btn secondary" href="{{ _next_action_page_href }}">
+          <a class="btn secondary" href="{{ url(_next_action_page_href) }}">
             Cancel
           </a>
         </div>
@@ -183,7 +183,7 @@
        saved-response confirmation is on). #}
     {% if prepare_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/prepare"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/prepare') }}"
             id="next-action-prepare-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -192,7 +192,7 @@
     {% endif %}
     {% if prepare_confirm %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/prepare"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/prepare') }}"
             id="next-action-prepare-regenerate-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -209,7 +209,7 @@
          auto-sends (clears scheduled_activate_at; invite_offsets
          becomes inert via anchor-null). #}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/activate"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/activate') }}"
             id="next-action-activate-session-form"
             {% if manual_activate_cancellation %}data-manual-activate-confirm="{{ manual_activate_cancellation.message }}"{% endif %}>
         {% if _next_action_return_to %}
@@ -219,7 +219,7 @@
     {% endif %}
     {% if revert_visible and is_validated %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/revert"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/revert') }}"
             id="next-action-revert-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -231,7 +231,7 @@
          The service requires confirm=true; the Close-session
          button posts a separate form below. #}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/revert"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/revert') }}"
             id="next-action-pause-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -241,7 +241,7 @@
     {% endif %}
     {% if close_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/close"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/close') }}"
             id="next-action-close-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -250,7 +250,7 @@
     {% endif %}
     {% if send_invites_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/invitations/send-all"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/send-all') }}"
             id="next-action-send-invites-form">
         <input type="hidden" name="return_to"
                value="{{ _next_action_return_to or 'home' }}">
@@ -258,7 +258,7 @@
     {% endif %}
     {% if send_reminders_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/invitations/remind-incomplete"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/remind-incomplete') }}"
             id="next-action-send-reminders-form">
         <input type="hidden" name="return_to"
                value="{{ _next_action_return_to or 'home' }}">
@@ -266,7 +266,7 @@
     {% endif %}
     {% if release_responses_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/release-responses"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/release-responses') }}"
             id="next-action-release-responses-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -275,7 +275,7 @@
     {% endif %}
     {% if stop_release_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/stop-release"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/stop-release') }}"
             id="next-action-stop-release-form">
         {% if _next_action_return_to %}
           <input type="hidden" name="return_to" value="{{ _next_action_return_to }}">
@@ -284,7 +284,7 @@
     {% endif %}
     {% if archive_visible %}
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/workflow/archive"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/workflow/archive') }}"
             id="next-action-archive-form"></form>
     {% endif %}
   </div>
@@ -323,7 +323,7 @@
 
     {% if activate_visible %}
       {% if _activate_needs_warnings_detour %}
-        <a class="btn" href="{{ _activate_warns_href }}">Activate<br>session</a>
+        <a class="btn" href="{{ url(_activate_warns_href) }}">Activate<br>session</a>
       {% else %}
         <button class="btn" type="submit"
                 form="next-action-activate-session-form">Activate<br>session</button>
@@ -372,11 +372,11 @@
           <strong>Setup checklist</strong> —
           <span class="next-action-checklist-inline">
             {% if setup_checklist.reviewers_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
-            <a href="/operator/sessions/{{ session.public_id }}/reviewers">Reviewers</a>
+            <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/reviewers') }}">Reviewers</a>
             {% if setup_checklist.reviewees_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
-            <a href="/operator/sessions/{{ session.public_id }}/reviewees">Reviewees</a>
+            <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/reviewees') }}">Reviewees</a>
             {% if setup_checklist.instruments_configured_ok %}<span class="pill pill-success" aria-label="done">✓</span>{% else %}<span class="pill pill-empty" aria-label="not done">✗</span>{% endif %}
-            <a href="/operator/sessions/{{ session.public_id }}/instruments">Instruments</a>
+            <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}">Instruments</a>
           </span>
         </p>
       {% endif %}

@@ -21,7 +21,6 @@ per-state fixtures rather than one.
 
 from __future__ import annotations
 
-import pathlib
 import re
 from dataclasses import dataclass
 
@@ -117,18 +116,17 @@ def _render_partial(**context: object) -> str:
     include*, not the guard inside it — which is how the first draft of
     this file passed while a mutant deleted the guard outright.
 
-    **A bare environment, not the app's.** Correct only while the partial
-    uses no app globals or custom filters, as it does not today. If it
-    ever reaches for one, this renders fine here and breaks in
-    production, so a partial that grows a ``url_for`` or a filter wants
-    this swapped for the configured environment rather than trusted.
+    **The app's configured environment**, since the partial's link goes
+    through the ``url()`` global (segment 21B), which reads the request
+    for the mount prefix; a request at ``/`` stands in.
     """
-    from jinja2 import Environment, FileSystemLoader
+    from starlette.requests import Request
 
-    root = pathlib.Path(__file__).resolve().parents[2] / "app/web/templates"
-    env = Environment(loader=FileSystemLoader(str(root)), autoescape=True)
-    template = env.get_template("operator/partials/_next_action_issue_list.html")
-    return template.render(**context)
+    from app.web.routes_operator._shared import _templates
+
+    request = Request({"type": "http", "path": "/", "root_path": "", "headers": []})
+    template = _templates.env.get_template("operator/partials/_next_action_issue_list.html")
+    return template.render(request=request, **context)
 
 
 def test_the_guard_holds_a_link_back_when_there_is_nothing_to_point_at() -> None:

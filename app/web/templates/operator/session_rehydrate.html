@@ -43,14 +43,14 @@
     <div class="card">
       <h2>Upload, validate, rehydrate</h2>
       <form id="rehydrate-validate-form" method="post"
-            action="/operator/sessions/rehydrate/validate"
+            action="{{ url('/operator/sessions/rehydrate/validate') }}"
             enctype="multipart/form-data">
         <label for="rehydrate-files">Extract files (CSVs and/or ZIP bundles)</label>
         <input type="file" id="rehydrate-files" name="files"
                multiple accept=".csv,.zip">
       </form>
       <form id="rehydrate-commit-form" method="post"
-            action="/operator/sessions/rehydrate/commit">
+            action="{{ url('/operator/sessions/rehydrate/commit') }}">
         <input type="hidden" name="token" value="{{ token or '' }}">
       </form>
       <p class="form-help">
@@ -94,10 +94,10 @@
     </p>
     <div class="sessions-action-buttons" style="margin-top: var(--space-3);">
       <a class="btn secondary"
-         href="/operator/sessions/rehydrate/dropped.csv?token={{ outcome.dropped_token }}">
+         href="{{ url('/operator/sessions/rehydrate/dropped.csv') }}?token={{ outcome.dropped_token }}">
         Download dropped responses
       </a>
-      <a class="btn" href="/operator/sessions/{{ outcome.session_public_id }}">
+      <a class="btn" href="{{ url('/operator/sessions/' ~ outcome.session_public_id) }}">
         Go to {{ outcome.session_name }}
       </a>
     </div>

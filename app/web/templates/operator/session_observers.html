@@ -17,7 +17,7 @@
      their routes accept — the silent failure in reverse. #}
   {% set unlock_available = not is_archived and not edit_mode %}
   {% set observers_base_url =
-        "/operator/sessions/" ~ session.public_id ~ "/observers" %}
+        url("/operator/sessions/" ~ session.public_id ~ "/observers") %}
 
   {# The edit row's own action bar, on the analogy of a selected row:
      the row being edited reads as selected and its controls hang
@@ -87,7 +87,7 @@
             {# Cancel leaves the editor for the list, so it lands where
                the list is — the same anchor `Clear` and `Search` take. #}
             <a class="btn secondary" data-observer-edit-cancel
-               href="{{ observers_base_url }}#{{ pager_anchor }}">Cancel</a>
+               href="{{ url(observers_base_url) }}#{{ pager_anchor }}">Cancel</a>
           </div>
           </div>
         </div>
@@ -218,7 +218,7 @@
     </p>
     <p>
       See
-      <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+      <a href="{{ url('/guide') }}?return_to={{ here() }}#guide-create_and_set_up">Create
       and set up a session</a> in the Guide.
     </p>
     {% endcall %}
@@ -241,7 +241,7 @@
     {% set edit_action = observers_base_url ~ "/cohort-rule" if rule_edit_ids
           else observers_base_url ~ "/create" if add_mode
           else observers_base_url ~ "/" ~ edit_id ~ "/update" %}
-    <form id="observer-edit-form" method="post" action="{{ edit_action }}">
+    <form id="observer-edit-form" method="post" action="{{ url(edit_action) }}">
       {% for oid in rule_edit_ids %}
         <input type="hidden" name="observer_ids" value="{{ oid }}">
       {% endfor %}
@@ -251,7 +251,7 @@
     </form>
   {% elif not is_archived %}
     <form id="observers-bulk-form" method="post"
-          action="{{ observers_base_url }}/bulk-inactivate">
+          action="{{ url(observers_base_url) }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
       <input type="hidden" name="filter_offset" value="{{ current_offset }}">
@@ -271,7 +271,7 @@
          is offered as a plain navigation. See the `Unlock` twin. #}
       <noscript>
         <a class="btn secondary"
-           href="{{ observers_base_url }}#roster-card">Lock</a>
+           href="{{ url(observers_base_url) }}#roster-card">Lock</a>
       </noscript>
     </div>
   {% endmacro %}
@@ -390,7 +390,7 @@
             {% endwith %}
 
             <form method="post" id="upload-csv-form"
-                  action="{{ observers_base_url }}/import"
+                  action="{{ url(observers_base_url) }}/import"
                   enctype="multipart/form-data">
               <input type="file" id="file" name="file" accept=".csv,text/csv"
                      aria-label="CSV file"{% if not held_upload %} required{% endif %}>
@@ -456,7 +456,7 @@
                    aria-labelledby="observer-self-fields-h"
                    data-observer-self-card>
             <h2 id="observer-self-fields-h">What observers see of their own entry</h2>
-            <form method="post" action="{{ observers_base_url }}/self-fields"
+            <form method="post" action="{{ url(observers_base_url) }}/self-fields"
                   id="observer-self-fields-form" autocomplete="off">
               <div class="reviewer-self-chips">
                 {% for chip in self_field_chips %}
@@ -518,7 +518,7 @@
             <section class="card danger-zone"
                      aria-labelledby="observers-danger-h">
               <h2 id="observers-danger-h">Danger Zone</h2>
-              <form method="post" action="{{ observers_base_url }}/delete-all">
+              <form method="post" action="{{ url(observers_base_url) }}/delete-all">
                 <p>
                   <label class="confirm-label">
                     <input type="checkbox" name="confirm" value="true" required
@@ -574,7 +574,7 @@
              read both cards at all. #}
           <noscript>
             <a class="btn secondary"
-               href="{{ observers_base_url }}?unlocked=1#roster-card">Unlock</a>
+               href="{{ url(observers_base_url) }}?unlocked=1#roster-card">Unlock</a>
           </noscript>
         </div>
       {% endif %}
@@ -664,7 +664,7 @@
              submission algorithm replaces the query and leaves the
              fragment alone. #}
           <form method="get"
-                action="{{ observers_base_url }}#{{ pager_anchor }}"
+                action="{{ url(observers_base_url) }}#{{ pager_anchor }}"
                 class="operator-actions-filter{% if edit_mode %} is-locked{% endif %}">
           <div class="filter-row">
             <label class="filter-status">
@@ -694,7 +694,7 @@
             <div class="filter-actions">
               {% if filter_status != "all" or filter_search %}
                 <a class="btn secondary"
-                   href="{{ observers_base_url }}#{{ pager_anchor }}">Clear</a>
+                   href="{{ url(observers_base_url) }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               {# `Add` reads `Add new` here, beside the control it sits
                  next to — the name the other roster pages use. Gated
@@ -712,7 +712,7 @@
                       defaults and the create redirect came back
                       unfiltered: the filter was lost at the
                       NAVIGATION, not at the POST. #}
-                   href="{{ observers_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
+                   href="{{ url(observers_base_url) }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
               {% endif %}
               <button class="btn secondary" type="submit"{% if edit_mode %} disabled{% endif %}>Search</button>
             </div>

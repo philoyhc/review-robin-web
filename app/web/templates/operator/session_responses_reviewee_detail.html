@@ -16,7 +16,7 @@
     <p>
       <code>{{ reviewee.email_or_identifier }}</code>
       &middot;
-      <a href="/operator/sessions/{{ session.public_id }}/responses">← Back to Responses</a>
+      <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/responses') }}">← Back to Responses</a>
     </p>
   </div>
 

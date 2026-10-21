@@ -41,13 +41,18 @@ def url_path(request: HTTPConnection, path: str | None) -> str:
     """``path`` as emitted. An app-relative path (one leading ``/``) gains
     the mount's prefix; anything else (``//host``, a scheme, ``#…``,
     ``?…``, a relative path, Easy Auth's host-level ``/.auth/…``) passes
-    through unchanged, and an empty value renders empty."""
+    through unchanged, and an empty value renders empty. Idempotent: a
+    path already under the prefix is returned as it is, so a template may
+    wrap a value where it is set and again where it is emitted."""
     if not path:
         return ""
     if path.startswith("/.auth/"):
         return path  # Easy Auth's, at the host level (v0.8 §3)
     if path.startswith("/") and not path.startswith("//"):
-        return root_path(request) + path
+        prefix = root_path(request)
+        if prefix and (path == prefix or path.startswith((prefix + "/", prefix + "?", prefix + "#"))):
+            return path  # already emitted once: a value wrapped where it is set and where it is used
+        return prefix + path
     return path
 
 

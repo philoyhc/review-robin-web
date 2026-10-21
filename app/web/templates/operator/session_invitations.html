@@ -146,7 +146,7 @@
            page turn does (19J.8) rather than landing at the document
            top. `Clear` takes the same anchor. #}
           <form method="get"
-                action="/operator/sessions/{{ session.public_id }}/invitations#{{ pager_anchor }}"
+                action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations') }}#{{ pager_anchor }}"
                 class="operator-actions-filter">
             <div class="filter-row">
               <label class="filter-status">
@@ -176,7 +176,7 @@
             <div class="filter-actions">
               {% if filter_status != "all" or filter_search %}
                 <a class="btn secondary"
-                   href="/operator/sessions/{{ session.public_id }}/invitations#{{ pager_anchor }}">Clear</a>
+                   href="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations') }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               <button class="btn secondary" type="submit">Search</button>
             </div>
@@ -238,7 +238,7 @@
                  reviewer now, so it exists for every row; it used to be
                  `{% if row.invitation %}`, which left the table a list
                  of names that went nowhere until Prepare ran. #}
-              <a href="/operator/sessions/{{ session.public_id }}/invitations/reviewers/{{ row.reviewer.id }}">
+              <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/reviewers/' ~ row.reviewer.id) }}">
                 <strong>{{ row.reviewer.name }}</strong>
               </a><br>
               <code>{{ row.reviewer.email }}</code>
@@ -306,7 +306,7 @@
               {% if row.invitation %}
                 {% if row.invitation.status == "pending" %}
                   <form method="post"
-                        action="/operator/sessions/{{ session.public_id }}/invitations/{{ row.invitation.id }}/send"
+                        action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/send') }}"
                         style="display: inline;">
                     <button class="btn secondary" type="submit"
                             {% if not is_ready %}disabled{% endif %}>
@@ -315,7 +315,7 @@
                   </form>
                 {% else %}
                   <form method="post"
-                        action="/operator/sessions/{{ session.public_id }}/invitations/{{ row.invitation.id }}/remind"
+                        action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/remind') }}"
                         style="display: inline;">
                     <button class="btn secondary" type="submit"
                             {% if not is_ready or not row.is_incomplete %}disabled{% endif %}>
@@ -324,7 +324,7 @@
                   </form>
                 {% endif %}
                 <form method="post"
-                      action="/operator/sessions/{{ session.public_id }}/invitations/{{ row.invitation.id }}/regenerate"
+                      action="{{ url('/operator/sessions/' ~ session.public_id ~ '/invitations/' ~ row.invitation.id ~ '/regenerate') }}"
                       style="display: inline;">
                   <button class="btn secondary" type="submit"
                           {% if not is_ready %}disabled{% endif %}>

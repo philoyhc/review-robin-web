@@ -97,7 +97,7 @@
             <tr data-tags='{{ tags_by_session.get(s.id, []) | tojson }}'
                 data-session-id="{{ s.public_id }}">
               <td>
-                <a href="/operator/sessions/{{ s.public_id }}">{{ s.name }}</a>
+                <a href="{{ url('/operator/sessions/' ~ s.public_id) }}">{{ s.name }}</a>
               </td>
               <td><code>{{ s.code }}</code></td>
               <td>
@@ -173,10 +173,10 @@
               <button type="button" class="btn secondary"
                       data-expander-clear-all>Unselect all</button>
               <button type="submit" class="btn"
-                      formaction="/operator/sessions/bulk-unarchive">Unarchive</button>
+                      formaction="{{ url('/operator/sessions/bulk-unarchive') }}">Unarchive</button>
               <button type="button" class="btn secondary" disabled>Download</button>
               <button type="submit" class="btn destructive"
-                      formaction="/operator/sessions/bulk-delete-archived"
+                      formaction="{{ url('/operator/sessions/bulk-delete-archived') }}"
                       data-expander-delete disabled>Delete</button>
             </div>
           </div>

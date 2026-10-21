@@ -160,6 +160,14 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
   found that a count lets a rung fix one leak and add another in the same
   file unseen. The crawl's checker is proved on probe pages, and its first
   RRW pages come with B2. The cumulative read's base is `fdcfee36`.
+- **2026-10-21, B3: `url()` is idempotent under a mount**, departing from
+  § Semantics ("not deduplicated"). Templates `{% set %}` app-relative
+  values and pass them to the partials that emit them, so wrapping at
+  both ends is the only way the static rules stay mechanical. A value
+  already under `root_path` comes back unchanged. `return_to` values still
+  travel app-relative (`here()`), which B3's own read checks. The crawl
+  takes `cookies=False` on Validate and the sys-admin users page until B6
+  scopes their cookies.
 
 ## PR ladder
 

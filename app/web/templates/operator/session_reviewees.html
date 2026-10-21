@@ -12,14 +12,14 @@
      row prepends (Add). Mirror of the Reviewers page. #}
   {% set edit_mode = (edit_id is not none) or add_mode %}
   {% set reviewees_base_url =
-        "/operator/sessions/" ~ session.public_id ~ "/reviewees" %}
+        url("/operator/sessions/" ~ session.public_id ~ "/reviewees") %}
   {# 19P.3 rung 4 — the Unlock panel's condition. #}
   {% set unlock_available = is_editable and not edit_mode %}
 
   {# The tag-labels editor's parameters, for its one home, the Unlock
      panel below. #}
   {% set field_labels_form_action =
-        "/operator/sessions/" ~ session.public_id ~ "/reviewees/field-labels" %}
+        url("/operator/sessions/" ~ session.public_id ~ "/reviewees/field-labels") %}
   {% set field_labels_source_type = "reviewee" %}
   {% set field_labels_card_title = "Reviewee tag labels" %}
   {% set field_labels_help =
@@ -83,7 +83,7 @@
             {# Cancel leaves the editor for the list, so it lands where
                the list is — the same anchor `Clear` and `Search` take. #}
             <a class="btn secondary"
-               href="{{ reviewees_base_url }}#{{ pager_anchor }}">Cancel</a>
+               href="{{ url(reviewees_base_url) }}#{{ pager_anchor }}">Cancel</a>
           </div>
         </div>
       </td>
@@ -144,7 +144,7 @@
       </p>
       <p>
         See
-        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+        <a href="{{ url('/guide') }}?return_to={{ here() }}#guide-create_and_set_up">Create
         and set up a session</a> in the Guide.
       </p>
       {% endcall %}
@@ -213,7 +213,7 @@
                    aria-labelledby="reviewee-self-fields-h"
                    data-reviewee-self-card>
             <h2 id="reviewee-self-fields-h">What reviewees see of their own entry</h2>
-            <form method="post" action="{{ reviewees_base_url }}/self-fields"
+            <form method="post" action="{{ url(reviewees_base_url) }}/self-fields"
                   id="reviewee-self-fields-form" autocomplete="off">
               <div class="reviewer-self-chips">
                 {% for chip in self_field_chips %}
@@ -281,7 +281,7 @@
             {% endwith %}
 
             <form method="post" id="upload-csv-form"
-                  action="{{ reviewees_base_url }}/import"
+                  action="{{ url(reviewees_base_url) }}/import"
                   enctype="multipart/form-data">
               <input type="file" id="file" name="file" accept=".csv,text/csv"
                      aria-label="CSV file"{% if not held_upload %} required{% endif %}>
@@ -349,7 +349,7 @@
           {% if total_row_count and total_row_count > 0 %}
             <section class="card danger-zone" aria-labelledby="reviewees-danger-h">
               <h2 id="reviewees-danger-h">Danger Zone</h2>
-              <form method="post" action="{{ reviewees_base_url }}/delete-all">
+              <form method="post" action="{{ url(reviewees_base_url) }}/delete-all">
                 <p>
                   <label class="confirm-label">
                     <input type="checkbox" name="confirm" value="true" required
@@ -401,7 +401,7 @@
                below. #}
             <noscript>
               <a class="btn secondary"
-                 href="{{ reviewees_base_url }}#roster-card">Lock</a>
+                 href="{{ url(reviewees_base_url) }}#roster-card">Lock</a>
             </noscript>
           </div>
           {% endif %}
@@ -437,7 +437,7 @@
            all. #}
         <noscript>
           <a class="btn secondary"
-             href="{{ reviewees_base_url }}?unlocked=1#roster-card">Unlock</a>
+             href="{{ url(reviewees_base_url) }}?unlocked=1#roster-card">Unlock</a>
         </noscript>
       </div>
       {% endif %}
@@ -489,7 +489,7 @@
   {% if edit_mode %}
     {% set edit_action = reviewees_base_url ~ "/create" if add_mode
           else reviewees_base_url ~ "/" ~ edit_id ~ "/update" %}
-    <form id="reviewee-edit-form" method="post" action="{{ edit_action }}">
+    <form id="reviewee-edit-form" method="post" action="{{ url(edit_action) }}">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
       {# 19P.3 rung 1 — the pager offset, carried through the POST
@@ -502,7 +502,7 @@
     </form>
   {% elif is_editable %}
     <form id="reviewees-bulk-form" method="post"
-          action="{{ reviewees_base_url }}/bulk-inactivate">
+          action="{{ url(reviewees_base_url) }}/bulk-inactivate">
       <input type="hidden" name="filter_status" value="{{ filter_status }}">
       <input type="hidden" name="filter_q" value="{{ filter_search }}">
       {# 19P.3 rung 1 — the pager offset, carried through the POST
@@ -604,7 +604,7 @@
              its `action`: the submission algorithm replaces the query and
              leaves the fragment alone. #}
           <form method="get"
-                action="{{ reviewees_base_url }}#{{ pager_anchor }}"
+                action="{{ url(reviewees_base_url) }}#{{ pager_anchor }}"
                 class="operator-actions-filter{% if edit_mode %} is-locked{% endif %}">
             <div class="filter-row">
               <label class="filter-status">
@@ -634,7 +634,7 @@
             <div class="filter-actions">
               {% if filter_status != "all" or filter_search %}
                 <a class="btn secondary"
-                   href="{{ reviewees_base_url }}#{{ pager_anchor }}">Clear</a>
+                   href="{{ url(reviewees_base_url) }}#{{ pager_anchor }}">Clear</a>
               {% endif %}
               {# `Add` is page-level and keeps its own inner gate; it
                  renders as `Add new` here, beside the control it reads
@@ -677,7 +677,7 @@
                         shell renders those defaults, and the create
                         redirect's filter round-trip carries nothing —
                         the route half works and the flow does not. #}
-                     href="{{ reviewees_base_url }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
+                     href="{{ url(reviewees_base_url) }}?add=1{% if filter_status and filter_status != 'all' %}&amp;status={{ filter_status | urlencode }}{% endif %}{% if filter_search %}&amp;q={{ filter_search | urlencode }}{% endif %}#{{ row_editor_anchor }}">Add new</a>
                 {% endif %}
               {% endif %}
               <button class="btn secondary" type="submit"{% if edit_mode %} disabled{% endif %}>Search</button>

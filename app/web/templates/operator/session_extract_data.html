@@ -81,7 +81,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewer-metadata-zip"
-             href="/operator/sessions/{{ session.public_id }}/export/reviewer_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
+             href="{{ url('/operator/sessions/' ~ session.public_id ~ '/export/reviewer_metadata.csv') }}{% if instruments %}?all_instruments=1{% endif %}" download>
             Download
           </a>
         </div>
@@ -130,7 +130,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-reviewee-metadata-zip"
-             href="/operator/sessions/{{ session.public_id }}/export/reviewee_metadata.csv{% if instruments %}?all_instruments=1{% endif %}" download>
+             href="{{ url('/operator/sessions/' ~ session.public_id ~ '/export/reviewee_metadata.csv') }}{% if instruments %}?all_instruments=1{% endif %}" download>
             Download
           </a>
         </div>
@@ -189,7 +189,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-by-instrument-zip"
-             href="/operator/sessions/{{ session.public_id }}/export/by_instrument_bundle.zip" download>
+             href="{{ url('/operator/sessions/' ~ session.public_id ~ '/export/by_instrument_bundle.zip') }}" download>
             Zip all
           </a>
         </div>
@@ -248,7 +248,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-zip-all"
-             href="/operator/sessions/{{ session.public_id }}/export/responses_bundle.zip" download>
+             href="{{ url('/operator/sessions/' ~ session.public_id ~ '/export/responses_bundle.zip') }}" download>
             Zip all
           </a>
         </div>
@@ -805,11 +805,11 @@
       {# Every saved shape's file in one zip; greyed until a shape is
          saved, since an empty zip is never a useful download. The
          card's script re-syncs it as shapes save and delete. #}
-      {% set shaper_zip_href = "/operator/sessions/" ~ session.public_id ~ "/export/data_shapes_bundle.zip" %}
+      {% set shaper_zip_href = url("/operator/sessions/" ~ session.public_id ~ "/export/data_shapes_bundle.zip") %}
       <a class="btn secondary"
          id="extract-data-shaper-zip"
-         data-zip-href="{{ shaper_zip_href }}"
-         {% if saved_shapes %}href="{{ shaper_zip_href }}" download{% else %}href="#" aria-disabled="true"{% endif %}>
+         data-zip-href="{{ url(shaper_zip_href) }}"
+         {% if saved_shapes %}href="{{ url(shaper_zip_href) }}" download{% else %}href="#" aria-disabled="true"{% endif %}>
         Zip all
       </a>
     </div>
@@ -841,7 +841,7 @@
            lobby expander's inactive state). ``return_to=archived`` lands on
            the archived-sessions index. #}
         {% set archivable = (not is_ready) and (not is_archived) %}
-        <form method="post" action="/operator/sessions/bulk-archive"
+        <form method="post" action="{{ url('/operator/sessions/bulk-archive') }}"
               style="margin: 0;">
           <input type="hidden" name="session_ids" value="{{ session.id }}">
           <input type="hidden" name="return_to" value="archived">
@@ -886,7 +886,7 @@
         <div class="extract-data-card-actions">
           <a class="btn secondary"
              id="extract-data-token-keys-download"
-             href="/operator/sessions/{{ session.public_id }}/export/participant_tokens.csv">
+             href="{{ url('/operator/sessions/' ~ session.public_id ~ '/export/participant_tokens.csv') }}">
             Download token keys
           </a>
         </div>
