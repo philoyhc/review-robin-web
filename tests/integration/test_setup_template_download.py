@@ -20,7 +20,7 @@ from app.auth.identity import (
     get_current_user,
     resolve_current_user,
 )
-from app.config import Settings
+from cordware.settings import IdentitySettings
 from app.db.models import (
     Assignment,
     Instrument,
@@ -68,7 +68,7 @@ def test_the_route_requires_authentication() -> None:
     an unauthenticated route here would be the app's first exception. The
     open question of whether `/guide` should be public is deferred to
     Segment 20; until it is answered, this route stays gated too."""
-    real_settings = Settings(allow_fake_auth=False)
+    real_settings = IdentitySettings(allow_fake_auth=False)
 
     def override(request: Request) -> AuthenticatedUser:
         return resolve_current_user(request, real_settings)
@@ -404,7 +404,7 @@ FULL_URL = "/templates/full.zip"
 
 
 def test_the_full_route_requires_authentication() -> None:
-    real_settings = Settings(allow_fake_auth=False)
+    real_settings = IdentitySettings(allow_fake_auth=False)
 
     def override(request: Request) -> AuthenticatedUser:
         return resolve_current_user(request, real_settings)

@@ -28,6 +28,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings
+from cordware.settings import identity_settings
 from app.db.models import User
 from app.db.session import get_db
 from _rrw_app import rrw_app
@@ -119,7 +120,7 @@ def _reset_allowlists(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", [])
     monkeypatch.setattr(settings, "fake_auth_operator", False)
     monkeypatch.setattr(settings, "fake_auth_sys_admin", False)
-    monkeypatch.setattr(settings, "allow_fake_auth", False)
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
 
 
 # --- Bootstrap on first sign-in (F3) ---------------------------------------
@@ -348,7 +349,7 @@ def test_fake_auth_operator_toggle_grants_operator_on_first_sign_in(
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "allow_fake_auth", True)
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
     monkeypatch.setattr(settings, "fake_auth_operator", True)
     fake_user = AuthenticatedUser(
         principal_id="fake-oid",
@@ -372,7 +373,7 @@ def test_fake_auth_sys_admin_toggle_grants_sys_admin_on_first_sign_in(
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "allow_fake_auth", True)
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
     monkeypatch.setattr(settings, "fake_auth_sys_admin", True)
     fake_user = AuthenticatedUser(
         principal_id="fake-oid",
@@ -399,7 +400,7 @@ def test_fake_auth_toggle_is_inert_when_user_is_not_fake(
     """A real Easy-Auth principal should never inherit the sandbox
     operator flag even if the env var is set; the toggle only
     applies when ``is_fake`` is true on the resolved identity."""
-    monkeypatch.setattr(settings, "allow_fake_auth", True)
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
     monkeypatch.setattr(settings, "fake_auth_operator", True)
     client = _make_client(db, auth_alice)
 

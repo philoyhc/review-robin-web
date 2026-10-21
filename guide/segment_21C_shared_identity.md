@@ -46,7 +46,7 @@ The interface:
   when present, else the fake user when `ALLOW_FAKE_AUTH` is on, else a
   401. This is today's `resolve_current_user`, moved whole, with its
   optional settings argument now Cordware's `IdentitySettings`.
-  `tests/test_identity.py` and
+  `cordware/tests/test_identity.py` (moved from `tests/` at C1) and
   `tests/integration/test_setup_template_download.py` pass one. **Never
   a dependency.**
 - **`get_identity(request)`** — the dependency: it takes the request and
@@ -140,6 +140,15 @@ Taken 2026-10-21 at `fd60526e`.
 | Settings moving | 7 fields in `app/config.py`: `app_env`, `allow_fake_auth`, `fake_auth_principal_id`, `_email`, `_name`, `fake_auth_super_admin`, `super_admin_emails` | `grep -nE 'app_env\|allow_fake_auth\|fake_auth_\|super_admin_emails' app/config.py` |
 | `APP_ENV` readers | `app/main.py:66`, `app/config.py:134` | `grep -rnE '\bapp_env\b' app` |
 | Tests patching a moving setting | 44 lines in 8 files; 15 files name an env-var spelling | `grep -rnE '"(allow_fake_auth\|super_admin_emails\|fake_auth_[a-z_]+\|app_env)"' tests`; `grep -rliE 'ALLOW_FAKE_AUTH\|SUPER_ADMIN_EMAILS\|FAKE_AUTH_\|APP_ENV' tests` |
+
+## Status
+
+**C1 (2026-10-21).** As laddered. The guard is `cordware.main.check_fake_auth`,
+run after the host configures logging and before any factory, raising
+`FakeAuthRefused`; the stop line carries `missing_identity_headers`. A
+new boundary test forbids any application importing `cordware.main`.
+`validate_critical_settings` takes `env` for its tests. RRW tests patch
+`cordware.settings.identity_settings` for the moved fields.
 
 ## PR ladder
 
