@@ -11,6 +11,10 @@
 # targets NUS via NUS-scoped credentials, so it coexists with the personal
 # deploy during cutover. See docs/deployment_nus.md §6.4.
 #
+# DO NOT DISPATCH until Cordware stage 4 (docs/deployment_nus.md): since
+# segment 21A, main serves only through cordware.main:app, and the artifact
+# below does not yet carry cordware/.
+#
 # When the NUS host becomes primary, either promote this to an `on: push`
 # deploy (and retire the personal workflow) or fold it back into the primary.
 

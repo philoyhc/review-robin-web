@@ -45,8 +45,8 @@ means the worker is not up — check the log stream.
 Three streams, all described in `docs/deployment_dev.md` →
 "Viewing logs": the GitHub Actions deploy log, the App Service
 Deployment Center log, and the live Application **Log stream**.
-Application logs are structured JSON (one object per line) — see
-`app/logging_config.py`.
+Application logs are structured JSON (one object per line), each stamped
+with the application that wrote it — see `cordware/logging.py`.
 
 ## Managing the operator / sys-admin allowlist
 

@@ -88,6 +88,17 @@ def _json_handlers() -> list[logging.Handler]:
     return [h for h in logging.getLogger().handlers if getattr(h, "_cordware_json", False)]
 
 
+@pytest.fixture(autouse=True)
+def _restore_root_logger() -> Iterator[None]:
+    """Each test here rebuilds the root handler; put back exactly what
+    was there, so later tests in the worker see the same logging."""
+    root = logging.getLogger()
+    handlers, level = list(root.handlers), root.level
+    yield
+    root.handlers[:] = handlers
+    root.setLevel(level)
+
+
 def test_configure_logging_is_idempotent() -> None:
     configure_logging("INFO", {})
     configure_logging("INFO", {})
@@ -108,8 +119,6 @@ def capture(monkeypatch: pytest.MonkeyPatch) -> Iterator[Callable[[], io.StringI
         return buffer
 
     yield start
-    monkeypatch.undo()
-    configure_logging("INFO", {})  # rebind to the real stdout
 
 
 def _lines(buffer: io.StringIO) -> list[dict[str, object]]:

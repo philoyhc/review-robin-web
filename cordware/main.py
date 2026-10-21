@@ -154,7 +154,9 @@ def create_app(
 
     # Registered before any mount, so it answers ahead of an application
     # mounted at `/`. Easy Auth excludes this path from sign-in.
-    @host.get("/health", include_in_schema=False)
+    # Named apart from RRW's own `health` route: inside a mounted app,
+    # `url_for` resolves through the host's router first.
+    @host.get("/health", include_in_schema=False, name="cordware_health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 

@@ -3,9 +3,11 @@
 The host configures the root logger once: one JSON line per record on
 stdout, the shape RRW's structured logging has had since segment 14A.
 Applications log under their own named loggers and never touch the root.
-`ApplicationFilter` stamps each record with the application that wrote
-it (`reviewrobin`, or `cordware` for the host and the server), so the
-shared Log Analytics workspace can be read per application.
+`ApplicationFilter` stamps each record that reaches the root handler with
+the application that wrote it (`reviewrobin`, or `cordware` for the
+host), so the shared Log Analytics workspace can be read per application.
+uvicorn's and gunicorn's own loggers keep their own handlers and do not
+propagate to the root, so their lines stay plain text, as before 21A.
 
 Any keyword passed in ``extra=`` that is not a reserved ``LogRecord``
 attribute is merged into the JSON object, as a top-level key.
@@ -72,7 +74,6 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
         return json.dumps(payload, default=str)
-
 
 
 class ApplicationFilter(logging.Filter):
