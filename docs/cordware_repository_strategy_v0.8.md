@@ -1,6 +1,6 @@
 # Cordware Repository and Deployment Strategy
 
-**Version:** 0.8, 20 October 2026; stages 1 and 2 resequenced the same day (§5)  
+**Version:** 0.8, 20 October 2026; stages 1 and 2 resequenced the same day (§5); fake auth, the platform super-admin and host logging settled 21 October (§3); `APP_ENV`, the fake-auth guard and local testing switches settled the same day (§3)  
 **Status:** The adopted strategy (author, 2026-10-19). The direction is decided; smaller details may still shift, and each shift is recorded here. This is not authorization for any single production change.  
 **Source of truth:** this file, in `philoyhc/review-robin-web`. The `philoyhc/cordware` planning repo stands down later and is not updated.  
 **Deployment:** One integrated application on one Azure App Service, at `https://cordware.nus.edu.sg`.
@@ -18,13 +18,16 @@ Cordware is a **stateless identity and hosting shell**, not a shared business pl
 | Concern | Cordware | RRW | Residential Apps |
 |---|---|---|---|
 | Authentication | Interpret identity authenticated by Entra / Azure Easy Auth; expose trusted claims | Consume Cordware's identity | Consume Cordware's identity |
-| Users and roles | **None stored** | Own users, operator/admin/participant permissions | Own RA/staff/admin users and permissions |
-| Authorization | No access decisions for any application | Own | Own |
+| Users and roles | **None stored**; one configured platform role, super-admin | Own users, operator/admin/participant permissions | Own RA/staff/admin users and permissions |
+| Authorization | No access decisions inside any application | Own | Own |
 | Auditing | No business or login audit table | Audit business and account-state actions | Audit business actions |
 | Data and migrations | **No database or Alembic** | Own | Own |
 | UI | Landing page linking the mounted applications; host health | RRW application | Support Log, RA Leave, RA Events |
+| Super-admin | **The platform role:** reads `SUPER_ADMIN_EMAILS`, an App Service application setting, and marks the identity; no Cordware console | Grants the platform super-admin its full rights in RRW; keeps its own app-only admins | Grants the platform super-admin its full rights in Residential; keeps its own app-only admins |
+| Logging | Operational events only (§3), to stdout and Azure Monitor | Own operational logs and business audit | Own operational logs and business audit |
+| Administration | Through Azure: portal, App Service settings, RBAC on Azure Monitor | In-app, by its own admins | In-app, by its own admins |
 
-Cordware's functions are limited to trusted identity resolution, application mounting, the landing page, and minimal process configuration, lifecycle, health and logging. The landing page lists the applications that are mounted, not the ones a viewer is entitled to use: each application gates its own routes. A Cordware database or generic authorization framework is **not planned**.
+Cordware's functions are limited to trusted identity resolution, application mounting, the landing page, and minimal process configuration, lifecycle, health and logging. The landing page lists the applications that are mounted, not the ones a viewer is entitled to use: each application gates its own routes. A Cordware database, generic authorization framework, admin interface or dashboard is **not planned**: whatever needs administering at the host level is done through Azure.
 
 **RRW is the senior tenant and the starting source of reusable host code, not the permanent owner of shared authentication.** Identity resolution moves to Cordware in stage 2 because the host itself needs it, not merely because a second application will. Beyond identity and hosting, extract shared code only when a second application actually needs it.
 
@@ -140,11 +143,49 @@ These requirements, carried from the archived integration spec v0.2, apply from 
 
 ### Shared identity, application-specific permissions
 
-Microsoft Entra / Azure Easy Auth performs institutional sign-in. In stage 2, Cordware takes over interpreting the **trusted** claims at the protected ingress and exposes a small request-level identity: principal/object ID where available, email/UPN, display name and provider. It never trusts spoofable identity headers from outside the protected ingress. Fake local identity is Cordware's alone, and is refused outside local development.
+Microsoft Entra / Azure Easy Auth performs institutional sign-in. In stage 2, Cordware takes over interpreting the **trusted** claims at the protected ingress and exposes a small request-level identity: principal/object ID where available, email/UPN, display name, provider, and whether the user holds the platform super-admin role. It never trusts spoofable identity headers from outside the protected ingress. Fake local identity is Cordware's alone, and is refused outside local development.
 
-RRW maps that identity to its own user and permission records; Residential does its own mapping. Neither receives an authorization decision from Cordware. Fake *roles* (RRW's operator, admin and super-admin flags, for example) stay with each application, because they are authorization, not identity. An application's role resolution reads whether the user is the fake one, and the fake email, from Cordware's identity, never from its own copy of the fake-auth settings, so there is one source for both.
+RRW maps that identity to its own user and permission records; Residential does its own mapping. Neither receives an authorization decision from Cordware: Cordware asserts one platform role, super-admin, from configuration, and what that role unlocks, like every other permission, each application decides. Fake *application* roles (RRW's operator and admin flags, for example) stay with each application, because they are authorization, not identity. An application's role resolution reads whether the user is the fake one from Cordware's identity, never from its own copy of the fake-auth settings, so there is one source for it.
+
+**Local fake auth.** The baked-in localhost account stays **Local Operator `<operator@example.edu>`**. Cordware builds it (principal ID, email and name) together with the switch that enables it (`ALLOW_FAKE_AUTH`) and the guard described below. While fake auth is on, Cordware also marks that fake user as platform super-admin, so it holds super-admin in every hosted application without any per-application setting. The switch for this, `FAKE_AUTH_SUPER_ADMIN`, moves from RRW to Cordware with its name and its default (on) unchanged, so a local run can still turn it off to test as a non-super-admin; RRW's own copy of the flag retires. Applications recognize the fake user by Cordware's fake marker, not by matching the literal email, so changing the fake account's email in Cordware can't strip its rights in any application.
+
+**Super-admin is a platform role** (author, 2026-10-21). It is the Cordware-level account; each application already has its own application-only admins for everything narrower.
+
+- **Cordware reads it.** `SUPER_ADMIN_EMAILS` becomes a Cordware setting, kept under its current, unprefixed name because it is deliberately shared. It is an App Service application setting: a comma-separated list, so there can be more than one super-admin; matched case-insensitively against the signed-in email; evaluated on every request; never stored.
+- **The identity carries it.** Cordware exposes it as a flag on the request-level identity (`is_super_admin`), alongside email and display name. Cordware also exposes whether the list is empty (`super_admin_configured`), both on the identity and as a host-level value readable outside a request, so an application can tell "no platform super-admin is configured" from "this user isn't one". Applications read these two values and never parse the setting themselves, so every application interprets the list the same way.
+- **The work happens inside each application.** Each application grants the platform super-admin its full rights there, the way RRW's top tier works today, and decides what that means. There is no separate Cordware application, dashboard or console for a super-admin to use.
+- **Editing the list is done in Azure**, in the App Service's settings; it can't be changed from inside any application. An empty list means no platform super-admin: `super_admin_configured` is false, and each application's existing fallback applies (in RRW, any admin may manage admins). Because the setting is Cordware's, the startup warning about an empty list is Cordware's too (host logging, event 1); RRW's own warning retires with its parsing of the setting. When the list has entries, the fallback is off, even for users who aren't in it.
+
+RRW's role resolution (`app/auth/roles.py`) moves from reading `SUPER_ADMIN_EMAILS` itself to reading the identity's flag in stage 2, with the identity extraction.
 
 RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the host exists (stage 1), and before RRW moves to `/reviewrobin`, so the dev slot's one live check at the prefix flip covers the new identity and the new prefix together. Identity parsing reads headers, not paths, so it doesn't depend on the mount. Because RRW has no standalone runtime, it keeps no second parser of its own.
+
+### Environment, guard and local testing switches
+
+**`APP_ENV` is a platform setting** (author, 2026-10-21). Cordware reads it and exposes it as a host-level value; applications consult that value rather than reading the setting themselves. It keeps its name and its default, `local`. Today RRW reads it in two places, both asking only whether it is `local`: its fail-fast startup check (`validate_critical_settings`, which refuses to start when no one could sign in) and the empty-super-admin startup warning, which moves to Cordware (host logging, event 1).
+
+**Cordware enforces the fake-auth guard.** It refuses to start when `ALLOW_FAKE_AUTH` is on and `APP_ENV` is anything other than `local`. Today nothing enforces this: fake auth is gated only by `ALLOW_FAKE_AUTH`, and "never enable it when deployed" is a documented rule. Every deployed environment, the personal dev slot included, therefore sets `APP_ENV` to a non-`local` value (NUS uses `production`).
+
+**Local testing switches keep their names, defaults and behavior.** Every environment switch RRW reads today stays settable in the repository-root `.env` or per run (`$env:NAME=…` in PowerShell, `export NAME=…` in a POSIX shell), with the shell value overriding `.env`, and a restart picking up a change. One `.env` is read by Cordware and every mounted application. Ownership splits as follows:
+
+- **Cordware:** `APP_ENV`, `ALLOW_FAKE_AUTH`, `FAKE_AUTH_EMAIL`, `FAKE_AUTH_NAME`, `FAKE_AUTH_PRINCIPAL_ID`, `FAKE_AUTH_SUPER_ADMIN`, `SUPER_ADMIN_EMAILS`, `LOG_LEVEL`.
+- **RRW:** `FAKE_AUTH_OPERATOR`, `FAKE_AUTH_SYS_ADMIN`, `OPERATOR_EMAILS`, `SYS_ADMIN_EMAILS`, `DATABASE_URL`, `REHYDRATE_ENABLED`, `AUDIT_STRICT_MODE`, `SMTP_ENCRYPTION_KEY`, `SCHEDULED_OPERATIONAL_LEAD_HOURS`, `REVIEWER_NOTICE_MIN_HOURS`, `PARTICIPANT_TOKEN_SALT`, `OPERATOR_CONTACT_EMAIL`, and the test and tool switches (`TEST_DATABASE_URL`, `RRW_REQUIRE_BROWSER`, `RRW_PARITY_DUMP`, `RRW_NODE_ROOT`).
+
+RRW's identity diagnostics, `/auth/me` and `/auth/me/debug`, keep working (at `/reviewrobin/auth/…` after the prefix flip) and show Cordware's identity, including whether it is the fake user.
+
+### Host logging
+
+Cordware writes **operational logs only**, as JSON lines on stdout, using the formatter RRW already has. App Service collects them, and Azure Monitor (the existing Log Analytics workspace and Application Insights) stores and queries them. Reading them is controlled by Azure RBAC on those resources. So host logging needs **no Cordware tables, users, admin interface or log viewer**. Locally the same lines print to the terminal.
+
+Cordware logs only what no application can see:
+
+1. process start and stop, which applications `CORDWARE_APPS` mounted, any mounted application's startup validation failure, and a warning when `SUPER_ADMIN_EMAILS` is empty in a deployed environment;
+2. fake auth being enabled (a warning on every start) and every refusal by its guard;
+3. identity problems: missing or malformed Easy Auth headers (the fact, never the header contents). A well-formed but forged header is indistinguishable from Easy Auth's to the host, so Cordware does not claim to detect requests that bypass the protected ingress. The network path rules that out (the Web App has `publicNetworkAccess = Disabled` and is reached only through Application Gateway and Easy Auth), and watching for a bypass belongs to infrastructure monitoring in Azure, not to host logging;
+4. requests no mounted application handled, the live counterpart of stage 1's leak check;
+5. errors outside any mounted application, and failing `/health` checks.
+
+Cordware does **not** log sign-ins (Entra's sign-in logs cover them), duplicate request access logs (App Service, Application Gateway and Application Insights already record requests), or anything an application logs about its own work. It does stamp every log record and telemetry item with the application that produced it (`reviewrobin`, `residentialapps` or the host), so the shared workspace can be read per application.
 
 ## 4. Audit and persistence
 
@@ -189,7 +230,7 @@ Make small, reviewable changes. **Nothing is deployed to the NUS host until this
 |---|---|---|
 | **0. Baseline and privacy** | Record RRW and Residential source SHAs, tests, migration heads, launch and deploy configuration. Make this repository **private before importing Residential's private material**, then check Actions, access and integrations after the change. | Known-good RRW baseline, provenance kept |
 | **1. Host skeleton and URL sweep** | Two workstreams, each behavior-neutral while RRW stays at `/`. **Host skeleton (first):** add `cordware/main.py` and the `CORDWARE_APPS` setting, with Cordware alone serving `/health`; mount RRW **at `/`** for now; move the module-level app out of `app/main.py` and every start command to the Cordware entry point; move root-logger setup into Cordware; add the import-boundary test. The personal dev slot's start command switches to the Cordware entry point here. **URL sweep:** move every literal root path in templates, Python, inline scripts, path comparisons and cookies onto route-aware generation; add a test harness that mounts RRW under `/reviewrobin` and a leak-check test that becomes a hard gate once the sweep is done. | Cordware alone and Cordware + RRW both run; RRW behavior unchanged at `/`; no root-path leak under the test mount |
-| **2. Shared identity, then the prefix flip** | **Shared identity** may start as soon as the host skeleton lands, in parallel with the sweep: move RRW's tested Easy Auth claims parsing into `cordware/identity.py`, with fake local identity and its guard; RRW consumes it through a re-export and keeps its fake roles, `users`, permissions and audits. No Cordware database. **Prefix flip (last, after the sweep):** mount RRW at `/reviewrobin`, serve the Cordware landing page at `/`, and fix the `/.auth/*` login and logout return paths. The personal dev slot then serves the assembled app, as the live check of §3's behavior requirements and the new identity under real Easy Auth. | Trusted-identity interface tested on its own; RRW permission behavior unchanged; RRW behavior unchanged at `/reviewrobin` |
+| **2. Shared identity, then the prefix flip** | **Shared identity** may start as soon as the host skeleton lands, in parallel with the sweep: move RRW's tested Easy Auth claims parsing into `cordware/identity.py`, with fake local identity and its guard, and the `SUPER_ADMIN_EMAILS` platform role; RRW consumes it through a re-export and keeps its fake roles, `users`, permissions and audits. No Cordware database. **Prefix flip (last, after the sweep):** mount RRW at `/reviewrobin`, serve the Cordware landing page at `/`, and fix the `/.auth/*` login and logout return paths. The personal dev slot then serves the assembled app, as the live check of §3's behavior requirements and the new identity under real Easy Auth. | Trusted-identity interface tested on its own; RRW permission behavior unchanged; RRW behavior unchanged at `/reviewrobin` |
 | **3. Establish Residential** | Import its skeleton, architectural decisions, specs, plans, tests, tools, agent guidance and Alembic; re-namespace `app`; consume Cordware identity; mount at `/residentialapps`. Settle B or C **before production database setup**, not necessarily before the code import. | Cordware + Residential runs without RRW; both applications coexist |
 | **4. Integrated release** | Resolve the one dependency environment; package the applications and assets; run each mounted application's migrations with its own database and credentials; verify in staging, then a controlled production cutover. | One validated build and release, with documented rollback and recovery |
 
@@ -233,9 +274,9 @@ The production process still shares Python dependency resolution, startup, compu
 - B or C is implemented safely (C preferred);
 - the integrated artifact is staged, tested and deployed, with a documented recovery path.
 
-**Implementation decisions still open:** the lifespan contract's exact shape; the route-aware URL helper for strings built outside a request; the trusted-identity interface; the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; path scoping for RRW's repo-wide tooling; repository privacy and rename timing.
+**Implementation decisions still open:** the lifespan contract's exact shape; the route-aware URL helper for strings built outside a request; the trusted-identity interface; the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; path scoping for RRW's repo-wide tooling; repository privacy and rename timing.
 
-**Non-goals:** moving RRW's source into a `reviewrobin/` folder; cross-repository source sync or private package composition; plugin discovery; a supported standalone RRW runtime; Cordware user or role tables, or any Cordware persistence; a login audit table; shared business tables; a second PostgreSQL server without a new requirement; redirects for old root paths; a big-bang rewrite.
+**Non-goals:** moving RRW's source into a `reviewrobin/` folder; cross-repository source sync or private package composition; plugin discovery; a supported standalone RRW runtime; Cordware user or role tables, or any Cordware persistence; a Cordware application, admin interface, console, dashboard or log viewer (the platform super-admin works inside the applications); a login audit table; shared business tables; a second PostgreSQL server without a new requirement; redirects for old root paths; a big-bang rewrite.
 
 ## 9. Decision history
 
@@ -249,7 +290,7 @@ The production process still shares Python dependency resolution, startup, compu
 
 All earlier versions, `cordware_repo_planning.md` and integration spec v0.2 are in `docs/archive/`. They are decision history, not implementation instructions.
 
-**Changed in v0.8** (author, 2026-10-19 and 2026-10-20):
+**Changed in v0.8** (author, 2026-10-19 to 2026-10-21):
 
 - **Standalone compatibility replaced by independence (§3).** v0.7 required RRW to "work both standalone locally and mounted". v0.8 requires that Cordware plus any single application runs, with the mounted set named by `CORDWARE_APPS` and Cordware runnable alone. Packages stay shared. There is no supported standalone RRW runtime, so RRW keeps no second identity parser.
 - **v0.7 Addendum A folded into §3** as "Behavior under the mount": deep links, auth-free probes, mounted request handling, no backend-host leak.
@@ -257,4 +298,6 @@ All earlier versions, `cordware_repo_planning.md` and integration spec v0.2 are 
 - **Gateway path forwarding stated (§3):** the mount needs Application Gateway to forward the public path unchanged; v0.7 had called keep-or-strip irrelevant.
 - **The v8 status report marked superseded in part:** its source-control and deployment model (independent repos synced into `philoyhc/cordware`) conflicts with this strategy, and the report now says so.
 - **Stages 1 and 2 resequenced (§5, same day):** v0.8 first put the whole mount, sweep included, in stage 1 and identity after it. Stage 1 is now the host skeleton (RRW still at `/`) and the URL sweep, both behavior-neutral. Stage 2 is shared identity, which may run alongside the sweep, then the prefix flip, which is the only step that changes URLs and comes last. The behavior requirements apply from the flip; the dev slot changes its start command in stage 1 and its served path in stage 2.
+- **Fake auth, the platform super-admin and host logging settled (§1, §3; author, 2026-10-21):** Cordware builds the localhost account, Local Operator `<operator@example.edu>`, and marks it platform super-admin while fake auth is on. Super-admin is one platform role: Cordware reads `SUPER_ADMIN_EMAILS` (an App Service application setting, one or more emails) and exposes it on the identity, and each application grants it full rights inside itself; there is no Cordware console, and the list is edited in Azure. Cordware writes operational logs only, to stdout and Azure Monitor, so it needs no tables, users or viewer.
+- **`APP_ENV`, the fake-auth guard and local testing switches (§3; author, 2026-10-21):** `APP_ENV` becomes a platform setting Cordware reads and exposes. Cordware refuses to start with fake auth on outside `APP_ENV=local`, turning a documented rule into an enforced one, so every deployed environment sets a non-`local` value. Every local testing switch keeps its name, default and override behavior, with one repository-root `.env` read by Cordware and every application; §3 lists which side owns each.
 - **Consistency fixes:** identity extraction ahead of Residential is explained (§1); the landing page lists mounted applications (§1, §3); the stage 1 and stage 3 gates name the independence checks (§5); the status line records adoption, and the broken version-history pointer is fixed.
