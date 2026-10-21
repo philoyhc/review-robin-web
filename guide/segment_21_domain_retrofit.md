@@ -10,6 +10,10 @@ RRW hosted by a `cordware/` package and mounted at `/reviewrobin` ·
 
 **On hold (author, 2026-10-16);** this rewrite does not lift it.
 Residential Apps (v0.8 stage 3) and any NUS deploy wait on 21D (v0.8 §5).
+**The dev slot is dormant** until the Azure work settles, and every rung
+is tested on localhost (author, 2026-10-21). Its steps, start command,
+`APP_ENV` and 21D's live check, wait in `docs/deployment_dev.md`
+"Resuming the dev slot".
 
 The **outline** for v0.8's stages 1–2: sub-segments `21A`–`21D`, each
 with its own `guide/segment_21X_<slug>.md` opened when it starts. This
@@ -44,10 +48,10 @@ merges on its own; D is the only one that changes a URL.
 
 | Sub-segment | What | Gate to start | Provable in CI? | v0.8 |
 |---|---|---|---|---|
-| **21A — Host skeleton** | `cordware/main.py` with `CORDWARE_APPS` (empty: Cordware alone, `/health`); RRW mounted **at `/`**; RRW built once (module-level app removed, its consumers moved); every start command on `cordware.main:app`, with the dev deploy artifact and package discovery carrying `cordware/`; root logging owned by the host; the import-boundary test | Stage 0's RRW baseline recorded (v0.8 §5) | Yes; the dev slot's start command is the author's, in Azure, switched within A2 | Stage 1 |
+| **21A — Host skeleton** | `cordware/main.py` with `CORDWARE_APPS` (empty: Cordware alone, `/health`); RRW mounted **at `/`**; RRW built once (module-level app removed, its consumers moved); every start command on `cordware.main:app`, with the dev deploy artifact and package discovery carrying `cordware/`; root logging owned by the host; the import-boundary test | Stage 0's RRW baseline recorded (v0.8 §5) | Yes; the dev slot's start command waits for its resumption | Stage 1 |
 | **21B — URL sweep** | A URL helper for strings built outside a request; a harness mounting RRW at `/reviewrobin`; a leak check with a shrinking allowlist; the sweep by area; the allowlist removed | 21A merged (the harness is Cordware) | Yes | Stage 1 |
-| **21C — Shared identity** | Easy Auth parsing, the fake identity and its `APP_ENV` guard move to `cordware/identity.py` behind a re-export; RRW's fake roles read Cordware's fake marker; super-admin becomes Cordware's platform role | 21A merged; the dev slot's `APP_ENV` set non-`local` before the guard lands | Yes, except the dev slot | Stage 2 |
-| **21D — Prefix flip** | RRW mounted at `/reviewrobin`; Cordware's landing page at `/`; `/.auth/*` return paths; deep-link return; the dev slot live check | 21A and 21B closed; 21C closed, so one live check covers identity and prefix together | Yes, requirement 4 included; the live check is the author's, on the dev slot; the NUS gateway itself only at stage 4 | Stage 2 |
+| **21C — Shared identity** | Easy Auth parsing, the fake identity and its `APP_ENV` guard move to `cordware/identity.py` behind a re-export; RRW's fake roles read Cordware's fake marker; super-admin becomes Cordware's platform role | 21A merged | Yes; the dev slot's `APP_ENV` waits for its resumption | Stage 2 |
+| **21D — Prefix flip** | RRW mounted at `/reviewrobin`; Cordware's landing page at `/`; `/.auth/*` return paths; deep-link return; the dev slot live check | 21A and 21B closed; 21C closed, so one live check covers identity and prefix together | Yes, requirement 4 included; the author checks on localhost, and the real-Easy-Auth check runs when the dev slot resumes; the NUS gateway itself only at stage 4 | Stage 2 |
 
 ```text
 21A ──┬──> 21C ──┐
@@ -92,7 +96,8 @@ still call RRW's own app at app-relative paths. Also rejected (sequence
   by rule, not by allowlist; 21D fixes its return paths.
 - **Failed startup validation in a mounted app fails the process**; **no
   redirects** from old root paths; `/health` is the host's, with no
-  interactive sign-in (all v0.8 §3).
+  interactive sign-in (all v0.8 §3). RRW's own stays reachable at
+  `/reviewrobin/health` (author, 2026-10-21).
 - **Identity** follows v0.8 §3; the points RRW's code turns on:
   - Cordware is the only Easy Auth parser; `users`, roles and audits
     stay RRW's (v0.8 §4). Fake roles key off Cordware's fake marker,
@@ -167,12 +172,10 @@ holds only the gates between them and the constraints a rung must carry.
    `cordware/` file.
 2. **21A.** A2 moves the module-level app and all its consumers in one
    rung (sequence A2), with the dev artifact and package discovery
-   carrying `cordware/`; the author switches the dev slot's start
-   command after A1 deploys and before A2 merges, since the slot
-   redeploys on every push. Plan: `guide/segment_21A_cordware_foundations.md`.
+   carrying `cordware/`. Plan: `guide/segment_21A_cordware_foundations.md`.
 3. **21B**, after 21A. Its allowlist only shrinks, rung by rung.
-4. **21C**, alongside 21B, after the author sets the dev slot's
-   `APP_ENV`. The C1–C3 rule in § Semantics holds at every rung.
+4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
+   rung.
 5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
    D2 is the author's live check (§ Definition of done).
 
@@ -192,9 +195,10 @@ holds only the gates between them and the constraints a rung must carry.
 - v0.8 §3's four behavior requirements hold before stage 3 starts (21D):
   a test under the mount with a non-backend `Host` shows every absolute
   URL and download carrying that host and `/reviewrobin`
-  (requirement 4); the author has verified all four and real-Easy-Auth
-  identity on the dev slot. Only the NUS gateway's own path and host
-  header wait for stage 4.
+  (requirement 4); the author has verified all four on localhost. The
+  real-Easy-Auth check on the dev slot runs when it resumes (the
+  dormant note at the top), before any NUS deploy. Only the NUS gateway's own
+  path and host header wait for stage 4.
 - v0.8 §8's stage 1–2 decisions are settled and recorded in v0.8
   (21A–21C).
 - `## Doc impact` section present and current
@@ -213,10 +217,14 @@ holds only the gates between them and the constraints a rung must carry.
    configured base or a forwarded host, per the gateway's host-header
    behavior (v8 report §8.1). Decided in 21B; proved at 21D by test.
 4. **The trusted-identity interface** (v0.8 §8). Decided in 21C.
-5. **The dev slot's `APP_ENV`** (v0.8 §8): non-`local` before C1, the author's.
-6. **Repo-wide tooling's path scope** once `cordware/` has code (v0.8
-   §8): `tools/`, the doc gates, ruff, pytest paths and CI's required
-   checks for `cordware/tests/`. Decided in 21A.
+5. ~~The dev slot's `APP_ENV`~~ (v0.8 §8): set non-`local` when the slot
+   resumes, step 1 of `docs/deployment_dev.md` "Resuming the dev slot"
+   (author, 2026-10-21).
+6. ~~Repo-wide tooling's path scope~~ for 21A: ruff and pytest take
+   `cordware/`, RRW's doc gates stay RRW's, and `cordware/spec/` is
+   checked by hand (author, 2026-10-21; `guide/segment_21A_cordware_foundations.md`).
+   CI's required checks need nothing new while one workflow collects both
+   trees; per-owner jobs wait for stage 3.
 7. **Console logs reaching Log Analytics** (v0.8 §8): the author, in Azure.
 8. **Should a service build URLs?** `services/validation.py`'s fix
    links could move to a view. The author rules in 21B.
