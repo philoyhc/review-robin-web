@@ -31,7 +31,8 @@ Two sibling registers hold the open work that is not queued here:
   `/reviewrobin`, proved on the dev slot. The outline,
   `guide/segment_21_domain_retrofit.md`, was rewritten 2026-10-21
   against v0.8 and `docs/cordware_implementation_sequence.md`: 21A host
-  skeleton, 21B URL sweep, 21C shared identity, 21D prefix flip. Nothing
+  skeleton (planned: `guide/segment_21A_cordware_foundations.md`), 21B
+  URL sweep, 21C shared identity, 21D prefix flip. Nothing
   under it starts until the author lifts the hold; Residential Apps
   (v0.8 stage 3) and any NUS deploy wait on it. The strategy is
   `docs/cordware_repository_strategy_v0.8.md` (adopted 2026-10-19,

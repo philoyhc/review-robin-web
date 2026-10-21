@@ -136,7 +136,7 @@ The sequence's counts (at `4ed8114`) differ mainly by method.
 |---|---|---|---|
 | A | Importers of the module-level app | 16: `app/web/return_to.py:65`, 14 test files, `tools/bench_roster_scale.py` | `grep -rlE 'from app\.main import app\b' --include='*.py' app tests tools` |
 | A | `app.main:app` in live start commands | `README.md`, `CLAUDE.md`, `.devcontainer/devcontainer.json`, `tests/browser/conftest.py`, `docs/local_setup.md` (3), `docs/setup_codespaces.md` (2), `docs/deployment_nus.md` (2), `docs/deployment_dev.md` | `grep -rnE 'app\.main:app' .`; the string is in no workflow |
-| A | Dev deploy artifact and packaging | the dev workflow uploads `app/`, `alembic/`, `alembic.ini`, `requirements.txt`, `pyproject.toml`, `antenv/` and deploys on every push to `main`; `pyproject.toml:35` finds `app*` only; `testpaths = ["tests"]` (`:38`) | `.github/workflows/main_app-review-robin-web-dev.yml:56–62` |
+| A | Dev deploy artifact and packaging | the dev workflow uploads `app/`, `alembic/`, `alembic.ini`, `requirements.txt`, `pyproject.toml`, `antenv/` and deploys on every push to `main`; `pyproject.toml:36` finds `app*` only; `testpaths = ["tests"]` (`:39`) | `.github/workflows/main_app-review-robin-web-dev.yml:56–62` |
 | A | Root-logger setup | `app/logging_config.py:96–106`, called first in `create_app()` | `alembic/env.py:22`'s `fileConfig` also replaces root handlers |
 | B | Template `href`/`action`/`formaction`/`src="/` | 95 / 50 / 9 / 38 (39, 20, 3, 1 files) | `grep -rnoE '(^\|[^a-z])href="/' app/web/templates \| wc -l`, per attribute |
 | B | Template attributes built in Python (`="{{`) | 58 href, 28 action, 3 formaction | same, with `\{\{` |
@@ -168,7 +168,8 @@ holds only the gates between them and the constraints a rung must carry.
 2. **21A.** A2 moves the module-level app and all its consumers in one
    rung (sequence A2), with the dev artifact and package discovery
    carrying `cordware/`; the author switches the dev slot's start
-   command as A2 merges, since the slot redeploys on every push.
+   command after A1 deploys and before A2 merges, since the slot
+   redeploys on every push. Plan: `guide/segment_21A_cordware_foundations.md`.
 3. **21B**, after 21A. Its allowlist only shrinks, rung by rung.
 4. **21C**, alongside 21B, after the author sets the dev slot's
    `APP_ENV`. The C1–C3 rule in § Semantics holds at every rung.
@@ -204,9 +205,9 @@ holds only the gates between them and the constraints a rung must carry.
 
 ## Open questions
 
-1. **Where do 21A's and 21C's plans live?** The author decides
-   (sequence §6.2). Recommended: here, as sub-segments, since the plan
-   tooling reads `guide/`; the settled contract goes to `cordware/spec/`.
+1. **Where do the sub-segment plans live?** In `guide/`, as
+   `segment_21X_*.md`: the author opened 21A's there (2026-10-21; sequence
+   §6.2). The settled contract still goes to `cordware/spec/`.
 2. **The lifespan contract's shape** (v0.8 §8). Decided in 21A.
 3. **The public host for absolute links** (invites, emails): a
    configured base or a forwarded host, per the gateway's host-header
