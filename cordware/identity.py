@@ -130,7 +130,9 @@ def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
         return None
     try:
         payload = json.loads(decoded)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # Base64 that decodes to bytes which are not UTF-8 is as malformed
+        # as text that is not JSON (Codex, #3214).
         return None
     if not isinstance(payload, dict):
         return None

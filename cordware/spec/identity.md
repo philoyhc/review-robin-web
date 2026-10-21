@@ -67,10 +67,13 @@ Headers count as present when any of `X-MS-CLIENT-PRINCIPAL-NAME`,
 `X-MS-CLIENT-PRINCIPAL-ID` or `X-MS-CLIENT-PRINCIPAL` is non-empty
 (`X-MS-CLIENT-PRINCIPAL-IDP` alone does not).
 
-`X-MS-CLIENT-PRINCIPAL` is base64 (strict) JSON, an object with a `claims`
-list of `{typ, val}` objects. Anything else is malformed: the header
-contributes nothing and `identity.header_malformed` is logged. Entries of
-`claims` that are not objects with a non-empty string `val` are skipped.
+`X-MS-CLIENT-PRINCIPAL` is base64 (strict) of UTF-8 JSON, an object with a
+`claims` list of `{typ, val}` objects. A value that is not base64, not UTF-8,
+not JSON or not a JSON object is malformed: the header contributes nothing and
+`identity.header_malformed` is logged. An object without a `claims` list is
+not malformed; it contributes no claims (its `auth_typ` or
+`identityProvider` may still name the provider). Entries of `claims` that are
+not objects with a non-empty string `val` are skipped.
 
 A claim is chosen by the **order of the types listed below**, not the token's
 own claim order; within one type the first non-empty value wins. Each field
