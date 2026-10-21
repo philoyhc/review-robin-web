@@ -86,14 +86,18 @@ def _load_factory(path: str) -> Callable[[], ASGIApp]:
     return getattr(importlib.import_module(module_name), attribute)
 
 
+def _log_startup_failure(name: str) -> None:
+    log.exception(
+        "mounted application failed to start",
+        extra={"event": "host.app_startup_failed", "app": name},
+    )
+
+
 def _build(name: str, entry: AppEntry) -> ASGIApp:
     try:
         return _load_factory(entry.factory)()
     except Exception:
-        log.exception(
-            "mounted application failed to start",
-            extra={"event": "host.app_startup_failed", "app": name},
-        )
+        _log_startup_failure(name)
         raise
 
 
@@ -127,7 +131,11 @@ def create_app(
                 router = getattr(sub_app, "router", None)
                 if router is None:
                     continue
-                yielded = await stack.enter_async_context(router.lifespan_context(sub_app))
+                try:
+                    yielded = await stack.enter_async_context(router.lifespan_context(sub_app))
+                except Exception:
+                    _log_startup_failure(name)
+                    raise
                 for key, value in (yielded or {}).items():
                     if key in state:
                         raise RuntimeError(

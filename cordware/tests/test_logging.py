@@ -11,9 +11,11 @@ import io
 import json
 import logging
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import asynccontextmanager
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cordware.logging import ApplicationFilter, JsonFormatter, configure_logging
@@ -159,6 +161,31 @@ def test_the_host_logs_start_and_stop_with_the_mounted_set(
 
 def failing_factory() -> None:
     raise RuntimeError("startup validation failed")
+
+
+def failing_lifespan_app() -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        raise RuntimeError("lifespan startup failed")
+        yield
+
+    return FastAPI(lifespan=lifespan)
+
+
+def test_a_mounted_lifespan_startup_failure_is_logged(
+    capture: Callable[[], io.StringIO],
+) -> None:
+    captured = capture()
+    registry = {
+        "late": AppEntry(path="/late", factory=f"{__name__}:failing_lifespan_app", logger="late")
+    }
+    host = create_app(apps=("late",), registry=registry)
+    with pytest.raises(RuntimeError, match="lifespan startup failed"):
+        with TestClient(host):
+            pass
+    (line,) = [e for e in _lines(captured) if e.get("event") == "host.app_startup_failed"]
+    assert line["app"] == "late"
+    assert "lifespan startup failed" in str(line["exc_info"])
 
 
 def test_a_mounted_startup_failure_is_logged_before_it_propagates(
