@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from cordware.settings import identity_settings
 from app.db.models import AuditEvent, User
 from app.services import account_listing
 
@@ -32,7 +33,7 @@ def test_super_admins_are_config_emails_with_an_account(
     # A super-admin is a config email, flag or not; a sys-admin flag
     # alone isn't one, and a config email with no account counts nothing.
     monkeypatch.setattr(
-        settings, "super_admin_emails", ["Boss@example.edu", "ghost@example.edu"]
+        identity_settings, "super_admin_emails", ["Boss@example.edu", "ghost@example.edu"]
     )
     _user(db, "boss@example.edu")
     _user(db, "admin@example.edu", is_operator=True, is_sys_admin=True)
@@ -52,7 +53,7 @@ def test_the_card_is_one_line_of_pills(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    monkeypatch.setattr(settings, "super_admin_emails", [])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [])
     # A different count for every kind, so a pill can't show another's.
     for n in range(3):
         _user(db, f"op{n}@example.edu", is_operator=True)
@@ -88,7 +89,7 @@ def test_the_super_admin_pill_counts_them(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch,
     supers: list[str], text: str,
 ) -> None:
-    monkeypatch.setattr(settings, "super_admin_emails", supers)
+    monkeypatch.setattr(identity_settings, "super_admin_emails", supers)
     _user(db, "boss@example.edu", is_operator=True, is_sys_admin=True)
     db.commit()
     assert _pill("super_admins", text) in _card(client)

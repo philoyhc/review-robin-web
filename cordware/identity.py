@@ -14,8 +14,9 @@ users and permissions; nothing here decides what anyone may do.
   from the request: a settings parameter would become a request body.
 - `resolve_identity(request, settings)`: the same resolution with the
   settings passed in, for tests. Never a dependency.
-- `fake_auth()`, `app_env()`, `is_local()`: host-level reads, valid
-  outside a request.
+- `fake_auth()`, `app_env()`, `is_local()`, `is_super_admin_email()`,
+  `super_admin_configured()`, `super_admin_emails()`: host-level reads,
+  valid outside a request.
 """
 
 from __future__ import annotations
@@ -24,7 +25,8 @@ import base64
 import binascii
 import json
 import logging
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from fastapi import HTTPException, Request, status
@@ -41,6 +43,11 @@ class Identity:
     name: str | None
     provider: str | None = None
     is_fake: bool = False
+    # The settings a caller passed to `resolve_identity` (tests), so the
+    # role properties read the configuration the identity was resolved
+    # under. None, as from the dependency, reads the host's. Not part of
+    # equality: two resolutions of one principal are the same identity.
+    resolved_with: IdentitySettings | None = field(default=None, compare=False, repr=False)
 
     @property
     def display_label(self) -> str:
@@ -48,6 +55,16 @@ class Identity:
         persisted user gives it, so a page rendered from the identity
         alone names the viewer too."""
         return self.name or self.email or ""
+
+    @property
+    def is_super_admin(self) -> bool:
+        """Computed from the host-level predicate, never stored, so the
+        flag, `is_super_admin_email` and `super_admin_configured` agree."""
+        return is_super_admin_email(self.email, self.resolved_with)
+
+    @property
+    def super_admin_configured(self) -> bool:
+        return super_admin_configured(self.resolved_with)
 
 
 @dataclass(frozen=True)
@@ -73,6 +90,37 @@ def app_env(settings: IdentitySettings | None = None) -> str:
 
 def is_local(settings: IdentitySettings | None = None) -> bool:
     return app_env(settings) == "local"
+
+
+def _normalize_email(email: str) -> str:
+    # RRW's `normalize_email` rule: strip, then `str.lower` (deliberately
+    # not casefold). Cordware cannot import an application, so it keeps
+    # its own copy, and an RRW test pins the two equal.
+    return email.strip().lower()
+
+
+def super_admin_emails(settings: IdentitySettings | None = None) -> tuple[str, ...]:
+    """The effective super-admin list, normalized: `SUPER_ADMIN_EMAILS`,
+    plus the fake account's email while fake auth and
+    `FAKE_AUTH_SUPER_ADMIN` are both on."""
+    s = _settings(settings)
+    emails = list(s.super_admin_emails)
+    if s.allow_fake_auth and s.fake_auth_super_admin:
+        emails.append(s.fake_auth_email)
+    return tuple(dict.fromkeys(_normalize_email(e) for e in emails if e.strip()))
+
+
+def super_admin_configured(settings: IdentitySettings | None = None) -> bool:
+    """Whether the effective super-admin list is non-empty."""
+    return bool(super_admin_emails(settings))
+
+
+def is_super_admin_email(email: str | None, settings: IdentitySettings | None = None) -> bool:
+    """Whether ``email`` is in the effective super-admin list. A missing
+    or blank email never is."""
+    if not email or not email.strip():
+        return False
+    return _normalize_email(email) in super_admin_emails(settings)
 
 
 def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
@@ -173,6 +221,9 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
 
 
 _missing_headers = 0
+# `get_identity` is a plain function, so FastAPI runs it on a worker
+# thread: the count and the once-only check share a lock.
+_missing_headers_lock = threading.Lock()
 
 
 def missing_header_count() -> int:
@@ -185,8 +236,10 @@ def _note_missing_headers() -> None:
     # line: with fake auth off, every unauthenticated probe is "missing"
     # (21C Open question 1, author 2026-10-21).
     global _missing_headers
-    _missing_headers += 1
-    if _missing_headers == 1:
+    with _missing_headers_lock:
+        _missing_headers += 1
+        first = _missing_headers == 1
+    if first:
         log.warning(
             "request without Easy Auth headers refused",
             extra={"event": "identity.headers_missing"},
@@ -198,10 +251,10 @@ def resolve_identity(request: Request, settings: IdentitySettings | None = None)
     auth is on, else a 401. Never a dependency: see the module docstring."""
     cfg = _settings(settings)
     identity = _identity_from_easy_auth_headers(request)
+    if identity is None and cfg.allow_fake_auth:
+        identity = _fake_identity(cfg)
     if identity is not None:
-        return identity
-    if cfg.allow_fake_auth:
-        return _fake_identity(cfg)
+        return identity if settings is None else replace(identity, resolved_with=settings)
     _note_missing_headers()
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

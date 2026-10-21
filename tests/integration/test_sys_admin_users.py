@@ -22,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from cordware.settings import identity_settings
 from app.db.models import AuditEvent, SessionOperator, User
 
 
@@ -38,7 +39,7 @@ def _bootstrap_super_admin(
     implies is_sys_admin + is_operator via the sign-in self-heal, so the
     actor passes ``require_sys_admin`` AND the actor-super guard on
     promote / demote."""
-    monkeypatch.setattr(settings, "super_admin_emails", [email])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [email])
 
 
 def _seed_target(
@@ -1115,7 +1116,7 @@ def test_plain_sys_admin_cannot_promote(
     IS configured (someone else), so the strict rule applies: promoting
     an operator to admin is super-admin-only → 403."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
 
     response = client.post(
@@ -1135,7 +1136,7 @@ def test_plain_sys_admin_cannot_demote(
     """Actor is a plain sys-admin, with a super tier configured, so the
     strict rule applies: demoting another admin is super-admin-only → 403."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     target = _seed_target(
         db, email="bob@example.edu", is_operator=True, is_sys_admin=True
     )
@@ -1158,7 +1159,7 @@ def test_plain_sys_admin_cannot_invite_as_sys_admin(
     Promote's rule: a plain sys-admin, with a super tier configured, is
     refused and no row is written. The page hides the box from them."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
 
     body = client.get("/operator/sys-admin/users").text
     assert 'name="invite_as_sys_admin"' not in body
@@ -1185,7 +1186,7 @@ def test_plain_sys_admin_can_still_invite_an_operator(
 ) -> None:
     """Without the admin box, Invite stays admin-gated."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
 
     response = client.post(
         "/operator/sys-admin/users/invite",
@@ -1206,7 +1207,7 @@ def test_plain_admin_can_invite_as_sys_admin_when_no_super_tier_configured(
 ) -> None:
     """The no-super-tier fallback covers Invite as it covers Promote."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", [])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [])
 
     body = client.get("/operator/sys-admin/users").text
     assert 'name="invite_as_sys_admin"' in body
@@ -1257,7 +1258,7 @@ def test_super_admin_target_cannot_be_demoted(
     """Even a super-admin actor can't demote a super-admin target —
     super-admin is config-only (protected). 409."""
     monkeypatch.setattr(
-        settings,
+        identity_settings,
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
@@ -1280,7 +1281,7 @@ def test_super_admin_target_cannot_be_revoked(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        settings,
+        identity_settings,
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
@@ -1303,7 +1304,7 @@ def test_super_admin_target_cannot_be_removed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        settings,
+        identity_settings,
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
@@ -1331,7 +1332,7 @@ def test_super_admin_target_cannot_be_removed_from_all_sessions(
     from app.services import users as users_service
 
     monkeypatch.setattr(
-        settings,
+        identity_settings,
         "super_admin_emails",
         ["actor@example.edu", "boss@example.edu"],
     )
@@ -1358,7 +1359,7 @@ def test_super_admin_row_shows_super_admin_badge(
     """A super-admin user's row carries the violet Super-admin tier
     badge + the data-is-super-admin marker the JS gates on."""
     monkeypatch.setattr(
-        settings,
+        identity_settings,
         "super_admin_emails",
         ["alice@example.edu", "boss@example.edu"],
     )
@@ -1394,7 +1395,7 @@ def test_promote_demote_controls_hidden_for_plain_sys_admin_actor(
     when a super tier is configured (admin management is
     super-admin-only): the table tells the expander's script so."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
     assert 'data-can-manage-admins="false"' in body
@@ -1449,7 +1450,7 @@ def test_plain_admin_can_promote_when_no_super_tier_configured(
     sys-admin can promote again — the fallback avoids locking admin
     management out entirely."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", [])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [])
     target = _seed_target(db, email="bob@example.edu", is_operator=True)
 
     response = client.post(
@@ -1467,7 +1468,7 @@ def test_plain_admin_can_demote_when_no_super_tier_configured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", [])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [])
     # Two admins so the demote isn't the last-admin case.
     target = _seed_target(
         db, email="bob@example.edu", is_operator=True, is_sys_admin=True
@@ -1490,7 +1491,7 @@ def test_promote_demote_controls_visible_to_plain_admin_when_no_super_tier(
     """The UI mirrors the fallback: with no super tier configured, a
     plain sys-admin sees the Promote/Demote controls again."""
     _bootstrap_sys_admin(monkeypatch, email="alice@example.edu")
-    monkeypatch.setattr(settings, "super_admin_emails", [])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [])
     _seed_target(db, email="bob@example.edu", is_operator=True)
     body = client.get("/operator/sys-admin/users").text
     assert 'data-can-manage-admins="true"' in body

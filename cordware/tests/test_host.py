@@ -163,6 +163,9 @@ def test_rrw_startup_validation_failure_fails_the_host(monkeypatch: pytest.Monke
     from cordware.settings import identity_settings
 
     monkeypatch.setattr(identity_settings, "app_env", "production")
+    # Off explicitly: a developer `.env` turns it on, and the guard would
+    # refuse before RRW's validation runs.
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
     monkeypatch.setattr(settings, "operator_emails", [])
     monkeypatch.setattr(settings, "sys_admin_emails", [])
     with pytest.raises(ConfigurationError):

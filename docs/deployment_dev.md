@@ -101,8 +101,8 @@ not landed yet.
 
 1. **`APP_ENV`** (needed once 21C's guard lands): set it to a non-`local`
    value such as `dev`. Cordware refuses to start with `ALLOW_FAKE_AUTH`
-   on and `APP_ENV` at `local`, and every deployed environment must set
-   it anyway. Keep `ALLOW_FAKE_AUTH` `false`.
+   on and `APP_ENV` anything but `local`, so a deployed environment
+   names itself, and keeps `ALLOW_FAKE_AUTH` `false`.
 2. **Startup command** (needed once 21A's A2 is on `main`, which removes
    `app.main:app`): change it to
    `gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app`.

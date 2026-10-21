@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
+from cordware.settings import identity_settings
 
 ACCOUNTS = "/operator/sys-admin/users"
 
@@ -39,7 +40,7 @@ def test_the_role_chip_replaces_the_checkbox(
 ) -> None:
     """A cycle chip: always solid, its label naming the state, around
     the same ``invite_as_sys_admin`` box the route reads."""
-    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["alice@example.edu"])
     body = _page(client)
     chip = body.split("data-invite-role-chip", 1)[1].split("</label>", 1)[0]
     head = body.split("data-invite-role-chip", 1)[0]
@@ -57,7 +58,7 @@ def test_the_chip_and_buttons_share_one_row_cancel_before_invite(
 ) -> None:
     """The chip leads the row; Cancel then Invite follow it on the right
     (author, 2026-10-14)."""
-    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["alice@example.edu"])
     body = _page(client)
     form = body.split('id="invite-form"', 1)[1].split("</form>", 1)[0]
     row = form.split('<div class="card-action-row">', 1)[1]
@@ -74,7 +75,7 @@ def test_without_the_chip_the_row_holds_the_buttons_alone(
     """A plain admin, with a super tier configured, can't invite an
     admin: no chip, and the buttons keep their order."""
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    monkeypatch.setattr(settings, "super_admin_emails", ["root@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["root@example.edu"])
     form = _page(client).split('id="invite-form"', 1)[1].split("</form>", 1)[0]
     row = form.split('<div class="card-action-row">', 1)[1]
     assert "data-invite-role-chip" not in row

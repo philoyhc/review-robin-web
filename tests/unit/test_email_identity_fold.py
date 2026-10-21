@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import sqlite3
 
+import pytest
+
 from app.services.email_identity import looks_like_email, normalize_email
 
 
@@ -213,7 +215,7 @@ def test_looks_like_email_strips_before_judging() -> None:
 # short of the gates it was written to protect.
 
 
-def test_super_admin_membership_does_not_merge_eszett() -> None:
+def test_super_admin_membership_does_not_merge_eszett(monkeypatch) -> None:
     """The worst instance, had it ever been reachable.
 
     `is_super_admin` case-folded both sides against the configured
@@ -222,17 +224,39 @@ def test_super_admin_membership_does_not_merge_eszett() -> None:
     admitted as super-admin.
     """
     from app.auth.roles import is_super_admin
-    from app.config import Settings
+    from cordware.settings import identity_settings
 
-    settings = Settings(super_admin_emails=["strasse@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["strasse@example.edu"])
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
 
-    assert is_super_admin("strasse@example.edu", settings)
-    assert is_super_admin("  STRASSE@Example.EDU  ", settings), (
+    assert is_super_admin("strasse@example.edu")
+    assert is_super_admin("  STRASSE@Example.EDU  "), (
         "the fold still has to do its ASCII job"
     )
-    assert not is_super_admin("straße@example.edu", settings), (
+    assert not is_super_admin("straße@example.edu"), (
         "casefold would admit this; it is a different mailbox"
     )
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "John.Smith@Example.COM",
+        "  a@b.com \n",
+        "   ",
+        "straße@example.com",
+        "strasse@example.com",
+        "  MiXeD@Example.com ",
+        "İstanbul@example.com",
+    ],
+)
+def test_cordware_folds_email_as_normalize_email_does(email: str) -> None:
+    """Segment 21C: Cordware decides super-admin by its own copy of the
+    fold, since it cannot import an application. The cases are this
+    file's own."""
+    from cordware.identity import _normalize_email
+
+    assert _normalize_email(email) == normalize_email(email)
 
 
 def test_no_identity_gate_folds_inline() -> None:

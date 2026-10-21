@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from cordware.settings import identity_settings
 from app.db.models import AuditEvent, ReviewSession, SessionOperator, User
 from app.services import users as users_service
 from app.web import views
@@ -26,7 +27,7 @@ ACCOUNTS = "/operator/sys-admin/users"
 def actor(db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> User:
     """Alice, a super-admin, so every action is open to her; the first
     request creates her row."""
-    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["alice@example.edu"])
     client.get(ACCOUNTS)
     return db.execute(
         select(User).where(User.email == "alice@example.edu")
@@ -200,7 +201,7 @@ def test_a_super_admin_target_is_refused(
     db: Session, client: TestClient, actor: User, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        settings, "super_admin_emails", ["alice@example.edu", "boss@example.edu"]
+        identity_settings, "super_admin_emails", ["alice@example.edu", "boss@example.edu"]
     )
     boss = _seed(db, "boss@example.edu", is_operator=True, is_sys_admin=True)
     query = _query(_post(client, "demote", boss))
@@ -215,7 +216,7 @@ def test_two_admins_demoted_together_are_refused_by_last_admin(
 ) -> None:
     """Each alone would leave the other; together they'd leave none. The
     actor is a super-admin by config whose row carries no admin flag."""
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     boss = _seed(db, "boss@example.edu", is_operator=True)
     ann = _seed(db, "ann@example.edu", is_operator=True, is_sys_admin=True)
     ben = _seed(db, "ben@example.edu", is_operator=True, is_sys_admin=True)
@@ -272,7 +273,7 @@ def test_a_plain_admin_cannot_promote_while_a_super_tier_exists(
     db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     client.get(ACCOUNTS)
     bob = _seed(db, "bob@example.edu", is_operator=True)
     assert _post(client, "promote", bob).status_code == 403

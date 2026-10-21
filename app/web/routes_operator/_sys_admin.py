@@ -40,7 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.web import urls
-from app.auth.roles import effective_super_admin_emails
+from app.auth.roles import super_admin_configured
 from app.db.models import User
 from app.db.session import get_db
 from app.services import (
@@ -387,7 +387,7 @@ def sys_admin_users(
             # OR (no super tier configured) any admin, so the UI never
             # hides a control the server would actually accept.
             "can_manage_admins": (
-                user.is_super_admin or not effective_super_admin_emails()
+                user.is_super_admin or not super_admin_configured()
             ),
             "invite_error": invite_error,
             # A refused batch names its row: the email is looked up, the

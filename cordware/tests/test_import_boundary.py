@@ -86,7 +86,8 @@ def test_a_planted_import_under_app_is_caught(tmp_path: Path) -> None:
 
 def imported_modules(source: str) -> set[str]:
     """Every dotted module a source imports by name, `from x import y`
-    also counting as importing `x.y` (it may be a submodule)."""
+    also counting as importing `x.y` (it may be a submodule), including
+    a literal ``importlib.import_module("x.y")`` or ``__import__("x.y")``."""
     modules: set[str] = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
@@ -94,6 +95,16 @@ def imported_modules(source: str) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             modules.add(node.module)
             modules.update(f"{node.module}.{alias.name}" for alias in node.names)
+        elif isinstance(node, ast.Call) and node.args:
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            first = node.args[0]
+            if (
+                name in _DYNAMIC
+                and isinstance(first, ast.Constant)
+                and isinstance(first.value, str)
+            ):
+                modules.add(first.value)
     return modules
 
 
@@ -114,4 +125,6 @@ def test_the_entry_point_check_reads_both_import_forms() -> None:
     assert "cordware.main" in imported_modules("import cordware.main\n")
     assert "cordware.main" in imported_modules("from cordware import main\n")
     assert "cordware.main" in imported_modules("def f():\n    from cordware.main import app\n")
+    assert "cordware.main" in imported_modules("import importlib\nimportlib.import_module('cordware.main')\n")
+    assert "cordware.main" in imported_modules("__import__('cordware.main')\n")
     assert "cordware.main" not in imported_modules("from cordware.identity import fake_auth\n")

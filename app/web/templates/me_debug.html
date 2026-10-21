@@ -22,6 +22,7 @@
       {% if user.principal_id %}<code>{{ user.principal_id }}</code>{% else %}Not provided{% endif %}
     </p>
     <p><strong>Identity provider:</strong> {{ user.provider or "Not provided" }}</p>
+    <p><strong>Super-admin:</strong> {{ "Yes" if user.is_super_admin else "No" }}</p>
   </div>
 
   <div class="card">
