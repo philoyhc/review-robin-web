@@ -19,8 +19,6 @@ from http.cookies import SimpleCookie
 import httpx
 from fastapi import FastAPI
 
-from cordware.main import AppEntry, create_app
-
 MOUNT = "/reviewrobin"
 
 
@@ -31,6 +29,10 @@ def host_with(factory: str, path: str = MOUNT) -> FastAPI:
     root = logging.getLogger()
     handlers, level = list(root.handlers), root.level
     try:
+        # Imported here, not at the top: `cordware.main` builds its own
+        # `app` (and configures logging) at import, which this restores.
+        from cordware.main import AppEntry, create_app
+
         return create_app(
             apps=("reviewrobin",),
             registry={"reviewrobin": AppEntry(path=path, factory=factory, logger="app")},

@@ -190,3 +190,12 @@ def test_the_checker_finds_every_kind_of_leak() -> None:
 def test_a_page_built_with_the_helpers_does_not_leak() -> None:
     client = TestClient(host_with(f"{__name__}:probe_app"))
     assert leaks(client.get(f"{MOUNT}/probe/page")) == []
+
+
+def test_building_the_harness_leaves_root_logging_as_it_was() -> None:
+    import logging
+
+    root = logging.getLogger()
+    before = (list(root.handlers), root.level)
+    host_with(f"{__name__}:probe_app")
+    assert (list(root.handlers), root.level) == before
