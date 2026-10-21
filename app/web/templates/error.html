@@ -105,8 +105,8 @@
        straight to it: history.length also counts a sign-in redirect, and
        history.back() does nothing in a tab opened as a new tab. #}
     <p class="error-links">
-      <a class="error-back" href="{{ home_url }}" data-error-home>{{ home_label }}</a>
-      <a class="error-back" href="{{ home_url }}" data-error-history hidden>Go back</a>
+      <a class="error-back" href="{{ url(home_url) }}" data-error-home>{{ home_label }}</a>
+      <a class="error-back" href="{{ url(home_url) }}" data-error-history hidden>Go back</a>
     </p>
     <script>
       (function () {

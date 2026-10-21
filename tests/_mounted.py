@@ -52,29 +52,58 @@ _URL_ATTRS = {"href", "action", "formaction", "src"}
 _NOT_APP_PATHS = ("#", "?", "mailto:", "tel:", "javascript:", "data:", "http:", "https:", "//")
 
 
+_VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+
 class _Links(HTMLParser):
-    def __init__(self) -> None:
+    """URL attributes, all of them or only those inside the first element
+    whose class list holds ``within`` (and everything nested in it)."""
+
+    def __init__(self, within: str | None) -> None:
         super().__init__()
+        self.within = within
+        self.depth = 0
         self.urls: list[str] = []
 
+    def _collect(self, tag: str, attrs: list[tuple[str, str | None]], *, void: bool) -> None:
+        entering = (
+            not self.depth
+            and self.within is not None
+            and self.within in (dict(attrs).get("class") or "").split()
+        )
+        if self.within is None or self.depth or entering:
+            self.urls += [value for name, value in attrs if name in _URL_ATTRS and value]
+        if (self.depth or entering) and not void:
+            self.depth += 1
+
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self.urls += [value for name, value in attrs if name in _URL_ATTRS and value]
+        self._collect(tag, attrs, void=tag in _VOID)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._collect(tag, attrs, void=True)
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.depth and tag not in _VOID:
+            self.depth -= 1
 
 
-def leaks(response: httpx.Response, prefix: str = MOUNT) -> list[str]:
+def leaks(response: httpx.Response, prefix: str = MOUNT, *, within: str | None = None) -> list[str]:
     """Every URL ``response`` emits that is an app path without ``prefix``:
     link, form action and source attributes, ``Location`` and cookie
     ``Path``s. A fragment, a query, another scheme, another host, a
     relative path or Easy Auth's host-level ``/.auth/`` is not an app
-    path."""
+    path. With ``within``, only the attributes inside the element of that
+    class are read, for a page whose other areas are not swept yet."""
     emitted: list[str] = []
     if "html" in response.headers.get("content-type", ""):
-        parser = _Links()
+        parser = _Links(within)
         parser.feed(response.text)
+        if within is not None:
+            assert parser.urls, f"no URL inside .{within}"
         emitted += parser.urls
-    if "location" in response.headers:
+    if within is None and "location" in response.headers:
         emitted.append(response.headers["location"])
-    for header in response.headers.get_list("set-cookie"):
+    for header in response.headers.get_list("set-cookie") if within is None else []:
         cookie = SimpleCookie()
         cookie.load(header)
         emitted += [m["path"] for m in cookie.values() if m["path"]]

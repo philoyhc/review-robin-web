@@ -5306,11 +5306,11 @@
             {# Operators only: Settings sits behind `require_operator`,
                which bounces anyone else to /me (participant audit M8). #}
             {% if (user.is_operator or user.is_sys_admin)
-                  and request.url.path != "/operator/settings" %}
-              <a class="chrome-link" href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>
+                  and not is_here("/operator/settings") %}
+              <a class="chrome-link" href="{{ url('/operator/settings') }}?return_to={{ here() | urlencode }}">Settings</a>
             {% endif %}
-            {% if user.is_sys_admin and not request.url.path.startswith("/operator/sys-admin") %}
-              <a class="chrome-link" href="/operator/sys-admin?return_to={{ request.url.path | urlencode }}">Admin</a>
+            {% if user.is_sys_admin and not here_under("/operator/sys-admin") %}
+              <a class="chrome-link" href="{{ url('/operator/sys-admin') }}?return_to={{ here() | urlencode }}">Admin</a>
             {% endif %}
             {# 19F PR 3 — hidden for a viewer who resolves no Guide
                audiences, who would only be bounced to /about. Tested as
@@ -5318,12 +5318,12 @@
                page which never stamps the flag still renders the link:
                the absence is cosmetic and routes_guide does the real
                deciding, so failing open is the safe direction. #}
-            {% if request.url.path not in ("/guide", "/auth/me/debug")
+            {% if not here_in("/guide", "/auth/me/debug")
                   and request.state.guide_hidden is not true %}
-              <a class="chrome-link" href="/guide?return_to={{ request.url.path | urlencode }}">Guide</a>
+              <a class="chrome-link" href="{{ url('/guide') }}?return_to={{ here() | urlencode }}">Guide</a>
             {% endif %}
-            {% if request.url.path not in ("/about", "/auth/me/debug") %}
-              <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
+            {% if not here_in("/about", "/auth/me/debug") %}
+              <a class="chrome-link" href="{{ url('/about') }}?return_to={{ here() | urlencode }}">About</a>
             {% endif %}
             <a class="signout" href="/.auth/logout">Sign out</a>
           </div>

@@ -14,7 +14,7 @@
 #}
 <div class="tab-strip tab-strip-page sys-admin-nav">
   <a class="nav-tab{% if current_admin_page == 'Sessions' %} active{% endif %}"
-     href="/operator/sys-admin/sessions">Sessions Diagnostics</a>
+     href="{{ url('/operator/sys-admin/sessions') }}">Sessions Diagnostics</a>
   <a class="nav-tab{% if current_admin_page == 'Accounts' %} active{% endif %}"
-     href="/operator/sys-admin/users">Accounts Management</a>
+     href="{{ url('/operator/sys-admin/users') }}">Accounts Management</a>
 </div>
