@@ -67,7 +67,7 @@ def me_debug(
         return looked_up[0]
 
     return_to = resolve_return_to(
-        request.query_params.get("return_to"), db, viewer=viewer
+        request.query_params.get("return_to"), db, viewer=viewer, routes=request.app.routes
     )
     return _templates.TemplateResponse(
         request,

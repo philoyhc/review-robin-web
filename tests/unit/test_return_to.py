@@ -21,8 +21,16 @@ from app.web.return_to import (
     DEFAULT_TARGET,
     PARTICIPANT_DEFAULT,
     ReturnTarget,
-    resolve_return_to,
+    Viewer,
 )
+from app.web.return_to import resolve_return_to as _resolve_return_to
+from _rrw_app import rrw_app
+
+
+def resolve_return_to(raw: str | None, db: Session, *, viewer: Viewer) -> ReturnTarget:
+    """`resolve_return_to` against RRW's own routes, as a request serving
+    one of RRW's pages passes them (`request.app.routes`)."""
+    return _resolve_return_to(raw, db, viewer=viewer, routes=rrw_app().routes)
 
 
 def _seed_session(db: Session, *, name: str = "Spring 2026") -> ReviewSession:
@@ -401,3 +409,11 @@ def test_a_refused_name_and_its_fallback_share_one_lookup(db: Session) -> None:
     raw = f"/me/sessions/{session.public_id}"
     assert resolve_return_to(raw, db, viewer=viewer) == PARTICIPANT_DEFAULT
     assert calls == [1]
+
+
+def test_a_session_page_no_get_serves_falls_back(db: Session) -> None:
+    session = _seed_session(db)
+    path = f"/operator/sessions/{session.public_id}"
+    owner = _owner(db, session)
+    assert _resolve_return_to(path, db, viewer=owner, routes=[]) == DEFAULT_TARGET
+    assert resolve_return_to(path, db, viewer=owner).label == session.name

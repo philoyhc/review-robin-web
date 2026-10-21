@@ -430,7 +430,9 @@ def _seed_responses(client: TestClient, db: Session) -> tuple[ReviewSession, int
 
     from app.auth.identity import get_current_user
     from app.db.session import get_db
-    from app.main import app
+    from _rrw_app import rrw_app
+
+    app = rrw_app()
 
     def override_user() -> AuthenticatedUser:
         return rae

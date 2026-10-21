@@ -40,7 +40,9 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.main import app
+from _rrw_app import rrw_app
+
+app = rrw_app()
 
 
 def _make_client(

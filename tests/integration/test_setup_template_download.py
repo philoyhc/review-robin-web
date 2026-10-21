@@ -30,7 +30,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.main import app
+from _rrw_app import rrw_app
 from app.services import csv_imports, relationships
 from app.services.setup_templates import (
     build_zip,
@@ -38,6 +38,8 @@ from app.services.setup_templates import (
     templates_in,
 )
 from app.web import views
+
+app = rrw_app()
 
 DOWNLOAD_URL = "/templates/starter.zip"
 DEMO_URL = "/templates/demo.zip"

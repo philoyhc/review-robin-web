@@ -82,7 +82,7 @@ def guide(
             url="/about", status_code=status.HTTP_303_SEE_OTHER
         )
     return_to = resolve_return_to(
-        request.query_params.get("return_to"), db, viewer=user
+        request.query_params.get("return_to"), db, viewer=user, routes=request.app.routes
     )
     return _templates.TemplateResponse(
         request,

@@ -153,6 +153,19 @@ Taken 2026-10-21 at `8b430421`.
   longer binds.
 - **2026-10-21, A1–A3 under way.** The base for A3's cumulative
   `diff-reviewer` read is `cca367fe`, `main` before A1.
+- **A1 (#3195)** also turned off the host's own docs and schema routes,
+  which would have shadowed RRW's at `/`. It now passes on the state that
+  mounted lifespans yield, a fix Codex found.
+- **A2 diverged twice.** First, the "session-scoped fixture" became a
+  cached builder, `tests/_rrw_app.py`. Helpers such as
+  `tests/integration/_public_id.py` and module-level route mounts
+  (`test_error_handlers.py`) need the app outside any fixture, and the
+  builder still builds once per process. It is imported top-level, like
+  `_sqlite_schema`. Second, the DoD's grep also finds records that quote
+  the old command, which stay as written:
+  `docs/cordware_stage0_baseline.md`,
+  `docs/cordware_implementation_sequence.md` and the dormant-slot note in
+  `docs/deployment_dev.md`.
 
 ## PR ladder
 

@@ -18,12 +18,12 @@ label never confirms that a session exists or says what it is called
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from urllib.parse import unquote
 
 from sqlalchemy.orm import Session
-from starlette.routing import Match
+from starlette.routing import BaseRoute, Match
 
 from app.db.models import User
 from app.services import permissions, sessions
@@ -57,15 +57,13 @@ _REVIEWER_ROOT = re.compile(r"^/me/?\Z")
 _REVIEWER_SESSION = re.compile(r"^/me/sessions/([0-9a-z]+)/?\Z")
 
 
-def _is_get_page(path: str) -> bool:
-    """Whether a GET route serves ``path``. The chrome builds
-    ``return_to`` from the request path, which on a page a POST rendered
-    (an import's error page) is the POST's, and going back there with a
-    GET would 405."""
-    from app.main import app  # here, not at the top: app.main imports this module
-
+def _is_get_page(path: str, routes: Sequence[BaseRoute]) -> bool:
+    """Whether a GET route among ``routes`` serves ``path``. The chrome
+    builds ``return_to`` from the request path, which on a page a POST
+    rendered (an import's error page) is the POST's, and going back there
+    with a GET would 405."""
     scope = {"type": "http", "path": path, "method": "GET"}
-    return any(route.matches(scope)[0] is Match.FULL for route in app.router.routes)
+    return any(route.matches(scope)[0] is Match.FULL for route in routes)
 
 
 Viewer = User | None | Callable[[], User | None]
@@ -97,7 +95,7 @@ def _fallback(get_viewer: Callable[[], User | None]) -> ReturnTarget:
 
 
 def resolve_return_to(
-    raw: str | None, db: Session, *, viewer: Viewer
+    raw: str | None, db: Session, *, viewer: Viewer, routes: Sequence[BaseRoute]
 ) -> ReturnTarget:
     """Validate a ``return_to`` path and resolve a human-readable label.
 
@@ -109,14 +107,20 @@ def resolve_return_to(
     exist. The fallback is the Sessions lobby for an operator and
     ``/me`` for anyone else. ``viewer`` may be a callable returning the
     user, called at most once and only when an answer needs it.
+    ``routes`` are those of the application serving the request
+    (``request.app.routes``: RRW's own app, mounted or not), against
+    which a session page is checked to be one a GET serves.
     """
     get_viewer = _once(viewer)
-    target = _resolve(raw, db, get_viewer)
+    target = _resolve(raw, db, get_viewer, routes)
     return target if target is not None else _fallback(get_viewer)
 
 
 def _resolve(
-    raw: str | None, db: Session, get_viewer: Callable[[], User | None]
+    raw: str | None,
+    db: Session,
+    get_viewer: Callable[[], User | None],
+    routes: Sequence[BaseRoute],
 ) -> ReturnTarget | None:
     """The allowlisted target for ``raw``, or ``None`` to fall back."""
     if not raw:
@@ -138,7 +142,7 @@ def _resolve(
         return ReturnTarget(url=path, label=page)
 
     m = _OPERATOR_SESSION.match(path)
-    if m and _is_get_page(path):
+    if m and _is_get_page(path, routes):
         session = sessions.get_by_public_id(db, m.group(1))
         if session is None or not permissions.may_name_session(db, get_viewer(), session):
             return None

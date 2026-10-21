@@ -8,7 +8,9 @@ from fastapi.testclient import TestClient
 
 from app.auth.identity import AuthenticatedUser, get_current_user, resolve_current_user
 from app.config import Settings
-from app.main import app
+from _rrw_app import rrw_app
+
+app = rrw_app()
 
 
 def test_me_returns_identity_from_easy_auth_headers() -> None:

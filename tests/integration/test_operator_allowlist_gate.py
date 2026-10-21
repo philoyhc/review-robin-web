@@ -30,12 +30,14 @@ from app.auth.identity import AuthenticatedUser, get_current_user
 from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
-from app.main import app
+from _rrw_app import rrw_app
 from app.web.deps import (
     OperatorAllowlistDenied,
     get_or_create_user,
     require_operator,
 )
+
+app = rrw_app()
 
 
 # --- Test-only route mounted on the live app to exercise require_operator -
