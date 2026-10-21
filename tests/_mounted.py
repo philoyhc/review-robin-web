@@ -87,13 +87,20 @@ class _Links(HTMLParser):
             self.depth -= 1
 
 
-def leaks(response: httpx.Response, prefix: str = MOUNT, *, within: str | None = None) -> list[str]:
+def leaks(
+    response: httpx.Response,
+    prefix: str = MOUNT,
+    *,
+    within: str | None = None,
+    cookies: bool = True,
+) -> list[str]:
     """Every URL ``response`` emits that is an app path without ``prefix``:
     link, form action and source attributes, ``Location`` and cookie
     ``Path``s. A fragment, a query, another scheme, another host, a
     relative path or Easy Auth's host-level ``/.auth/`` is not an app
     path. With ``within``, only the attributes inside the element of that
-    class are read, for a page whose other areas are not swept yet."""
+    class are read, for a page whose other areas are not swept yet;
+    ``cookies=False`` skips cookie paths, which B6 sweeps."""
     emitted: list[str] = []
     if "html" in response.headers.get("content-type", ""):
         parser = _Links(within)
@@ -103,7 +110,7 @@ def leaks(response: httpx.Response, prefix: str = MOUNT, *, within: str | None =
         emitted += parser.urls
     if within is None and "location" in response.headers:
         emitted.append(response.headers["location"])
-    for header in response.headers.get_list("set-cookie") if within is None else []:
+    for header in response.headers.get_list("set-cookie") if within is None and cookies else []:
         cookie = SimpleCookie()
         cookie.load(header)
         emitted += [m["path"] for m in cookie.values() if m["path"]]

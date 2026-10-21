@@ -127,7 +127,7 @@
        the HTML5 ``form="config-save-{id}"`` association (they can't physically
        nest). Save posts to the config route (Slice 3). #}
     <form id="config-save-{{ session.id }}" method="post"
-          action="/operator/sessions/{{ session.public_id }}/config"></form>
+          action="{{ url('/operator/sessions/' ~ session.public_id ~ '/config') }}"></form>
     <datalist id="config-timezone-options">
       {% for tz in timezone_options %}
         <option value="{{ gmt_offset_zone_label(tz) }}"></option>
@@ -366,13 +366,13 @@
           <button type="submit" form="config-save-{{ session.id }}"
                   class="btn secondary" data-config-save data-edit-only>Save</button>
           <a class="btn secondary" data-config-cancel data-edit-only
-             href="/operator/sessions/{{ session.public_id }}#session-config"
+             href="{{ url('/operator/sessions/' ~ session.public_id) }}#session-config"
              onclick="return sessionConfig.cancel(this);">Cancel</a>
-          {# Home's own path, not ``request.url.path``: a refused Quick
+          {# Home's own path, not ``here()``: a refused Quick
              Setup upload renders this page at its POST's URL (O7). #}
           {% if is_draft or is_validated %}
             <a class="btn secondary" data-config-lock-toggle
-               href="/operator/sessions/{{ session.public_id }}{% if not config_editing %}?editing=1{% endif %}#session-config"
+               href="{{ url('/operator/sessions/' ~ session.public_id) }}{% if not config_editing %}?editing=1{% endif %}#session-config"
                onclick="return sessionConfig.toggle(this);">{{ 'Lock' if config_editing else 'Unlock' }}</a>
           {% else %}
             <a class="btn secondary" data-config-lock-toggle aria-disabled="true"
@@ -602,7 +602,7 @@
               <td>{{ owner.joined_at | format_date }}</td>
               <td class="col-shrink">
                 <form method="post" style="display:inline"
-                      action="/operator/sessions/{{ session.public_id }}/owners/{{ owner.user_id }}/remove"
+                      action="{{ url('/operator/sessions/' ~ session.public_id ~ '/owners/' ~ owner.user_id ~ '/remove') }}"
                       {% if is_self %}data-owners-self-remove
                       onsubmit="return window.confirm('Remove yourself as an owner? You will lose access to this session.');"
                       {%- else %}data-owners-remove
@@ -623,7 +623,7 @@
 
         {% if config_owner_candidates %}
           <form method="post" id="owners-add-form"
-                action="/operator/sessions/{{ session.public_id }}/owners/add">
+                action="{{ url('/operator/sessions/' ~ session.public_id ~ '/owners/add') }}">
             {# A sibling ``<label for>``, as on the Create page's picker:
                nesting the input in the label left 1.9px between the text
                and the box, against 5.9px everywhere else (measured in
@@ -664,7 +664,7 @@
           Revert to draft first.
         </p>
 
-        <form method="post" action="/operator/sessions/{{ session.public_id }}/delete-data">
+        <form method="post" action="{{ url('/operator/sessions/' ~ session.public_id ~ '/delete-data') }}">
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required
@@ -690,7 +690,7 @@
 
         <hr>
 
-        <form method="post" action="/operator/sessions/{{ session.public_id }}/delete">
+        <form method="post" action="{{ url('/operator/sessions/' ~ session.public_id ~ '/delete') }}">
           <p>
             <label style="font-weight: normal;">
               <input type="checkbox" name="confirm" value="true" required

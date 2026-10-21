@@ -32,7 +32,7 @@
 {% macro _step(glyph, label, target, base, anchor) -%}
   {%- if target -%}
     <a class="btn-icon table-pager-step"
-       href="{{ base }}offset={{ target.offset }}#{{ anchor }}"
+       href="{{ url(base) }}offset={{ target.offset }}#{{ anchor }}"
        aria-label="{{ label }}">{{ glyph }}</a>
   {%- else -%}
     <span class="btn-icon table-pager-step is-inactive"
@@ -58,7 +58,7 @@
                   aria-current="page">{{ link.label }}</span>
           {%- else -%}
             <a class="table-pager-menu-item"
-               href="{{ pager_url_base }}offset={{ link.offset }}#{{ pager_anchor }}">{{ link.label }}</a>
+               href="{{ url(pager_url_base) }}offset={{ link.offset }}#{{ pager_anchor }}">{{ link.label }}</a>
           {%- endif -%}
         {% endfor %}
       </div>

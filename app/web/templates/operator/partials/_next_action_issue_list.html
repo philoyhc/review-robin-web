@@ -33,6 +33,6 @@
 ) > 0 %}
 {% if _has_any %}
   <p class="next-action-issue-pointer">
-    <a href="/operator/sessions/{{ session.public_id }}/validate">Review on Validate</a>
+    <a href="{{ url('/operator/sessions/' ~ session.public_id ~ '/validate') }}">Review on Validate</a>
   </p>
 {% endif %}

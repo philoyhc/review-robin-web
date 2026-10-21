@@ -27,7 +27,14 @@ def session_id(mounted_client: TestClient, db: Session) -> str:
         data={"name": "Crawl", "code": "crawl"},
         follow_redirects=False,
     )
-    return db.execute(select(ReviewSession).where(ReviewSession.code == "crawl")).scalar_one().public_id
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "crawl")
+    ).scalar_one()
+    # The optional Setup pages render only with their toggles on.
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.flush()
+    return review_session.public_id
 
 
 @pytest.fixture
@@ -85,3 +92,54 @@ def test_the_chrome_hides_its_own_page_under_the_mount(mounted_client: TestClien
     assert response.status_code == 200
     assert f'href="{MOUNT}/guide?' not in response.text
     assert f'href="{MOUNT}/about?return_to=/guide"' in response.text
+
+
+# --- B3: the operator pages, whole ---
+
+OPERATOR_PAGES = [
+    "/operator/sessions",
+    "/operator/sessions/new",
+    "/operator/sessions/archived",
+    "/operator/settings",
+]
+SESSION_PAGES = [
+    "",
+    "/reviewers",
+    "/reviewees",
+    "/relationships",
+    "/observers",
+    "/instruments",
+    "/setup-invite",
+    "/assignments",
+    "/validate",
+    "/invitations",
+    "/responses",
+    "/extract-data",
+]
+SYS_ADMIN_PAGES = ["/operator/sys-admin/sessions", "/operator/sys-admin/users"]
+
+
+@pytest.mark.parametrize("path", OPERATOR_PAGES)
+def test_an_operator_page_emits_only_prefixed_urls(mounted_client: TestClient, path: str) -> None:
+    response = mounted_client.get(f"{MOUNT}{path}")
+    assert response.status_code == 200
+    assert leaks(response) == []
+
+
+@pytest.mark.parametrize("page", SESSION_PAGES)
+def test_a_session_page_emits_only_prefixed_urls(
+    mounted_client: TestClient, session_id: str, page: str
+) -> None:
+    response = mounted_client.get(f"{MOUNT}/operator/sessions/{session_id}{page}")
+    assert response.status_code == 200
+    # Validate's severity cookie is scoped by B6.
+    assert leaks(response, cookies=page != "/validate") == []
+
+
+@pytest.mark.usefixtures("sys_admin")
+@pytest.mark.parametrize("path", SYS_ADMIN_PAGES)
+def test_a_sys_admin_page_emits_only_prefixed_urls(mounted_client: TestClient, path: str) -> None:
+    response = mounted_client.get(f"{MOUNT}{path}")
+    assert response.status_code == 200
+    # The admin return-to cookie is scoped by B6.
+    assert leaks(response, cookies=False) == []

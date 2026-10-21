@@ -26,7 +26,7 @@
         <span class="nav-tab active" aria-current="page">{{ label }}</span>
       {% else %}
         <a class="nav-tab"
-           href="/operator/sessions/{{ session.public_id }}/setup-invite?template={{ t }}">{{ label }}</a>
+           href="{{ url('/operator/sessions/' ~ session.public_id ~ '/setup-invite') }}?template={{ t }}">{{ label }}</a>
       {% endif %}
     {% endfor %}
   </div>
@@ -59,7 +59,7 @@
       <h2>{{ (active_template|replace("_", " "))|capitalize }} email</h2>
 
       <form method="post"
-            action="/operator/sessions/{{ session.public_id }}/setup-invite"
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/setup-invite') }}"
             id="setupinvite-form">
         <input type="hidden" name="template" value="{{ active_template }}">
 
@@ -83,7 +83,7 @@
         {% endif %}
 
         <div class="muted">
-          <strong>From:</strong> <em>(your configured SMTP From email — see <a href="/operator/settings?return_to={{ request.url.path | urlencode }}">Settings</a>)</em>
+          <strong>From:</strong> <em>(your configured SMTP From email — see <a href="{{ url('/operator/settings') }}?return_to={{ here() | urlencode }}">Settings</a>)</em>
         </div>
         <div class="muted">
           <strong>To:</strong> <em>(sent individually to each reviewer)</em>
@@ -127,7 +127,7 @@
       {% for row in rows %}
         {% if row.has_override %}
           <form method="post"
-                action="/operator/sessions/{{ session.public_id }}/setup-invite/reset"
+                action="{{ url('/operator/sessions/' ~ session.public_id ~ '/setup-invite/reset') }}"
                 id="setupinvite-reset-{{ row.field }}-form"
                 style="display: none;">
             <input type="hidden" name="template" value="{{ active_template }}">
@@ -143,7 +143,7 @@
          still posting it. Cancel is an anchor back to Session Home. #}
       <div style="display: flex; justify-content: flex-start; gap: 16px; margin-top: 20px;">
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.public_id }}">Cancel</a>
+           href="{{ url('/operator/sessions/' ~ session.public_id) }}">Cancel</a>
         <button class="btn secondary" type="submit" form="setupinvite-form"
                 id="setupinvite-save-button" disabled>Save</button>
       </div>
@@ -164,7 +164,7 @@
       <strong>Sending is not switched on yet</strong>, so what you save here is
       stored, not delivered. Nothing about access depends on it — reviewers
       reach their work by signing in, and the roster is what lets them in. See
-      <a href="/guide?return_to={{ request.url.path }}#guide-give_access">Give
+      <a href="{{ url('/guide') }}?return_to={{ here() }}#guide-give_access">Give
       reviewers access</a> in the Guide.
     </p>
     {% endcall %}

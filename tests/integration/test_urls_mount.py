@@ -199,3 +199,11 @@ def test_building_the_harness_leaves_root_logging_as_it_was() -> None:
     before = (list(root.handlers), root.level)
     host_with(f"{__name__}:probe_app")
     assert (list(root.handlers), root.level) == before
+
+
+def test_url_path_is_idempotent_under_the_mount() -> None:
+    request = Request({"type": "http", "path": "/x", "root_path": MOUNT, "headers": []})
+    once = urls.url_path(request, "/operator/sessions?x=1")
+    assert urls.url_path(request, once) == once == f"{MOUNT}/operator/sessions?x=1"
+    assert urls.url_path(request, MOUNT) == MOUNT
+    assert urls.url_path(request, "/reviewrobinx") == f"{MOUNT}/reviewrobinx"

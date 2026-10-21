@@ -4,7 +4,7 @@
 {% block body_class %}ui-v2{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="/operator/sys-admin/sessions">&larr; Back to Sessions Diagnostics</a>
+  <a class="back-link" href="{{ url('/operator/sys-admin/sessions') }}">&larr; Back to Sessions Diagnostics</a>
 
   <h1>Admin</h1>
 
@@ -26,13 +26,13 @@
           Display times in
           {% if zone.switchable %}
             <a class="pill pill-count tag-chip is-selected"
-               href="{{ filter_form.zone_toggle_url }}"
+               href="{{ url(filter_form.zone_toggle_url) }}"
                title="Show times in {{ zone.other_label }}">{{ zone.label }}</a>
           {% else %}
             <span class="pill pill-count">{{ zone.label }}</span>
           {% endif %}
         </span>
-        <a class="btn secondary" href="{{ filter_form.download_csv_url }}" download>Download CSV</a>
+        <a class="btn secondary" href="{{ url(filter_form.download_csv_url) }}" download>Download CSV</a>
       </div>
     </div>
     <p class="muted">
@@ -45,7 +45,7 @@
        left; actor, dates and the Apply / Clear buttons on the right,
        the buttons just under the dates whatever the left column's
        height. #}
-    <form method="get" action="{{ viewer_base_url }}" class="audit-filter-form">
+    <form method="get" action="{{ url(viewer_base_url) }}" class="audit-filter-form">
       {% if zone.utc_chosen %}<input type="hidden" name="tz" value="utc">{% endif %}
       <div class="page-grid">
         <div>
@@ -107,7 +107,7 @@
           </div>
           <div class="btn-pair audit-filter-actions">
             {% if filter_form.is_active %}
-              <a class="btn secondary" href="{{ filter_form.cleared_url }}">Clear</a>
+              <a class="btn secondary" href="{{ url(filter_form.cleared_url) }}">Clear</a>
             {% endif %}
             <button class="btn secondary" type="submit">Apply filters</button>
           </div>
@@ -208,7 +208,7 @@
       {% if audit_log.next_cursor %}
         <p style="margin-top: 16px;">
           <a class="chrome-link"
-             href="{{ viewer_base_url }}?cursor={{ audit_log.next_cursor }}{% if filters_querystring %}&{{ filters_querystring }}{% endif %}">
+             href="{{ url(viewer_base_url) }}?cursor={{ audit_log.next_cursor }}{% if filters_querystring %}&{{ filters_querystring }}{% endif %}">
             Older events &rarr;
           </a>
         </p>

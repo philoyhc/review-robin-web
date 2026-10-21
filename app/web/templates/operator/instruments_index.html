@@ -46,7 +46,7 @@
       </p>
       <p>
         See
-        <a href="/guide?return_to={{ request.url.path }}#guide-create_and_set_up">Create
+        <a href="{{ url('/guide') }}?return_to={{ here() }}#guide-create_and_set_up">Create
         and set up a session</a> in the Guide.
       </p>
       {% endcall %}
@@ -103,7 +103,7 @@
         {% elif is_archived %}
           The instruments cannot be modified because the session is archived.
           Unarchive it from
-          <a href="/operator/sessions/archived">Archived sessions</a>
+          <a href="{{ url('/operator/sessions/archived') }}">Archived sessions</a>
           if you wish to modify anything.
         {% else %}
           The instruments cannot be modified because the session is closed.
@@ -111,7 +111,7 @@
         {% endif %}
       </p>
       {% if not is_archived %}
-      <form method="post" action="/operator/sessions/{{ session.public_id }}/revert">
+      <form method="post" action="{{ url('/operator/sessions/' ~ session.public_id ~ '/revert') }}">
         <input type="hidden" name="return_to" value="instruments">
         <p>
           <label style="font-weight: normal;">
@@ -142,7 +142,7 @@
       <p style="margin: 0;"><strong>Could not save the sort order:</strong> {{ sort_save_error }}</p>
       <div class="banner-actions">
         <a class="btn secondary"
-           href="/operator/sessions/{{ session.public_id }}/instruments?editing={{ sort_save_error_instrument_id }}#instrument-{{ sort_save_error_instrument_id }}">Cancel</a>
+           href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}?editing={{ sort_save_error_instrument_id }}#instrument-{{ sort_save_error_instrument_id }}">Cancel</a>
       </div>
     </div>
   {% endif %}
@@ -198,7 +198,7 @@
         {# Replicate — clone this instrument's content into a new
            card slotted immediately after it (Segment 13C PR 3). #}
         <form method="post"
-              action="/operator/sessions/{{ session.public_id }}/instruments/{{ instrument.id }}/replicate"
+              action="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments/' ~ instrument.id ~ '/replicate') }}"
               style="display: inline; margin: 0;">
           <button class="btn secondary" type="submit"
                   {% if add_delete_disabled %}disabled title="{{ add_delete_disabled_title }}"{% endif %}>Replicate</button>
@@ -220,7 +220,7 @@
            instrument immediately after this one. With legacy add
            buttons retired this is the sole "create" affordance. #}
         <form method="post"
-              action="/operator/sessions/{{ session.public_id }}/instruments/add-new-model"
+              action="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments/add-new-model') }}"
               style="display: inline; margin: 0;">
           <input type="hidden" name="after" value="{{ instrument.id }}">
           <button class="btn secondary" type="submit"
@@ -233,7 +233,7 @@
            break); the successor already carries a break (double-
            stack); or the session is past the editable window. #}
         <form method="post"
-              action="/operator/sessions/{{ session.public_id }}/instruments/{{ instrument.id }}/page-break/create"
+              action="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments/' ~ instrument.id ~ '/page-break/create') }}"
               style="display: inline; margin: 0;">
           <button class="btn secondary" type="submit"
                   data-instrument-page-break-add="{{ instrument.id }}"
@@ -261,13 +261,13 @@
         <a class="btn secondary{% if not can_edit %} disabled{% endif %}"
            data-unlock-only
            data-instrument-lock-toggle="{{ instrument.id }}"
-           href="/operator/sessions/{{ session.public_id }}/instruments#instrument-{{ instrument.id }}"
+           href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}#instrument-{{ instrument.id }}"
            onclick="return newModelLockClick(event, {{ instrument.id }})"
            {% if not can_edit %}aria-disabled="true"{% endif %}>Lock</a>
         <a class="btn secondary{% if not can_edit %} disabled{% endif %}"
            data-lock-only
            data-instrument-unlock-toggle="{{ instrument.id }}"
-           href="/operator/sessions/{{ session.public_id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+           href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
            onclick="return newModelUnlockClick(event, {{ instrument.id }})"
            {% if not can_edit %}aria-disabled="true"{% endif %}>Unlock</a>
       </div>
@@ -318,7 +318,7 @@
       <div class="page-break-card" data-page-break-before="{{ instrument.id }}">
         <span class="page-break-card-label">Page break</span>
         <form method="post"
-              action="/operator/sessions/{{ session.public_id }}/instruments/{{ instrument.id }}/page-break/delete"
+              action="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments/' ~ instrument.id ~ '/page-break/delete') }}"
               style="display: inline; margin: 0;">
           <button type="submit"
                   class="page-break-card-delete"
@@ -371,7 +371,7 @@
          Disabled controls in a locked card don't submit, and a
          locked card is never Saved, so always-rendering is safe. #}
       <form id="dfsave-{{ instrument.id }}" method="post"
-            action="/operator/sessions/{{ session.public_id }}/instruments/{{ instrument.id }}/fields/save"></form>
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments/' ~ instrument.id ~ '/fields/save') }}"></form>
       {# Segment 18R Item 2 PR 3 — consolidated-Save summary banner.
          Hidden until a fetch-Save returns validation errors; the JS
          fills it with the blocking issues and keeps the card unlocked
@@ -484,7 +484,7 @@
             <a class="btn secondary{% if not can_edit %} disabled{% endif %}"
                data-unlock-only
                data-instrument-lock-toggle="{{ instrument.id }}"
-               href="/operator/sessions/{{ session.public_id }}/instruments#instrument-{{ instrument.id }}"
+               href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}#instrument-{{ instrument.id }}"
                onclick="return newModelLockClick(event, {{ instrument.id }})"
                {% if not can_edit %}aria-disabled="true"{% endif %}>Lock</a>
             <button form="dfsave-{{ instrument.id }}" type="submit"
@@ -501,7 +501,7 @@
             <a class="btn secondary{% if not can_edit %} disabled{% endif %}"
                data-lock-only
                data-instrument-unlock-toggle="{{ instrument.id }}"
-               href="/operator/sessions/{{ session.public_id }}/instruments?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
+               href="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments') }}?editing={{ instrument.id }}#instrument-{{ instrument.id }}"
                onclick="return newModelUnlockClick(event, {{ instrument.id }})"
                {% if not can_edit %}aria-disabled="true"{% endif %}>Unlock</a>
             {# Per-card Show / Don't show when closed retired
@@ -6520,7 +6520,7 @@
         {% set page_break_title = "" %}
       {% endif %}
       <form id="instrument-delete-{{ instrument.id }}" method="post"
-            action="/operator/sessions/{{ session.public_id }}/instruments/{{ instrument.id }}/delete"></form>
+            action="{{ url('/operator/sessions/' ~ session.public_id ~ '/instruments/' ~ instrument.id ~ '/delete') }}"></form>
       {{ instrument_action_row(session, instrument, is_editing, can_edit, add_delete_disabled, add_delete_disabled_title, delete_disabled, delete_title, page_break_disabled, page_break_title) }}
       <p style="text-align: right; margin: -12px 0 20px 0;">
         <label style="font-weight: normal;">

@@ -25,10 +25,10 @@
     <div class="banner-actions">
       {% if held_upload %}
         <button type="submit" class="btn secondary" form="upload-csv-form"
-                formaction="{{ upload_problems_dismiss_url }}"
+                formaction="{{ url(upload_problems_dismiss_url) }}"
                 formnovalidate>Dismiss</button>
       {% else %}
-        <a class="btn secondary" href="{{ upload_problems_cancel_url }}">Dismiss</a>
+        <a class="btn secondary" href="{{ url(upload_problems_cancel_url) }}">Dismiss</a>
       {% endif %}
     </div>
   </div>

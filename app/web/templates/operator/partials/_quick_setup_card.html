@@ -124,9 +124,9 @@
       {% if held_token and dismiss_url %}
         {# A held file (segment 19W): Dismiss ends the hold. #}
         <button type="submit" class="btn secondary" form="{{ form_id }}"
-                formaction="{{ dismiss_url }}" formnovalidate>Dismiss</button>
+                formaction="{{ url(dismiss_url) }}" formnovalidate>Dismiss</button>
       {% else %}
-        <a class="btn secondary" href="{{ slot.cancel_url }}"
+        <a class="btn secondary" href="{{ url(slot.cancel_url) }}"
            data-quick-setup-dismiss>Dismiss</a>
       {% endif %}
     </div>
@@ -152,7 +152,7 @@
      ``form="..."``) or when there's no session row to scope to. #}
   {% if has_own_form %}
     <form id="{{ submit_all_form_id }}"
-          action="/operator/sessions/{{ session.public_id }}/quick-setup/submit-all"
+          action="{{ url('/operator/sessions/' ~ session.public_id ~ '/quick-setup/submit-all') }}"
           method="post"
           enctype="multipart/form-data"
           style="margin: 0;">
@@ -184,7 +184,7 @@
           last Submit have expired; choose them again.</p>
         <div class="banner-actions">
           <a class="btn secondary"
-             href="/operator/sessions/{{ session.public_id }}#quick-setup"
+             href="{{ url('/operator/sessions/' ~ session.public_id) }}#quick-setup"
              data-quick-setup-dismiss>Dismiss</a>
         </div>
       </div>
@@ -192,7 +192,7 @@
     {% for slot in quick_setup.slots %}
       {{ quick_setup_slot_banner(
            slot, submit_all_form_id, quick_setup.held_token,
-           ("/operator/sessions/" ~ session.public_id ~ "/quick-setup/dismiss")
+           url("/operator/sessions/" ~ session.public_id ~ "/quick-setup/dismiss")
              if has_own_form else None) }}
     {% endfor %}
     {# Slot layout: Reviewers + Reviewees on the left, the remaining

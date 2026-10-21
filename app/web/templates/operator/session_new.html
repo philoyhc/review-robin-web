@@ -11,7 +11,7 @@
     <p class="form-help">Create a new review session. Roster and assignment setup happen on the per-session pages once the session exists.</p>
 
     <form method="post"
-          action="/operator/sessions"
+          action="{{ url('/operator/sessions') }}"
           id="create-session-form"
           enctype="multipart/form-data">
       <div class="page-grid" style="margin-bottom: 0;">
@@ -122,7 +122,7 @@
         <button class="btn"
                 type="submit"
                 id="create-session-submit">Create session</button>
-        <a class="btn secondary" href="/operator/sessions">Cancel</a>
+        <a class="btn secondary" href="{{ url('/operator/sessions') }}">Cancel</a>
       </div>
     </form>
   </div>
