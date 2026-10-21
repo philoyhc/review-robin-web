@@ -55,6 +55,7 @@ jobs:
           name: python-app
           path: |
             app/
+            cordware/
             alembic/
             alembic.ini
             requirements.txt

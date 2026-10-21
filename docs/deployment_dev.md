@@ -56,7 +56,8 @@ When enabled, the workflow triggers on push to `main` (or via
 deploy**.
 
 1. **build** installs `requirements.txt` into a prebuilt `antenv/`
-   virtualenv and packages `app/`, `alembic/`, `alembic.ini`,
+   virtualenv and packages `app/`, `cordware/` (the host, segment 21A),
+   `alembic/`, `alembic.ini`,
    `requirements.txt`, `pyproject.toml` and `antenv/` into the deployment
    artifact, so App Service uses that venv rather than re-running the build.
 2. **migrate** runs `alembic upgrade head` against Azure Postgres using

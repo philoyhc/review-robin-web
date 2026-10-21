@@ -7,9 +7,9 @@
 stateless `cordware/` host serves RRW, mounted at `/`, and every start
 command names it
 
-**Segment 21's hold** (author, 2026-10-16) was lifted for A0 on
-2026-10-21, when the author started it. A1 onward still waits on the
-author.
+**Segment 21's hold** (author, 2026-10-16) was lifted for 21A on
+2026-10-21: for A0 when the author started it, and for A1–A3 when the
+author asked for the rest of 21A.
 
 ## Opportunity
 
@@ -151,6 +151,8 @@ Taken 2026-10-21 at `8b430421`.
   `docs/deployment_dev.md` "Resuming the dev slot". A1–A3 stay separate
   rungs for reviewability, though § Decision's deploy-on-merge reason no
   longer binds.
+- **2026-10-21, A1–A3 under way.** The base for A3's cumulative
+  `diff-reviewer` read is `cca367fe`, `main` before A1.
 
 ## PR ladder
 
