@@ -83,3 +83,38 @@ def test_a_header_sorts_and_the_actions_stay_on_one_line(
     expect(actions).to_have_count(3)
     tops = {round(box["y"]) for box in (a.bounding_box() for a in actions.all()) if box}
     assert len(tops) == 1, tops
+
+
+def test_a_sort_survives_a_reload(page: Page, new_session: Callable[[], str]) -> None:
+    """The sort cookie is scoped to a path this page is under, so the
+    browser sends it back. It was written at ``/operator/sessions/admin``
+    when the table id ``rrw-sort-sys-admin-sessions`` was read as surface
+    ``sys``, session ``admin``, and the order was lost on reload."""
+    new_session()
+    new_session()
+    page.goto(PAGE)
+    page.context.clear_cookies(name="rrw-sort-sys-admin-sessions")
+    page.reload()
+    codes = page.locator("#diagnostics-sessions tbody tr td:nth-child(2) code")
+    button = '#diagnostics-sessions th[data-sort-key="code"] .rrw-sort-btn'
+    page.click(button)
+    page.click(button)
+    descending = codes.all_inner_texts()
+    [cookie] = [c for c in page.context.cookies() if c["name"] == "rrw-sort-sys-admin-sessions"]
+    assert cookie["path"] == "/"
+    page.reload()
+    assert codes.all_inner_texts() == descending
+
+
+def test_each_table_id_maps_to_its_cookie_path(page: Page) -> None:
+    page.goto(PAGE)
+    cases = {
+        "rrw-sort-lobby": "/",
+        "rrw-sort-archived": "/",
+        "rrw-sort-sys-admin-sessions": "/",
+        "rrw-sort-reviewers-k7m2p9q4rs": "/operator/sessions/k7m2p9q4rs",
+        "rrw-sort-assignments-k7m2p9q4rs": "/operator/sessions/k7m2p9q4rs",
+        "rrw-sort-rs-k7m2p9q4rs-3": "/me/sessions/k7m2p9q4rs",
+    }
+    found = page.evaluate("ids => ids.map(id => _rrwCookiePath(id))", list(cases))
+    assert dict(zip(cases, found)) == cases
