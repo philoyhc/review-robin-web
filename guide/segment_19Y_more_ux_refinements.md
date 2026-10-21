@@ -731,6 +731,8 @@ swapping the two Band 2 pairs.
   two Band 2 previews first showed different instruments; the author
   reshot the unlocked and locked pairs from one instrument
   (`Guide_6b.docx`, a follow-up PR), and the alt text stood.
+  A second follow-up added the author's sentence on the Layout chip to
+  the Band 2 paragraph (2026-10-21), beyond the document's text.
 - **Reads.** Two `diff-reviewer` reads, one per PR; neither found a
   defect. The first flagged this missing block, which is now written,
   and corrected the Create session alt text's placement of "Release
