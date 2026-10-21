@@ -596,3 +596,136 @@ the build, specs and close in one, as laddered.
 - `spec/ui_elements.md` — the textarea resize rule's second exception (Item 5).
 - `guide/things_to_check_in_browser.md` — a row for the growing box (Item 5).
 - `guide/todo_master.md` — the 19Y entry (Item 5).
+
+## Item 6 — The preview's heading follows the name as it is typed
+
+### Opportunity
+
+The author, 2026-10-21: renaming an instrument in Band 1 (or giving it
+a friendly name for the first time) leaves Band 2's heading showing the
+old name until the card is locked, so the preview disagrees with the
+box just edited.
+
+### Decision
+
+The author's ruling, 2026-10-21, on a recommendation: the heading
+follows the name box **as it is typed**, still unsaved until Save. The
+name box's `input` runs the existing `newModelSyncTextViews(card)`,
+which today runs only on Lock and recomposes the heading by the
+reviewer surface's own rule (`newModelIntroHeading`). Rejected: a
+"Refresh" button (repurposing ↻ Refresh sample): it would mix picking a
+sample reviewee with syncing text, and the preview would stay wrong
+until someone remembered to click.
+
+### Semantics
+
+- Covers the first friendly name as well as a rename, and the one- vs
+  many-instrument heading forms (`#N: label`), since the rule is shared.
+- The card's dirty state is unchanged: the name box already marks it.
+- The description, edited in Band 2 itself, is unaffected.
+
+### Blast radius (measured)
+
+Taken 2026-10-21 at `d63f80b7`.
+
+| What | Count | Command |
+|---|---|---|
+| Name box in the card | 1 | `grep -c "data-card-title-input" app/web/templates/operator/instruments_index.html` (3 hits: the box, the sync, the key guard) |
+| Tests on the heading or the box | 2 | `grep -rln "data-card-title-input\|data-intro-title-view" tests --include=*.py` |
+
+### PR ladder
+
+1. **PR 1 — build, specs, close.** The `input` hook beside the key
+   guard; a browser test (type a name: the heading shows it; clear it:
+   the fallback heading); the spec; checklist row; one `diff-reviewer`
+   read; close.
+
+### Definition of done
+
+- Typing in the name box updates Band 2's heading before Save, the card
+  still unsaved (browser test).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.6` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None (ruled 2026-10-21).
+
+### Out of scope
+
+- Renaming or repurposing ↻ Refresh sample.
+
+### Doc impact
+
+- `spec/instruments.md` — the preview's heading follows the name box as typed (Item 6).
+- `guide/things_to_check_in_browser.md` — a row for the live heading (Item 6).
+- `guide/todo_master.md` — the 19Y entry (Item 6).
+
+## Item 7 — The Guide's screencaps and wording catch up
+
+### Opportunity
+
+The author, 2026-10-21, with `Guide_6a.docx`: five Guide screencaps
+predate 19X and 19Y (the Create form's date pickers and offsets, the
+roster card's own-entry card, Band 2's help rows and layouts), and the
+Instruments section shows Band 2 only locked, though its text tells the
+operator to type into the unlocked boxes.
+
+### Decision
+
+Take the document as written: replace four light/dark pairs
+(`create-session-details`, `roster-card-locked`, `roster-card-unlocked`,
+`instrument-card-preview`, now Band 2 locked), add one
+(`instrument-card-preview-unlocked`), replace the Band 2 paragraph with
+the document's, and add its sentence introducing the locked screencap.
+Alt text is rewritten to what each new image shows. This also settles
+Item 1's owed screencap reshoot (in Layout 2, the author's choice).
+
+### Semantics
+
+- The paragraph after the figures ("In the screencap above…") stays: it
+  reads true of the new locked screencap, which sits directly above it.
+- No other Guide text changes.
+
+### Blast radius (measured)
+
+Taken 2026-10-21 at `d63f80b7`.
+
+| What | Count | Command |
+|---|---|---|
+| Figures replaced in `app/web/templates/guide.html` | 4 (+1 new) | `grep -c "create-session-details\|roster-card-\|instrument-card-preview" app/web/templates/guide.html` (8 `img`) |
+| PNGs under `app/web/static/guide/` | 8 replaced, 2 added | from the document's 10 images |
+| Gate on referenced vs committed PNGs | 1 | `tests/integration/test_guide_screencaps.py` |
+
+### PR ladder
+
+1. **PR 1 — build and close.** The PNGs, `guide.html`, the checklist
+   (Item 1's reshoot row goes; a row for this item); one `diff-reviewer`
+   read; close. After Item 6.
+
+### Definition of done
+
+- The Guide serves the five pairs with matching alt text, and the
+  screencap gate passes (`tests/integration/test_guide_screencaps.py`).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.7` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Other Guide sections and screencaps.
+
+### Doc impact
+
+- `app/web/templates/guide.html` — the Band 2 paragraph, the new sentence, the figures and alt text (Item 7).
+- `guide/things_to_check_in_browser.md` — Item 1's reshoot row goes; a row for the new screencaps (Item 7).
+- `guide/todo_master.md` — the 19Y entry (Item 7).
