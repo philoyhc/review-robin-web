@@ -106,7 +106,7 @@ Still to confirm / decide before the first deploy:
 ## 2. What stays the same (do NOT change)
 
 - **Localhost.** `.env` with `ALLOW_FAKE_AUTH=true` + SQLite; `uvicorn
-  app.main:app --reload`. Untouched.
+  cordware.main:app --reload` (the Cordware host, segment 21A).
 - **CI workflows** `.github/workflows/ci.yml` + `ci-postgres.yml`. Untouched.
 - **App code + migrations.** No code change is required to change hosts —
   everything is configuration (App Settings + secrets + the deploy
@@ -122,6 +122,12 @@ Azure work is the status doc's "Application Gateway work remaining" and "Remaini
 project-side work after blockers clear". This runbook adds the detail for
 four of those items:
 
+- [ ] **Do not dispatch `deploy_nus.yml` until stage 4.** Since segment
+  21A's A2, `main` has no `app.main:app`, and this workflow's artifact does
+  not yet carry `cordware/`, so a deploy from `main` could not start. Stage
+  4 broadens the artifact and moves the command below to
+  `cordware.main:app` together (`docs/cordware_repository_strategy_v0.8.md`
+  §5).
 - [ ] **Startup command** on the Web App (Python 3.12), as on the dev slot:
   ```bash
   gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app

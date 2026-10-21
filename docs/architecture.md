@@ -112,7 +112,8 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
   there is no slot swap), so the app never ships against a stale
   schema.
 - **Observability.** The app writes structured JSON logs to stdout, one
-  object per line (`app/logging_config.py`), which App Service's log
+  object per line (`cordware/logging.py`, the host's since segment 21A),
+  stamped with the application that wrote it, which App Service's log
   stream shows. **Azure Monitor** (Log Analytics + Application Insights)
   is provisioned, but nothing sends the app's logs to it yet. Correlation
   IDs are stamped on `audit_events` rows and on a few log lines.

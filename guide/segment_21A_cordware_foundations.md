@@ -74,16 +74,17 @@ would start a command that does not exist yet (§ PR ladder, A1).
 - **A failed RRW startup check fails the host.** `validate_critical_settings`
   raising inside `create_app()` propagates out of the host's
   construction. There is no degraded mode (v0.8 §3).
-- **Importing `app.main` builds nothing**, and a test imports it fresh
-  and asserts so. Importing `cordware.main` builds the host once: the
+- **Importing `app.main` builds nothing**, and a test asserts that no
+  application instance is among its attributes. Importing `cordware.main` builds the host once: the
   entry point is the one construction (v0.8 §3).
 - **`return_to` under a mount.** The GET-route check reads the routes of
   the application handling the request. Its paths stay app-relative
   (outline § Semantics), so the check is unchanged at `/` and correct
   under `/reviewrobin`.
 - **Logging.** The root handler's level comes from `LOG_LEVEL`, as now.
-  Every record gains `application` (`reviewrobin`, or `cordware` for the
-  host's own). The host logs start, stop and the mounted set; any mounted
+  Every record that reaches the root handler gains `application`
+  (`reviewrobin`, or `cordware` for the host's own). uvicorn's and
+  gunicorn's own loggers keep their own handlers, as before 21A. The host logs start, stop and the mounted set; any mounted
   application's startup failure, logged before the process exits; and
   failing `/health` checks. These are v0.8's host-logging events 1 and 5,
   less the super-admin warning that 21C moves. `alembic/env.py`'s
@@ -166,6 +167,31 @@ Taken 2026-10-21 at `8b430421`.
   `docs/cordware_stage0_baseline.md`,
   `docs/cordware_implementation_sequence.md` and the dormant-slot note in
   `docs/deployment_dev.md`.
+- **A3.** The JSON formatter moved out of RRW into `cordware/logging.py`,
+  with an `ApplicationFilter` that stamps each record by logger-name
+  prefix. Each registry entry now names its prefix (RRW's is `app`).
+  `app/logging_config.py` keeps only `get_logger`, so `app/` still
+  imports nothing from `cordware/`. `LOG_LEVEL` is the host's setting,
+  and RRW's `Settings.log_level` is gone. **Event 5 waits for 21D:** the
+  host has no code of its own that can fail beyond a static `/health`,
+  and errors inside RRW are RRW's to log. The landing page brings the
+  first host code that can fail.
+- **The cumulative `diff-reviewer` read (one, at A3, from `cca367fe`)**
+  found nothing blocking and nine items, all fixed in A3:
+  - the browser harness now pins `CORDWARE_APPS`, since a `.env` that
+    ran the host alone would still answer `/health`;
+  - the NUS runbook and workflow say not to dispatch until stage 4,
+    because `main` no longer has `app.main:app`;
+  - the logging claim is narrowed: uvicorn's own lines stay plain;
+  - the logging tests restore the root logger exactly;
+  - the import-boundary test also reads `importlib` and `__import__`
+    calls, scans a planted tree, and holds `app/` off `cordware/` until
+    21C;
+  - the host's `/health` route is named `cordware_health`, so RRW's
+    `url_for("health")` cannot resolve to it under 21D's mount;
+  - two stale pointers to `app/logging_config.py` are repointed;
+  - two nits: the `pkill` patterns and a comment's alignment.
+  It verified by running code that nothing RRW serves at `/` changed.
 
 ## PR ladder
 
@@ -215,8 +241,9 @@ Taken 2026-10-21 at `8b430421`.
 - `pytest cordware/tests` passes with `CORDWARE_APPS` unset, empty and
   `reviewrobin`; an unknown name fails construction (A1).
 - `git grep -n 'app\.main:app' -- ':!guide/archive' ':!docs/archive'`
-  finds only segment 21's own plans and `docs/deployment_nus.md`, whose
-  command changes with stage 4's artifact (A2).
+  finds only segment 21's own plans, `docs/deployment_nus.md` (whose
+  command changes with stage 4's artifact), and the records § Status names
+  (A2).
 - A test imports `app.main` and finds no `FastAPI` instance on it
   (A2).
 - The full suite passes on SQLite and Postgres with no test's request
@@ -277,6 +304,10 @@ Taken 2026-10-21 at `8b430421`.
 - `spec/settings_inventory.md` — `CORDWARE_APPS` and `LOG_LEVEL`'s owner (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the lifespan contract and 21A's path scope recorded as settled (close).
 - `CLAUDE.md` — the run command (A2). `AGENTS.md` twinned.
+- `docs/deployment_nus.md` — the localhost command; "do not dispatch until stage 4" (A3).
+- `docs/architecture.md` — the JSON logs come from the host, stamped per application (A3).
+- `docs/operations_runbook.md` — the logging pointer (A3).
+- `.github/workflows/deploy_nus.yml` — the header says not to dispatch until stage 4 (A3).
 - `README.md` — the run command (A2).
 - `.env.example` — a commented `CORDWARE_APPS` line, unset meaning every registered application (A1).
 - `pyproject.toml` — package discovery and `testpaths` take in `cordware` (A1).

@@ -60,8 +60,8 @@ def failing_factory() -> FastAPI:
 
 
 STUBS = {
-    "a": AppEntry(path="/a", factory=f"{__name__}:stub_a"),
-    "b": AppEntry(path="/b", factory=f"{__name__}:stub_b"),
+    "a": AppEntry(path="/a", factory=f"{__name__}:stub_a", logger="stub_a"),
+    "b": AppEntry(path="/b", factory=f"{__name__}:stub_b", logger="stub_b"),
 }
 
 
@@ -87,7 +87,9 @@ def test_host_shadows_nothing_of_rrw_but_health() -> None:
 
 
 def test_registry_mounts_rrw_at_root() -> None:
-    assert REGISTRY["reviewrobin"] == AppEntry(path="/", factory="app.main:create_app")
+    assert REGISTRY["reviewrobin"] == AppEntry(
+        path="/", factory="app.main:create_app", logger="app"
+    )
 
 
 @pytest.mark.parametrize(
@@ -144,14 +146,14 @@ def test_state_a_mounted_lifespan_yields_reaches_its_requests() -> None:
 
 
 def test_a_lifespan_state_key_clash_refuses_to_start() -> None:
-    registry = {**STUBS, "clash": AppEntry(path="/c", factory=f"{__name__}:stub_clash")}
+    registry = {**STUBS, "clash": AppEntry(path="/c", factory=f"{__name__}:stub_clash", logger="clash")}
     with pytest.raises(RuntimeError, match="'resource_a' from 'clash'"):
         with TestClient(create_app(apps=("a", "clash"), registry=registry)):
             pass
 
 
 def test_a_failing_factory_fails_the_host() -> None:
-    registry = {"bad": AppEntry(path="/bad", factory=f"{__name__}:failing_factory")}
+    registry = {"bad": AppEntry(path="/bad", factory=f"{__name__}:failing_factory", logger="bad")}
     with pytest.raises(RuntimeError, match="startup validation failed"):
         create_app(apps=("bad",), registry=registry)
 

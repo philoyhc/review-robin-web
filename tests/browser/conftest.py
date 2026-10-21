@@ -116,9 +116,12 @@ def live_server(
     # conftest's AUDIT_STRICT_MODE (and REHYDRATE_ENABLED) reach it, as they
     # reach the in-process suite. The fake-auth keys are pinned here because
     # app settings also read a developer's .env, which must not decide who
-    # the tests sign in as.
+    # the tests sign in as. CORDWARE_APPS is pinned for the same reason: a
+    # .env that runs the host alone would still answer /health, and every
+    # test would then fail on a 404.
     env = {
         **os.environ,
+        "CORDWARE_APPS": "reviewrobin",
         "DATABASE_URL": database_url,
         "ALLOW_FAKE_AUTH": "true",
         "FAKE_AUTH_OPERATOR": "true",

@@ -92,7 +92,7 @@ alembic upgrade head                     # apply migrations to local SQLite (./r
 alembic downgrade -1                     # roll back one
 alembic revision --autogenerate -m "..." # after editing models — ALWAYS hand-review the file
 
-uvicorn cordware.main:app --reload            # local dev server on http://127.0.0.1:8000
+uvicorn cordware.main:app --reload       # local dev server on http://127.0.0.1:8000
 ```
 
 `pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite whose schema is built directly from the ORM metadata (`Base.metadata.create_all`) per `tests/conftest.py` — the Alembic migration chain is still round-tripped on every PR by the `ci-postgres` job. `pytest-xdist` runs the suite in parallel (`pytest -n auto`).
