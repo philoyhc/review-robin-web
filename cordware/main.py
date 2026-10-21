@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+from typing import Any
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
 
@@ -91,15 +92,25 @@ def create_app(
     mounted = [(registry[name], _load_factory(registry[name].factory)()) for name in names]
 
     @asynccontextmanager
-    async def lifespan(_host: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_host: FastAPI) -> AsyncIterator[dict[str, Any]]:
         # Starlette runs no lifespan for a mounted application, so the
         # host enters each one in mount order and exits them in reverse.
+        # State a lifespan yields is merged and yielded on, which is how
+        # it reaches `request.state` inside the mounted application.
+        state: dict[str, Any] = {}
         async with AsyncExitStack() as stack:
-            for _, sub_app in mounted:
+            for name, (_, sub_app) in zip(names, mounted, strict=True):
                 router = getattr(sub_app, "router", None)
-                if router is not None:
-                    await stack.enter_async_context(router.lifespan_context(sub_app))
-            yield
+                if router is None:
+                    continue
+                yielded = await stack.enter_async_context(router.lifespan_context(sub_app))
+                for key, value in (yielded or {}).items():
+                    if key in state:
+                        raise RuntimeError(
+                            f"lifespan state key {key!r} from {name!r} is already set"
+                        )
+                    state[key] = value
+            yield state
 
     # No docs or schema routes of the host's own: registered ahead of the
     # mount, they would shadow those of an application mounted at `/`.

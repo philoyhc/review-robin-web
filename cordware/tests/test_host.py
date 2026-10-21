@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from cordware.main import REGISTRY, AppEntry, create_app, parse_apps
@@ -21,9 +21,9 @@ EVENTS: list[str] = []
 
 def _stub(name: str) -> FastAPI:
     @asynccontextmanager
-    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_app: FastAPI) -> AsyncIterator[dict[str, str]]:
         EVENTS.append(f"start {name}")
-        yield
+        yield {f"resource_{name}": f"made by {name}"}
         EVENTS.append(f"stop {name}")
 
     stub = FastAPI(lifespan=lifespan)
@@ -32,7 +32,19 @@ def _stub(name: str) -> FastAPI:
     def ping() -> dict[str, str]:
         return {"app": name}
 
+    @stub.get("/resource")
+    def resource(request: Request) -> dict[str, str]:
+        return {"resource": getattr(request.state, f"resource_{name}")}
+
     return stub
+
+
+def stub_clash() -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[dict[str, str]]:
+        yield {"resource_a": "clash"}
+
+    return FastAPI(lifespan=lifespan)
 
 
 def stub_a() -> FastAPI:
@@ -123,6 +135,19 @@ def test_host_runs_mounted_lifespans_in_order() -> None:
         assert EVENTS == ["start a", "start b"]
         assert client.get("/a/ping").json() == {"app": "a"}
     assert EVENTS == ["start a", "start b", "stop b", "stop a"]
+
+
+def test_state_a_mounted_lifespan_yields_reaches_its_requests() -> None:
+    with TestClient(create_app(apps=("a", "b"), registry=STUBS)) as client:
+        assert client.get("/a/resource").json() == {"resource": "made by a"}
+        assert client.get("/b/resource").json() == {"resource": "made by b"}
+
+
+def test_a_lifespan_state_key_clash_refuses_to_start() -> None:
+    registry = {**STUBS, "clash": AppEntry(path="/c", factory=f"{__name__}:stub_clash")}
+    with pytest.raises(RuntimeError, match="'resource_a' from 'clash'"):
+        with TestClient(create_app(apps=("a", "clash"), registry=registry)):
+            pass
 
 
 def test_a_failing_factory_fails_the_host() -> None:
