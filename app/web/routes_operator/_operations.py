@@ -279,7 +279,7 @@ def validate_session(
         views.VALIDATE_SEVERITY_COOKIE,
         views.validate_severity_cookie(severities),
         max_age=_ONE_YEAR,
-        path="/operator/sessions",
+        path=urls.cookie_path(request, "/operator/sessions"),
         httponly=True,
         samesite="lax",
     )

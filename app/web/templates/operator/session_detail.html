@@ -35,7 +35,7 @@
     // Save seat key and a reload all address Home, never the POST-only
     // route (the read of the S4 / O7 PR).
     (function () {
-      var home = {{ ('/operator/sessions/' ~ session.public_id) | tojson }};
+      var home = {{ url('/operator/sessions/' ~ session.public_id) | tojson }};
       if (window.location.pathname !== home) {
         try {
           history.replaceState(history.state, '', home + window.location.hash);

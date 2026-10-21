@@ -1076,7 +1076,7 @@
           return;
         }
         var base =
-          "/operator/sessions/" + sessionId + "/export/by_instrument_bundle.zip";
+          {{ url('/operator/sessions/') | tojson }} + sessionId + "/export/by_instrument_bundle.zip";
         var qs = params.toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
       }
@@ -1136,7 +1136,7 @@
         var btn = document.getElementById("extract-data-" + card + "-zip");
         if (!btn) return;
         var base =
-          "/operator/sessions/" + sessionId + "/export/" +
+          {{ url('/operator/sessions/') | tojson }} + sessionId + "/export/" +
           card.replace("-", "_") + ".csv";
         var qs = metadataParams(card).toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
@@ -1181,7 +1181,7 @@
         if (!extractAllChipOn("data-shaper")) params.set("data_shapes", "0");
         if (!extractAllChipOn("token-keys")) params.set("tokens", "0");
         var base =
-          "/operator/sessions/" + sessionId +
+          {{ url('/operator/sessions/') | tojson }} + sessionId +
           "/export/responses_bundle.zip";
         var qs = params.toString();
         btn.setAttribute("href", qs ? base + "?" + qs : base);
@@ -2124,7 +2124,7 @@
           if (shapeId) {
             downloadBtn.setAttribute(
               "href",
-              "/operator/sessions/" + sessionId +
+              {{ url('/operator/sessions/') | tojson }} + sessionId +
                 "/extract-data/shapes/" + shapeId + "/download.csv"
             );
             downloadBtn.setAttribute("aria-disabled", "false");
@@ -2328,9 +2328,9 @@
         var shapeId = shape.getAttribute("data-shape-id");
         var method = shapeId ? "PATCH" : "POST";
         var url = shapeId
-          ? "/operator/sessions/" + sessionId +
+          ? {{ url('/operator/sessions/') | tojson }} + sessionId +
               "/extract-data/shapes/" + shapeId
-          : "/operator/sessions/" + sessionId + "/extract-data/shapes";
+          : {{ url('/operator/sessions/') | tojson }} + sessionId + "/extract-data/shapes";
         return fetch(url, {
           method: method,
           headers: {"Content-Type": "application/json"},
@@ -2364,7 +2364,7 @@
         var shapeId = shape.getAttribute("data-shape-id");
         if (!shapeId) return Promise.resolve(true);
         return fetch(
-          "/operator/sessions/" + sessionId +
+          {{ url('/operator/sessions/') | tojson }} + sessionId +
             "/extract-data/shapes/" + shapeId,
           {method: "DELETE", credentials: "same-origin"}
         ).then(function (resp) {

@@ -5507,13 +5507,13 @@
         // Map: ``rs`` (reviewer surface) → ``/me/sessions/N``;
         //      anything else → ``/operator/sessions/N``.
         var match = tableId.match(/^rrw-sort-([^-]+)-([0-9a-z]+)/);
-        if (!match) return '/';
+        if (!match) return {{ url('/') | tojson }};
         var surface = match[1];
         var sessionId = match[2];
         if (surface === 'rs') {
-          return '/me/sessions/' + sessionId;
+          return {{ url('/me/sessions/') | tojson }} + sessionId;
         }
-        return '/operator/sessions/' + sessionId;
+        return {{ url('/operator/sessions/') | tojson }} + sessionId;
       }
 
       // Seed every sortable table's state from its cookie on

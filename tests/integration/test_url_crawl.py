@@ -135,8 +135,7 @@ def test_a_session_page_emits_only_prefixed_urls(
 ) -> None:
     response = mounted_client.get(f"{MOUNT}/operator/sessions/{session_id}{page}")
     assert response.status_code == 200
-    # Validate's severity cookie is scoped by B6.
-    assert leaks(response, cookies=page != "/validate") == []
+    assert leaks(response) == []
 
 
 @pytest.mark.usefixtures("sys_admin")
@@ -144,8 +143,7 @@ def test_a_session_page_emits_only_prefixed_urls(
 def test_a_sys_admin_page_emits_only_prefixed_urls(mounted_client: TestClient, path: str) -> None:
     response = mounted_client.get(f"{MOUNT}{path}")
     assert response.status_code == 200
-    # The admin return-to cookie is scoped by B6.
-    assert leaks(response, cookies=False) == []
+    assert leaks(response) == []
 
 
 # --- B4: the participant pages, the Guide and About ---

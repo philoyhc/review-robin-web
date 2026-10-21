@@ -237,7 +237,7 @@
                 if (!chips.length) params.append("show", "");
                 chips.forEach(function (box) { params.append("show", box.value); });
                 params.append("q", input.value);
-                fetch({{ (accounts_base_url ~ "/search-options?")|tojson }} + params.toString(), {
+                fetch({{ url(accounts_base_url ~ "/search-options?")|tojson }} + params.toString(), {
                   credentials: "same-origin",
                   headers: { "Accept": "application/json" }
                 })
@@ -364,7 +364,7 @@
           // admin) are the server's: it judges the whole batch and
           // refuses it whole, naming the row.
           var table = document.getElementById("users-table");
-          var BASE = {{ accounts_base_url | tojson }};
+          var BASE = {{ url(accounts_base_url) | tojson }};
           var ROUTES = {
             "Admit": "/bulk-admit",
             "Revoke": "/bulk-revoke",
