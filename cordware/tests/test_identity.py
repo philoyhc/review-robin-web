@@ -456,3 +456,33 @@ def test_explicit_settings_carry_to_the_role_properties(monkeypatch: pytest.Monk
     # The dependency's identity reads the host's settings.
     assert get_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "boss@example.edu"})).is_super_admin is False
     assert boss == Identity(principal_id=None, email="boss@example.edu", name=None)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        b"\x80abc",
+        b'{"claims": "\xc3("}',
+        b"[1, 2]",
+        b"not json",
+        b'{"x": ' + b"1" * 5000 + b"}",
+        b"[" * 10000,
+    ],
+    ids=["non-utf8", "non-utf8-in-json", "not-an-object", "not-json", "long-int", "deep"],
+)
+def test_a_decodable_but_malformed_principal_is_logged_not_raised(
+    raw: bytes, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Codex on #3214: base64 of non-UTF-8 bytes raised a 500."""
+    header = base64.b64encode(raw).decode("ascii")
+    request = _request({"X-MS-CLIENT-PRINCIPAL": header, "X-MS-CLIENT-PRINCIPAL-ID": "p-2"})
+    with caplog.at_level(logging.WARNING, logger="cordware.identity"):
+        identity = resolve_identity(request, _settings())
+    assert identity.principal_id == "p-2"
+    assert len(_events(caplog, "identity.header_malformed")) == 1
+
+
+def test_only_a_string_names_the_provider() -> None:
+    rich = _encode_principal({"auth_typ": {"a": 1}, "identityProvider": "aad", "claims": []})
+    identity = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
+    assert identity.provider == "aad"

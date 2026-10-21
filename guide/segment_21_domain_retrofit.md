@@ -10,7 +10,8 @@ RRW hosted by a `cordware/` package and mounted at `/reviewrobin` ·
 
 **On hold (author, 2026-10-16);** lifted for 21A, closed 2026-10-21, and
 for 21B at that close; 21B closed 2026-10-21, and the hold lifted for 21C
-at that close (author).
+at that close; 21C closed 2026-10-21, and the hold lifted for 21D at that
+close (author).
 Residential Apps (v0.8 stage 3) and any NUS deploy wait on 21D (v0.8 §5).
 **The dev slot is dormant** until the Azure work settles, and every rung
 is tested on localhost (author, 2026-10-21). Its steps, start command,
@@ -179,7 +180,7 @@ holds only the gates between them and the constraints a rung must carry.
 3. **21B**, after 21A. Its allowlist only shrinks, rung by rung.
    **Closed 2026-10-21**: `guide/archive/segment_21B_url_sweep.md`.
 4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
-   rung. Plan: `guide/segment_21C_shared_identity.md`.
+   rung. **Closed 2026-10-21**: `guide/archive/segment_21C_shared_identity.md`.
 5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
    D2 is the author's live check (§ Definition of done).
 
@@ -225,7 +226,8 @@ holds only the gates between them and the constraints a rung must carry.
    absolute URL of its own: carried to 21D, where it binds. 21B's
    recommendation is the request's own host, with no configured base
    (`guide/archive/segment_21B_url_sweep.md`). The author decides.
-4. **The trusted-identity interface** (v0.8 §8). Decided in 21C.
+4. ~~The trusted-identity interface~~ (v0.8 §8): settled in 21C,
+   `cordware/spec/identity.md`.
 5. ~~The dev slot's `APP_ENV`~~ (v0.8 §8): set non-`local` when the slot
    resumes, step 1 of `docs/deployment_dev.md` "Resuming the dev slot"
    (author, 2026-10-21).

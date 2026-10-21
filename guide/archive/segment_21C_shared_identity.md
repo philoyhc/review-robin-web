@@ -143,53 +143,44 @@ Taken 2026-10-21 at `fd60526e`.
 
 ## Status
 
-**C1 (2026-10-21).** As laddered. The guard is `cordware.main.check_fake_auth`,
-run after the host configures logging and before any factory, raising
-`FakeAuthRefused`; the stop line carries `missing_identity_headers`. A
-new boundary test forbids any application importing `cordware.main`.
-`validate_critical_settings` takes `env` for its tests. RRW tests patch
-`cordware.settings.identity_settings` for the moved fields.
+**Closed 2026-10-21.** PRs #3209 (plan), #3210 (C1), #3212 (C2; #3211
+opened on a stale head and was closed), #3213 (C3); the author's
+localhost check passed, `/auth/me/debug` included. The ladder ran as
+planned. Contract: `cordware/spec/identity.md`; the host's part in
+`cordware/spec/host.md`.
 
-**C2 (2026-10-21).** As laddered: `get_or_create_user` grants the fake
-operator and admin roles on `is_fake` alone; a parametrized test turns
-each switch off with `ALLOW_FAKE_AUTH` off.
+Decisions confirmed at build:
 
-**C3 (2026-10-21).** As laddered, with these build decisions:
-
-- **Cordware exposes `super_admin_emails()` too**, the effective list
-  normalized. `account_listing.py`'s admin filter and super-admin count
-  are SQL `IN` clauses, and a predicate cannot build one.
-  `app/auth/roles.py` re-exports it with `is_super_admin` and
-  `super_admin_configured`; `effective_super_admin_emails` and the
-  `settings` parameter are gone.
-- **The empty-list warning keeps its event name**
-  (`super_admin.unconfigured`) and is logged by
-  `cordware.main.warn_if_no_super_admin`.
-- **`/auth/me` gains `is_super_admin`, and `/auth/me/debug` gains a
-  "Super-admin" line.**
-- **The normalization parity test** sits beside `normalize_email`'s own
-  tests (`tests/unit/test_email_identity_fold.py`), on that file's cases.
+- **The guard is `cordware.main.check_fake_auth`**, after logging is
+  configured and before any factory, raising `FakeAuthRefused`. The
+  empty-list warning keeps its event name (`super_admin.unconfigured`)
+  and moved to the host; the stop line carries `missing_identity_headers`.
+- **Cordware also exposes `super_admin_emails()`**, the normalized
+  effective list: `account_listing.py` filters and counts with SQL `IN`,
+  which a predicate cannot build. `app/auth/roles.py` re-exports it with
+  `is_super_admin` and `super_admin_configured`.
 - **An identity resolved under passed-in settings keeps them**
-  (`resolved_with`, outside equality), so its role properties read the
-  settings it was resolved under (Codex, #3213). The dependency passes
-  none and reads the host's.
-- **A blank entry never counts** toward the effective list, the fake
-  email included, so a blank `FAKE_AUTH_EMAIL` no longer turns the
-  any-admin fallback off locally.
+  (`resolved_with`, outside equality), so its role flags read those
+  settings (Codex, #3213); the dependency passes none.
+- **A blank entry never counts** toward the effective list, so a blank
+  `FAKE_AUTH_EMAIL` no longer turns the any-admin fallback off locally.
+- **`/auth/me` gains `is_super_admin`**, `/auth/me/debug` a
+  "Super-admin" line, which stays in the parsed-identity card.
+- No application may import `cordware.main`, dynamic imports included.
 
-Reads: one cumulative `diff-reviewer` read, `7369744a..` C3. Nothing
-serious. It found:
+Found at close (`spec-writer`), not changed: a malformed
+`X-MS-CLIENT-PRINCIPAL` with no simple headers yields an identity with
+every field empty rather than a 401, as RRW's parser did before; RRW
+refuses it for want of an email. After C2 and C3 RRW reads neither
+`fake_auth()` nor `is_local()`; `app/config.py` reads `app_env()`.
 
-- a host test that a developer `.env` with fake auth on would fail;
-- `cordware/spec/host.md` missing from Doc impact;
-- the guard stated backwards in `docs/deployment_dev.md`;
-- a stale `.env.example` comment;
-- dynamic imports unread by the entry-point check;
-- a race on the missing-header counter;
-- `APP_ENV` not pinned for the browser host.
-
-All were fixed in C3. The read also called "Super-admin" a config fact
-sitting in the debug page's parsed-identity card; it stays there.
+Reads: one cumulative `diff-reviewer` read (`7369744a..` C3). Nothing
+serious; it found an environment-dependent host test,
+`cordware/spec/host.md` missing from Doc impact, the guard stated
+backwards in `docs/deployment_dev.md`, a counter race, unread dynamic
+imports and an unpinned `APP_ENV` for the browser host, all fixed in C3.
+Codex found the `resolved_with` case on C3; C2 merged before Codex
+finished, on the author's word.
 
 ## PR ladder
 

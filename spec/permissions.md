@@ -31,7 +31,7 @@ membership:
 |---|---|---|---|
 | **Operator** | `users.is_operator` | env bootstrap on first sign-in (`OPERATOR_EMAILS`), or an admin's *Admit* | an admin's *Revoke* (refused while the user still owns any session) |
 | **Admin** (`sys_admin`) | `users.is_sys_admin` | env bootstrap (`SYS_ADMIN_EMAILS`), or a **super-admin's** *Promote* or *Invite* with the chip on `Invite as sys-admin` | a super-admin's *Demote* (refused for the last admin, and while a user with no Operator flag still owns any session) |
-| **Super-admin** | *derived*, never stored — email ∈ `SUPER_ADMIN_EMAILS` (`app/auth/roles.py::is_super_admin`, case-insensitive) | deployer config only | deployer config only; no in-app path may demote, revoke or remove one |
+| **Super-admin** | *derived*, never stored — Cordware's platform role: email ∈ the effective list, `SUPER_ADMIN_EMAILS` plus the fake-auth fold-in (`app/auth/roles.py::is_super_admin`, case-insensitive) | deployer config only | deployer config only; no in-app path may demote, revoke or remove one |
 | **Session owner** | a `session_operators` row (`role="owner"`) | session create (the creator, plus any co-owners named on Create's Owners card), clone (the cloner), an owner's *Add owner*, or a sys-admin's audited self-add | an owner's *Remove owner* (refused for the last owner) |
 
 **Nesting.** Every gate treats admin as implying operator
@@ -54,11 +54,22 @@ OR'd in, audited as `workspace.user_absorbed`; `docs/security_posture.md`
 the exception — being config-derived, it can neither drift from the
 env var nor be flipped in-app.
 
-**Fake-auth fold-in (local dev only).** When `ALLOW_FAKE_AUTH=true`,
-`FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN` grant the fake identity
-those flags on first sign-in, and `FAKE_AUTH_SUPER_ADMIN` folds the
-fake email into the effective super-admin set. All three are inert
-in a deployed environment, where `allow_fake_auth` must be false.
+**Where super-admin comes from.** It is Cordware's platform role, read
+the same way by every application (`cordware/spec/identity.md`): the flag
+`Identity.is_super_admin`, the predicate `is_super_admin_email(email)`,
+and `super_admin_configured()` for the no-super-tier fallback below.
+They are computed from one effective list and cannot disagree. RRW
+reads them only through `app/auth/roles.py` (`is_super_admin`,
+`super_admin_configured`, `super_admin_emails`).
+
+**Fake-auth fold-in (local dev only).** `FAKE_AUTH_OPERATOR` /
+`FAKE_AUTH_SYS_ADMIN` grant an identity those flags on first sign-in when
+`Identity.is_fake` is true, and on nothing else: they do not re-read
+`ALLOW_FAKE_AUTH`. Cordware sets `is_fake` only on the fake user, and the
+host refuses to start with `ALLOW_FAKE_AUTH` on outside `APP_ENV=local`,
+so all three switches are inert in a deployed environment.
+`FAKE_AUTH_SUPER_ADMIN` is Cordware's: it folds the fake email into the
+effective super-admin list while `ALLOW_FAKE_AUTH` is on.
 
 **`session_operators`.** Unique on `(session_id, user_id)`.
 `role` is one of `SESSION_OPERATOR_ROLES = ("owner", "manager")`,
@@ -177,7 +188,8 @@ status.
 
 **No-super-tier fallback.** `requires_super_admin` engages only
 once a super-admin actually exists in the effective set; with
-`SUPER_ADMIN_EMAILS` empty (and no fake-auth fold-in) any admin
+`super_admin_configured()` false (`SUPER_ADMIN_EMAILS` empty and no
+fake-auth fold-in) any admin
 may promote / demote, and invite as an admin. This keeps a deployment
 that never configures the top tier from locking itself out of admin
 management.
@@ -355,6 +367,7 @@ a case when a gate changes.
 | an owner add and a revoke of the same user serialize (§4.2): every owner-row write re-reads under the lock, and on Postgres each side waits on the other | `tests/integration/test_owner_add_lock.py`; Rehydrate's in `tests/integration/test_rehydrate_commit_route.py` |
 | every route that makes a session takes the owner-add lock first, and only the known services write owner rows | `tests/unit/test_owner_lock_wiring.py` |
 | super-admin resolver (config membership, fake fold-in) | `tests/unit/test_roles_super_admin.py` |
+| the identity's super-admin flag, predicate and fallback; the fake-auth guard | `cordware/tests/test_identity.py` |
 | audit-log CSV is sys-admin-only | `tests/integration/test_outbox_sys_admin_relax.py` |
 | reviewer gate 404s (other session, inactive row) and foreign `assignment_id` dropped | `tests/integration/test_reviewer_response_flow.py` |
 
@@ -372,7 +385,10 @@ a case when a gate changes.
 - `spec/operator_ui_concept.md` §6 — the Accounts Management
   and Sessions Diagnostics surfaces.
 - `spec/settings_inventory.md` — `OPERATOR_EMAILS` /
-  `SYS_ADMIN_EMAILS` / `SUPER_ADMIN_EMAILS` and the fake-auth knobs.
+  `SYS_ADMIN_EMAILS` / `SUPER_ADMIN_EMAILS` and the fake-auth knobs
+  (`SUPER_ADMIN_EMAILS`, `ALLOW_FAKE_AUTH` and the other `FAKE_AUTH_*`
+  identity settings are Cordware's; `FAKE_AUTH_OPERATOR` /
+  `FAKE_AUTH_SYS_ADMIN` are RRW's).
 - `guide/archive/segment_16A_sys_admin_page.md` (Option C
   strict-allowlist posture) and
   `guide/archive/segment_18S_security.md` (three tiers, protected

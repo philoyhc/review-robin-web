@@ -53,7 +53,9 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
 **config-anchored and protected**:
 
 - **Super-admin is derived from `SUPER_ADMIN_EMAILS`** (deployer config),
-  never a DB column (`app/auth/roles.py::is_super_admin`). No in-app path
+  never a DB column. It is Cordware's platform role (segment 21C):
+  Cordware reads the list and RRW reads the result through
+  `app/auth/roles.py` (`is_super_admin`, `super_admin_configured`). No in-app path
   adds or removes one — only editing the App Setting can. App Settings are
   unreachable from inside the app, so this is the hard anchor. A super-admin
   **self-heals** to full admin rights on every sign-in
@@ -69,7 +71,7 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
   promote/demote or invite admins — so a deploy that never sets the list can't lock its
   own admin management out. The strict rule engages only once a super-admin
   exists. A deployed env that boots with no super-admin logs a startup warning
-  (`super_admin.unconfigured`).
+  (`super_admin.unconfigured`, from the host).
 - **Protected-super-admin guarantee.** No in-app action can demote, revoke,
   hard-remove, or detach-from-all-sessions a super-admin: `demote` /
   `revoke` / `remove_user` / `remove_from_all_sessions` refuse a super-admin
@@ -79,7 +81,7 @@ strictly (super-admin ⊇ admin ⊇ operator). The top tier is
   service guards are the enforcement.
 - **Local dev.** With `ALLOW_FAKE_AUTH=true`, `FAKE_AUTH_SUPER_ADMIN`
   (default on) treats the fake operator as a super-admin — inert in any
-  deployed env (where `allow_fake_auth` must be false).
+  deployed env, where the host refuses fake auth (below).
 
 ## §5.5a Identity matching — the fold
 
@@ -411,7 +413,7 @@ injects.*
   headers are present. See "`ALLOW_FAKE_AUTH` gating" below for the
   deployed-environment guard.
 - **Diagnostic routes:** `GET /auth/me` (JSON — `principal_id`,
-  `email`, `name`, `provider`, `is_fake`) and `GET /auth/me/debug`
+  `email`, `name`, `provider`, `is_fake`, `is_super_admin`) and `GET /auth/me/debug`
   (HTML — the parsed `AuthenticatedUser`, the raw decoded claims list,
   a fake-auth pill when the local fallback is in use, and a
   `/.auth/logout` sign-out link).
@@ -496,22 +498,24 @@ there is no Easy Auth in front of a laptop / sandbox. It **must
 stay `false` in every deployed environment**; with it on, anyone
 would be handed a fake operator identity.
 
-Defence against that footgun:
+Defence against that footgun (segment 21C, enforced by the host):
 
-- It defaults to `false` (`app/config.py`).
+- It defaults to `false` (`cordware/settings.py`).
+- **The host refuses to start** with `ALLOW_FAKE_AUTH` on and
+  `APP_ENV` anything but `local`: `cordware.main.check_fake_auth` logs
+  `identity.fake_auth_refused` and raises before any application is
+  built. With it on locally, the host warns on every start
+  (`identity.fake_auth_enabled`).
 - The companion `FAKE_AUTH_OPERATOR` / `FAKE_AUTH_SYS_ADMIN`
-  flags are honoured only when `ALLOW_FAKE_AUTH` is also true and
-  the resolved identity is `is_fake`, so they are inert in a
+  flags are honoured only for an identity marked `is_fake`, which
+  Cordware sets only on the fake user, so they are inert in a
   deployed environment regardless.
 - `docs/deployment_dev.md` states it must not be enabled in App
-  Service config, and the "Identity-subsystem mechanics" note above
-  flags the same.
+  Service config, and sets `APP_ENV` to a non-`local` value.
 
-Note: the PR 6a startup check (`validate_critical_settings`) does
-**not** currently hard-fail on `ALLOW_FAKE_AUTH=true` in a
-deployed environment — the check set was scoped to the
-empty-allowlist case. Adding a fake-auth assertion there is a
-reasonable future tightening.
+Identity is interpreted by the host, not RRW: `cordware/identity.py`
+is the one Easy Auth parser, and `app/auth/identity.py` re-exports it
+(`cordware/spec/identity.md`).
 
 ## Deferred hardening
 

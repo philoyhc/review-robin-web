@@ -274,7 +274,7 @@ The production process still shares Python dependency resolution, startup, compu
 - B or C is implemented safely (C preferred);
 - the integrated artifact is staged, tested and deployed, with a documented recovery path.
 
-**Implementation decisions still open:** the trusted-identity interface; the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; repository privacy and rename timing.
+**Implementation decisions still open:** the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; repository privacy and rename timing.
 
 **Settled in stage 1 (segment 21A, 2026-10-21):**
 
@@ -284,6 +284,10 @@ The production process still shares Python dependency resolution, startup, compu
 **Settled in stage 1 (segment 21B, 2026-10-21):**
 
 - *URL emission.* Routes keep their literal app-relative paths rather than adopting route names. A value, built in a template or in Python, stays app-relative until it is emitted; `app/web/urls.py` then adds `root_path` once: `url()` in templates, `redirect()` for responses, `cookie_path()` for cookies, `app_path()` and `here()` for comparisons. A string built outside a request is app-relative too, and gains the prefix where a template emits it. Two tests gate it: a static leak test, and a crawl of every GET route under a `/reviewrobin` test mount. Contract: `spec/architecture.md`.
+
+**Settled in stage 2 (segment 21C, 2026-10-21):**
+
+- *The trusted-identity interface.* `cordware/identity.py` is the one Easy Auth parser and the only source of the fake identity. Applications depend on `get_identity(request)`, which takes the request alone, and read host-level `fake_auth()`, `app_env()` / `is_local()`, `is_super_admin_email()`, `super_admin_configured()` and `super_admin_emails()`. The identity's `is_super_admin` and `super_admin_configured` are computed, never stored. The settings live in `cordware/settings.py` under their old names. The host refuses fake auth outside `APP_ENV=local` before mounting anything. RRW re-exports the interface from `app/auth/identity.py` and keeps its fake operator and admin roles, keyed off `is_fake`. Contract: `cordware/spec/identity.md`.
 
 **Non-goals:** moving RRW's source into a `reviewrobin/` folder; cross-repository source sync or private package composition; plugin discovery; a supported standalone RRW runtime; Cordware user or role tables, or any Cordware persistence; a Cordware application, admin interface, console, dashboard or log viewer (the platform super-admin works inside the applications); a login audit table; shared business tables; a second PostgreSQL server without a new requirement; redirects for old root paths; a big-bang rewrite.
 

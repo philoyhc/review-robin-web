@@ -130,7 +130,11 @@ def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
         return None
     try:
         payload = json.loads(decoded)
-    except json.JSONDecodeError:
+    except (ValueError, RecursionError):
+        # Not JSON, not text `json.loads` can decode, an integer past
+        # Python's digit limit, or nesting past the recursion limit: all
+        # malformed, none a 500 (Codex and a cold read, #3214).
+        # `JSONDecodeError` and `UnicodeDecodeError` are `ValueError`s.
         return None
     if not isinstance(payload, dict):
         return None
@@ -194,7 +198,14 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 "oid",
                 "sub",
             )
-            provider = provider or payload.get("auth_typ") or payload.get("identityProvider")
+            provider = provider or next(
+                (
+                    value
+                    for value in (payload.get("auth_typ"), payload.get("identityProvider"))
+                    if isinstance(value, str) and value
+                ),
+                None,
+            )
 
     if simple_name and not email:
         if "@" in simple_name:

@@ -99,7 +99,7 @@ uvicorn cordware.main:app --reload       # local dev server on http://127.0.0.1:
 
 **Migration portability matters.** Alembic migrations run against both SQLite (default; tests) and Postgres 16 (production + the `ci-postgres` job). SQLite is more permissive than Postgres in several places that have bitten us — `BOOLEAN DEFAULT 1` (use `sa.true()` / `sa.false()`), `WHERE bool_col = 1` (use `IS TRUE`), FK constraints not enforced at `DROP TABLE` time (drop FKs explicitly first, or recreate them on downgrade), and index / FK name mismatches between upgrade and downgrade (use the *original* names so downgrades further back in the chain can drop them). The `ci-postgres` job runs `alembic upgrade head` *and* the full `downgrade base + upgrade head` round-trip, so every migration must survive both directions on Postgres.
 
-Local auth shortcut: set `ALLOW_FAKE_AUTH=true` plus `FAKE_AUTH_EMAIL`/`FAKE_AUTH_NAME` in `.env`. In deployed environments Azure Easy Auth supplies the identity headers and this flag must remain `false`.
+Local auth shortcut: set `ALLOW_FAKE_AUTH=true` plus `FAKE_AUTH_EMAIL`/`FAKE_AUTH_NAME` in `.env` (Cordware's settings, `cordware/settings.py`). In deployed environments Azure Easy Auth supplies the identity headers, and the host refuses to start with this flag on outside `APP_ENV=local`.
 
 ## Architecture at a glance
 
@@ -146,8 +146,8 @@ reject it.
 
 ### Identity and auth
 
-- `app/auth/identity.py` parses Azure Easy Auth headers (`X-MS-CLIENT-PRINCIPAL` and friends) into an `AuthenticatedUser`. When `ALLOW_FAKE_AUTH=true`, a fake user is injected.
-- `get_current_user` (defined in `app/auth/identity.py`) and `get_or_create_user` (in `app/web/deps.py`, which ensures the auth principal has a row in `users`) are the dependencies routes use, not the headers directly.
+- Cordware interprets identity (segment 21C): `cordware/identity.py` parses Azure Easy Auth headers (`X-MS-CLIENT-PRINCIPAL` and friends), injects the fake user when `ALLOW_FAKE_AUTH=true`, and decides the platform super-admin. `app/auth/identity.py` re-exports it under RRW's names (`AuthenticatedUser`, `get_current_user`). The host refuses to start with fake auth on outside `APP_ENV=local`.
+- `get_current_user` (re-exported by `app/auth/identity.py`) and `get_or_create_user` (in `app/web/deps.py`, which ensures the auth principal has a row in `users`) are the dependencies routes use, not the headers directly.
 - **Operator authorization** goes through `require_session_operator` (in `deps.py`), which combines `get_or_create_user` with a per-session permission check from `app/services/permissions.py`.
 - **Participant authorization** goes through `require_reviewee_with_current_grant` (19F) or `require_observer_in_session` (W3) for the reviewee `/me/sessions/{id}/results` and observer `/me/sessions/{id}/collation` surfaces. Both match the signed-in user's email (case-insensitive) against the session's roster + gate on `Reviewee.status` / `Observer.status` being `"active"`; the reviewee gate does that through `require_reviewee_in_session` (W2), then 404s unless a visibility grant currently resolves (`visibility_policies.reviewee_has_current_grant`). Reviewees with non-email identifiers (anonymous IDs for analysis-only sessions) fail the reachability check — flagged on the Validate page by the `reviewees.unreachable_for_results` soft warning (W8).
 
