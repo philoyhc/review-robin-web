@@ -15,10 +15,10 @@ class Settings(BaseSettings):
 
     # Sandbox-only flags so the agent's local dev exercises the
     # 16A operator / sys-admin gates without coordinating env vars.
-    # Honoured only when Cordware's fake auth is on AND the
-    # resolved identity is ``is_fake=True``, so they're inert in
-    # any deployed environment (where Cordware refuses fake auth
-    # outside ``APP_ENV=local``). Default-True keeps the agent's
+    # Honoured only for an identity with ``is_fake=True``, which
+    # Cordware supplies only with fake auth on, and refuses fake auth
+    # outside ``APP_ENV=local``, so they're inert in any deployed
+    # environment. Default-True keeps the agent's
     # local dev loop seamless under the 16A PR 1 operator gate.
     fake_auth_operator: bool = True
     fake_auth_sys_admin: bool = True
