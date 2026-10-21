@@ -26,13 +26,16 @@ Two sibling registers hold the open work that is not queued here:
 
 ### On hold
 
-- **21 — Domain retrofit: speculative, on hold** (author,
-  2026-10-16). RRW served at `cordware.nus.edu.sg/reviewrobin` rather
-  than its own hostname. Nothing under it starts, and nothing else
-  waits on it, until the author lifts the hold. That covers the outline
-  `guide/segment_21_domain_retrofit.md`, its sub-segments 21A–21D, and
-  the Cordware strategy, `docs/cordware_repository_strategy_v0.8.md`
-  (2026-10-20; adopted as the direction 2026-10-19). Its predecessors
+- **21 — RRW under Cordware: on hold** (author, 2026-10-16). v0.8's
+  stages 1–2: RRW hosted by a `cordware/` package and mounted at
+  `/reviewrobin`, proved on the dev slot. The outline,
+  `guide/segment_21_domain_retrofit.md`, was rewritten 2026-10-21
+  against v0.8 and `docs/cordware_implementation_sequence.md`: 21A host
+  skeleton, 21B URL sweep, 21C shared identity, 21D prefix flip. Nothing
+  under it starts until the author lifts the hold; Residential Apps
+  (v0.8 stage 3) and any NUS deploy wait on it. The strategy is
+  `docs/cordware_repository_strategy_v0.8.md` (adopted 2026-10-19,
+  revised to 2026-10-21). Its predecessors
   v0.4–v0.7, the planning notes and integration spec v0.2 are in
   `docs/archive/` as decision history. The v8 status report,
   `docs/cordware_nus_azure_status_2026-10-16_v8.md`, is the deployment's

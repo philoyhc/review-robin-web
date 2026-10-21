@@ -1,142 +1,201 @@
-# Segment 21 — Domain retrofit (RRW under `cordware.nus.edu.sg/reviewrobin`)
+# Segment 21 — RRW under Cordware (stages 1–2: host, sweep, identity, prefix flip)
 
-> **Needs updating to fit the finalized Cordware spec** (author,
-> 2026-10-16). This outline was written against the v0.1 integration spec
-> and the 15 October addendum, both since replaced by
-> `docs/archive/cordware_rrw_integration_spec_v0.2.md` (archived
-> 2026-10-19),
-> `docs/cordware_repository_strategy_v0.8.md` and
-> `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Those make RRW a
-> module inside one Cordware App Service rather than its own App Service
-> behind a shared gateway. The strategy (v0.8, 2026-10-20) also keeps
-> RRW at this repository's root and mounts it at `/reviewrobin` from a
-> small `cordware/` host package. Rework the split, the decisions and the audit
-> against it before any sub-segment opens. Its §3 and §5 already settle
-> several: the mount replaces the `BASE_PATH` shim, RRW is constructed
-> once with logging owned by the host, there is no standalone RRW
-> runtime, Cordware plus any one application must run (the
-> independence requirement), and Azure sees only the assembled app.
+**Opened:** 2026-10-16 · **Rewritten:** 2026-10-21, against
+`docs/cordware_repository_strategy_v0.8.md` (v0.8, as revised to
+2026-10-21) and `docs/cordware_implementation_sequence.md` · **Theme:**
+RRW hosted by a `cordware/` package and mounted at `/reviewrobin` ·
+**Related:** `docs/cordware_nus_azure_status_2026-10-16_v8.md`,
+`docs/deployment_dev.md`, `docs/deployment_nus.md`,
+`docs/archive/cordware_rrw_integration_spec_v0.2.md`
 
-**Opened:** 2026-10-16 · **Theme:** RRW stops assuming its public root is `/` · **Related:** `docs/cordware_rrw_integration_spec.md`, `docs/nus_azure_status_cordware_addendum.md`, `docs/nus_azure_status.md`, `docs/deployment_nus.md`
+**On hold (author, 2026-10-16);** this rewrite does not lift it.
+Residential Apps (v0.8 stage 3) and any NUS deploy wait on 21D (v0.8 §5).
 
-**On hold, speculative (author, 2026-10-16).** Nothing below is
-scheduled, and no other plan waits on it; the Cordware documents in
-`docs/` are on hold with it. It stays in `guide/` as the record of the audit
-until the author lifts the hold or retires it.
-
-This is the **outline** for the whole retrofit. The work lands as
-sub-segments `21A`, `21B`, … each with its own
-`guide/segment_21X_<slug>.md` plan opened when it starts. This file holds
-the split, the cross-cutting decisions and the audit. It does not hold the
-sub-segments' PR ladders.
+The **outline** for v0.8's stages 1–2: sub-segments `21A`–`21D`, each
+with its own `guide/segment_21X_<slug>.md` opened when it starts. This
+file holds the split, the cross-cutting rules and the audit, and cites
+v0.8 rather than restating it. The 2026-10-16 outline is under
+`## Superseded plan`.
 
 ## Opportunity
 
-Production is moving to a shared host. RRW will be served at
-`https://cordware.nus.edu.sg/reviewrobin`, not on a hostname of its own
-(the addendum, §1). RRW was written for a root mount, and the integration
-spec's §10 lists fourteen acceptance criteria it does not meet today. The
-audit below finds:
+The target architecture serves RRW inside one Cordware App Service at
+`cordware.nus.edu.sg/reviewrobin` (v8 report §3). v0.8 decides how: RRW
+stays at the repository root, a small stateless `cordware/` package
+hosts it and supplies trusted identity, and Cordware plus any single
+application must run on its own (v0.8 §3). RRW today assumes the
+opposite at every layer (§ Blast radius):
 
-- about 200 template links, form targets and image sources written as root paths;
-- 198 root-path URLs built in Python, across 38 files;
-- about 45 root paths in inline scripts;
-- 22 template comparisons against `request.url.path`;
-- four cookies (three set by the server, one family set by script) scoped to root paths;
-- four links into Easy Auth's `/.auth/*`, which App Service serves at the host root;
-- no trusted-proxy handling at all. Absolute invite links in emails are built from the request's own host header, so behind the gateway they could carry the `azurewebsites.net` backend name.
-
-`docs/deployment_nus.md` line 103 still says "No code change is required
-to change hosts". The addendum's §8 retires that claim.
+- **It builds itself:** a module-level app (`app/main.py:138`) that every
+  start command and test client names, configuring the root logger.
+- **It writes root paths:** 192 template attributes, 194 Python code
+  lines (76 redirect targets among them), 3 cookie paths, 6 `/.auth/*`
+  references; 5 `url_for` calls are its only route-aware generation.
+- **It owns identity:** Easy Auth parsing, the fake user and
+  `SUPER_ADMIN_EMAILS`, and nothing enforces "never enable fake auth when
+  deployed". `docs/deployment_nus.md` still says hosts change without code.
 
 ## Decision
 
-**One segment is not enough. Use an outline plus four sub-segments,** cut
-where the gates differ:
+**Four sub-segments, the implementation sequence's workstreams A–D, in
+the order A → (B ∥ C) → D** (sequence §3–§5, accepted into v0.8 §5 on
+2026-10-20). Every step but D leaves RRW's behavior at `/` unchanged and
+merges on its own; D is the only one that changes a URL.
 
-| Sub-segment | What | Gate to start | Provable in CI? |
-|---|---|---|---|
-| **21A — Base-path foundation** | A `BASE_PATH` setting (default empty); an ASGI shim; one URL helper for Python, Jinja and inline JS; the *mechanisms* for trusted-proxy headers (an allowlist, empty by default) and a `PUBLIC_BASE_URL` for absolute links, both inert until set; a prefixed-mode test harness; a **leak ratchet** test. No visible change at root. | None. Can start now. | Yes |
-| **21B — The sweep** | Every emitter routed through the helper, area by area (§ Blast radius), each PR shrinking the ratchet's allowlist; then the allowlist removed and the ratchet made a hard gate. | 21A merged | Yes |
-| **21C — Auth and edge under the mount** | `/.auth/*` links and sign-out; Easy Auth's callback, return URL and session cookie on a shared host; the health probe path; the production values for 21A's proxy allowlist and `PUBLIC_BASE_URL`; proof in a non-production Azure slot (integration spec §14 step 5). | NUS IT decisions (Open questions 1–3) and a reachable Azure test slot | Partly: the app side yes, the Easy Auth side no |
-| **21D — Cutover runbook and verification** | `docs/deployment_nus.md` and `docs/nus_azure_status.md` revised, with the addendum folded in; the addendum's twelve cutover checks as a runbook checklist; the cutover itself. | 21B and 21C closed; gateway listener and path map live | No: the author, on Azure |
+| Sub-segment | What | Gate to start | Provable in CI? | v0.8 |
+|---|---|---|---|---|
+| **21A — Host skeleton** | `cordware/main.py` with `CORDWARE_APPS` (empty: Cordware alone, `/health`); RRW mounted **at `/`**; RRW built once (module-level app removed, its consumers moved); every start command on `cordware.main:app`, with the dev deploy artifact and package discovery carrying `cordware/`; root logging owned by the host; the import-boundary test | Stage 0's RRW baseline recorded (v0.8 §5) | Yes; the dev slot's start command is the author's, in Azure, switched within A2 | Stage 1 |
+| **21B — URL sweep** | A URL helper for strings built outside a request; a harness mounting RRW at `/reviewrobin`; a leak check with a shrinking allowlist; the sweep by area; the allowlist removed | 21A merged (the harness is Cordware) | Yes | Stage 1 |
+| **21C — Shared identity** | Easy Auth parsing, the fake identity and its `APP_ENV` guard move to `cordware/identity.py` behind a re-export; RRW's fake roles read Cordware's fake marker; super-admin becomes Cordware's platform role | 21A merged; the dev slot's `APP_ENV` set non-`local` before the guard lands | Yes, except the dev slot | Stage 2 |
+| **21D — Prefix flip** | RRW mounted at `/reviewrobin`; Cordware's landing page at `/`; `/.auth/*` return paths; deep-link return; the dev slot live check | 21A and 21B closed; 21C closed, so one live check covers identity and prefix together | Yes, requirement 4 included; the live check is the author's, on the dev slot; the NUS gateway itself only at stage 4 | Stage 2 |
 
-21A and 21B are most of the code. They depend on nothing outside the
-repository, so they run in parallel with the infrastructure workstream
-(the addendum's §12 workstream B).
+```text
+21A ──┬──> 21C ──┐
+      │          ├──> 21D ──> (v0.8 stage 3: Residential Apps)
+21B ──┴──────────┘
+```
 
-**One app-relative model, whichever way the gateway forwards.**
-- Inside RRW every route, spec and test stays app-relative (`/operator/sessions/…`).
-- A small ASGI shim in front of the app accepts the request path with or without `BASE_PATH`. It strips the prefix when it is present, and either way sets the ASGI `root_path` to `BASE_PATH`.
-- Starlette's `url_for` and one helper (`app_url(path)`) then add the prefix on the way out.
-- So the open question of whether the gateway **keeps or strips** `/reviewrobin` changes only gateway configuration and the probe path, not RRW's code.
-
-**Rejected: mount the app under a fixed prefix (`Mount("/reviewrobin", app)`).** It hard-codes the keep-the-prefix answer before NUS IT has given it, and local development and the 6,000-test suite would have to move off `/`.
-
-**Also rejected: fix each emitter as it breaks.** The integration spec's §11 rules this out explicitly. A shared-host leak fails quietly: the link resolves to the Cordware shell's 404, not to an error in RRW. So only a sweep checked by a test closes it.
+**Rejected: the 2026-10-16 outline's `BASE_PATH` shim.** It accepted the
+path with or without the prefix so the gateway's keep-or-strip answer
+would not matter, and it rejected a fixed mount because that answer was
+open and the suite would move off `/`. v0.8 §3 settles both: the
+gateway must forward the path unchanged, and the mount supplies the
+prefix (`root_path`) with no setting or shim. RRW's TestClient tests
+still call RRW's own app at app-relative paths. Also rejected (sequence
+§4): v0.8's first order (flip with the sweep) and routing first.
 
 ## Semantics
 
-- **Root mode is byte-identical.** With `BASE_PATH` empty, `app_url("/x")` returns `"/x"` and the shim does nothing. The existing suite is the regression proof: 763 root-path test requests and 465 root-path assertions across 120 files. Root-mode output is therefore never edited to suit prefix mode.
-- **Prefix mode.**
-  - `app_url("/x")` gives `"/reviewrobin/x"`. Redirect `Location`s, form actions, `fetch` targets, `src` attributes and cookie `Path`s all carry the prefix.
-  - Path comparisons compare app-relative paths: `request.url.path` minus `root_path`. That covers active navigation, `return_to` allowlists and "not on this page" checks.
-  - `return_to` values travel app-relative. A prefixed value arriving from outside is normalized once, at `app/web/return_to.py`.
-- **Absolute URLs.** Emails and anything else rendered outside a request use `PUBLIC_BASE_URL` (scheme, host and `BASE_PATH`), not the request host. When it is unset they fall back to today's `request.url_for` behavior, so local development and the dev slot are unchanged.
-- **`/health`** answers at both `/health` and `{BASE_PATH}/health`, without auth, in either gateway mode.
-- **Bare and trailing-slash entry.** `{BASE_PATH}` and `{BASE_PATH}/` both reach the role-aware `/` redirect.
-- **Starlette 1.6 `root_path` semantics** (whether `request.url.path` includes `root_path`, and what `url_for` returns under a stripped prefix) are pinned by tests in 21A's first rung. They are not assumed here.
+- **Built once.** `create_app()` returns a complete ASGI app; importing
+  `app.main` builds nothing, and a test says so. `app/web/return_to.py`
+  checks GET routes on `request.app` (RRW's sub-app under a mount), not
+  on a module global.
+- **App-relative inside RRW.** Routes, specs and RRW's TestClient tests
+  stay app-relative: they call `create_app()` directly, through one
+  session-scoped fixture, and Cordware's own tests mount RRW. The
+  browser tests drive a live server and do move: from 21A it is
+  Cordware with RRW at `/`, so their root paths hold until 21D
+  (Open question 9).
+- **At `/` (21A–21C) behavior is unchanged.** `root_path` is empty, so
+  route-aware generation returns today's strings, and the existing suite
+  is the regression proof. Output is never edited to suit the mount.
+- **Under the mount (21B's harness, then 21D).** Every emitted URL
+  carries `/reviewrobin` through route-aware generation: links, form
+  actions, redirects, `fetch` targets, `src` and cookie `Path`s. Path
+  comparisons compare the app-relative path; `return_to` values travel
+  app-relative, normalized once at `app/web/return_to.py`.
+  Starlette's `root_path` semantics (what `request.url.path` holds under
+  a mount) are pinned by tests in 21B's first rung, not assumed.
+- **The literal `/reviewrobin`** appears only in `cordware/` and
+  deployment docs, never in `app/` (v0.8 §3).
+- **`/.auth/*` is the host's** (v0.8 §3), so the leak check excludes it
+  by rule, not by allowlist; 21D fixes its return paths.
+- **Failed startup validation in a mounted app fails the process**; **no
+  redirects** from old root paths; `/health` is the host's, with no
+  interactive sign-in (all v0.8 §3).
+- **Identity** follows v0.8 §3; the points RRW's code turns on:
+  - Cordware is the only Easy Auth parser; `users`, roles and audits
+    stay RRW's (v0.8 §4). Fake roles key off Cordware's fake marker,
+    never the literal email. Cordware refuses to start when
+    `ALLOW_FAKE_AUTH` is on and `APP_ENV` is not `local`.
+  - RRW reads `is_super_admin`, `is_super_admin_email` and
+    `super_admin_configured` over Cordware's effective list and never
+    parses `SUPER_ADMIN_EMAILS`; its any-admin fallback keys off
+    `super_admin_configured`.
+  - From C1, `effective_super_admin_emails()` reads Cordware's host-level
+    fake state, and the fake super-admin resolves at every rung through
+    C3 (sequence C1–C3).
+  - One repository-root `.env`; every switch keeps its name, default and
+    per-run override. RRW logs under a named logger; the host owns root.
 
 ## Judgment calls — decided
 
-- Four sub-segments, not three. 21C waits on NUS IT and 21D waits on infrastructure, and folding either into 21B would leave a merged code segment unable to close (2026-10-16).
-- The leak ratchet is a test that renders every route the suite already reaches in prefix mode and fails on any root-path URL. Its allowlist only shrinks. This is the repo's usual "derive the gate" pattern (`constitution.md` II), and it lets 21B land in small PRs without a flag day (2026-10-16).
-- The literal `/reviewrobin` appears only in deployment configuration and docs, never in `app/`. This is the integration spec's §2.4 and §4.4 (2026-10-16).
-- **Sign-in is identity only; permissions are each app's own** (author, 2026-10-16). Cordware's shared sign-in tells RRW who the person is; RRW alone decides what they may do. This is the integration spec's §2.1, and RRW's model today.
-- 21A builds the proxy and absolute-URL mechanisms inert; 21C sets their production values once NUS IT says how the gateway forwards the host. This keeps 21A free of outside gates (Codex review of #3081, 2026-10-16).
-- The Cordware landing app is out of scope. It is a separate codebase (addendum §6) (2026-10-16).
+- Sub-segments follow the sequence's A–D, replacing the old 21A–21D
+  (2026-10-21). The old split cut on NUS IT and Azure gates that v0.8
+  removes from stages 1–2 (§ Superseded plan).
+- The leak check's allowlist only shrinks, so 21B lands in small PRs
+  without a flag day (`constitution.md` II), carried from 2026-10-16.
+- Sign-in establishes identity only; each application decides
+  permissions (v0.8 §1; carried from 2026-10-16).
+- The landing page is in scope, in 21D: v0.8 puts it in `cordware/web/`
+  in this repository; the old outline excluded it as a separate codebase.
+- `app/auth/identity.py` becomes a re-export in 21C, so its 77 importers
+  move later or never (sequence C4, optional).
+- `return_to` travels app-relative, carried from 2026-10-16: one
+  normalization point, not a prefix threaded through every value.
 
 ## Blast radius (measured)
 
-Taken 2026-10-16 at `74f57a71`. "Root path" means a URL beginning `/operator`, `/me`, `/guide`, `/about`, `/auth`, `/static`, `/templates`, `/.auth` or `/health`. Route definitions are not counted; they stay app-relative.
+Taken 2026-10-21 at `50be3a2c`. `ROOT` is a quoted string starting
+`/operator`, `/me`, `/guide`, `/about`, `/auth`, `/static`, `/health`,
+`/sessions` or `/.auth`; `/templates/` hrefs fall inside the template
+counts. "ast" counts skip decorators and docstrings exactly; grep cannot.
+The sequence's counts (at `4ed8114`) differ mainly by method.
 
-| What | Count | Command / note |
-|---|---|---|
-| Template `href="/…"` | 94 in 37 files | `grep -rEo 'href="/[^"]*' app/web/templates \| wc -l` |
-| Template `action="/…"` | 59 in 22 files | `grep -rEo 'action="/[^"]*' app/web/templates \| wc -l` |
-| Template `formaction="/…"` | 9 | `grep -rEo 'formaction="/[^"]*' app/web/templates \| wc -l` |
-| Template `src="/…"` (all `/static/guide/` screencaps) | 36 | `grep -rEo 'src="/[^"]*' app/web/templates \| wc -l` |
-| Template `href`/`action` from a Python value (`"{{ … }}"`; the root path is built in Python) | 58 + 28 | `grep -rEo 'href="\{\{' …` / `'action="\{\{'` |
-| Root-path literals in inline JS and Jinja string concatenation | 45 lines | quoted `/operator`, `/me`, `/guide`, `/about`, `/auth`, `/static`, `/.auth`, `/templates` or `/health` strings in `app/web/templates`, less the attribute hits above; includes 7 `fetch` calls and 6 `location` assignments |
-| Template `request.url.path` uses (comparisons plus 13 self or `return_to` links) | 22 | `grep -rEn "request\.url\.path" app/web/templates \| wc -l` |
-| Python root-path URL strings (docstrings and route decorators excluded) | 198 sites in 38 files (147 f-strings, 51 literals) | AST count over `app/`; the script is committed with 21A. Largest: `app/web/routes_operator/_instruments.py` 15, `app/web/routes_operator/_operations.py` 15, `app/web/breadcrumbs.py` 12, `app/web/routes_reviewer/_surface/_routes.py` 11 |
-| …of which in `app/services/` (fix-link builders in `validation.py`) | 7 | A layering question for 21B: a service emitting URLs |
-| Server cookies with a root `path` | 3 | `_operations.py:275` (`/operator/sessions`), `_sys_admin.py:81` (`/operator/sys-admin`), `:403` (`/operator/sys-admin/users`) |
-| Script-set sort cookies (`_rrwCookiePath` in `base.html`) | 1 family | Paths `/me/sessions/N` and `/operator/sessions/N` |
-| Links to Easy Auth `/.auth/*` | 4 (+1 JS check) | `base.html:5183`, `reviewer/_top_bar.html:50`, `me_debug.html:55`, `error_handlers.py:118`; `error.html:123` checks `pathname` |
-| `request.url_for` (absolute invite links in emails) | 5 call sites | `grep -rn "url_for(\"reviewer_invite\"" app` |
-| Trusted-proxy or `root_path` configuration | 0 | `grep -rn "root_path\|ProxyHeaders\|forwarded_allow_ips" app` |
-| Tests: root-path requests / root-path assertions | 763 / 465 lines in 120 files | Unchanged by design (root mode byte-identical) |
-| Browser tests: `page.goto` | 86 | A prefixed-mode subset is added in 21A/21B |
-| Specs with root cookie paths | 2 | `spec/settings_inventory.md`, `spec/sort_by_reviewee.md` |
+| Sub | What | Count | Command / note |
+|---|---|---|---|
+| A | Importers of the module-level app | 16: `app/web/return_to.py:65`, 14 test files, `tools/bench_roster_scale.py` | `grep -rlE 'from app\.main import app\b' --include='*.py' app tests tools` |
+| A | `app.main:app` in live start commands | `README.md`, `CLAUDE.md`, `.devcontainer/devcontainer.json`, `tests/browser/conftest.py`, `docs/local_setup.md` (3), `docs/setup_codespaces.md` (2), `docs/deployment_nus.md` (2), `docs/deployment_dev.md` | `grep -rnE 'app\.main:app' .`; the string is in no workflow |
+| A | Dev deploy artifact and packaging | the dev workflow uploads `app/`, `alembic/`, `alembic.ini`, `requirements.txt`, `pyproject.toml`, `antenv/` and deploys on every push to `main`; `pyproject.toml:35` finds `app*` only; `testpaths = ["tests"]` (`:38`) | `.github/workflows/main_app-review-robin-web-dev.yml:56–62` |
+| A | Root-logger setup | `app/logging_config.py:96–106`, called first in `create_app()` | `alembic/env.py:22`'s `fileConfig` also replaces root handlers |
+| B | Template `href`/`action`/`formaction`/`src="/` | 95 / 50 / 9 / 38 (39, 20, 3, 1 files) | `grep -rnoE '(^\|[^a-z])href="/' app/web/templates \| wc -l`, per attribute |
+| B | Template attributes built in Python (`="{{`) | 58 href, 28 action, 3 formaction | same, with `\{\{` |
+| B | Other `ROOT` strings in templates (Jinja, JS) | 47 lines in 16 files | `grep -rnE "[\"'\`]ROOT" app/web/templates`, less the attribute hits |
+| B | `fetch(` / `location` assignments | 7 (3 with a literal root target) / 6 | `grep -rnE '\bfetch\(' app/web/templates` |
+| B | `request.url.path` | 20 live lines in 8 templates; 4 in `app/web/error_handlers.py` | `grep -rnE 'request\.url\.path'` |
+| B | `ROOT` code lines in Python | 194 in 37 files (ast); 273 by grep | ast: per-line `ROOT` match over `app/**/*.py`, decorator and docstring line ranges dropped; top: `_instruments.py` 15, `_operations.py` 15, `breadcrumbs.py` 12 |
+| B | `RedirectResponse` with a `ROOT` target | 76 of 124, in 21 files (ast) | ast: `RedirectResponse` calls whose first argument or `url=` is a `ROOT` constant or f-string; grep finds 4, as most put `url=` on the next line |
+| B | Cookies with a root path | 3 server (`_operations.py:281`, `_sys_admin.py:84`, `:403`); 1 script family (`base.html`, `_rrwCookiePath`) | `grep -rnE 'set_cookie\(' app` |
+| B | `url_for` | 5, all `request.url_for("reviewer_invite")` (absolute invite links); 0 in templates | `grep -rnE '\burl_for\(' app` |
+| B | Proxy or `root_path` handling | 0 | `grep -rniE 'root_path\|ProxyHeaders\|X-Forwarded' app` |
+| C | `app/auth/identity.py` | 165 lines; imported by 4 app files, 72 test files, 1 tool | `grep -rlE 'app\.auth\.identity'` |
+| C | Settings moving to Cordware | `app_env`, `allow_fake_auth`, `fake_auth_principal_id`/`_email`/`_name`, `fake_auth_super_admin`, `super_admin_emails`, `log_level` | `app/config.py:8–75` |
+| C | `APP_ENV` reads | `app/main.py:64` (warning), `app/config.py:140` (`validate_critical_settings`) | `grep -rnE '\bapp_env\b' app` |
+| C | Super-admin reads | `effective_super_admin_emails` (`app/auth/roles.py:22`) at `roles.py:53`, `services/users.py:375`, `services/account_listing.py:81, 295`, `_sys_admin.py:386`; empty-list warning `app/main.py:64–70`; `is_super_admin` callers `deps.py:96, 165`, `services/users.py:377, 393`, `services/account_listing.py:222`, `db/models/user.py:100` | `grep -rnE 'effective_super_admin_emails' app` |
+| C | Fake roles and `is_fake` | `app/web/deps.py:156–160` (first sign-in only); `is_fake` in `identity.py`, `deps.py`, `services/users.py:123`, `routes_auth.py:37`, `me_debug.html` | `grep -rnE 'is_fake' app` |
+| C | Tests on super-admin or fake auth | 13 files; 16 counting env-var spellings | `grep -rlE 'super_admin\|fake_auth' tests`; `-rliE` for 16 |
+| D | `/.auth/*` references | 6: `error_handlers.py:118`, `me_debug.html:55`, `_top_bar.html:50`, `base.html:5328`, `error.html:121, 123` | `grep -rnE '/\.auth' app` |
+| D | RRW's root redirects | `/` (`app/main.py:113`), `/operator` (`:126–133`), the allowlist-denied redirect (`:111`) | `grep -nE 'RedirectResponse\|@app\.get' app/main.py` |
+| — | Test requests at root paths | 3,422 TestClient calls in 296 files (ast), unchanged by design; 79 browser `page.goto`, which move with 21D | ast: calls whose first argument is a `ROOT` constant or f-string; grep on one line finds 797 |
 
 ## PR ladder
 
-At this level the ladder is the sub-segment sequence. Each sub-segment's
-own plan carries its PRs.
+Each sub-segment plan cuts its own rungs from sequence §5; this file
+holds only the gates between them and the constraints a rung must carry.
 
-1. **This outline**, prose only. Must not touch `app/` or `tests/`.
-2. **21A plan**, then its build. The scaffold-first rung is the setting, the shim, the helper and the ratchet with a full allowlist. Nothing is converted yet.
-3. **21B plan**, then the sweep by area: chrome and `base.html`; operator Setup pages; Operations pages; Instruments; Session Home and lobby; Sys Admin; reviewer and participant surfaces; Guide, About and static files; Python emitters and services; cookies and `return_to`. Then the allowlist is deleted.
-4. **21C plan**, opened once Open questions 1–3 are answered. The app side lands in CI; the Azure proof is the author's.
-5. **21D plan**: docs, the runbook checklist, the cutover.
+1. **This rewrite**, prose only; it touches no `app/`, `tests/` or
+   `cordware/` file.
+2. **21A.** A2 moves the module-level app and all its consumers in one
+   rung (sequence A2), with the dev artifact and package discovery
+   carrying `cordware/`; the author switches the dev slot's start
+   command as A2 merges, since the slot redeploys on every push.
+3. **21B**, after 21A. Its allowlist only shrinks, rung by rung.
+4. **21C**, alongside 21B, after the author sets the dev slot's
+   `APP_ENV`. The C1–C3 rule in § Semantics holds at every rung.
+5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
+   D2 is the author's live check (§ Definition of done).
 
 ## Definition of done
 
-- `BASE_PATH=/reviewrobin` runs the full suite's prefixed-mode harness green, and the leak ratchet passes with no allowlist (21B).
-- `BASE_PATH` unset leaves the existing suite green and unchanged (21A, 21B).
-- Each of the integration spec's §10 criteria 1–14 is checked against a named test or a recorded Azure check (21A–21D).
-- `docs/deployment_nus.md` no longer says hosts change without code. `docs/nus_azure_status.md` has the addendum folded in, and the addendum is retired to `docs/archive/` (21D).
+- Cordware alone and Cordware + RRW both run, and the import-boundary
+  test passes (21A).
+- Importing `app.main` builds nothing; no live start command names
+  `app.main:app` (21A).
+- Under the `/reviewrobin` harness the leak check passes with no
+  allowlist, `/.auth/*` excluded by rule (21B).
+- The trusted-identity interface is tested on its own; Cordware
+  refuses to start with `ALLOW_FAKE_AUTH` on and `APP_ENV` not `local`;
+  the super-admin flag, predicate and fallback are tested with an empty
+  and a non-empty list;
+  the fake user keeps every role (21C).
+- v0.8 §3's four behavior requirements hold before stage 3 starts (21D):
+  a test under the mount with a non-backend `Host` shows every absolute
+  URL and download carrying that host and `/reviewrobin`
+  (requirement 4); the author has verified all four and real-Easy-Auth
+  identity on the dev slot. Only the NUS gateway's own path and host
+  header wait for stage 4.
+- v0.8 §8's stage 1–2 decisions are settled and recorded in v0.8
+  (21A–21C).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 21` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -145,31 +204,72 @@ own plan carries its PRs.
 
 ## Open questions
 
-1. **Does the gateway keep or strip `/reviewrobin`?** NUS IT decides, with the gateway design. RRW's code supports both (Decision), so this sets only the gateway rewrite and the probe path. 21C cannot finish without it.
-2. **How one sign-in reaches every app on the shared host.** NUS IT and EUC decide, with a 21C spike. The principle is already ruled (Judgment calls): sign-in establishes identity only, so a person signs in once for Cordware. What remains is the mechanism.
-   - App Service serves `/.auth/*` at the host root, and its `AppServiceAuthSession` cookie is host-wide and readable only by the App Service that issued it. So per-app Easy Auth behind one host may mean the apps clobber each other's session rather than share one. This is unverified, which is why it is a spike.
-   - The candidates are a gateway rewrite of `{BASE_PATH}/.auth/*` per app, one shared registration with per-app sessions, or one identity layer in front that hands each app the same identity headers.
-   - Whatever is chosen, RRW keeps reading identity from headers and deciding permissions itself. App-level OIDC in place of Easy Auth would break the project convention of no Microsoft authentication in app code, so it needs the author's explicit say.
-3. **Does the gateway pass the public host in `X-Forwarded-Host` or `Host`?** NUS IT decides. 21A builds both mechanisms without needing the answer; the answer sets which one production uses and its values, in 21C.
-4. **Is `/reviewrobin` the final path?** The author and NUS IT decide. Nothing in `app/` depends on it (Judgment calls).
-5. **Should a service build URLs at all?** The author rules in 21B. `services/validation.py`'s fix links could move to a view.
+1. **Where do 21A's and 21C's plans live?** The author decides
+   (sequence §6.2). Recommended: here, as sub-segments, since the plan
+   tooling reads `guide/`; the settled contract goes to `cordware/spec/`.
+2. **The lifespan contract's shape** (v0.8 §8). Decided in 21A.
+3. **The public host for absolute links** (invites, emails): a
+   configured base or a forwarded host, per the gateway's host-header
+   behavior (v8 report §8.1). Decided in 21B; proved at 21D by test.
+4. **The trusted-identity interface** (v0.8 §8). Decided in 21C.
+5. **The dev slot's `APP_ENV`** (v0.8 §8): non-`local` before C1, the author's.
+6. **Repo-wide tooling's path scope** once `cordware/` has code (v0.8
+   §8): `tools/`, the doc gates, ruff, pytest paths and CI's required
+   checks for `cordware/tests/`. Decided in 21A.
+7. **Console logs reaching Log Analytics** (v0.8 §8): the author, in Azure.
+8. **Should a service build URLs?** `services/validation.py`'s fix
+   links could move to a view. The author rules in 21B.
+9. **Browser tests under the mount:** a base-URL prefix, or a harness
+   mounting RRW at `/`. Decided in 21D.
+
+Answered, from the 2026-10-16 list: one Easy Auth boundary serves every
+application (v8 report §4.1, §11.1); the path is `/reviewrobin`; the
+gateway must keep the prefix (v0.8 §3), which NUS IT has yet to
+configure (v8 report §8.1) and stage 4 checks.
 
 ## Out of scope
 
-- **The Cordware landing app and its discovery registry.** A separate codebase (addendum §6; integration spec §7).
-- **Application Gateway, DNS and TLS configuration.** NUS IT and the project's infrastructure workstream (addendum §12 B). 21D only verifies them.
-- **The runner VM capacity blocker.** Unchanged; tracked in `docs/nus_azure_status.md`.
-- **Segment 20's administrator guide.** It documents the deployment once it exists, and stays gated where it is.
+- **Stage 0's privacy step and Residential's provenance:** the author's,
+  before Residential's import (v0.8 §5). Its RRW baseline gates 21A.
+- **Stages 3 and 4:** Residential Apps, the integrated release, the NUS
+  deploy and cutover, database option B or C and `RRW_DATABASE_URL`
+  precedence, the NUS deploy workflow's artifact.
+- **Infrastructure:** Application Gateway, whose path forwarding and host
+  header NUS IT configures and stage 4 checks; DNS, TLS, the Easy Auth
+  registration's repurposing (v8 report §8.1, §11.1), the runner VM.
+- **v0.8 non-goals:** a Cordware database, console or log viewer; a
+  standalone RRW runtime.
+- **The repository rename**, optional and later (v0.8 §7).
+- **Segment 20's administrator guide**, gated where it is.
 
 ## Doc impact
 
-Provisional at outline level. Each sub-segment plan takes over its bullets.
+Provisional at outline level; each sub-segment plan takes over its bullets.
 
-- `spec/architecture.md` — a "Public base path and proxy" section: the app-relative model, `BASE_PATH`, the shim, the helper, and trusted-proxy handling (21A).
-- `spec/settings_inventory.md` — `BASE_PATH` and `PUBLIC_BASE_URL` rows; cookie `path` cells relative to the base path (21A, 21B).
-- `spec/sort_by_reviewee.md` — sort-cookie path under the base path (21B).
-- `docs/local_setup.md` — running locally with a `BASE_PATH` to reproduce production (21A).
-- `docs/security_posture.md` — trusted-proxy posture and Easy Auth under a shared host (21C).
-- `docs/deployment_nus.md` — remove "no code change"; the cutover checklist (21D).
-- `docs/nus_azure_status.md` — fold in the Cordware addendum (21D).
-- `CLAUDE.md` — the convention "never write a root-path URL; use the helper", enforced by the ratchet (21B). `AGENTS.md` twinned.
+- `spec/architecture.md` — RRW as a mounted application: built once by `create_app()`, app-relative routes, route-aware links, identity from Cordware (21A, 21B, 21C).
+- `spec/settings_inventory.md` — settings ownership per v0.8 §3; cookie paths under the mount (21B, 21C).
+- `spec/sort_by_reviewee.md` — the sort-cookie path under the mount (21B).
+- `spec/permissions.md` — super-admin from Cordware's flag, predicate and `super_admin_configured`; the fake-auth fold-in and the no-super-tier fallback (21C).
+- `spec/audience_and_identity_model.md` — super-admin as Cordware's platform role; fake identity and its guard owned by Cordware (21C).
+- `docs/local_setup.md` — running through `cordware.main:app`; one `.env`; `CORDWARE_APPS` (21A, 21C).
+- `docs/setup_codespaces.md` — the start command (21A).
+- `docs/deployment_dev.md` — the dev slot's start command (21A), `APP_ENV` (21C), served at `/reviewrobin` (21D).
+- `docs/deployment_nus.md` — the start command; "no code change" retired (21A, 21D).
+- `docs/security_posture.md` — the fake-auth guard enforced; identity interpreted by the host (21C).
+- `docs/cordware_repository_strategy_v0.8.md` — §8's stage 1–2 decisions recorded as each sub-segment settles them (21A–21C).
+- `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at 21D's close; the sub-segment plans carry its ladder (21D).
+- `CLAUDE.md` — the run command; "never write a root-path URL"; "Identity and auth" and the local auth shortcut (21A, 21B, 21C). `AGENTS.md` twinned.
+- `.github/workflows/main_app-review-robin-web-dev.yml` — the dev artifact carries `cordware/` (21A).
+- `pyproject.toml` — package discovery and test paths take in `cordware/` (21A).
+- `README.md` — the run command (21A).
+- `cordware/spec/` — Cordware's host and identity contract, created by 21A (21A, 21C); checked by hand at close, since `close_check` does not read `cordware/` paths.
+
+## Superseded plan
+
+The 2026-10-16 outline, in full: `git show
+68097709:guide/segment_21_domain_retrofit.md`. Written for RRW as its own
+App Service, it split 21A base-path foundation, 21B sweep, 21C auth and
+edge, 21D NUS cutover. `BASE_PATH` and `app_url()` became the mount's
+`root_path`; the trusted-proxy allowlist and `PUBLIC_BASE_URL` became
+Open question 3; old 21C became new 21C with no NUS IT gate; old 21D
+became v0.8 stage 4, its audit (`74f57a71`) § Blast radius.
