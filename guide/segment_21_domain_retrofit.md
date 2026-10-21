@@ -175,7 +175,8 @@ holds only the gates between them and the constraints a rung must carry.
    rung (sequence A2), with the dev artifact and package discovery
    carrying `cordware/`. **Closed 2026-10-21**:
    `guide/archive/segment_21A_cordware_foundations.md`.
-3. **21B**, after 21A. Its allowlist only shrinks, rung by rung.
+3. **21B**, after 21A. Its allowlist only shrinks, rung by rung. Plan:
+   `guide/segment_21B_url_sweep.md`.
 4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
    rung.
 5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
