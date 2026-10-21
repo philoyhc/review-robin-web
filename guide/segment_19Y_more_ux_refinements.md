@@ -719,6 +719,22 @@ Taken 2026-10-21 at `d63f80b7`.
 | PNGs under `app/web/static/guide/` | 8 replaced, 2 added | from the document's 10 images |
 | Gate on referenced vs committed PNGs | 1 | `tests/integration/test_guide_screencaps.py` |
 
+### Status
+
+**Closed 2026-10-21** in one PR, as laddered, with the document's text
+and images taken as written.
+
+- **What moved from the plan.** Nothing. This settles the screencap
+  reshoot that Items 1 and 2 left owed by the author (Layout 2). The
+  unlocked and locked previews show different instruments; the alt text
+  names what each one shows.
+- **Reads.** One `diff-reviewer` read found no defect in the change. It
+  flagged this missing block, which is now written, and corrected the
+  Create session alt text's placement of "Release responses until".
+  `spec-writer`: no spec in Doc impact; no spec names these screencaps.
+- **Owed by the author:** the browser-check row in
+  `guide/things_to_check_in_browser.md`.
+
 ### PR ladder
 
 1. **PR 1 — build and close.** The PNGs, `guide.html`, the checklist
