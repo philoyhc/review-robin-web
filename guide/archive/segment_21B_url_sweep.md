@@ -154,68 +154,49 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
 
 ## Status
 
-- **2026-10-21, B1 (#3200).** The allowlist keys each leak by rule, file
-  and the leaking source itself, whitespace collapsed, in a JSON file
-  beside the test (removed at B7). It is not a per-file count. Codex
-  found that a count lets a rung fix one leak and add another in the same
-  file unseen. The crawl's checker is proved on probe pages, and its first
-  RRW pages come with B2. The cumulative read's base is `fdcfee36`.
-- **2026-10-21, B3: `url()` is idempotent under a mount**, departing from
+**Closed 2026-10-21.** PRs #3199 (plan), #3200–#3206 (B1–B7); the
+author's localhost check at `/` passed. The ladder ran as planned, one PR
+per rung. Contract: `spec/architecture.md` "URL emission";
+`cordware/spec/host.md` for the host's part and the harness.
+
+Decisions confirmed at build:
+
+- **`url()` is idempotent under a mount** (B3), departing from
   § Semantics ("not deduplicated"). Templates `{% set %}` app-relative
   values and pass them to the partials that emit them, so wrapping at
-  both ends is the only way the static rules stay mechanical. A value
-  already under `root_path` comes back unchanged. `return_to` values still
-  travel app-relative (`here()`), which B3's own read checks. The crawl
-  takes `cookies=False` on Validate and the sys-admin users page until B6
-  scopes their cookies.
-- **2026-10-21, B5.** Every route that redirects, or calls a helper that
-  does, takes `request: Request` as its first parameter, and so do the
-  helpers (`_redirect_keeping_selection`, `_instruments_redirect`,
-  `dismiss_held_upload`, `_users_redirect`, `_handle_toggle`). The rewrite
-  was mechanical, driven by the AST. Rejected: middleware that prefixes a
-  `Location` header after the fact. It would touch less code, but it hides
-  where a redirect is built, and the plan's `redirect()` keeps it visible.
-- **2026-10-21, B6.** Script strings are written `{{ url('/…') | tojson }}`,
-  rendered server-side, not read from a `data-` attribute at runtime, so
-  the static rules see them as `url()` calls. The allowlist is empty.
-- **2026-10-21, cumulative read (1, `diff-reviewer` on `fdcfee36..` B6).**
-  It confirmed that nothing at `/` changes and that `return_to` stays
-  app-relative. It found:
-  - two script values on the sys-admin users page built from a Python
-    URL with no `url()`. Both are fixed. The static rules cannot see such
-    a value, so the crawl's checker now also scans inline-script strings
-    for a root path;
-  - error-handler log lines now record the app-relative path. This is
-    kept by decision: a log line names the route, not the mount;
-  - a no-op `url()` wrap on an already-prefixed value. It is harmless,
-    since `url()` is idempotent;
-  - "route-aware generation" wording in the v0.8 strategy and the
-    implementation sequence. It is reconciled at close.
-- **2026-10-21, B7.** The allowlist and its file are gone, and so is
-  `leaks()`'s `cookies=` escape hatch.
-  - **What the crawl visits.** Its `ROUTES` table names all 77 GET routes
-    RRW registers. They are found by walking the router, not by reading
-    the schema, so this includes the seven registered outside the schema:
-    `/`, `/operator`, `/operator/` and FastAPI's four doc pages.
-    `test_every_get_route_is_crawled` fails on a missing route or an
-    empty visit list. Only `rehydrate/dropped.csv` may be pinned at 404:
-    its token names rows a rehydrate commit stashes, and the crawl runs no
-    rehydrate.
-  - **States.** One seeded session is visited in four phases: draft,
-    activated, rae submitted, and released. The operator's session pages
-    are read in draft, live and released, because each state renders
-    forms the others don't: the unlocked editors in draft, and Archive
-    and Stop release once closed.
-  - **What the checker reads.** It also reads JSON string values and
-    `data-*` URL attributes.
-  - **Proof.** I disabled `url_path()`'s prefix. 84 of 111 visits failed.
-    The other 27 were 20 downloads, 3 JSON routes, and FastAPI's doc
-    pages, which prefix from `root_path` themselves.
-  - **This rung's read** (1, `diff-reviewer` on B7): it found the four
-    unlisted doc routes, the draft-state and closed-state forms, the
-    `CLAUDE.md` bullet that was due now, a miscount, and the stale
-    `app/web/urls.py` docstring. All are fixed in this rung. JSON keys
-    are deliberately not read, since the schema's paths are keys.
+  both ends is the only way the static rules stay mechanical.
+- **The allowlist keyed each leak by its source**, not a per-file count
+  (B1, Codex): a count let a rung fix one leak and add another unseen. It
+  emptied at B6 and went at B7.
+- **Every redirect goes through `urls.redirect(request, …)`**, with
+  `request` threaded into each handler and helper that redirects (B5).
+  Rejected: middleware rewriting `Location` after the fact, which hides
+  where a redirect is built.
+- **Script URLs render server-side** as `{{ url('/…') | tojson }}` (B6),
+  so the static rules see them; the crawl's checker also reads script
+  strings (a bare `"/"` included, Codex), JSON values and `data-*` URL
+  attributes, for what a template builds from a Python value.
+- **The crawl is the route-complete gate** (B7): every GET route the
+  router registers (77, seven of them outside the schema), each pinned to
+  a user and a status, across draft, live, submitted and released, with
+  only `rehydrate/dropped.csv` pinned at 404. Disabling the prefix fails
+  84 of its 111 visits; the other 27 are downloads, JSON and FastAPI's
+  own doc pages.
+- **Error-handler logs record the app-relative path**: a log line names
+  the route, not the mount.
+
+Reads: two `diff-reviewer` reads. The cumulative read (`fdcfee36..` B6)
+found two unwrapped script values on the sys-admin users page, which led
+to the script scan. B7's own read found the unlisted doc routes, the
+draft-state and closed-state forms, the `CLAUDE.md` bullet due at B7, a
+miscount and a stale docstring. All were fixed in their rungs.
+
+Found at close, not this segment's: the sys-admin sessions sort cookie
+(`rrw-sort-sys-admin-sessions`) is written at `/operator/sessions/admin`
+because `_rrwCookiePath`'s pattern reads `sys-admin` as surface and
+session. It predates 21B; the spec states the intended root path.
+Code docstrings still cite this plan at its pre-archive path, as 21A's
+did.
 
 ## PR ladder
 
@@ -273,20 +254,14 @@ not change a route, a status code or a string at `/`.
 
 ## Open questions
 
-1. **The public host for absolute links** (outline Open question 3). The
-   recommendation is the request's own host: no configured base URL, with
-   the server trusting the gateway's forwarded host. That makes 21D's
-   requirement-4 test a non-backend `Host` header, and the gateway's
-   host-header behavior an NUS IT item at stage 4. The rejected
-   alternative is a `PUBLIC_BASE_URL` setting, a second source of truth
-   for the host that can drift from the gateway. 21B emits no absolute
-   URL of its own, so this binds at 21D. The author decides.
-2. **Should a service build URLs?** (outline Open question 8). The
-   recommendation is yes, as app-relative strings:
-   `services/validation.py`'s fix links stay where they are, and
-   templates add the prefix with `url()`. Moving them to a view would buy
-   nothing under this design. The author decides; B3 proceeds on the
-   recommendation unless the author rules otherwise.
+1. **The public host for absolute links:** not decided here. 21B emits
+   no absolute URL of its own, so it binds at 21D, which carries it with
+   the recommendation (the request's own host, no configured base; the
+   rejected alternative is a `PUBLIC_BASE_URL` setting that can drift
+   from the gateway). The author decides.
+2. ~~Should a service build URLs?~~ Yes, as app-relative strings that a
+   template emits through `url()`; adopted on the recommendation, not
+   overruled.
 
 ## Out of scope
 

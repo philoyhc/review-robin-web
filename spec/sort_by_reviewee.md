@@ -113,8 +113,9 @@ The reviewer's override **spans both display and response columns**. Sort by dis
 
 **Persistence: per-browser cookie.** The reviewer-side override
 persists in a `rrw-sort-rs-{session_id}-{instrument_seq}` cookie scoped
-to `/me/sessions/{id}`, the instrument named by its per-session
-`session_seq`. A header's key names its column by what the page already
+to `/me/sessions/{id}` below the mount's root (`/reviewrobin/me/sessions/{id}`
+under `/reviewrobin`; `_rrwCookiePath` renders the root with `url()`), the
+instrument named by its per-session `session_seq`. A header's key names its column by what the page already
 shows, never a row ID: `reviewee.name` for the Reviewee column,
 `display:{source_type}.{source_field}` for a display field, and
 `response:{field_key}` for a response field. A display key is matched
@@ -370,7 +371,8 @@ Key landmarks in the codebase:
   `unquote()` before parsing. The three session-list pages carry no
   session id: `rrw-sort-lobby`, `rrw-sort-archived` and
   `rrw-sort-sys-admin-sessions`, which the
-  primitive scopes to path `/` rather than to a session's path.
+  primitive scopes to the mount root (`/` at `/`) rather than to a
+  session's path.
 - **Tests:**
   - `tests/unit/test_order_rows_by_sort_spec.py` — the pure helper.
   - `tests/integration/test_set_sort_display_fields.py` — the
