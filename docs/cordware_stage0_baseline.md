@@ -24,7 +24,24 @@ segment 21 plans hold those.
 
 ## Tests
 
-TESTS_PLACEHOLDER
+Run here on SQLite at `b03fd1be`'s tree, with Chromium and Node 22
+present. `pytest -n auto -q -rs` gave **6,828 passed, 4 skipped**,
+235 warnings, in 229 s.
+
+| Tree | Collected | Command |
+|---|---|---|
+| `tests/unit` | 1,828 | `pytest --collect-only -q tests/unit` |
+| `tests/integration` | 4,764 | same, per tree |
+| `tests/browser` | 193, all run (none skipped for want of a browser) | same |
+| the rest (`tests/db`, top-level) | 47 | same, ignoring the three above |
+
+The 4 skips are by design. `test_css_parity_dump.py:41` runs only with
+`RRW_PARITY_DUMP` set. Three cases in `test_owner_add_lock.py:256, 282`
+need Postgres row locks, and the `postgres` job covers them.
+`test_inline_scripts_parse.py` ran: it skips only without `node`.
+The warnings are deprecations, chiefly Starlette's
+`HTTP_422_UNPROCESSABLE_ENTITY` rename and the legacy `detail=`
+audit kwarg, plus SQLite's datetime adapter. None fails a test.
 
 ## Launch configuration
 
