@@ -25,6 +25,7 @@ import base64
 import binascii
 import json
 import logging
+import threading
 from dataclasses import dataclass
 from typing import Any
 
@@ -215,6 +216,9 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
 
 
 _missing_headers = 0
+# `get_identity` is a plain function, so FastAPI runs it on a worker
+# thread: the count and the once-only check share a lock.
+_missing_headers_lock = threading.Lock()
 
 
 def missing_header_count() -> int:
@@ -227,8 +231,10 @@ def _note_missing_headers() -> None:
     # line: with fake auth off, every unauthenticated probe is "missing"
     # (21C Open question 1, author 2026-10-21).
     global _missing_headers
-    _missing_headers += 1
-    if _missing_headers == 1:
+    with _missing_headers_lock:
+        _missing_headers += 1
+        first = _missing_headers == 1
+    if first:
         log.warning(
             "request without Easy Auth headers refused",
             extra={"event": "identity.headers_missing"},

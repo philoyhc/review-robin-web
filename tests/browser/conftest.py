@@ -123,6 +123,8 @@ def live_server(
         **os.environ,
         "CORDWARE_APPS": "reviewrobin",
         "DATABASE_URL": database_url,
+        # The host refuses fake auth outside APP_ENV=local (21C).
+        "APP_ENV": "local",
         "ALLOW_FAKE_AUTH": "true",
         "FAKE_AUTH_OPERATOR": "true",
         # Accounts' invite role chip renders only for an actor who can

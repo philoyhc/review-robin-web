@@ -169,6 +169,23 @@ each switch off with `ALLOW_FAKE_AUTH` off.
   "Super-admin" line.**
 - **The normalization parity test** sits beside `normalize_email`'s own
   tests (`tests/unit/test_email_identity_fold.py`), on that file's cases.
+- **A blank entry never counts** toward the effective list, the fake
+  email included, so a blank `FAKE_AUTH_EMAIL` no longer turns the
+  any-admin fallback off locally.
+
+Reads: one cumulative `diff-reviewer` read, `7369744a..` C3. Nothing
+serious. It found:
+
+- a host test that a developer `.env` with fake auth on would fail;
+- `cordware/spec/host.md` missing from Doc impact;
+- the guard stated backwards in `docs/deployment_dev.md`;
+- a stale `.env.example` comment;
+- dynamic imports unread by the entry-point check;
+- a race on the missing-header counter;
+- `APP_ENV` not pinned for the browser host.
+
+All were fixed in C3. The read also called "Super-admin" a config fact
+sitting in the debug page's parsed-identity card; it stays there.
 
 ## PR ladder
 
@@ -255,8 +272,9 @@ passes at each.
 - `spec/settings_inventory.md` — the seven settings' owner becomes Cordware, names and defaults unchanged (close).
 - `spec/permissions.md` — super-admin from Cordware's flag, predicate and `super_admin_configured`; the fake roles keyed off `is_fake` (close).
 - `spec/audience_and_identity_model.md` — super-admin as Cordware's platform role; fake identity and its guard owned by Cordware (close).
-- `docs/security_posture.md` — the fake-auth guard enforced; identity interpreted by the host (close).
+- `docs/security_posture.md` — the fake-auth guard enforced; identity interpreted by the host; `/auth/me` gains `is_super_admin` (close).
 - `docs/local_setup.md` — the identity switches are Cordware's, still in one `.env` (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the trusted-identity interface settled (close).
 - `CLAUDE.md` — "Identity and auth" and the local auth shortcut name Cordware (close). `AGENTS.md` twinned.
 - `cordware/spec/identity.md` — new: the trusted-identity contract (close); checked by hand.
+- `cordware/spec/host.md` — the guard and the five new log events, `missing_identity_headers` on `host.stopping`, the empty-list warning now the host's, and the boundary's `cordware.main` rule (close); added at C3 from the cumulative read.
