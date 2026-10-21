@@ -182,7 +182,8 @@ holds only the gates between them and the constraints a rung must carry.
 4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
    rung. **Closed 2026-10-21**: `guide/archive/segment_21C_shared_identity.md`.
 5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
-   D2 is the author's live check (§ Definition of done).
+   D2 is the author's live check (§ Definition of done). Plan:
+   `guide/segment_21D_prefix_flip.md`.
 
 ## Definition of done
 
@@ -220,12 +221,8 @@ holds only the gates between them and the constraints a rung must carry.
 2. ~~The lifespan contract's shape~~ (v0.8 §8): the host enters each
    mounted application's lifespan in mount order and passes on the state
    it yields (21A; `cordware/spec/host.md`).
-3. **The public host for absolute links** (invites, emails): a
-   configured base or a forwarded host, per the gateway's host-header
-   behavior (v8 report §8.1). Not decided in 21B, which emits no
-   absolute URL of its own: carried to 21D, where it binds. 21B's
-   recommendation is the request's own host, with no configured base
-   (`guide/archive/segment_21B_url_sweep.md`). The author decides.
+3. ~~The public host for absolute links~~: the request's own host,
+   no configured base (author, 2026-10-21, in 21D).
 4. ~~The trusted-identity interface~~ (v0.8 §8): settled in 21C,
    `cordware/spec/identity.md`.
 5. ~~The dev slot's `APP_ENV`~~ (v0.8 §8): set non-`local` when the slot
@@ -240,8 +237,8 @@ holds only the gates between them and the constraints a rung must carry.
 8. ~~Should a service build URLs?~~ Yes, as app-relative strings,
    which a template emits through `url()` (21B, on its recommendation;
    not overruled).
-9. **Browser tests under the mount:** a base-URL prefix, or a harness
-   mounting RRW at `/`. Decided in 21D.
+9. ~~Browser tests under the mount~~: the real mount, through a
+   prefixing `page` fixture (author, 2026-10-21, in 21D).
 
 Answered, from the 2026-10-16 list: one Easy Auth boundary serves every
 application (v8 report §4.1, §11.1); the path is `/reviewrobin`; the
