@@ -5443,9 +5443,10 @@
       // (state.length === 0) writes an expired cookie so the
       // initial render returns to the server-side default.
       //
-      // Scope: ``Path=/`` so the JS can read/write it from any
-      // path under the surface. ``SameSite=Lax``. Not
-      // ``HttpOnly`` (the JS needs to read).
+      // Scope: the surface's path under the mount
+      // (``_rrwCookiePath``), so the route that renders the table
+      // reads it. ``SameSite=Lax``. Not ``HttpOnly`` (the JS needs
+      // to read).
       function _rrwWriteCookie(tableId, state) {
         var path = _rrwCookiePath(tableId);
         if (state.length === 0) {
@@ -5505,8 +5506,14 @@
         // the path mirrors the surface prefix.
         //
         // Map: ``rs`` (reviewer surface) → ``/me/sessions/N``;
-        //      anything else → ``/operator/sessions/N``.
-        var match = tableId.match(/^rrw-sort-([^-]+)-([0-9a-z]+)/);
+        //      any other per-session surface → ``/operator/sessions/N``;
+        //      a table with no session in its name (the lobby, the
+        //      archive, Sys Admin → Sessions) → the mount root.
+        // The session part has the public ID's shape (``sessions.py``'s
+        // ``_PUBLIC_ID_SHAPE``), and nothing but an instrument number
+        // may follow it, so ``rrw-sort-sys-admin-sessions`` is not read
+        // as surface ``sys``, session ``admin``.
+        var match = tableId.match(/^rrw-sort-([a-z]+)-([0-9a-z]{1,16})(?:-[0-9]+)?$/);
         if (!match) return {{ url('/') | tojson }};
         var surface = match[1];
         var sessionId = match[2];
