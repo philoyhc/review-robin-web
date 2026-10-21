@@ -770,3 +770,79 @@ swapping the two Band 2 pairs.
 - `app/web/templates/guide.html` — the Band 2 paragraph, the new sentence, the figures and alt text (Item 7).
 - `guide/things_to_check_in_browser.md` — Item 1's reshoot row goes; a row for the new screencaps (Item 7).
 - `guide/todo_master.md` — the 19Y entry (Item 7).
+
+## Item 8 — Visibility "off" reads "Not shown"
+
+### Opportunity
+
+The author, 2026-10-21, with a screenshot of the reviewer surface: the
+"Who can see what you wrote (other than admin)" card marks an audience
+that sees nothing in a window with a bare "—" pill. A participant has to
+guess what it means; the cells beside it say what the audience gets
+("Raw responses").
+
+### Decision
+
+The author's ruling, 2026-10-21: the off cell reads **Not shown**, on
+the reviewer surface and on the instrument card (locked preview and
+unlocked editor), keeping the muted pill. "Cannot view" was rejected: it
+reads as a permission error, and oddly in the "You" row.
+
+### Semantics
+
+- One label, three sources kept equal: `_REVIEWER_VP_MODE_LABELS`
+  (server), `_b3_mode_labels` (Jinja editor) and `_VP_CELL_LABELS` (JS
+  repaint); the existing parity test holds the JS map to the server's.
+- The fixed Reviewees · Session ongoing switch reads "Not shown" too.
+- Stored values, the valid modes per cell and the audit log are
+  unchanged: a display label only.
+- Other "—" (empty values, anonymized names, zero-response cells, the
+  rule-picker count) are not visibility-off and stay. The reviewee
+  `/results` and observer `/collation` pages carry no visibility readout.
+
+### Blast radius (measured)
+
+Taken 2026-10-21 at `4e8806b4`, by a search of `app/`, `tests/`,
+`spec/` for an em dash in a visibility context.
+
+| What | Count |
+|---|---|
+| Label sources | 3: `app/web/views/_instruments.py:1300`, `instruments_index.html:1748` (+ the `:1784` fallback, `:1998` static pill), `:7238` |
+| Templates rendering them | 2: `reviewer/review_surface.html`, `operator/instruments_index.html` |
+| Tests asserting the "—" | 3 files: `test_band3_static_pills.py`, `test_instrument_builder_routes.py`, `tests/browser/test_vp_identity_chip.py` |
+| Specs naming it | 2: `spec/visibility_policy.md`, `spec/ui_elements.md` |
+| Guide screencaps showing it | 4 PNGs (`instrument-card-preview*`, both states, light and dark) |
+
+### PR ladder
+
+1. **PR 1 — plan, build, specs, close** (the author, 2026-10-21: fold it
+   into #3187 with the Items 6 and 7 browser checks). The three label
+   sources and their comments, tests, specs, checklist rows; one
+   `diff-reviewer` read; close.
+
+### Definition of done
+
+- The three sources say "Not shown" and nothing in scope renders "—" for
+  off (tests above, updated).
+- `### Doc impact` section present and current
+- `python3 tools/close_check.py 19Y.8` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `### Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19Y entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+- None.
+
+### Out of scope
+
+- Reshooting the Guide's screencaps: the author's, owed as a checklist
+  row; the alt text already says "nothing" in words.
+
+### Doc impact
+
+- `spec/visibility_policy.md` — the transparency card's off label (Item 8).
+- `spec/ui_elements.md` — §9's deliberate-off cycle-chip note (Item 8).
+- `spec/instruments.md` — the fixed Reviewees · Session ongoing switch's label (Item 8).
+- `guide/things_to_check_in_browser.md` — rows for both surfaces and the screencap reshoot (Item 8).
+- `guide/todo_master.md` — the 19Y entry (Item 8).
