@@ -2,7 +2,7 @@
 
 **Taken:** 2026-10-21 at `b03fd1be` (`main`, after #3193) · **For:**
 v0.8 §5 stage 0, the gate before segment 21A's A1
-(`guide/segment_21A_cordware_foundations.md`) · **Scope:** RRW only.
+(`guide/archive/segment_21A_cordware_foundations.md`) · **Scope:** RRW only.
 Residential's provenance and making the repository private stay the
 author's, before stage 3 imports anything.
 

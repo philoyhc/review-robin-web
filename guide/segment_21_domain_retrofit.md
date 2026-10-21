@@ -8,7 +8,8 @@ RRW hosted by a `cordware/` package and mounted at `/reviewrobin` ·
 `docs/deployment_dev.md`, `docs/deployment_nus.md`,
 `docs/archive/cordware_rrw_integration_spec_v0.2.md`
 
-**On hold (author, 2026-10-16);** this rewrite does not lift it.
+**On hold (author, 2026-10-16);** lifted for 21A, closed 2026-10-21, and
+for 21B at that close.
 Residential Apps (v0.8 stage 3) and any NUS deploy wait on 21D (v0.8 §5).
 **The dev slot is dormant** until the Azure work settles, and every rung
 is tested on localhost (author, 2026-10-21). Its steps, start command,
@@ -172,7 +173,8 @@ holds only the gates between them and the constraints a rung must carry.
    `cordware/` file.
 2. **21A.** A2 moves the module-level app and all its consumers in one
    rung (sequence A2), with the dev artifact and package discovery
-   carrying `cordware/`. Plan: `guide/segment_21A_cordware_foundations.md`.
+   carrying `cordware/`. **Closed 2026-10-21**:
+   `guide/archive/segment_21A_cordware_foundations.md`.
 3. **21B**, after 21A. Its allowlist only shrinks, rung by rung.
 4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
    rung.
@@ -212,7 +214,9 @@ holds only the gates between them and the constraints a rung must carry.
 1. **Where do the sub-segment plans live?** In `guide/`, as
    `segment_21X_*.md`: the author opened 21A's there (2026-10-21; sequence
    §6.2). The settled contract still goes to `cordware/spec/`.
-2. **The lifespan contract's shape** (v0.8 §8). Decided in 21A.
+2. ~~The lifespan contract's shape~~ (v0.8 §8): the host enters each
+   mounted application's lifespan in mount order and passes on the state
+   it yields (21A; `cordware/spec/host.md`).
 3. **The public host for absolute links** (invites, emails): a
    configured base or a forwarded host, per the gateway's host-header
    behavior (v8 report §8.1). Decided in 21B; proved at 21D by test.
@@ -222,7 +226,7 @@ holds only the gates between them and the constraints a rung must carry.
    (author, 2026-10-21).
 6. ~~Repo-wide tooling's path scope~~ for 21A: ruff and pytest take
    `cordware/`, RRW's doc gates stay RRW's, and `cordware/spec/` is
-   checked by hand (author, 2026-10-21; `guide/segment_21A_cordware_foundations.md`).
+   checked by hand (author, 2026-10-21; `guide/archive/segment_21A_cordware_foundations.md`).
    CI's required checks need nothing new while one workflow collects both
    trees; per-owner jobs wait for stage 3.
 7. **Console logs reaching Log Analytics** (v0.8 §8): the author, in Azure.

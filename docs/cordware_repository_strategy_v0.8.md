@@ -274,7 +274,12 @@ The production process still shares Python dependency resolution, startup, compu
 - B or C is implemented safely (C preferred);
 - the integrated artifact is staged, tested and deployed, with a documented recovery path.
 
-**Implementation decisions still open:** the lifespan contract's exact shape; the route-aware URL helper for strings built outside a request; the trusted-identity interface; the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; path scoping for RRW's repo-wide tooling; repository privacy and rename timing.
+**Implementation decisions still open:** the route-aware URL helper for strings built outside a request; the trusted-identity interface; the `DATABASE_URL` / `RRW_DATABASE_URL` precedence; confirming that the Web App's diagnostic settings route App Service console logs to the Log Analytics workspace; confirming that the personal dev slot sets `APP_ENV` to a non-`local` value before the guard lands; B versus C, and the database-role and recovery arrangements with NUS IT; dependency locking and the build artifact; CI required-check and release-gate policy; repository privacy and rename timing.
+
+**Settled in stage 1 (segment 21A, 2026-10-21):**
+
+- *The lifespan contract.* The host enters each mounted application's `router.lifespan_context` in mount order and exits in reverse; state a lifespan yields is merged and reaches `request.state` inside that application, and a repeated key refuses to start. Startup work may also stay in the factory. Contract: `cordware/spec/host.md`.
+- *Path scoping for RRW's repo-wide tooling.* ruff and pytest take in `cordware/` (`cordware/tests` is in `testpaths`); RRW's doc-reference, doc-convention and spec-coverage gates stay RRW's, and `cordware/spec/` is checked by hand at each close. Per-owner CI jobs wait for a second application (§6).
 
 **Non-goals:** moving RRW's source into a `reviewrobin/` folder; cross-repository source sync or private package composition; plugin discovery; a supported standalone RRW runtime; Cordware user or role tables, or any Cordware persistence; a Cordware application, admin interface, console, dashboard or log viewer (the platform super-admin works inside the applications); a login audit table; shared business tables; a second PostgreSQL server without a new requirement; redirects for old root paths; a big-bang rewrite.
 

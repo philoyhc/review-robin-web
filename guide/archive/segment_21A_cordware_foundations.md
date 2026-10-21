@@ -8,8 +8,8 @@ stateless `cordware/` host serves RRW, mounted at `/`, and every start
 command names it
 
 **Segment 21's hold** (author, 2026-10-16) was lifted for 21A on
-2026-10-21: for A0 when the author started it, and for A1–A3 when the
-author asked for the rest of 21A.
+2026-10-21, and for 21B when the author asked for it at 21A's close.
+**Closed 2026-10-21.**
 
 ## Opportunity
 
@@ -86,7 +86,7 @@ would start a command that does not exist yet (§ PR ladder, A1).
   (`reviewrobin`, or `cordware` for the host's own). uvicorn's and
   gunicorn's own loggers keep their own handlers, as before 21A. The host logs start, stop and the mounted set; any mounted
   application's startup failure, logged before the process exits; and
-  failing `/health` checks. These are v0.8's host-logging events 1 and 5,
+  failing `/health` checks (deferred to 21D, § Status). These are v0.8's host-logging events 1 and 5,
   less the super-admin warning that 21C moves. `alembic/env.py`'s
   `fileConfig` is a separate process and is left alone.
 - **Import boundary.** `cordware/` imports an application only through
@@ -139,59 +139,69 @@ Taken 2026-10-21 at `8b430421`.
 
 ## Status
 
-- **2026-10-21, A0.** The baseline is `docs/cordware_stage0_baseline.md`,
-  taken at `b03fd1be`. **It found the dev deploy workflow
-  `disabled_manually`**: last run 2026-06-03, so the slot has not followed
-  `main` since then. This changes the premise behind the A1 → A2 switch
-  timing and § Decision's rejected alternative. A disabled workflow
-  cannot be dispatched either, so no deploy reaches the slot until it is
-  re-enabled. The ordering holds from then on (Open question 4).
-- **2026-10-21, author's ruling: the dev slot stays dormant until the
-  Azure work settles, and every rung is tested on localhost.** A1's
-  start-command switch and the dev-slot DoD line move to
-  `docs/deployment_dev.md` "Resuming the dev slot". A1–A3 stay separate
-  rungs for reviewability, though § Decision's deploy-on-merge reason no
-  longer binds.
-- **2026-10-21, A1–A3 under way.** The base for A3's cumulative
-  `diff-reviewer` read is `cca367fe`, `main` before A1.
-- **A1 (#3195)** also turned off the host's own docs and schema routes,
-  which would have shadowed RRW's at `/`. It now passes on the state that
-  mounted lifespans yield, a fix Codex found.
-- **A2 diverged twice.** First, the "session-scoped fixture" became a
-  cached builder, `tests/_rrw_app.py`. Helpers such as
-  `tests/integration/_public_id.py` and module-level route mounts
-  (`test_error_handlers.py`) need the app outside any fixture, and the
-  builder still builds once per process. It is imported top-level, like
-  `_sqlite_schema`. Second, the DoD's grep also finds records that quote
-  the old command, which stay as written:
-  `docs/cordware_stage0_baseline.md`,
-  `docs/cordware_implementation_sequence.md` and the dormant-slot note in
-  `docs/deployment_dev.md`.
-- **A3.** The JSON formatter moved out of RRW into `cordware/logging.py`,
-  with an `ApplicationFilter` that stamps each record by logger-name
-  prefix. Each registry entry now names its prefix (RRW's is `app`).
-  `app/logging_config.py` keeps only `get_logger`, so `app/` still
-  imports nothing from `cordware/`. `LOG_LEVEL` is the host's setting,
-  and RRW's `Settings.log_level` is gone. **Event 5 waits for 21D:** the
-  host has no code of its own that can fail beyond a static `/health`,
-  and errors inside RRW are RRW's to log. The landing page brings the
-  first host code that can fail.
-- **The cumulative `diff-reviewer` read (one, at A3, from `cca367fe`)**
-  found nothing blocking and nine items, all fixed in A3:
-  - the browser harness now pins `CORDWARE_APPS`, since a `.env` that
-    ran the host alone would still answer `/health`;
-  - the NUS runbook and workflow say not to dispatch until stage 4,
-    because `main` no longer has `app.main:app`;
-  - the logging claim is narrowed: uvicorn's own lines stay plain;
-  - the logging tests restore the root logger exactly;
-  - the import-boundary test also reads `importlib` and `__import__`
-    calls, scans a planted tree, and holds `app/` off `cordware/` until
-    21C;
-  - the host's `/health` route is named `cordware_health`, so RRW's
-    `url_for("health")` cannot resolve to it under 21D's mount;
-  - two stale pointers to `app/logging_config.py` are repointed;
-  - two nits: the `pkill` patterns and a comment's alignment.
-  It verified by running code that nothing RRW serves at `/` changed.
+**Closed 2026-10-21.** Shipped as laid out: plan #3193, A0 #3194, A1
+#3195, A2 #3196, A3 #3197, close (this PR). RRW is served through
+`cordware.main:app`, mounted at `/`, with nothing it serves changed. The
+author checked it on localhost on 2026-10-21: sign-in with fake auth,
+the lobby, `/health`, and the `host.started` line. The contract is
+`cordware/spec/host.md`.
+
+**Intended vs done:**
+
+- **The dev slot stayed dormant** (author, 2026-10-21). A0 found the dev
+  deploy workflow `disabled_manually` since 2026-06-03, so § Decision's
+  deploy-on-merge reason for separate rungs never bound. The rungs stayed
+  separate for reviewability. The slot's start-command switch and
+  `APP_ENV` moved to `docs/deployment_dev.md` "Resuming the dev slot",
+  and every rung was tested on localhost.
+- **The NUS deploy must not be dispatched until stage 4.** `main` has no
+  `app.main:app` since A2, and the NUS artifact doesn't carry `cordware/`.
+  The runbook and the workflow header say so (A3).
+- **The "session-scoped fixture" became a cached builder**,
+  `tests/_rrw_app.py`, because helpers and module-level mounts need the
+  app outside any fixture. It still builds once per process.
+- **Logging (A3).** `JsonFormatter` moved to `cordware/logging.py`, and
+  `ApplicationFilter` stamps each record by logger prefix (each registry
+  entry names one). `LOG_LEVEL` moved to the host, and
+  `app/logging_config.py` keeps only `get_logger`. uvicorn's own lines
+  stay plain. **Event 5 (failing `/health` checks) waits for 21D**,
+  because only the landing page brings host code that can fail.
+- **Beyond the ladder.** The host serves no docs or schema routes of its
+  own, which would shadow RRW's at `/` (A1). The host's `/health` route is
+  named `cordware_health`, so RRW's `url_for("health")` can't resolve to
+  it under 21D's mount (A3).
+
+**`spec-writer` at close** wrote `cordware/spec/host.md` and the
+`spec/architecture.md` and `spec/settings_inventory.md` edits. Its five
+flags were all adjudicated as the code standing:
+
+- event 5's deferral, already recorded above;
+- the super-admin warning, which stays RRW's until 21C;
+- a lifespan-entry failure, which logs `host.app_startup_failed` too;
+- the mounted set, which is logged as `host.started`'s `mounted` key;
+- `.env`, which resolves against the working directory.
+
+**`close_check 21A`** passes. Its four notes (`routes_about`, `routes_guide`,
+`_settings` and `_sys_admin` were touched, but their specs aren't in the
+manifest) are adjudicated: A2 only passed `routes=request.app.routes` to
+`resolve_return_to` there, and no contract changed.
+
+**Reads:** one cumulative `diff-reviewer` read, at A3 from `cca367fe`.
+Nothing blocking; it found nine items, all fixed in A3:
+
+- the browser harness pins `CORDWARE_APPS`;
+- the NUS do-not-dispatch notes;
+- narrowed logging claims;
+- exact root-logger restore;
+- an import-boundary test that reads `importlib` and `__import__` and
+  scans a planted tree;
+- the route name;
+- two stale pointers;
+- two nits.
+
+Codex added three fixes along the way: the yielded lifespan state, the
+logging of a lifespan's startup failure, and plan-budget and pointer
+fixes.
 
 ## PR ladder
 
@@ -249,7 +259,7 @@ Taken 2026-10-21 at `8b430421`.
 - The full suite passes on SQLite and Postgres with no test's request
   path changed (A1–A3).
 - On localhost, `uvicorn cordware.main:app` serves RRW. The author
-  checked sign-in (fake auth) and the lobby there (A2). The dev slot's
+  checked sign-in (fake auth) and the lobby there (2026-10-21). The dev slot's
   switch is step 2 of `docs/deployment_dev.md` "Resuming the dev slot".
 - A captured log line carries `application: reviewrobin`, and no RRW
   module adds a root handler (A3).
