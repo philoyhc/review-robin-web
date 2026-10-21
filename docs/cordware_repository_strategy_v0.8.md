@@ -169,7 +169,7 @@ RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the host e
 **Local testing switches keep their names, defaults and behavior.** Every environment switch RRW reads today stays settable in the repository-root `.env` or per run (`$env:NAME=…` in PowerShell, `export NAME=…` in a POSIX shell), with the shell value overriding `.env`, and a restart picking up a change. One `.env` is read by Cordware and every mounted application. Ownership splits as follows:
 
 - **Cordware:** `APP_ENV`, `ALLOW_FAKE_AUTH`, `FAKE_AUTH_EMAIL`, `FAKE_AUTH_NAME`, `FAKE_AUTH_PRINCIPAL_ID`, `FAKE_AUTH_SUPER_ADMIN`, `SUPER_ADMIN_EMAILS`, `LOG_LEVEL`.
-- **RRW:** `FAKE_AUTH_OPERATOR`, `FAKE_AUTH_SYS_ADMIN`, `OPERATOR_EMAILS`, `SYS_ADMIN_EMAILS`, `DATABASE_URL`, `REHYDRATE_ENABLED`, `AUDIT_STRICT_MODE`, `SMTP_ENCRYPTION_KEY`, `SCHEDULED_OPERATIONAL_LEAD_HOURS`, `REVIEWER_NOTICE_MIN_HOURS`, `PARTICIPANT_TOKEN_SALT`, `OPERATOR_CONTACT_EMAIL`, and the test and tool switches (`TEST_DATABASE_URL`, `RRW_REQUIRE_BROWSER`, `RRW_PARITY_DUMP`, `RRW_NODE_ROOT`).
+- **RRW:** `APP_VERSION` (the version RRW's pages display), `FAKE_AUTH_OPERATOR`, `FAKE_AUTH_SYS_ADMIN`, `OPERATOR_EMAILS`, `SYS_ADMIN_EMAILS`, `DATABASE_URL`, `REHYDRATE_ENABLED`, `AUDIT_STRICT_MODE`, `SMTP_ENCRYPTION_KEY`, `SCHEDULED_OPERATIONAL_LEAD_HOURS`, `REVIEWER_NOTICE_MIN_HOURS`, `PARTICIPANT_TOKEN_SALT`, `OPERATOR_CONTACT_EMAIL`, and the test and tool switches (`TEST_DATABASE_URL`, `RRW_REQUIRE_BROWSER`, `RRW_PARITY_DUMP`, `RRW_VALIDATION_PARITY_DUMP`, `RRW_NODE_ROOT`).
 
 RRW's identity diagnostics, `/auth/me` and `/auth/me/debug`, keep working (at `/reviewrobin/auth/…` after the prefix flip) and show Cordware's identity, including whether it is the fake user.
 
