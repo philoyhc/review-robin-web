@@ -1,6 +1,6 @@
 """instruments.intro_layout: which arrangement an instrument's intro takes
 
-Segment 19Y Item 1 (``guide/segment_19Y_more_ux_refinements.md``): each
+Segment 19Y Item 1 (``guide/archive/segment_19Y_more_ux_refinements.md``): each
 instrument picks the layout of its intro on the reviewer surface.
 ``layout_1`` (the heading and help cards left, visibility right) is the
 default, so every existing row takes it; ``layout_2`` is the earlier
