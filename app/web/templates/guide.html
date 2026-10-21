@@ -293,12 +293,20 @@
     <figure class="guide-figure">
       <img src="/static/guide/create-session-details.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Create session form: name, code, description, and start
-                and end date/time fields.">
+           alt="The Create session form: Name, Code, Help contact and Timezone
+                across the top; Description on the left; Start, End and the
+                release window as date-time boxes each with a picker and a clear
+                button, with the Send invites and Send reminders offsets to the
+                right of Start and End and Release responses until below them;
+                Create session and Cancel below.">
       <img src="/static/guide/create-session-details-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Create session form: name, code, description, and start
-                and end date/time fields.">
+           alt="The Create session form: Name, Code, Help contact and Timezone
+                across the top; Description on the left; Start, End and the
+                release window as date-time boxes each with a picker and a clear
+                button, with the Send invites and Send reminders offsets to the
+                right of Start and End and Release responses until below them;
+                Create session and Cancel below.">
     </figure>
     <p>
       If you already have the CSV files for the reviewers and reviewees (or
@@ -382,12 +390,14 @@
            data-theme-variant="light" loading="lazy"
            alt="The roster card at the top of the Reviewers page, locked: the
                 reviewer count and a pill per roster column carrying its
-                filled-in count, with the Unlock button at the right.">
+                filled-in count, the columns reviewers see of their own entry,
+                and the Unlock button at the right.">
       <img src="/static/guide/roster-card-locked-dark.png"
            data-theme-variant="dark" loading="lazy"
            alt="The roster card at the top of the Reviewers page, locked: the
                 reviewer count and a pill per roster column carrying its
-                filled-in count, with the Unlock button at the right.">
+                filled-in count, the columns reviewers see of their own entry,
+                and the Unlock button at the right.">
     </figure>
     <p>
       To access the facilities:
@@ -395,18 +405,22 @@
     <figure class="guide-figure">
       <img src="/static/guide/roster-card-unlocked.png"
            data-theme-variant="light" loading="lazy"
-           alt="The same card unlocked: the Reviewer tag labels editor with
-                Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team, the
-                Danger Zone card with its delete-all confirmation, the Upload
-                Reviewers card listing the required and optional CSV columns
-                above a file input, and the Lock button.">
+           alt="The same card unlocked: What reviewers see of their own entry,
+                with Name, Email and Profile on and Tutor, Group and Team off; the
+                Upload Reviewers card listing the required and optional CSV
+                columns above a file input; the Reviewer tag labels editor with
+                Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team; the
+                Danger Zone card with its delete-all confirmation; and the Lock
+                button.">
       <img src="/static/guide/roster-card-unlocked-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The same card unlocked: the Reviewer tag labels editor with
-                Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team, the
-                Danger Zone card with its delete-all confirmation, the Upload
-                Reviewers card listing the required and optional CSV columns
-                above a file input, and the Lock button.">
+           alt="The same card unlocked: What reviewers see of their own entry,
+                with Name, Email and Profile on and Tutor, Group and Team off; the
+                Upload Reviewers card listing the required and optional CSV
+                columns above a file input; the Reviewer tag labels editor with
+                Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team; the
+                Danger Zone card with its delete-all confirmation; and the Lock
+                button.">
     </figure>
     {# 19E rung 4 — the starter templates. This is the "downloaded here"
        sentence from the author's draft, with the link resolved to the route
@@ -517,34 +531,60 @@
     </p>
     <p>
       The second part is a <strong>preview of what the reviewer will see</strong>.
-      Use the text boxes to fill in a description of the instrument and helping
-      text for the response fields. The fields it shows are chosen further
-      down (see below). Name always shows, and so does Email, except on a
-      group-scoped instrument, whose group rows have no email. Column
-      widths can be adjusted by dragging the edges. After changing the assignment rule,
-      use <strong>Refresh sample</strong> to refresh the preview.
+      When the instrument's card is unlocked, use the text boxes to fill in
+      a description of the instrument and helping text for the response
+      fields. (The fields it shows are chosen further down; see below.) For
+      the review table itself, Name always shows, and so does Email, except
+      on a group-scoped instrument, whose group rows have no email. Column
+      widths can be adjusted by dragging the edges. After changing the
+      assignment rule, use <strong>Refresh sample</strong> to refresh the
+      preview.
+    </p>
+    <figure class="guide-figure">
+      <img src="/static/guide/instrument-card-preview-unlocked.png"
+           data-theme-variant="light" loading="lazy"
+           alt="The Preview review instrument part of an unlocked card in Layout
+                2, with the Layout 2 chip and Refresh sample beside its title: on
+                the left the instrument's name over a description box, and the
+                Who can see what you wrote table with a lock on the cells that
+                can't change and an Observers row shown for setup only; on the
+                right a help-text box for Rating and one for Comments; then the
+                counts and the sample reviewee row.">
+      <img src="/static/guide/instrument-card-preview-unlocked-dark.png"
+           data-theme-variant="dark" loading="lazy"
+           alt="The Preview review instrument part of an unlocked card in Layout
+                2, with the Layout 2 chip and Refresh sample beside its title: on
+                the left the instrument's name over a description box, and the
+                Who can see what you wrote table with a lock on the cells that
+                can't change and an Observers row shown for setup only; on the
+                right a help-text box for Rating and one for Comments; then the
+                counts and the sample reviewee row.">
+    </figure>
+    <p>
+      When the instrument is saved and locked, the preview shows what the
+      reviewers will see:
     </p>
     <figure class="guide-figure">
       <img src="/static/guide/instrument-card-preview.png"
            data-theme-variant="light" loading="lazy"
-           alt="The Preview review instrument part of a locked card: on the
-                left the instrument's name and description over the Who can
-                see what you wrote table, where You see raw responses while
-                the session is ongoing and nothing once released, and
-                Reviewees see nothing; on the right the Rating and Comments
-                help-text cards; then the required and all-items counts and
-                a sample reviewee row with Profile, Tutor, Group and Team
-                columns and the Rating and Comments inputs.">
+           alt="The Preview review instrument part of a saved, locked card in
+                Layout 2: on the left the instrument's name and description over
+                the Who can see what you wrote table, where You see raw responses
+                while the session is ongoing and nothing once released, and
+                Reviewees see nothing; on the right one card of help texts for
+                Rating and Comments; then the required and all-items counts and
+                a sample reviewee row with Profile, Tutor, Group and Team columns
+                and the Rating and Comments inputs.">
       <img src="/static/guide/instrument-card-preview-dark.png"
            data-theme-variant="dark" loading="lazy"
-           alt="The Preview review instrument part of a locked card: on the
-                left the instrument's name and description over the Who can
-                see what you wrote table, where You see raw responses while
-                the session is ongoing and nothing once released, and
-                Reviewees see nothing; on the right the Rating and Comments
-                help-text cards; then the required and all-items counts and
-                a sample reviewee row with Profile, Tutor, Group and Team
-                columns and the Rating and Comments inputs.">
+           alt="The Preview review instrument part of a saved, locked card in
+                Layout 2: on the left the instrument's name and description over
+                the Who can see what you wrote table, where You see raw responses
+                while the session is ongoing and nothing once released, and
+                Reviewees see nothing; on the right one card of help texts for
+                Rating and Comments; then the required and all-items counts and
+                a sample reviewee row with Profile, Tutor, Group and Team columns
+                and the Rating and Comments inputs.">
     </figure>
     <p>
       Per instrument you can set <strong>who sees responses and in what

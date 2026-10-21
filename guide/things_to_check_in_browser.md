@@ -48,15 +48,6 @@ deployment, not a local run.
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
 
-## An instrument's intro picks its layout (19Y Item 1)
-
-- [ ] **The Guide's screencap.** Reshoot
-  `app/web/static/guide/instrument-card-preview.png` and `-dark` with the
-  new default and the chip, and update their alt text in
-  `app/web/templates/guide.html` to say the help texts sit as rows in
-  the heading card on the left and the visibility table on the right
-  (Item 2: rows, not help cards).
-
 ## The preview's heading follows the name as typed (19Y Item 6)
 
 - [ ] **The heading keeps up.** Unlock an instrument card and type a new
@@ -65,3 +56,10 @@ deployment, not a local run.
   back (in Firefox too). Give a nameless instrument its first name: the
   same. On a session's only instrument with no name, typing the
   description changes the heading as you type.
+
+## The Guide's screencaps and wording catch up (19Y Item 7)
+
+- [ ] **The Guide shows the new screencaps.** Open `/guide` in light and
+  dark: Create session, both roster cards and both Band 2 previews
+  (unlocked, then locked) show the new images in the right theme, and
+  the Band 2 text reads as in `Guide_6a.docx`.
