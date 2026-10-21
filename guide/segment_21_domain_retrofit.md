@@ -181,7 +181,7 @@ holds only the gates between them and the constraints a rung must carry.
 - Cordware alone and Cordware + RRW both run, and the import-boundary
   test passes (21A).
 - Importing `app.main` builds nothing; no live start command names
-  `app.main:app` (21A).
+  `app.main:app` but the NUS runbook's, which waits for stage 4 (21A).
 - Under the `/reviewrobin` harness the leak check passes with no
   allowlist, `/.auth/*` excluded by rule (21B).
 - The trusted-identity interface is tested on its own; Cordware
@@ -255,7 +255,7 @@ Provisional at outline level; each sub-segment plan takes over its bullets.
 - `docs/local_setup.md` — running through `cordware.main:app`; one `.env`; `CORDWARE_APPS` (21A, 21C).
 - `docs/setup_codespaces.md` — the start command (21A).
 - `docs/deployment_dev.md` — the dev slot's start command (21A), `APP_ENV` (21C), served at `/reviewrobin` (21D).
-- `docs/deployment_nus.md` — the start command; "no code change" retired (21A, 21D).
+- `docs/deployment_nus.md` — "no code change" retired (21D); its start command moves with stage 4's artifact.
 - `docs/security_posture.md` — the fake-auth guard enforced; identity interpreted by the host (21C).
 - `docs/cordware_repository_strategy_v0.8.md` — §8's stage 1–2 decisions recorded as each sub-segment settles them (21A–21C).
 - `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at 21D's close; the sub-segment plans carry its ladder (21D).

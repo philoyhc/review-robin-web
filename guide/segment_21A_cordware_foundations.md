@@ -120,7 +120,7 @@ Taken 2026-10-21 at `8b430421`.
 | A2 | Importers of `app.main.app` | 16: `app/web/return_to.py:65`, 13 test files, `tests/integration/_public_id.py`, `tools/bench_roster_scale.py` | `grep -rlE 'from app\.main import app\b' --include='*.py' app tests tools` |
 | A2 | `dependency_overrides` on that object | 59 lines in 12 files | `grep -rn --include='*.py' dependency_overrides tests` |
 | A2 | `resolve_return_to(` calls needing the router | 6 in 5 app files; 31 in `tests/unit/test_return_to.py` | `grep -rn 'resolve_return_to(' app tests --include='*.py'` |
-| A2 | Live `app.main:app` start lines | `README.md:115`, `CLAUDE.md:95` (+ twin), `.devcontainer/devcontainer.json:23`, `tests/browser/conftest.py:4, 96`, `docs/local_setup.md:159, 326, 507`, `docs/setup_codespaces.md:31, 54`, `docs/deployment_dev.md:38`, `docs/deployment_nus.md:109, 127` | `grep -rnI 'app\.main:app' . --exclude-dir=archive`, less `.claude/worktrees/` and segment 21's plans |
+| A2 | Live `app.main:app` start lines | `README.md:115`, `CLAUDE.md:95` (+ twin), `.devcontainer/devcontainer.json:23`, `tests/browser/conftest.py:4, 96`, `docs/local_setup.md:159, 326, 507`, `docs/setup_codespaces.md:31, 54`, `docs/deployment_dev.md:38`; `docs/deployment_nus.md:109, 127` stay until stage 4 broadens the NUS artifact | `grep -rnI 'app\.main:app' . --exclude-dir=archive`, less `.claude/worktrees/` and segment 21's plans |
 | A1 | Dev artifact paths | `app/`, `alembic/`, `alembic.ini`, `requirements.txt`, `pyproject.toml`, `antenv/`; deploys on every push to `main` | `.github/workflows/main_app-review-robin-web-dev.yml:56–62` |
 | A1 | Packaging and collection | `include = ["app*"]` (`pyproject.toml:36`); `testpaths = ["tests"]` (`:39`); ruff already covers `.` | `grep -n 'include\|testpaths' pyproject.toml` |
 | — | NUS deploy | `deploy_nus.yml` is `workflow_dispatch` only; its artifact stays as is until stage 4 (v0.8 §5) | `sed -n 1,10p .github/workflows/deploy_nus.yml` |
@@ -150,7 +150,8 @@ Taken 2026-10-21 at `8b430421`.
 4. **A2, built once.** Removes `app = create_app()`. Moves `return_to`
    onto the request's router, the 16 importers onto a session-scoped
    `rrw_app` fixture in `tests/conftest.py`, the browser harness onto
-   `cordware.main:app`, and every live start line (§ Blast radius). Adds
+   `cordware.main:app`, and every live start line but the NUS runbook's
+   (§ Blast radius). Adds
    the "importing `app.main` builds nothing" test. Must not change a
    route, a template or a URL.
 5. **A3, logging and the boundary.** `configure_logging()` moves to the
@@ -169,7 +170,8 @@ Taken 2026-10-21 at `8b430421`.
 - `pytest cordware/tests` passes with `CORDWARE_APPS` unset, empty and
   `reviewrobin`; an unknown name fails construction (A1).
 - `git grep -n 'app\.main:app' -- ':!guide/archive' ':!docs/archive'`
-  finds only segment 21's own plans (A2).
+  finds only segment 21's own plans and `docs/deployment_nus.md`, whose
+  command changes with stage 4's artifact (A2).
 - A test imports `app.main` and finds no `FastAPI` instance on it
   (A2).
 - The full suite passes on SQLite and Postgres with no test's request
@@ -180,6 +182,8 @@ Taken 2026-10-21 at `8b430421`.
   module adds a root handler (A3).
 - The import-boundary test fails on a planted `import residentialapps`
   under `app/` (A3).
+- Segment 21's `guide/todo_master.md` entry records 21A done and stays
+  until 21D closes; only 21A's own mention in it is deleted (close).
 - `cordware/spec/host.md` documents `CORDWARE_APPS`, the registry,
   `/health`, the lifespan contract and host logging (close).
 - `## Doc impact` section present and current
@@ -207,7 +211,9 @@ Taken 2026-10-21 at `8b430421`.
   (the outline). Nothing here generates or rewrites a URL.
 - **Host-logging events 2–4** (fake auth, identity problems, unhandled
   requests) and moving the super-admin warning: 21C and 21D.
-- **The NUS deploy workflow and its start command:** stage 4 (v0.8 §5).
+- **The NUS deploy workflow, its start command and its runbook line**
+  (`docs/deployment_nus.md:109, 127`): stage 4, together with the
+  artifact that carries `cordware/` (v0.8 §5).
 - **Cordware settings beyond `CORDWARE_APPS`** (`APP_ENV`, fake auth,
   super-admin): 21C.
 - **Path-detected CI jobs per owner** (v0.8 §6): not needed until a
@@ -219,7 +225,6 @@ Taken 2026-10-21 at `8b430421`.
 - `docs/local_setup.md` — run through `cordware.main:app`; `CORDWARE_APPS` (A2).
 - `docs/setup_codespaces.md` — the restart command (A2).
 - `docs/deployment_dev.md` — the dev slot's start command and the artifact's `cordware/` (A1–A2).
-- `docs/deployment_nus.md` — the start command, for stage 4 (A2).
 - `spec/architecture.md` — RRW as a mounted application built once; the host owns root logging (close).
 - `spec/settings_inventory.md` — `CORDWARE_APPS` and `LOG_LEVEL`'s owner (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the lifespan contract and 21A's path scope recorded as settled (close).
