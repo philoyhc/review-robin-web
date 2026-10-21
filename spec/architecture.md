@@ -227,6 +227,76 @@ capture still answers 304 with no body. Fingerprinted filenames would
 also solve it and are still refused — versioning the names is the asset
 pipeline this directory exists without.
 
+### URL emission
+
+RRW is mounted, so the prefix its host serves it under (`root_path` in the
+ASGI scope; empty at `/`) is not RRW's to know. **App-relative values
+travel; the prefix is added once, at emission.** Routes, views, services,
+breadcrumbs and `return_to` build app-relative strings
+(`/operator/sessions/…`), and a URL leaves RRW only through
+`app/web/urls.py`:
+
+| Where | Helper |
+|---|---|
+| Template `href`, `action`, `formaction`, `src`, and every root string in an inline script | `url('/…')`; in a script, `{{ url('/…') \| tojson }}` |
+| Template comparison with the current page | `here()`, `is_here()`, `here_in()`, `here_under()` |
+| Redirect | `redirect(request, url, status_code=307, headers=None)`, the only place a `RedirectResponse` is built |
+| Cookie `Path` | `cookie_path(request, path)` on every `set_cookie` |
+| Python comparison, or a `return_to` built from the current page | `app_path(request)`, the request path without `root_path` |
+
+`url_path` underlies `url()`, `redirect()` and `cookie_path()`; the Jinja
+globals are installed on every template environment (`urls.install`). A
+route or helper that redirects takes `request`.
+
+- **What `url()` leaves alone.** `""` and `None` render `""`; `/.auth/…`
+  (Easy Auth's, at the host), `//host…`, `scheme:…`, `#…`, `?…` and
+  relative paths pass through unchanged. It is **idempotent**: a path
+  already under `root_path` comes back as it is. Templates `{% set %}` an
+  app-relative value and hand it to a partial that emits it, so wrapping at
+  both ends is what keeps the static rules below mechanical.
+- **`return_to` stays app-relative**, going in and coming out
+  (`app/web/return_to.py`). Pages put `here()` in it, never the
+  prefixed `request.url.path`; the prefix is added when the value is
+  finally emitted as a link or redirect.
+- **Services may build app-relative URL strings** (`services/validation.py`'s
+  `fix_url`); templates add the prefix. A service never imports
+  `app.web.urls`.
+- **Absolute links** (`request.url_for("reviewer_invite", …)`) already carry
+  the prefix and are not routed through these helpers.
+- **A script's URL comes from the template.** A URL a route passes to an
+  inline script through context still needs `url()` where the template
+  emits it; the static rules cannot see that value, the crawl can.
+- The helpers read `request` from the template context, so a macro that
+  calls them is imported `with context`, and no template rebinds a
+  helper's name (`url`, `here`, `is_here`, `here_in`, `here_under`).
+
+**Two gates.** Neither has an allowlist; any finding fails the suite.
+
+- **The static leak test** (`tests/unit/test_url_leaks.py`) reads the
+  source. A "root literal" is a quoted string starting with one of RRW's
+  top-level segments, read from its router, so a new top-level route is
+  covered with no edit.
+  - **T1.** In a template, a root literal (and a bare `"/"` link) appears
+    only inside `url(`, `is_here(`, `here_in(` or `here_under(`.
+  - **T2.** A templated `href`, `action`, `formaction` or `src` value starts
+    with `url(`.
+  - **P1.** `RedirectResponse(` is called only in `app/web/urls.py`.
+  - **P2.** Every `set_cookie` passes `path=cookie_path(...)`.
+  - **P3.** `request.url.path` is read only in `app/web/urls.py`;
+    templates use `here()`.
+- **The crawl** (`tests/integration/test_url_crawl.py`) serves RRW under
+  `/reviewrobin` (the harness in `cordware/spec/host.md`) and visits every
+  registered GET route, schema or not; a new GET route fails
+  `test_every_get_route_is_crawled` until it is visited. One seeded session
+  is read in draft, live, submitted and released phases, and the operator's
+  session pages in draft, live and released, since each state renders forms
+  the others do not. Every emitted `href`, `action`, `formaction`, `src`,
+  `data-*` URL attribute, string in an inline script, JSON string value
+  (keys are not read), `Location` and cookie `Path` must sit under the
+  prefix, or be external, a fragment, `mailto:` or `/.auth/…`. Only one route
+  is pinned at 404, the rehydrate `dropped.csv`, whose token a rehydrate
+  commit stashes.
+
 ### Route conventions
 
 Operator + participant **mutations** follow one house style: a `POST`

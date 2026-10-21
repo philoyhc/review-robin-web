@@ -38,6 +38,22 @@ through `cordware.main:app`; RRW has no standalone entry point.
 - The host imports an application only by loading its `factory` string at
   construction. `cordware/main.py` names no application package.
 
+## The host's part in `root_path`
+
+The host emits no URL of its own and rewrites none. Its only part is the
+mount: Starlette's `Mount` sets `root_path` in the ASGI scope to the mount
+path before the application runs, and an application serves what is under
+it. Inside the mount:
+
+- `root_path` is the mount path (empty at `/`), and `request.url.path`
+  includes it;
+- `request.app.url_path_for(...)` omits it;
+- `request.url_for(...)` is absolute, host and prefix included.
+
+Adding the prefix to the URLs an application emits is the application's
+job (RRW's, in `spec/architecture.md` "URL emission"). Easy Auth's
+`/.auth/*` stays at the host level, outside every mount.
+
 ## `CORDWARE_APPS`
 
 Selects which registered applications mount. Read once, when the host is
@@ -148,3 +164,26 @@ The host's tests live in `cordware/tests/`, a package (it has its own
 collection). `pyproject.toml` lists it in `testpaths`, so both CI jobs collect
 it. They need no database; RRW's `tests/conftest.py` fixtures do not reach
 them. RRW's own suite builds the application through `tests/_rrw_app.py`.
+
+### The `/reviewrobin` harness
+
+RRW is still served at `/`, so the mounted behavior is proved under a test
+mount. `tests/_mounted.py` (a top-level module, like `_rrw_app`) holds it:
+
+- `host_with(factory, path="/reviewrobin")` builds the host through
+  `create_app` with a one-entry registry override. It puts the root
+  logger back as it found it, since `create_app` configures logging.
+- `mounted_rrw()` is that host with RRW's cached `tests/_rrw_app.py`
+  instance at `/reviewrobin`, so the `dependency_overrides` a fixture sets
+  carry into the mount. `tests/integration/conftest.py`'s `mounted_client`
+  and `make_mounted_client` wrap it; request paths carry the prefix.
+- `leaks(response, prefix="/reviewrobin", *, within=None)` returns every URL
+  a response emits as an app path without the prefix: link, form and
+  source attributes (and `data-*` URL attributes), strings in inline
+  scripts, string values in a JSON body, `Location` and cookie `Path`s.
+  `/.auth/…`, fragments, queries, other schemes and hosts, and relative
+  paths are not app paths. `within` limits the attributes read to one
+  element, by class.
+
+`tests/integration/test_url_crawl.py` drives it over every RRW GET route.
+Browser tests stay on RRW at `/` until 21D moves the registry's `path`.
