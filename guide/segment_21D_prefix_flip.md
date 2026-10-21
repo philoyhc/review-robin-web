@@ -59,8 +59,13 @@ run under the mount.
 - **Browser tests run under the real mount** (Open question 2,
   author):
   - the harness's base URL gains `/reviewrobin`;
-  - a `page` fixture prefixes app-relative paths passed to `goto`;
-  - URL assertions read through one helper.
+  - every navigation goes through one `app_url(path)` helper: the
+    `page` fixture's `goto`, every raw `browser.new_context(...)` page,
+    every in-page `window.location` navigation or path assertion, and
+    every URL assertion (Codex, #3215);
+  - a guard test fails on a root-path literal passed to `goto` or
+    `window.location` in `tests/browser/`, so a new test cannot slip
+    back to `/`.
 
 **Rejected:**
 - *A `PUBLIC_BASE_URL` setting:* it can drift from the gateway, and
@@ -122,7 +127,7 @@ Taken 2026-10-21 at `d3420be9`.
 | Host tests assuming RRW at `/` | 3 in `cordware/tests/test_host.py` (at root, shadows nothing, registry) | `grep -n "def test" cordware/tests/test_host.py` |
 | `/.auth/` references | 6: `base.html`, `reviewer/_top_bar.html`, `me_debug.html`, `error.html` ×2, `error_handlers.py` | `grep -rn "/\.auth" app --include=*.py --include=*.html` |
 | Absolute-URL builders | 5 `request.url_for("reviewer_invite", …)`: `_shared.py` ×1, `_operations.py` ×4 | `grep -rn 'url_for("reviewer_invite"' app` |
-| Browser suite | 49 files; 99 `page.goto`, 31 URL assertions, 11 `live_server.base_url` uses | `grep -rn "page.goto(" tests/browser \| wc -l`; `grep -rn "to_have_url\|page.url\|wait_for_url" tests/browser` |
+| Browser suite | 49 files; 99 `page.goto`, 31 URL assertions, 11 `live_server.base_url` uses, 4 `new_context(` (3 in tests, 1 in `conftest.py`), 4 `window.location` in 2 files | `grep -rn "page.goto(" tests/browser \| wc -l`; `grep -rn "to_have_url\|page.url\|wait_for_url" tests/browser`; `grep -rn "new_context(\|window.location" tests/browser` |
 | Docs naming the local URL | 7 lines in `README.md`, `CLAUDE.md`, `docs/local_setup.md`, `docs/security_posture.md` | `grep -rn "127.0.0.1:8000" README.md CLAUDE.md docs/*.md` |
 | TestClient calls at root | 3,422, unchanged by design | outline § Blast radius |
 
@@ -141,7 +146,9 @@ Taken 2026-10-21 at `d3420be9`.
    - `REGISTRY` path `/reviewrobin`; with RRW alone, `/` redirects to
      `/reviewrobin/`.
    - Host tests move to the mount. The browser harness moves to the
-     mount, through the fixture, with every browser test passing.
+     mount through `app_url`, covering raw contexts and `window.location`
+     too, with the guard test and every browser test passing.
+   - `docs/deployment_nus.md` retires its "no code change" line.
    - Docs that name the local URL say `/reviewrobin/`.
    - The `.env.example` and start commands are unchanged.
 4. **D3, the behavior requirements pinned.**
@@ -208,4 +215,6 @@ Taken 2026-10-21 at `d3420be9`.
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the public host and the browser harness settled (close).
 - `README.md` — the local URL (D2).
 - `CLAUDE.md` — the local URL the author checks at (D2). `AGENTS.md` twinned.
+- `docs/deployment_nus.md` — the "no code change" line retired; its start command moves with stage 4's artifact (D2; carried from the outline).
+- `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at the close; the sub-segment plans carry its ladder (close; carried from the outline).
 - `cordware/spec/host.md` — the landing page and the one-application redirect, `AppEntry.title`, RRW at `/reviewrobin` (close); checked by hand.
