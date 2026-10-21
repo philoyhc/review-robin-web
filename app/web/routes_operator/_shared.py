@@ -779,7 +779,7 @@ def _setup_row_window(
 
 
 def _redirect_keeping_selection(
-    base_url: str,
+    request: Request, base_url: str,
     selected_ids: list[int],
     *,
     filter_params: list[tuple[str, str]] | None = None,
@@ -830,7 +830,7 @@ def _redirect_keeping_selection(
     url = base_url if not params else base_url + "?" + urlencode(params)
     if anchor:
         url += "#" + anchor
-    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+    return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _row_action_anchor(row_ids: list[int], *, noun: str) -> str:
@@ -931,7 +931,7 @@ def _require_instrument_in_session(
 
 
 def _instruments_redirect(
-    session_id: str, fragment: str | None = None
+    request: Request, session_id: str, fragment: str | None = None
 ) -> RedirectResponse:
     """Redirect to the Instruments index, optionally landing on an
     in-page anchor.
@@ -948,11 +948,11 @@ def _instruments_redirect(
     url = f"/operator/sessions/{session_id}/instruments"
     if fragment:
         url = f"{url}#{fragment}"
-    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+    return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 def dismiss_held_upload(
-    db: Session,
+    request: Request, db: Session,
     *,
     held_token: str | None,
     user: User,
@@ -964,7 +964,7 @@ def dismiss_held_upload(
     ``page`` is the route segment (``reviewers``, ``reviewees``,
     ``relationships``, ``observers``), never a URL from the form."""
     release_hold(db, token=held_token, user=user, review_session=review_session)
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/{page}"
             "?unlocked=1#upload-csv"
@@ -1278,7 +1278,7 @@ async def _handle_import(
     # 19P.3 rung 4 — unconditional now. This was
     # `if kind == "reviewers" else ""` while Reviewees had no panel to
     # keep open; it has one, and this handler serves no other kind.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/{kind}"
             "?unlocked=1#roster-card"

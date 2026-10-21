@@ -30,9 +30,10 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.config import settings
 from app.db.models import User
 from app.db.session import get_db
@@ -242,7 +243,7 @@ def rehydrate_commit(
 
     if not result.dropped:
         db.commit()
-        return RedirectResponse(
+        return urls.redirect(request,
             url=f"/operator/sessions/{result.session.public_id}?rehydrated=1",
             status_code=status.HTTP_303_SEE_OTHER,
         )

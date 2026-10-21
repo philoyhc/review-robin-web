@@ -22,6 +22,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports, participant_info
@@ -99,14 +100,14 @@ async def reviewers_import_submit(
 
 @router.post("/sessions/{session_id}/reviewers/import/dismiss")
 def reviewers_import_dismiss(
-    held_token: str | None = Form(default=None),
+    request: Request, held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(
+    return dismiss_held_upload(request,
         db, held_token=held_token, user=user,
         review_session=review_session, page="reviewers",
     )
@@ -454,7 +455,7 @@ def reviewers_create(
     # sent and discarded, and the redirect was bare: after adding a
     # reviewer the page went back to the top of the document with the
     # filter dropped.
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -526,7 +527,7 @@ def reviewers_update(
             edit_error=exc.message,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         [reviewer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -537,7 +538,7 @@ def reviewers_update(
 
 @router.post("/sessions/{session_id}/reviewers/bulk-inactivate")
 def reviewers_bulk_inactivate(
-    reviewer_ids: list[int] = Form(default=[]),
+    request: Request, reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -558,7 +559,7 @@ def reviewers_bulk_inactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -569,7 +570,7 @@ def reviewers_bulk_inactivate(
 
 @router.post("/sessions/{session_id}/reviewers/bulk-reactivate")
 def reviewers_bulk_reactivate(
-    reviewer_ids: list[int] = Form(default=[]),
+    request: Request, reviewer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -590,7 +591,7 @@ def reviewers_bulk_reactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         reviewer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -601,7 +602,7 @@ def reviewers_bulk_reactivate(
 
 @router.post("/sessions/{session_id}/reviewers/delete-all")
 def reviewers_delete_all(
-    confirm: str | None = Form(default=None),
+    request: Request, confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -631,7 +632,7 @@ def reviewers_delete_all(
     # route answers 303 like 3a's. It matched the status code; it did
     # not match the contract, which is what moving a control into the
     # panel actually costs.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/reviewers"
             "?unlocked=1#roster-card"
@@ -670,7 +671,7 @@ async def reviewers_save_self_fields(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/reviewers"
             "?unlocked=1#roster-card"
@@ -719,7 +720,7 @@ async def reviewers_save_field_labels(
     # `?unlocked=1`: saving a label must not close the panel the label
     # editor lives in — the Lock control is what closes it. The fragment
     # lands on the card rather than the top of the document.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/reviewers"
             "?unlocked=1#roster-card"
@@ -730,7 +731,7 @@ async def reviewers_save_field_labels(
 
 @router.post("/sessions/{session_id}/reviewers/bulk-delete")
 def reviewers_bulk_delete(
-    reviewer_ids: list[int] = Form(default=[]),
+    request: Request, reviewer_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
@@ -768,7 +769,7 @@ def reviewers_bulk_delete(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

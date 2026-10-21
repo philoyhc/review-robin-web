@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from starlette import status
 
+from app.web import urls
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import responses as responses_service
@@ -76,7 +77,7 @@ def reviewer_session_summary(
     ):
         # Not all rows submitted — redirect to the dashboard.
         # With a one-line notice saying why (participant audit M11).
-        return RedirectResponse(
+        return urls.redirect(request,
             url="/me?notice=summary",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -127,7 +128,7 @@ def reviewer_session_summary(
 
 @router.get("/sessions/{session_id}/summary.csv", response_model=None)
 def reviewer_session_summary_csv(
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
+    request: Request, reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
     user: User = Depends(get_or_create_user),
@@ -138,7 +139,7 @@ def reviewer_session_summary_csv(
         db, reviewer=reviewer, session_id=review_session.id
     ):
         # With a one-line notice saying why (participant audit M11).
-        return RedirectResponse(
+        return urls.redirect(request,
             url="/me?notice=summary",
             status_code=status.HTTP_303_SEE_OTHER,
         )

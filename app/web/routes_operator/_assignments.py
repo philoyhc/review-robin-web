@@ -29,6 +29,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import (
     Instrument,
     Relationship,
@@ -407,7 +408,7 @@ def _render_assignments_hub(
 
 @router.post("/sessions/{session_id}/assignments/generate")
 def assignments_generate(
-    confirm_replace: str | None = Form(default=None),
+    request: Request, confirm_replace: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -428,7 +429,7 @@ def assignments_generate(
     _require_editable(review_session)
     existing = assignments.existing_count(db, review_session.id)
     if existing > 0 and confirm_replace != "true":
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/assignments"
                 f"?needs_confirm=1"
@@ -445,7 +446,7 @@ def assignments_generate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -457,7 +458,7 @@ def assignments_generate(
     response_model=None,
 )
 def assignments_instrument_self_reviews_active(
-    session_id: str,
+    request: Request, session_id: str,
     active: str = Form(...),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -487,7 +488,7 @@ def assignments_instrument_self_reviews_active(
         active=is_active,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/assignments",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -499,7 +500,7 @@ def assignments_instrument_self_reviews_active(
     response_model=None,
 )
 def assignments_bulk_inactivate(
-    session_id: str,
+    request: Request, session_id: str,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
@@ -520,7 +521,7 @@ def assignments_bulk_inactivate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_assignments_url(
             review_session.public_id, filter_q, filter_search_by, filter_status
         ),
@@ -534,7 +535,7 @@ def assignments_bulk_inactivate(
     response_model=None,
 )
 def assignments_bulk_activate(
-    session_id: str,
+    request: Request, session_id: str,
     assignment_ids: list[int] = Form(default=[]),
     filter_q: str = Form(default=""),
     filter_search_by: str = Form(default="all"),
@@ -555,7 +556,7 @@ def assignments_bulk_activate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_assignments_url(
             review_session.public_id, filter_q, filter_search_by, filter_status
         ),

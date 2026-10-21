@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, sta
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import User
 from app.db.session import get_db
 from app.services import date_formatting
@@ -88,7 +89,7 @@ def operator_settings_form(
 
 @router.post("/settings")
 def operator_settings_save(
-    smtp_host: str | None = Form(default=None),
+    request: Request, smtp_host: str | None = Form(default=None),
     smtp_port: str | None = Form(default=None),
     smtp_username: str | None = Form(default=None),
     smtp_password: str | None = Form(default=None),
@@ -133,7 +134,7 @@ def operator_settings_save(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -141,7 +142,7 @@ def operator_settings_save(
 
 @router.post("/settings/timezone")
 def operator_settings_save_timezone(
-    display_timezone: str = Form(...),
+    request: Request, display_timezone: str = Form(...),
     return_to: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -163,7 +164,7 @@ def operator_settings_save_timezone(
         timezone_name=timezone_name,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -171,7 +172,7 @@ def operator_settings_save_timezone(
 
 @router.post("/settings/clear")
 def operator_settings_clear(
-    return_to: str | None = Form(default=None),
+    request: Request, return_to: str | None = Form(default=None),
     confirm: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -184,7 +185,7 @@ def operator_settings_clear(
     operator_settings.clear_email_settings(
         db, user=user, correlation_id=request_correlation_id()
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_settings_redirect_url(return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )

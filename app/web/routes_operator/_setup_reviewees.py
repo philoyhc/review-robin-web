@@ -25,6 +25,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, csv_imports, participant_info
@@ -109,14 +110,14 @@ async def reviewees_import_submit(
 
 @router.post("/sessions/{session_id}/reviewees/import/dismiss")
 def reviewees_import_dismiss(
-    held_token: str | None = Form(default=None),
+    request: Request, held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(
+    return dismiss_held_upload(request,
         db, held_token=held_token, user=user,
         review_session=review_session, page="reviewees",
     )
@@ -482,7 +483,7 @@ def reviewees_create(
     # page the form was submitted from — the fragment would name a row
     # the response never rendered. It relocates the pager window; the
     # fragment then resolves onto the row.
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -573,7 +574,7 @@ def reviewees_update(
             edit_confirm_group_clear=exc.count,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         [reviewee_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -613,7 +614,7 @@ async def reviewees_save_self_fields(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/reviewees"
             "?unlocked=1#roster-card"
@@ -624,7 +625,7 @@ async def reviewees_save_self_fields(
 
 @router.post("/sessions/{session_id}/reviewees/bulk-inactivate")
 def reviewees_bulk_inactivate(
-    reviewee_ids: list[int] = Form(default=[]),
+    request: Request, reviewee_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -645,7 +646,7 @@ def reviewees_bulk_inactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         reviewee_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -656,7 +657,7 @@ def reviewees_bulk_inactivate(
 
 @router.post("/sessions/{session_id}/reviewees/bulk-reactivate")
 def reviewees_bulk_reactivate(
-    reviewee_ids: list[int] = Form(default=[]),
+    request: Request, reviewee_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -677,7 +678,7 @@ def reviewees_bulk_reactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         reviewee_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -688,7 +689,7 @@ def reviewees_bulk_reactivate(
 
 @router.post("/sessions/{session_id}/reviewees/delete-all")
 def reviewees_delete_all(
-    confirm: str | None = Form(default=None),
+    request: Request, confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -712,7 +713,7 @@ def reviewees_delete_all(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/reviewees"
             "?unlocked=1#roster-card"
@@ -770,7 +771,7 @@ async def reviewees_save_field_labels(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/reviewees"
             "?unlocked=1#roster-card"
@@ -781,7 +782,7 @@ async def reviewees_save_field_labels(
 
 @router.post("/sessions/{session_id}/reviewees/bulk-delete")
 def reviewees_bulk_delete(
-    reviewee_ids: list[int] = Form(default=[]),
+    request: Request, reviewee_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
@@ -819,7 +820,7 @@ def reviewees_bulk_delete(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/reviewees",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

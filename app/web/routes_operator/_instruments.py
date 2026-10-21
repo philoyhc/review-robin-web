@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import (
     Instrument,
     ReviewSession,
@@ -125,16 +126,16 @@ def _require_display_field_in_instrument(
     "/sessions/{session_id}/instruments/{instrument_id}",
 )
 def instrument_detail_redirect(
-    bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
+    request: Request, bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
 ) -> RedirectResponse:
     """Back-compat: legacy per-instrument page redirects to consolidated view."""
     _, review_session = bundle
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/edit")
 def instrument_edit_description(
-    description: str | None = Form(default=None),
+    request: Request, description: str | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -147,12 +148,12 @@ def instrument_edit_description(
         description=description,
         actor=user,
     )
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/fields")
 def instrument_add_field(
-    field_key: str | None = Form(default=None),
+    request: Request, field_key: str | None = Form(default=None),
     label: str = Form(...),
     response_type: str = Form(...),
     required: str | None = Form(default=None),
@@ -189,7 +190,7 @@ def instrument_add_field(
             actor=user,
         )
     except instruments_service.FieldKeyError as exc:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?field_key_error={int(False)}"
@@ -197,14 +198,14 @@ def instrument_add_field(
             status_code=status.HTTP_303_SEE_OTHER,
             headers={"X-FieldKey-Error": str(exc)},
         )
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post(
     "/sessions/{session_id}/instruments/{instrument_id}/fields/add-row"
 )
 def instrument_add_default_field(
-    after: int | None = Form(default=None),
+    request: Request, after: int | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -219,7 +220,7 @@ def instrument_add_default_field(
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     # Preserve editing state: the ➕ button is only rendered while
     # editing, so the operator stays in editing mode after the add.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
@@ -232,7 +233,7 @@ def instrument_add_default_field(
     "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/edit"
 )
 def instrument_edit_field(
-    field_id: int,
+    request: Request, field_id: int,
     label: str = Form(...),
     required: str | None = Form(default=None),
     validation_min: str | None = Form(default=None),
@@ -269,21 +270,21 @@ def instrument_edit_field(
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     if warning_count > 0:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?required_warning={warning_count}&field_id={field.id}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post(
     "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/delete"
 )
 def instrument_delete_field(
-    field_id: int,
+    request: Request, field_id: int,
     confirm: str | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -303,7 +304,7 @@ def instrument_delete_field(
     except instruments_service.BranchedInstrumentError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except instruments_service.ResponsesPresentError as exc:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?editing={instrument.id}"
@@ -314,7 +315,7 @@ def instrument_delete_field(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     # Preserve editing state on the redirect.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
@@ -327,7 +328,7 @@ def instrument_delete_field(
     "/sessions/{session_id}/instruments/{instrument_id}/fields/{field_id}/move"
 )
 def instrument_move_field(
-    field_id: int,
+    request: Request, field_id: int,
     direction: str = Form(...),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -347,7 +348,7 @@ def instrument_move_field(
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     # Preserve editing state: the ▲ / ▼ buttons are only rendered
     # while editing.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
@@ -358,7 +359,7 @@ def instrument_move_field(
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/display-fields")
 def instrument_add_display_field(
-    source_pair: str = Form(...),
+    request: Request, source_pair: str = Form(...),
     label: str | None = Form(default=None),
     visible: str | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
@@ -369,7 +370,7 @@ def instrument_add_display_field(
     _require_instrument_editable(review_session)
 
     if ":" not in source_pair:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?display_source_error=invalid_pair"
@@ -389,14 +390,14 @@ def instrument_add_display_field(
             actor=user,
         )
     except instruments_service.DisplaySourceError:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?display_source_error={source_type}:{source_field}"
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post(
@@ -404,7 +405,7 @@ def instrument_add_display_field(
     "/display-fields/{df_id}/edit"
 )
 def instrument_edit_display_field(
-    df_id: int,
+    request: Request, df_id: int,
     visible: str | None = Form(default=None),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -433,7 +434,7 @@ def instrument_edit_display_field(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be hidden.",
         )
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post(
@@ -441,7 +442,7 @@ def instrument_edit_display_field(
     "/display-fields/{df_id}/delete"
 )
 def instrument_delete_display_field(
-    df_id: int,
+    request: Request, df_id: int,
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -457,7 +458,7 @@ def instrument_delete_display_field(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Locked display fields cannot be deleted.",
         )
-    return _instruments_redirect(review_session.public_id)
+    return _instruments_redirect(request, review_session.public_id)
 
 
 @router.post(
@@ -465,7 +466,7 @@ def instrument_delete_display_field(
     "/display-fields/{df_id}/move"
 )
 def instrument_move_display_field(
-    df_id: int,
+    request: Request, df_id: int,
     direction: str = Form(...),
     bundle: tuple[Instrument, ReviewSession] = Depends(_require_instrument_in_session),
     user: User = Depends(get_or_create_user),
@@ -488,7 +489,7 @@ def instrument_move_display_field(
         )
     # Preserve editing state on the redirect so the operator stays in
     # the editable view after moving a row.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/instruments"
             f"?editing={instrument.id}#instrument-{instrument.id}"
@@ -605,7 +606,7 @@ async def instrument_bulk_save_fields(
             sort_dirs_raw = [str(v) for v in form.getlist("sort_dir")]
             if len(sort_ids_raw) != len(sort_dirs_raw):
                 db.rollback()
-                return RedirectResponse(
+                return urls.redirect(request,
                     url=(
                         f"/operator/sessions/{review_session.public_id}/instruments"
                         f"?editing={instrument.id}"
@@ -621,7 +622,7 @@ async def instrument_bulk_save_fields(
                     sort_pairs.append((int(raw_id), raw_dir))
                 except ValueError:
                     db.rollback()
-                    return RedirectResponse(
+                    return urls.redirect(request,
                         url=(
                             f"/operator/sessions/{review_session.public_id}/instruments"
                             f"?editing={instrument.id}"
@@ -645,7 +646,7 @@ async def instrument_bulk_save_fields(
                 db.rollback()
                 # The code, never the message: the page maps it to fixed
                 # copy (findings O7).
-                return RedirectResponse(
+                return urls.redirect(request,
                     url=(
                         f"/operator/sessions/{review_session.public_id}/instruments"
                         f"?editing={instrument.id}"
@@ -761,7 +762,7 @@ async def instrument_bulk_save_fields(
         # re-lock the new-model card. Lock/Unlock owns the gating;
         # Save owns persistence. ``?saved=<id>`` triggers the flash
         # confirmation banner on the next render.
-        return RedirectResponse(
+        return urls.redirect(request,
             url=(
                 f"/operator/sessions/{review_session.public_id}/instruments"
                 f"?editing={instrument.id}&saved={instrument.id}"
@@ -1132,7 +1133,7 @@ async def instrument_consolidated_save(
 
 @router.post("/sessions/{session_id}/instruments/add-new-model")
 def instruments_add_new_model(
-    after: int | None = Form(default=None),
+    request: Request, after: int | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1149,7 +1150,7 @@ def instruments_add_new_model(
         after_instrument_id=after,
         actor=user,
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/instruments#instrument-{instrument.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1157,7 +1158,7 @@ def instruments_add_new_model(
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/replicate")
 def instruments_replicate(
-    bundle: tuple[Instrument, ReviewSession] = Depends(
+    request: Request, bundle: tuple[Instrument, ReviewSession] = Depends(
         _require_instrument_in_session
     ),
     user: User = Depends(get_or_create_user),
@@ -1173,7 +1174,7 @@ def instruments_replicate(
         source=source,
         actor=user,
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/instruments#instrument-{instrument.id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1181,7 +1182,7 @@ def instruments_replicate(
 
 @router.post("/sessions/{session_id}/instruments/{instrument_id}/delete")
 def instruments_delete(
-    instrument_id: int,
+    request: Request, instrument_id: int,
     confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -1218,7 +1219,7 @@ def instruments_delete(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         )
-    return _instruments_redirect(
+    return _instruments_redirect(request,
         review_session.public_id,
         fragment=f"instrument-{landing_id}" if landing_id else None,
     )

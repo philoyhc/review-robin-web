@@ -29,6 +29,7 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Reviewee, ReviewSession, User
 from app.db.session import get_db
 from app.services import reviewees as reviewees_service
@@ -90,7 +91,7 @@ def reviewee_results(
     response_class=HTMLResponse,
 )
 def reviewee_results_acknowledge(
-    reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
+    request: Request, reviewee_session: tuple[Reviewee, ReviewSession] = Depends(
         require_reviewee_with_current_grant
     ),
     user: User = Depends(get_or_create_user),
@@ -104,7 +105,7 @@ def reviewee_results_acknowledge(
     reviewees_service.acknowledge_results(
         db, review_session=review_session, reviewee=reviewee, user=user
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{review_session.public_id}/results",
         status_code=status.HTTP_303_SEE_OTHER,
     )

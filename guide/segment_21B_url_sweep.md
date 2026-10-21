@@ -168,6 +168,13 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
   travel app-relative (`here()`), which B3's own read checks. The crawl
   takes `cookies=False` on Validate and the sys-admin users page until B6
   scopes their cookies.
+- **2026-10-21, B5.** Every route that redirects, or calls a helper that
+  does, takes `request: Request` as its first parameter, and so do the
+  helpers (`_redirect_keeping_selection`, `_instruments_redirect`,
+  `dismiss_held_upload`, `_users_redirect`, `_handle_toggle`). The rewrite
+  was mechanical, driven by the AST. Rejected: middleware that prefixes a
+  `Location` header after the fact. It would touch less code, but it hides
+  where a redirect is built, and the plan's `redirect()` keeps it visible.
 
 ## PR ladder
 

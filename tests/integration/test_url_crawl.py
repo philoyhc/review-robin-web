@@ -200,3 +200,32 @@ def test_a_reviewer_page_emits_only_prefixed_urls(
     response = rae_client.get(f"{MOUNT}{path.format(sid=active_session_id)}")
     assert response.status_code == 200
     assert leaks(response) == []
+
+
+# --- B5: redirects ---
+
+
+def test_the_root_redirects_land_under_the_mount(mounted_client: TestClient) -> None:
+    for path in ("/", "/operator"):
+        response = mounted_client.get(f"{MOUNT}{path}", follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers["location"] == f"{MOUNT}/operator/sessions"
+
+
+def test_a_post_redirect_lands_under_the_mount(mounted_client: TestClient) -> None:
+    response = mounted_client.post(
+        f"{MOUNT}/operator/sessions", data={"name": "R", "code": "redir"}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].startswith(f"{MOUNT}/operator/sessions/")
+    assert leaks(response) == []
+
+
+@pytest.mark.parametrize("path", ["/me/sessions/{sid}", "/me/sessions/{sid}/summary"])
+def test_a_reviewer_redirect_lands_under_the_mount(
+    active_session_id: str, rae_client: TestClient, path: str
+) -> None:
+    response = rae_client.get(f"{MOUNT}{path.format(sid=active_session_id)}", follow_redirects=False)
+    assert response.status_code in (302, 303, 307)
+    assert response.headers["location"].startswith(f"{MOUNT}/me")
+    assert leaks(response) == []

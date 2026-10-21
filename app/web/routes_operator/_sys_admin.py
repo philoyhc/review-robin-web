@@ -39,6 +39,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.auth.roles import effective_super_admin_emails
 from app.db.models import User
 from app.db.session import get_db
@@ -102,7 +103,7 @@ def sys_admin_root(
     target = f"{_ADMIN_PATH}/sessions"
     if return_to:
         target = f"{target}?return_to={quote(return_to, safe='/')}"
-    response = RedirectResponse(url=target, status_code=status.HTTP_303_SEE_OTHER)
+    response = urls.redirect(request, url=target, status_code=status.HTTP_303_SEE_OTHER)
     if return_to:
         _remember_return_to(response, _admin_return_target(request, return_to, db, user))
     return response
@@ -430,7 +431,7 @@ def sys_admin_users_search_options(
 
 @router.post("/sys-admin/sessions/{session_id}/adopt")
 def sys_admin_adopt_session(
-    session_id: str,
+    request: Request, session_id: str,
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -462,7 +463,7 @@ def sys_admin_adopt_session(
             # allowlist, so the latter shouldn't fire) — fall through to the
             # redirect either way; the goal state is "actor owns it".
             pass
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -478,7 +479,7 @@ def _load_target(db: Session, user_id: int) -> User:
 
 
 def _users_redirect(
-    error_code: str | None = None,
+    request: Request, error_code: str | None = None,
     selected_user_id: int | None = None,
     view: str = "",
     refused_user_id: int | None = None,
@@ -501,10 +502,11 @@ def _users_redirect(
         params.append(f"selected={selected_user_id}")
     if params:
         url = f"{url}?{'&'.join(params)}"
-    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+    return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _handle_toggle(
+    request: Request,
     action: Callable[..., Any],
     /,
     *,
@@ -537,17 +539,17 @@ def _handle_toggle(
                 status_code=status.HTTP_409_CONFLICT, detail=exc.message
             ) from exc
         raise
-    return _users_redirect(selected_user_id=selected_user_id, view=view)
+    return _users_redirect(request, selected_user_id=selected_user_id, view=view)
 
 
 @router.post("/sys-admin/users/{user_id}/admit")
 def admit_user(
-    user_id: int,
+    request: Request, user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(
+    return _handle_toggle(request,
         users_service.admit,
         db=db,
         actor=actor,
@@ -559,12 +561,12 @@ def admit_user(
 
 @router.post("/sys-admin/users/{user_id}/revoke")
 def revoke_user(
-    user_id: int,
+    request: Request, user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(
+    return _handle_toggle(request,
         users_service.revoke,
         db=db,
         actor=actor,
@@ -576,12 +578,12 @@ def revoke_user(
 
 @router.post("/sys-admin/users/{user_id}/promote")
 def promote_user(
-    user_id: int,
+    request: Request, user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(
+    return _handle_toggle(request,
         users_service.promote,
         db=db,
         actor=actor,
@@ -593,12 +595,12 @@ def promote_user(
 
 @router.post("/sys-admin/users/{user_id}/demote")
 def demote_user(
-    user_id: int,
+    request: Request, user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(
+    return _handle_toggle(request,
         users_service.demote,
         db=db,
         actor=actor,
@@ -610,12 +612,12 @@ def demote_user(
 
 @router.post("/sys-admin/users/{user_id}/remove-from-all-sessions")
 def remove_from_all_sessions(
-    user_id: int,
+    request: Request, user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    return _handle_toggle(
+    return _handle_toggle(request,
         users_service.remove_from_all_sessions,
         db=db,
         actor=actor,
@@ -627,14 +629,14 @@ def remove_from_all_sessions(
 
 @router.post("/sys-admin/users/{user_id}/delete")
 def remove_user(
-    user_id: int,
+    request: Request, user_id: int,
     view: str = Form(default=""),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     # ``remove_user`` deletes the row outright, so there's no row
     # to re-select on the redirect target.
-    return _handle_toggle(
+    return _handle_toggle(request,
         users_service.remove_user,
         db=db,
         actor=actor,
@@ -657,7 +659,7 @@ _BULK_ACTIONS: dict[str, str] = {
 
 @router.post("/sys-admin/users/bulk-{action}")
 def bulk_account_action(
-    action: str,
+    request: Request, action: str,
     user_ids: list[int] = Form(default_factory=list),
     view: str = Form(default=""),
     confirm: str = Form(default=""),
@@ -698,20 +700,20 @@ def bulk_account_action(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail=exc.message
             ) from exc
-        return _users_redirect(
+        return _users_redirect(request,
             error_code=exc.code, refused_user_id=exc.user_id, view=view
         )
     # One row keeps the single-row actions' landing: its chip on, its
     # page open. Several have no one row to land on; a delete, none left.
     single = len(set(user_ids)) == 1 and batch_action != "delete"
-    return _users_redirect(
+    return _users_redirect(request,
         selected_user_id=user_ids[0] if single else None, view=view
     )
 
 
 @router.post("/sys-admin/users/invite")
 def invite_user(
-    email: str = Form(...),
+    request: Request, email: str = Form(...),
     invite_as_sys_admin: str | None = Form(default=None),
     actor: User = Depends(require_sys_admin),
     db: Session = Depends(get_db),
@@ -726,6 +728,6 @@ def invite_user(
         )
     except users_service.UserOperationError as exc:
         url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"
-        return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+        return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
     # Selected, so its chip turns on whatever chips are remembered.
-    return _users_redirect(selected_user_id=invited.id)
+    return _users_redirect(request, selected_user_id=invited.id)

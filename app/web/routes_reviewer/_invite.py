@@ -7,9 +7,10 @@ Carved out of the single-file ``routes_reviewer.py`` in Segment
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import User
 from app.db.session import get_db
 from app.services import invitations as invitations_service
@@ -74,7 +75,7 @@ def reviewer_invite(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

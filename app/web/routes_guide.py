@@ -22,7 +22,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -80,7 +80,7 @@ def guide(
     # additionally stops rendering the link for such a viewer, so the
     # bounce is the safety net rather than the normal path.
     if not visible_audiences(db, user):
-        return RedirectResponse(
+        return urls.redirect(request,
             url="/about", status_code=status.HTTP_303_SEE_OTHER
         )
     return_to = resolve_return_to(

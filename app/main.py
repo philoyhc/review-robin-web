@@ -9,6 +9,7 @@ from app.auth.roles import effective_super_admin_emails
 from app.config import settings, validate_critical_settings
 from app.db.models import User
 from app.logging_config import get_logger
+from app.web import urls
 from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
 from app.web.oversized_ids import refuse_oversized_ids
@@ -109,10 +110,10 @@ def create_app() -> FastAPI:
         # access" messaging lives on ``/about`` (which retired
         # ``/request-access``). ``/me`` says in one line why they landed
         # there (participant audit M11).
-        return RedirectResponse(url="/me?notice=organizers", status_code=303)
+        return urls.redirect(request, url="/me?notice=organizers", status_code=303)
 
     @app.get("/", include_in_schema=False)
-    def root(user: User = Depends(get_or_create_user)) -> RedirectResponse:
+    def root(request: Request, user: User = Depends(get_or_create_user)) -> RedirectResponse:
         # Role-aware landing (18R Item 6). Operators + sys-admins land on
         # the session lobby; everyone else (participants, or a signed-in
         # user with no roles yet) lands on the ``/me`` dashboard, which
@@ -121,17 +122,17 @@ def create_app() -> FastAPI:
         # allowlist edit). Liveness / metadata now lives only at
         # ``/health``; ``/`` no longer serves a JSON body.
         if user.is_operator or user.is_sys_admin:
-            return RedirectResponse(url="/operator/sessions", status_code=302)
-        return RedirectResponse(url="/me", status_code=302)
+            return urls.redirect(request, url="/operator/sessions", status_code=302)
+        return urls.redirect(request, url="/me", status_code=302)
 
     @app.get("/operator", include_in_schema=False)
     @app.get("/operator/", include_in_schema=False)
-    def operator_root() -> RedirectResponse:
+    def operator_root(request: Request) -> RedirectResponse:
         # Bare ``/operator`` has no page of its own — send everyone to the
         # lobby and let the operator router's ``require_operator`` gate
         # bounce non-operators from there. Deliberately unguarded so one
         # place (the lobby gate) decides operator access, not two.
-        return RedirectResponse(url="/operator/sessions", status_code=302)
+        return urls.redirect(request, url="/operator/sessions", status_code=302)
 
     return app
 
