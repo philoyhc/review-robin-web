@@ -438,6 +438,7 @@
             <input type="text"
                    data-card-title-input data-unlock-only
                    form="dfsave-{{ instrument.id }}" name="short_label"
+                   autocomplete="off"
                    maxlength="32"
                    value="{{ instrument.short_label or '' }}"
                    placeholder="Rename the instrument (32 chars max)"
@@ -4338,6 +4339,18 @@
               input.addEventListener('keydown', _titleKeyGuard);
               input.addEventListener('keypress', _titleKeyGuard);
               input.addEventListener('keyup', _titleKeyGuard);
+              // 19Y Item 6 — Band 2's heading follows the name as it is
+              // typed, by the same rule Lock applies; still unsaved.
+              input.addEventListener('input', function () {
+                window.newModelSyncTextViews(input.closest('[data-instrument-card]'));
+              });
+            });
+            // ...and the description, which is the heading itself on a
+            // lone nameless instrument.
+            document.querySelectorAll('[data-intro-description-input]').forEach(function (box) {
+              box.addEventListener('input', function () {
+                window.newModelSyncTextViews(box.closest('[data-instrument-card]'));
+              });
             });
           }
           // Segment 18R Item 2 — collapse ⇒ lock. Collapsing an

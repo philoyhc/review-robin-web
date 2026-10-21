@@ -57,3 +57,11 @@ deployment, not a local run.
   the heading card on the left and the visibility table on the right
   (Item 2: rows, not help cards).
 
+## The preview's heading follows the name as typed (19Y Item 6)
+
+- [ ] **The heading keeps up.** Unlock an instrument card and type a new
+  name in Band 1: "Preview review instrument"'s heading shows it as you
+  type (`#N: name` with several instruments). Cancel: the old name comes
+  back (in Firefox too). Give a nameless instrument its first name: the
+  same. On a session's only instrument with no name, typing the
+  description changes the heading as you type.
