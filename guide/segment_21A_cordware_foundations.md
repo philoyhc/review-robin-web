@@ -107,6 +107,13 @@ would start a command that does not exist yet (§ PR ladder, A1).
 - The import-boundary test lives in `cordware/tests/`: it guards
   Cordware's rule, and it runs on every PR because both CI jobs collect
   that path (v0.8 §6).
+- Tooling scope for 21A (author, 2026-10-21; outline Open question 6):
+  ruff and pytest take `cordware/`. The doc-reference and spec-coverage
+  gates stay RRW's, and `cordware/spec/` is checked by hand at close.
+- `cordware/tests/` is a package with its own `__init__.py`. Root
+  `tests/` has none, so a shared basename such as `test_health.py` would
+  break collection. RRW's `tests/conftest.py` fixtures don't reach it,
+  and the host's tests need no database.
 - No `cordware/docs/`, `cordware/guide/` or `cordware/AGENTS.md` yet
   (v0.8 §2: "create host files only when they are needed"). Only
   `cordware/spec/` is created, at close, for the settled contract.
@@ -159,21 +166,27 @@ Taken 2026-10-21 at `8b430421`.
    `cordware/tests/` (host alone, host + RRW, an unknown name refusing to
    start, the lifespan stub, RRW's startup failure failing the host).
    It also adds `cordware*` to package discovery, `cordware/tests` to
-   `testpaths`, and `cordware/` to the dev artifact. Must not touch
+   `testpaths`, `cordware/` to the dev artifact, and a commented
+   `CORDWARE_APPS` line to `.env.example`. Must not touch
    `app/` or any start command. ~~**After it deploys, the author switches
    the dev slot's start command to `cordware.main:app`, before A2
    merges.**~~ (Struck 2026-10-21: the slot is dormant, see § Status.)
    A2 removes the object the old command names.
 4. **A2, built once.** Removes `app = create_app()`. Moves `return_to`
-   onto the request's router, the 16 importers onto a session-scoped
-   `rrw_app` fixture in `tests/conftest.py`, the browser harness onto
+   onto the request's router, and the test importers onto a
+   session-scoped `rrw_app` fixture in `tests/conftest.py`.
+   `tests/integration/_public_id.py` takes the app as an argument, and
+   `tools/bench_roster_scale.py` calls `create_app()` itself. It moves the
+   browser harness onto
    `cordware.main:app`, and every live start line but the NUS runbook's
    (§ Blast radius). Adds
    the "importing `app.main` builds nothing" test. Must not change a
    route, a template or a URL.
 5. **A3, logging and the boundary.** `configure_logging()` moves to the
    host. RRW logs under its named loggers with `application` stamped, and
-   the host emits events 1 and 5. Adds the import-boundary test. Must not
+   the host emits events 1 and 5. `tests/unit/test_logging_config.py`
+   follows `configure_logging()` to the host, and its formatter cases stay.
+   Adds the import-boundary test. Must not
    change a log record's existing fields. This is the last code rung:
    the cumulative `diff-reviewer` read runs here from A1's base SHA.
 6. **Close**, prose only: `cordware/spec/host.md` by `spec-writer`, the
@@ -212,16 +225,13 @@ Taken 2026-10-21 at `8b430421`.
 
 ## Open questions
 
-1. **Does RRW's `/health` stay reachable at `/reviewrobin/health`?** v0.8
-   §3 calls it optional. Recommended: keep it (it costs nothing and it
-   probes RRW alone). The author decides in 21D.
-2. **The logged form of `application`**: a top-level JSON key, or inside
-   `extra`. Decided in A3 against how Log Analytics queries it
-   (outline Open question 7, the author's in Azure).
-3. **Repo-wide tooling's path scope** (outline Open question 6).
-   Recommended for 21A: ruff and pytest take `cordware/`, the
-   doc-reference and spec-coverage gates stay RRW's, and
-   `cordware/spec/` is checked by hand at close. Decided in A1.
+1. ~~RRW's `/health` at `/reviewrobin/health`?~~ It stays reachable:
+   21D keeps RRW's route under the mount (author, 2026-10-21).
+2. ~~The logged form of `application`?~~ A top-level key. RRW's
+   `JsonFormatter` already lifts every `extra` field to the top level
+   (`app/logging_config.py`), so there is nothing to choose.
+3. ~~Repo-wide tooling's path scope?~~ As recommended: see § Judgment
+   calls (author, 2026-10-21).
 
 4. ~~When does the dev deploy workflow come back on?~~ When the Azure
    work settles. Until then the slot stays dormant and testing is on
@@ -253,6 +263,7 @@ Taken 2026-10-21 at `8b430421`.
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the lifespan contract and 21A's path scope recorded as settled (close).
 - `CLAUDE.md` — the run command (A2). `AGENTS.md` twinned.
 - `README.md` — the run command (A2).
+- `.env.example` — a commented `CORDWARE_APPS` line, unset meaning every registered application (A1).
 - `pyproject.toml` — package discovery and `testpaths` take in `cordware` (A1).
 - `.github/workflows/main_app-review-robin-web-dev.yml` — the artifact carries `cordware/` (A1).
 - `.devcontainer/devcontainer.json` — `postStartCommand` on `cordware.main:app` (A2).

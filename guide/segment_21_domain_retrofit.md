@@ -96,7 +96,8 @@ still call RRW's own app at app-relative paths. Also rejected (sequence
   by rule, not by allowlist; 21D fixes its return paths.
 - **Failed startup validation in a mounted app fails the process**; **no
   redirects** from old root paths; `/health` is the host's, with no
-  interactive sign-in (all v0.8 §3).
+  interactive sign-in (all v0.8 §3). RRW's own stays reachable at
+  `/reviewrobin/health` (author, 2026-10-21).
 - **Identity** follows v0.8 §3; the points RRW's code turns on:
   - Cordware is the only Easy Auth parser; `users`, roles and audits
     stay RRW's (v0.8 §4). Fake roles key off Cordware's fake marker,
@@ -219,9 +220,11 @@ holds only the gates between them and the constraints a rung must carry.
 5. ~~The dev slot's `APP_ENV`~~ (v0.8 §8): set non-`local` when the slot
    resumes, step 1 of `docs/deployment_dev.md` "Resuming the dev slot"
    (author, 2026-10-21).
-6. **Repo-wide tooling's path scope** once `cordware/` has code (v0.8
-   §8): `tools/`, the doc gates, ruff, pytest paths and CI's required
-   checks for `cordware/tests/`. Decided in 21A.
+6. ~~Repo-wide tooling's path scope~~ for 21A: ruff and pytest take
+   `cordware/`, RRW's doc gates stay RRW's, and `cordware/spec/` is
+   checked by hand (author, 2026-10-21; `guide/segment_21A_cordware_foundations.md`).
+   CI's required checks need nothing new while one workflow collects both
+   trees; per-owner jobs wait for stage 3.
 7. **Console logs reaching Log Analytics** (v0.8 §8): the author, in Azure.
 8. **Should a service build URLs?** `services/validation.py`'s fix
    links could move to a view. The author rules in 21B.
