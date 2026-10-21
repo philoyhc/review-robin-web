@@ -7,7 +7,7 @@
 {% block top_bar %}{% if participant_chrome %}{% include "reviewer/_top_bar.html" %}{% else %}{{ super() }}{% endif %}{% endblock %}
 
 {% block content %}
-  <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
+  <a class="back-link" href="{{ url(return_to_url) }}">&larr; Back to {{ return_to_label }}</a>
 
   <h1>About</h1>
 
@@ -44,7 +44,7 @@
       <strong>Sessions</strong> page.
     </p>
     <p>
-      Reviews assigned to you appear on <a href="/me">Your reviews</a>. If you're
+      Reviews assigned to you appear on <a href="{{ url('/me') }}">Your reviews</a>. If you're
       expecting a review and don't see it — or you should be able to run reviews
       but can't — access is managed by whoever administers this
       workspace{% if contact_email %}: contact

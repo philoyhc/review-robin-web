@@ -199,6 +199,22 @@ def mounted_client(db: Session, alice: AuthenticatedUser) -> Iterator[TestClient
 
 
 @pytest.fixture
+def make_mounted_client(db: Session) -> Iterator[object]:
+    """Factory for a mounted TestClient signed in as any AuthenticatedUser.
+    Overrides are app-wide, so the last client made decides who is signed
+    in."""
+
+    def _factory(user: AuthenticatedUser) -> TestClient:
+        _make_client(db, user)
+        return TestClient(mounted_rrw())
+
+    try:
+        yield _factory
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.fixture
 def make_client(db: Session) -> Iterator[object]:
     """Factory that returns a TestClient signed in as any AuthenticatedUser."""
 

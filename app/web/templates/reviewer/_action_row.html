@@ -44,11 +44,11 @@
     {% else %}
       <button class="btn secondary" type="submit" data-rs-save>Save</button>
       <a class="btn secondary"
-         href="/me/sessions/{{ session.public_id }}/{{ current_page_n }}"
+         href="{{ url('/me/sessions/' ~ session.public_id ~ '/' ~ current_page_n) }}"
          data-rs-discard>Cancel</a>
       <button class="btn"
               type="submit"
-              formaction="/me/sessions/{{ session.public_id }}/submit?page={{ current_page_n }}">
+              formaction="{{ url('/me/sessions/' ~ session.public_id ~ '/submit') }}?page={{ current_page_n }}">
         Submit
       </button>
     {% endif %}
@@ -60,13 +60,13 @@
     {% endif %}
     <div class="rs-page-nav-cluster">
       {% if prev_page_url %}
-        <a class="btn secondary" href="{{ prev_page_url }}">&lt; Previous page</a>
+        <a class="btn secondary" href="{{ url(prev_page_url) }}">&lt; Previous page</a>
       {% else %}
         <button class="btn secondary" type="button" disabled aria-disabled="true">&lt; Previous page</button>
       {% endif %}
       <span class="rs-page-nav-counter">Page {{ current_page_n }} of {{ page_count }}</span>
       {% if next_page_url %}
-        <a class="btn secondary" href="{{ next_page_url }}">Next page &gt;</a>
+        <a class="btn secondary" href="{{ url(next_page_url) }}">Next page &gt;</a>
       {% else %}
         <button class="btn secondary" type="button" disabled aria-disabled="true">Next page &gt;</button>
       {% endif %}

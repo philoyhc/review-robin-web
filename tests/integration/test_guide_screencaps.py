@@ -1,7 +1,7 @@
 """The Guide's screencaps — the app's first static assets.
 
-Every image is referenced by an absolute `/static/guide/...` path in
-`guide.html` and served by the single `StaticFiles` mount in `app.main`.
+Every image is referenced by an app-relative `/static/guide/...` path,
+through `url()` (segment 21B), in `guide.html` and served by the single `StaticFiles` mount in `app.main`.
 Two ways this breaks silently, both covered here: a `<img>` whose file
 was never committed (a 404 the page renders as a broken icon), and a
 committed file no template points at (dead weight in the deploy
@@ -31,8 +31,13 @@ GUIDE_TEMPLATE = (
 )
 BASE_TEMPLATE = GUIDE_TEMPLATE.with_name("base.html")
 
+def _src(name: str) -> str:
+    """How ``guide.html`` writes a screencap's ``src`` (through ``url()``)."""
+    return f"src=\"{{{{ url('/static/guide/{name}') }}}}\""
+
+
 REFERENCED = sorted(
-    set(re.findall(r'src="/static/guide/([^"]+)"', GUIDE_TEMPLATE.read_text()))
+    set(re.findall(r"src=\"\{\{ url\('/static/guide/([^']+)'\) \}\}\"", GUIDE_TEMPLATE.read_text()))
 )
 
 
@@ -66,7 +71,7 @@ def test_every_screencap_carries_alt_text(name: str) -> None:
     """A screenshot with no alt text is invisible to anyone not looking at
     it, and these carry the page's only account of some UI states."""
     markup = " ".join(GUIDE_TEMPLATE.read_text().split())
-    figure = markup.split(f'src="/static/guide/{name}"', 1)[1]
+    figure = markup.split(_src(name), 1)[1]
     figure = figure[: figure.index(">")]
 
     assert 'alt="' in figure, name
@@ -124,7 +129,7 @@ def _png_width(path: pathlib.Path) -> int:
 @pytest.mark.parametrize("name", REFERENCED)
 def test_narrow_captures_carry_the_narrow_figure_class(name: str) -> None:
     markup = " ".join(GUIDE_TEMPLATE.read_text().split())
-    figure = markup.rsplit(f'src="/static/guide/{name}"', 1)[0]
+    figure = markup.rsplit(_src(name), 1)[0]
     figure = figure[figure.rindex("<figure") :]
 
     is_narrow = _png_width(STATIC_GUIDE / name) < NARROW_MAX_WIDTH
@@ -177,13 +182,13 @@ def test_both_halves_of_a_pair_render_in_the_same_figure(name: str) -> None:
     ever failed to hide one; two alt texts would describe one picture two
     ways to whoever hears only the visible half."""
     markup = " ".join(GUIDE_TEMPLATE.read_text().split())
-    figure = markup.split(f'src="/static/guide/{name}"', 1)[1]
+    figure = markup.split(_src(name), 1)[1]
     figure = figure[: figure.index("</figure>")]
 
-    assert f'src="/static/guide/{_stem(name)}{DARK_SUFFIX}"' in figure, name
-    light_alt = markup.split(f'src="/static/guide/{name}"', 1)[1]
+    assert _src(f"{_stem(name)}{DARK_SUFFIX}") in figure, name
+    light_alt = markup.split(_src(name), 1)[1]
     light_alt = light_alt[: light_alt.index(">")].split('alt="', 1)[1].split('"')[0]
-    dark_alt = markup.split(f'src="/static/guide/{_stem(name)}{DARK_SUFFIX}"', 1)[1]
+    dark_alt = markup.split(_src(f"{_stem(name)}{DARK_SUFFIX}"), 1)[1]
     dark_alt = dark_alt[: dark_alt.index(">")].split('alt="', 1)[1].split('"')[0]
 
     assert light_alt == dark_alt, name
