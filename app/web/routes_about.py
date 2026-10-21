@@ -13,10 +13,12 @@ from app.db.session import get_db
 from app.web.deps import get_or_create_user
 from app.web import views
 from app.web.return_to import resolve_return_to
+from app.web import urls
 
 router = APIRouter()
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+urls.install(_templates)
 _templates.env.globals["app_version"] = settings.app_version
 
 

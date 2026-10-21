@@ -33,10 +33,12 @@ from app.web.deps import get_or_create_user
 from app.web import views
 from app.web.return_to import resolve_return_to
 from app.web.views._guide import visible_audiences, visible_sections
+from app.web import urls
 
 router = APIRouter()
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+urls.install(_templates)
 # The chrome's "(version …)" reads it; every other environment that
 # renders base.html sets it too (participant audit M8).
 _templates.env.globals["app_version"] = settings.app_version

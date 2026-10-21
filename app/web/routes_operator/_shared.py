@@ -57,6 +57,7 @@ from app.web.date_filters import (
     format_datetime_filter,
 )
 from app.web.deps import request_correlation_id, require_session_operator
+from app.web import urls
 
 
 # ------------------------------------------------------------------ #
@@ -73,6 +74,7 @@ _templates = Jinja2Templates(
     directory=str(Path(__file__).parent.parent / "templates"),
     context_processors=[display_timezone_context_processor],
 )
+urls.install(_templates)
 _templates.env.globals["app_version"] = settings.app_version
 _templates.env.globals["display_field_label"] = (
     instruments_service.display_field_label
