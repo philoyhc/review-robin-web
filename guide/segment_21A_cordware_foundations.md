@@ -7,9 +7,9 @@
 stateless `cordware/` host serves RRW, mounted at `/`, and every start
 command names it
 
-**Segment 21's hold stands** (author, 2026-10-16). This plan is written
-so the work is ready; no build rung starts until the author lifts the
-hold.
+**Segment 21's hold** (author, 2026-10-16) was lifted for A0 on
+2026-10-21, when the author started it. A1 onward still waits on the
+author.
 
 ## Opportunity
 
@@ -129,6 +129,16 @@ Taken 2026-10-21 at `8b430421`.
 | A3 | Logger call sites | 12 `get_logger(` lines; 15 files log at all | `grep -rn 'get_logger(' app --include='*.py'`; `-rlE 'getLogger\|get_logger\('` for 15 |
 | A1 | RRW's `/health` | `app/web/routes_health.py`, `{"status": "ok"}`; Easy Auth excludes `/health` on both slots | `docs/deployment_dev.md:247`, `docs/deployment_nus.md:159` |
 
+## Status
+
+- **2026-10-21, A0.** The baseline is `docs/cordware_stage0_baseline.md`,
+  taken at `b03fd1be`. **It found the dev deploy workflow
+  `disabled_manually`**: last run 2026-06-03, so the slot has not followed
+  `main` since then. This changes the premise behind the A1 → A2 switch
+  timing and § Decision's rejected alternative. The ordering still holds
+  whenever the workflow is re-enabled. Until then, the author chooses
+  when to deploy (Open question 4).
+
 ## PR ladder
 
 1. **This plan**, prose only.
@@ -204,6 +214,11 @@ Taken 2026-10-21 at `8b430421`.
    Recommended for 21A: ruff and pytest take `cordware/`, the
    doc-reference and spec-coverage gates stay RRW's, and
    `cordware/spec/` is checked by hand at close. Decided in A1.
+
+4. **Does the dev deploy workflow come back on before A1?** It has been
+   `disabled_manually` since 2026-06-03 (§ Status). If it stays off, the
+   dev slot is deployed by dispatch, and the author dispatches after A1
+   and again after A2. The author decides before A1 merges.
 
 ## Out of scope
 
