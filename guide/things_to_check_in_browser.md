@@ -48,20 +48,17 @@ deployment, not a local run.
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
 
-## The preview's heading follows the name as typed (19Y Item 6)
+## Visibility "off" reads "Not shown" (19Y Item 8)
 
-- [ ] **The heading keeps up.** Unlock an instrument card and type a new
-  name in Band 1: "Preview review instrument"'s heading shows it as you
-  type (`#N: name` with several instruments). Cancel: the old name comes
-  back (in Firefox too). Give a nameless instrument its first name: the
-  same. On a session's only instrument with no name, typing the
-  description changes the heading as you type.
-
-## The Guide's screencaps and wording catch up (19Y Item 7)
-
-- [ ] **The Guide shows the new screencaps.** Open `/guide` in light and
-  dark: Create session, both roster cards and both Band 2 previews
-  (unlocked, then locked) show the new images in the right theme, and
-  the Band 2 text reads as in `Guide_6a.docx`, plus a sentence on the
-  Layout chip; both Band 2 previews show the same instrument
-  (`Guide_6b.docx`).
+- [ ] **The reviewer sees words, not a dash.** On a reviewer's page, the
+  "Who can see what you wrote" card reads "Not shown" where an audience
+  sees nothing (Reviewees while the session runs; You after release
+  unless the operator set Raw), in the muted pill.
+- [ ] **The instrument card matches.** Locked, Band 2's card reads the
+  same; unlocked, a cell's chip cycles through to "Not shown", the fixed
+  Reviewees · Session ongoing switch reads "Not shown", and the locked
+  table repaints to match before Save. The wider pill keeps the table
+  tidy in Layouts 1 and 2 and at a narrow width.
+- [ ] **The Guide's screencaps catch up.** Reshoot
+  `app/web/static/guide/instrument-card-preview.png`, `-dark`, and the
+  two `instrument-card-preview-unlocked` images, which still show "—".

@@ -1292,12 +1292,12 @@ REVIEWER_IDENTITY_LABELS: dict[str, str] = {
 # because they're internal admin-side viewers and the reviewer
 # doesn't need to reason about them; the heading suffix
 # "(other than admin)" makes that explicit. NULL ≡ "off in this
-# window" renders as the em-dash placeholder; (audience, window)
+# window" renders as "Not shown" (19Y Item 8); (audience, window)
 # cells the operator can't author are pinned to their baseline
 # label regardless of stored state (Reviewers Session-ongoing
 # always Raw, Reviewees Session-ongoing always off).
 _REVIEWER_VP_MODE_LABELS: dict[str | None, str] = {
-    None: "—",
+    None: "Not shown",
     "raw": "Raw responses",
     "anonymized": "Anonymized responses",
     "summarized": "Anonymized summaries",
@@ -1319,7 +1319,7 @@ def build_reviewer_visibility_rows(
     with no persisted policy row fall back to
     :data:`_BAND3_VISIBILITY_DEFAULTS`. The display labels are
     the Band 3 cycle chips' own words (``Raw responses`` /
-    ``Anonymized responses`` / ``Anonymized summaries`` / ``—``), so
+    ``Anonymized responses`` / ``Anonymized summaries`` / ``Not shown``), so
     the reviewer reads what the operator authored against and the
     Band 2 preview's live repaint matches a fresh render. Observers
     are intentionally omitted — they're internal admin-side

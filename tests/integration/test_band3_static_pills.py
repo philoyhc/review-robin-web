@@ -40,7 +40,7 @@ from app.db.models import ReviewSession
 #: not the operator's to choose (peer reviewers always see raw responses
 #: while the session is ongoing; reviewees see nothing). The row labels
 #: were pills too until 19T Item 7 made them plain text.
-FIXED_LABELS = ["Raw responses", "—"]
+FIXED_LABELS = ["Raw responses", "Not shown"]
 
 
 @dataclass

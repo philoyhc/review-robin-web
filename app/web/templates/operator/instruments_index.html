@@ -1745,7 +1745,7 @@
           {%- set _re = _b3vis.get("reviewee", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
           {%- set _ob = _b3vis.get("observer", {"while_ongoing_mode": None, "after_release_mode": None}) -%}
           {% set _b3_mode_labels = {
-                "": "—",
+                "": "Not shown",
                 "raw": "Raw responses",
                 "anonymized": "Anonymized responses",
                 "summarized": "Anonymized summaries",
@@ -1770,8 +1770,9 @@
             {# Cycle chip for a (audience, window) cell. ``slugs`` is
                the ordered list of allowed values (with ``""`` for
                "off"); the chip rotates through them on click and
-               writes the matching hidden input. Labels are looked
-               up client-side in the JS ``_VP_CELL_LABELS`` map. #}
+               writes the matching hidden input. The first render
+               reads ``_b3_mode_labels``; a click looks the next label
+               up in the JS ``_VP_CELL_LABELS`` map. #}
             {% set _current = current_mode or "" %}
             <span class="pill pill-count tag-chip is-selected"
                   role="button" tabindex="0"
@@ -1781,7 +1782,7 @@
                   data-new-model-vp-current-slug="{{ _current }}"
                   onclick="newModelCycleVisibilityCell(this)"
                   onkeydown="newModelChipKey(this, event)"
-                  title="Click to cycle">{{ _b3_mode_labels.get(_current, "—") }}</span>
+                  title="Click to cycle">{{ _b3_mode_labels.get(_current, "Not shown") }}</span>
           {% endmacro %}
           {% macro b3_identity_chip(audience, state) %}
             {# ProfileLink updates Item 2 — how much of the reviewer a Raw
@@ -1990,12 +1991,12 @@
                                           ["", "raw"], _pr.after_release_mode) }}
                       </td>
                     </tr>
-                    {# Reviewees — responses about them. — while the
+                    {# Reviewees — responses about them. Not shown while the
                        session runs (the strict per-pair flow rule); all
                        four modes after release. #}
                     <tr>
                       <td style="padding: 4px 8px;">Reviewees</td>
-                      <td style="padding: 4px 8px;">{{ b3_static_pill("—") }}</td>
+                      <td style="padding: 4px 8px;">{{ b3_static_pill("Not shown") }}</td>
                       <td style="padding: 4px 8px;">
                         {{ b3_mode_cycle("reviewee", "after_release",
                                           ["", "raw", "anonymized", "summarized"],
@@ -7227,7 +7228,7 @@
     // mode set; the matching hidden input
     // (``{audience}_{window}_mode``) is updated in lock-step.
     // The label vocabulary is fixed:
-    //   ""           → "—"
+    //   ""           → "Not shown"
     //   "raw"        → "Raw responses"
     //   "anonymized" → "Anonymized responses"
     //   "summarized" → "Anonymized summaries"
@@ -7235,7 +7236,7 @@
     // (``dfsave-<id>`` → ``/instruments/{id}/fields/save``); the
     // service validates per-(audience, window) cell rules.
     var _VP_CELL_LABELS = {
-      "": "—",
+      "": "Not shown",
       "raw": "Raw responses",
       "anonymized": "Anonymized responses",
       "summarized": "Anonymized summaries"

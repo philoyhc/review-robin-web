@@ -2638,6 +2638,10 @@ def test_surface_visibility_policy_card_reflects_persisted_policy(
     # Each mode is a display-only pill, as on Band 2's preview of this
     # card (findings 2026-10-07 A7).
     assert '<span class="pill pill-count">Anonymized summaries</span>' in flat
+    # An off cell says so in words (19Y Item 8): You after release and
+    # Reviewees while the session runs.
+    assert flat.count('<span class="pill pill-count">Not shown</span>') == 2
+    assert '<span class="pill pill-count">—</span>' not in flat
 
 
 def test_an_excluded_group_member_keeps_the_groups_answers(

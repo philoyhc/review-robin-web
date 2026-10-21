@@ -31,10 +31,10 @@ def test_enter_and_space_cycle_a_mode_chip(
     mouse (the author, 2026-10-11)."""
     card = open_unlocked(page, new_session())
     cycle = _cycle(card, "reviewee")
-    expect(cycle).to_have_text("—")
+    expect(cycle).to_have_text("Not shown")
     expect(save_button(card)).to_be_disabled()
     cycle.focus()
-    page.keyboard.press("Enter")  # — → Raw
+    page.keyboard.press("Enter")  # Not shown → Raw
     expect(cycle).to_have_attribute("data-new-model-vp-current-slug", "raw")
     # The keyed cycle marks the card dirty, as a click does.
     expect(save_button(card)).to_be_enabled()
@@ -59,9 +59,9 @@ def test_the_identity_chip_follows_its_cell_and_cycles(
     for audience in ("reviewee", "observer"):
         cycle = _cycle(card, audience)
         chip = card.locator(f'[data-new-model-vp-identity="{audience}"]')
-        expect(cycle).to_have_text("—")
+        expect(cycle).to_have_text("Not shown")
         expect(chip).to_be_hidden()
-        cycle.click()  # — → Raw
+        cycle.click()  # Not shown → Raw
         expect(cycle).to_have_attribute("data-new-model-vp-current-slug", "raw")
         expect(chip).to_be_visible()
         expect(chip).to_have_text("Reviewer name, email")
@@ -79,8 +79,8 @@ def test_the_identity_chip_follows_its_cell_and_cycles(
         cycle.click()  # Raw → Anonymized
         expect(chip).to_be_hidden()
         cycle.click()  # Anonymized → Summarized
-        cycle.click()  # Summarized → —
-        cycle.click()  # — → Raw: the level it held comes back
+        cycle.click()  # Summarized → Not shown
+        cycle.click()  # Not shown → Raw: the level it held comes back
         expect(chip).to_have_text("Reviewer name only")
 
     save(page, card)
@@ -109,7 +109,7 @@ def test_the_released_column_widens_while_an_identity_pill_shows(
     audience, ongoing, released = _widths(card)
     assert abs(ongoing - released) < 2
     cycle = _cycle(card, "reviewee")
-    cycle.click()  # — → Raw: the identity pill shows
+    cycle.click()  # Not shown → Raw: the identity pill shows
     expect(card.locator('[data-new-model-vp-identity="reviewee"]')).to_be_visible()
     audience_wide, ongoing_wide, released_wide = _widths(card)
     assert released_wide > ongoing_wide + 50
