@@ -39,10 +39,12 @@ from starlette.responses import Response
 
 from app.logging_config import get_logger
 from app.services.session_guard import SessionStateConflict
+from app.web import urls
 
 log = get_logger(__name__)
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+urls.install(_templates)
 
 # Per-status headline + default body for the error page.
 _ERROR_COPY: dict[int, tuple[str, str]] = {

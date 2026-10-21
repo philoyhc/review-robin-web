@@ -33,6 +33,7 @@ from app.services import visibility_policies
 from app.services.email_identity import normalize_email
 from app.services import session_lifecycle as lifecycle
 from app.web import views
+from app.web import urls
 from app.web.date_filters import (
     display_timezone_context_processor,
     format_date_filter,
@@ -47,6 +48,7 @@ _templates = Jinja2Templates(
     directory=str(Path(__file__).parent.parent / "templates"),
     context_processors=[display_timezone_context_processor],
 )
+urls.install(_templates)
 _templates.env.globals["app_version"] = settings.app_version
 # Segment 13C — per-numeric-column ``ch`` width for the
 # fixed-layout group-scoped instrument table.

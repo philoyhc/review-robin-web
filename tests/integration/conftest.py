@@ -15,6 +15,7 @@ from app.config import settings
 from app.db.models import Instrument, InstrumentViewPolicy, ReviewSession
 from app.db.session import get_db
 from app.services import visibility_policies
+from _mounted import mounted_rrw
 from _rrw_app import rrw_app
 
 app = rrw_app()
@@ -181,6 +182,18 @@ def client(db: Session, alice: AuthenticatedUser) -> Iterator[TestClient]:
     test_client = _make_client(db, alice)
     try:
         yield test_client
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def mounted_client(db: Session, alice: AuthenticatedUser) -> Iterator[TestClient]:
+    """TestClient signed in as alice, through the Cordware host with RRW
+    mounted at `/reviewrobin` (`tests/_mounted.py`). Request paths carry
+    the prefix."""
+    _make_client(db, alice)
+    try:
+        yield TestClient(mounted_rrw())
     finally:
         app.dependency_overrides.clear()
 
