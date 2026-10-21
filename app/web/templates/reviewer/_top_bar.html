@@ -23,8 +23,8 @@
   {% if user %}
     <div class="chrome-user">
       <div>Signed in as {{ user.display_label }}{% if user.is_super_admin %} (super admin){% elif user.is_sys_admin %} (sys admin){% endif %}</div>
-      {% if request.url.path != "/me" %}
-        <a class="chrome-link" href="/me" data-your-reviews>Your reviews</a>
+      {% if not is_here("/me") %}
+        <a class="chrome-link" href="{{ url('/me') }}" data-your-reviews>Your reviews</a>
       {% endif %}
       {# Guide, for participants who resolve at least one audience
          (2026-09-08). This bar had no Guide entry at all, so a reviewer
@@ -40,12 +40,12 @@
          bounces a viewer who resolves nothing to `/about`, so a stray
          link is cosmetic while a missing one hides a page someone is
          entitled to. #}
-      {% if request.url.path not in ("/guide", "/auth/me/debug")
+      {% if not here_in("/guide", "/auth/me/debug")
             and request.state.guide_hidden is not true %}
-        <a class="chrome-link" href="/guide?return_to={{ request.url.path | urlencode }}">Guide</a>
+        <a class="chrome-link" href="{{ url('/guide') }}?return_to={{ here() | urlencode }}">Guide</a>
       {% endif %}
-      {% if request.url.path not in ("/about", "/auth/me/debug") %}
-        <a class="chrome-link" href="/about?return_to={{ request.url.path | urlencode }}">About</a>
+      {% if not here_in("/about", "/auth/me/debug") %}
+        <a class="chrome-link" href="{{ url('/about') }}?return_to={{ here() | urlencode }}">About</a>
       {% endif %}
       <a class="signout" href="/.auth/logout">Sign out</a>
     </div>

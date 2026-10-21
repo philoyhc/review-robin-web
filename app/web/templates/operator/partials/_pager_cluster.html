@@ -41,16 +41,16 @@
 {%- endmacro %}
 {% if pager %}
   {% set ranges = pager.ranges %}
-  {% set here = pager.offset // pager.page_size %}
+  {% set page_index = pager.offset // pager.page_size %}
   <div class="table-pager-cluster{% if cluster_extra_class %} {{ cluster_extra_class }}{% endif %}"
        role="group"
        aria-label="{{ pager_label | default('Table rows') }}">
-    {{ _step("«", "First rows", ranges[0] if here > 0 else None,
+    {{ _step("«", "First rows", ranges[0] if page_index > 0 else None,
              pager_url_base, pager_anchor) }}
-    {{ _step("‹", "Previous rows", ranges[here - 1] if here > 0 else None,
+    {{ _step("‹", "Previous rows", ranges[page_index - 1] if page_index > 0 else None,
              pager_url_base, pager_anchor) }}
     <details class="table-pager-menu">
-      <summary>{{ ranges[here].label }}</summary>
+      <summary>{{ ranges[page_index].label }}</summary>
       <div class="table-pager-menu-panel">
         {% for link in ranges %}
           {%- if link.is_current -%}
@@ -64,10 +64,10 @@
       </div>
     </details>
     {{ _step("›", "Next rows",
-             ranges[here + 1] if here < ranges | length - 1 else None,
+             ranges[page_index + 1] if page_index < ranges | length - 1 else None,
              pager_url_base, pager_anchor) }}
     {{ _step("»", "Last rows",
-             ranges[-1] if here < ranges | length - 1 else None,
+             ranges[-1] if page_index < ranges | length - 1 else None,
              pager_url_base, pager_anchor) }}
   </div>
 {% endif %}

@@ -118,7 +118,7 @@ def _home_link(request: Request, status_code: int) -> tuple[str, str]:
     """
     if status_code == status.HTTP_401_UNAUTHORIZED:
         return "/.auth/logout", "Sign out"
-    if request.url.path.startswith("/operator"):
+    if urls.app_path(request).startswith("/operator"):
         return "/operator/sessions", "Go to Sessions"
     return "/me", "Go to your reviews"
 
@@ -157,7 +157,7 @@ async def _http_exception_handler(
             "http exception",
             extra={
                 "status_code": exc.status_code,
-                "path": request.url.path,
+                "path": urls.app_path(request),
                 "method": request.method,
             },
         )
@@ -170,7 +170,7 @@ async def _http_exception_handler(
             extra={
                 "status_code": exc.status_code,
                 "detail": detail,
-                "path": request.url.path,
+                "path": urls.app_path(request),
                 "method": request.method,
             },
         )
@@ -196,7 +196,7 @@ async def _unhandled_exception_handler(
 ) -> Response:
     log.error(
         "unhandled exception",
-        extra={"path": request.url.path, "method": request.method},
+        extra={"path": urls.app_path(request), "method": request.method},
         exc_info=exc,
     )
     return _render_error(request, status.HTTP_500_INTERNAL_SERVER_ERROR)

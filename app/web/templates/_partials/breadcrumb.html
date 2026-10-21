@@ -1,11 +1,12 @@
-{# Renders a breadcrumb trail from `breadcrumbs` (list of (label, url|None) tuples).
-   The last tuple has url=None and renders as a non-link span marking the current page. #}
+{# Renders a breadcrumb trail from `breadcrumbs` (list of (label, href|None) tuples;
+   hrefs are app-relative, and `url()` adds the mount prefix).
+   The last tuple has href=None and renders as a non-link span marking the current page. #}
 {% set crumbs = breadcrumbs|default([]) %}
 {% if crumbs %}
   <nav class="breadcrumb" aria-label="Breadcrumb">
-    {% for label, url in crumbs %}
-      {% if url %}
-        <a href="{{ url }}">{{ label }}</a>
+    {% for label, href in crumbs %}
+      {% if href %}
+        <a href="{{ url(href) }}">{{ label }}</a>
       {% else %}
         <span aria-current="page">{{ label }}</span>
       {% endif %}

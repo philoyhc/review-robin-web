@@ -45,10 +45,19 @@ URLS_MODULE = "app/web/urls.py"
 ALLOWLIST_FILE = Path(__file__).with_name("url_leaks_allowlist.json")
 
 _HELPERS = re.compile(r"\b(?:url|is_here|here_in|here_under)\(")
-_COMMENTS = re.compile(r"\{#.*?#\}|<!--.*?-->", re.DOTALL)
+# Jinja and HTML comments, CSS and script block comments, and script
+# line comments: none of them is emitted as a URL.
+_COMMENTS = re.compile(
+    r"\{#.*?#\}|<!--.*?-->|/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTILINE
+)
 _TEMPLATED_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])\{[{%]-?\s*+(?!url\()""")
 _BARE_ROOT_ATTR = re.compile(r"""\b(?:href|action|formaction|src)=(["'])/\1""")
 _URL_PATH = re.compile(r"\burl\.path\b")
+_HELPER_NAMES = r"(?:url|here|is_here|here_in|here_under)"
+_REBINDS = re.compile(
+    rf"\{{%-?\s*(?:set\s+{_HELPER_NAMES}\b|for\s+[^%]*\b{_HELPER_NAMES}\b[^%]*\bin\b)"
+    rf"|\bmacro\s+\w+\([^)]*\b{_HELPER_NAMES}\b"
+)
 
 
 def _segments() -> list[str]:
@@ -171,6 +180,18 @@ def test_no_url_leaks_beyond_the_allowlist() -> None:
     assert not stale, (
         f"Allowlisted leaks no longer found; remove them from {_rel(ALLOWLIST_FILE)}: {stale}"
     )
+
+
+def test_no_template_rebinds_a_url_helper() -> None:
+    """A ``{% set url = … %}`` or a loop variable named ``here`` hides the
+    global for the rest of its scope, and every link under it renders
+    unprefixed."""
+    found = [
+        _rel(path)
+        for path in sorted(TEMPLATES.rglob("*.html"))
+        if _REBINDS.search(_blank_comments(path.read_text()))
+    ]
+    assert not found, f"templates rebind a URL helper name: {found}"
 
 
 def test_segments_come_from_the_router() -> None:
