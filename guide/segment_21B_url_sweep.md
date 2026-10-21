@@ -44,7 +44,8 @@ app-relative strings (`/operator/sessions/…`), as the outline requires
   passes `#…`, `?…`, `mailto:` and absolute URLs through unchanged. It is
   used for every `href`, `action`, `formaction` and `src`, and for every
   root string in an inline script.
-- **Redirects.** `redirect(request, path, status_code=303)` in
+- **Redirects.** `redirect(request, url, status_code=307, headers=None)`, with
+  `RedirectResponse`'s own parameters and defaults, in
   `app/web/urls.py` is the only place that constructs a
   `RedirectResponse`.
 - **Cookies.** `cookie_path(request, path)` supplies every `set_cookie`
@@ -88,8 +89,10 @@ proves that the helpers prefix (§ Semantics).
   put `here()` (plus the query, where they do today) into `return_to`.
   `app/web/return_to.py` is unchanged apart from receiving app-relative
   input.
-- **Redirect status codes and query strings are unchanged.**
-  `redirect()` takes the same arguments a call site passes today.
+- **Redirect status codes, headers and query strings are unchanged.**
+  `redirect()` takes the same arguments a call site passes today,
+  `url=` and `headers=` included (`_instruments.py` sends
+  `X-FieldKey-Error`), so each call site moves over unchanged.
 - **Cookies.** A cookie's `Path` is `root_path` + today's path. Under the
   mount, cookies set before the flip don't match. 21D accepts that (no
   old-path compatibility, v0.8 §3).
