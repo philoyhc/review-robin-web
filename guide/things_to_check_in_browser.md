@@ -62,4 +62,6 @@ deployment, not a local run.
 - [ ] **The heading keeps up.** Unlock an instrument card and type a new
   name in Band 1: "Preview review instrument"'s heading shows it as you
   type (`#N: name` with several instruments). Cancel: the old name comes
-  back. Give a nameless instrument its first name: the same.
+  back (in Firefox too). Give a nameless instrument its first name: the
+  same. On a session's only instrument with no name, typing the
+  description changes the heading as you type.

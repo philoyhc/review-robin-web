@@ -324,7 +324,9 @@ The `<summary>` carries, in document order:
   it discards and reloads instead — so the sync only ever
   copies persisted values. An empty
   value clears the label and reverts the view to the muted
-  `Instrument_{session_seq}` fallback.
+  `Instrument_{session_seq}` fallback. Typing in the box also
+  updates Band 2's reviewer-preview heading live (see Band 2's
+  Heading bullet).
 - **Status pills:**
   - **Set up / Not set up** — mirrors the workflow
     card's `instruments_service.is_configured(db,
@@ -921,9 +923,14 @@ Top-of-band intro card carrying:
   `#{N}` with no short label; in a one-instrument session the short
   label alone, or the description in its place, and no heading at all
   when there is neither — locked, such a card (`data-intro-empty`) is
-  not drawn, as the reviewer surface draws none. On Lock,
-  `newModelIntroHeading` recomposes it from the saved values (a node
-  test holds it to the Python rule). Per the operator-identifier
+  not drawn, as the reviewer surface draws none. The heading follows
+  the card's name box (`data-card-title-input`) and its description box
+  (`data-intro-description-input`, the heading itself on a lone nameless
+  instrument) as they are typed: each `input` event runs
+  `newModelSyncTextViews(card)`, which recomposes it
+  through `newModelIntroHeading`, and the card stays unsaved until
+  Save. Lock runs the same recompose (a node test holds it to the
+  Python rule). Per the operator-identifier
   policy the short label is **edited from the card title** in the
   `<summary>` above (`Setup → Instruments` card), not from this
   preview surface.
@@ -938,8 +945,11 @@ Top-of-band intro card carrying:
   `newModelSetLock` recomposes the heading and subtitle from the
   label and textarea (the same `newModelSyncTextViews` call the card
   title uses — see that bullet above). A *dirty* card cannot reach
-  that path — it discards and reloads instead — so this sync, like
-  the title's, only ever reads persisted values.
+  that path — it discards and reloads instead — so the Lock-time sync,
+  like the title's, only ever reads persisted values; the typing-time
+  sync reads the live, unsaved name and description. The name box takes
+  `autocomplete="off"`, so a Cancel's reload never restores a discarded
+  name the heading no longer shows.
 
 Identity edits ride the bulk-save form: one Save commits identity
 together with Band 1 and Band 3, and the page issues no separate

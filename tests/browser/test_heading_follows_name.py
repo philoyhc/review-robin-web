@@ -34,3 +34,15 @@ def test_typing_a_name_updates_the_heading_unsaved(
     card.locator("[data-intro-description-input]").fill("")
     name.fill("")
     expect(heading).to_be_hidden()
+
+
+def test_a_nameless_lone_instrument_shows_its_description_as_typed(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """With no name, a lone instrument's heading is its description, so
+    the description box drives the heading too."""
+    session_id = new_session()
+    card = open_unlocked(page, session_id)
+    card.locator("[data-card-title-input]").fill("")
+    card.locator("[data-intro-description-input]").fill("Rate your teammates.")
+    expect(card.locator(_HEADING)).to_have_text("Rate your teammates.")
