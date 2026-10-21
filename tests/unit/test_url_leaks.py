@@ -18,15 +18,18 @@ The top-level segments come from RRW's own router, not a list kept here,
 so a new top-level route is covered with no edit. ``/.auth/`` is the
 host's (v0.8 §3) and is not an RRW path.
 
-**`ALLOWLIST` is exact and may only shrink.** It records, per rule and
-file, the leaks the sweep has not reached. A rung that removes leaks
-lowers its counts in the same change, so this file always states what is
+**The allowlist is exact and may only shrink.** `url_leaks_allowlist.json`
+records each leak the sweep has not reached, by rule, file and the
+leaking source itself (whitespace collapsed), so a fixed leak cannot be
+traded for a new one in the same file. A rung that removes leaks deletes
+their entries in the same change, so the file always states what is
 left; at B7 it is empty and goes.
 """
 
 from __future__ import annotations
 
 import ast
+import json
 import re
 from collections import Counter
 from pathlib import Path
@@ -39,6 +42,7 @@ REPO = Path(__file__).resolve().parents[2]
 APP = REPO / "app"
 TEMPLATES = APP / "web" / "templates"
 URLS_MODULE = "app/web/urls.py"
+ALLOWLIST_FILE = Path(__file__).with_name("url_leaks_allowlist.json")
 
 _HELPERS = re.compile(r"\b(?:url|is_here|here_in|here_under)\(")
 _COMMENTS = re.compile(r"\{#.*?#\}|<!--.*?-->", re.DOTALL)
@@ -77,20 +81,38 @@ def _rel(path: Path) -> str:
     return path.relative_to(REPO).as_posix()
 
 
-def template_leaks() -> Counter[tuple[str, str]]:
-    found: Counter[tuple[str, str]] = Counter()
+Leak = tuple[str, str, str]  # (rule, file, the leaking source, whitespace-collapsed)
+
+
+def _norm(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _line_at(text: str, offset: int) -> str:
+    start = text.rfind("\n", 0, offset) + 1
+    end = text.find("\n", offset)
+    return _norm(text[start : end if end != -1 else len(text)])
+
+
+def _template_text_leaks(raw: str, name: str, root: re.Pattern[str]) -> Counter[Leak]:
+    found: Counter[Leak] = Counter()
+    text = _blank_comments(raw)
+    spans = _helper_spans(text)
+    for match in root.finditer(text):
+        if not any(start <= match.start() < end for start, end in spans):
+            found["T1", name, _line_at(text, match.start())] += 1
+    for rule, pattern in (("T1", _BARE_ROOT_ATTR), ("T2", _TEMPLATED_ATTR), ("P3", _URL_PATH)):
+        for match in pattern.finditer(text):
+            found[rule, name, _line_at(text, match.start())] += 1
+    return found
+
+
+def template_leaks() -> Counter[Leak]:
+    found: Counter[Leak] = Counter()
     root = _root_literal()
     for path in sorted(TEMPLATES.rglob("*.html")):
-        text = _blank_comments(path.read_text())
-        spans = _helper_spans(text)
-        name = _rel(path)
-        for match in root.finditer(text):
-            if not any(start <= match.start() < end for start, end in spans):
-                found["T1", name] += 1
-        found["T1", name] += len(_BARE_ROOT_ATTR.findall(text))
-        found["T2", name] += len(_TEMPLATED_ATTR.findall(text))
-        found["P3", name] += len(_URL_PATH.findall(text))
-    return +found
+        found += _template_text_leaks(path.read_text(), _rel(path), root)
+    return found
 
 
 def _is_cookie_path_call(node: ast.expr) -> bool:
@@ -100,150 +122,54 @@ def _is_cookie_path_call(node: ast.expr) -> bool:
     )
 
 
-def python_leaks() -> Counter[tuple[str, str]]:
-    found: Counter[tuple[str, str]] = Counter()
+def python_leaks() -> Counter[Leak]:
+    """Each leak is keyed by its whole call (P1, P2) or line (P3), so a
+    fixed leak cannot be traded for a new one in the same file."""
+    found: Counter[Leak] = Counter()
     for path in sorted(APP.rglob("*.py")):
         name = _rel(path)
         if name == URLS_MODULE:
             continue
-        for node in ast.walk(ast.parse(path.read_text())):
+        source = path.read_text()
+        lines = source.splitlines()
+        for node in ast.walk(ast.parse(source)):
             if isinstance(node, ast.Call):
                 func = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+                call = _norm(ast.get_source_segment(source, node) or "")
                 if func == "RedirectResponse":
-                    found["P1", name] += 1
+                    found["P1", name, call] += 1
                 if func == "set_cookie":
                     path_kw = next((k.value for k in node.keywords if k.arg == "path"), None)
                     if path_kw is None or not _is_cookie_path_call(path_kw):
-                        found["P2", name] += 1
+                        found["P2", name, call] += 1
             if (
                 isinstance(node, ast.Attribute)
                 and node.attr == "path"
                 and isinstance(node.value, ast.Attribute)
                 and node.value.attr == "url"
             ):
-                found["P3", name] += 1
-    return +found
+                found["P3", name, _norm(lines[node.lineno - 1])] += 1
+    return found
 
 
-# Leaks the sweep has not reached yet: (rule, file) -> count. Exact, and
-# only ever lowered.
-ALLOWLIST: dict[tuple[str, str], int] = {
-    ("P1", "app/main.py"): 4,
-    ("P1", "app/web/routes_guide.py"): 1,
-    ("P1", "app/web/routes_operator/_assignments.py"): 5,
-    ("P1", "app/web/routes_operator/_instruments.py"): 15,
-    ("P1", "app/web/routes_operator/_lobby.py"): 7,
-    ("P1", "app/web/routes_operator/_operations.py"): 12,
-    ("P1", "app/web/routes_operator/_preview_surface.py"): 2,
-    ("P1", "app/web/routes_operator/_quick_setup.py"): 5,
-    ("P1", "app/web/routes_operator/_rehydrate.py"): 1,
-    ("P1", "app/web/routes_operator/_session_home.py"): 14,
-    ("P1", "app/web/routes_operator/_settings.py"): 3,
-    ("P1", "app/web/routes_operator/_setup_invite.py"): 2,
-    ("P1", "app/web/routes_operator/_setup_observers.py"): 3,
-    ("P1", "app/web/routes_operator/_setup_relationships.py"): 3,
-    ("P1", "app/web/routes_operator/_setup_reviewees.py"): 3,
-    ("P1", "app/web/routes_operator/_setup_reviewers.py"): 3,
-    ("P1", "app/web/routes_operator/_shared.py"): 4,
-    ("P1", "app/web/routes_operator/_sys_admin.py"): 4,
-    ("P1", "app/web/routes_operator/_workflow.py"): 20,
-    ("P1", "app/web/routes_reviewer/_invite.py"): 1,
-    ("P1", "app/web/routes_reviewer/_results.py"): 1,
-    ("P1", "app/web/routes_reviewer/_summary.py"): 2,
-    ("P1", "app/web/routes_reviewer/_surface/_routes.py"): 9,
-    ("P2", "app/web/routes_operator/_operations.py"): 1,
-    ("P2", "app/web/routes_operator/_sys_admin.py"): 2,
-    ("P3", "app/web/error_handlers.py"): 4,
-    ("P3", "app/web/templates/base.html"): 8,
-    ("P3", "app/web/templates/operator/instruments_index.html"): 1,
-    ("P3", "app/web/templates/operator/session_observers.html"): 1,
-    ("P3", "app/web/templates/operator/session_relationships.html"): 1,
-    ("P3", "app/web/templates/operator/session_reviewees.html"): 1,
-    ("P3", "app/web/templates/operator/session_reviewers.html"): 1,
-    ("P3", "app/web/templates/operator/session_setupinvite.html"): 2,
-    ("P3", "app/web/templates/reviewer/_top_bar.html"): 5,
-    ("T1", "app/web/templates/about.html"): 1,
-    ("T1", "app/web/templates/base.html"): 15,
-    ("T1", "app/web/templates/guide.html"): 41,
-    ("T1", "app/web/templates/operator/instruments_index.html"): 16,
-    ("T1", "app/web/templates/operator/operator_settings.html"): 3,
-    ("T1", "app/web/templates/operator/partials/_email_preview_region.html"): 3,
-    ("T1", "app/web/templates/operator/partials/_next_action_issue_list.html"): 1,
-    ("T1", "app/web/templates/operator/partials/_quick_setup_card.html"): 3,
-    ("T1", "app/web/templates/operator/partials/_roster_lock_card.html"): 2,
-    ("T1", "app/web/templates/operator/partials/next_action_card.html"): 18,
-    ("T1", "app/web/templates/operator/partials/session_top_nav.html"): 12,
-    ("T1", "app/web/templates/operator/partials/sys_admin_top_nav.html"): 2,
-    ("T1", "app/web/templates/operator/session_assignments.html"): 5,
-    ("T1", "app/web/templates/operator/session_detail.html"): 8,
-    ("T1", "app/web/templates/operator/session_extract_data.html"): 15,
-    ("T1", "app/web/templates/operator/session_invitations.html"): 6,
-    ("T1", "app/web/templates/operator/session_invitations_reviewer_detail.html"): 2,
-    ("T1", "app/web/templates/operator/session_new.html"): 2,
-    ("T1", "app/web/templates/operator/session_observers.html"): 2,
-    ("T1", "app/web/templates/operator/session_rehydrate.html"): 4,
-    ("T1", "app/web/templates/operator/session_relationships.html"): 4,
-    ("T1", "app/web/templates/operator/session_responses.html"): 3,
-    ("T1", "app/web/templates/operator/session_responses_reviewee_detail.html"): 1,
-    ("T1", "app/web/templates/operator/session_reviewees.html"): 3,
-    ("T1", "app/web/templates/operator/session_reviewers.html"): 2,
-    ("T1", "app/web/templates/operator/session_setupinvite.html"): 6,
-    ("T1", "app/web/templates/operator/session_validate.html"): 4,
-    ("T1", "app/web/templates/operator/sessions_archived.html"): 3,
-    ("T1", "app/web/templates/operator/sessions_list.html"): 16,
-    ("T1", "app/web/templates/operator/sys_admin_session_audit_log.html"): 1,
-    ("T1", "app/web/templates/operator/sys_admin_session_outbox.html"): 1,
-    ("T1", "app/web/templates/operator/sys_admin_sessions.html"): 4,
-    ("T1", "app/web/templates/operator/sys_admin_users.html"): 1,
-    ("T1", "app/web/templates/reviewer/_action_row.html"): 2,
-    ("T1", "app/web/templates/reviewer/_top_bar.html"): 8,
-    ("T1", "app/web/templates/reviewer/dashboard.html"): 1,
-    ("T1", "app/web/templates/reviewer/invite_mismatch.html"): 1,
-    ("T1", "app/web/templates/reviewer/pre_open.html"): 1,
-    ("T1", "app/web/templates/reviewer/results.html"): 1,
-    ("T1", "app/web/templates/reviewer/review_surface.html"): 4,
-    ("T1", "app/web/templates/reviewer/summary.html"): 3,
-    ("T2", "app/web/templates/_partials/breadcrumb.html"): 1,
-    ("T2", "app/web/templates/_partials/profile_value.html"): 1,
-    ("T2", "app/web/templates/about.html"): 1,
-    ("T2", "app/web/templates/error.html"): 2,
-    ("T2", "app/web/templates/guide.html"): 1,
-    ("T2", "app/web/templates/me_debug.html"): 1,
-    ("T2", "app/web/templates/operator/operator_settings.html"): 2,
-    ("T2", "app/web/templates/operator/partials/_extract_data_card.html"): 1,
-    ("T2", "app/web/templates/operator/partials/_field_labels_editor.html"): 1,
-    ("T2", "app/web/templates/operator/partials/_pager_cluster.html"): 2,
-    ("T2", "app/web/templates/operator/partials/_quick_setup_card.html"): 2,
-    ("T2", "app/web/templates/operator/partials/_upload_problems.html"): 2,
-    ("T2", "app/web/templates/operator/partials/next_action_card.html"): 2,
-    ("T2", "app/web/templates/operator/partials/validation_results.html"): 2,
-    ("T2", "app/web/templates/operator/session_assignments.html"): 2,
-    ("T2", "app/web/templates/operator/session_extract_data.html"): 2,
-    ("T2", "app/web/templates/operator/session_observers.html"): 11,
-    ("T2", "app/web/templates/operator/session_relationships.html"): 13,
-    ("T2", "app/web/templates/operator/session_reviewees.html"): 11,
-    ("T2", "app/web/templates/operator/session_reviewers.html"): 11,
-    ("T2", "app/web/templates/operator/sys_admin_session_audit_log.html"): 5,
-    ("T2", "app/web/templates/operator/sys_admin_sessions.html"): 1,
-    ("T2", "app/web/templates/operator/sys_admin_users.html"): 4,
-    ("T2", "app/web/templates/reviewer/_action_row.html"): 2,
-    ("T2", "app/web/templates/reviewer/_role_chips.html"): 1,
-    ("T2", "app/web/templates/reviewer/collation.html"): 1,
-    ("T2", "app/web/templates/reviewer/dashboard.html"): 4,
-}
+def allowlist() -> Counter[Leak]:
+    """Leaks the sweep has not reached yet, one entry per leaking source.
+    Exact, and only ever shrunk."""
+    entries = json.loads(ALLOWLIST_FILE.read_text())
+    return Counter({(rule, file, text): count for rule, file, text, count in entries})
 
 
 def test_no_url_leaks_beyond_the_allowlist() -> None:
     found = template_leaks() + python_leaks()
-    allowed = Counter(ALLOWLIST)
-    over = {key: (found[key], allowed[key]) for key in found if found[key] > allowed[key]}
-    under = {key: (found[key], allowed[key]) for key in allowed if found[key] < allowed[key]}
-    assert not over, (
-        "URLs emitted without the mount prefix ((rule, file): (found, allowed)); "
-        f"use url() / redirect() / cookie_path() / here() (app/web/urls.py): {over}"
+    allowed = allowlist()
+    new = sorted((found - allowed).elements())
+    stale = sorted((allowed - found).elements())
+    assert not new, (
+        "URLs emitted without the mount prefix; use url() / redirect() / "
+        f"cookie_path() / here() (app/web/urls.py): {new}"
     )
-    assert not under, (
-        f"Fewer leaks than allowed; lower ALLOWLIST to match ((rule, file): (found, allowed)): {under}"
+    assert not stale, (
+        f"Allowlisted leaks no longer found; remove them from {_rel(ALLOWLIST_FILE)}: {stale}"
     )
 
 
@@ -251,15 +177,17 @@ def test_segments_come_from_the_router() -> None:
     assert {"operator", "me", "static"} <= set(_segments())
 
 
-def test_the_rules_catch_a_planted_leak(tmp_path: Path) -> None:
+def test_the_rules_catch_a_planted_leak() -> None:
+    planted = """<a href="/operator/x">a</a> <a href="{{ url('/me') }}">b</a>
+    {# <a href="/me">c</a> #} <a href="{{ link }}">d</a> <a href="/">e</a>
+    {% if is_here("/guide") %}{% endif %} {{ request.url.path }}"""
+    found = _template_text_leaks(planted, "t.html", _root_literal())
+    assert sorted(rule for rule, _, _ in found.elements()) == ["P3", "T1", "T1", "T2"]
+
+
+def test_a_fixed_leak_cannot_be_traded_for_a_new_one() -> None:
     root = _root_literal()
-    text = _blank_comments(
-        """<a href="/operator/x">a</a> <a href="{{ url('/me') }}">b</a>
-        {# <a href="/me">c</a> #} <a href="{{ link }}">d</a> <a href="/">e</a>
-        {% if is_here("/guide") %}{% endif %}"""
-    )
-    spans = _helper_spans(text)
-    leaks = [m for m in root.finditer(text) if not any(s <= m.start() < e for s, e in spans)]
-    assert len(leaks) == 1
-    assert len(_TEMPLATED_ATTR.findall(text)) == 1
-    assert len(_BARE_ROOT_ATTR.findall(text)) == 1
+    before = _template_text_leaks('<a href="/me">a</a>\n<a href="{{ url(\'/guide\') }}">b</a>', "t.html", root)
+    after = _template_text_leaks('<a href="{{ url(\'/me\') }}">a</a>\n<a href="/guide">b</a>', "t.html", root)
+    assert sum(before.values()) == sum(after.values()) == 1
+    assert after - before

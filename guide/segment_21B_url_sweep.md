@@ -152,6 +152,15 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
 | `url_for` | 6 lines, all `reviewer_invite` | `grep -rnE '\burl_for\(' app` |
 | `/.auth` | 6, left to 21D | `grep -rnE '/\.auth' app` |
 
+## Status
+
+- **2026-10-21, B1 (#3200).** The allowlist keys each leak by rule, file
+  and the leaking source itself, whitespace collapsed, and lives in
+  `tests/unit/url_leaks_allowlist.json`. It is not a per-file count. Codex
+  found that a count lets a rung fix one leak and add another in the same
+  file unseen. The crawl's checker is proved on probe pages, and its first
+  RRW pages come with B2. The cumulative read's base is `fdcfee36`.
+
 ## PR ladder
 
 1. **B0, this plan**, prose only.
