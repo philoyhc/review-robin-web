@@ -9,6 +9,11 @@ own: a stored setting, a new control, more than one rung (author,
 2026-10-20). Items close independently; the segment closes when the
 author says no more are coming.
 
+**Segment closed 2026-10-21 at the author's word**, after the last
+browser checks passed and the Guide's screencaps were reshot. All eight items had closed (#3169 →
+#3188). Further refinements go to `guide/segment_19X_refinements.md` or
+a new segment.
+
 ## Item 1 — An instrument's intro picks its layout
 
 ### Opportunity
