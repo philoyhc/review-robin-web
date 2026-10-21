@@ -96,8 +96,9 @@ tests.
 - **Host logging** (v0.8 §3, events 1–3):
   - a warning on every start with fake auth on, and a record of the
     guard's refusal (C1);
-  - a missing or malformed Easy Auth header on a request that ends in
-    401 or a decode failure, the fact only and never the contents (C1);
+  - a malformed Easy Auth header every time, and a missing one once per
+    process with a running count, the fact only and never the contents
+    (C1; Open question 1);
   - the empty-list warning in a deployed environment moves from
     `app/main.py` to Cordware (C3).
 - **Every switch stays settable per run** (`$env:NAME=…` or
@@ -191,18 +192,15 @@ passes at each.
 
 ## Open questions
 
-1. **Log a missing Easy Auth header on every 401?** v0.8 §3 lists
-   "missing or malformed". With fake auth off, every unauthenticated
-   probe is "missing". The recommendation is to log malformed always,
-   and missing once per process with a count, so the line stays useful
-   on a gateway with no traffic yet. The author decides before C1.
-2. **C4, repointing the 78 importers:** the recommendation is not in 21C
-   (sequence C4, optional). The re-export costs one module, and moving
-   the importers is churn with no behavior. The author decides.
+1. ~~Log a missing Easy Auth header on every 401?~~ No: a malformed
+   header is logged every time, a missing one once per process with a
+   running count (author, 2026-10-21, on the recommendation).
+2. ~~C4, repointing the 78 importers?~~ Not in 21C; the re-export stays
+   (author, 2026-10-21, on the recommendation).
 
 ## Out of scope
 
-- **C4** (Open question 2), unless the author rules it in.
+- **C4**, repointing the importers (Open question 2).
 - **The prefix flip, `/.auth/*` return paths, the landing page:** 21D.
 - **The dev slot's `APP_ENV`:** set when the slot resumes
   (`docs/deployment_dev.md` "Resuming the dev slot", step 1).
