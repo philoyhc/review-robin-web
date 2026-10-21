@@ -18,18 +18,15 @@ The top-level segments come from RRW's own router, not a list kept here,
 so a new top-level route is covered with no edit. ``/.auth/`` is the
 host's (v0.8 §3) and is not an RRW path.
 
-**The allowlist is exact and may only shrink.** `url_leaks_allowlist.json`
-records each leak the sweep has not reached, by rule, file and the
-leaking source itself (whitespace collapsed), so a fixed leak cannot be
-traded for a new one in the same file. A rung that removes leaks deletes
-their entries in the same change, so the file always states what is
-left; at B7 it is empty and goes.
+**There is no allowlist.** The sweep's rungs held one, shrinking it
+rung by rung until B6 emptied it and B7 removed it: any leak these rules
+find fails the suite. Each is reported by rule, file and the leaking
+source itself (whitespace collapsed).
 """
 
 from __future__ import annotations
 
 import ast
-import json
 import re
 from collections import Counter
 from pathlib import Path
@@ -42,7 +39,6 @@ REPO = Path(__file__).resolve().parents[2]
 APP = REPO / "app"
 TEMPLATES = APP / "web" / "templates"
 URLS_MODULE = "app/web/urls.py"
-ALLOWLIST_FILE = Path(__file__).with_name("url_leaks_allowlist.json")
 
 _HELPERS = re.compile(r"\b(?:url|is_here|here_in|here_under)\(")
 # Jinja and HTML comments, CSS and script block comments, and script
@@ -132,8 +128,7 @@ def _is_cookie_path_call(node: ast.expr) -> bool:
 
 
 def python_leaks() -> Counter[Leak]:
-    """Each leak is keyed by its whole call (P1, P2) or line (P3), so a
-    fixed leak cannot be traded for a new one in the same file."""
+    """Each leak is reported by its whole call (P1, P2) or line (P3)."""
     found: Counter[Leak] = Counter()
     for path in sorted(APP.rglob("*.py")):
         name = _rel(path)
@@ -161,24 +156,11 @@ def python_leaks() -> Counter[Leak]:
     return found
 
 
-def allowlist() -> Counter[Leak]:
-    """Leaks the sweep has not reached yet, one entry per leaking source.
-    Exact, and only ever shrunk."""
-    entries = json.loads(ALLOWLIST_FILE.read_text())
-    return Counter({(rule, file, text): count for rule, file, text, count in entries})
-
-
-def test_no_url_leaks_beyond_the_allowlist() -> None:
-    found = template_leaks() + python_leaks()
-    allowed = allowlist()
-    new = sorted((found - allowed).elements())
-    stale = sorted((allowed - found).elements())
-    assert not new, (
+def test_no_url_leaks() -> None:
+    found = sorted((template_leaks() + python_leaks()).elements())
+    assert not found, (
         "URLs emitted without the mount prefix; use url() / redirect() / "
-        f"cookie_path() / here() (app/web/urls.py): {new}"
-    )
-    assert not stale, (
-        f"Allowlisted leaks no longer found; remove them from {_rel(ALLOWLIST_FILE)}: {stale}"
+        f"cookie_path() / here() (app/web/urls.py): {found}"
     )
 
 
@@ -220,11 +202,3 @@ def test_the_rules_catch_a_planted_leak() -> None:
     {% if is_here("/guide") %}{% endif %} {{ request.url.path }}"""
     found = _template_text_leaks(planted, "t.html", _root_literal())
     assert sorted(rule for rule, _, _ in found.elements()) == ["P3", "T1", "T1", "T2"]
-
-
-def test_a_fixed_leak_cannot_be_traded_for_a_new_one() -> None:
-    root = _root_literal()
-    before = _template_text_leaks('<a href="/me">a</a>\n<a href="{{ url(\'/guide\') }}">b</a>', "t.html", root)
-    after = _template_text_leaks('<a href="{{ url(\'/me\') }}">a</a>\n<a href="/guide">b</a>', "t.html", root)
-    assert sum(before.values()) == sum(after.values()) == 1
-    assert after - before

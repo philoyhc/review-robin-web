@@ -53,6 +53,12 @@ _URL_ATTRS = {"href", "action", "formaction", "src"}
 _NOT_APP_PATHS = ("#", "?", "mailto:", "tel:", "javascript:", "data:", "http:", "https:", "//")
 
 
+def _is_url_attr(name: str) -> bool:
+    """``href`` and its kin, and a ``data-*`` attribute named for one
+    (``data-zip-href``), which a script follows."""
+    return name in _URL_ATTRS or (name.startswith("data-") and name.endswith(("href", "url", "action", "src")))
+
+
 _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
 
@@ -93,7 +99,7 @@ class _Links(HTMLParser):
             and self.within in (dict(attrs).get("class") or "").split()
         )
         if self.within is None or self.depth or entering:
-            self.urls += [value for name, value in attrs if name in _URL_ATTRS and value]
+            self.urls += [value for name, value in attrs if _is_url_attr(name) and value]
         if (self.depth or entering) and not void:
             self.depth += 1
 
@@ -116,23 +122,35 @@ class _Links(HTMLParser):
             self.depth -= 1
 
 
+def _json_strings(value: object) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        value = list(value.values())
+    if isinstance(value, list):
+        return [s for item in value for s in _json_strings(item)]
+    return []
+
+
 def leaks(
     response: httpx.Response,
     prefix: str = MOUNT,
     *,
     within: str | None = None,
-    cookies: bool = True,
 ) -> list[str]:
     """Every URL ``response`` emits that is an app path without ``prefix``:
     link, form action and source attributes, ``Location`` and cookie
     ``Path``s. A fragment, a query, another scheme, another host, a
     relative path or Easy Auth's host-level ``/.auth/`` is not an app
-    path. Strings in inline scripts that start with an RRW path count as
-    emitted too. With ``within``, only the attributes inside the element of that
-    class are read, for a page whose other areas are not swept yet;
-    ``cookies=False`` skips cookie paths, which B6 sweeps."""
+    path. Strings in inline scripts, and string values in a JSON body,
+    that start with an RRW path count as emitted too. With ``within``,
+    only the attributes inside the element of that class are read."""
     emitted: list[str] = []
-    if "html" in response.headers.get("content-type", ""):
+    content_type = response.headers.get("content-type", "")
+    if "json" in content_type:
+        root = _script_root_string()
+        emitted += [s for s in _json_strings(response.json()) if root.match(f'"{s}"')]
+    if "html" in content_type:
         parser = _Links(within)
         parser.feed(response.text)
         if within is not None:
@@ -140,7 +158,7 @@ def leaks(
         emitted += parser.urls
     if within is None and "location" in response.headers:
         emitted.append(response.headers["location"])
-    for header in response.headers.get_list("set-cookie") if within is None and cookies else []:
+    for header in response.headers.get_list("set-cookie") if within is None else []:
         cookie = SimpleCookie()
         cookie.load(header)
         emitted += [m["path"] for m in cookie.values() if m["path"]]

@@ -70,6 +70,10 @@ def probe_app() -> FastAPI:
         response.set_cookie("c", "v", path="/operator/sessions")
         return response
 
+    @probe.get("/probe/leaky.json")
+    def leaky_json() -> dict[str, object]:
+        return {"next": "/operator/z", "rows": [{"ok": "/reviewrobin/me"}, "a/b", "/.auth/me", 3]}
+
     @probe.get("/probe/page", response_class=HTMLResponse)
     def page(request: Request) -> HTMLResponse:
         return templates.TemplateResponse(request, "page.html")
@@ -193,6 +197,7 @@ def test_the_checker_finds_every_kind_of_leak() -> None:
         "/operator/x",
         "/static/z.png",
     ]
+    assert leaks(client.get(f"{MOUNT}/probe/leaky.json")) == ["/operator/z"]
     assert leaks(client.get(f"{MOUNT}/probe/redirect", follow_redirects=False)) == []
 
 
