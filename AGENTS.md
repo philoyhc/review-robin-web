@@ -157,6 +157,13 @@ reject it.
 - **Static assets** live in `app/web/static/`, served by the single `StaticFiles` mount at `/static` in `app/main.py`. It exists for the Guide's screencaps (`app/web/static/guide/`) — the first assets too large to inline — and is deliberately not a general asset pipeline; CSS stays inline in `base.html`. `app/` ships wholesale in the deploy artefact, so anything added here is shipped: `tests/integration/test_guide_screencaps.py` fails on a referenced-but-missing file *and* on a committed-but-unreferenced one.
 - The canonical `.btn` roles and the `.page-grid` / `.bottom-grid` layout patterns live in `spec/ui_elements.md` — buttons in §6, layout primitives in §10. Refer to those roles when editing UI; see also `spec/operator_ui_concept.md` for page-level chrome.
 - Operator pages render breadcrumbs via `app/web/breadcrumbs.py` helpers (`operator_root`, `operator_session_child`). Don't hand-roll breadcrumb HTML — call these.
+- **Never write a root-path URL.** RRW can be served under a prefix (`/reviewrobin`, segment 21B), so an app path stays app-relative until it is emitted, and it is emitted through `app/web/urls.py`:
+  - templates write `url('/…')`, and `{{ url('/…') | tojson }}` in a script;
+  - templates compare the current page with `here()` / `is_here()`;
+  - routes return `urls.redirect(request, …)`;
+  - cookies take `path=urls.cookie_path(request, …)`.
+
+  `tests/unit/test_url_leaks.py` fails on a literal that skips these. `tests/integration/test_url_crawl.py` fails on a page that emits one under the mount, and on a new GET route it does not visit.
 
 ### Database
 

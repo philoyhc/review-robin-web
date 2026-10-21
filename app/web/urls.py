@@ -16,8 +16,9 @@ ASGI scope, is added once, where a URL leaves RRW:
 
 At ``/`` ``root_path`` is empty, so every helper returns its input.
 Segment 21B (`guide/segment_21B_url_sweep.md`) moves RRW's call sites
-onto these; `tests/unit/test_url_leaks.py` holds the rest to an
-allowlist that only shrinks.
+onto these. `tests/unit/test_url_leaks.py` fails on an emission that
+skips them, and `tests/integration/test_url_crawl.py` fails on a page
+that emits one under the mount.
 """
 
 from __future__ import annotations

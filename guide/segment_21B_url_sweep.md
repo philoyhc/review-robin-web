@@ -192,16 +192,30 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
   - "route-aware generation" wording in the v0.8 strategy and the
     implementation sequence. It is reconciled at close.
 - **2026-10-21, B7.** The allowlist and its file are gone, and so is
-  `leaks()`'s `cookies=` escape hatch. The crawl's `ROUTES` table names
-  every GET route in RRW's schema, plus the three registered outside it.
-  `test_every_get_route_is_crawled` fails on a route the table lacks.
-  Each entry pins the user and the status it answers with, across three
-  phases of one seeded session: activated, rae submitted, and released.
-  No route is skipped. `rehydrate/dropped.csv` is visited at its 404,
-  because only a POSTed upload stashes the set it names. The checker
-  also reads string values in JSON bodies. Proved by disabling
-  `url_path()`'s prefix: 55 of the crawl's 79 visits fail. The other 24
-  are downloads and JSON with no URL in them, or 404s.
+  `leaks()`'s `cookies=` escape hatch.
+  - **What the crawl visits.** Its `ROUTES` table names all 77 GET routes
+    RRW registers. They are found by walking the router, not by reading
+    the schema, so this includes the seven registered outside the schema:
+    `/`, `/operator`, `/operator/` and FastAPI's four doc pages.
+    `test_every_get_route_is_crawled` fails on a missing route or an
+    empty visit list. Only `rehydrate/dropped.csv` may be pinned at 404:
+    its token names rows a rehydrate commit stashes, and the crawl runs no
+    rehydrate.
+  - **States.** One seeded session is visited in four phases: draft,
+    activated, rae submitted, and released. The operator's session pages
+    are read in draft, live and released, because each state renders
+    forms the others don't: the unlocked editors in draft, and Archive
+    and Stop release once closed.
+  - **What the checker reads.** It also reads JSON string values and
+    `data-*` URL attributes.
+  - **Proof.** I disabled `url_path()`'s prefix. 84 of 111 visits failed.
+    The other 27 were 20 downloads, 3 JSON routes, and FastAPI's doc
+    pages, which prefix from `root_path` themselves.
+  - **This rung's read** (1, `diff-reviewer` on B7): it found the four
+    unlisted doc routes, the draft-state and closed-state forms, the
+    `CLAUDE.md` bullet that was due now, a miscount, and the stale
+    `app/web/urls.py` docstring. All are fixed in this rung. JSON keys
+    are deliberately not read, since the schema's paths are keys.
 
 ## PR ladder
 

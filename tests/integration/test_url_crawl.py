@@ -76,6 +76,13 @@ def _user(name: str) -> AuthenticatedUser:
 
 def _activated_session(client: TestClient, db: Session) -> str:
     """A session alice operates and rae reviews, activated, through the mount."""
+    sid = _draft_session(client, db)
+    _activate(client, db, sid)
+    return sid
+
+
+def _draft_session(client: TestClient, db: Session) -> str:
+    """The same session in draft: rosters in, ready to activate."""
     from ._full_matrix import mark_band1_touched_on_all_instruments, pin_full_matrix_on_all_instruments
 
     base = f"{MOUNT}/operator/sessions"
@@ -93,11 +100,15 @@ def _activated_session(client: TestClient, db: Session) -> str:
         )
     pin_full_matrix_on_all_instruments(db, review_session.id)
     mark_band1_touched_on_all_instruments(db, review_session.id)
+    return sid
+
+
+def _activate(client: TestClient, db: Session, sid: str) -> None:
     for step in ("prepare", "activate"):
-        client.post(f"{base}/{sid}/workflow/{step}", follow_redirects=False)
+        client.post(f"{MOUNT}/operator/sessions/{sid}/workflow/{step}", follow_redirects=False)
+    review_session = db.execute(select(ReviewSession).where(ReviewSession.public_id == sid)).scalar_one()
     db.refresh(review_session)
     assert review_session.status == "ready", review_session.status  # activated: open to reviewers
-    return sid
 
 
 # --- B2: the chrome ---
@@ -193,13 +204,17 @@ def test_a_reviewer_redirect_lands_under_the_mount(
 
 # --- B7: every GET route ---
 #
-# One seeded session, visited in three phases: activated; then rae
-# submits, which opens the summary; then closed with responses released,
-# which opens carol's results and olive's row download. Each route names
-# the phase, the user and the status it answers with, so a page that
-# turns into a 404 cannot pass as crawled.
+# One seeded session, visited in four phases: draft; activated; rae
+# submitted, which opens the summary; and closed with responses
+# released, which opens carol's results and olive's row download. Each
+# route names the phase, the user and the status it answers with, so a
+# page that turns into a 404 cannot pass as crawled. The operator's
+# session pages are read in draft, live and released, because each state
+# renders forms the others do not (the unlocked roster and instrument
+# editors in draft; Archive and Stop release once closed).
 
-_LIVE, _SUBMITTED, _RELEASED = "live", "submitted", "released"
+_DRAFT, _LIVE, _SUBMITTED, _RELEASED = "draft", "live", "submitted", "released"
+_PHASES = (_DRAFT, _LIVE, _SUBMITTED, _RELEASED)
 
 
 @dataclass(frozen=True)
@@ -210,6 +225,7 @@ class Visit:
 
 
 _PAGE = (Visit("alice", 200),)
+_EVERY_STATE = tuple(Visit("alice", 200, phase) for phase in (_DRAFT, _LIVE, _RELEASED))
 _SESSION = "/operator/sessions/{session_id}"
 _EXPORTS = (
     "audit_log.csv",
@@ -240,6 +256,11 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/templates/demo.zip": _PAGE,
     "/templates/full.zip": _PAGE,
     "/templates/starter.zip": _PAGE,
+    # FastAPI's own pages, on by default.
+    "/docs": _PAGE,
+    "/docs/oauth2-redirect": _PAGE,
+    "/redoc": _PAGE,
+    "/openapi.json": _PAGE,
     # The participant surfaces.
     "/me": (Visit("alice", 200), Visit("rae", 200), Visit("olive", 200), Visit("carol", 200, _RELEASED)),
     "/me/invite/{token}": (Visit("rae", 303),),
@@ -261,31 +282,32 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/operator/sessions/archived": _PAGE,
     "/operator/sessions/new": _PAGE,
     "/operator/sessions/rehydrate": _PAGE,
-    # Its token names a stashed rehydrate set, which only a POSTed upload
-    # makes; without one it answers the error page.
+    # Its token names the dropped rows a rehydrate commit stashes; the
+    # crawl runs no rehydrate, so it answers the error page, whose chrome
+    # is still read. The body it would answer is a CSV.
     "/operator/sessions/rehydrate/dropped.csv": (Visit("alice", 404),),
-    _SESSION: _PAGE,
+    _SESSION: _EVERY_STATE,
     f"{_SESSION}/edit": (Visit("alice", 308),),
-    f"{_SESSION}/reviewers": _PAGE,
-    f"{_SESSION}/reviewees": _PAGE,
-    f"{_SESSION}/relationships": _PAGE,
-    f"{_SESSION}/observers": _PAGE,
-    f"{_SESSION}/instruments": _PAGE,
+    f"{_SESSION}/reviewers": _EVERY_STATE,
+    f"{_SESSION}/reviewees": _EVERY_STATE,
+    f"{_SESSION}/relationships": _EVERY_STATE,
+    f"{_SESSION}/observers": _EVERY_STATE,
+    f"{_SESSION}/instruments": _EVERY_STATE,
     f"{_SESSION}/instruments/{{instrument_id}}": (Visit("alice", 303),),
-    f"{_SESSION}/setup-invite": _PAGE,
-    f"{_SESSION}/assignments": _PAGE,
-    f"{_SESSION}/validate": _PAGE,
+    f"{_SESSION}/setup-invite": _EVERY_STATE,
+    f"{_SESSION}/assignments": _EVERY_STATE,
+    f"{_SESSION}/validate": _EVERY_STATE,
     f"{_SESSION}/preview": (Visit("alice", 308),),
     f"{_SESSION}/previews": (Visit("alice", 308),),
     f"{_SESSION}/preview-surface": (Visit("alice", 303),),
-    f"{_SESSION}/preview-surface/{{page_n}}": _PAGE,
-    f"{_SESSION}/invitations": _PAGE,
+    f"{_SESSION}/preview-surface/{{page_n}}": _EVERY_STATE,
+    f"{_SESSION}/invitations": _EVERY_STATE,
     f"{_SESSION}/invitations/reviewers/{{reviewer_id}}": _PAGE,
     f"{_SESSION}/invitations/{{invitation_id}}/detail": (Visit("alice", 308),),
     f"{_SESSION}/monitoring": (Visit("alice", 308),),
-    f"{_SESSION}/responses": _PAGE,
-    f"{_SESSION}/responses/{{reviewee_id}}/detail": _PAGE,
-    f"{_SESSION}/extract-data": _PAGE,
+    f"{_SESSION}/responses": _EVERY_STATE,
+    f"{_SESSION}/responses/{{reviewee_id}}/detail": _EVERY_STATE,
+    f"{_SESSION}/extract-data": _EVERY_STATE,
     f"{_SESSION}/extract-data/shapes/{{shape_id}}/download.csv": _PAGE,
     **{f"{_SESSION}/export/{name}": _PAGE for name in _EXPORTS},
     "/operator/settings": _PAGE,
@@ -297,23 +319,39 @@ ROUTES: dict[str, tuple[Visit, ...]] = {
     "/operator/sys-admin/users/search-options": _PAGE,
 }
 
-# Registered with ``include_in_schema=False``, so the schema does not list them.
-_UNSCHEMED = {"/", "/operator", "/operator/"}
+
+def _get_paths(routes: list[object], prefix: str = "") -> set[str]:
+    """Every GET path registered under ``routes``, schema or not. FastAPI
+    nests an included router behind its include context, prefix and all."""
+    found: set[str] = set()
+    for route in routes:
+        context = getattr(route, "include_context", None)
+        if context is not None:
+            found |= _get_paths(context.included_router.routes, prefix + context.prefix)
+        elif "GET" in (getattr(route, "methods", None) or ()):
+            found.add(prefix + route.path)
+    return found
 
 
 def test_every_get_route_is_crawled() -> None:
-    """A new GET route fails here until the crawl visits it. Built fresh,
-    not the suite's cached instance: a test may add a route to that one,
-    and its cached schema keeps the route after the test removes it."""
+    """A new GET route fails here until the crawl visits it, whether or not
+    the schema lists it. Built fresh, not the suite's cached instance: a
+    test may add a route to that one."""
     from app.main import create_app
 
-    schema = {path for path, ops in create_app().openapi()["paths"].items() if "get" in ops}
-    assert set(ROUTES) == schema | _UNSCHEMED
+    app = create_app()
+    registered = _get_paths(app.routes)
+    # The walk reads FastAPI internals; if they move, it must not shrink.
+    assert {path for path, ops in app.openapi()["paths"].items() if "get" in ops} <= registered
+    assert set(ROUTES) == registered
+    assert all(ROUTES.values()), "a route with no visit is not crawled"
+    pinned_at_404 = {route for route, visits in ROUTES.items() if any(v.status == 404 for v in visits)}
+    assert pinned_at_404 == {"/operator/sessions/rehydrate/dropped.csv"}
 
 
-def _seed(client: TestClient, db: Session) -> tuple[ReviewSession, dict[str, str]]:
-    """The live phase's session, and a value for every path parameter."""
-    sid = _activated_session(client, db)
+def _seed_draft(client: TestClient, db: Session) -> tuple[ReviewSession, dict[str, str]]:
+    """The draft session, and a value for every path parameter it has yet."""
+    sid = _draft_session(client, db)
     review_session = db.execute(select(ReviewSession).where(ReviewSession.public_id == sid)).scalar_one()
     review_session.relationships_enabled = True
     review_session.observers_enabled = True
@@ -327,29 +365,31 @@ def _seed(client: TestClient, db: Session) -> tuple[ReviewSession, dict[str, str
         )
     )
     db.commit()
-
-    def first(model: type) -> object:
-        return db.execute(select(model).where(model.session_id == review_session.id)).scalars().first()
-
-    invitation = first(Invitation)
-    client.post(f"{MOUNT}/operator/sessions/{sid}/invitations/{invitation.id}/send")
-    outbox = db.execute(select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)).scalar_one()
-    token = re.search(r"/me/invite/([\w-]+)", outbox.body)
-    assert token is not None, outbox.body
-    instrument = first(Instrument)
+    instrument = _first(db, Instrument, review_session)
     return review_session, {
         "session_id": sid,
         "page_n": "1",
         "instrument_seq": str(instrument.session_seq),
         "instrument_id": str(instrument.id),
-        "reviewer_id": str(first(Reviewer).id),
-        "reviewee_id": str(first(Reviewee).id),
-        "invitation_id": str(invitation.id),
-        "shape_id": str(first(DataShape).id),
-        "token": token.group(1),
+        "reviewer_id": str(_first(db, Reviewer, review_session).id),
+        "reviewee_id": str(_first(db, Reviewee, review_session).id),
+        "shape_id": str(_first(db, DataShape, review_session).id),
     }
 
 
+def _first(db: Session, model: type, review_session: ReviewSession) -> object:
+    return db.execute(select(model).where(model.session_id == review_session.id)).scalars().first()
+
+
+def _go_live(client: TestClient, db: Session, review_session: ReviewSession, params: dict[str, str]) -> None:
+    """Activate, and send rae's invitation for its token."""
+    _activate(client, db, review_session.public_id)
+    invitation = _first(db, Invitation, review_session)
+    client.post(f"{MOUNT}/operator/sessions/{review_session.public_id}/invitations/{invitation.id}/send")
+    outbox = db.execute(select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)).scalar_one()
+    token = re.search(r"/me/invite/([\w-]+)", outbox.body)
+    assert token is not None, outbox.body
+    params.update(invitation_id=str(invitation.id), token=token.group(1))
 def _submit(client: TestClient, db: Session, review_session: ReviewSession) -> None:
     """rae answers every field on page 1 and submits."""
     assignments = db.execute(
@@ -414,9 +454,11 @@ def test_every_get_route_under_the_mount_emits_only_prefixed_urls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "rehydrate_enabled", True)
-    review_session, params = _seed(mounted_client, db)
+    review_session, params = _seed_draft(mounted_client, db)
     failures: list[str] = []
-    for phase in (_LIVE, _SUBMITTED, _RELEASED):
+    for phase in _PHASES:
+        if phase == _LIVE:
+            _go_live(make_mounted_client(_user("alice")), db, review_session, params)
         if phase == _SUBMITTED:
             _submit(make_mounted_client(_user("rae")), db, review_session)
         if phase == _RELEASED:

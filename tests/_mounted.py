@@ -53,6 +53,12 @@ _URL_ATTRS = {"href", "action", "formaction", "src"}
 _NOT_APP_PATHS = ("#", "?", "mailto:", "tel:", "javascript:", "data:", "http:", "https:", "//")
 
 
+def _is_url_attr(name: str) -> bool:
+    """``href`` and its kin, and a ``data-*`` attribute named for one
+    (``data-zip-href``), which a script follows."""
+    return name in _URL_ATTRS or (name.startswith("data-") and name.endswith(("href", "url", "action", "src")))
+
+
 _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
 
@@ -93,7 +99,7 @@ class _Links(HTMLParser):
             and self.within in (dict(attrs).get("class") or "").split()
         )
         if self.within is None or self.depth or entering:
-            self.urls += [value for name, value in attrs if name in _URL_ATTRS and value]
+            self.urls += [value for name, value in attrs if _is_url_attr(name) and value]
         if (self.depth or entering) and not void:
             self.depth += 1
 
