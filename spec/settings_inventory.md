@@ -442,22 +442,29 @@ pattern), `spec/operator_ui_concept.md` (chrome-detour return-to-origin).
 Listed for context — these are not operator-determined. Set in
 `.env` locally and via Azure App Service "Application settings" in
 deployed environments. Source: `app/config.py`, except `LOG_LEVEL` and
-`CORDWARE_APPS`, which are the host's (`cordware/main.py`).
+`CORDWARE_APPS`, which are the host's (`cordware/main.py`), and the seven
+identity settings (`APP_ENV`, `ALLOW_FAKE_AUTH`, `FAKE_AUTH_PRINCIPAL_ID`,
+`FAKE_AUTH_EMAIL`, `FAKE_AUTH_NAME`, `FAKE_AUTH_SUPER_ADMIN`,
+`SUPER_ADMIN_EMAILS`), which are Cordware's: `IdentitySettings` in
+`cordware/settings.py`, read from the same root `.env` under the names and
+defaults below (contract: `cordware/spec/identity.md`). RRW reads them only
+through `cordware.identity`; `FAKE_AUTH_OPERATOR` and `FAKE_AUTH_SYS_ADMIN`
+stay RRW's.
 
 | Var | Default | Purpose |
 |---|---|---|
-| `APP_ENV` | `local` | `local` / `dev` / `prod`. Any value but `local` turns on the boot-time checks: startup fails when `OPERATOR_EMAILS` and `SYS_ADMIN_EMAILS` are both empty (`app/config.py`), and logs a warning when no super-admin is configured (`app/main.py`). |
+| `APP_ENV` | `local` | `local` / `dev` / `prod`. Any value but `local` turns on the boot-time checks: RRW's startup fails when `OPERATOR_EMAILS` and `SYS_ADMIN_EMAILS` are both empty (`app/config.py`), and the host logs a warning when no super-admin is configured (`super_admin.unconfigured`, `cordware/spec/host.md`). Only `local` permits fake auth. |
 | `APP_VERSION` | `dev` | Labels the build in the operator top bar and on the About page. |
-| `ALLOW_FAKE_AUTH` | `False` | When `True`, bypasses Azure Easy Auth and injects a fake operator. **Must remain `False` in deployed environments.** |
+| `ALLOW_FAKE_AUTH` | `False` | When `True`, a request without Easy Auth headers is the fake user instead of a 401. **Enforced, not advisory:** with it on and `APP_ENV` not `local`, the host refuses to start (`cordware/spec/host.md` "Fake-auth guard"). |
 | `FAKE_AUTH_PRINCIPAL_ID` | `local-dev` | Fake-auth identity slot. |
 | `FAKE_AUTH_EMAIL` | `operator@example.edu` | Fake-auth identity slot. |
 | `FAKE_AUTH_NAME` | `Local Operator` | Fake-auth identity slot. |
-| `FAKE_AUTH_OPERATOR` | `True` | Sandbox-only: the fake identity is seeded as operator. Honoured only when `ALLOW_FAKE_AUTH` is also `True`; inert in deployed envs. |
+| `FAKE_AUTH_OPERATOR` | `True` | Sandbox-only: the fake identity is seeded as operator. Honored only for the fake identity (`Identity.is_fake`), which exists only while `ALLOW_FAKE_AUTH` is `True`; inert in deployed envs. |
 | `FAKE_AUTH_SYS_ADMIN` | `True` | Sandbox-only: the fake identity is seeded as sys-admin (admin tier). Same gating. |
-| `FAKE_AUTH_SUPER_ADMIN` | `True` | Sandbox-only: the fake identity is treated as **super-admin** — its email is folded into the effective super-admin set by `app/auth/roles.py`. Honoured only when `ALLOW_FAKE_AUTH` is also `True`, so the localhost operator holds super-admin for testing with zero env coordination; inert in deployed envs. |
+| `FAKE_AUTH_SUPER_ADMIN` | `True` | Sandbox-only: the fake identity is treated as **super-admin** — its email is folded into the effective super-admin list by `cordware.identity`. Honored only when `ALLOW_FAKE_AUTH` is also `True`, so the localhost operator holds super-admin for testing with zero env coordination; inert in deployed envs. |
 | `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap of `users.is_operator`). |
 | `SYS_ADMIN_EMAILS` | empty | Comma-separated admin allowlist (first-sign-in bootstrap of `users.is_sys_admin`). In a deployed env, at least one of `OPERATOR_EMAILS` / `SYS_ADMIN_EMAILS` must be non-empty or the app refuses to boot. |
-| `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier. **Derived, not stored**: `is_super_admin` is computed from this list (case-insensitive), never a DB column, so it can't drift or be flipped in-app. Set **only** via App Settings. Optional (not part of the boot fail-fast); a super-admin self-heals to full admin rights on every sign-in and can't be demoted/removed in-app. |
+| `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier. **Derived, not stored**: `is_super_admin` is computed from this list (case-insensitive; blank entries never count), never a DB column, so it can't drift or be flipped in-app. Set **only** via App Settings. Optional (not part of the boot fail-fast); a super-admin self-heals to full admin rights on every sign-in and can't be demoted/removed in-app. |
 | `DATABASE_URL` | `sqlite:///./review_robin_web.db` | SQLAlchemy connection string. Postgres in deployed environments; SQLite locally / in tests. |
 | `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup, so local dev / tests that don't touch Operator Settings don't need it set. |
 | `AUDIT_STRICT_MODE` | `False` | When `True`, `audit.write_event` raises on a detail-shape violation. Production stays `False` (logs + writes through). Test runner flips to `True` so drift surfaces in CI. |
@@ -475,7 +482,8 @@ back to a fixed built-in default.
 
 **Canonical spec:** `docs/local_setup.md` (env-var setup),
 `docs/deployment_dev.md` (deployment-side configuration),
-`docs/security_posture.md` (Easy Auth + `ALLOW_FAKE_AUTH`).
+`docs/security_posture.md` (Easy Auth + `ALLOW_FAKE_AUTH`),
+`cordware/spec/identity.md` (the identity settings).
 
 ---
 

@@ -107,17 +107,22 @@ FAKE_AUTH_NAME=Local Operator
 # DATABASE_URL=sqlite:///./review_robin_web.db
 ```
 
+`APP_ENV`, `ALLOW_FAKE_AUTH`, the `FAKE_AUTH_*` identity fields,
+`FAKE_AUTH_SUPER_ADMIN` and `SUPER_ADMIN_EMAILS` are Cordware's settings
+(`cordware/settings.py`), read from the same `.env`; a shell value
+(`$env:NAME=…` or `export NAME=…`) overrides the file for one run.
+
 > **Never** set `ALLOW_FAKE_AUTH=true` in any deployed environment. The
-> default in `app/config.py` is `False`; the variable only takes effect if
-> a `.env` (local) or App Setting (deployed, **don't**) overrides it.
+> default in `cordware/settings.py` is `False`, and the host refuses to
+> start with it on and `APP_ENV` anything but `local`.
 
 Under fake auth the local `operator@example.edu` carries **operator +
 sys-admin + super-admin** rights — `fake_auth_operator` /
-`fake_auth_sys_admin` / `fake_auth_super_admin` all default to `True` in
-`app/config.py`. Super-admin (Segment 18S) is derived, so you don't set
+`fake_auth_sys_admin` (in `app/config.py`) and `fake_auth_super_admin`
+(Cordware's) all default to `True`. Super-admin (Segment 18S) is derived, so you don't set
 `SUPER_ADMIN_EMAILS` locally; the fake toggle covers it and self-heals your
 existing local row on the next sign-in. All three are inert in deployed
-envs (where `ALLOW_FAKE_AUTH` is false).
+envs, where the host refuses fake auth.
 
 ### `review_robin_web.db` (created automatically)
 

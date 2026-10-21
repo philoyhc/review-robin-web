@@ -198,6 +198,32 @@ the app handling the request (`request.app.routes`). The host owns root
 logging; RRW logs under named `app.*` loggers via
 `app.logging_config.get_logger` and never configures the root logger.
 
+**Identity is Cordware's** (`cordware/identity.py`; contract in
+`cordware/spec/identity.md`). Cordware is the only reader of the Easy Auth
+`X-MS-CLIENT-PRINCIPAL*` headers and the only source of the fake local
+identity; RRW maps the identity it is handed to its own `users` and
+permissions.
+
+- `app/auth/identity.py` is a re-export under RRW's names, so no importer
+  changed: `AuthenticatedUser` is `cordware.identity.Identity`;
+  `get_current_user` is `get_identity`, the only dependency, taking the
+  request alone; `resolve_current_user` is `resolve_identity`, which also
+  takes settings and is for tests, never a dependency;
+  `decode_client_principal` and `extract_claims` pass through.
+- `app/auth/roles.py` is the one place RRW reads the platform
+  super-admin role: `is_super_admin(email)`, `super_admin_configured()`
+  and `super_admin_emails()`, from `cordware.identity`. No RRW module
+  parses `SUPER_ADMIN_EMAILS`.
+- `app/config.py` reads `APP_ENV` through `cordware.identity.app_env()`;
+  the other identity settings are not on RRW's `Settings`
+  (`spec/settings_inventory.md` §8). `FAKE_AUTH_OPERATOR` and
+  `FAKE_AUTH_SYS_ADMIN` stay RRW's and key off `Identity.is_fake` alone.
+- The fake-auth guard is the host's: `cordware.main` refuses to start
+  with `ALLOW_FAKE_AUTH` on and `APP_ENV` not `local`
+  (`cordware/spec/host.md`). RRW does not re-check it.
+- An application imports `cordware.identity`,
+  never `cordware.main` (`cordware/spec/host.md` "Import boundary").
+
 **Static assets** — `app/web/static/`, served by the one `StaticFiles`
 mount at `/static` (`app/main.py`). It exists for the Guide's
 screencaps, which cannot be inlined at a sane size, and is a
@@ -987,9 +1013,10 @@ is. Every write from that date onward is canonical.
 - **Three-tier role model.** The admin surface is a
   strict, nested hierarchy: **super-admin ⊇ admin ⊇ operator**.
   `users.is_operator` and `users.is_sys_admin` (admin) are stored
-  columns; **super-admin is derived, never stored** —
-  `app/auth/roles.py::is_super_admin` tests case-insensitive
-  membership in the deployer-config `SUPER_ADMIN_EMAILS`. Gates
+  columns; **super-admin is derived, never stored** — Cordware's
+  platform role, which `app/auth/roles.py::is_super_admin` reads as
+  case-insensitive membership in the deployer-config
+  `SUPER_ADMIN_EMAILS`. Gates
   treat admin as implying operator; a super-admin self-heals to
   `is_sys_admin = is_operator = True` on every sign-in
   (`deps.py::_reassert_super_admin`). Admins add/revoke operators;

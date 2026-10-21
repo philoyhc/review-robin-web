@@ -115,7 +115,7 @@ The admin surface is a **strict three-tier hierarchy** with
 |---|---|---|
 | **Operator** | `users.is_operator` | Admins (and super-admins, by nesting) |
 | **Admin** | `users.is_sys_admin` | **Super-admins only** |
-| **Super-admin** | *derived*: email ∈ `SUPER_ADMIN_EMAILS` (deployer config) | **Azure App Settings only** — never in-app |
+| **Super-admin** | *derived*: email ∈ the effective list, `SUPER_ADMIN_EMAILS` (deployer config) plus the local fake-auth fold-in | **Azure App Settings only** — never in-app |
 
 **Capability nesting (strict superset).** Everything an operator can do
 an admin can do; everything an admin can do a super-admin can do, i.e.
@@ -127,10 +127,14 @@ only), so every admin/operator gate passes for a super-admin with no
 special-casing, and a demotion applied outside the app cannot
 strand a protected account.
 
-**Super-admin is derived, never stored** (`app/auth/roles.py::is_super_admin`
-— case-insensitive membership in `SUPER_ADMIN_EMAILS`, plus a fake-auth
-fold-in for local dev; see `spec/settings_inventory.md`). No DB column, no
-migration; it can't drift from config or be flipped in-app.
+**Super-admin is derived, never stored.** It is Cordware's platform role,
+asserted on the trusted identity (`Identity.is_super_admin`) and read by
+every application the same way; RRW reads it through
+`app/auth/roles.py::is_super_admin` — case-insensitive membership in
+`SUPER_ADMIN_EMAILS`, plus a fake-auth fold-in for local dev (settings:
+`spec/settings_inventory.md` §8; contract: `cordware/spec/identity.md`).
+No DB column, no migration; it can't drift from config or be flipped
+in-app.
 
 **Who can manage whom:**
 
@@ -338,7 +342,10 @@ app and uses it regularly.
 
 Every audience authenticates — operator, reviewer, reviewee,
 observer and system administrator. Unauthenticated access is not
-supported for any of them:
+supported for any of them. The host, not RRW, reads Azure Easy Auth's
+identity headers and owns the one exception for local development, the
+fake identity, which it refuses outside `APP_ENV=local`
+(`cordware/spec/identity.md`; guard in `cordware/spec/host.md`):
 
 - **Operators** — and the admin tiers, which are operators with an
   elevated role — sign in via institutional SSO (MS365 in current

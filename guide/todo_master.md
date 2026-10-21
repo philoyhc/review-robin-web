@@ -32,10 +32,9 @@ Two sibling registers hold the open work that is not queued here:
   slot. The outline, `guide/segment_21_domain_retrofit.md`, was rewritten
   2026-10-21 against v0.8 and `docs/cordware_implementation_sequence.md`:
   21A host skeleton (**done** 2026-10-21), 21B URL sweep (**done** 2026-10-21),
-  21C shared identity (hold lifted 2026-10-21, author; plan:
-  `guide/segment_21C_shared_identity.md`), 21D prefix flip. 21D
-  waits until the author lifts the hold for it; Residential Apps
-  (v0.8 stage 3) and any NUS deploy wait on it. The strategy is
+  21C shared identity (**done** 2026-10-21), 21D prefix flip (hold
+  lifted 2026-10-21, author). Residential Apps (v0.8 stage 3) and any
+  NUS deploy wait on 21D. The strategy is
   `docs/cordware_repository_strategy_v0.8.md` (adopted 2026-10-19,
   revised to 2026-10-21). Its predecessors
   v0.4–v0.7, the planning notes and integration spec v0.2 are in

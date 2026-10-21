@@ -18,8 +18,9 @@ through `cordware.main:app`; RRW has no standalone entry point.
 - `app = create_app()` runs once, at import of `cordware.main`: the entry point
   is the one construction. Importing `app.main` builds nothing
   (`tests/unit/test_app_main_builds_nothing.py`).
-- `create_app` reads `CordwareSettings`, configures logging, builds every
-  selected application, registers `/health`, then mounts them.
+- `create_app` reads `CordwareSettings`, configures logging, runs the
+  fake-auth guard and the super-admin warning (below), builds every selected
+  application, registers `/health`, then mounts them.
 
 ## Registry
 
@@ -82,6 +83,21 @@ items are ignored. An unknown name, or a name written twice, raises
   (`docs_url`, `redoc_url` and `openapi_url` are `None`). Registered ahead of
   a mount at `/`, they would shadow the mounted application's.
 
+## Fake-auth guard and super-admin warning
+
+Both read Cordware's identity settings (`cordware/spec/identity.md`) and run
+in `create_app` after logging is configured and before any factory runs.
+
+- **`check_fake_auth(settings)`.** With `ALLOW_FAKE_AUTH` off it does nothing.
+  With it on and `APP_ENV` not `local` it logs `identity.fake_auth_refused`
+  and raises `FakeAuthRefused`: the host is not built, so the process fails
+  before any application is mounted. With it on at `local` it logs
+  `identity.fake_auth_enabled` as a warning, on every start.
+- **`warn_if_no_super_admin(settings)`.** In a deployed environment (`APP_ENV`
+  not `local`) with an empty effective super-admin list, it logs
+  `super_admin.unconfigured` as a warning. It never refuses; each application
+  applies its own fallback. At `local` it is silent.
+
 ## Startup failure
 
 A factory that raises (RRW's `validate_critical_settings` included) is logged
@@ -131,30 +147,35 @@ Host events (`extra["event"]`, logger `cordware`):
 | Event | When | Extra keys |
 |---|---|---|
 | `host.started` | The host's lifespan has entered every mounted application. | `mounted` (names, mount order) |
-| `host.stopping` | The server is shutting down, before mounted lifespans exit. | none |
+| `host.stopping` | The server is shutting down, before mounted lifespans exit. | `missing_identity_headers` (count of requests refused for want of Easy Auth headers, since process start) |
 | `host.app_startup_failed` | A factory or a mounted lifespan raised. | `app` (name) |
+| `identity.fake_auth_refused` | The guard refused (level error). | `app_env` |
+| `identity.fake_auth_enabled` | The guard allowed fake auth at `local` (warning, every start). | none |
+| `super_admin.unconfigured` | A deployed environment has no super-admin (warning). | none |
 
-These are part of v0.8 §3 "Host logging" event 1. The rest of that list
-(fake auth, identity problems, unhandled requests, errors outside any
-application, failing `/health` checks) arrives with 21C and 21D; the startup
-warning for an empty `SUPER_ADMIN_EMAILS` still comes from RRW until 21C.
+The identity events from `cordware.identity` (`identity.header_malformed`,
+`identity.headers_missing`) are in `cordware/spec/identity.md` "Logging". The
+rest of v0.8 §3 "Host logging" (unhandled requests, errors outside any
+application, failing `/health` checks) arrives with 21D.
 
 ## Import boundary
 
 `cordware/tests/test_import_boundary.py` reads source with `ast`, at any
 depth and including literal `importlib.import_module(...)` and
 `__import__(...)` calls. The `FORBIDDEN` map names, per package, the
-top-level packages it may not import:
+top-level packages it may not import; a second check adds one module:
 
 | Package | May not import |
 |---|---|
-| `app` | `residentialapps`, `cordware` |
+| `app` | `residentialapps`; and the module `cordware.main` |
 | `residentialapps` | `app` |
 | `cordware` | `app`, `residentialapps` |
 
 - `cordware/tests/` is exempt: the host's tests drive real applications.
-- `app` may not import `cordware` until 21C moves identity there; 21C drops
-  that name from its set.
+- `app` may import `cordware` (identity, `cordware.identity`) but never
+  `cordware.main`, which builds the host when imported. A separate check in
+  the same file reads every module an application imports, `from cordware
+  import main` and dynamic imports included.
 - `residentialapps` joins the test when the directory exists.
 
 ## Tests
