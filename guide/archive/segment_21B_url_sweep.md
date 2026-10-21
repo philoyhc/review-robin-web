@@ -259,9 +259,7 @@ not change a route, a status code or a string at `/`.
    the recommendation (the request's own host, no configured base; the
    rejected alternative is a `PUBLIC_BASE_URL` setting that can drift
    from the gateway). The author decides.
-2. ~~Should a service build URLs?~~ Yes, as app-relative strings that a
-   template emits through `url()`; adopted on the recommendation, not
-   overruled.
+2. ~~Should a service build URLs?~~ Yes, app-relative (recommendation, not overruled).
 
 ## Out of scope
 
