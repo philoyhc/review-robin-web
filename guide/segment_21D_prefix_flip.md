@@ -40,6 +40,10 @@ run under the mount.
 - **The landing page is the host's,** in `cordware/web/`:
   - one server-rendered page at `/`, listing each mounted application
     with a link to its path and its display name;
+  - **with exactly one application mounted, `/` redirects to its path
+    instead** (302), so a lone RRW opens at `/reviewrobin/`; the page
+    shows with none mounted, or with two or more (Open question 3,
+    author);
   - `AppEntry` gains a `title`;
   - a host-level `Sign out` (`/.auth/logout`);
   - no identity check and no roles: each application gates its own
@@ -49,11 +53,11 @@ run under the mount.
   scaffold-first"): D1 serves it while RRW is still at `/`, at `/` only
   when no application is mounted there.
 - **Absolute URLs use the request's own host** (Open question 1,
-  recommended). Every one is already `request.url_for(...)` (5 sites),
+  author). Every one is already `request.url_for(...)` (5 sites),
   which carries `root_path`. No `PUBLIC_BASE_URL` is added. The gateway's
   host header is stage 4's to check.
 - **Browser tests run under the real mount** (Open question 2,
-  recommended):
+  author):
   - the harness's base URL gains `/reviewrobin`;
   - a `page` fixture prefixes app-relative paths passed to `goto`;
   - URL assertions read through one helper.
@@ -130,10 +134,12 @@ Taken 2026-10-21 at `d3420be9`.
      page is served at `/` only when no application is mounted there,
      so it shows today with `CORDWARE_APPS` empty.
    - Tests: the page lists exactly the mounted set, with links and
-     titles; the host alone serves it; RRW at `/` still owns `/`.
+     titles; the host alone serves it; one application not at `/`
+     redirects `/` to its path; RRW at `/` still owns `/`.
    - **Must not change** any response with RRW mounted.
 3. **D2, the flip.**
-   - `REGISTRY` path `/reviewrobin`; the landing page always at `/`.
+   - `REGISTRY` path `/reviewrobin`; with RRW alone, `/` redirects to
+     `/reviewrobin/`.
    - Host tests move to the mount. The browser harness moves to the
      mount, through the fixture, with every browser test passing.
    - Docs that name the local URL say `/reviewrobin/`.
@@ -156,8 +162,8 @@ Taken 2026-10-21 at `d3420be9`.
 ## Definition of done
 
 - With `CORDWARE_APPS` empty, `/` serves the landing page and `/health`
-  answers; with RRW mounted, `/` lists Review Robin, linking to
-  `/reviewrobin/` (D1, D2).
+  answers; with RRW alone, `/` redirects to `/reviewrobin/`; with two
+  stub applications, `/` lists both (D1, D2).
 - `REGISTRY["reviewrobin"].path == "/reviewrobin"`, pinned by a host
   test (D2).
 - The full browser suite passes under the mount (D2).
@@ -176,18 +182,14 @@ Taken 2026-10-21 at `d3420be9`.
 
 ## Open questions
 
-1. **The public host for absolute links** (carried from the outline,
-   Open question 3). Recommended: the request's own host, which the code
-   already uses, with no configured base. If the NUS gateway rewrites
-   `Host`, stage 4 adds forwarded-header handling, not a setting. The
-   author decides.
-2. **Browser tests under the mount** (outline, Open question 9).
-   Recommended: the real mount, through a prefixing `page` fixture. The
-   alternative, a harness at `/`, loses runtime coverage of client-built
-   URLs. The author decides.
-3. **The landing page with one application.** Recommended: list it (one
-   link), with no automatic redirect to `/reviewrobin/`, so `/` behaves
-   the same once Residential arrives. The author decides.
+1. ~~The public host for absolute links~~: the request's own host, no
+   configured base (author, 2026-10-21, on the recommendation).
+2. ~~Browser tests under the mount~~: the real mount, through a
+   prefixing `page` fixture (author, 2026-10-21, on the recommendation).
+3. ~~The landing page with one application~~: `/` redirects to that
+   application's path; the page lists applications when none or two or
+   more are mounted (author, 2026-10-21, overruling the recommendation
+   to list it).
 
 ## Out of scope
 
@@ -200,10 +202,10 @@ Taken 2026-10-21 at `d3420be9`.
 ## Doc impact
 
 - `spec/architecture.md` — RRW served at `/reviewrobin`; old root paths answer the host's 404; absolute URLs from the request's host (close).
-- `docs/local_setup.md` — the local URL is `http://127.0.0.1:8000/reviewrobin/`; `/` is the landing page (D2).
+- `docs/local_setup.md` — the local URL is `http://127.0.0.1:8000/reviewrobin/`; `/` redirects there while RRW is the only application (D2).
 - `docs/deployment_dev.md` — `/reviewrobin/health` excluded from Easy Auth; the four-requirement live check (D3).
 - `docs/security_posture.md` — `/health` and `/reviewrobin/health` as the unauthenticated probes; sign-out stays host-level (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the public host and the browser harness settled (close).
 - `README.md` — the local URL (D2).
 - `CLAUDE.md` — the local URL the author checks at (D2). `AGENTS.md` twinned.
-- `cordware/spec/host.md` — the landing page, `AppEntry.title`, RRW at `/reviewrobin` (close); checked by hand.
+- `cordware/spec/host.md` — the landing page and the one-application redirect, `AppEntry.title`, RRW at `/reviewrobin` (close); checked by hand.
