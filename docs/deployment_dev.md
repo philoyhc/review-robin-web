@@ -150,7 +150,7 @@ restart the app after a change.
 |---|---|---|
 | `APP_ENV` | `local` | Environment name. Any value other than `local` activates the fail-fast startup checks (`validate_critical_settings`). |
 | `DATABASE_URL` | local SQLite | Database connection string. Postgres in deployed environments — see "Database configuration" below. |
-| `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup. |
+| `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup, which the Cordware host owns (`cordware/logging.py`, segment 21A). |
 | `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap). |
 | `SYS_ADMIN_EMAILS` | empty | Comma-separated sys-admin (admin) allowlist. In a non-local environment, at least one of these two must be non-empty or the app refuses to boot. |
 | `SUPER_ADMIN_EMAILS` | empty | Comma-separated **super-admin** allowlist — the protected top tier (Segment 18S). Derived, not stored; set **only** here. Optional (not part of the boot fail-fast). A super-admin can't be demoted/removed in-app and is the only actor who can promote/demote admins. |

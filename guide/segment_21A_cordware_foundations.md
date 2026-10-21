@@ -166,6 +166,15 @@ Taken 2026-10-21 at `8b430421`.
   `docs/cordware_stage0_baseline.md`,
   `docs/cordware_implementation_sequence.md` and the dormant-slot note in
   `docs/deployment_dev.md`.
+- **A3.** The JSON formatter moved out of RRW into `cordware/logging.py`,
+  with an `ApplicationFilter` that stamps each record by logger-name
+  prefix. Each registry entry now names its prefix (RRW's is `app`).
+  `app/logging_config.py` keeps only `get_logger`, so `app/` still
+  imports nothing from `cordware/`. `LOG_LEVEL` is the host's setting,
+  and RRW's `Settings.log_level` is gone. **Event 5 waits for 21D:** the
+  host has no code of its own that can fail beyond a static `/health`,
+  and errors inside RRW are RRW's to log. The landing page brings the
+  first host code that can fail.
 
 ## PR ladder
 

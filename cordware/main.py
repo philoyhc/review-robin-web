@@ -13,6 +13,7 @@ path, at mount time, so this module names no application package.
 from __future__ import annotations
 
 import importlib
+import logging
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -22,22 +23,30 @@ from fastapi import FastAPI
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.types import ASGIApp
 
+from cordware.logging import configure_logging
+
+log = logging.getLogger("cordware")
+
 
 @dataclass(frozen=True)
 class AppEntry:
-    """One mountable application: where it mounts and how to build it.
+    """One mountable application: where it mounts, how to build it, and
+    the logger-name prefix it logs under.
 
     ``factory`` is a ``"module:attribute"`` path to a zero-argument
-    callable returning a complete ASGI application."""
+    callable returning a complete ASGI application. Records from
+    ``logger`` and its children are stamped with the application's
+    name."""
 
     path: str
     factory: str
+    logger: str
 
 
 # RRW mounts at `/` until segment 21D moves it to `/reviewrobin`. A
 # constant, not a setting, so no configuration can move it by accident.
 REGISTRY: Mapping[str, AppEntry] = {
-    "reviewrobin": AppEntry(path="/", factory="app.main:create_app"),
+    "reviewrobin": AppEntry(path="/", factory="app.main:create_app", logger="app"),
 }
 
 
@@ -46,6 +55,7 @@ class CordwareSettings(BaseSettings):
     shell value overrides the file (v0.8 §3)."""
 
     cordware_apps: str | None = None
+    log_level: str = "INFO"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -76,6 +86,17 @@ def _load_factory(path: str) -> Callable[[], ASGIApp]:
     return getattr(importlib.import_module(module_name), attribute)
 
 
+def _build(name: str, entry: AppEntry) -> ASGIApp:
+    try:
+        return _load_factory(entry.factory)()
+    except Exception:
+        log.exception(
+            "mounted application failed to start",
+            extra={"event": "host.app_startup_failed", "app": name},
+        )
+        raise
+
+
 def create_app(
     apps: Sequence[str] | None = None,
     *,
@@ -83,13 +104,16 @@ def create_app(
 ) -> FastAPI:
     """Build the host and mount ``apps`` (default: from `CORDWARE_APPS`).
 
-    A mounted application's factory raising, its startup validation
-    included, propagates: the host does not start (v0.8 §3)."""
-    names = parse_apps(
-        CordwareSettings().cordware_apps if apps is None else ",".join(apps),
-        registry,
+    The host configures the root logger first, so what a factory logs
+    while it builds is already structured. A mounted application's
+    factory raising, its startup validation included, is logged and
+    propagates: the host does not start (v0.8 §3)."""
+    settings = CordwareSettings()
+    configure_logging(
+        settings.log_level, {entry.logger: name for name, entry in registry.items()}
     )
-    mounted = [(registry[name], _load_factory(registry[name].factory)()) for name in names]
+    names = parse_apps(settings.cordware_apps if apps is None else ",".join(apps), registry)
+    mounted = [(registry[name], _build(name, registry[name])) for name in names]
 
     @asynccontextmanager
     async def lifespan(_host: FastAPI) -> AsyncIterator[dict[str, Any]]:
@@ -110,7 +134,13 @@ def create_app(
                             f"lifespan state key {key!r} from {name!r} is already set"
                         )
                     state[key] = value
-            yield state
+            log.info(
+                "host started", extra={"event": "host.started", "mounted": list(names)}
+            )
+            try:
+                yield state
+            finally:
+                log.info("host stopping", extra={"event": "host.stopping"})
 
     # No docs or schema routes of the host's own: registered ahead of the
     # mount, they would shadow those of an application mounted at `/`.

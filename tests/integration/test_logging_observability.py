@@ -4,7 +4,7 @@ Verifies the application-log stream fires (and carries its
 structured ``extra`` fields) at session activation, roster
 import / delete, retention purge, and permission denial. The
 JSON-formatter shape itself is covered in
-``tests/unit/test_logging_config.py``.
+``cordware/tests/test_logging.py``.
 """
 from __future__ import annotations
 

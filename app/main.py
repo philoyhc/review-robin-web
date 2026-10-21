@@ -8,7 +8,7 @@ from starlette.responses import RedirectResponse, Response
 from app.auth.roles import effective_super_admin_emails
 from app.config import settings, validate_critical_settings
 from app.db.models import User
-from app.logging_config import configure_logging, get_logger
+from app.logging_config import get_logger
 from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
 from app.web.oversized_ids import refuse_oversized_ids
@@ -55,7 +55,8 @@ class _RevalidatingStaticFiles(StaticFiles):
 
 
 def create_app() -> FastAPI:
-    configure_logging()
+    # The root logger is the host's (`cordware.logging`): RRW logs under
+    # its named `app.*` loggers only.
     validate_critical_settings(settings)
     # Segment 18S Item 2 — surface the degraded (no-super-tier) state.
     # A deployed env with no super-admin configured falls back to
