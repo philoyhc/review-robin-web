@@ -979,7 +979,7 @@ rotating through the modes `spec/visibility_policy.md` §3.1 allows for
 its `(audience, window)` cell; the cycle sets themselves are not restated
 here. A click, Enter or Space advances one step (`newModelChipKey`, as on
 Band 1's link chips). The two cells that can't — Reviewer / Session-ongoing (pinned to
-Raw) and Reviewees / Session-ongoing (pinned to off) — are fixed
+Raw) and Reviewees / Session-ongoing (pinned to off, reading "Not shown") — are fixed
 switches (`b3_static_pill`: `.tag-chip.is-fixed`, `spec/ui_elements.md`
 §9), the cycle chips' solid fill with no edge or pointer, a lock glyph,
 no role or handler, and the title "Fixed". Both macros keep the `b3_`

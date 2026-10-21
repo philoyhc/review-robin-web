@@ -855,7 +855,7 @@ page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
 `.pill-tag-clear` take `--selected-bg` / `--selected-fg` outright).
 Select all / Clear all is the edge case whose label names the next click
 rather than a state. The Instruments Visibility cells that can change
-are cycle chips too, "—" being a deliberate off. So are Extract's three empty-row chips
+are cycle chips too, "Not shown" being a deliberate off. So are Extract's three empty-row chips
 ("All reviewers ↔ Reviewers with responses" and its two siblings), which
 keep `is-selected` on in both labels (`spec/extract_data.md`).
 `tests/browser/test_cycle_chips.py` pins the lobby, Archived and Extract

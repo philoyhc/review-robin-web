@@ -47,3 +47,18 @@ deployment, not a local run.
 - [ ] **An invited user's first sign-in binds them.** Invite a new
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
+
+## Visibility "off" reads "Not shown" (19Y Item 8)
+
+- [ ] **The reviewer sees words, not a dash.** On a reviewer's page, the
+  "Who can see what you wrote" card reads "Not shown" where an audience
+  sees nothing (Reviewees while the session runs; You after release
+  unless the operator set Raw), in the muted pill.
+- [ ] **The instrument card matches.** Locked, Band 2's card reads the
+  same; unlocked, a cell's chip cycles through to "Not shown", the fixed
+  Reviewees · Session ongoing switch reads "Not shown", and the locked
+  table repaints to match before Save. The wider pill keeps the table
+  tidy in Layouts 1 and 2 and at a narrow width.
+- [ ] **The Guide's screencaps catch up.** Reshoot
+  `app/web/static/guide/instrument-card-preview.png`, `-dark`, and the
+  two `instrument-card-preview-unlocked` images, which still show "—".

@@ -80,7 +80,7 @@ MODE_LABELS: dict[str, tuple[str, str]] = {
 # - reviewee Session-ongoing: **always off** — the strict
 #   per-pair flow says reviewees don't see responses while the
 #   review is in flight. Editor renders this cell as a static
-#   "—" pill.
+#   "Not shown" pill.
 # - reviewee Responses-released: any of the three modes or off.
 # - observer Session-ongoing: ``None`` (off) or ``summarized``
 #   only. Per-row downloads during an active session — Raw or

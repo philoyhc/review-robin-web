@@ -813,6 +813,23 @@ Taken 2026-10-21 at `4e8806b4`, by a search of `app/`, `tests/`,
 | Specs naming it | 2: `spec/visibility_policy.md`, `spec/ui_elements.md` |
 | Guide screencaps showing it | 4 PNGs (`instrument-card-preview*`, both states, light and dark) |
 
+### Status
+
+**Closed 2026-10-21** in one PR, as laddered (#3187, with the Items 6
+and 7 browser checks).
+
+- **What moved from the plan.** Nothing in behavior. Of the six Guide
+  PNGs first counted, two (`instrument-card-fields-and-visibility*`)
+  show no visibility table; four are owed a reshoot. A test now pins the
+  operator's locked preview cell, which nothing asserted before.
+- **Reads.** One `diff-reviewer` read: no defect. It noted the coverage
+  gap above (closed) and a stale `b3_mode_cycle` comment naming only the
+  JS map (fixed). `spec-writer` at the close wrote
+  `spec/visibility_policy.md`, `spec/ui_elements.md` §9 and
+  `spec/instruments.md`; no flags.
+- **Owed by the author:** the browser-check rows and the screencap
+  reshoot in `guide/things_to_check_in_browser.md`.
+
 ### PR ladder
 
 1. **PR 1 — plan, build, specs, close** (the author, 2026-10-21: fold it

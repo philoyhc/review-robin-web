@@ -9663,6 +9663,9 @@ def test_band2_visibility_card_is_the_editor(
     ]
     assert ">You<" in locked and ">Reviewees<" in locked
     assert "Observers" not in locked
+    # Reviewees see nothing while the session runs, said in words (19Y
+    # Item 8).
+    assert 'data-new-model-vp-preview-cell="reviewee-while_ongoing">Not shown</span>' in locked
     # Unlocked: the editor, shown by the lock layer's swap, and the form
     # the cycle handler looks its hidden inputs up in.
     assert (
@@ -9700,7 +9703,7 @@ def test_band2_visibility_card_is_the_editor(
         r'<span class="pill pill-count tag-chip is-fixed" title="Fixed">([^<]+)</span>', editor
     ) == [
         "Raw responses",
-        "—",
+        "Not shown",
     ]
     # The six hidden inputs sit in the card and ride the dfsave form.
     inputs = re.findall(
