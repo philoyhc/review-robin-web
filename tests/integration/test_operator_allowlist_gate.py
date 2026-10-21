@@ -349,7 +349,6 @@ def test_fake_auth_operator_toggle_grants_operator_on_first_sign_in(
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
     monkeypatch.setattr(settings, "fake_auth_operator", True)
     fake_user = AuthenticatedUser(
         principal_id="fake-oid",
@@ -373,7 +372,6 @@ def test_fake_auth_sys_admin_toggle_grants_sys_admin_on_first_sign_in(
     db: Session,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
     monkeypatch.setattr(settings, "fake_auth_sys_admin", True)
     fake_user = AuthenticatedUser(
         principal_id="fake-oid",
@@ -390,6 +388,36 @@ def test_fake_auth_sys_admin_toggle_grants_sys_admin_on_first_sign_in(
         select(User).where(User.email == "fake-admin@example.edu")
     ).scalar_one()
     assert user.is_sys_admin is True
+
+
+@pytest.mark.parametrize(
+    ("operator_on", "sys_admin_on"),
+    [(True, True), (False, True), (True, False), (False, False)],
+    ids=["both-on", "operator-off", "sys-admin-off", "both-off"],
+)
+def test_fake_user_roles_key_off_is_fake_alone(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    operator_on: bool,
+    sys_admin_on: bool,
+) -> None:
+    """Segment 21C C2: the fake grants read the identity's marker, not
+    Cordware's `ALLOW_FAKE_AUTH` (left off here). With each switch off
+    the fake user loses only that role."""
+    monkeypatch.setattr(settings, "fake_auth_operator", operator_on)
+    monkeypatch.setattr(settings, "fake_auth_sys_admin", sys_admin_on)
+    fake_user = AuthenticatedUser(
+        principal_id="fake-oid",
+        email="fake-both@example.edu",
+        name="Fake Both",
+        provider="fake",
+        is_fake=True,
+    )
+    _make_client(db, fake_user).get("/__test/operator-gated")
+    user = db.execute(
+        select(User).where(User.email == "fake-both@example.edu")
+    ).scalar_one()
+    assert (user.is_operator, user.is_sys_admin) == (operator_on, sys_admin_on)
 
 
 def test_fake_auth_toggle_is_inert_when_user_is_not_fake(

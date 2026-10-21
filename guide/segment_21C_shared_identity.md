@@ -150,6 +150,10 @@ new boundary test forbids any application importing `cordware.main`.
 `validate_critical_settings` takes `env` for its tests. RRW tests patch
 `cordware.settings.identity_settings` for the moved fields.
 
+**C2 (2026-10-21).** As laddered: `get_or_create_user` grants the fake
+operator and admin roles on `is_fake` alone; a parametrized test turns
+each switch off with `ALLOW_FAKE_AUTH` off.
+
 ## PR ladder
 
 1. **C0, this plan**, prose only.
