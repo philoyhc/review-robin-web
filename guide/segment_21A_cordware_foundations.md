@@ -138,6 +138,12 @@ Taken 2026-10-21 at `8b430421`.
   timing and § Decision's rejected alternative. A disabled workflow
   cannot be dispatched either, so no deploy reaches the slot until it is
   re-enabled. The ordering holds from then on (Open question 4).
+- **2026-10-21, author's ruling: the dev slot stays dormant until the
+  Azure work settles, and every rung is tested on localhost.** A1's
+  start-command switch and the dev-slot DoD line move to
+  `docs/deployment_dev.md` "Resuming the dev slot". A1–A3 stay separate
+  rungs for reviewability, though § Decision's deploy-on-merge reason no
+  longer binds.
 
 ## PR ladder
 
@@ -154,9 +160,10 @@ Taken 2026-10-21 at `8b430421`.
    start, the lifespan stub, RRW's startup failure failing the host).
    It also adds `cordware*` to package discovery, `cordware/tests` to
    `testpaths`, and `cordware/` to the dev artifact. Must not touch
-   `app/` or any start command. **After it deploys, the author switches
+   `app/` or any start command. ~~**After it deploys, the author switches
    the dev slot's start command to `cordware.main:app`, before A2
-   merges.** A2 removes the object the old command names.
+   merges.**~~ (Struck 2026-10-21: the slot is dormant, see § Status.)
+   A2 removes the object the old command names.
 4. **A2, built once.** Removes `app = create_app()`. Moves `return_to`
    onto the request's router, the 16 importers onto a session-scoped
    `rrw_app` fixture in `tests/conftest.py`, the browser harness onto
@@ -186,8 +193,9 @@ Taken 2026-10-21 at `8b430421`.
   (A2).
 - The full suite passes on SQLite and Postgres with no test's request
   path changed (A1–A3).
-- The dev slot serves RRW from `cordware.main:app`; the author checked
-  sign-in and the lobby there (A2).
+- On localhost, `uvicorn cordware.main:app` serves RRW. The author
+  checked sign-in (fake auth) and the lobby there (A2). The dev slot's
+  switch is step 2 of `docs/deployment_dev.md` "Resuming the dev slot".
 - A captured log line carries `application: reviewrobin`, and no RRW
   module adds a root handler (A3).
 - The import-boundary test fails on a planted `import residentialapps`
@@ -215,13 +223,10 @@ Taken 2026-10-21 at `8b430421`.
    doc-reference and spec-coverage gates stay RRW's, and
    `cordware/spec/` is checked by hand at close. Decided in A1.
 
-4. **When does the dev deploy workflow come back on?** It has been
-   `disabled_manually` since 2026-06-03 (§ Status). Disabled, it runs on
-   neither push nor dispatch, so the slot has no deploy path. Re-enabling
-   it before A1 merges keeps the A1 → switch → A2 order. Re-enabling it
-   only for 21D's live check means the slot jumps from the June build to
-   the full A1–A2 tree, with the start command switched first. The
-   author decides before A1 merges.
+4. ~~When does the dev deploy workflow come back on?~~ When the Azure
+   work settles. Until then the slot stays dormant and testing is on
+   localhost (author, 2026-10-21). The steps are in
+   `docs/deployment_dev.md` "Resuming the dev slot".
 
 ## Out of scope
 
@@ -242,7 +247,7 @@ Taken 2026-10-21 at `8b430421`.
 - `docs/cordware_stage0_baseline.md` — created: RRW's stage 0 baseline (A0).
 - `docs/local_setup.md` — run through `cordware.main:app`; `CORDWARE_APPS` (A2).
 - `docs/setup_codespaces.md` — the restart command (A2).
-- `docs/deployment_dev.md` — the dev slot's start command and the artifact's `cordware/` (A1–A2).
+- `docs/deployment_dev.md` — the dormant-slot note and "Resuming the dev slot" (A0); the start command and the artifact's `cordware/` (A1–A2).
 - `spec/architecture.md` — RRW as a mounted application built once; the host owns root logging (close).
 - `spec/settings_inventory.md` — `CORDWARE_APPS` and `LOG_LEVEL`'s owner (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the lifespan contract and 21A's path scope recorded as settled (close).

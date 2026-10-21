@@ -44,8 +44,16 @@ GitHub Actions workflow name:
 
 - `.github/workflows/main_app-review-robin-web-dev.yml`
 
-The workflow triggers on push to `main` (or via `workflow_dispatch`) and
-runs three jobs in order: **build → migrate → deploy**.
+**Dormant since 2026-06-03.** The workflow is `disabled_manually` on
+GitHub, so it runs on neither push nor `workflow_dispatch`, and the slot
+still serves a build from that date or earlier. All testing is on
+localhost until the Azure work settles (author, 2026-10-21). Bring the
+slot back with "Resuming the dev slot" below, not by re-enabling the
+workflow alone.
+
+When enabled, the workflow triggers on push to `main` (or via
+`workflow_dispatch`) and runs three jobs in order: **build → migrate →
+deploy**.
 
 1. **build** installs `requirements.txt` into a prebuilt `antenv/`
    virtualenv and packages `app/`, `alembic/`, `alembic.ini`,
@@ -79,6 +87,37 @@ environment exists.
 
 There is no startup-time migration hook in the app; that pattern is
 fragile under concurrent deploys.
+
+## Resuming the dev slot
+
+The slot has been dormant since 2026-06-03 (above), while segment 21
+moves RRW under the Cordware host (`guide/segment_21_domain_retrofit.md`).
+`main` has moved on since then, so do these steps in order, in the
+Azure portal and on GitHub, when Azure is available. Each step names the
+change on `main` that makes it necessary. Skip a step whose change has
+not landed yet.
+
+1. **`APP_ENV`** (needed once 21C's guard lands): set it to a non-`local`
+   value such as `dev`. Cordware refuses to start with `ALLOW_FAKE_AUTH`
+   on and `APP_ENV` at `local`, and every deployed environment must set
+   it anyway. Keep `ALLOW_FAKE_AUTH` `false`.
+2. **Startup command** (needed once 21A's A2 is on `main`, which removes
+   `app.main:app`): change it to
+   `gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app`.
+   Its target exists from 21A's A1 on, so the new command is safe to set
+   ahead of a deploy that carries A1. A build older than A1 needs the
+   old command.
+3. **Re-enable the workflow**: Actions → the workflow → *Enable workflow*,
+   or `gh workflow enable main_app-review-robin-web-dev.yml`. Then
+   dispatch it, or let the next push to `main` run it. Its migrate job
+   brings the dev database from the June head up to the current one.
+4. **Check** `/health` unauthenticated. Then sign in through Easy Auth
+   and reach the lobby. Once 21D has landed, run the live check its plan
+   owes: RRW at `/reviewrobin`, Cordware's landing page at `/`, deep links
+   and sign-in/sign-out returns, and v0.8 §3's behavior requirements
+   under real Easy Auth (`docs/cordware_repository_strategy_v0.8.md` §3).
+5. **Record it:** clear this section's "dormant" note above, and set the
+   segment 21 plans' dev-slot lines to done.
 
 ## Production deployment (planned)
 

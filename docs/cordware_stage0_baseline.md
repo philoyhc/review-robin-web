@@ -90,4 +90,7 @@ Command: `gh api repos/philoyhc/review-robin-web/actions/workflows`, and
   dev slot redeploys on merge. A disabled workflow runs on neither push
   nor `workflow_dispatch`, so nothing reaches the slot until the author
   re-enables it. The start command must then name an object the deployed
-  build has. The plan's `## Status` and Open question 4 record this.
+  build has. The author has ruled that the slot stays dormant and all
+  testing is on localhost until the Azure work settles (2026-10-21).
+  The steps to bring it back are in `docs/deployment_dev.md` "Resuming
+  the dev slot".
