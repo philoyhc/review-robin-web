@@ -15,7 +15,7 @@
      every section for every viewer; rung 7 replaces the resolver and touches
      nothing here. Copy lives in this template; audience policy lives in the
      view. #}
-  <a class="back-link" href="{{ return_to_url }}">&larr; Back to {{ return_to_label }}</a>
+  <a class="back-link" href="{{ url(return_to_url) }}">&larr; Back to {{ return_to_label }}</a>
 
   <h1>Guide</h1>
   <p class="page-subtitle">
@@ -265,11 +265,11 @@
       On the Sessions lobby, choose <strong>Add new session</strong>.
     </p>
     <figure class="guide-figure guide-figure-narrow">
-      <img src="/static/guide/lobby-add-new-session.png"
+      <img src="{{ url('/static/guide/lobby-add-new-session.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Sessions lobby's Filter card: a filter box reading Filter by name,
                 code, or tag, above the Clear, Add new session and Go to Archive buttons.">
-      <img src="/static/guide/lobby-add-new-session-dark.png"
+      <img src="{{ url('/static/guide/lobby-add-new-session-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Sessions lobby's Filter card: a filter box reading Filter by name,
                 code, or tag, above the Clear, Add new session and Go to Archive buttons.">
@@ -291,7 +291,7 @@
       it, and at least an hour from now (a deployment can change both).
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/create-session-details.png"
+      <img src="{{ url('/static/guide/create-session-details.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Create session form: Name, Code, Help contact and Timezone
                 across the top; Description on the left; Start, End and the
@@ -299,7 +299,7 @@
                 button, with the Send invites and Send reminders offsets to the
                 right of Start and End and Release responses until below them;
                 Create session and Cancel below.">
-      <img src="/static/guide/create-session-details-dark.png"
+      <img src="{{ url('/static/guide/create-session-details-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Create session form: Name, Code, Help contact and Timezone
                 across the top; Description on the left; Start, End and the
@@ -319,7 +319,7 @@
       assign tags to the session.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/create-session-quick-setup.png"
+      <img src="{{ url('/static/guide/create-session-quick-setup.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The foot of the Create session page: on the left, the User
                 interface settings card with its two toggles for the optional
@@ -328,7 +328,7 @@
                 relationships, observers and session settings; on the right,
                 the Tags (optional) card above the Owners (optional) card, which
                 lists you as the first owner and has a picker to add others.">
-      <img src="/static/guide/create-session-quick-setup-dark.png"
+      <img src="{{ url('/static/guide/create-session-quick-setup-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The foot of the Create session page: on the left, the User
                 interface settings card with its two toggles for the optional
@@ -357,13 +357,13 @@
       have been populated, but the review's Instruments are not ready.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/session-home-chrome-and-workflow.png"
+      <img src="{{ url('/static/guide/session-home-chrome-and-workflow.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="Session Home: the two-row Setup and Operations tab strip, the
                 status bar reading Draft, 154 reviewers, 154 reviewees,
                 Instruments 0 / 1, and the Workflow card with its setup
                 checklist.">
-      <img src="/static/guide/session-home-chrome-and-workflow-dark.png"
+      <img src="{{ url('/static/guide/session-home-chrome-and-workflow-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="Session Home: the two-row Setup and Operations tab strip, the
                 status bar reading Draft, 154 reviewers, 154 reviewees,
@@ -386,13 +386,13 @@
       <strong>Unlock</strong>:
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/roster-card-locked.png"
+      <img src="{{ url('/static/guide/roster-card-locked.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The roster card at the top of the Reviewers page, locked: the
                 reviewer count and a pill per roster column carrying its
                 filled-in count, the columns reviewers see of their own entry,
                 and the Unlock button at the right.">
-      <img src="/static/guide/roster-card-locked-dark.png"
+      <img src="{{ url('/static/guide/roster-card-locked-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The roster card at the top of the Reviewers page, locked: the
                 reviewer count and a pill per roster column carrying its
@@ -403,7 +403,7 @@
       To access the facilities:
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/roster-card-unlocked.png"
+      <img src="{{ url('/static/guide/roster-card-unlocked.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The same card unlocked: What reviewers see of their own entry,
                 with Name, Email and Profile on and Tutor, Group and Team off; the
@@ -412,7 +412,7 @@
                 Tag 1, Tag 2 and Tag 3 renamed to Tutor, Group and Team; the
                 Danger Zone card with its delete-all confirmation; and the Lock
                 button.">
-      <img src="/static/guide/roster-card-unlocked-dark.png"
+      <img src="{{ url('/static/guide/roster-card-unlocked-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The same card unlocked: What reviewers see of their own entry,
                 with Name, Email and Profile on and Tutor, Group and Team off; the
@@ -427,7 +427,7 @@
        that serves the zip. #}
     <p>
       The required and optional columns are listed in each Upload card. A full
-      set of <a href="/templates/starter.zip" download>template CSV files with mock data
+      set of <a href="{{ url('/templates/starter.zip') }}" download>template CSV files with mock data
       can be downloaded here</a> — <code>reviewers.csv</code>,
       <code>reviewees.csv</code>, <code>relationships.csv</code> and
       <code>observers.csv</code>, each with the correct headers and example
@@ -474,11 +474,11 @@
       whole instrument card.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/instrument-card-collapsed.png"
+      <img src="{{ url('/static/guide/instrument-card-collapsed.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="A collapsed instrument bar reading Instrument_1, with NOT SET
                 UP and LOCKED pills and the expand chevron at the right.">
-      <img src="/static/guide/instrument-card-collapsed-dark.png"
+      <img src="{{ url('/static/guide/instrument-card-collapsed-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="A collapsed instrument bar reading Instrument_1, with NOT SET
                 UP and LOCKED pills and the expand chevron at the right.">
@@ -498,7 +498,7 @@
       connectors by clicking the pills.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/instrument-card-assignment-rule.png"
+      <img src="{{ url('/static/guide/instrument-card-assignment-rule.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The top of an unlocked instrument card named Group Peer
                 Review, carrying the SET UP and UNLOCKED pills, with Lock,
@@ -509,7 +509,7 @@
                 INDIVIDUAL, with an INCLUDE SELF REVIEWS chip below it and the
                 line: A self review is where the individual reviewed is the
                 reviewer.">
-      <img src="/static/guide/instrument-card-assignment-rule-dark.png"
+      <img src="{{ url('/static/guide/instrument-card-assignment-rule-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The top of an unlocked instrument card named Group Peer
                 Review, carrying the SET UP and UNLOCKED pills, with Lock,
@@ -543,7 +543,7 @@
       <strong>Refresh sample</strong> to refresh the preview.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/instrument-card-preview-unlocked.png"
+      <img src="{{ url('/static/guide/instrument-card-preview-unlocked.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Preview review instrument part of an unlocked card in Layout
                 2, with the Layout 2 chip and Refresh sample beside its title: on
@@ -552,7 +552,7 @@
                 can't change and an Observers row shown for setup only; on the
                 right a help-text box for Rating and one for Comments; then the
                 counts and the sample reviewee row.">
-      <img src="/static/guide/instrument-card-preview-unlocked-dark.png"
+      <img src="{{ url('/static/guide/instrument-card-preview-unlocked-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Preview review instrument part of an unlocked card in Layout
                 2, with the Layout 2 chip and Refresh sample beside its title: on
@@ -567,7 +567,7 @@
       reviewers will see:
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/instrument-card-preview.png"
+      <img src="{{ url('/static/guide/instrument-card-preview.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Preview review instrument part of a saved, locked card in
                 Layout 2: on the left the instrument's name and description over
@@ -577,7 +577,7 @@
                 Rating and Comments; then the required and all-items counts and
                 a sample reviewee row with Profile, Tutor, Group and Team columns
                 and the Rating and Comments inputs.">
-      <img src="/static/guide/instrument-card-preview-dark.png"
+      <img src="{{ url('/static/guide/instrument-card-preview-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Preview review instrument part of a saved, locked card in
                 Layout 2: on the left the instrument's name and description over
@@ -610,7 +610,7 @@
       locked off, as is any field a group row can't show).
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/instrument-card-fields-and-visibility.png"
+      <img src="{{ url('/static/guide/instrument-card-fields-and-visibility.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The foot of an unlocked instrument card: the Display fields
                 as chips, Name and Email each with a lock and the others with
@@ -619,7 +619,7 @@
                 bounds and the R, ≡, ▲ ▼ and X buttons; and the Save,
                 Cancel, Replicate, Delete, +Instrument, +Page break and Lock
                 buttons above the delete-confirmation checkbox.">
-      <img src="/static/guide/instrument-card-fields-and-visibility-dark.png"
+      <img src="{{ url('/static/guide/instrument-card-fields-and-visibility-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The foot of an unlocked instrument card: the Display fields
                 as chips, Name and Email each with a lock and the others with
@@ -669,7 +669,7 @@
       branching.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/instrument-card-branching.png"
+      <img src="{{ url('/static/guide/instrument-card-branching.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Response fields rows with a branch inside a branch:
                 Familiarity, with the condition row If the above is more
@@ -679,7 +679,7 @@
                 optional); and Comments in Rating's branch, one column
                 further right under a second bar. Each field row starts
                 with its chip.">
-      <img src="/static/guide/instrument-card-branching-dark.png"
+      <img src="{{ url('/static/guide/instrument-card-branching-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Response fields rows with a branch inside a branch:
                 Familiarity, with the condition row If the above is more
@@ -730,11 +730,11 @@
       Reviewers, Reviewees and Instruments are ready for it.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/workflow-prepare-session.png"
+      <img src="{{ url('/static/guide/workflow-prepare-session.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Workflow card on a draft session, offering the Prepare
                 session button beside an all-ticked setup checklist.">
-      <img src="/static/guide/workflow-prepare-session-dark.png"
+      <img src="{{ url('/static/guide/workflow-prepare-session-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Workflow card on a draft session, offering the Prepare
                 session button beside an all-ticked setup checklist.">
@@ -751,12 +751,12 @@
       <strong>Validate</strong> page.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/workflow-after-validation.png"
+      <img src="{{ url('/static/guide/workflow-after-validation.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Workflow card after a successful validation, offering revert to draft,
                 prepare session, send invites and activate session, with a right column
                 reading Status — Setup validated.">
-      <img src="/static/guide/workflow-after-validation-dark.png"
+      <img src="{{ url('/static/guide/workflow-after-validation-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Workflow card after a successful validation, offering revert to draft,
                 prepare session, send invites and activate session, with a right column
@@ -770,13 +770,13 @@
       inactive.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/assignments-page.png"
+      <img src="{{ url('/static/guide/assignments-page.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Assignments page's Per-instrument status card: one row for the
                 Group Peer Review instrument as a chip, an INDIVIDUAL type pill,
                 726 generated pairs, no groups, an INCLUDE 154 SELF REVIEWS chip,
                 726 included, and an Edit on Instruments page link.">
-      <img src="/static/guide/assignments-page-dark.png"
+      <img src="{{ url('/static/guide/assignments-page-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Assignments page's Per-instrument status card: one row for the
                 Group Peer Review instrument as a chip, an INDIVIDUAL type pill,
@@ -826,11 +826,11 @@
       yet, an empty roster &mdash; the link lands you on the right page.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/validate-page.png"
+      <img src="{{ url('/static/guide/validate-page.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Validate page: a setup-coverage summary, severity filter chips,
                 and issues grouped by gate, each with a Fix-on deep link.">
-      <img src="/static/guide/validate-page-dark.png"
+      <img src="{{ url('/static/guide/validate-page-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Validate page: a setup-coverage summary, severity filter chips,
                 and issues grouped by gate, each with a Fix-on deep link.">
@@ -880,12 +880,12 @@
       every reviewer with their current state.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/invitations-page.png"
+      <img src="{{ url('/static/guide/invitations-page.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Invitations page: eight lifecycle counters reading 154 eligible
                 reviewers and 154 invitations created with none sent, above a reviewer
                 table where every row is NOT SENT and NOT STARTED.">
-      <img src="/static/guide/invitations-page-dark.png"
+      <img src="{{ url('/static/guide/invitations-page-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Invitations page: eight lifecycle counters reading 154 eligible
                 reviewers and 154 invitations created with none sent, above a reviewer
@@ -903,11 +903,11 @@
       Invitations page, because nothing is wrong with any individual reviewer.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/responses-page.png"
+      <img src="{{ url('/static/guide/responses-page.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Responses page: reviewee coverage counters above a table of
                 reviewees with their coverage state and reviewers-completed count.">
-      <img src="/static/guide/responses-page-dark.png"
+      <img src="{{ url('/static/guide/responses-page-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Responses page: reviewee coverage counters above a table of
                 reviewees with their coverage state and reviewers-completed count.">
@@ -938,12 +938,12 @@
       &mdash; or a zip of CSVs where the lens produces several.
     </p>
     <figure class="guide-figure">
-      <img src="/static/guide/extract-data-page.png"
+      <img src="{{ url('/static/guide/extract-data-page.png') }}"
            data-theme-variant="light" loading="lazy"
            alt="The Extract data page: four lens cards in a two-by-two grid — Extract all
                 data, Reviewer response metadata, By instrument and Reviewee response
                 metadata — each with its chip-driven options and a download button.">
-      <img src="/static/guide/extract-data-page-dark.png"
+      <img src="{{ url('/static/guide/extract-data-page-dark.png') }}"
            data-theme-variant="dark" loading="lazy"
            alt="The Extract data page: four lens cards in a two-by-two grid — Extract all
                 data, Reviewer response metadata, By instrument and Reviewee response
@@ -1001,7 +1001,7 @@
       nobody real involved.
     </p>
     <p>
-      <a href="/templates/demo.zip" download>Download sample session data</a> — the same
+      <a href="{{ url('/templates/demo.zip') }}" download>Download sample session data</a> — the same
       four files as the setup templates, but filled in: six students across two
       tutorial groups <code>TW01</code> and <code>TW02</code>, each reviewing
       the others in their group, with both tutors as observers.
@@ -1039,7 +1039,7 @@
        six-student walkthrough rather than replacing it. #}
     <p>
       To try the app at a realistic class size,
-      <a href="/templates/full.zip" download>download the full-size sample
+      <a href="{{ url('/templates/full.zip') }}" download>download the full-size sample
       rosters</a> — <code>reviewers.csv</code> and <code>reviewees.csv</code>
       with the same 154 people in each. They are split into eleven tutorial
       groups, <code>TW01</code> to <code>TW11</code>, with tag columns

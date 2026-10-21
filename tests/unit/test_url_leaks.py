@@ -194,6 +194,22 @@ def test_no_template_rebinds_a_url_helper() -> None:
     assert not found, f"templates rebind a URL helper name: {found}"
 
 
+_IMPORTS = re.compile(r"""\{%-?\s*(?:from|import)\s+["']([^"']+)["'][^%]*%\}""")
+
+
+def test_a_macro_using_the_helpers_is_imported_with_context() -> None:
+    """The helpers read ``request`` from the template context, which a
+    plain ``{% from … import %}`` does not pass to the macro."""
+    uses = re.compile(rf"\b{_HELPER_NAMES}\(")
+    missing = []
+    for path in sorted(TEMPLATES.rglob("*.html")):
+        for match in _IMPORTS.finditer(_blank_comments(path.read_text())):
+            target = TEMPLATES / match.group(1)
+            if "with context" not in match.group(0) and uses.search(target.read_text()):
+                missing.append(f"{_rel(path)}: {match.group(0)}")
+    assert not missing, f"import these with context: {missing}"
+
+
 def test_segments_come_from_the_router() -> None:
     assert {"operator", "me", "static"} <= set(_segments())
 

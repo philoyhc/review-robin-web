@@ -33,7 +33,7 @@
           <tr>
             <td>
               {% if item.link_enabled %}
-                <a href="{{ item.link_target }}">
+                <a href="{{ url(item.link_target) }}">
                   {{ item.session.name }}
                 </a>
               {% else %}
@@ -55,19 +55,19 @@
                     {% set role_link = item.role_links.get(role) %}
                     {% if role == "reviewer" %}
                       {% if role_link and role_link.enabled %}
-                        <a class="pill pill-role-reviewer" href="{{ role_link.target }}">Reviewer</a>
+                        <a class="pill pill-role-reviewer" href="{{ url(role_link.target) }}">Reviewer</a>
                       {% else %}
                         <span class="pill pill-role-reviewer">Reviewer</span>
                       {% endif %}
                     {% elif role == "reviewee" %}
                       {% if role_link and role_link.enabled %}
-                        <a class="pill pill-role-reviewee" href="{{ role_link.target }}">Reviewee</a>
+                        <a class="pill pill-role-reviewee" href="{{ url(role_link.target) }}">Reviewee</a>
                       {% else %}
                         <span class="pill pill-role-reviewee">Reviewee</span>
                       {% endif %}
                     {% elif role == "observer" %}
                       {% if role_link and role_link.enabled %}
-                        <a class="pill pill-role-observer" href="{{ role_link.target }}">Observer</a>
+                        <a class="pill pill-role-observer" href="{{ url(role_link.target) }}">Observer</a>
                       {% else %}
                         <span class="pill pill-role-observer">Observer</span>
                       {% endif %}
@@ -149,7 +149,7 @@
         nothing here for you right now. If you expected to see a review
         here, contact the person running it.
       </p>
-      <p><a href="/about?return_to=/me">About Review Robin</a></p>
+      <p><a href="{{ url('/about') }}?return_to=/me">About Review Robin</a></p>
     </div>
   {% endif %}
 {% endblock %}
