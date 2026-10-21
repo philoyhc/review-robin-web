@@ -112,9 +112,8 @@ on the plan), and the close.
   right-column hide rule (a 12px gap under no-help intros at ≤ 800px),
   an empty-row gap and two stale spec phrases; all fixed, with browser
   tests for the narrow no-help and no-heading-no-help cases.
-- **Owed by the author:** the browser-check rows in
-  `guide/things_to_check_in_browser.md`, including reshooting the Guide's
-  preview screencap and its alt text.
+- **Browser checks** passed (the author, 2026-10-20); the Guide's
+  preview screencap and its alt text were redone in Item 7.
 
 ### PR ladder
 
@@ -253,9 +252,8 @@ the close.
   lock-dependent wording in `spec/instruments.md`, this count).
   `spec-writer` at the close wrote the five specs, the rule included;
   no code-versus-plan flag.
-- **Owed by the author:** the browser-check rows in
-  `guide/things_to_check_in_browser.md`; the Item 1 screencap reshoot
-  now shows Item 2's rows, and its alt text says so.
+- **Browser checks** passed (the author, 2026-10-20); the Item 1
+  screencap reshoot (Item 7) shows Item 2's rows.
 
 ### PR ladder
 
@@ -381,8 +379,7 @@ and close in one, as laddered.
   `before` unchecked in two tests).
   `spec-writer` at the close wrote the three specs (a new intro-columns
   blockquote in `spec/ui_elements.md`); no code-versus-plan flag.
-- **Owed by the author:** the browser-check rows in
-  `guide/things_to_check_in_browser.md`.
+- **Browser checks** passed (the author, 2026-10-20).
 
 ### PR ladder
 
@@ -470,8 +467,7 @@ the build, specs and close in one, as laddered.
   inline style, and the test's selector matches only it. A docstring
   that claimed an unchecked height was trimmed. `spec-writer` at the
   close wrote the two specs; no flag beyond a section number.
-- **Owed by the author:** the browser-check row in
-  `guide/things_to_check_in_browser.md`.
+- **Browser checks** passed (the author, 2026-10-20).
 
 ### PR ladder
 
@@ -562,8 +558,7 @@ the build, specs and close in one, as laddered.
   unobserve, a width test that compared two layouts rather than one box
   before and after, and the help-text helper moved to `_builder.py`).
   `spec-writer` at the close wrote the two specs; no flag.
-- **Owed by the author:** the browser-check row in
-  `guide/things_to_check_in_browser.md`.
+- **Browser checks** passed (the author, 2026-10-20).
 
 ### PR ladder
 
@@ -649,8 +644,7 @@ the build, spec and close in one, as laddered.
   (the description and `autocomplete`, above). `spec-writer` at the
   close wrote `spec/instruments.md`; its one flag, a "persisted values
   only" sentence the hook falsified, it rewrote.
-- **Owed by the author:** the browser-check row in
-  `guide/things_to_check_in_browser.md`.
+- **Browser checks** passed (the author, 2026-10-21).
 
 ### PR ladder
 
@@ -738,8 +732,7 @@ swapping the two Band 2 pairs.
   and corrected the Create session alt text's placement of "Release
   responses until".
   `spec-writer`: no spec in Doc impact; no spec names these screencaps.
-- **Owed by the author:** the browser-check row in
-  `guide/things_to_check_in_browser.md`.
+- **Browser checks** passed (the author, 2026-10-21).
 
 ### PR ladder
 
@@ -828,8 +821,8 @@ and 7 browser checks).
   `spec/visibility_policy.md`, `spec/ui_elements.md` §9 and
   `spec/instruments.md`; no flags. Codex then found the same "—" in
   `spec/rrw_functional_spec.md`'s reviewer card, now fixed.
-- **Owed by the author:** the browser-check rows and the screencap
-  reshoot in `guide/things_to_check_in_browser.md`.
+- **Browser checks** passed (the author, 2026-10-21); the four Band 2
+  screencaps were reshot from `Guide_6c.docx` in a follow-up PR.
 
 ### PR ladder
 
