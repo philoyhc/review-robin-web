@@ -3,14 +3,17 @@
 Segment 21B (`guide/segment_21B_url_sweep.md`): the static rules in
 `tests/unit/test_url_leaks.py` say every emission goes through the
 helpers; this renders real pages under the mount and checks what they
-emit (`tests/_mounted.py`'s `leaks()`). The page set grows as each area
-is swept, and at B7 covers every fillable GET route; until then a page
-whose body is not swept is checked only inside its swept regions.
+emit (`tests/_mounted.py`'s `leaks()`). The B7 crawl visits every GET
+route RRW registers; the tests before it pin particular emissions (the
+chrome's `return_to`, the redirect targets).
 """
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,7 +23,21 @@ from sqlalchemy.orm import Session
 from _mounted import MOUNT, leaks
 from app.auth.identity import AuthenticatedUser
 from app.config import settings
-from app.db.models import ReviewSession
+from app.db.models import (
+    Assignment,
+    DataShape,
+    EmailOutbox,
+    Instrument,
+    InstrumentResponseField,
+    InstrumentViewPolicy,
+    Invitation,
+    Observer,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+)
+
+from ._answer_form import answer_form
 
 
 @pytest.fixture
@@ -43,6 +60,44 @@ def session_id(mounted_client: TestClient, db: Session) -> str:
 @pytest.fixture
 def sys_admin(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+
+
+def _user(name: str) -> AuthenticatedUser:
+    """alice operates (and, with ``sys_admin``, administers); rae reviews,
+    olive observes and carol is reviewed in the seeded session."""
+    if name == "alice":
+        return AuthenticatedUser(
+            principal_id="alice-oid", email="alice@example.edu", name="Alice Example", provider="aad"
+        )
+    return AuthenticatedUser(
+        principal_id=f"{name}-oid", email=f"{name}@example.edu", name=name.title(), provider="aad"
+    )
+
+
+def _activated_session(client: TestClient, db: Session) -> str:
+    """A session alice operates and rae reviews, activated, through the mount."""
+    from ._full_matrix import mark_band1_touched_on_all_instruments, pin_full_matrix_on_all_instruments
+
+    base = f"{MOUNT}/operator/sessions"
+    client.post(base, data={"name": "Live", "code": "live"}, follow_redirects=False)
+    review_session = db.execute(select(ReviewSession).where(ReviewSession.code == "live")).scalar_one()
+    sid = review_session.public_id
+    for kind, body in (
+        ("reviewers", b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n"),
+        ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
+    ):
+        client.post(
+            f"{base}/{sid}/{kind}/import",
+            files={"file": (f"{kind}.csv", body, "text/csv")},
+            follow_redirects=False,
+        )
+    pin_full_matrix_on_all_instruments(db, review_session.id)
+    mark_band1_touched_on_all_instruments(db, review_session.id)
+    for step in ("prepare", "activate"):
+        client.post(f"{base}/{sid}/workflow/{step}", follow_redirects=False)
+    db.refresh(review_session)
+    assert review_session.status == "ready", review_session.status  # activated: open to reviewers
+    return sid
 
 
 # --- B2: the chrome ---
@@ -97,110 +152,17 @@ def test_the_chrome_hides_its_own_page_under_the_mount(mounted_client: TestClien
     assert f'href="{MOUNT}/about?return_to=/guide"' in response.text
 
 
-# --- B3: the operator pages, whole ---
-
-OPERATOR_PAGES = [
-    "/operator/sessions",
-    "/operator/sessions/new",
-    "/operator/sessions/archived",
-    "/operator/settings",
-]
-SESSION_PAGES = [
-    "",
-    "/reviewers",
-    "/reviewees",
-    "/relationships",
-    "/observers",
-    "/instruments",
-    "/setup-invite",
-    "/assignments",
-    "/validate",
-    "/invitations",
-    "/responses",
-    "/extract-data",
-]
-SYS_ADMIN_PAGES = ["/operator/sys-admin/sessions", "/operator/sys-admin/users"]
-
-
-@pytest.mark.parametrize("path", OPERATOR_PAGES)
-def test_an_operator_page_emits_only_prefixed_urls(mounted_client: TestClient, path: str) -> None:
-    response = mounted_client.get(f"{MOUNT}{path}")
-    assert response.status_code == 200
-    assert leaks(response) == []
-
-
-@pytest.mark.parametrize("page", SESSION_PAGES)
-def test_a_session_page_emits_only_prefixed_urls(
-    mounted_client: TestClient, session_id: str, page: str
-) -> None:
-    response = mounted_client.get(f"{MOUNT}/operator/sessions/{session_id}{page}")
-    assert response.status_code == 200
-    assert leaks(response) == []
-
-
-@pytest.mark.usefixtures("sys_admin")
-@pytest.mark.parametrize("path", SYS_ADMIN_PAGES)
-def test_a_sys_admin_page_emits_only_prefixed_urls(mounted_client: TestClient, path: str) -> None:
-    response = mounted_client.get(f"{MOUNT}{path}")
-    assert response.status_code == 200
-    assert leaks(response) == []
-
-
-# --- B4: the participant pages, the Guide and About ---
+# --- B5: redirects ---
 
 
 @pytest.fixture
 def active_session_id(mounted_client: TestClient, db: Session) -> str:
-    """A session alice operates and rae reviews, activated, through the mount."""
-    from ._full_matrix import mark_band1_touched_on_all_instruments, pin_full_matrix_on_all_instruments
-
-    base = f"{MOUNT}/operator/sessions"
-    mounted_client.post(base, data={"name": "Live", "code": "live"}, follow_redirects=False)
-    review_session = db.execute(select(ReviewSession).where(ReviewSession.code == "live")).scalar_one()
-    sid = review_session.public_id
-    for kind, body in (
-        ("reviewers", b"ReviewerName,ReviewerEmail\nRae,rae@example.edu\n"),
-        ("reviewees", b"RevieweeName,RevieweeEmail\nCarol,carol@example.edu\n"),
-    ):
-        mounted_client.post(
-            f"{base}/{sid}/{kind}/import",
-            files={"file": (f"{kind}.csv", body, "text/csv")},
-            follow_redirects=False,
-        )
-    pin_full_matrix_on_all_instruments(db, review_session.id)
-    mark_band1_touched_on_all_instruments(db, review_session.id)
-    for step in ("prepare", "activate"):
-        mounted_client.post(f"{base}/{sid}/workflow/{step}", follow_redirects=False)
-    db.refresh(review_session)
-    assert review_session.status == "ready", review_session.status  # activated: open to reviewers
-    return sid
-
-
-@pytest.mark.parametrize("path", ["/me", "/guide", "/about", "/auth/me/debug"])
-def test_a_participant_page_emits_only_prefixed_urls(
-    mounted_client: TestClient, active_session_id: str, path: str
-) -> None:
-    response = mounted_client.get(f"{MOUNT}{path}")
-    assert response.status_code == 200
-    assert leaks(response) == []
+    return _activated_session(mounted_client, db)
 
 
 @pytest.fixture
 def rae_client(make_mounted_client: Callable[[AuthenticatedUser], TestClient]) -> TestClient:
-    rae = AuthenticatedUser(principal_id="rae-oid", email="rae@example.edu", name="Rae", provider="aad")
-    return make_mounted_client(rae)
-
-
-@pytest.mark.parametrize("path", ["/me", "/me/sessions/{sid}/1"])
-def test_a_reviewer_page_emits_only_prefixed_urls(
-    active_session_id: str, rae_client: TestClient, path: str
-) -> None:
-    response = rae_client.get(f"{MOUNT}{path.format(sid=active_session_id)}")
-    assert response.status_code == 200
-    assert leaks(response) == []
-
-
-# --- B5: redirects ---
+    return make_mounted_client(_user("rae"))
 
 
 def test_the_root_redirects_land_under_the_mount(mounted_client: TestClient) -> None:
@@ -227,3 +189,245 @@ def test_a_reviewer_redirect_lands_under_the_mount(
     assert response.status_code in (302, 303, 307)
     assert response.headers["location"].startswith(f"{MOUNT}/me")
     assert leaks(response) == []
+
+
+# --- B7: every GET route ---
+#
+# One seeded session, visited in three phases: activated; then rae
+# submits, which opens the summary; then closed with responses released,
+# which opens carol's results and olive's row download. Each route names
+# the phase, the user and the status it answers with, so a page that
+# turns into a 404 cannot pass as crawled.
+
+_LIVE, _SUBMITTED, _RELEASED = "live", "submitted", "released"
+
+
+@dataclass(frozen=True)
+class Visit:
+    who: str
+    status: int
+    phase: str = _LIVE
+
+
+_PAGE = (Visit("alice", 200),)
+_SESSION = "/operator/sessions/{session_id}"
+_EXPORTS = (
+    "audit_log.csv",
+    "bundle.zip",
+    "by_instrument_bundle.zip",
+    "data_shapes_bundle.zip",
+    "observers.csv",
+    "participant_tokens.csv",
+    "relationships.csv",
+    "responses.csv",
+    "responses_bundle.zip",
+    "reviewee_metadata.csv",
+    "reviewees.csv",
+    "reviewer_metadata.csv",
+    "reviewers.csv",
+    "settings.csv",
+)
+
+ROUTES: dict[str, tuple[Visit, ...]] = {
+    "/": (Visit("alice", 302),),
+    "/operator": (Visit("alice", 302),),
+    "/operator/": (Visit("alice", 302),),
+    "/about": _PAGE,
+    "/auth/me": _PAGE,
+    "/auth/me/debug": _PAGE,
+    "/guide": _PAGE,
+    "/health": _PAGE,
+    "/templates/demo.zip": _PAGE,
+    "/templates/full.zip": _PAGE,
+    "/templates/starter.zip": _PAGE,
+    # The participant surfaces.
+    "/me": (Visit("alice", 200), Visit("rae", 200), Visit("olive", 200), Visit("carol", 200, _RELEASED)),
+    "/me/invite/{token}": (Visit("rae", 303),),
+    "/me/sessions/{session_id}": (Visit("rae", 303),),
+    "/me/sessions/{session_id}/{page_n}": (Visit("rae", 200), Visit("rae", 200, _SUBMITTED)),
+    "/me/sessions/{session_id}/{page_n}/save": (Visit("rae", 303),),
+    "/me/sessions/{session_id}/clear": (Visit("rae", 303),),
+    "/me/sessions/{session_id}/submit": (Visit("rae", 303),),
+    "/me/sessions/{session_id}/recall": (Visit("rae", 303),),
+    "/me/sessions/{session_id}/summary": (Visit("rae", 303), Visit("rae", 200, _SUBMITTED)),
+    "/me/sessions/{session_id}/summary.csv": (Visit("rae", 200, _SUBMITTED),),
+    "/me/sessions/{session_id}/collation": (Visit("olive", 200), Visit("olive", 200, _RELEASED)),
+    "/me/sessions/{session_id}/collation/instruments/{instrument_seq}.csv": (
+        Visit("olive", 200, _RELEASED),
+    ),
+    "/me/sessions/{session_id}/results": (Visit("carol", 200, _RELEASED),),
+    # The operator surfaces.
+    "/operator/sessions": _PAGE,
+    "/operator/sessions/archived": _PAGE,
+    "/operator/sessions/new": _PAGE,
+    "/operator/sessions/rehydrate": _PAGE,
+    # Its token names a stashed rehydrate set, which only a POSTed upload
+    # makes; without one it answers the error page.
+    "/operator/sessions/rehydrate/dropped.csv": (Visit("alice", 404),),
+    _SESSION: _PAGE,
+    f"{_SESSION}/edit": (Visit("alice", 308),),
+    f"{_SESSION}/reviewers": _PAGE,
+    f"{_SESSION}/reviewees": _PAGE,
+    f"{_SESSION}/relationships": _PAGE,
+    f"{_SESSION}/observers": _PAGE,
+    f"{_SESSION}/instruments": _PAGE,
+    f"{_SESSION}/instruments/{{instrument_id}}": (Visit("alice", 303),),
+    f"{_SESSION}/setup-invite": _PAGE,
+    f"{_SESSION}/assignments": _PAGE,
+    f"{_SESSION}/validate": _PAGE,
+    f"{_SESSION}/preview": (Visit("alice", 308),),
+    f"{_SESSION}/previews": (Visit("alice", 308),),
+    f"{_SESSION}/preview-surface": (Visit("alice", 303),),
+    f"{_SESSION}/preview-surface/{{page_n}}": _PAGE,
+    f"{_SESSION}/invitations": _PAGE,
+    f"{_SESSION}/invitations/reviewers/{{reviewer_id}}": _PAGE,
+    f"{_SESSION}/invitations/{{invitation_id}}/detail": (Visit("alice", 308),),
+    f"{_SESSION}/monitoring": (Visit("alice", 308),),
+    f"{_SESSION}/responses": _PAGE,
+    f"{_SESSION}/responses/{{reviewee_id}}/detail": _PAGE,
+    f"{_SESSION}/extract-data": _PAGE,
+    f"{_SESSION}/extract-data/shapes/{{shape_id}}/download.csv": _PAGE,
+    **{f"{_SESSION}/export/{name}": _PAGE for name in _EXPORTS},
+    "/operator/settings": _PAGE,
+    "/operator/sys-admin": (Visit("alice", 303),),
+    "/operator/sys-admin/sessions": _PAGE,
+    "/operator/sys-admin/sessions/{session_id}/audit-log": _PAGE,
+    "/operator/sys-admin/sessions/{session_id}/outbox": _PAGE,
+    "/operator/sys-admin/users": _PAGE,
+    "/operator/sys-admin/users/search-options": _PAGE,
+}
+
+# Registered with ``include_in_schema=False``, so the schema does not list them.
+_UNSCHEMED = {"/", "/operator", "/operator/"}
+
+
+def test_every_get_route_is_crawled() -> None:
+    """A new GET route fails here until the crawl visits it. Built fresh,
+    not the suite's cached instance: a test may add a route to that one,
+    and its cached schema keeps the route after the test removes it."""
+    from app.main import create_app
+
+    schema = {path for path, ops in create_app().openapi()["paths"].items() if "get" in ops}
+    assert set(ROUTES) == schema | _UNSCHEMED
+
+
+def _seed(client: TestClient, db: Session) -> tuple[ReviewSession, dict[str, str]]:
+    """The live phase's session, and a value for every path parameter."""
+    sid = _activated_session(client, db)
+    review_session = db.execute(select(ReviewSession).where(ReviewSession.public_id == sid)).scalar_one()
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.add(Observer(session_id=review_session.id, email="olive@example.edu", display_name="Olive"))
+    db.add(
+        DataShape(
+            session_id=review_session.id,
+            name="Crawl",
+            axis="reviewer",
+            column_chip_slots=json.dumps(["reviewer:name"]),
+        )
+    )
+    db.commit()
+
+    def first(model: type) -> object:
+        return db.execute(select(model).where(model.session_id == review_session.id)).scalars().first()
+
+    invitation = first(Invitation)
+    client.post(f"{MOUNT}/operator/sessions/{sid}/invitations/{invitation.id}/send")
+    outbox = db.execute(select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)).scalar_one()
+    token = re.search(r"/me/invite/([\w-]+)", outbox.body)
+    assert token is not None, outbox.body
+    instrument = first(Instrument)
+    return review_session, {
+        "session_id": sid,
+        "page_n": "1",
+        "instrument_seq": str(instrument.session_seq),
+        "instrument_id": str(instrument.id),
+        "reviewer_id": str(first(Reviewer).id),
+        "reviewee_id": str(first(Reviewee).id),
+        "invitation_id": str(invitation.id),
+        "shape_id": str(first(DataShape).id),
+        "token": token.group(1),
+    }
+
+
+def _submit(client: TestClient, db: Session, review_session: ReviewSession) -> None:
+    """rae answers every field on page 1 and submits."""
+    assignments = db.execute(
+        select(Assignment).where(Assignment.session_id == review_session.id)
+    ).scalars().all()
+    fields = db.execute(
+        select(InstrumentResponseField).where(
+            InstrumentResponseField.instrument_id.in_({a.instrument_id for a in assignments})
+        )
+    ).scalars().all()
+    data = {
+        f"response[{a.id}][{f.field_key}]": "1"
+        for a in assignments
+        for f in fields
+        if f.instrument_id == a.instrument_id
+    }
+    response = client.post(
+        f"{MOUNT}/me/sessions/{review_session.public_id}/submit",
+        data=answer_form(db, data, page_n=1),
+        follow_redirects=False,
+    )
+    assert response.headers["location"].endswith("/summary"), response.headers["location"]
+
+
+def _release(
+    db: Session, review_session: ReviewSession, grant: Callable[..., Instrument]
+) -> None:
+    """Close the session with responses released: carol holds a grant,
+    and olive may download the first instrument's rows, her cohort rule
+    taking in rae's."""
+    from app.services.visibility_policies import MODE_LABELS
+
+    grant(review_session)
+    instrument = db.execute(
+        select(Instrument).where(
+            Instrument.session_id == review_session.id, Instrument.session_seq == 1
+        )
+    ).scalar_one()
+    db.execute(select(Reviewer).where(Reviewer.session_id == review_session.id)).scalar_one().tag_1 = "crawl"
+    db.execute(select(Observer).where(Observer.session_id == review_session.id)).scalar_one().cohort_rule = {
+        "combinator": "AND",
+        "rules": [{"field": "reviewer.tag1", "op": "IS", "operand_tag": "", "operand_value": "crawl"}],
+    }
+    granularity, identification = MODE_LABELS["raw"]
+    db.add(
+        InstrumentViewPolicy(
+            instrument_id=instrument.id,
+            audience="observer",
+            after_release_granularity=granularity,
+            after_release_identification=identification,
+        )
+    )
+    db.commit()
+
+
+@pytest.mark.usefixtures("sys_admin")
+def test_every_get_route_under_the_mount_emits_only_prefixed_urls(
+    db: Session,
+    mounted_client: TestClient,
+    make_mounted_client: Callable[[AuthenticatedUser], TestClient],
+    grant_reviewee_visibility: Callable[..., Instrument],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "rehydrate_enabled", True)
+    review_session, params = _seed(mounted_client, db)
+    failures: list[str] = []
+    for phase in (_LIVE, _SUBMITTED, _RELEASED):
+        if phase == _SUBMITTED:
+            _submit(make_mounted_client(_user("rae")), db, review_session)
+        if phase == _RELEASED:
+            _release(db, review_session, grant_reviewee_visibility)
+        for route, visits in ROUTES.items():
+            for visit in visits:
+                if visit.phase != phase:
+                    continue
+                client = make_mounted_client(_user(visit.who))
+                response = client.get(MOUNT + route.format(**params), follow_redirects=False)
+                found = leaks(response)
+                if response.status_code != visit.status or found:
+                    failures.append(f"{phase} {visit.who} {route}: {response.status_code} {found}")
+    assert not failures, "\n".join(failures)

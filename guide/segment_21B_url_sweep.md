@@ -155,8 +155,8 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
 ## Status
 
 - **2026-10-21, B1 (#3200).** The allowlist keys each leak by rule, file
-  and the leaking source itself, whitespace collapsed, and lives in
-  `tests/unit/url_leaks_allowlist.json`. It is not a per-file count. Codex
+  and the leaking source itself, whitespace collapsed, in a JSON file
+  beside the test (removed at B7). It is not a per-file count. Codex
   found that a count lets a rung fix one leak and add another in the same
   file unseen. The crawl's checker is proved on probe pages, and its first
   RRW pages come with B2. The cumulative read's base is `fdcfee36`.
@@ -191,6 +191,17 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
     since `url()` is idempotent;
   - "route-aware generation" wording in the v0.8 strategy and the
     implementation sequence. It is reconciled at close.
+- **2026-10-21, B7.** The allowlist and its file are gone, and so is
+  `leaks()`'s `cookies=` escape hatch. The crawl's `ROUTES` table names
+  every GET route in RRW's schema, plus the three registered outside it.
+  `test_every_get_route_is_crawled` fails on a route the table lacks.
+  Each entry pins the user and the status it answers with, across three
+  phases of one seeded session: activated, rae submitted, and released.
+  No route is skipped. `rehydrate/dropped.csv` is visited at its 404,
+  because only a POSTed upload stashes the set it names. The checker
+  also reads string values in JSON bodies. Proved by disabling
+  `url_path()`'s prefix: 55 of the crawl's 79 visits fail. The other 24
+  are downloads and JSON with no URL in them, or 404s.
 
 ## PR ladder
 
