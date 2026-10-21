@@ -65,7 +65,7 @@ def probe_app() -> FastAPI:
             '<a href="/operator/x">a</a><form action="/me/y"></form><img src="/static/z.png">'
             '<a href="https://example.edu/">ok</a><a href="#f">ok</a><a href="/.auth/me">ok</a>'
             '<script>// see "/me/x" in a comment\nfetch("/operator/api" + id);'
-            ' var ok = "/reviewrobin/me";</script>'
+            ' var ok = "/reviewrobin/me"; var home = "/";</script>'
         )
         response.set_cookie("c", "v", path="/operator/sessions")
         return response
@@ -186,6 +186,7 @@ def test_the_checker_finds_every_kind_of_leak() -> None:
     client = TestClient(host_with(f"{__name__}:probe_app"))
     found = leaks(client.get(f"{MOUNT}/probe/leaky"))
     assert sorted(found) == [
+        "/",
         "/me/y",
         "/operator/api",
         "/operator/sessions",

@@ -62,14 +62,16 @@ _SCRIPT_COMMENTS = re.compile(r"/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTI
 @cache
 def _script_root_string() -> re.Pattern[str]:
     """A quoted string in a script that starts with one of RRW's top-level
-    segments, read from its router as the static rules do."""
+    segments, read from its router as the static rules do, or that is the
+    bare root ``"/"``: the application's own root, as ``base.html``'s
+    cookie-path fallback emits it."""
     from _rrw_app import rrw_app
 
     app = rrw_app()
     paths = list(app.openapi()["paths"]) + [getattr(r, "path", "") for r in app.routes]
     segments = sorted({p.split("/")[1] for p in paths if p.count("/") >= 1 and p.split("/")[1]})
     alternatives = "|".join(re.escape(s) for s in segments)
-    return re.compile(rf"""["'`](/(?:{alternatives})(?:[/?#"'`]|$)[^"'`]*)""")
+    return re.compile(rf"""["'`](/(?:{alternatives})(?:[/?#"'`]|$)[^"'`]*|/(?=["'`]))""")
 
 
 class _Links(HTMLParser):
