@@ -23,7 +23,9 @@ from fastapi import FastAPI
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.types import ASGIApp
 
+from cordware.identity import missing_header_count
 from cordware.logging import configure_logging
+from cordware.settings import IdentitySettings, identity_settings
 
 log = logging.getLogger("cordware")
 
@@ -101,6 +103,32 @@ def _build(name: str, entry: AppEntry) -> ASGIApp:
         raise
 
 
+class FakeAuthRefused(RuntimeError):
+    """Fake auth is on outside `APP_ENV=local`: the host will not start."""
+
+
+def check_fake_auth(settings: IdentitySettings) -> None:
+    """The host's guard (v0.8 §3): fake auth only at `APP_ENV=local`.
+
+    Refused, the host is not built, so the process fails before any
+    application is mounted. Allowed, it warns on every start."""
+    if not settings.allow_fake_auth:
+        return
+    if settings.app_env != "local":
+        log.error(
+            "fake auth refused outside APP_ENV=local",
+            extra={"event": "identity.fake_auth_refused", "app_env": settings.app_env},
+        )
+        raise FakeAuthRefused(
+            f"ALLOW_FAKE_AUTH is on with APP_ENV={settings.app_env!r}; "
+            "fake auth is allowed only at APP_ENV=local"
+        )
+    log.warning(
+        "fake auth is on: every request without Easy Auth headers is the fake user",
+        extra={"event": "identity.fake_auth_enabled"},
+    )
+
+
 def create_app(
     apps: Sequence[str] | None = None,
     *,
@@ -111,11 +139,13 @@ def create_app(
     The host configures the root logger first, so what a factory logs
     while it builds is already structured. A mounted application's
     factory raising, its startup validation included, is logged and
-    propagates: the host does not start (v0.8 §3)."""
+    propagates: the host does not start (v0.8 §3), as it does not when
+    the fake-auth guard refuses (`check_fake_auth`)."""
     settings = CordwareSettings()
     configure_logging(
         settings.log_level, {entry.logger: name for name, entry in registry.items()}
     )
+    check_fake_auth(identity_settings)
     names = parse_apps(settings.cordware_apps if apps is None else ",".join(apps), registry)
     mounted = [(registry[name], _build(name, registry[name])) for name in names]
 
@@ -148,7 +178,13 @@ def create_app(
             try:
                 yield state
             finally:
-                log.info("host stopping", extra={"event": "host.stopping"})
+                log.info(
+                    "host stopping",
+                    extra={
+                        "event": "host.stopping",
+                        "missing_identity_headers": missing_header_count(),
+                    },
+                )
 
     # No docs or schema routes of the host's own: registered ahead of the
     # mount, they would shadow those of an application mounted at `/`.

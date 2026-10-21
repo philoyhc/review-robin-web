@@ -61,6 +61,7 @@ from app.services import (
 )
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import normalize_email
+from cordware.identity import fake_auth
 
 log = get_logger(__name__)
 
@@ -153,7 +154,7 @@ def get_or_create_user(
     cfg = default_settings
     is_operator = _email_in(cfg.operator_emails, current_user.email)
     is_sys_admin = _email_in(cfg.sys_admin_emails, current_user.email)
-    if cfg.allow_fake_auth and current_user.is_fake:
+    if fake_auth().enabled and current_user.is_fake:
         if cfg.fake_auth_operator:
             is_operator = True
         if cfg.fake_auth_sys_admin:

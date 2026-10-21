@@ -160,8 +160,9 @@ def test_a_failing_factory_fails_the_host() -> None:
 
 def test_rrw_startup_validation_failure_fails_the_host(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.config import ConfigurationError, settings
+    from cordware.settings import identity_settings
 
-    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(identity_settings, "app_env", "production")
     monkeypatch.setattr(settings, "operator_emails", [])
     monkeypatch.setattr(settings, "sys_admin_emails", [])
     with pytest.raises(ConfigurationError):

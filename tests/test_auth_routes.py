@@ -7,7 +7,7 @@ from fastapi import Request
 from fastapi.testclient import TestClient
 
 from app.auth.identity import AuthenticatedUser, get_current_user, resolve_current_user
-from app.config import Settings
+from cordware.settings import IdentitySettings
 from _rrw_app import rrw_app
 
 app = rrw_app()
@@ -36,7 +36,7 @@ def test_me_returns_identity_from_easy_auth_headers() -> None:
 
 
 def test_me_returns_401_when_unauthenticated_and_fake_auth_disabled() -> None:
-    real_settings = Settings(allow_fake_auth=False)
+    real_settings = IdentitySettings(allow_fake_auth=False)
 
     def override_get_current_user(request: Request) -> AuthenticatedUser:
         return resolve_current_user(request, real_settings)
@@ -52,7 +52,7 @@ def test_me_returns_401_when_unauthenticated_and_fake_auth_disabled() -> None:
 
 
 def test_me_returns_fake_identity_when_fake_auth_enabled() -> None:
-    fake_settings = Settings(allow_fake_auth=True)
+    fake_settings = IdentitySettings(allow_fake_auth=True)
 
     def override_get_current_user(request: Request) -> AuthenticatedUser:
         return resolve_current_user(request, fake_settings)
@@ -109,7 +109,7 @@ def test_me_debug_renders_html_with_identity_and_claims() -> None:
 
 
 def test_me_debug_returns_401_when_unauthenticated() -> None:
-    real_settings = Settings(allow_fake_auth=False)
+    real_settings = IdentitySettings(allow_fake_auth=False)
 
     def override_get_current_user(request: Request) -> AuthenticatedUser:
         return resolve_current_user(request, real_settings)
@@ -125,7 +125,7 @@ def test_me_debug_returns_401_when_unauthenticated() -> None:
 
 
 def test_me_debug_renders_with_fake_auth_and_no_claims() -> None:
-    fake_settings = Settings(allow_fake_auth=True)
+    fake_settings = IdentitySettings(allow_fake_auth=True)
 
     def override_get_current_user(request: Request) -> AuthenticatedUser:
         return resolve_current_user(request, fake_settings)

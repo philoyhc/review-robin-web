@@ -20,6 +20,7 @@ from app.web.routes_auth import router as auth_router
 from app.web.routes_health import router as health_router
 from app.web.routes_operator import router as operator_router
 from app.web.routes_reviewer import router as reviewer_router
+from cordware.identity import is_local
 
 
 class _RevalidatingStaticFiles(StaticFiles):
@@ -63,7 +64,7 @@ def create_app() -> FastAPI:
     # A deployed env with no super-admin configured falls back to
     # "any admin manages admins"; that's intentional (no lockout) but
     # worth a loud line in the logs so it isn't a silent surprise.
-    if settings.app_env != "local" and not effective_super_admin_emails(settings):
+    if not is_local() and not effective_super_admin_emails(settings):
         get_logger(__name__).warning(
             "no super-admin configured (SUPER_ADMIN_EMAILS empty) — "
             "admin promote/demote falls back to any-admin; set "

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from app.config import Settings, settings as default_settings
 from app.services.email_identity import normalize_email
+from cordware.identity import fake_auth
 
 
 def effective_super_admin_emails(settings: Settings | None = None) -> list[str]:
@@ -24,18 +25,20 @@ def effective_super_admin_emails(settings: Settings | None = None) -> list[str]:
 
     The configured ``super_admin_emails`` plus — **only** in a
     fake-auth sandbox — the fake identity's email. That fold-in lets
-    the localhost operator (``fake_auth_email``, default
+    the localhost operator (Cordware's fake account, default
     ``operator@example.edu``) hold super-admin for testing without any
     env coordination, while keeping the "derived from config, never
     stored" invariant: the fake email is not a real
     ``SUPER_ADMIN_EMAILS`` entry, just part of the effective set. Inert
-    in any deployed environment, where ``allow_fake_auth`` must be
-    false.
+    in any deployed environment, where Cordware refuses fake auth.
+    Whether fake auth is on, and the fake email, are Cordware's
+    (``cordware.identity.fake_auth``, segment 21C).
     """
     s = settings or default_settings
     emails = list(s.super_admin_emails)
-    if s.allow_fake_auth and s.fake_auth_super_admin:
-        emails.append(s.fake_auth_email)
+    fake = fake_auth()
+    if fake.enabled and s.fake_auth_super_admin:
+        emails.append(fake.email)
     return emails
 
 

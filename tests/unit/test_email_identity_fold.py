@@ -224,10 +224,7 @@ def test_super_admin_membership_does_not_merge_eszett() -> None:
     from app.auth.roles import is_super_admin
     from app.config import Settings
 
-    settings = Settings(
-        super_admin_emails=["strasse@example.edu"],
-        allow_fake_auth=False,
-    )
+    settings = Settings(super_admin_emails=["strasse@example.edu"])
 
     assert is_super_admin("strasse@example.edu", settings)
     assert is_super_admin("  STRASSE@Example.EDU  ", settings), (

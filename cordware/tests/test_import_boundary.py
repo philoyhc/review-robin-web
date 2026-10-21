@@ -1,6 +1,7 @@
 """The import boundary (v0.8 §3, "The independence requirement").
 
-Applications may import Cordware; Cordware imports an application only
+Applications may import Cordware, but not its entry point `cordware.main`;
+Cordware imports an application only
 through its registry entry's factory path, a string; applications never
 import each other. Read from the source, so a forbidden import fails
 here even if no test exercises the module.
@@ -15,11 +16,9 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Package directory -> top-level packages it must never import. RRW takes
-# nothing from `cordware` until 21C moves identity there (the segment 21A
-# plan, § Semantics); 21C drops it from this set.
+# Package directory -> top-level packages it must never import.
 FORBIDDEN = {
-    "app": {"residentialapps", "cordware"},
+    "app": {"residentialapps"},
     "residentialapps": {"app"},
     "cordware": {"app", "residentialapps"},
 }
@@ -83,3 +82,36 @@ def test_a_planted_import_under_app_is_caught(tmp_path: Path) -> None:
     (tmp_path / "cordware" / "tests" / "test_x.py").write_text("import app.main\n")
     assert violations("app", tmp_path) == ["app/services/leak.py imports residentialapps"]
     assert violations("cordware", tmp_path) == ["cordware/main.py imports app"]
+
+
+def imported_modules(source: str) -> set[str]:
+    """Every dotted module a source imports by name, `from x import y`
+    also counting as importing `x.y` (it may be a submodule)."""
+    modules: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            modules.add(node.module)
+            modules.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return modules
+
+
+def test_no_application_imports_the_host_entry_point() -> None:
+    """`cordware.main` builds the host when imported (segment 21C):
+    applications import `cordware.identity`, never the entry point."""
+    found = [
+        str(path.relative_to(ROOT))
+        for package in ("app", "residentialapps")
+        if (ROOT / package).is_dir()
+        for path in sorted((ROOT / package).rglob("*.py"))
+        if "cordware.main" in imported_modules(path.read_text())
+    ]
+    assert found == []
+
+
+def test_the_entry_point_check_reads_both_import_forms() -> None:
+    assert "cordware.main" in imported_modules("import cordware.main\n")
+    assert "cordware.main" in imported_modules("from cordware import main\n")
+    assert "cordware.main" in imported_modules("def f():\n    from cordware.main import app\n")
+    assert "cordware.main" not in imported_modules("from cordware.identity import fake_auth\n")

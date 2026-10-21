@@ -3,26 +3,27 @@ from typing import Annotated
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from cordware.identity import app_env
+
 
 class Settings(BaseSettings):
-    app_env: str = "local"
+    # `APP_ENV`, `ALLOW_FAKE_AUTH` and the fake identity's
+    # `FAKE_AUTH_PRINCIPAL_ID` / `_EMAIL` / `_NAME` are Cordware's
+    # (`cordware/settings.py`, segment 21C), read through
+    # `cordware.identity`; the role switches below stay RRW's.
     app_version: str = "dev"
 
-    allow_fake_auth: bool = False
-    fake_auth_principal_id: str = "local-dev"
-    fake_auth_email: str = "operator@example.edu"
-    fake_auth_name: str = "Local Operator"
     # Sandbox-only flags so the agent's local dev exercises the
     # 16A operator / sys-admin gates without coordinating env vars.
-    # Honoured only when ``allow_fake_auth`` is also true AND the
+    # Honoured only when Cordware's fake auth is on AND the
     # resolved identity is ``is_fake=True``, so they're inert in
-    # any deployed environment (where ``allow_fake_auth`` must
-    # remain false per CLAUDE.md). Default-True keeps the agent's
+    # any deployed environment (where Cordware refuses fake auth
+    # outside ``APP_ENV=local``). Default-True keeps the agent's
     # local dev loop seamless under the 16A PR 1 operator gate.
     fake_auth_operator: bool = True
     fake_auth_sys_admin: bool = True
     # Segment 18S Item 1 — sandbox-only super-admin for the fake
-    # identity. Honoured only when ``allow_fake_auth`` is also true AND
+    # identity. Honoured only when Cordware's fake auth is on AND
     # the resolved identity is ``is_fake=True`` (folded into the
     # effective super-admin set by ``app/auth/roles.py``), so the
     # localhost operator holds super-admin for testing with zero env
@@ -122,16 +123,20 @@ class ConfigurationError(RuntimeError):
     symptom later."""
 
 
-def validate_critical_settings(s: "Settings") -> None:
+def validate_critical_settings(s: "Settings", env: str | None = None) -> None:
     """Fail-fast guard, run from ``create_app`` before the app
-    accepts traffic. A no-op when ``app_env == "local"`` — the
+    accepts traffic. A no-op when the environment is ``local`` — the
     checks below only matter for a deployed environment.
+
+    ``env`` is `APP_ENV`, Cordware's (``cordware.identity.app_env``,
+    segment 21C); a test passes it in.
 
     Segment 14A PR 6a. The check set is deliberately minimal; see
     ``docs/security_posture.md`` for the settings that are guarded
-    elsewhere (e.g. ``allow_fake_auth`` via the auth layer).
+    elsewhere (fake auth by the host's guard).
     """
-    if s.app_env == "local":
+    env = app_env() if env is None else env
+    if env == "local":
         return
     problems: list[str] = []
     if not s.operator_emails and not s.sys_admin_emails:
@@ -141,7 +146,7 @@ def validate_critical_settings(s: "Settings") -> None:
         )
     if problems:
         raise ConfigurationError(
-            f"Critical configuration problem(s) for app_env={s.app_env!r}: "
+            f"Critical configuration problem(s) for app_env={env!r}: "
             + "; ".join(problems)
         )
 

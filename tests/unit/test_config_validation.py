@@ -15,7 +15,6 @@ from app.config import ConfigurationError, Settings, validate_critical_settings
 
 def _settings(**overrides: object) -> Settings:
     base: dict[str, object] = {
-        "app_env": "production",
         "operator_emails": [],
         "sys_admin_emails": [],
     }
@@ -25,23 +24,23 @@ def _settings(**overrides: object) -> Settings:
 
 def test_local_env_skips_the_check() -> None:
     # Empty allowlists are fine locally — fake auth covers dev.
-    validate_critical_settings(_settings(app_env="local"))
+    validate_critical_settings(_settings(), env="local")
 
 
 def test_deployed_env_with_empty_allowlists_fails() -> None:
     with pytest.raises(ConfigurationError) as excinfo:
-        validate_critical_settings(_settings())
+        validate_critical_settings(_settings(), env="production")
     assert "operator_emails" in str(excinfo.value)
     assert "production" in str(excinfo.value)
 
 
 def test_deployed_env_passes_with_operator_allowlist() -> None:
     validate_critical_settings(
-        _settings(operator_emails=["op@example.edu"])
+        _settings(operator_emails=["op@example.edu"]), env="production"
     )
 
 
 def test_deployed_env_passes_with_sys_admin_allowlist() -> None:
     validate_critical_settings(
-        _settings(sys_admin_emails=["admin@example.edu"])
+        _settings(sys_admin_emails=["admin@example.edu"]), env="production"
     )
