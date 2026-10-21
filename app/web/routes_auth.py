@@ -37,6 +37,7 @@ def me(user: AuthenticatedUser = Depends(get_current_user)) -> dict[str, object]
         "name": user.name,
         "provider": user.provider,
         "is_fake": user.is_fake,
+        "is_super_admin": user.is_super_admin,
     }
 
 

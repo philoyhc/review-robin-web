@@ -30,7 +30,7 @@ from sqlalchemy import case, exists, func, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.auth.roles import effective_super_admin_emails, is_super_admin
+from app.auth.roles import is_super_admin, super_admin_emails
 from app.db.models import (
     AuditEvent,
     Observer,
@@ -78,7 +78,7 @@ class AccountsPage:
 
 
 def _is_admin() -> ColumnElement[bool]:
-    supers = [normalize_email(email) for email in effective_super_admin_emails()]
+    supers = [normalize_email(email) for email in super_admin_emails()]
     return or_(User.is_sys_admin.is_(True), func.lower(User.email).in_(supers))
 
 
@@ -292,7 +292,7 @@ def count_super_admins(db: Session) -> int:
     """Accounts the config names as super-admins, for the Overview card
     (admin_pages_refine Item 3): a super-admin with no account yet isn't
     one."""
-    supers = [normalize_email(email) for email in effective_super_admin_emails()]
+    supers = [normalize_email(email) for email in super_admin_emails()]
     return int(
         db.execute(
             select(func.count()).select_from(User).where(func.lower(User.email).in_(supers))

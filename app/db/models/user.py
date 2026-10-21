@@ -90,11 +90,12 @@ class User(Base, TimestampMixin):
 
     @property
     def is_super_admin(self) -> bool:
-        """Segment 18S Item 1 — the protected top tier. Derived from
-        config (``SUPER_ADMIN_EMAILS`` + the fake-auth fold-in), never a
-        stored column, so it can't drift or be flipped in-app. Thin
-        delegate to ``app.auth.roles`` (lazy import keeps the model's
-        module-level dependency graph free of the auth layer)."""
+        """Segment 18S Item 1 — the protected top tier. Cordware's
+        platform role (``SUPER_ADMIN_EMAILS`` + the fake-auth fold-in,
+        segment 21C), never a stored column, so it can't drift or be
+        flipped in-app. Thin delegate to ``app.auth.roles`` (lazy
+        import keeps the model's module-level dependency graph free of
+        the auth layer)."""
         from app.auth.roles import is_super_admin
 
         return is_super_admin(self.email)

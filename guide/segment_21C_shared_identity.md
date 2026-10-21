@@ -154,6 +154,22 @@ new boundary test forbids any application importing `cordware.main`.
 operator and admin roles on `is_fake` alone; a parametrized test turns
 each switch off with `ALLOW_FAKE_AUTH` off.
 
+**C3 (2026-10-21).** As laddered, with these build decisions:
+
+- **Cordware exposes `super_admin_emails()` too**, the effective list
+  normalized. `account_listing.py`'s admin filter and super-admin count
+  are SQL `IN` clauses, and a predicate cannot build one.
+  `app/auth/roles.py` re-exports it with `is_super_admin` and
+  `super_admin_configured`; `effective_super_admin_emails` and the
+  `settings` parameter are gone.
+- **The empty-list warning keeps its event name**
+  (`super_admin.unconfigured`) and is logged by
+  `cordware.main.warn_if_no_super_admin`.
+- **`/auth/me` gains `is_super_admin`, and `/auth/me/debug` gains a
+  "Super-admin" line.**
+- **The normalization parity test** sits beside `normalize_email`'s own
+  tests (`tests/unit/test_email_identity_fold.py`), on that file's cases.
+
 ## PR ladder
 
 1. **C0, this plan**, prose only.

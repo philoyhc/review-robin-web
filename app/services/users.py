@@ -50,7 +50,7 @@ from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.auth.roles import effective_super_admin_emails, is_super_admin
+from app.auth.roles import is_super_admin, super_admin_configured
 from app.db.models import (
     AuditEvent,
     DataShape,
@@ -372,7 +372,7 @@ def _guard_actor_super_admin(actor: User) -> None:
     locking admin management out entirely — the strict rule engages only
     once a super-admin actually exists.
     """
-    if not effective_super_admin_emails():
+    if not super_admin_configured():
         return
     if not is_super_admin(actor.email):
         raise UserOperationError(

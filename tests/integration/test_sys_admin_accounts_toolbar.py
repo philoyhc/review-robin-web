@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from cordware.settings import identity_settings
 from app.db.models import (
     AuditEvent,
     Observer,
@@ -96,7 +97,7 @@ def workspace(db: Session, client: TestClient, admin: None) -> dict[str, User]:
 def test_every_account_sits_under_exactly_one_chip(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(settings, "super_admin_emails", ["Super@Example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["Super@Example.edu"])
     operator = _seed(db, "op@example.edu", is_operator=True)
     # Admins win: the Operator flag doesn't put an admin under both.
     admin_operator = _seed(db, "ao@example.edu", is_operator=True, is_sys_admin=True)

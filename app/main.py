@@ -5,10 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
-from app.auth.roles import effective_super_admin_emails
 from app.config import settings, validate_critical_settings
 from app.db.models import User
-from app.logging_config import get_logger
 from app.web import urls
 from app.web.deps import OperatorAllowlistDenied, get_or_create_user
 from app.web.error_handlers import register_error_handlers
@@ -20,7 +18,6 @@ from app.web.routes_auth import router as auth_router
 from app.web.routes_health import router as health_router
 from app.web.routes_operator import router as operator_router
 from app.web.routes_reviewer import router as reviewer_router
-from cordware.identity import is_local
 
 
 class _RevalidatingStaticFiles(StaticFiles):
@@ -60,17 +57,8 @@ def create_app() -> FastAPI:
     # The root logger is the host's (`cordware.logging`): RRW logs under
     # its named `app.*` loggers only.
     validate_critical_settings(settings)
-    # Segment 18S Item 2 — surface the degraded (no-super-tier) state.
-    # A deployed env with no super-admin configured falls back to
-    # "any admin manages admins"; that's intentional (no lockout) but
-    # worth a loud line in the logs so it isn't a silent surprise.
-    if not is_local() and not effective_super_admin_emails(settings):
-        get_logger(__name__).warning(
-            "no super-admin configured (SUPER_ADMIN_EMAILS empty) — "
-            "admin promote/demote falls back to any-admin; set "
-            "SUPER_ADMIN_EMAILS to enable the protected top tier",
-            extra={"event": "super_admin.unconfigured"},
-        )
+    # The no-super-admin warning is the host's (segment 21C C3,
+    # `cordware.main.warn_if_no_super_admin`).
     # App-wide, so it runs before any route's own dependencies reach the
     # database with an id SQLite cannot bind (findings O6).
     app = FastAPI(

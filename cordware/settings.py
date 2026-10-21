@@ -11,7 +11,10 @@ when imported.
 
 from __future__ import annotations
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Annotated
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class IdentitySettings(BaseSettings):
@@ -25,6 +28,21 @@ class IdentitySettings(BaseSettings):
     fake_auth_principal_id: str = "local-dev"
     fake_auth_email: str = "operator@example.edu"
     fake_auth_name: str = "Local Operator"
+
+    # The platform super-admin (v0.8 §3): a comma-separated email list,
+    # set only by the deployer. `NoDecode` keeps pydantic-settings from
+    # reading the raw value as JSON; the validator splits it.
+    super_admin_emails: Annotated[list[str], NoDecode] = []
+    # Folds the fake account into the effective list while fake auth is
+    # on, so the localhost user is a super-admin with no list set.
+    fake_auth_super_admin: bool = True
+
+    @field_validator("super_admin_emails", mode="before")
+    @classmethod
+    def _split_email_list(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

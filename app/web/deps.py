@@ -93,7 +93,7 @@ def _reassert_super_admin(db: Session, user: User) -> None:
     without rights — every admin/operator gate passes for a super-admin
     with no special-casing at the gate.
     """
-    if not is_super_admin(user.email, default_settings):
+    if not is_super_admin(user.email):
         return
     if user.is_sys_admin and user.is_operator:
         return
@@ -165,7 +165,7 @@ def get_or_create_user(
     # both seeds a first-sign-in super-admin and — together with
     # ``_reassert_super_admin`` on the existing-row path — keeps the
     # capability nesting super-admin ⊇ admin ⊇ operator holding.
-    if is_super_admin(current_user.email, cfg):
+    if is_super_admin(current_user.email):
         is_operator = True
         is_sys_admin = True
 

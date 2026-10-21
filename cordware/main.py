@@ -23,7 +23,7 @@ from fastapi import FastAPI
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from starlette.types import ASGIApp
 
-from cordware.identity import missing_header_count
+from cordware.identity import is_local, missing_header_count, super_admin_configured
 from cordware.logging import configure_logging
 from cordware.settings import IdentitySettings, identity_settings
 
@@ -129,6 +129,19 @@ def check_fake_auth(settings: IdentitySettings) -> None:
     )
 
 
+def warn_if_no_super_admin(settings: IdentitySettings) -> None:
+    """In a deployed environment, an empty super-admin list is worth a
+    loud line: each application then applies its own fallback (RRW's is
+    "any admin manages admins")."""
+    if is_local(settings) or super_admin_configured(settings):
+        return
+    log.warning(
+        "no super-admin configured (SUPER_ADMIN_EMAILS empty); set it to "
+        "enable the protected platform tier",
+        extra={"event": "super_admin.unconfigured"},
+    )
+
+
 def create_app(
     apps: Sequence[str] | None = None,
     *,
@@ -146,6 +159,7 @@ def create_app(
         settings.log_level, {entry.logger: name for name, entry in registry.items()}
     )
     check_fake_auth(identity_settings)
+    warn_if_no_super_admin(identity_settings)
     names = parse_apps(settings.cordware_apps if apps is None else ",".join(apps), registry)
     mounted = [(registry[name], _build(name, registry[name])) for name in names]
 

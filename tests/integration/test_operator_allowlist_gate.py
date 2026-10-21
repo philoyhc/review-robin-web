@@ -249,7 +249,7 @@ def test_super_admin_email_seeds_full_rights_on_first_sign_in(
     auth_alice: AuthenticatedUser,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["alice@example.edu"])
     client = _make_client(db, auth_alice)
 
     response = client.get("/__test/operator-gated")
@@ -279,7 +279,7 @@ def test_super_admin_self_heals_existing_demoted_row_every_sign_in(
     db.add(user)
     db.commit()
 
-    monkeypatch.setattr(settings, "super_admin_emails", ["alice@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["alice@example.edu"])
     client = _make_client(db, auth_alice)
 
     response = client.get("/__test/operator-gated")
@@ -312,7 +312,7 @@ def test_non_super_admin_demotion_is_not_re_asserted(
     db.add(user)
     db.commit()
 
-    monkeypatch.setattr(settings, "super_admin_emails", ["boss@example.edu"])
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
     client = _make_client(db, auth_alice)
 
     response = client.get("/__test/operator-gated")

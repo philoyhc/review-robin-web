@@ -32,6 +32,7 @@ def test_me_returns_identity_from_easy_auth_headers() -> None:
         "name": None,
         "provider": "aad",
         "is_fake": False,
+        "is_super_admin": False,
     }
 
 
@@ -142,3 +143,21 @@ def test_me_debug_renders_with_fake_auth_and_no_claims() -> None:
     assert "fake auth" in body.lower()
     assert "Local Operator" in body
     assert "No claims found" in body
+
+
+def test_me_and_debug_report_super_admin_from_cordware(monkeypatch) -> None:
+    """Segment 21C C3: `is_super_admin` is the identity's computed flag,
+    Cordware's platform role."""
+    from cordware.settings import identity_settings
+
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["Alice@Example.edu"])
+    headers = {
+        "X-MS-CLIENT-PRINCIPAL-NAME": "alice@example.edu",
+        "X-MS-CLIENT-PRINCIPAL-ID": "principal-123",
+        "X-MS-CLIENT-PRINCIPAL-IDP": "aad",
+    }
+    client = TestClient(app)
+    assert client.get("/auth/me", headers=headers).json()["is_super_admin"] is True
+    debug = client.get("/auth/me/debug", headers=headers)
+    assert debug.status_code == 200
+    assert "<strong>Super-admin:</strong> Yes" in debug.text

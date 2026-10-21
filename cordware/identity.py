@@ -14,8 +14,9 @@ users and permissions; nothing here decides what anyone may do.
   from the request: a settings parameter would become a request body.
 - `resolve_identity(request, settings)`: the same resolution with the
   settings passed in, for tests. Never a dependency.
-- `fake_auth()`, `app_env()`, `is_local()`: host-level reads, valid
-  outside a request.
+- `fake_auth()`, `app_env()`, `is_local()`, `is_super_admin_email()`,
+  `super_admin_configured()`, `super_admin_emails()`: host-level reads,
+  valid outside a request.
 """
 
 from __future__ import annotations
@@ -49,6 +50,16 @@ class Identity:
         alone names the viewer too."""
         return self.name or self.email or ""
 
+    @property
+    def is_super_admin(self) -> bool:
+        """Computed from the host-level predicate, never stored, so the
+        flag, `is_super_admin_email` and `super_admin_configured` agree."""
+        return is_super_admin_email(self.email)
+
+    @property
+    def super_admin_configured(self) -> bool:
+        return super_admin_configured()
+
 
 @dataclass(frozen=True)
 class FakeAuth:
@@ -73,6 +84,37 @@ def app_env(settings: IdentitySettings | None = None) -> str:
 
 def is_local(settings: IdentitySettings | None = None) -> bool:
     return app_env(settings) == "local"
+
+
+def _normalize_email(email: str) -> str:
+    # RRW's `normalize_email` rule: strip, then `str.lower` (deliberately
+    # not casefold). Cordware cannot import an application, so it keeps
+    # its own copy, and an RRW test pins the two equal.
+    return email.strip().lower()
+
+
+def super_admin_emails(settings: IdentitySettings | None = None) -> tuple[str, ...]:
+    """The effective super-admin list, normalized: `SUPER_ADMIN_EMAILS`,
+    plus the fake account's email while fake auth and
+    `FAKE_AUTH_SUPER_ADMIN` are both on."""
+    s = _settings(settings)
+    emails = list(s.super_admin_emails)
+    if s.allow_fake_auth and s.fake_auth_super_admin:
+        emails.append(s.fake_auth_email)
+    return tuple(dict.fromkeys(_normalize_email(e) for e in emails if e.strip()))
+
+
+def super_admin_configured(settings: IdentitySettings | None = None) -> bool:
+    """Whether the effective super-admin list is non-empty."""
+    return bool(super_admin_emails(settings))
+
+
+def is_super_admin_email(email: str | None, settings: IdentitySettings | None = None) -> bool:
+    """Whether ``email`` is in the effective super-admin list. A missing
+    or blank email never is."""
+    if not email or not email.strip():
+        return False
+    return _normalize_email(email) in super_admin_emails(settings)
 
 
 def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
