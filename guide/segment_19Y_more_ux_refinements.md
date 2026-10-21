@@ -633,6 +633,18 @@ Taken 2026-10-21 at `d63f80b7`.
 | Name box in the card | 1 | `grep -c "data-card-title-input" app/web/templates/operator/instruments_index.html` (3 hits: the box, the sync, the key guard) |
 | Tests on the heading or the box | 2 | `grep -rln "data-card-title-input\|data-intro-title-view" tests --include=*.py` |
 
+### Status
+
+**Closed 2026-10-21** in two PRs: #3182 (the plan, with Item 7's) and
+the build, spec and close in one, as laddered.
+
+- **What moved from the plan.** Nothing. The hook sits beside the name
+  box's key guard and calls `newModelSyncTextViews`, which also renames
+  the card's (lock-only) title view; harmless while unlocked.
+- **Reads.** READS_LINE
+- **Owed by the author:** the browser-check row in
+  `guide/things_to_check_in_browser.md`.
+
 ### PR ladder
 
 1. **PR 1 — build, specs, close.** The `input` hook beside the key

@@ -4338,6 +4338,11 @@
               input.addEventListener('keydown', _titleKeyGuard);
               input.addEventListener('keypress', _titleKeyGuard);
               input.addEventListener('keyup', _titleKeyGuard);
+              // 19Y Item 6 — Band 2's heading follows the name as it is
+              // typed, by the same rule Lock applies; still unsaved.
+              input.addEventListener('input', function () {
+                window.newModelSyncTextViews(input.closest('[data-instrument-card]'));
+              });
             });
           }
           // Segment 18R Item 2 — collapse ⇒ lock. Collapsing an
