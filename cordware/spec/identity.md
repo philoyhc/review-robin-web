@@ -67,13 +67,16 @@ Headers count as present when any of `X-MS-CLIENT-PRINCIPAL-NAME`,
 `X-MS-CLIENT-PRINCIPAL-ID` or `X-MS-CLIENT-PRINCIPAL` is non-empty
 (`X-MS-CLIENT-PRINCIPAL-IDP` alone does not).
 
-`X-MS-CLIENT-PRINCIPAL` is base64 (strict) of UTF-8 JSON, an object with a
-`claims` list of `{typ, val}` objects. A value that is not base64, not UTF-8,
-not JSON or not a JSON object is malformed: the header contributes nothing and
-`identity.header_malformed` is logged. An object without a `claims` list is
-not malformed; it contributes no claims (its `auth_typ` or
-`identityProvider` may still name the provider). Entries of `claims` that are
-not objects with a non-empty string `val` are skipped.
+`X-MS-CLIENT-PRINCIPAL` is base64 (strict) of JSON text, an object with a
+`claims` list of `{typ, val}` objects. The text is read as `json.loads` reads
+bytes: UTF-8, a UTF-8 BOM, or the UTF-16 / UTF-32 it detects. A value that is
+not base64, not decodable JSON, or not a JSON object is malformed, as is one
+past Python's integer-digit or nesting limits: the header contributes
+nothing and `identity.header_malformed` is logged. An object without a
+`claims` list is not malformed; it contributes no claims, and a non-empty
+string `auth_typ` (or else `identityProvider`) still names the provider.
+Entries of `claims` that are not objects with a non-empty string `val` are
+skipped.
 
 A claim is chosen by the **order of the types listed below**, not the token's
 own claim order; within one type the first non-empty value wins. Each field
@@ -173,7 +176,7 @@ Logger `cordware.identity`, `extra["event"]`; the shape of a record is
 
 | Event | Level | When |
 |---|---|---|
-| `identity.header_malformed` | warning | **Every time** an `X-MS-CLIENT-PRINCIPAL` header is not base64 of a JSON object. The fact only, never the header's contents. |
+| `identity.header_malformed` | warning | **Every time** an `X-MS-CLIENT-PRINCIPAL` header is malformed (§ Easy Auth headers). The fact only, never the header's contents. |
 | `identity.headers_missing` | warning | **Once per process**, on the first request refused for want of headers. |
 
 With fake auth off every unauthenticated probe is a request without headers, so

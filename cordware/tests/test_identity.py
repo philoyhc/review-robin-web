@@ -460,8 +460,15 @@ def test_explicit_settings_carry_to_the_role_properties(monkeypatch: pytest.Monk
 
 @pytest.mark.parametrize(
     "raw",
-    [b"\x80abc", b'{"claims": "\xc3("}', b"[1, 2]", b"not json"],
-    ids=["non-utf8", "non-utf8-in-json", "not-an-object", "not-json"],
+    [
+        b"\x80abc",
+        b'{"claims": "\xc3("}',
+        b"[1, 2]",
+        b"not json",
+        b'{"x": ' + b"1" * 5000 + b"}",
+        b"[" * 10000,
+    ],
+    ids=["non-utf8", "non-utf8-in-json", "not-an-object", "not-json", "long-int", "deep"],
 )
 def test_a_decodable_but_malformed_principal_is_logged_not_raised(
     raw: bytes, caplog: pytest.LogCaptureFixture
@@ -473,3 +480,9 @@ def test_a_decodable_but_malformed_principal_is_logged_not_raised(
         identity = resolve_identity(request, _settings())
     assert identity.principal_id == "p-2"
     assert len(_events(caplog, "identity.header_malformed")) == 1
+
+
+def test_only_a_string_names_the_provider() -> None:
+    rich = _encode_principal({"auth_typ": {"a": 1}, "identityProvider": "aad", "claims": []})
+    identity = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
+    assert identity.provider == "aad"
