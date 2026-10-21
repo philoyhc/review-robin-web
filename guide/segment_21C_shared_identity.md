@@ -169,6 +169,10 @@ each switch off with `ALLOW_FAKE_AUTH` off.
   "Super-admin" line.**
 - **The normalization parity test** sits beside `normalize_email`'s own
   tests (`tests/unit/test_email_identity_fold.py`), on that file's cases.
+- **An identity resolved under passed-in settings keeps them**
+  (`resolved_with`, outside equality), so its role properties read the
+  settings it was resolved under (Codex, #3213). The dependency passes
+  none and reads the host's.
 - **A blank entry never counts** toward the effective list, the fake
   email included, so a blank `FAKE_AUTH_EMAIL` no longer turns the
   any-admin fallback off locally.

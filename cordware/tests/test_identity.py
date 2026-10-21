@@ -441,3 +441,18 @@ def test_the_host_warns_on_no_super_admin_in_a_deployed_environment(
     with caplog.at_level(logging.INFO, logger="cordware"):
         create_app(apps=())
     assert bool(_events(caplog, "super_admin.unconfigured")) is warned
+
+
+def test_explicit_settings_carry_to_the_role_properties(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex on #3213: an identity resolved under passed-in settings reads
+    its role flags from them, not from the host's."""
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
+    monkeypatch.setattr(identity_settings, "super_admin_emails", [])
+    fake = resolve_identity(_request(), IdentitySettings(allow_fake_auth=True))
+    assert (fake.is_super_admin, fake.super_admin_configured) == (True, True)
+    listed = IdentitySettings(super_admin_emails=["boss@example.edu"])
+    boss = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "boss@example.edu"}), listed)
+    assert boss.is_super_admin is True
+    # The dependency's identity reads the host's settings.
+    assert get_identity(_request({"X-MS-CLIENT-PRINCIPAL-NAME": "boss@example.edu"})).is_super_admin is False
+    assert boss == Identity(principal_id=None, email="boss@example.edu", name=None)

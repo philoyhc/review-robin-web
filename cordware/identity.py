@@ -26,7 +26,7 @@ import binascii
 import json
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from fastapi import HTTPException, Request, status
@@ -43,6 +43,11 @@ class Identity:
     name: str | None
     provider: str | None = None
     is_fake: bool = False
+    # The settings a caller passed to `resolve_identity` (tests), so the
+    # role properties read the configuration the identity was resolved
+    # under. None, as from the dependency, reads the host's. Not part of
+    # equality: two resolutions of one principal are the same identity.
+    resolved_with: IdentitySettings | None = field(default=None, compare=False, repr=False)
 
     @property
     def display_label(self) -> str:
@@ -55,11 +60,11 @@ class Identity:
     def is_super_admin(self) -> bool:
         """Computed from the host-level predicate, never stored, so the
         flag, `is_super_admin_email` and `super_admin_configured` agree."""
-        return is_super_admin_email(self.email)
+        return is_super_admin_email(self.email, self.resolved_with)
 
     @property
     def super_admin_configured(self) -> bool:
-        return super_admin_configured()
+        return super_admin_configured(self.resolved_with)
 
 
 @dataclass(frozen=True)
@@ -246,10 +251,10 @@ def resolve_identity(request: Request, settings: IdentitySettings | None = None)
     auth is on, else a 401. Never a dependency: see the module docstring."""
     cfg = _settings(settings)
     identity = _identity_from_easy_auth_headers(request)
+    if identity is None and cfg.allow_fake_auth:
+        identity = _fake_identity(cfg)
     if identity is not None:
-        return identity
-    if cfg.allow_fake_auth:
-        return _fake_identity(cfg)
+        return identity if settings is None else replace(identity, resolved_with=settings)
     _note_missing_headers()
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
