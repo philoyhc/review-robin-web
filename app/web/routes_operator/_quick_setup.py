@@ -32,6 +32,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
@@ -69,7 +70,7 @@ router = APIRouter()
 
 @router.post("/sessions", response_model=None)
 async def create_session(
-    name: str = Form(...),
+    request: Request, name: str = Form(...),
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
@@ -339,7 +340,7 @@ async def create_session(
         # No slot fragment (19X Item 7): Home's banner script scrolls
         # to the shown banner on load.
         query = _quick_setup_error_query(kind, "refused")
-        return RedirectResponse(
+        return urls.redirect(request,
             url=f"{home_url}?{query}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -375,7 +376,7 @@ async def create_session(
     # A bare create (no uploads) opens the Session details card in edit
     # mode (``edit_url``) so the operator continues setting up details.
     target_url = home_url if uploads else edit_url
-    return RedirectResponse(
+    return urls.redirect(request,
         url=target_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -995,7 +996,7 @@ def _slot_response(
     (segment 19W)."""
 
     if refusal is None:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=f"/operator/sessions/{review_session.public_id}#quick-setup-{kind}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -1256,7 +1257,7 @@ async def quick_setup_submit_all(
             held=held_names,
             held_token=token,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1264,7 +1265,7 @@ async def quick_setup_submit_all(
 
 @router.post("/sessions/{session_id}/quick-setup/dismiss")
 def quick_setup_dismiss(
-    held_token: str | None = Form(default=None),
+    request: Request, held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -1272,7 +1273,7 @@ def quick_setup_dismiss(
     """A Quick Setup banner's Dismiss while its ask holds the submit's
     files: end the hold and land on the card (segment 19W)."""
     release_hold(db, token=held_token, user=user, review_session=review_session)
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}#quick-setup",
         status_code=status.HTTP_303_SEE_OTHER,
     )

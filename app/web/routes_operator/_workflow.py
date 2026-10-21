@@ -35,11 +35,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import Request, APIRouter, Depends, Form
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette import status
 
+from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments, audit, invitations, validation
@@ -95,7 +96,7 @@ def _warnings_detour_url(session_id: str, return_to: str | None) -> str:
 
 @router.post("/sessions/{session_id}/workflow/prepare")
 def workflow_prepare(
-    return_to: str | None = Form(default=None),
+    request: Request, return_to: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -122,7 +123,7 @@ def workflow_prepare(
     # Pre-flight gate — Prepare runs only while the session is editable
     # (draft / validated). Ready sessions need to be reverted first.
     if not lifecycle.is_editable(review_session):
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -147,7 +148,7 @@ def workflow_prepare(
     ):
         impact = assignments.reconcile_impact(db, review_session)
         if impact.responses_lost > 0:
-            return RedirectResponse(
+            return urls.redirect(request,
                 url=_redirect_url(
                     review_session.public_id, return_to, prepare_confirm=True
                 ),
@@ -213,7 +214,7 @@ def workflow_prepare(
             # failure return, so without this the row dies with the
             # connection. 19O Item 7 entry 7.
             db.commit()
-            return RedirectResponse(
+            return urls.redirect(request,
                 url=_redirect_url(
                     review_session.public_id,
                     return_to,
@@ -294,7 +295,7 @@ def workflow_prepare(
         # failure return, so without this the row dies with the
         # connection. 19O Item 7 entry 7.
         db.commit()
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -336,7 +337,7 @@ def workflow_prepare(
             _log.exception("could not record the failed Prepare run")
         raise
 
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -344,7 +345,7 @@ def workflow_prepare(
 
 @router.post("/sessions/{session_id}/workflow/activate")
 def workflow_activate(
-    return_to: str | None = Form(default=None),
+    request: Request, return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -365,7 +366,7 @@ def workflow_activate(
 
     # Pre-flight gates.
     if lifecycle.is_ready(review_session):
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -377,7 +378,7 @@ def workflow_activate(
             status_code=status.HTTP_303_SEE_OTHER,
         )
     if not lifecycle.is_validated(review_session):
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -419,7 +420,7 @@ def workflow_activate(
             # started row is committed, as on every other return that
             # writes one, or it dies with the connection (findings Bc6).
             db.commit()
-            return RedirectResponse(
+            return urls.redirect(request,
                 url=_warnings_detour_url(review_session.public_id, return_to),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
@@ -458,7 +459,7 @@ def workflow_activate(
         # failure return, so without this the row dies with the
         # connection. 19O Item 7 entry 7.
         db.commit()
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -470,7 +471,7 @@ def workflow_activate(
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -478,7 +479,7 @@ def workflow_activate(
 
 @router.post("/sessions/{session_id}/workflow/close")
 def workflow_close(
-    return_to: str | None = Form(default=None),
+    request: Request, return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -495,7 +496,7 @@ def workflow_close(
     """
     correlation_id = request_correlation_id()
     if not lifecycle.is_ready(review_session):
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -514,7 +515,7 @@ def workflow_close(
             correlation_id=correlation_id,
         )
     except lifecycle.LifecycleError as exc:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -525,7 +526,7 @@ def workflow_close(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -533,7 +534,7 @@ def workflow_close(
 
 @router.post("/sessions/{session_id}/workflow/release-responses")
 def workflow_release_responses(
-    return_to: str | None = Form(default=None),
+    request: Request, return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -545,7 +546,7 @@ def workflow_release_responses(
     """
     correlation_id = request_correlation_id()
     if lifecycle.is_archived(review_session):
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -565,7 +566,7 @@ def workflow_release_responses(
         )
     except lifecycle.SessionStateConflict:
         # Archived since the check above (findings Bc4): the same answer.
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -576,7 +577,7 @@ def workflow_release_responses(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -584,7 +585,7 @@ def workflow_release_responses(
 
 @router.post("/sessions/{session_id}/workflow/stop-release")
 def workflow_stop_release(
-    return_to: str | None = Form(default=None),
+    request: Request, return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -596,7 +597,7 @@ def workflow_stop_release(
     """
     correlation_id = request_correlation_id()
     if lifecycle.is_archived(review_session):
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -616,7 +617,7 @@ def workflow_stop_release(
         )
     except lifecycle.SessionStateConflict:
         # Archived since the check above (findings Bc4): the same answer.
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -627,7 +628,7 @@ def workflow_stop_release(
             ),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -635,7 +636,7 @@ def workflow_stop_release(
 
 @router.post("/sessions/{session_id}/workflow/archive")
 def workflow_archive(
-    review_session: ReviewSession = Depends(require_session_operator),
+    request: Request, review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -659,7 +660,7 @@ def workflow_archive(
         # Drop the user back to the lobby's archived index either
         # way — they'll see the row there.
         pass
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,
     )

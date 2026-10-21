@@ -26,6 +26,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.schemas.sessions import SessionCreate
@@ -161,9 +162,9 @@ def session_detail(
 # 2026-09-08.)
 @router.get("/sessions/{session_id}/edit")
 def session_edit_redirect(
-    review_session: ReviewSession = Depends(require_session_operator),
+    request: Request, review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}?editing=1",
         # 308 (not 301) preserves the GET method and matches the other
         # legacy-URL shim (``/preview`` → operations); audit R11.
@@ -476,7 +477,7 @@ def _apply_session_config_form(
 
 @router.post("/sessions/{session_id}/config")
 def session_config_submit(
-    name: str = Form(...),
+    request: Request, name: str = Form(...),
     code: str = Form(...),
     description: str | None = Form(default=None),
     deadline: str | None = Form(default=None),
@@ -544,7 +545,7 @@ def session_config_submit(
             tags=tags.split(","),
             correlation_id=correlation_id,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         # No ``#session-config``: the page's own script restores the
         # operator's scroll position, and a fragment would scroll the
         # card's top edge into view first (19U Item 4).
@@ -555,7 +556,7 @@ def session_config_submit(
 
 @router.post("/sessions/{session_id}/delete-data")
 def session_delete_data(
-    confirm: str | None = Form(default=None),
+    request: Request, confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -572,7 +573,7 @@ def session_delete_data(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -580,7 +581,7 @@ def session_delete_data(
 
 @router.post("/sessions/{session_id}/delete")
 def session_delete(
-    confirm: str | None = Form(default=None),
+    request: Request, confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -597,7 +598,7 @@ def session_delete(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -605,7 +606,7 @@ def session_delete(
 
 @router.post("/sessions/{session_id}/activate")
 def session_activate(
-    acknowledge_warnings: str | None = Form(default=None),
+    request: Request, acknowledge_warnings: str | None = Form(default=None),
     return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -628,7 +629,7 @@ def session_activate(
         # ``_redirect_url``) rather than raising an error page, so an
         # activation failure looks the same from either activate button
         # (audit R2).
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_redirect_url(
                 review_session.public_id,
                 return_to,
@@ -642,7 +643,7 @@ def session_activate(
     target = f"/operator/sessions/{review_session.public_id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
-    return RedirectResponse(
+    return urls.redirect(request,
         url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -650,7 +651,7 @@ def session_activate(
 
 @router.post("/sessions/{session_id}/revert")
 def session_revert_to_draft(
-    confirm: str | None = Form(default=None),
+    request: Request, confirm: str | None = Form(default=None),
     return_to: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -669,7 +670,7 @@ def session_revert_to_draft(
     target = f"/operator/sessions/{review_session.public_id}"
     if return_to in _REVERT_RETURN_TO:
         target = f"{target}/{return_to}"
-    return RedirectResponse(
+    return urls.redirect(request,
         url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -695,7 +696,7 @@ def _owners_redirect_url(session_id: str, error_code: str | None = None) -> str:
 
 @router.post("/sessions/{session_id}/owners/add")
 def session_owners_add(
-    target_email: str = Form(...),
+    request: Request, target_email: str = Form(...),
     review_session: ReviewSession = Depends(
         require_sys_admin_or_session_operator
     ),
@@ -710,7 +711,7 @@ def session_owners_add(
         )
     ).scalar_one_or_none()
     if target is None:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_owners_redirect_url(review_session.public_id, "not_in_workspace"),
             status_code=status.HTTP_303_SEE_OTHER,
         )
@@ -722,7 +723,7 @@ def session_owners_add(
     # is unaffected and may add anyone.
     if not permissions.user_can_view_session(db, actor, review_session.id):
         if target.id != actor.id:
-            return RedirectResponse(
+            return urls.redirect(request,
                 url=_owners_redirect_url(review_session.public_id, "self_only"),
                 status_code=status.HTTP_303_SEE_OTHER,
             )
@@ -735,11 +736,11 @@ def session_owners_add(
             correlation_id=request_correlation_id(),
         )
     except session_owners.OwnerOperationError as exc:
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_owners_redirect_url(review_session.public_id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_owners_redirect_url(review_session.public_id),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -747,7 +748,7 @@ def session_owners_add(
 
 @router.post("/sessions/{session_id}/owners/{user_id}/remove")
 def session_owners_remove(
-    user_id: int,
+    request: Request, user_id: int,
     review_session: ReviewSession = Depends(require_session_operator),
     actor: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -774,17 +775,17 @@ def session_owners_remove(
         )
         if status_code == status.HTTP_409_CONFLICT:
             raise HTTPException(status_code=status_code, detail=exc.message) from exc
-        return RedirectResponse(
+        return urls.redirect(request,
             url=_owners_redirect_url(review_session.public_id, exc.code),
             status_code=status.HTTP_303_SEE_OTHER,
         )
     # Removing yourself leaves Session Home a 404 for you, so land on the
     # sessions lobby instead (19S Item 10, author's ruling).
     if target.id == actor.id:
-        return RedirectResponse(
+        return urls.redirect(request,
             url="/operator/sessions", status_code=status.HTTP_303_SEE_OTHER
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_owners_redirect_url(review_session.public_id),
         status_code=status.HTTP_303_SEE_OTHER,
     )

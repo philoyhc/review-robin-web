@@ -14,6 +14,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Assignment, Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.services import date_formatting
@@ -81,12 +82,12 @@ def _submitted_from_page(request: Request) -> int:
 
 
 @router.get("/sessions/{session_id}", response_class=HTMLResponse, response_model=None)
-def review_surface_default_position(session_id: str) -> RedirectResponse:
+def review_surface_default_position(request: Request, session_id: str) -> RedirectResponse:
     """Bare-URL fallback. 303s to ``/{id}/1`` (page 1) per the
     Segment 18L multi-page replan. Auth happens on the destination
     handler; the redirect is harmless without it.
     """
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{session_id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -102,8 +103,8 @@ def review_surface_default_position(session_id: str) -> RedirectResponse:
 # would otherwise take ``submit`` / ``recall`` / ``clear`` as a page
 # number and 422.
 @router.get("/sessions/{session_id}/{page_n}/save", response_model=None)
-def review_surface_save_revisited(session_id: str, page_n: int) -> RedirectResponse:
-    return RedirectResponse(
+def review_surface_save_revisited(request: Request, session_id: str, page_n: int) -> RedirectResponse:
+    return urls.redirect(request,
         url=f"/me/sessions/{session_id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -115,24 +116,24 @@ def review_surface_submit_revisited(
 ) -> RedirectResponse:
     # ``?page=N`` is the page Submit was pressed on; parsed to an int,
     # so nothing but a number reaches the Location.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{session_id}/{_submitted_from_page(request)}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.get("/sessions/{session_id}/recall", response_model=None)
-def review_surface_recall_revisited(session_id: str) -> RedirectResponse:
+def review_surface_recall_revisited(request: Request, session_id: str) -> RedirectResponse:
     # Recall is posted from the summary page.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{session_id}/summary",
         status_code=status.HTTP_303_SEE_OTHER,
     )
 
 
 @router.get("/sessions/{session_id}/clear", response_model=None)
-def review_surface_clear_revisited(session_id: str) -> RedirectResponse:
-    return RedirectResponse(
+def review_surface_clear_revisited(request: Request, session_id: str) -> RedirectResponse:
+    return urls.redirect(request,
         url=f"/me/sessions/{session_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -475,7 +476,7 @@ async def reviewer_save(
             context,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{review_session.public_id}/{page_n}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -610,7 +611,7 @@ async def reviewer_submit(
     state = responses_service.reviewer_session_state(
         db, reviewer=reviewer, session_id=review_session.id
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=submit_redirect_url(
             review_session,
             fully_submitted=(
@@ -644,7 +645,7 @@ def _recall_refused(review_session: ReviewSession) -> HTTPException:
     response_model=None,
 )
 def reviewer_recall(
-    reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
+    request: Request, reviewer_session: tuple[Reviewer, ReviewSession] = Depends(
         require_reviewer_in_session
     ),
     user: User = Depends(get_or_create_user),
@@ -682,7 +683,7 @@ def reviewer_recall(
         db.rollback()
         db.refresh(review_session)
         raise _recall_refused(review_session) from None
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{review_session.public_id}/1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -752,7 +753,7 @@ async def reviewer_clear(
             page_n=1,
             form={},
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/me/sessions/{review_session.public_id}",
         status_code=status.HTTP_303_SEE_OTHER,
     )

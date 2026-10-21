@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import (
     Invitation,
     Reviewee,
@@ -213,7 +214,7 @@ def validate_session(
         clean_url += "?" + urlencode([("severity", value) for value in severity])
     if activate:
         if not lifecycle.is_validated(review_session):
-            return RedirectResponse(
+            return urls.redirect(request,
                 url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
         if report.errors:
@@ -227,7 +228,7 @@ def validate_session(
                 "warnings": report.warnings,
             }
         else:
-            return RedirectResponse(
+            return urls.redirect(request,
                 url=clean_url, status_code=status.HTTP_303_SEE_OTHER
             )
     # The severity chips: no ``severity`` in the URL (a nav link, a
@@ -287,10 +288,10 @@ def validate_session(
 
 @router.get("/sessions/{session_id}/previews", response_class=HTMLResponse)
 def previews_index(
-    review_session: ReviewSession = Depends(require_session_operator),
+    request: Request, review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Keep old Previews bookmarks useful after the hub's retirement."""
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
@@ -298,7 +299,7 @@ def previews_index(
 
 @router.get("/sessions/{session_id}/preview")
 def session_preview(
-    review_session: ReviewSession = Depends(require_session_operator),
+    request: Request, review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Permanent redirect from the standalone reviewer-surface preview
     (Segment 10B-3) to the operator-side full preview surface.
@@ -310,7 +311,7 @@ def session_preview(
     Status 308 keeps the GET method and preserves the bookmark / link
     semantics for stragglers.
     """
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/preview-surface/1",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
@@ -728,7 +729,7 @@ def invitation_reviewer_detail(
 
 @router.get("/sessions/{session_id}/invitations/{invitation_id}/detail")
 def invitation_reviewer_detail_legacy(
-    bundle: tuple[Invitation, ReviewSession] = Depends(
+    request: Request, bundle: tuple[Invitation, ReviewSession] = Depends(
         _require_invitation_in_session
     ),
 ) -> RedirectResponse:
@@ -741,7 +742,7 @@ def invitation_reviewer_detail_legacy(
     one segment earlier — so declaration order does not matter here.
     """
     invitation, review_session = bundle
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}"
             f"/invitations/reviewers/{invitation.reviewer_id}"
@@ -775,7 +776,7 @@ def invitations_send_all(
         ),
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_invitation_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -783,7 +784,7 @@ def invitations_send_all(
 
 @router.post("/sessions/{session_id}/invitations/regenerate-all")
 def invitations_regenerate_all(
-    review_session: ReviewSession = Depends(require_session_operator),
+    request: Request, review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -799,7 +800,7 @@ def invitations_regenerate_all(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -809,7 +810,7 @@ def invitations_regenerate_all(
     "/sessions/{session_id}/invitations/{invitation_id}/regenerate"
 )
 def invitations_regenerate(
-    bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
+    request: Request, bundle: tuple[Invitation, ReviewSession] = Depends(_require_invitation_in_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -821,7 +822,7 @@ def invitations_regenerate(
         user=user,
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -882,7 +883,7 @@ def invitations_send_one(
         ),
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -902,14 +903,14 @@ def invitations_send_one(
 
 @router.get("/sessions/{session_id}/monitoring")
 def session_monitoring_redirect(
-    review_session: ReviewSession = Depends(require_session_operator),
+    request: Request, review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Segment 11C Part 1 PR 3 retired the Monitoring template; the
     consolidated Manage Invitations page (PR 2) absorbed its
     reviewer-centric surface. Existing bookmarks land here and 308
     forward to ``/invitations``, the house rule for a moved GET
     (``spec/architecture.md``; findings F4, 2026-10-03)."""
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_308_PERMANENT_REDIRECT,
     )
@@ -1146,7 +1147,7 @@ def invitations_remind_one(
         ),
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/invitations",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -1177,7 +1178,7 @@ def invitations_remind_incomplete(
         ),
         correlation_id=request_correlation_id(),
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_invitation_redirect_url(review_session.public_id, return_to),
         status_code=status.HTTP_303_SEE_OTHER,
     )

@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.config import settings
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
@@ -142,7 +143,7 @@ def archived_sessions(
 
 @router.post("/sessions/bulk-tags")
 def sessions_bulk_tags(
-    session_ids: list[int] = Form(default=[]),
+    request: Request, session_ids: list[int] = Form(default=[]),
     tags: str = Form(default=""),
     op: str = Form(...),
     user: User = Depends(get_or_create_user),
@@ -187,7 +188,7 @@ def sessions_bulk_tags(
             except ValueError:
                 # Blank / over-long tag from the split — skip it.
                 continue
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -195,7 +196,7 @@ def sessions_bulk_tags(
 
 @router.post("/sessions/bulk-unarchive")
 def sessions_unarchive_selected(
-    session_ids: list[int] = Form(default=[]),
+    request: Request, session_ids: list[int] = Form(default=[]),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
@@ -218,7 +219,7 @@ def sessions_unarchive_selected(
             # Unarchived by another request since this one read it (a
             # double submit): skipped, as the filter above skips it.
             db.rollback()
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -226,7 +227,7 @@ def sessions_unarchive_selected(
 
 @router.post("/sessions/bulk-delete-archived")
 def sessions_delete_archived_selected(
-    session_ids: list[int] = Form(default=[]),
+    request: Request, session_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -250,7 +251,7 @@ def sessions_delete_archived_selected(
             user=user,
             correlation_id=correlation_id,
         )
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions/archived",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -258,7 +259,7 @@ def sessions_delete_archived_selected(
 
 @router.post("/sessions/{session_id}/lobby-edit")
 def lobby_edit_submit(
-    name: str = Form(...),
+    request: Request, name: str = Form(...),
     code: str = Form(...),
     deadline: str | None = Form(default=None),
     tags: str = Form(default=""),
@@ -344,7 +345,7 @@ def lobby_edit_submit(
         correlation_id=correlation_id,
     )
 
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -352,7 +353,7 @@ def lobby_edit_submit(
 
 @router.post("/sessions/{session_id}/clone")
 def clone_session_submit(
-    mode: str = Form(...),
+    request: Request, mode: str = Form(...),
     review_session: ReviewSession = Depends(
         require_sys_admin_or_session_operator
     ),
@@ -385,7 +386,7 @@ def clone_session_submit(
     # card open in edit mode (the Edit page is retired). The operator's
     # first task on a clone is to rename it, then review the cloned setup
     # on the same page. No fragment (19X Item 7).
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{clone.public_id}?editing=1",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -393,7 +394,7 @@ def clone_session_submit(
 
 @router.post("/sessions/bulk-archive")
 def sessions_archive_selected(
-    session_ids: list[int] = Form(default=[]),
+    request: Request, session_ids: list[int] = Form(default=[]),
     purge: list[str] = Form(default=[]),
     return_to: str = Form(default=""),
     user: User = Depends(get_or_create_user),
@@ -436,7 +437,7 @@ def sessions_archive_selected(
         if return_to == "archived"
         else "/operator/sessions"
     )
-    return RedirectResponse(
+    return urls.redirect(request,
         url=target,
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -444,7 +445,7 @@ def sessions_archive_selected(
 
 @router.post("/sessions/bulk-delete")
 def sessions_delete_selected(
-    session_ids: list[int] = Form(default=[]),
+    request: Request, session_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
@@ -489,7 +490,7 @@ def sessions_delete_selected(
             # Activated since this request read it (findings Bc4): skipped,
             # as the filter above skips a ``ready`` row.
             db.rollback()
-    return RedirectResponse(
+    return urls.redirect(request,
         url="/operator/sessions",
         status_code=status.HTTP_303_SEE_OTHER,
     )

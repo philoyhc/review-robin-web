@@ -35,6 +35,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Observer, ReviewSession, User
 from app.db.session import get_db
 from app.schemas.observer_cohort_rule import VALUE_OPERATORS
@@ -482,7 +483,7 @@ def observers_create(
     # the end and, on a roster over one page, is not on the page the
     # form was submitted from. `focus` relocates the window to it and
     # the fragment then resolves.
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -558,7 +559,7 @@ def observers_update(
             edit_cohort_rule=rule.shown,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/observers",
         [observer_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -569,7 +570,7 @@ def observers_update(
 
 @router.post("/sessions/{session_id}/observers/bulk-inactivate")
 def observers_bulk_inactivate(
-    observer_ids: list[int] = Form(default=[]),
+    request: Request, observer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -592,7 +593,7 @@ def observers_bulk_inactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -603,7 +604,7 @@ def observers_bulk_inactivate(
 
 @router.post("/sessions/{session_id}/observers/bulk-reactivate")
 def observers_bulk_reactivate(
-    observer_ids: list[int] = Form(default=[]),
+    request: Request, observer_ids: list[int] = Form(default=[]),
     filter_status: str = Form(default="all"),
     filter_q: str = Form(default=""),
     filter_offset: int = Form(default=0),
@@ -626,7 +627,7 @@ def observers_bulk_reactivate(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -780,7 +781,7 @@ async def observers_cohort_rule_save(
             edit_cohort_rule=rule.shown,
             http_status=status.HTTP_400_BAD_REQUEST,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/observers",
         observer_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -826,7 +827,7 @@ async def observers_save_self_fields(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/observers"
             "?unlocked=1#roster-card"
@@ -837,7 +838,7 @@ async def observers_save_self_fields(
 
 @router.post("/sessions/{session_id}/observers/delete-all")
 def observers_delete_all(
-    confirm: str | None = Form(default=None),
+    request: Request, confirm: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -873,7 +874,7 @@ def observers_delete_all(
     # after the fact: a control inside the panel must not close the
     # panel it was used from. Matching the status code is not matching
     # the contract.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/observers"
             "?unlocked=1#roster-card"
@@ -1004,7 +1005,7 @@ async def observers_import_submit(
     # Open, like the failure path above and like `delete-all`: one rule
     # about the panel rather than three about its controls. A Save does
     # not close this card; the Lock button does.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/observers"
             "?unlocked=1#roster-card"
@@ -1015,7 +1016,7 @@ async def observers_import_submit(
 
 @router.post("/sessions/{session_id}/observers/import/dismiss")
 def observers_import_dismiss(
-    held_token: str | None = Form(default=None),
+    request: Request, held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -1024,7 +1025,7 @@ def observers_import_dismiss(
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(
+    return dismiss_held_upload(request,
         db, held_token=held_token, user=user,
         review_session=review_session, page="observers",
     )
@@ -1032,7 +1033,7 @@ def observers_import_dismiss(
 
 @router.post("/sessions/{session_id}/observers/bulk-delete")
 def observers_bulk_delete(
-    observer_ids: list[int] = Form(default=[]),
+    request: Request, observer_ids: list[int] = Form(default=[]),
     confirm: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     filter_status: str = Form(default="all"),
@@ -1072,7 +1073,7 @@ def observers_bulk_delete(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message
         ) from exc
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/observers",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],

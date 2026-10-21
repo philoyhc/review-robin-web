@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, sta
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import email_templates
@@ -130,7 +131,7 @@ async def setupinvite_save(
         correlation_id=request_correlation_id(),
     )
     db.commit()
-    return RedirectResponse(
+    return urls.redirect(request,
         url=f"/operator/sessions/{review_session.public_id}/setup-invite?template={template}",
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -138,7 +139,7 @@ async def setupinvite_save(
 
 @router.post("/sessions/{session_id}/setup-invite/reset")
 def setupinvite_reset(
-    template: str = Form(...),
+    request: Request, template: str = Form(...),
     field: str = Form(...),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -169,7 +170,7 @@ def setupinvite_reset(
         correlation_id=request_correlation_id(),
     )
     db.commit()
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/setup-invite"
             f"?template={template}"

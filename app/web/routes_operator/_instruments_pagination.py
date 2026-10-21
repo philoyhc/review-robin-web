@@ -45,7 +45,7 @@ router = APIRouter()
     "/sessions/{session_id}/instruments/{instrument_id}/page-break/create"
 )
 def instrument_page_break_create(
-    bundle: tuple[Instrument, ReviewSession] = Depends(
+    request: Request, bundle: tuple[Instrument, ReviewSession] = Depends(
         _require_instrument_in_session
     ),
     user: User = Depends(get_or_create_user),
@@ -66,7 +66,7 @@ def instrument_page_break_create(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
-    return _instruments_redirect(
+    return _instruments_redirect(request,
         review_session.public_id, fragment=f"instrument-{instrument.id}"
     )
 
@@ -75,7 +75,7 @@ def instrument_page_break_create(
     "/sessions/{session_id}/instruments/{instrument_id}/page-break/delete"
 )
 def instrument_page_break_delete(
-    bundle: tuple[Instrument, ReviewSession] = Depends(
+    request: Request, bundle: tuple[Instrument, ReviewSession] = Depends(
         _require_instrument_in_session
     ),
     user: User = Depends(get_or_create_user),
@@ -96,7 +96,7 @@ def instrument_page_break_delete(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
-    return _instruments_redirect(
+    return _instruments_redirect(request,
         review_session.public_id, fragment=f"instrument-{instrument.id}"
     )
 

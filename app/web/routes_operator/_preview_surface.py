@@ -35,6 +35,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Reviewer, ReviewSession, User
 from app.db.session import get_db
 from app.web import breadcrumbs, views
@@ -91,13 +92,13 @@ def _resolve_preview_reviewer(
     response_model=None,
 )
 def preview_surface_default_page(
-    session_id: str,
+    request: Request, session_id: str,
     reviewer_email: str = "",
     review_session: ReviewSession = Depends(require_session_operator),
 ) -> RedirectResponse:
     """Bare-URL fallback. 303s to ``/preview-surface/1`` preserving the
     optional reviewer-email picker."""
-    return RedirectResponse(
+    return urls.redirect(request,
         url=_preview_url(review_session.public_id, 1, reviewer_email),
         status_code=status.HTTP_303_SEE_OTHER,
     )
@@ -145,7 +146,7 @@ def preview_surface(
         url = f"/operator/sessions/{review_session.public_id}/invitations"
         if typo:
             url = f"{url}?{urlencode({'no_match': typo})}"
-        return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+        return urls.redirect(request, url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     pages = _pages_for_session(db, review_session.id)
     validate_page_n(page_n, pages)

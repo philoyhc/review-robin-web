@@ -25,6 +25,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.web import urls
 from app.db.models import Relationship, ReviewSession, User
 from app.db.session import get_db
 from app.services import assignments
@@ -219,7 +220,7 @@ async def relationships_import_submit(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/relationships"
             "?unlocked=1#roster-card"
@@ -230,14 +231,14 @@ async def relationships_import_submit(
 
 @router.post("/sessions/{session_id}/relationships/import/dismiss")
 def relationships_import_dismiss(
-    held_token: str | None = Form(default=None),
+    request: Request, held_token: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """The upload card's Dismiss while an ask holds its file: end the
     hold and return to the card (segment 19W)."""
-    return dismiss_held_upload(
+    return dismiss_held_upload(request,
         db, held_token=held_token, user=user,
         review_session=review_session, page="relationships",
     )
@@ -280,7 +281,7 @@ def relationships_delete_all(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/relationships"
             "?unlocked=1#roster-card"
@@ -409,7 +410,7 @@ def relationships_create(
     # page the form was submitted from — the fragment would name a row
     # the response never rendered. It relocates the pager window; the
     # fragment then resolves onto the row.
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -516,7 +517,7 @@ def relationships_update(
             surface="editor", edit_id=relationship_id, edit_values=edit_values,
             status=filter_status, search=filter_q, offset=filter_offset,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         [relationship_id],
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -561,7 +562,7 @@ def relationships_bulk_inactivate(
             surface="bulk", selected_ids=set(relationship_ids),
             status=filter_status, search=filter_q, offset=filter_offset,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         relationship_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -606,7 +607,7 @@ def relationships_bulk_reactivate(
             surface="bulk", selected_ids=set(relationship_ids),
             status=filter_status, search=filter_q, offset=filter_offset,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         relationship_ids,
         filter_params=[("status", filter_status), ("q", filter_q)],
@@ -1047,7 +1048,7 @@ async def relationships_save_field_labels(
     # operator was working in: a Save does not close the card, the Lock
     # control does. The fragment lands on the card rather than the top of
     # the document.
-    return RedirectResponse(
+    return urls.redirect(request,
         url=(
             f"/operator/sessions/{review_session.public_id}/relationships"
             "?unlocked=1#roster-card"
@@ -1108,7 +1109,7 @@ def relationships_bulk_delete(
             surface="bulk", selected_ids=set(relationship_ids),
             status=filter_status, search=filter_q, offset=filter_offset,
         )
-    return _redirect_keeping_selection(
+    return _redirect_keeping_selection(request,
         f"/operator/sessions/{review_session.public_id}/relationships",
         [],
         filter_params=[("status", filter_status), ("q", filter_q)],
