@@ -48,43 +48,6 @@ deployment, not a local run.
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
 
-## An instrument nobody in view takes part in shows only its line (19X Item 4)
-
-- [ ] **No empty table.** On a session where you are an observer, set
-  your own Observers row's cohort to a rule that matches no one (e.g.
-  Team IS `Team Z`) and open `/me/sessions/<its id>/collation`: each
-  instrument's card shows its heading and "No one in your view takes
-  part in this instrument, so there is nothing to download.", with no
-  table. Set the cohort back to one that matches (e.g. Team CONTAINS
-  `Team`): the tables return.
-
-## A Create with staged files lands at the top of Home (19X Item 5)
-
-- [ ] **No slot fragment.** New session with files staged (say
-  reviewers, reviewees and a settings file): after Create, Session Home
-  opens at the top and the address ends at the session's id, with no
-  `#quick-setup-…`. A Create with nothing staged still opens the
-  details card for editing.
-
-## Date-time boxes take 24-hour text, with a picker and a clear (19X Item 6)
-
-- [ ] **Text, picker and clear.** Unlock Session Home's details card:
-  Start, End, Release from and Release until each show `YYYY-MM-DD
-  HH:MM` in 24-hour time with a 📅 and a ✕ beside them. Select the
-  whole box and delete it in one press; ✕ empties it too. 📅 opens the
-  browser's calendar, and the time picked lands in the box as 24-hour
-  text. Lock the card: the boxes and both buttons hide. Save keeps
-  what was typed.
-- [ ] **New session, the same four.** On New session the four schedule
-  boxes look and behave as Session Home's. Put End before Start and
-  press Create: the browser stops it at End with "End must be on or
-  after Start."; 📅 on End offers nothing before Start. Put them in
-  order and Create: Session Home shows the times you typed.
-- [ ] **The lobby's Deadline.** Tick one session in the lobby: the
-  expander's Deadline shows 24-hour text with 📅 and ✕. ✕ empties it;
-  type a new time and Save: the row shows it. On an active session the
-  box and both buttons are greyed out.
-
 ## An instrument's intro picks its layout (19Y Item 1)
 
 - [ ] **The Guide's screencap.** Reshoot
@@ -94,27 +57,3 @@ deployment, not a local run.
   the heading card on the left and the visibility table on the right
   (Item 2: rows, not help cards).
 
-## The preview's response boxes don't resize (19Y Item 4)
-
-- [ ] **No handle in the preview.** On an instrument card, locked and
-  unlocked, the Comments box in "Preview review instrument" shows no
-  corner handle. The reviewer's Comments box still has one and drags
-  taller.
-
-## A help text's edit box grows with its text (19Y Item 5)
-
-- [ ] **The box fits its text.** Unlock an instrument card whose
-  Comments help runs several lines: its edit box shows the whole text,
-  no scrollbar, no corner handle. Type more lines: it grows; delete
-  them: it shrinks back, never below its one-line-plus floor. Click the
-  layout chip and narrow the window: the box re-fits each time. On the
-  last instrument card, scrolled to the page's foot, typing in the box
-  doesn't make the page jump.
-
-## Arriving on a page carries no fragment (19X Item 7)
-
-- [ ] **No `#…` on arrival.** New session with nothing staged → Create:
-  the address ends `?editing=1` and the details card is open for
-  editing. The lobby's Duplicate does the same on the copy. A Create
-  with a bad reviewers
-  file lands on its red banner, with no `#quick-setup-…` in the address.
