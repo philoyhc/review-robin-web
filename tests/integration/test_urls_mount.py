@@ -64,6 +64,8 @@ def probe_app() -> FastAPI:
         response = HTMLResponse(
             '<a href="/operator/x">a</a><form action="/me/y"></form><img src="/static/z.png">'
             '<a href="https://example.edu/">ok</a><a href="#f">ok</a><a href="/.auth/me">ok</a>'
+            '<script>// see "/me/x" in a comment\nfetch("/operator/api" + id);'
+            ' var ok = "/reviewrobin/me";</script>'
         )
         response.set_cookie("c", "v", path="/operator/sessions")
         return response
@@ -183,7 +185,13 @@ def test_every_rrw_template_environment_has_the_url_globals() -> None:
 def test_the_checker_finds_every_kind_of_leak() -> None:
     client = TestClient(host_with(f"{__name__}:probe_app"))
     found = leaks(client.get(f"{MOUNT}/probe/leaky"))
-    assert sorted(found) == ["/me/y", "/operator/sessions", "/operator/x", "/static/z.png"]
+    assert sorted(found) == [
+        "/me/y",
+        "/operator/api",
+        "/operator/sessions",
+        "/operator/x",
+        "/static/z.png",
+    ]
     assert leaks(client.get(f"{MOUNT}/probe/redirect", follow_redirects=False)) == []
 
 

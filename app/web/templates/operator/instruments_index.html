@@ -3559,7 +3559,7 @@
             };
             btn.disabled = true;
             btn.textContent = '↻ Refreshing...';
-            fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/preview-sample', {
+            fetch({{ url('/operator/sessions/') | tojson }} + sessionId + '/instruments/' + instrumentId + '/preview-sample', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               credentials: 'same-origin',
@@ -6708,7 +6708,7 @@
       function submitNewOrder() {
         const items = currentItems();
         fetch(
-          '/operator/sessions/' + SESSION_ID + '/instruments/order',
+          {{ url('/operator/sessions/') | tojson }} + SESSION_ID + '/instruments/order',
           {
             method: 'POST',
             credentials: 'same-origin',

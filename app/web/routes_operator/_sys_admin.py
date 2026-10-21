@@ -81,11 +81,11 @@ def _admin_return_target(
     )
 
 
-def _remember_return_to(response: Response, target: ReturnTarget) -> None:
+def _remember_return_to(request: Request, response: Response, target: ReturnTarget) -> None:
     response.set_cookie(
         _ADMIN_RETURN_COOKIE,
         target.url,
-        path=_ADMIN_PATH,
+        path=urls.cookie_path(request, _ADMIN_PATH),
         httponly=True,
         samesite="lax",
     )
@@ -105,7 +105,7 @@ def sys_admin_root(
         target = f"{target}?return_to={quote(return_to, safe='/')}"
     response = urls.redirect(request, url=target, status_code=status.HTTP_303_SEE_OTHER)
     if return_to:
-        _remember_return_to(response, _admin_return_target(request, return_to, db, user))
+        _remember_return_to(request, response, _admin_return_target(request, return_to, db, user))
     return response
 
 
@@ -153,7 +153,7 @@ def sys_admin_sessions(
         },
     )
     if return_to:
-        _remember_return_to(response, target)
+        _remember_return_to(request, response, target)
     return response
 
 
@@ -404,7 +404,7 @@ def sys_admin_users(
         views.ACCOUNT_CHIPS_COOKIE,
         remembered,
         max_age=_ONE_YEAR,
-        path=_ACCOUNTS_URL,
+        path=urls.cookie_path(request, _ACCOUNTS_URL),
         httponly=True,
         samesite="lax",
     )

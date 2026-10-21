@@ -12,6 +12,7 @@ Imported as a top-level module, like `_rrw_app`.
 from __future__ import annotations
 
 import logging
+import re
 from functools import cache
 from html.parser import HTMLParser
 from http.cookies import SimpleCookie
@@ -55,14 +56,32 @@ _NOT_APP_PATHS = ("#", "?", "mailto:", "tel:", "javascript:", "data:", "http:", 
 _VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
 
+_SCRIPT_COMMENTS = re.compile(r"/\*.*?\*/|^[ \t]*//[^\n]*", re.DOTALL | re.MULTILINE)
+
+
+@cache
+def _script_root_string() -> re.Pattern[str]:
+    """A quoted string in a script that starts with one of RRW's top-level
+    segments, read from its router as the static rules do."""
+    from _rrw_app import rrw_app
+
+    app = rrw_app()
+    paths = list(app.openapi()["paths"]) + [getattr(r, "path", "") for r in app.routes]
+    segments = sorted({p.split("/")[1] for p in paths if p.count("/") >= 1 and p.split("/")[1]})
+    alternatives = "|".join(re.escape(s) for s in segments)
+    return re.compile(rf"""["'`](/(?:{alternatives})(?:[/?#"'`]|$)[^"'`]*)""")
+
+
 class _Links(HTMLParser):
     """URL attributes, all of them or only those inside the first element
-    whose class list holds ``within`` (and everything nested in it)."""
+    whose class list holds ``within`` (and everything nested in it), and
+    the app-path strings in inline scripts."""
 
     def __init__(self, within: str | None) -> None:
         super().__init__()
         self.within = within
         self.depth = 0
+        self.in_script = False
         self.urls: list[str] = []
 
     def _collect(self, tag: str, attrs: list[tuple[str, str | None]], *, void: bool) -> None:
@@ -77,12 +96,20 @@ class _Links(HTMLParser):
             self.depth += 1
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.in_script = tag == "script"
         self._collect(tag, attrs, void=tag in _VOID)
+
+    def handle_data(self, data: str) -> None:
+        if self.in_script and (self.within is None or self.depth):
+            code = _SCRIPT_COMMENTS.sub("", data)
+            self.urls += _script_root_string().findall(code)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._collect(tag, attrs, void=True)
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "script":
+            self.in_script = False
         if self.depth and tag not in _VOID:
             self.depth -= 1
 
@@ -98,7 +125,8 @@ def leaks(
     link, form action and source attributes, ``Location`` and cookie
     ``Path``s. A fragment, a query, another scheme, another host, a
     relative path or Easy Auth's host-level ``/.auth/`` is not an app
-    path. With ``within``, only the attributes inside the element of that
+    path. Strings in inline scripts that start with an RRW path count as
+    emitted too. With ``within``, only the attributes inside the element of that
     class are read, for a page whose other areas are not swept yet;
     ``cookies=False`` skips cookie paths, which B6 sweeps."""
     emitted: list[str] = []

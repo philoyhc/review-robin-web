@@ -175,6 +175,22 @@ Taken 2026-10-21 at `42936344`, `ROOT` as in the outline's § Blast radius.
   was mechanical, driven by the AST. Rejected: middleware that prefixes a
   `Location` header after the fact. It would touch less code, but it hides
   where a redirect is built, and the plan's `redirect()` keeps it visible.
+- **2026-10-21, B6.** Script strings are written `{{ url('/…') | tojson }}`,
+  rendered server-side, not read from a `data-` attribute at runtime, so
+  the static rules see them as `url()` calls. The allowlist is empty.
+- **2026-10-21, cumulative read (1, `diff-reviewer` on `fdcfee36..` B6).**
+  It confirmed that nothing at `/` changes and that `return_to` stays
+  app-relative. It found:
+  - two script values on the sys-admin users page built from a Python
+    URL with no `url()`. Both are fixed. The static rules cannot see such
+    a value, so the crawl's checker now also scans inline-script strings
+    for a root path;
+  - error-handler log lines now record the app-relative path. This is
+    kept by decision: a log line names the route, not the mount;
+  - a no-op `url()` wrap on an already-prefixed value. It is harmless,
+    since `url()` is idempotent;
+  - "route-aware generation" wording in the v0.8 strategy and the
+    implementation sequence. It is reconciled at close.
 
 ## PR ladder
 
@@ -260,6 +276,6 @@ not change a route, a status code or a string at `/`.
 
 - `spec/architecture.md` — the emission rule: app-relative values, `url()` / `redirect()` / `cookie_path()` / `app_path()` at emission, and the leak test (close).
 - `spec/settings_inventory.md` — cookie paths under the mount, in browser-local UI state (close).
-- `spec/sort_by_reviewee.md` — the sort cookie's path takes the mount root (B6).
+- `spec/sort_by_reviewee.md` — the sort cookie's path takes the mount root (close; the code lands in B6).
 - `CLAUDE.md` — "never write a root-path URL": templates use `url()`, routes use `redirect()` (B7). `AGENTS.md` twinned.
 - `cordware/spec/host.md` — the `/reviewrobin` test harness, and the host's part in `root_path` (close); checked by hand.

@@ -567,7 +567,7 @@
           var save = node.querySelector("[data-expander-save]");
           if (save) save.addEventListener("click", function () {
             submitExpanderForm(
-              "/operator/sessions/" +
+              {{ url('/operator/sessions/') | tojson }} +
                 row.getAttribute("data-session-id") + "/lobby-edit",
               {
                 name: fieldValue("name"),
@@ -586,7 +586,7 @@
             var btn = node.querySelector(selector);
             if (btn) btn.addEventListener("click", function () {
               submitExpanderForm(
-                "/operator/sessions/" +
+                {{ url('/operator/sessions/') | tojson }} +
                   row.getAttribute("data-session-id") + "/clone",
                 { mode: mode }
               );

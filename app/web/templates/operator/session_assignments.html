@@ -534,7 +534,7 @@
         var tickOrder = [];
         var panel = null;
         var BULK_BASE =
-          {{ ("/operator/sessions/" ~ session.public_id ~ "/assignments") | tojson }};
+          {{ url("/operator/sessions/" ~ session.public_id ~ "/assignments") | tojson }};
 
         // Only the rows the operator can see. This page has something
         // no roster page has: a CLIENT-side filter. The instrument-name

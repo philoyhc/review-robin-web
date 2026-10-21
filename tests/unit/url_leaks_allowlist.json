@@ -1,17 +1,3 @@
 [
- ["P2", "app/web/routes_operator/_operations.py", "response.set_cookie( views.VALIDATE_SEVERITY_COOKIE, views.validate_severity_cookie(severities), max_age=_ONE_YEAR, path=\"/operator/sessions\", httponly=True, samesite=\"lax\", )", 1],
- ["P2", "app/web/routes_operator/_sys_admin.py", "response.set_cookie( _ADMIN_RETURN_COOKIE, target.url, path=_ADMIN_PATH, httponly=True, samesite=\"lax\", )", 1],
- ["P2", "app/web/routes_operator/_sys_admin.py", "response.set_cookie( views.ACCOUNT_CHIPS_COOKIE, remembered, max_age=_ONE_YEAR, path=_ACCOUNTS_URL, httponly=True, samesite=\"lax\", )", 1],
- ["T1", "app/web/templates/base.html", "return '/me/sessions/' + sessionId;", 1],
- ["T1", "app/web/templates/base.html", "return '/operator/sessions/' + sessionId;", 1],
- ["T1", "app/web/templates/operator/instruments_index.html", "'/operator/sessions/' + SESSION_ID + '/instruments/order',", 1],
- ["T1", "app/web/templates/operator/instruments_index.html", "fetch('/operator/sessions/' + sessionId + '/instruments/' + instrumentId + '/preview-sample', {", 1],
- ["T1", "app/web/templates/operator/session_assignments.html", "{{ (\"/operator/sessions/\" ~ session.public_id ~ \"/assignments\") | tojson }};", 1],
- ["T1", "app/web/templates/operator/session_detail.html", "var home = {{ ('/operator/sessions/' ~ session.public_id) | tojson }};", 1],
- ["T1", "app/web/templates/operator/session_extract_data.html", "\"/operator/sessions/\" + sessionId +", 3],
- ["T1", "app/web/templates/operator/session_extract_data.html", "\"/operator/sessions/\" + sessionId + \"/export/\" +", 1],
- ["T1", "app/web/templates/operator/session_extract_data.html", "\"/operator/sessions/\" + sessionId + \"/export/by_instrument_bundle.zip\";", 1],
- ["T1", "app/web/templates/operator/session_extract_data.html", ": \"/operator/sessions/\" + sessionId + \"/extract-data/shapes\";", 1],
- ["T1", "app/web/templates/operator/session_extract_data.html", "? \"/operator/sessions/\" + sessionId +", 1],
- ["T1", "app/web/templates/operator/sessions_list.html", "\"/operator/sessions/\" +", 2]
+
 ]
