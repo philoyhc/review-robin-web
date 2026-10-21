@@ -432,7 +432,8 @@ pattern), `spec/operator_ui_concept.md` (chrome-detour return-to-origin).
 
 Listed for context — these are not operator-determined. Set in
 `.env` locally and via Azure App Service "Application settings" in
-deployed environments. Source: `app/config.py`.
+deployed environments. Source: `app/config.py`, except `LOG_LEVEL` and
+`CORDWARE_APPS`, which are the host's (`cordware/main.py`).
 
 | Var | Default | Purpose |
 |---|---|---|
@@ -452,7 +453,8 @@ deployed environments. Source: `app/config.py`.
 | `SMTP_ENCRYPTION_KEY` | `None` | Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to encrypt operator SMTP passwords at rest. Generate with `cryptography.fernet.Fernet.generate_key()`. Fail-loud at encrypt / decrypt time, not at startup, so local dev / tests that don't touch Operator Settings don't need it set. |
 | `AUDIT_STRICT_MODE` | `False` | When `True`, `audit.write_event` raises on a detail-shape violation. Production stays `False` (logs + writes through). Test runner flips to `True` so drift surfaces in CI. |
 | `OPERATOR_CONTACT_EMAIL` | `None` | Optional contact address on `/about` (the signed-in-but-no-access landing). When set, the page renders a `mailto:` access-request link; when unset, generic copy. |
-| `LOG_LEVEL` | `INFO` | Root level for the structured logging `app.logging_config.configure_logging` sets up. Any standard `logging` level name; an unrecognized value falls back to `INFO`. |
+| `LOG_LEVEL` | `INFO` | The host's setting, not RRW's: read by `CordwareSettings` (`cordware/main.py`), not `Settings`. Root level for the structured logging `configure_logging` (`cordware/logging.py`) sets up. Any standard `logging` level name; an unrecognized value falls back to `INFO`. |
+| `CORDWARE_APPS` | unset | The host's setting, read by `CordwareSettings` (`cordware/main.py`), not `Settings`. Comma-separated names of the registered applications to mount (whitespace trimmed, case kept). Unset mounts every registered application; `""` runs the host alone. An unknown or repeated name refuses to start, naming it. Contract: `cordware/spec/host.md`. |
 | `SCHEDULED_OPERATIONAL_LEAD_HOURS` | `1` | Minimum lead time (hours) between now and a `scheduled_activate_at` set at save, and between now and each resolved auto-send fire moment (§2). |
 | `REVIEWER_NOTICE_MIN_HOURS` | `1` | Minimum `\|offset\|` (hours) of each `invite_offsets` / `reminder_offsets` entry (§2). |
 | `REHYDRATE_ENABLED` | `False` | Gates the Rehydrate page and its routes, which 404 while it is off, and the lobby button (`spec/rehydrate.md`). The test suite turns it on. |

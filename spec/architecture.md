@@ -189,6 +189,15 @@ iterate over (`_setup.py`, `_instruments.py`, `_validate.py`,
 anything in between (e.g. computing a status label from instrument
 state) lives here.
 
+**Construction and hosting.** RRW is a mounted application, not a
+process: `create_app()` in `app/main.py` builds it, once per process, and
+importing `app.main` builds nothing. It is served through the Cordware
+host (`cordware.main:app`; contract in `cordware/spec/host.md`), and its
+routes are app-relative. `return_to`'s GET-route check reads the routes of
+the app handling the request (`request.app.routes`). The host owns root
+logging; RRW logs under named `app.*` loggers via
+`app.logging_config.get_logger` and never configures the root logger.
+
 **Static assets** — `app/web/static/`, served by the one `StaticFiles`
 mount at `/static` (`app/main.py`). It exists for the Guide's
 screencaps, which cannot be inlined at a sane size, and is a
