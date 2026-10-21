@@ -721,16 +721,20 @@ Taken 2026-10-21 at `d63f80b7`.
 
 ### Status
 
-**Closed 2026-10-21** in one PR, as laddered, with the document's text
-and images taken as written.
+**Closed 2026-10-21** in one PR, as laddered (#3184), with the
+document's text and images taken as written, then a follow-up PR
+swapping the two Band 2 pairs.
 
-- **What moved from the plan.** Nothing. This settles the screencap
-  reshoot that Items 1 and 2 left owed by the author (Layout 2). The
-  unlocked and locked previews show different instruments; the alt text
-  names what each one shows.
-- **Reads.** One `diff-reviewer` read found no defect in the change. It
-  flagged this missing block, which is now written, and corrected the
-  Create session alt text's placement of "Release responses until".
+- **What moved from the plan.** Only the follow-up below. This settles
+  the screencap reshoot that Items 1 and 2 left owed by the author
+  (Layout 2). The
+  two Band 2 previews first showed different instruments; the author
+  reshot the unlocked and locked pairs from one instrument
+  (`Guide_6b.docx`, a follow-up PR), and the alt text stood.
+- **Reads.** Two `diff-reviewer` reads, one per PR; neither found a
+  defect. The first flagged this missing block, which is now written,
+  and corrected the Create session alt text's placement of "Release
+  responses until".
   `spec-writer`: no spec in Doc impact; no spec names these screencaps.
 - **Owed by the author:** the browser-check row in
   `guide/things_to_check_in_browser.md`.

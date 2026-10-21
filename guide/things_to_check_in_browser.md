@@ -62,4 +62,5 @@ deployment, not a local run.
 - [ ] **The Guide shows the new screencaps.** Open `/guide` in light and
   dark: Create session, both roster cards and both Band 2 previews
   (unlocked, then locked) show the new images in the right theme, and
-  the Band 2 text reads as in `Guide_6a.docx`.
+  the Band 2 text reads as in `Guide_6a.docx`; both Band 2 previews
+  show the same instrument (`Guide_6b.docx`).
