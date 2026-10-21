@@ -87,7 +87,7 @@ Command: `gh api repos/philoyhc/review-robin-web/actions/workflows`, and
 ## What this changes downstream
 
 - 21A's switch timing ("after A1 deploys, before A2 merges") assumed the
-  dev slot redeploys on merge. While the workflow stays disabled, nothing
-  reaches the slot until the author re-enables or dispatches it. The
-  start command then has to name an object the deployed build has. The
-  plan's `## Status` records this.
+  dev slot redeploys on merge. A disabled workflow runs on neither push
+  nor `workflow_dispatch`, so nothing reaches the slot until the author
+  re-enables it. The start command must then name an object the deployed
+  build has. The plan's `## Status` and Open question 4 record this.

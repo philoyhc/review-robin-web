@@ -135,9 +135,9 @@ Taken 2026-10-21 at `8b430421`.
   taken at `b03fd1be`. **It found the dev deploy workflow
   `disabled_manually`**: last run 2026-06-03, so the slot has not followed
   `main` since then. This changes the premise behind the A1 → A2 switch
-  timing and § Decision's rejected alternative. The ordering still holds
-  whenever the workflow is re-enabled. Until then, the author chooses
-  when to deploy (Open question 4).
+  timing and § Decision's rejected alternative. A disabled workflow
+  cannot be dispatched either, so no deploy reaches the slot until it is
+  re-enabled. The ordering holds from then on (Open question 4).
 
 ## PR ladder
 
@@ -215,10 +215,13 @@ Taken 2026-10-21 at `8b430421`.
    doc-reference and spec-coverage gates stay RRW's, and
    `cordware/spec/` is checked by hand at close. Decided in A1.
 
-4. **Does the dev deploy workflow come back on before A1?** It has been
-   `disabled_manually` since 2026-06-03 (§ Status). If it stays off, the
-   dev slot is deployed by dispatch, and the author dispatches after A1
-   and again after A2. The author decides before A1 merges.
+4. **When does the dev deploy workflow come back on?** It has been
+   `disabled_manually` since 2026-06-03 (§ Status). Disabled, it runs on
+   neither push nor dispatch, so the slot has no deploy path. Re-enabling
+   it before A1 merges keeps the A1 → switch → A2 order. Re-enabling it
+   only for 21D's live check means the slot jumps from the June build to
+   the full A1–A2 tree, with the start command switched first. The
+   author decides before A1 merges.
 
 ## Out of scope
 
