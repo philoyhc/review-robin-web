@@ -112,7 +112,7 @@ source .venv/bin/activate  # macOS/Linux
 # .venv\Scripts\activate   # Windows PowerShell/CMD
 pip install -e .[dev]
 alembic upgrade head
-uvicorn app.main:app --reload
+uvicorn cordware.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/health` and expect:

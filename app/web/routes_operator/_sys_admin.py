@@ -73,7 +73,10 @@ def _admin_return_target(
     request: Request, return_to: str | None, db: Session, user: User
 ) -> ReturnTarget:
     return resolve_return_to(
-        return_to or request.cookies.get(_ADMIN_RETURN_COOKIE), db, viewer=user
+        return_to or request.cookies.get(_ADMIN_RETURN_COOKIE),
+        db,
+        viewer=user,
+        routes=request.app.routes,
     )
 
 
@@ -101,7 +104,7 @@ def sys_admin_root(
         target = f"{target}?return_to={quote(return_to, safe='/')}"
     response = RedirectResponse(url=target, status_code=status.HTTP_303_SEE_OTHER)
     if return_to:
-        _remember_return_to(response, resolve_return_to(return_to, db, viewer=user))
+        _remember_return_to(response, _admin_return_target(request, return_to, db, user))
     return response
 
 

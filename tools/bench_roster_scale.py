@@ -526,7 +526,9 @@ def _client(engine: Engine, email: str):  # noqa: ANN202 — TestClient, importe
     from app.auth.identity import AuthenticatedUser, get_current_user
     from app.config import settings
     from app.db.session import get_db
-    from app.main import app
+    from app.main import create_app
+
+    app = create_app()
 
     settings.operator_emails = [email]
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

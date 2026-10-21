@@ -1,7 +1,8 @@
 """Browser tests: the app served live, driven by a real Chromium.
 
 Plan: ``guide/archive/browser_test.md``. A session-scoped server runs
-``uvicorn app.main:app`` against a freshly migrated SQLite file with fake
+``uvicorn cordware.main:app`` (the Cordware host, RRW mounted at ``/``)
+against a freshly migrated SQLite file with fake
 auth, so a Save reaches the server and a reload proves it persisted. Tests
 seed through the app's own routes over HTTP and make their own session, so
 they share the server but not data.
@@ -93,7 +94,7 @@ def _server_command(sock: socket.socket) -> tuple[list[str], dict[str, object]]:
     race comes back, rarely, and ``_wait_for_health`` re-checks that our own
     server is still the one running.
     """
-    base = [sys.executable, "-m", "uvicorn", "app.main:app"]
+    base = [sys.executable, "-m", "uvicorn", "cordware.main:app"]
     if os.name == "posix":
         sock.listen()
         sock.set_inheritable(True)

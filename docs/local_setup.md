@@ -156,10 +156,17 @@ cp .env.example .env
 alembic upgrade head
 
 # 6. Run the app
-uvicorn app.main:app --reload
+uvicorn cordware.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/health` — expect `{"status": "ok"}`.
+
+`cordware.main:app` is the Cordware host with RRW mounted at `/`, the only
+way RRW is served (segment 21A; `docs/cordware_repository_strategy_v0.8.md`
+§3). `app.main` only defines RRW's `create_app()`. The host's
+`CORDWARE_APPS` setting chooses what it mounts. Leave it unset to mount
+RRW; set it empty (`CORDWARE_APPS=`) to run the host alone, which serves
+only `/health`.
 
 ---
 
@@ -323,7 +330,7 @@ private:** with fake auth anyone who can reach it is signed in as
 Surface-check `/health`, `/`, `/auth/me`, `/auth/me/debug`, `/docs` as in
 [§6](#6-verifying-each-surface-area). If the server is not answering, read
 `/tmp/rrw-uvicorn.log`, or stop it and run it in a terminal:
-`pkill -f "uvicorn app.main" ; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`.
+`pkill -f "uvicorn cordware.main" ; uvicorn cordware.main:app --reload --host 0.0.0.0 --port 8000`.
 
 **Postgres parity (optional).** The dev container has no Docker; add
 `"ghcr.io/devcontainers/features/docker-in-docker:2": {}` to its
@@ -504,7 +511,7 @@ points inside `...\review-robin-web\.venv\Scripts`.
 ```powershell
 pytest -n auto                    # full suite
 ruff check .                      # lint
-uvicorn app.main:app --reload     # then open http://127.0.0.1:8000/health
+uvicorn cordware.main:app --reload     # then open http://127.0.0.1:8000/health
 ```
 
 Expect `{"status": "ok"}` at `/health`. That's the whole loop; from here the

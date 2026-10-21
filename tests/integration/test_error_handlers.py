@@ -21,8 +21,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser, get_current_user
 from app.db.session import get_db
-from app.main import app
+from _rrw_app import rrw_app
 from app.services.session_guard import SessionStateConflict
+
+app = rrw_app()
 
 _test_router = APIRouter()
 

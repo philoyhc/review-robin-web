@@ -13,7 +13,9 @@ from sqlalchemy import select
 
 from app.db.models import ReviewSession
 from app.db.session import get_db
-from app.main import app
+from _rrw_app import rrw_app
+
+app = rrw_app()
 
 
 def public_id(session_id: int) -> str:

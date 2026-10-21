@@ -447,7 +447,9 @@ def _upload_endpoints() -> dict[str, list[str]]:
     upload endpoints and passes while asserting nothing. The first
     assertion in the test exists for exactly that.
     """
-    from app.main import app
+    from _rrw_app import rrw_app
+
+    app = rrw_app()
 
     def walk(routes):
         for route in routes:

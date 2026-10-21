@@ -15,7 +15,9 @@ from app.config import settings
 from app.db.models import Instrument, InstrumentViewPolicy, ReviewSession
 from app.db.session import get_db
 from app.services import visibility_policies
-from app.main import app
+from _rrw_app import rrw_app
+
+app = rrw_app()
 
 
 # The Segment 16A PR 1 operator-allowlist gate is mounted on the

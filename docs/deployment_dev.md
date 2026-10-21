@@ -32,10 +32,11 @@ see `guide/deferred_consolidated.md` and `docs/security_posture.md`
 
 ## App startup
 
-Startup command:
+Startup command, once the slot resumes (step 2 of "Resuming the dev
+slot" below; the dormant slot is still set to `app.main:app`):
 
 ```bash
-gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app
+gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app
 ```
 
 ## CI/CD workflow

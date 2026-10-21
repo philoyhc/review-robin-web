@@ -28,7 +28,7 @@ does, and what a Codespace can't do (real Entra sign-in), is in
    3. **If the tab errors or there is no row**, open a terminal
       (☰ ▸ **Terminal ▸ New Terminal**) and read `cat /tmp/rrw-uvicorn.log`,
       or restart the server there (stopping any old one first):
-      `pkill -f "uvicorn app.main" ; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`.
+      `pkill -f "uvicorn cordware.main" ; uvicorn cordware.main:app --reload --host 0.0.0.0 --port 8000`.
 
    The database starts empty: create a session and import a few roster
    rows to have something to look at. The editor's own Chat panel is
@@ -51,7 +51,7 @@ reach the URL a super-admin.
 
 - **The app does not answer.** Read `/tmp/rrw-uvicorn.log` in the
   terminal, or restart the server there:
-  `pkill -f "uvicorn app.main" ; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`.
+  `pkill -f "uvicorn cordware.main" ; uvicorn cordware.main:app --reload --host 0.0.0.0 --port 8000`.
 - **Run the tests:** `pytest -n auto`. `tests/browser/` skips unless you
   run `python -m playwright install --with-deps chromium` first.
 

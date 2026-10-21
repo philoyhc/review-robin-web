@@ -34,7 +34,7 @@ from app.db.models import (
     InstrumentResponseField,
     ReviewSession,
 )
-from app.main import app
+from _rrw_app import rrw_app
 from app.web.deps import get_current_user
 
 from ._answer_form import answer_form
@@ -42,6 +42,8 @@ from ._full_matrix import (
     generate_via_page_button,
     pin_full_matrix_on_all_instruments,
 )
+
+app = rrw_app()
 
 
 @pytest.fixture

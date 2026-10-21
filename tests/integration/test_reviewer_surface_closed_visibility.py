@@ -30,7 +30,7 @@ from app.db.models import (
     ReviewSession,
     User,
 )
-from app.main import app
+from _rrw_app import rrw_app
 from app.services import session_lifecycle as lifecycle
 from app.services import visibility_policies
 from app.web.deps import get_current_user
@@ -41,6 +41,8 @@ from ._full_matrix import (
     pin_full_matrix_on_all_instruments,
 )
 from ._past_draft_setup import past_draft_setup
+
+app = rrw_app()
 
 
 def _restore_operator_identity(operator: AuthenticatedUser) -> None:
