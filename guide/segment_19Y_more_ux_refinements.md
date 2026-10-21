@@ -826,7 +826,8 @@ and 7 browser checks).
   gap above (closed) and a stale `b3_mode_cycle` comment naming only the
   JS map (fixed). `spec-writer` at the close wrote
   `spec/visibility_policy.md`, `spec/ui_elements.md` §9 and
-  `spec/instruments.md`; no flags.
+  `spec/instruments.md`; no flags. Codex then found the same "—" in
+  `spec/rrw_functional_spec.md`'s reviewer card, now fixed.
 - **Owed by the author:** the browser-check rows and the screencap
   reshoot in `guide/things_to_check_in_browser.md`.
 
@@ -861,5 +862,6 @@ and 7 browser checks).
 - `spec/visibility_policy.md` — the transparency card's off label (Item 8).
 - `spec/ui_elements.md` — §9's deliberate-off cycle-chip note (Item 8).
 - `spec/instruments.md` — the fixed Reviewees · Session ongoing switch's label (Item 8).
+- `spec/rrw_functional_spec.md` — the reviewer card's "for none" label (Item 8; added on Codex's review of #3187).
 - `guide/things_to_check_in_browser.md` — rows for both surfaces and the screencap reshoot (Item 8).
 - `guide/todo_master.md` — the 19Y entry (Item 8).

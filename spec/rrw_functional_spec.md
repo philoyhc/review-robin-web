@@ -1724,7 +1724,7 @@ read-only card titled *Who can see what you wrote (other than admin)*
 shows, for **You** and for **Reviewees**, the mode the instrument's
 visibility policy grants while the session is ongoing and once
 responses are released — Raw responses, Anonymized responses,
-Anonymized summaries, or — for none. Observers are not listed. It is
+Anonymized summaries, or Not shown for none. Observers are not listed. It is
 the reviewer's view of the policy the operator sets on the same card,
 unlocked, in Band 2 ([§9.6](#96-configure-instruments),
 `spec/visibility_policy.md`).
