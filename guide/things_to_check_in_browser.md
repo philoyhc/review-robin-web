@@ -9,7 +9,7 @@ section may point to upload files under `guide/browser_check_files/`;
 delete them once no remaining section points to them.
 
 **Some rows need more than a local run:** an Azure deployment (#2720,
-P5) or the Rehydrate round trip (D28).
+P2's signed-out row, P5) or the Rehydrate round trip (D28).
 
 ## Email dates in the session's zone (#2720)
 
@@ -23,6 +23,13 @@ P5) or the Rehydrate round trip (D28).
 - [ ] **Rehydrate still takes it.** Give an instrument the short label
   `responses`, then download Extract Setup's Zip all and this Zip all.
   Rehydrate both zips on the lobby: it accepts them.
+
+## The /me fallback after sign-in (P2)
+
+- [ ] **No "Go back" after the sign-in redirect.** On a deployment, open
+  `/me/sessions/999999/results` signed out in a fresh tab: after the
+  sign-in redirect, the error page shows "Go to your reviews" and no
+  "Go back". *Needs a deployment; the local half was checked 2026-10-19.*
 
 ## Sign-in keeps its row when the email changes (P5)
 
