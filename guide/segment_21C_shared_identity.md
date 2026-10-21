@@ -42,11 +42,16 @@ The interface:
   by construction, which v0.8 §3 requires. A test that builds an identity
   by hand gets the same answer a request would. RRW's `AuthenticatedUser`
   becomes this class under its old name, `display_label` included.
-- **`get_identity(request)`** — Easy Auth headers when present, else the
-  fake user when `ALLOW_FAKE_AUTH` is on, else a 401. This is today's
-  `resolve_current_user`, moved whole, with its optional settings
-  argument now Cordware's `IdentitySettings`. `tests/test_identity.py`
-  and `tests/integration/test_setup_template_download.py` pass one.
+- **`resolve_identity(request, settings=None)`** — Easy Auth headers
+  when present, else the fake user when `ALLOW_FAKE_AUTH` is on, else a
+  401. This is today's `resolve_current_user`, moved whole, with its
+  optional settings argument now Cordware's `IdentitySettings`.
+  `tests/test_identity.py` and
+  `tests/integration/test_setup_template_download.py` pass one. **Never
+  a dependency.**
+- **`get_identity(request)`** — the dependency: it takes the request and
+  nothing else, and calls `resolve_identity(request)`, as
+  `get_current_user` wraps `resolve_current_user` today.
   `get_current_user` re-exports it.
 - **Host-level reads, valid outside a request:**
   - `fake_auth()` returns `enabled` and `email`;
@@ -73,6 +78,12 @@ tests.
 
 ## Semantics
 
+- **A dependency's signature is its attack surface.** FastAPI reads
+  every parameter of a `Depends` target from the request, so a
+  settings parameter would become an optional body, and a caller could
+  post `{"allow_fake_auth": true}`. Only `get_identity(request)` is ever
+  a dependency, and a C1 test pins its signature to `request` alone
+  (Codex, on this plan).
 - **Email comparison** in Cordware is `strip()` then `str.lower()`, the
   rule `app/services/email_identity.py`'s `normalize_email` documents
   (lowercase, deliberately not casefold, 19N Item 2). Cordware cannot
@@ -134,7 +145,8 @@ Taken 2026-10-21 at `fd60526e`.
 
 1. **C0, this plan**, prose only.
 2. **C1, Cordware's identity.**
-   - Lands `cordware/identity.py` (`Identity`, `get_identity`, `fake_auth`,
+   - Lands `cordware/identity.py` (`Identity`, `resolve_identity`,
+     `get_identity`, `fake_auth`,
      `app_env`, `is_local`) and `cordware/settings.py`, with the identity
      settings moved and `SUPER_ADMIN_EMAILS` / `FAKE_AUTH_SUPER_ADMIN`
      still RRW's.
@@ -174,6 +186,8 @@ passes at each.
   - every switch set per run;
   - the guard refusing with `ALLOW_FAKE_AUTH` on and `APP_ENV` not
     `local`, and allowing it at `local` (C1).
+- `get_identity`'s signature is `request` alone, pinned by a test, so no
+  dependency can take settings from a request body (C1).
 - `app/` reads no moved setting: `grep -rnE 'settings\.(app_env|allow_fake_auth|fake_auth_(principal_id|email|name|super_admin)|super_admin_emails)' app`
   finds nothing (C3).
 - The fake user is an operator, an admin and a super-admin at every rung.
