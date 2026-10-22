@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 3 of 22 rows, S4, P3, E4, each found by a fix's cold read (every medium and every original low done); S4, P3, E4 added by the fixes' reads); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 3 of 22 rows, S4, P3, E4, each found by a fix's cold read (every medium and every original low done); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
