@@ -2,7 +2,8 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 19 of 19 rows.
+**Open:** 19 of 19 rows; every author row ruled 2026-10-22 (R3, R4,
+L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
 all 46 rows done), this one read the code for defects rather than the
@@ -47,14 +48,14 @@ None.
   submits again, unprompted. Sources: answers saved before those fixes,
   and the responses import, which stores values verbatim. *Reproduced.*
   Code: normalize the stored value before comparing.
-- **R4** — **The observer per-instrument CSV includes unsubmitted
+- **R4** — **Ruled 2026-10-22: include drafts, each marked as unsubmitted.** **The observer per-instrument CSV includes unsubmitted
   values** (`app/web/routes_reviewer/_collation.py:188`, no
   `submitted_at` filter) that the collation page's stats and `/results`
   leave out, so an edit R1's ruling says is "not released as submitted"
   reaches observers. *Reproduced.* Author: a submitted-only switch on the
   observer route, or `spec/participant_model.md` says drafts are
   included.
-- **L1** — **An untouched Release window refuses every Session Home
+- **L1** — **Ruled 2026-10-22: skip the pair's checks when neither release box was edited, as for the other two pairs.** **An untouched Release window refuses every Session Home
   Save.** Save re-checks the Release-from / Release-until pair on every
   post (`app/web/routes_operator/_session_home.py:395`) against the
   365-day cap; the L6 skip covers only the other two pairs. A Settings
@@ -70,7 +71,7 @@ None.
   every operator's `bundle.zip` and `responses_bundle.zip`; `2026/Q1`
   makes a folder; `:` or `*` breaks Windows extraction. *Reproduced.*
   Code: sanitize the code once, as the slugs already are.
-- **S1** — **Quick Setup's Relationships slot deletes saved group answers
+- **S1** — **Ruled 2026-10-22: ask, as the Relationships Setup card does.** **Quick Setup's Relationships slot deletes saved group answers
   without asking.** `_save_slot` passes no `acknowledged_loss`
   (`app/web/routes_operator/_quick_setup.py:938`), so on a reverted
   session with responses a Relationships file plus the replace tick
@@ -78,7 +79,7 @@ None.
   file with a count. Reachable from a stale Home tab or a direct POST.
   *Reproduced.* Author/spec: `spec/quick_setup_card_spec.md` predates
   the 2026-10-17 "ask first" ruling. Refuse while responses exist, or ask.
-- **C1** — **Reminders resend invitation links from before the
+- **C1** — **Ruled 2026-10-22: nothing was sent before the flip; add the guard anyway, rebuilding the link from the token.** **Reminders resend invitation links from before the
   `/reviewrobin` flip.** `send_reminder` reuses the URL in the last
   invitation email whenever its token still matches
   (`app/services/invitations.py:729` checks only the token segment), so
@@ -89,7 +90,7 @@ None.
 
 ## 3. Low
 
-- **R3** — Blanking an assignment's only answer after Submit leaves the
+- **R3** — **Ruled 2026-10-22: narrow the spec: a blank that leaves nothing on its row needs no new Submit.** Blanking an assignment's only answer after Submit leaves the
   review reading Submitted: the blank rule unstamps the same assignment's
   other rows (`_core.py:432`) and there are none. *Reproduced.*
   Spec/author: narrow the "must Submit again" sentence, or add a
@@ -98,11 +99,11 @@ None.
   `app/services/date_formatting.py:250`, `:275`): End `0026-10-27`
   saves, re-renders as `26-10-27 12:00`, and every later Save is 422.
   *Reproduced.* Code: `f"{year:04d}"`, or refuse years below 1000.
-- **O2** — The Archive page's Archived column and sort read `updated_at`
+- **O2** — **Ruled 2026-10-22: lock the email template editor on archived sessions.** The Archive page's Archived column and sort read `updated_at`
   (`app/web/views/_sessions_table.py:56`), which the email template
   editor (writable on archived sessions) moves. *Reproduced.*
   Spec/author: an archived timestamp, or lock the editor.
-- **O3** — The SMTP password is `strip()`ped before it is stored
+- **O3** — **Ruled 2026-10-22: store the password as typed.** The SMTP password is `strip()`ped before it is stored
   (`app/services/operator_settings.py:316`); latent, since nothing
   sends. *By reading.* Author.
 - **S2** — An empty file chosen on a Setup upload card sends the held
@@ -127,7 +128,7 @@ None.
   gates look only at `link1` / `link2`, so a hand-edited Settings CSV
   stores rules the card hides and its next Save drops. *Reproduced.*
   Code.
-- **E2** — On a relationship-tag boundary a reviewer's whole "no
+- **E2** — **Ruled 2026-10-22: the empty-key catch-all group never counts as the reviewer's own.** On a relationship-tag boundary a reviewer's whole "no
   relationship" group counts as a self-review: the (R, R) pair keys to
   `("",)`, like every unrelated reviewee. Only stored or imported
   boundaries reach it. *Reproduced.* Author.

@@ -1,7 +1,8 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 59 of 59 rows.
+(#3225) · **Open:** 59 of 59 rows; every author row ruled 2026-10-22, as
+recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
 files, was read against the code it describes, in six verify-mode reads
@@ -32,25 +33,27 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
   violation in production "logs and writes through"; the code calls
   `warnings.warn` (`app/services/audit.py:207`, `:1108`) and nothing
   captures warnings, so the JSON log never sees one.
-- **D1** (medium, author) — Rehydrate matches instruments by
+- **D1** (medium, author) — **Ruled 2026-10-22: fall back to the positional key when two short labels collide; no uniqueness rule.** Rehydrate matches instruments by
   `InstrumentShortLabel`, which `spec/rehydrate.md` §6.4 calls unique per
   session; nothing enforces it (`spec/settings_inventory.md` §10 says
   labels need not be unique), and `{short_label: instrument}` lets the
   last of two shared labels win, loading responses onto the wrong
   instrument. Rehydrate is gated off. Enforce uniqueness, or fall back to
   the positional key on ambiguity.
-- **F9** (low, author) — `cordware/spec/identity.md` reads the
+- **F9** (low, author) — **Ruled 2026-10-22: loosen the spec to what the code does.** `cordware/spec/identity.md` reads the
   `X-MS-CLIENT-PRINCIPAL-NAME` header as the name's last fallback; the
   code reads it only when no email was found. Fix the code or loosen the
   spec.
 - **E8** (low, code) — two stale `base.html` comments: `.rs-help-card`
   cites a §"Reviewer help cards" `spec/ui_elements.md` no longer has, and
   `.tab-strip-page` claims to match a tint the spec says it differs from.
-- **B7** (low, author) — `spec/session_owners.md` maps to no routing
+- **B7** (low, author) — **Ruled 2026-10-22: map it to the `_session_home` routing module.** `spec/session_owners.md` maps to no routing
   module in `app/web/spec_registry.py`, so `close_check` never flags an
   owners-route change against it. Add it to the `_session_home` tuple.
 
 ## 2. For the author
+
+All ruled 2026-10-22, each as its row records.
 
 - **H1, H2** — the docs that describe the dormant dev slot as live (H1),
   and `CONTRIBUTING.md`'s reason for waiting on CI (H2), whose premise —
@@ -64,10 +67,10 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
   drop the tally.
 - **F11** — the functional-spec trim (below), proposed by the 5 and 16
   October assessments and not yet done.
-- **E5** — `spec/visual_style_rrw.md` "Sign-in surface" describes an
+- **E5** — **Ruled 2026-10-22: retire the section.** `spec/visual_style_rrw.md` "Sign-in surface" describes an
   in-app sign-in page and magic links that do not exist: mark deferred,
   or retire the section.
-- **D10** — `band2_state` carries source-session reviewee ids through the
+- **D10** — **Ruled 2026-10-22: strip the sample-group ids on export and clone.** `band2_state` carries source-session reviewee ids through the
   Settings CSV and clone, marked ✅ in `spec/roundtrip_coverage.md`
   (unverified harm; likely preview only).
 
@@ -162,10 +165,10 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
 - **F7** (low–medium, spec) — `spec/README.md` does not index the two
   Cordware specs, and its `architecture.md` row omits URL emission and
   the mount.
-- **F8** (low, spec / author) — `spec/rrw_functional_spec.md` §4.3 says
+- **F8** (low, spec / author) — **Ruled 2026-10-22: fix §4.3, and add a row for the Cordware specs to §19.** `spec/rrw_functional_spec.md` §4.3 says
   the invitation link signs a reviewer in (it never does); §19 omits the
   Cordware specs (author: add a row or soften "every live spec").
-- **F11** (low, author) — `spec/rrw_functional_spec.md` sections that
+- **F11** (low, author) — **Ruled 2026-10-22: trim it, carried by the spec-update PRs.** `spec/rrw_functional_spec.md` sections that
   restate a narrower spec: §9.1, §9.3–9.7, §9.9–9.15, §10.3–10.10,
   §11.2–11.5, §12.2–12.4, §6.1–6.3 and §16, §4.1, §7.3 and §17. Keep §1–3,
   §5, §8, §13, §14, §18, §19. Do not cut the §6 table a doc-convention
@@ -174,20 +177,20 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
 
 **`docs/` and root (H)**
 
-- **H1** (medium, author) — `docs/operations_runbook.md`,
+- **H1** (medium, author) — **Ruled 2026-10-22: restate as "when the slot is live".** `docs/operations_runbook.md`,
   `docs/known_limitations.md`, `docs/deployment_nus.md` §0,
   `docs/database.md`, `docs/troubleshooting.md` and
   `docs/backup_restore.md` describe the dev deploy as live; it is
   disabled (`docs/deployment_dev.md` is right).
-- **H2** (medium, author) — `CONTRIBUTING.md` "When to wait for CI":
+- **H2** (medium, author) — **Ruled 2026-10-22: restate the reason as conditional; keep the policy.** `CONTRIBUTING.md` "When to wait for CI":
   the migration premise (above); also its checklist says `pytest` where
   `CLAUDE.md` requires `-n auto` and `ruff`.
 - **H3** (medium, doc) — "Segment 21, on hold" is stale in
   `docs/README.md`, `docs/architecture.md`, `docs/known_limitations.md`
   and `docs/deployment_nus.md`'s banner.
-- **H4** (medium, author) — `docs/deployment_nus.md` §3 starts
+- **H4** (medium, author) — **Ruled 2026-10-22: fix the command.** `docs/deployment_nus.md` §3 starts
   `app.main:app`, which does not exist; it is `cordware.main:app`.
-- **H5** (low–medium, author) — `docs/cordware_stage0_baseline.md`
+- **H5** (low–medium, author) — **Ruled 2026-10-22: keep it as a dated record; retitle the column "at `b03fd1be`".** `docs/cordware_stage0_baseline.md`
   "Command today" and its line citations have moved (above).
 - **H6** (low, doc) — `docs/local_setup.md` §2 omits `cordware/`; §3 and
   §8 name `/docs`, now `/reviewrobin/docs`.
@@ -198,15 +201,15 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
   `CORDWARE_APPS`.
 - **H9** (low, doc) — `docs/deployment_dev.md` "Resuming the dev slot":
   every "once 21x lands" has landed.
-- **H10** (low, author) — `rrw_sdd_in_practice.md` appendix "4,800 tests"
+- **H10** (low, author) — **Ruled 2026-10-22: date each figure rather than re-take it.** `rrw_sdd_in_practice.md` appendix "4,800 tests"
   and `CLAUDE.md`'s 172 s are dated measurements.
-- **H11** (low, author) — `rrw_design_rationale.md` §6.6: the dev slot
+- **H11** (low, author) — **Ruled 2026-10-22: date it, with H18.** `rrw_design_rationale.md` §6.6: the dev slot
   "serves today"; §7 also calls it "the only live environment" (H18).
 - **H12** (medium, doc) — `docs/cordware_repository_strategy_v0.8.md` §3
   still says, in decision-time "today" sentences, that nothing enforces
   the fake-auth guard and that RRW writes root-path links; both shipped
   (`cordware/main.py`, `app/web/urls.py`). Its §8 ledger is right.
-- **H13** (low, author) — the strategy's §2 tree lists `cordware/AGENTS.md`,
+- **H13** (low, author) — **Ruled 2026-10-22: label the tree as the target layout.** the strategy's §2 tree lists `cordware/AGENTS.md`,
   `docs/`, `guide/`, `tools/` and `deployment/` (none exist) and omits
   `cordware/settings.py` and `cordware/logging.py`; it says the root
   `AGENTS.md` routes work by owner, which it does not. Label the tree as
@@ -216,7 +219,7 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
 - **H15** (low–medium, doc) — `docs/cordware_nus_azure_status_2026-10-16_v8.md`
   §4.3 says the landing page shows only eligible applications; it lists
   every mounted one (`cordware/web/landing.py`), as the strategy says.
-- **H16** (low, author) — the status record's banner misses §1, §18.5,
+- **H16** (low, author) — **Ruled 2026-10-22: extend the banner.** the status record's banner misses §1, §18.5,
   §21 and §22 step 4 (a Cordware repo and federated credential the
   strategy dropped), and §21's "RRW Cordware retrofit: Not started"
   (Segment 21 shipped it). Extend the banner.
@@ -228,9 +231,9 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
 - **H19** (low, doc) — `rrw_design_rationale.md` §6.3 and its appendix
   spell the visibility modes as prose; `CLAUDE.md` asks for the shipped
   `Anonymized` / `Summarized`.
-- **H20** (low, doc) — `rrw_sdd_in_practice.md` §1 ("two thousand six
+- **H20** (low, doc) — **Ruled 2026-10-22: date each figure.** `rrw_sdd_in_practice.md` §1 ("two thousand six
   hundred pull requests", undated) and §6.7 (`CLAUDE.md` "297" lines, now
   309): date or drop.
-- **H21** (low, author) — neither narrative document says RRW now runs
+- **H21** (low, author) — **Ruled 2026-10-22: one pointer to the strategy in each.** neither narrative document says RRW now runs
   under the Cordware host, which parses identity; one pointer to the
   strategy would do.
