@@ -939,12 +939,15 @@ translate to HTTP 422 with the per-pair error message:
 | Release-until ≤ Release-from | `Release responses until must be after Release responses from.` |
 | Release-until > Release-from + 365d | `Release responses until must be within 365 days of Release responses from.` |
 
-On Session Home's details card a Start ↔ End or End ↔ Release-from
-pair whose two boxes both still hold their stored values (in the seeded
-or, after a Timezone change, the submitted zone: `spec/session_home.md`
-§4) is not checked, as the import below skips a pair
-it leaves alone, so a Save is never refused over a stored pair nobody
-edited (the closed-then-released session below holds one).
+On Session Home's details card a pair whose two boxes both still hold
+their stored values (in the seeded or, after a Timezone change, the
+submitted zone: `spec/session_home.md` §4) is not checked, as the
+import below skips a pair it leaves alone, so a Save is never refused
+over a stored pair nobody edited (the closed-then-released session
+below holds one). That covers all three pairs, the Release-from ↔
+Release-until order and its 365-day cap included: an import, or Stop
+releasing a year after Release and then a Revert, can store a window
+past the cap (findings L1).
 
 The **Settings CSV import** enforces the chain too, in its parse phase, so a violating file is refused
 whole and nothing is applied. It checks the three pairs through

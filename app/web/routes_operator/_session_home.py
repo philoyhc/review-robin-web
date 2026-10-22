@@ -380,9 +380,19 @@ def _apply_session_config_form(
             detail=str(exc),
         ) from exc
 
+    # A pair whose two boxes both still hold their stored values is not
+    # checked, as the Settings import skips a pair it supplies neither
+    # side of: Close early, then Release, stamps Release-from before
+    # End, and a Save that leaves both alone must not be refused over
+    # them (findings L6). Passing ``None`` for one side skips the pair.
+    def _pair_edited(*fields: str) -> bool:
+        return not all(field in unedited for field in fields)
+
     # Participant-model W14 + S12: Release-responses anchor + close
     # datetime. Until is validated against the (possibly freshly-
-    # edited) anchor.
+    # edited) anchor, unless neither box was edited: an import, or a
+    # Revert a year after Stop releasing, can store a window past the
+    # 365-day cap (findings L1).
     try:
         parsed_responses_release_at = _kept(
             "responses_release_at",
@@ -395,7 +405,13 @@ def _apply_session_config_form(
             scheduled_events.parse_and_validate_responses_release_until(
                 release_until_raw,
                 timezone_name=release_until_zone,
-                responses_release_at=parsed_responses_release_at,
+                responses_release_at=(
+                    parsed_responses_release_at
+                    if _pair_edited(
+                        "responses_release_at", "responses_release_until"
+                    )
+                    else None
+                ),
             ),
         )
     except scheduled_events.ScheduledActivateError as exc:
@@ -407,16 +423,8 @@ def _apply_session_config_form(
     # Cross-field datetime ordering: Start ≤ End ≤ Release-from.
     # (Release-until > Release-from is checked inside its own
     # parser.) Runs after every individual parse so the operator
-    # gets the field-level error before the ordering error.
-    #
-    # A pair whose two boxes both still hold their stored values is not
-    # checked, as the Settings import skips a pair it supplies neither
-    # side of: Close early, then Release, stamps Release-from before
-    # End, and a Save that leaves both alone must not be refused over
-    # them (findings L6). Passing ``None`` for one side skips the pair.
-    def _pair_edited(*fields: str) -> bool:
-        return not all(field in unedited for field in fields)
-
+    # gets the field-level error before the ordering error. An unedited
+    # pair is skipped (``_pair_edited`` above).
     try:
         scheduled_events.validate_schedule_ordering(
             scheduled_activate_at=(
