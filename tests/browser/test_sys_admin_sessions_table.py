@@ -141,3 +141,35 @@ def test_a_sort_cookie_left_at_the_root_path_is_expired(page: Page) -> None:
     page.reload()
     paths = sorted(c["path"] for c in page.context.cookies() if c["name"] == name)
     assert paths == [app_url("/")]
+
+
+def test_the_load_that_expires_a_root_copy_sorts_by_the_mount_copy(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """Codex on #3235: the server sorted that load by the root copy, so the
+    script that expires it puts the rows in the mount copy's order."""
+    from urllib.parse import quote
+
+    new_session()
+    new_session()
+    name = "rrw-sort-sys-admin-sessions"
+    page.goto(app_url(PAGE))
+    host = page.evaluate("location.hostname")
+
+    def spec(direction: str) -> str:
+        return quote(f'[{{"key":"code","dir":"{direction}"}}]', safe="")
+
+    page.context.clear_cookies(name=name)
+    page.context.add_cookies(
+        [
+            {"name": name, "value": spec("asc"), "domain": host, "path": "/"},
+            {"name": name, "value": spec("desc"), "domain": host, "path": app_url("/")},
+        ]
+    )
+    rows = page.locator("#diagnostics-sessions tbody tr td:nth-child(2) code")
+    page.reload()
+    first_load = rows.all_inner_texts()
+    assert [c["path"] for c in page.context.cookies() if c["name"] == name] == [app_url("/")]
+    # The next load sends only the mount copy, so the server sorts by it.
+    page.reload()
+    assert first_load == rows.all_inner_texts()

@@ -5463,11 +5463,26 @@
       // could not clear. Expired whenever the table is read or written;
       // under a root mount the two paths are one, so nothing is
       // expired (findings C2).
+      // Returns whether there was a root copy to expire, so the load
+      // that found one can put the rows in the mount copy's order: the
+      // server sorted them by the root copy (Codex on #3235).
       function _rrwExpireRootCopy(tableId, path) {
         // A one-character path is the host root itself (a root mount).
-        if (path.length === 1) return;
+        if (path.length === 1) return false;
+        var before = _rrwCookieCount(tableId);
         document.cookie =
           encodeURIComponent(tableId) + '=; Path=/; SameSite=Lax; Max-Age=0';
+        return _rrwCookieCount(tableId) < before;
+      }
+
+      function _rrwCookieCount(tableId) {
+        var name = encodeURIComponent(tableId) + '=';
+        var parts = document.cookie ? document.cookie.split('; ') : [];
+        var count = 0;
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].indexOf(name) === 0) count += 1;
+        }
+        return count;
       }
 
       function _rrwWriteCookie(tableId, state) {
@@ -5570,11 +5585,15 @@
           var table = tables[i];
           var tableId = table.getAttribute('data-rrw-sortable');
           if (!tableId) continue;
-          _rrwExpireRootCopy(tableId, _rrwCookiePath(tableId));
+          var stale = _rrwExpireRootCopy(tableId, _rrwCookiePath(tableId));
           var state = _rrwReadCookie(tableId);
           if (state.length === 0) continue;
           _rrwSortState[tableId] = state;
           _rrwRefreshSortBadges(table, state);
+          if (stale) {
+            _rrwApplySort(table, state);
+            continue;
+          }
           // The server orders display keys, so a display-only spec
           // needs no re-sort. It cannot order `response:` keys
           // (ruling A27), so a spec holding one re-sorts here, through
