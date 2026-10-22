@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 13 of 19 rows (O1, R1, R2, R4, L1, S1 done); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 12 of 19 rows (every medium done: O1, R1, R2, R4, L1, S1, C1); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -79,7 +79,7 @@ None.
   file with a count. Reachable from a stale Home tab or a direct POST.
   *Reproduced.* Author/spec: `spec/quick_setup_card_spec.md` predates
   the 2026-10-17 "ask first" ruling. Refuse while responses exist, or ask.
-- **C1** — **Ruled 2026-10-22: nothing was sent before the flip; add the guard anyway, rebuilding the link from the token.** **Reminders resend invitation links from before the
+- ~~**C1**~~ — **Done in #3233**: a reminder, and the Invitation card, build the link again from its token (`invitations.current_invite_url`; `spec/architecture.md`; `tests/integration/test_invitation_link_reuse.py`). **Ruled 2026-10-22: nothing was sent before the flip; add the guard anyway, rebuilding the link from the token.** **Reminders resend invitation links from before the
   `/reviewrobin` flip.** `send_reminder` reuses the URL in the last
   invitation email whenever its token still matches
   (`app/services/invitations.py:729` checks only the token segment), so
