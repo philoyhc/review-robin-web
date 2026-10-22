@@ -1682,7 +1682,7 @@ The partial branches on chip state, never on role, so a fourth role
 would touch only `_ROLE_PRIORITY`, the per-role branch in
 `build_role_chips`, and a `.pill-role-<role>` palette in `base.html`.
 A new surface adds the strip by passing `role_chips` from its route
-and including the partial under its page header and before the
+and including the partial under its title row and the session
 description; if it also renders as an operator preview, the
 preview must say what the strip shows there (the reviewer surface's
 static pill is the precedent).
