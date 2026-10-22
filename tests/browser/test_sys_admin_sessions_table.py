@@ -120,3 +120,24 @@ def test_each_table_id_maps_to_its_cookie_path(page: Page) -> None:
     }
     found = page.evaluate("ids => ids.map(id => _rrwCookiePath(id))", list(cases))
     assert dict(zip(cases, found)) == {name: app_url(path) for name, path in cases.items()}
+
+
+def test_a_sort_cookie_left_at_the_root_path_is_expired(page: Page) -> None:
+    """Findings C2: a copy written at ``Path=/`` before the move under the
+    mount rode beside the mount's copy, and the server read it last. The
+    page expires it on load, and leaves the mount's copy alone."""
+    assert app_url("/") != "/", "premise: the suite serves RRW under a mount"
+    name = "rrw-sort-sys-admin-sessions"
+    page.goto(app_url(PAGE))
+    host = page.evaluate("location.hostname")
+    page.context.clear_cookies(name=name)
+    stale = '%5B%7B%22key%22%3A%22code%22%2C%22dir%22%3A%22asc%22%7D%5D'
+    page.context.add_cookies(
+        [
+            {"name": name, "value": stale, "domain": host, "path": "/"},
+            {"name": name, "value": "%5B%5D", "domain": host, "path": app_url("/")},
+        ]
+    )
+    page.reload()
+    paths = sorted(c["path"] for c in page.context.cookies() if c["name"] == name)
+    assert paths == [app_url("/")]

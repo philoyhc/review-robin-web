@@ -16,6 +16,7 @@ from app.web import urls
 from app.db.models import ReviewSession, User
 from app.db.session import get_db
 from app.services import email_templates
+from app.services import session_lifecycle as lifecycle
 from app.web import breadcrumbs, views
 from app.web.deps import (
     get_or_create_user,
@@ -29,6 +30,17 @@ router = APIRouter()
 
 
 _VALID_TEMPLATES = ("invitation", "reminder", "responses_received")
+
+
+def _require_editable_templates(review_session: ReviewSession) -> None:
+    """An archived session's email templates are read-only: an edit
+    moved ``updated_at``, which the Archive page reads as the date the
+    session was archived (findings O2, author's ruling 2026-10-22)."""
+    if lifecycle.is_archived(review_session):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Session is archived; its email templates are read-only.",
+        )
 
 
 def _build_field_rows(
@@ -80,6 +92,7 @@ def setupinvite_form(
             "responses_received_enabled": (
                 email_templates.responses_received_enabled(review_session)
             ),
+            "locked": lifecycle.is_archived(review_session),
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Email Template"
             ),
@@ -100,6 +113,7 @@ async def setupinvite_save(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Unknown template",
         )
+    _require_editable_templates(review_session)
     form = await request.form()
     updates: dict[str, str | None] = {}
     for spec in email_templates.TEMPLATE_FIELDS[template]:
@@ -150,6 +164,7 @@ def setupinvite_reset(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Unknown template",
         )
+    _require_editable_templates(review_session)
     spec = next(
         (s for s in email_templates.TEMPLATE_FIELDS[template] if s["field"] == field),
         None,

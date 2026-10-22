@@ -442,7 +442,10 @@ The lobby carries all three:
   The chosen sort persists in the `rrw-sort-lobby` cookie (shared
   `rrw-sortable` primitive with the Setup preview tables), decoded
   server-side by `views.decode_cookie_sort_spec` /
-  `apply_cookie_sort`. Default order is `created_at DESC`.
+  `apply_cookie_sort`. Default order is `created_at DESC`. The cookie
+  sits at the mount's root path; a copy left at `Path=/` from before
+  the move under `/reviewrobin`, which the server would read in its
+  place, is expired whenever the table loads or sorts (findings C2).
   The Created, Deadline and Timezone cells carry the route's sort value
   as `data-sort-value` — the stored instant as UTC ISO 8601 to the
   microsecond (the `sort_instant` filter, `views.instant_sort_value`;

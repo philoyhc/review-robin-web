@@ -254,6 +254,36 @@ def test_settings_save_blank_password_keeps_existing_ciphertext(
     assert user.smtp_from_display_name == "Updated name"
 
 
+def test_settings_save_stores_the_password_as_typed(
+    client: TestClient, db: Session, fernet_key: str
+) -> None:
+    """Findings O3, ruled 2026-10-22: outer spaces are part of a
+    password, so it is stored as typed; whitespace alone still reads as
+    left blank and keeps the saved one."""
+    form = {
+        "smtp_host": "smtp.office365.com",
+        "smtp_port": "587",
+        "smtp_username": "alice@example.edu",
+        "smtp_encryption": "starttls",
+    }
+    client.post(
+        "/operator/settings",
+        data={**form, "smtp_password": " spaced pw "},
+        follow_redirects=False,
+    )
+    db.expire_all()
+    stored = _alice_row(db).smtp_password_encrypted
+    assert _secrets.decrypt_password(stored) == " spaced pw "
+
+    client.post(
+        "/operator/settings",
+        data={**form, "smtp_password": "   "},
+        follow_redirects=False,
+    )
+    db.expire_all()
+    assert _alice_row(db).smtp_password_encrypted == stored
+
+
 def test_settings_save_same_password_records_no_change(
     client: TestClient, db: Session, fernet_key: str
 ) -> None:
