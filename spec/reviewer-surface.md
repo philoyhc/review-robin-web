@@ -714,8 +714,7 @@ Response field input markup is driven by the field's `data_type`:
 
 | `data_type` | Render |
 |---|---|
-| `String` with `validation.max_length > 100` | `<textarea rows="N">` where `N` is derived from `max_length` and the operator-set column width via `views.textarea_rows_for` (see below); `min-height: 44px` floor; `resize: vertical` so the corner-drag doesn't push the column out of its operator-defined width; preserves stored value. |
-| `String` with `validation.max_length ≤ 100` | `<input type="text">`; the `maxlength` attribute reflects `validation.max_length`. |
+| `String` | `<textarea class="rs-answer" data-fit-box>` that fits its text (below); `maxlength` reflects `validation.max_length`; preserves stored value. `rows` is `1` when `max_length` is 50 or fewer, else `2` (a field with no `max_length` included), and a one-line box carries `data-fit-box="one-line"`. |
 | `Integer`, `Decimal` | `<input type="number">`; `min` / `max` reflect `validation`. `step="any"` turns off the browser's own step grid; the step lives in `data-rs-step` (anchored at `min` by `data-rs-step-anchor`) and the page's inline script checks it. An `Integer` with no `validation.step` and a whole (or no) `min` still carries `data-rs-step="1"`, so a decimal meets that check. |
 | `List` | `<select>` over `validation.choices`, with an empty leading option (`value=""`) representing "no answer". |
 | anything else | `<input type="text">` (defensive fallback). |
@@ -723,40 +722,32 @@ Response field input markup is driven by the field's `data_type`:
 When the assignment isn't accepting (deadline closed or operator-
 paused), every input renders `disabled`.
 
-**Textarea height derivation.** Long-text textareas size their
-initial `rows` attribute so a typical response — assumed to cluster
-around **50%** of the configured `max_length` — fits at the column's
-current width:
-
-```
-typical_chars = max_length * 0.5
-chars_per_row = max(20, column_width_px / 8)
-rows          = clamp(ceil(typical_chars / chars_per_row), 2, 8)
-```
-
-`column_width_px` comes from `Instrument.column_widths["rf_<id>"]`
-(the per-cell width the operator sets via Band 2's column
-grippers); when unset, the default is 224px (matching the
-`td.rs-textlong { min-width: 14em }` CSS at the default 16px body
-font). The 8 px/char ratio is calibrated against the proportional
-sans-serif body font stack; the 0.5 factor is named at
-`views/_instruments.py::_TYPICAL_RESPONSE_FRACTION`. Reviewers
-retain native textarea corner-drag at runtime — this only sets
-the initial height. The Band 2 preview cell in
-`templates/operator/instruments_index.html` ships a JS port of
-the same formula (constants kept in sync) so the operator's
-preview matches what the reviewer will see.
+**A String answer box fits its text.** `base.html`'s shared fit script
+(`textarea[data-fit-box]`) sets the box's height to its content's, above
+its `rows` floor, on load, on each edit and when its width changes (a
+column drag, a window resize). There is no ceiling: `maxlength` bounds
+the answer, so a saved answer always shows whole. Once the script has
+taken a box on (`data-fit-on`) it has no resize handle and no scrollbar,
+because a drag would be undone by the next keystroke; without script the
+box stays at its floor and keeps the native vertical handle. A one-line
+box takes no new line break: Enter inserts none (outside an IME
+composition), and a pasted or dropped break becomes a space; a stored
+answer shows as saved, breaks included. A two-line box keeps its breaks.
+The server keeps a posted line break (CRLF) as one character (LF), so
+its length check agrees with the box's `maxlength`.
+`rs-textlong` (Header column-width hint above) sizes the column, not the
+box.
 
 **Cell vertical alignment.** Cells inside
 `.rs-instrument-group` and `[data-new-model-band2-preview]` carry
-`vertical-align: top` so multi-row textareas anchor at the top of
-the row rather than centering vertically next to single-line
-neighbours.
+`vertical-align: top` so an answer box taller than one line anchors
+at the top of the row rather than centering vertically next to its
+single-line neighbours.
 
 Stored values are read from `Response` rows keyed by
 `(assignment_id, response_field_id)` and rendered as the input's
-`value` (or selected `<option>` for `List`, or textarea body for the
-long `String` variant).
+`value` (or selected `<option>` for `List`, or textarea body for a
+`String`).
 
 ### Branching between response fields
 

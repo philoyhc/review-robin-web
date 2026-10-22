@@ -148,11 +148,6 @@ _templates.env.globals["profile_column_ch_width"] = (
     views.profile_column_ch_width
 )
 _templates.env.globals["is_web_link"] = views.is_web_link
-# Sized-textarea helper — same as on the reviewer ``_templates``.
-# The operator preview route (``_preview_surface.py``) renders
-# ``reviewer/review_surface.html`` through this operator instance,
-# so the helper has to be registered both places.
-_templates.env.globals["textarea_rows_for"] = views.textarea_rows_for
 # Reviewer-progress pill: one state → (css, label) mapping (audit V2).
 _templates.env.globals["progress_pill"] = views.progress_pill
 # Operator-facing instrument label resolver

@@ -1732,9 +1732,10 @@ unlocked, in Band 2 ([§9.6](#96-configure-instruments),
 **Cell rendering** is driven by each response field's own
 data type and inline bounds:
 
-- **String** fields render as a one-line text box (length cap
-  ≤ 100) or a multi-line text area (cap > 100, initial height
-  derived from the length cap and column width).
+- **String** fields render as a text box that grows to fit what
+  is typed, starting one line tall for a short length cap (50 or
+  fewer) and two lines otherwise; a one-line box takes no line
+  break.
 - **Integer** / **Decimal** fields render as a number box
   with min / max / step from the field's bounds.
 - **List** fields render as a drop-down with an empty leading

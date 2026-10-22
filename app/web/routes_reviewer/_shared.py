@@ -59,13 +59,6 @@ _templates.env.globals["profile_column_ch_width"] = (
     views.profile_column_ch_width
 )
 _templates.env.globals["is_web_link"] = views.is_web_link
-# 2026-05-28 — derives the ``rows`` attribute for String
-# response-field textareas from ``max_chars`` + operator-set
-# column width so reviewers see a textarea sized for the typical
-# response (50% of the configured cap) at the column's current
-# width, without waiting on the reviewer to drag-resize. Native
-# textarea resize stays available at runtime.
-_templates.env.globals["textarea_rows_for"] = views.textarea_rows_for
 # Reviewer-progress pill: one state → (css, label) mapping (audit V2).
 _templates.env.globals["progress_pill"] = views.progress_pill
 # Canonical date / time display formatting — Segment 18B PR 1 / PR 2.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -75,6 +76,20 @@ def test_parse_form_payload_extracts_response_entries() -> None:
         (10, "comments"): "good",
         (20, "rating"): "",  # whitespace normalised to empty
     }
+
+
+@pytest.mark.parametrize("strip", [True, False])
+def test_parse_form_payload_keeps_a_line_break_as_one_character(strip: bool) -> None:
+    """19X Item 10: a textarea posts a line break as CRLF, which the
+    browser's ``maxlength`` counted as one character; it is kept as LF,
+    so the length check counts it once too."""
+    [upsert] = responses_service.parse_form_payload(
+        {"response[1][comments]": "first\r\nsecond"},
+        page_assignment_ids=[10],
+        strip=strip,
+    )
+    assert upsert.value == "first\nsecond"
+    assert len(upsert.value) == 12
 
 
 def test_save_draft_with_no_upserts_writes_zero(db: Session) -> None:

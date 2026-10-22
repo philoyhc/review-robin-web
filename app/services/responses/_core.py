@@ -56,6 +56,9 @@ def parse_form_payload(
     reviewer's own page. Non-matching keys and ordinals the page doesn't
     have are ignored. Values are stripped, so whitespace-only ones become
     empty strings; the save layer interprets empty as "delete the row".
+    A line break arrives from a textarea as CRLF and is kept as LF, so
+    a length check counts it once, as the browser's ``maxlength`` does
+    (19X Item 10).
     ``strip=False`` keeps them as typed, for showing a refused write's
     answers back (participant audit P3)."""
     out: list[ResponseUpsert] = []
@@ -63,11 +66,12 @@ def parse_form_payload(
         match = ANSWER_KEY_PATTERN.match(key)
         if match is None or not 1 <= int(match["n"]) <= len(page_assignment_ids):
             continue
+        text = (value or "").replace("\r\n", "\n")
         out.append(
             ResponseUpsert(
                 assignment_id=page_assignment_ids[int(match["n"]) - 1],
                 field_key=match["key"],
-                value=(value or "").strip() if strip else (value or ""),
+                value=text.strip() if strip else text,
             )
         )
     return out

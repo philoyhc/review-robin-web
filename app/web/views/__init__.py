@@ -189,7 +189,6 @@ from ._instruments import (
     profile_column_ch_width,
     is_web_link,
     placeholder_for_field,
-    textarea_rows_for,
 )
 
 # Quick Setup card on Session Home + new-session preview variant
@@ -436,7 +435,6 @@ __all__ = [
     "numeric_column_ch_width",
     "profile_column_ch_width",
     "is_web_link",
-    "textarea_rows_for",
     "RuleEditState",
     "cohort_rule_summary",
     "rule_edit_state",
