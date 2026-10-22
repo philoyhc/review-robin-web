@@ -227,7 +227,8 @@ those cards are configured.
 the file Rehydrate reads (`spec/rehydrate.md` §4), whatever the
 chips say. Each chip that is on adds exactly the files its card's
 own button would download at that moment, under the same names
-and with the same bytes; a chip that is off leaves them out. A
+(made safe as zip members, § *Cross-cutting behaviours*) and with
+the same bytes; a chip that is off leaves them out. A
 card with nothing to download — By instrument with no instrument
 chip on — rides as off. A shape whose name makes it collide
 with another member gains `_2` before `.csv` in the bundle only.
@@ -1202,6 +1203,16 @@ current chip selection. Right-click "Copy link" therefore yields a URL
 that reflects the live chip configuration — useful for
 operators who want to script the download or paste it into
 a runbook.
+
+**Zip member names.** Every bundle names its members as the
+standalone downloads are named, from the free-text session code, made
+safe as zip members: a path separator (`/`, `\`), a character Windows
+refuses in a file name (`: * ? " < > |`) or a control character
+becomes `_`, and leading dots and spaces are dropped. So a code
+`../../x` cannot place a file outside the extraction folder and
+`2026/Q1` makes no folder; any other character, non-Latin ones
+included, is kept. The standalone download keeps the code as typed in
+its `Content-Disposition`, which the browser cleans.
 
 **Lifecycle behaviour.** The page renders identically in
 every lifecycle state. Downloads stay available even after

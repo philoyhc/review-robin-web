@@ -22,6 +22,7 @@ either bundle (it lives behind the diagnostics doorway).
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -366,6 +367,24 @@ def _by_instrument_members(
         yield f"{code}_by_instrument_{slug}.csv", rows
 
 
+#: What a zip member name may not hold: a path separator, a character
+#: Windows refuses in a file name, or a control character.
+_UNSAFE_IN_MEMBER = re.compile(r'[\\/:*?"<>|\x00-\x1f\x7f]')
+
+
+def _member_name(name: str) -> str:
+    """``name`` made safe as a zip member (findings O1, 2026-10-22).
+
+    A session code is free text and names every member, so ``../../x``
+    would reach outside the extraction folder, ``2026/Q1`` would make a
+    folder, and ``a:b`` would not extract on Windows. Each such
+    character becomes ``_`` and leading dots and spaces go; every
+    other character, non-Latin ones included, is kept. A standalone
+    download keeps its name, which the browser cleans.
+    """
+    return _UNSAFE_IN_MEMBER.sub("_", name).lstrip(". ") or "session.csv"
+
+
 def _zip_named(members: list[tuple[str, list[tuple[str, ...]]]]) -> bytes:
     """Write ``(name, rows)`` members in order. A name already
     taken gains ``_2``, ``_3`` … before ``.csv``, so no member
@@ -374,6 +393,7 @@ def _zip_named(members: list[tuple[str, list[tuple[str, ...]]]]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, rows in members:
+            name = _member_name(name)
             stem, dot, ext = name.rpartition(".")
             candidate, n = name, 2
             while candidate in used:
@@ -392,7 +412,7 @@ def _write_archive(
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for kind, rows in members.items():
             archive.writestr(
-                filename(review_session, kind),
+                _member_name(filename(review_session, kind)),
                 b"".join(stream_csv(rows)),
             )
     return buffer.getvalue()
