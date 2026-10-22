@@ -853,6 +853,14 @@ def _save_uploads(
                 for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
             }
             populated: list[str] = []
+            # A Settings file in the same submit rebuilds every instrument,
+            # which deletes every response after this slot's save, so
+            # Relationships has nothing to ask about (the read of S1).
+            group_ack = (
+                None
+                if any(item.kind == "settings" for item in staged)
+                else acknowledged_group_loss
+            )
             for item in staged:
                 current = item.kind
                 saved = _save_slot(
@@ -862,7 +870,7 @@ def _save_uploads(
                     user=user,
                     correlation_id=correlation_id,
                     acknowledged_deletions=acknowledged_deletions,
-                    acknowledged_group_loss=acknowledged_group_loss,
+                    acknowledged_group_loss=group_ack,
                 )
                 if saved:
                     populated.append(item.kind)
@@ -893,7 +901,7 @@ def _save_slot(
     user: User,
     correlation_id: str,
     acknowledged_deletions: int | None = None,
-    acknowledged_group_loss: int = 0,
+    acknowledged_group_loss: int | None = 0,
 ) -> int:
     """Save one checked slot; returns how many roster rows it saved
     (0 for Settings).
@@ -1137,12 +1145,15 @@ async def quick_setup_relationships_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     """Quick Setup card slot 3 (Relationships). Checked against the
-    session's current rosters, since no roster file rides with it."""
+    session's current rosters, since no roster file rides with it.
+    ``acknowledge_response_loss`` is the count of group answers it may
+    clear (findings S1)."""
 
     return await _single_slot(
         "relationships",
@@ -1152,6 +1163,7 @@ async def quick_setup_relationships_submit(
         user=user,
         db=db,
         confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
     )
 
 

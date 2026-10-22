@@ -561,10 +561,10 @@ def _quick_setup_error_message(
     if reason == "clears_group_answers":
         one = count == 1
         return (
-            f"Nothing was imported. This relationships file would clear "
-            f"{count} saved group answer{'' if one else 's'}. Upload it on "
-            "the Relationships page, which asks before clearing "
-            f"{'it' if one else 'them'}."
+            f"Nothing was imported. This relationships file clears {count} "
+            f"saved response{'' if one else 's'} on groups whose members it "
+            "changes. Upload it on the Relationships page, which asks "
+            f"before clearing {'it' if one else 'them'}."
         )
     if reason == "deletes_instruments" and slot_key == "settings" and count:
         one = count == 1

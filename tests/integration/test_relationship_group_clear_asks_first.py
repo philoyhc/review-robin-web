@@ -520,9 +520,11 @@ def test_quick_setup_refuses_with_the_count_then_goes_through(
         )
 
     for path, field in (("relationships", "file"), ("submit-all", "relationships_file")):
-        refused = refusal(submit(path, field, {}))
+        refused = refusal(submit(path, field, {"acknowledge_response_loss": "true"}))
         assert (refused.kind, refused.reason) == ("relationships", "clears_group_answers")
-        assert "would clear 3 saved group answers" in refused.lead
+        assert "clears 3 saved responses on groups whose members it changes" in (
+            refused.lead
+        )
         assert _relationship(db, session.id, "Ann").tag_1 == "x"
         assert _responses(db) == 4
 
@@ -539,6 +541,44 @@ def test_quick_setup_refuses_with_the_count_then_goes_through(
     assert accepted.status_code == 303
     assert _relationship(db, session.id, "Ann").tag_1 == "y"
     assert _responses(db) == 1
+
+
+def test_quick_setup_with_a_settings_file_asks_only_the_settings_questions(
+    db: Session, client: TestClient
+) -> None:
+    """The read of S1: a Settings file in the same submit rebuilds every
+    instrument and deletes every response, so Relationships does not ask
+    too. Both read ``acknowledge_response_loss``, Settings as ``true``,
+    so asking both would make the pair unsubmittable."""
+    session = _seed(db, client, "rgc-quick-setup-settings")
+    response = client.post(
+        f"/operator/sessions/{session.public_id}/quick-setup/submit-all",
+        files={
+            "relationships_file": (
+                "relationships.csv",
+                b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+                b"rae@example.edu,ann@example.edu,y\n"
+                b"rae@example.edu,bo@example.edu,x\n"
+                b"rae@example.edu,cy@example.edu,y\n"
+                b"rae@example.edu,di@example.edu,y\n",
+                "text/csv",
+            ),
+            "settings_file": (
+                "settings.csv",
+                b"field,value,data_type\ninstruments[1].name,Eval,string\n",
+                "text/csv",
+            ),
+        },
+        data={
+            "confirm_replace": "true",
+            "acknowledge_response_loss": "true",
+            "acknowledge_instrument_deletion": "1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text[:300]
+    assert _relationship(db, session.id, "Ann").tag_1 == "y"
+    assert _responses(db) == 0
 
 
 def test_counting_the_delete_leaves_loaded_rows_loaded(
