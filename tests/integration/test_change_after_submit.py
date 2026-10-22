@@ -11,8 +11,15 @@ every member's copy for a group (Codex on the rulings PR).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from types import SimpleNamespace
+
+import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+from app.auth.identity import AuthenticatedUser
 
 from app.db.models import (
     Assignment,
@@ -356,3 +363,76 @@ def test_a_real_change_to_an_older_form_still_clears_its_stamp(db: Session) -> N
     _save(db, op, reviewer, review_session, a, rating="5", comments="one\nthree")
 
     assert _stamps(db, a) == {"rating": False, "comments": False}
+
+
+def test_blanking_an_answer_already_blank_as_posted_unstamps_nothing(
+    db: Session,
+) -> None:
+    """Findings R2, the read of the fix: the import stores a whitespace
+    cell as given, a browser posts it stripped to blank, and the blank
+    rule then cleared every answer on the row. Blanking what is already
+    blank is no change."""
+    op, reviewer, review_session, [a] = _seed(db)
+    _submit(db, op, reviewer, review_session, a, rating="4", comments="ok")
+    _restamp_stored(db, a, comments="   ")
+
+    _save(db, op, reviewer, review_session, a, rating="4", comments="")
+
+    assert _stamps(db, a) == {"rating": True, "comments": True}
+    assert _pill(db, reviewer, review_session) == "submitted"
+
+
+def test_group_copies_stored_in_different_forms_keep_their_stamps(
+    db: Session,
+) -> None:
+    op, reviewer, review_session, [first, second] = _seed(db, group=True)
+    _submit(db, op, reviewer, review_session, first, rating="4", comments="ok")
+    _restamp_stored(db, first, rating="04")
+    _restamp_stored(db, second, rating="+4")
+
+    _save(db, op, reviewer, review_session, first, rating="4", comments="ok")
+
+    assert _stamps(db, first) == {"rating": True, "comments": True}
+    assert _stamps(db, second) == {"rating": True, "comments": True}
+
+
+@pytest.mark.parametrize(
+    ("data_type", "stored", "posted"),
+    [
+        ("Integer", "04", "4"),
+        ("Integer", " +4 ", "4"),
+        ("Decimal", "1.50", "1.5"),
+        ("Decimal", "x", "x"),
+        ("List", " A ", "A"),
+        ("String", "  one\r\ntwo ", "one\ntwo"),
+        ("String", None, ""),
+    ],
+)
+def test_stored_as_posted(data_type: str, stored: str | None, posted: str) -> None:
+    field = SimpleNamespace(data_type=data_type)  # all the helper reads
+    assert responses_service.stored_as_posted(stored, field) == posted
+
+
+def test_the_page_renders_a_stored_number_as_a_save_posts_it(
+    db: Session,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """A browser posts a number box holding ``+4`` as blank, so the page
+    renders the stored value in the form a Save posts."""
+    op, reviewer, review_session, [a] = _seed(db)
+    _submit(db, op, reviewer, review_session, a, rating="4", comments="ok")
+    _restamp_stored(db, a, rating="+4")
+    db.commit()
+
+    client = make_client(
+        AuthenticatedUser(
+            principal_id="rae-oid",
+            email="rae@example.edu",
+            name="Rae",
+            provider="aad",
+        )
+    )
+    body = client.get(f"/me/sessions/{review_session.public_id}/1").text
+
+    assert 'data-rs-saved-value="4"' in body
+    assert '"+4"' not in body

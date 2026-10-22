@@ -1348,6 +1348,8 @@ def test_collation_csv_marks_an_unsubmitted_answer(
         rows = list(csv.reader(io.StringIO(client.get(url).text)))
         header = next(r for r in rows if r and r[0] == "ReviewerName")
         data = rows[rows.index(header) + 1]
+        # The new column is last, and every row lines up with it.
+        assert header[-1] == "Submitted" and len(data) == len(header)
         return dict(zip(header, data))
 
     submitted = table()
@@ -1363,4 +1365,9 @@ def test_collation_csv_marks_an_unsubmitted_answer(
     draft = table()
     assert draft["Submitted"] == "FALSE"
     assert draft["SubmittedAt"] == ""
-    assert "4" in draft.values()
+    assert list(draft.values()).count("4") == 1
+
+    # A row the import stored with no value exports blank: no answer.
+    response.value = None
+    db.commit()
+    assert table()["Submitted"] == ""

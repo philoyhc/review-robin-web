@@ -626,7 +626,11 @@ def _assignment_row(
     values: list[str] = []
     saved_at = None
     submitted_at = None
-    answered = [responses[f] for f in field_ids if f in responses]
+    # A row the import stored with no value exports blank, so it is not
+    # an answer here either.
+    answered = [
+        responses[f] for f in field_ids if f in responses and responses[f].value
+    ]
     submitted_state = (
         ""
         if not answered
