@@ -718,8 +718,10 @@ def _check_uploads(
     acknowledge_response_loss: str | None,
     replacing: bool,
 ) -> list[_StagedSlot] | _SlotRefusal:
-    """Every gate but the lock, for every attached file, before anything
-    is written. Slot by slot in dispatch order: the file's own checks,
+    """Every gate before the save, for every attached file, before
+    anything is written. Not lock-free: a short-row Settings file's
+    report takes the session lock, so the caller runs this off the event
+    loop (findings S3). Slot by slot in dispatch order: the file's own checks,
     then its replacement gates, so the first slot that refuses is the
     one reported — what the slot-by-slot dispatch reported before."""
 

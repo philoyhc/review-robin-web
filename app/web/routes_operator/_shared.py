@@ -232,7 +232,8 @@ async def read_upload(
     A newly chosen file wins over the hold, even an empty one: a file
     is chosen when it has a filename, as Quick Setup's ``_attached``
     reads it, since an untouched input posts an empty-named part. An
-    empty chosen file is then refused as empty (findings S2). The held
+    empty chosen file is then refused as a fresh empty upload is
+    (findings S2). The held
     bytes are parsed again by the caller, exactly as a fresh upload's
     would be."""
     token = (held_token or "").strip() or None

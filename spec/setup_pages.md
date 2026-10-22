@@ -1096,8 +1096,8 @@ answers.
 - **The route.** It takes the held file when no file is chosen; a
   newly chosen file wins over it. A file is chosen when it has a
   filename, as an untouched input posts none, so an empty file chosen
-  is refused as empty rather than swapped for the held one (findings
-  S2). The held bytes are parsed again as a fresh upload's would be.
+  is refused as a fresh empty upload is ("CSV has no header row")
+  rather than swapped for the held one (findings S2). The held bytes are parsed again as a fresh upload's would be.
 - **The replace tick.** After a group-clear or response-loss ask it
   renders ticked again, since the operator had ticked it to get there.
   After a missing-replace ask it renders unticked.
