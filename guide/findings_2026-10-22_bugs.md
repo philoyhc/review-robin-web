@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 15 of 19 rows (O1, R1, R2, R4 done); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 14 of 19 rows (O1, R1, R2, R4, L1 done); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -55,7 +55,7 @@ None.
   reaches observers. *Reproduced.* Author: a submitted-only switch on the
   observer route, or `spec/participant_model.md` says drafts are
   included.
-- **L1** — **Ruled 2026-10-22: skip the pair's checks when neither release box was edited, as for the other two pairs.** **An untouched Release window refuses every Session Home
+- ~~**L1**~~ — **Done in #3231**: Session Home skips the Release window's order and cap when neither box was edited (`spec/lifecycle.md` §8.2.7; `tests/integration/test_schedule_ordering_routes.py`). **Ruled 2026-10-22: skip the pair's checks when neither release box was edited, as for the other two pairs.** **An untouched Release window refuses every Session Home
   Save.** Save re-checks the Release-from / Release-until pair on every
   post (`app/web/routes_operator/_session_home.py:395`) against the
   365-day cap; the L6 skip covers only the other two pairs. A Settings
