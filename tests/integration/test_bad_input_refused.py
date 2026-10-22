@@ -390,3 +390,25 @@ def test_too_large_reads_any_length_of_digits(text: str, too_large: bool) -> Non
     from app.web.oversized_ids import _too_large
 
     assert _too_large(text) is too_large
+
+
+def test_a_session_whose_public_id_is_all_digits_is_reachable(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #3236: a public id may be ten digits (``2222222222``),
+    past the 32-bit id bound, but it is text, not a row id, so the guard
+    leaves it to the session lookup."""
+    created = client.post(
+        "/operator/sessions",
+        data={"name": "Digits", "code": "digits-public-id"},
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "digits-public-id")
+    ).scalar_one()
+    review_session.public_id = "2222222222"
+    db.commit()
+
+    assert client.get("/operator/sessions/2222222222").status_code == 200
+    assert client.get("/operator/sessions/2222222222/reviewees").status_code == 200

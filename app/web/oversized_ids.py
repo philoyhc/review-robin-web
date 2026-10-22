@@ -25,6 +25,8 @@ and only compare them in Python, never binding them in SQL.
 
 from __future__ import annotations
 
+import typing
+
 from fastapi import HTTPException, Request, params, status
 
 from app.services.text import MAX_SQL_INT
@@ -65,9 +67,43 @@ def _declares_form_body(request: Request) -> bool:
     return body_field is not None and isinstance(body_field.field_info, params.Form)
 
 
+def _is_text(annotation: object) -> bool:
+    """Whether a declared parameter type is ``str`` (or ``str | None``)."""
+    if annotation is str:
+        return True
+    args = [a for a in typing.get_args(annotation) if a is not type(None)]
+    return bool(args) and all(a is str for a in args)
+
+
+def _text_params(request: Request) -> set[str]:
+    """The path and query parameters the matched route, or a dependency
+    of it, declares as text. A session's ``session_id`` is its public id,
+    ten characters that may all be digits (``2222222222``), so a text
+    parameter is never read as a row id (Codex on #3236)."""
+    stack = [getattr(request.scope.get("route"), "dependant", None)]
+    names: set[str] = set()
+    while stack:
+        dependant = stack.pop()
+        if dependant is None:
+            continue
+        for field in (*dependant.path_params, *dependant.query_params):
+            if _is_text(field.field_info.annotation):
+                names.add(field.name)
+        stack.extend(dependant.dependencies)
+    return names
+
+
 async def refuse_oversized_ids(request: Request) -> None:
     """404 when a path, id query or id form-body value is past ``MAX_SQL_INT``."""
-    fields = [*request.path_params.items(), *request.query_params.multi_items()]
+    text = _text_params(request)
+    fields = [
+        (key, value)
+        for key, value in (
+            *request.path_params.items(),
+            *request.query_params.multi_items(),
+        )
+        if key not in text
+    ]
     if _declares_form_body(request):
         form = await request.form()  # the cached FormData, not a second read
         fields += [(k, v) for k, v in form.multi_items() if isinstance(v, str)]
