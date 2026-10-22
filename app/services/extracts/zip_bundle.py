@@ -22,7 +22,7 @@ either bundle (it lives behind the diagnostics doorway).
 from __future__ import annotations
 
 import io
-import re
+import unicodedata
 import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -368,15 +368,24 @@ def _by_instrument_members(
         yield f"{code}_by_instrument_{slug}.csv", rows
 
 
-#: What a zip member name may not hold: a path separator or a lookalike
-#: an extractor's best-fit code page turns into one (fullwidth, division
-#: and fraction slashes), a character Windows refuses in a file name, a
-#: control character (C0, DEL, C1), or a bidi control that can disguise
-#: the name.
-_UNSAFE_IN_MEMBER = re.compile(
-    r'[\\/:*?"<>|\x00-\x1f\x7f-\x9f'
-    r"\uff0f\uff3c\u2215\u2044\u202a-\u202e\u2066-\u2069]"
-)
+#: Path separators and the characters Windows refuses in a file name.
+_UNSAFE_ASCII = frozenset('\\/:*?"<>|')
+#: Slashes with no compatibility decomposition that an extractor's
+#: best-fit code page still maps to a separator.
+_SLASH_LOOKALIKES = frozenset("\u2044\u2215\u29f8\u29f9")
+
+
+def _unsafe_in_member(ch: str) -> bool:
+    """A separator, a Windows-refused character, anything whose
+    compatibility form holds one (``／``, ``＼``, ``﹨``, ``：`` …), a
+    slash lookalike, or a control or format character (C0, DEL, C1, and
+    every bidi mark, override and isolate)."""
+    return (
+        ch in _UNSAFE_ASCII
+        or ch in _SLASH_LOOKALIKES
+        or unicodedata.category(ch) in ("Cc", "Cf")
+        or not _UNSAFE_ASCII.isdisjoint(unicodedata.normalize("NFKC", ch))
+    )
 
 
 def _member_name(name: str) -> str:
@@ -389,7 +398,8 @@ def _member_name(name: str) -> str:
     other character, non-Latin ones included, is kept. A standalone
     download keeps its name, which the browser cleans.
     """
-    return _UNSAFE_IN_MEMBER.sub("_", name).lstrip(". ") or "session.csv"
+    safe = "".join("_" if _unsafe_in_member(ch) else ch for ch in name)
+    return safe.lstrip(". ") or "session.csv"
 
 
 def _zip_named(members: list[tuple[str, list[tuple[str, ...]]]]) -> bytes:
