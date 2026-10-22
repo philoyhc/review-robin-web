@@ -140,17 +140,24 @@ def review_surface_clear_revisited(request: Request, session_id: str) -> Redirec
 
 
 def _page_changed(
-    form: Mapping[str, str], review_session: ReviewSession, page_rows: list[Assignment]
+    db: Session,
+    form: Mapping[str, str],
+    review_session: ReviewSession,
+    page_rows: list[Assignment],
 ) -> bool:
     """Whether a post that carries answers was made against a page whose
-    rows have changed since (19V Item 2). A post with no answers names no
-    row, so it needs no digest."""
+    rows, or whose rows' groups, have changed since (19V Item 2;
+    findings R1, 2026-10-22). A post with no answers names no row, so it
+    needs no digest."""
     if not any(key.startswith("response[") for key in form):
         return False
     return not responses_service.digest_matches(
         form.get(responses_service.PAGE_DIGEST_FIELD),
         review_session,
         page_rows,
+        group_keys=responses_service.group_keys(
+            db, assignments=page_rows, session_id=review_session.id
+        ),
     )
 
 
@@ -380,7 +387,7 @@ async def reviewer_save(
     upserts = responses_service.parse_form_payload(
         string_form, page_assignment_ids=page_ids
     )
-    page_changed = _page_changed(string_form, review_session, page_rows)
+    page_changed = _page_changed(db, string_form, review_session, page_rows)
     # A refusal lists the typed answers under their rows only when the
     # form's ordinals still name them.
     listed_ids = [] if page_changed else page_ids
@@ -507,7 +514,7 @@ async def reviewer_submit(
     upserts = responses_service.parse_form_payload(
         string_form, page_assignment_ids=page_ids
     )
-    page_changed = _page_changed(string_form, review_session, page_rows)
+    page_changed = _page_changed(db, string_form, review_session, page_rows)
     listed_ids = [] if page_changed else page_ids
     # Off the event loop: the gate's deadline observer may wait on the
     # session row lock (findings Bc4).

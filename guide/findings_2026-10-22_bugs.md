@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 18 of 19 rows (O1 done); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 17 of 19 rows (O1, R1 done); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -31,7 +31,7 @@ None.
 
 ## 2. Medium
 
-- **R1** — **A stale group form writes into a different group after a
+- ~~**R1**~~ — **Done in #3229**: the page digest also covers how the page's group rows group (`spec/reviewer-surface.md` "Form HTML mechanics"; `tests/integration/test_review_form_ordinals.py`). **A stale group form writes into a different group after a
   regroup.** The page digest covers only the page's assignment-ID set
   (`app/services/responses/_form_keys.py:70`); a group row is fanned out
   by its representative member's *current* group key. Revert, move Ann
