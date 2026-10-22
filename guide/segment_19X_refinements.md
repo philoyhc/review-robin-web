@@ -885,3 +885,118 @@ All four answered by the author, 2026-10-22, on the recommendation:
 - `spec/instruments.md` — the preview's String box mirrors the floors; the help boxes' fit is shared (Item 10).
 - `spec/ui_elements.md` — answer boxes fit their text, with no handle (Item 10).
 - `guide/todo_master.md` — Item 10 in the 19X entry (Item 10).
+
+## Item 11 — The reviewer surface's header loses its card
+
+### Opportunity
+
+The author, 2026-10-22, with a screenshot of the reviewer surface's top.
+It stacks four parts (`spec/reviewer-surface.md`, the page's parts 3–4):
+- **a title row:** the session name, then `Deadline: …`;
+- **a role row:** the `Reviewer` pill, then the reviewer's own line
+  (name · email · Profile);
+- **an overview card** (`.card.rs-status-panel`), a bordered card
+  holding:
+  - the session description;
+  - the session-closed banner;
+  - the `Draft` / `Saved but not submitted` / `Submitted` rollup pill;
+  - one pill per instrument (`#1 Group Team Review: not started`).
+
+The card is the page's heaviest element, and it holds little more than
+pills.
+
+### Decision
+
+*Proposed; the author rules on Open questions 1–4.* Two rows and no
+card:
+1. **The title row:** the session name, then the rollup pill (`Draft`
+   in the screenshot), then `Deadline: …` when there is a deadline.
+2. **The participant row:**
+   - the reviewer's own line (name · email · Profile, when set);
+   - the role pill or pills;
+   - a `|` separator;
+   - the instrument status pills.
+
+The card's other contents keep their place under the rows, without a
+card:
+- the session description, as a paragraph;
+- the session-closed banner, as a banner.
+
+Rejected: *keeping the card for the description alone*, since one
+paragraph needs no border.
+
+### Semantics
+
+- **No instrument pills** (no assignments) means no `|` either. The
+  separator is `aria-hidden`.
+- **No deadline** means the title row ends at the pill.
+- **The operator preview** (`preview_mode`) renders the same template,
+  with its static `Reviewer` pill, so it follows.
+- **On a narrow window** each row wraps on its own: the separator stays
+  with the instrument pills, and the rows never merge.
+- **The help contact** (`Questions? Contact …`) stays on the title row,
+  after the deadline (Open question 2).
+
+### Blast radius (measured)
+
+Taken 2026-10-22 at `5395f19`.
+
+| What | Count | Command |
+|---|---|---|
+| Templates | `reviewer/review_surface.html` (header and card); `reviewer/_role_chips.html` (row order, shared by `summary.html`, `pre_open.html`, `results.html` and `collation.html`); `results.html` and `collation.html` keep a description-only `rs-status-panel` card | `grep -rln "_role_chips.html\|rs-status-panel" app/web/templates` |
+| CSS | `base.html`'s `.rs-page-header`, `.rs-status-panel` and `.rs-role-nav` rules | `grep -n "rs-page-header\|rs-status-panel\|rs-role-nav" app/web/templates/base.html` |
+| Tests naming these classes | 8 integration files, 46 references (`test_me_surface_role_chips.py` 17, `test_reviewer_self_info.py` 10) | `grep -rc "rs-status-panel\|rs-page-status-pills\|rs-role-nav\|rs-self-info" tests` |
+| Specs | `spec/reviewer-surface.md` (the page's parts 3–4, "Overview card", the role-navigator markup); `spec/visual_style_rrw.md` (status cards) | `grep -rln "rs-status-panel\|overview card\|rs-role-nav" spec` |
+
+### PR ladder
+
+1. **PR 1, this entry**, prose only, with Item 10.
+2. **PR 2, the build:**
+   - the two rows;
+   - the card's removal;
+   - the shared row's order, as Open question 1 rules;
+   - tests and specs.
+
+   Must not change a pill's wording or color, or the role chips' links.
+
+### Definition of done
+
+- The reviewer surface renders no `.rs-status-panel`. Its title row
+  holds the name, the rollup pill and the deadline; its participant row
+  holds the own line, the role pills, `|` and the instrument pills, in
+  that order (integration test).
+- With no assignments there is no `|`; with no deadline there is no
+  `Deadline:` (integration test).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.11` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+The author decides each; my recommendation is first.
+1. **The own line before the role pills on the other participant
+   pages** (summary, not-open, results, collation): yes, in the shared
+   partial, so every page reads the same. The alternative is to reorder
+   on the reviewer surface only.
+2. **The help contact:** it stays on the title row, after the deadline.
+   The alternative is the end of the participant row.
+3. **The description-only cards** on results and collation: they lose
+   their card too, so every participant page drops it. The alternative
+   is to keep them.
+4. **The rollup pill's wording** (`Draft` / `Saved but not submitted` /
+   `Submitted`): unchanged. Beside the title it reads as the reviewer's
+   own status, which it is.
+
+### Out of scope
+
+- Each instrument's progress pills above its table, and the per-field
+  constraints.
+- The chrome above the page (the top bar).
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the page's header as two rows; the overview card retired; the role row's order (Item 11).
+- `spec/visual_style_rrw.md` — the status-card example no longer names the reviewer surface (Item 11).
+- `guide/todo_master.md` — Item 11 in the 19X entry (Item 11).

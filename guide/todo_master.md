@@ -64,7 +64,8 @@ concluding** (decision 2026-09-05) and independent of each other.
    runs, one item each. Items 1–3 closed 2026-10-19 and Items 4–9 on
    2026-10-20. Open: **Item 10**, String answer boxes on the reviewer
    surface fit their text (logged 2026-10-22, rulings in; not built
-   yet). Add one per finding.
+   yet), and **Item 11**, the reviewer surface's header loses its card
+   (logged 2026-10-22, awaiting rulings). Add one per finding.
    **Plan:** `guide/segment_19X_refinements.md`.
 
 ### Stubs
