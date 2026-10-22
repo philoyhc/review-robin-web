@@ -1836,7 +1836,11 @@ submitted value clears that answer's submission, as a new answer
 has none, and blanking any answer after Submit clears the submission
 of that assignment's remaining answers. Until the reviewer submits
 again, the assignment reads "in progress" on the monitoring view
-and not "submitted" on the reviewer's own pills.
+and not "submitted" on the reviewer's own pills. A blank that leaves
+the assignment no answer at all unstamps nothing else, and the
+reviewer's other assignments keep their stamps; it reads "not started"
+until answered again (`spec/reviewer-surface.md` "Persistence
+semantics", findings R3).
 Submission in RRW is a status marker, not an enforcement gate.
 
 ### 10.7 Clear all
