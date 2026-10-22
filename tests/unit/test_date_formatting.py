@@ -229,3 +229,18 @@ def test_parse_local_datetime_reads_either_separator_and_trims() -> None:
     expected = datetime(2027, 4, 2, 3, 15)
     for text in ("2027-04-02 11:15", "2027-04-02T11:15", " 2027-04-02 11:15 "):
         assert date_formatting.parse_local_datetime(text, "Asia/Singapore") == expected
+
+
+def test_a_year_below_1000_renders_four_digits_and_reads_back() -> None:
+    """Findings L2 (2026-10-22): ``strftime("%Y")`` left year 26 as
+    ``26``, which no box reads back, so every later Save was 422."""
+    from datetime import datetime
+
+    from app.services import date_formatting
+
+    value = datetime(26, 10, 27, 12, 0)
+    box = date_formatting.format_datetime_box(value, "UTC")
+    assert box == "0026-10-27 12:00"
+    assert date_formatting.format_datetime_local(value, "UTC") == "0026-10-27T12:00"
+    assert date_formatting.format_date(value) == "0026-10-27"
+    assert date_formatting.parse_local_datetime(box, "UTC") == value

@@ -437,3 +437,19 @@ def test_the_page_renders_a_stored_number_as_a_save_posts_it(
 
     assert 'data-rs-saved-value="4"' in body
     assert '"+4"' not in body
+
+
+def test_blanking_an_assignments_only_answer_leaves_it_submitted(
+    db: Session,
+) -> None:
+    """Findings R3, ruled 2026-10-22 (narrow the spec): with nothing
+    left on its row there is nothing to release and nothing else to
+    unstamp; a lone assignment's review then has no answer at all."""
+    op, reviewer, review_session, [a] = _seed(db)
+    _submit(db, op, reviewer, review_session, a, rating="4", comments="")
+    assert _stamps(db, a) == {"rating": True}
+
+    _save(db, op, reviewer, review_session, a, rating="", comments="")
+
+    assert _stamps(db, a) == {}
+    assert _pill(db, reviewer, review_session) == "not started"

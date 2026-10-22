@@ -40,6 +40,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 _DATETIME_FORMAT = "%Y-%m-%d %H:%M"
 _DATE_FORMAT = "%Y-%m-%d"
 
+
+def _strftime(value: date | datetime, fmt: str) -> str:
+    """``value.strftime(fmt)`` with the year always four digits: the C
+    library leaves a year below 1000 unpadded (``26-10-27``), which no
+    box reads back, so a Save of a value it rendered was refused
+    (findings L2)."""
+    return value.strftime(fmt.replace("%Y", f"{value.year:04d}"))
+
 DEFAULT_TIMEZONE = "UTC"
 
 # Single internal switch for the trailing zone token on date-time
@@ -123,7 +131,7 @@ def format_datetime(value: datetime | None, tz_name: str | None = None) -> str:
     if value is None:
         return ""
     local = _in_zone(value, tz_name)
-    rendered = local.strftime(_DATETIME_FORMAT)
+    rendered = _strftime(local, _DATETIME_FORMAT)
     if SHOW_ZONE_TOKEN:
         rendered = f"{rendered} {local.strftime('%Z')}"
     return rendered
@@ -142,7 +150,7 @@ def format_date(
         return ""
     if isinstance(value, datetime):
         value = _in_zone(value, tz_name).date()
-    return value.strftime(_DATE_FORMAT)
+    return _strftime(value, _DATE_FORMAT)
 
 
 def gmt_offset_label(tz_name: str | None, at: datetime | None = None) -> str:
@@ -247,7 +255,7 @@ def format_datetime_box(value: datetime | None, tz_name: str | None) -> str:
     :func:`parse_local_datetime` reads it back."""
     if value is None:
         return ""
-    return _in_zone(value, tz_name).strftime(_DATETIME_FORMAT)
+    return _strftime(_in_zone(value, tz_name), _DATETIME_FORMAT)
 
 
 def box_text(value: str | None) -> str:
@@ -272,4 +280,4 @@ def format_datetime_local(
     """
     if value is None:
         return ""
-    return _in_zone(value, tz_name).strftime("%Y-%m-%dT%H:%M")
+    return _strftime(_in_zone(value, tz_name), "%Y-%m-%dT%H:%M")
