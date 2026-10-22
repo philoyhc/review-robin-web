@@ -147,7 +147,9 @@ def save_email_settings(
     string." A ``plaintext_password`` of ``None`` (or whitespace)
     leaves the existing ciphertext intact — the editor's password
     field renders empty by default, and an empty submit must not
-    wipe a previously-saved password.
+    wipe a previously-saved password. Any other password is stored as
+    typed, outer spaces included: a password may hold them (findings
+    O3, author's ruling 2026-10-22).
     """
     changes: dict[str, list[Any]] = {}
 
@@ -164,7 +166,11 @@ def save_email_settings(
     _set("smtp_encryption", _normalise(encryption))
     _set("smtp_transport", "smtp")  # only legal transport today
 
-    pw_norm = _normalise(plaintext_password)
+    pw_norm = (
+        plaintext_password
+        if plaintext_password is not None and plaintext_password.strip()
+        else None
+    )
     if pw_norm is not None and pw_norm != _stored_password(user):
         # Compared as plaintext: Fernet salts every encryption, so two
         # ciphertexts of one password never match and comparing them

@@ -508,3 +508,74 @@ def test_reset_responses_received_subject_removes_override(
     db.refresh(review_session)
     overrides = review_session.email_template_overrides or {}
     assert "responses_received_subject" not in overrides
+
+
+def test_an_archived_sessions_templates_are_read_only(
+    client: TestClient, db: Session
+) -> None:
+    """Findings O2, ruled 2026-10-22: the editor moved ``updated_at``,
+    which the Archive page reads as the archived date, so on an
+    archived session both writes answer 409 and the page renders its
+    fields disabled with no Reset buttons."""
+    review_session = _make_session(client, db, code="tpl-archived")
+    base = f"/operator/sessions/{review_session.public_id}/setup-invite"
+    assert (
+        client.post(
+            base,
+            data={"template": "reminder", "subject": "Kept"},
+            follow_redirects=False,
+        ).status_code
+        == 303
+    )
+    review_session.status = "archived"
+    db.commit()
+    db.refresh(review_session)
+    before = review_session.updated_at
+
+    saved = client.post(
+        base, data={"template": "reminder", "subject": "Changed"},
+        follow_redirects=False,
+    )
+    reset = client.post(
+        f"{base}/reset", data={"template": "reminder", "field": "subject"},
+        follow_redirects=False,
+    )
+    assert (saved.status_code, reset.status_code) == (409, 409)
+    db.refresh(review_session)
+    assert review_session.updated_at == before
+    assert review_session.email_template_overrides["reminder_subject"] == "Kept"
+
+    page = client.get(f"{base}?template=reminder").text
+    assert "data-setupinvite-locked" in page
+    import re
+
+    for name in ("subject", "body"):
+        tag = re.search(rf'<(?:input|textarea)[^>]*name="{name}"[^>]*>', page).group(0)
+        assert re.search(r"\bdisabled\b", tag), tag
+    assert "Reset subject to default" not in page
+
+
+def test_an_archive_committed_since_the_page_loaded_still_refuses(
+    client: TestClient, db: Session
+) -> None:
+    """The cold read of O2: the route's check reads the row as loaded, so
+    the rule is ``email_templates.lock_for_edit``, which locks and
+    re-reads it."""
+    import pytest
+    from sqlalchemy import update
+
+    from app.services import email_templates
+    from app.services.session_guard import SessionStateConflict
+
+    review_session = _make_session(client, db, code="tpl-race")
+    assert review_session.status != "archived"
+    db.execute(
+        update(ReviewSession)
+        .where(ReviewSession.id == review_session.id)
+        .values(status="archived")
+        .execution_options(synchronize_session=False)
+    )
+    assert review_session.status != "archived", "premise: the object is stale"
+
+    with pytest.raises(SessionStateConflict):
+        email_templates.lock_for_edit(db, review_session)

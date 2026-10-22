@@ -483,6 +483,22 @@ def set_overrides(
 # --------------------------------------------------------------------------- #
 
 
+ARCHIVED_MESSAGE = "Session is archived; its email templates are read-only."
+
+
+def lock_for_edit(db: ORMSession, review_session: ReviewSession) -> ReviewSession:
+    """Lock and re-read the session before an editor write, refusing an
+    archived one: an edit moved ``updated_at``, which the Archive page
+    reads as the archived date (findings O2, author's ruling
+    2026-10-22). Under the lock, so an archive committed since the page
+    loaded refuses too."""
+    from app.services import session_lifecycle
+
+    return session_lifecycle.require_not_archived(
+        db, review_session, message=ARCHIVED_MESSAGE
+    )
+
+
 def record_template_change(
     db: ORMSession,
     *,

@@ -638,8 +638,9 @@ Home with nothing to explain it.
 
 The **Email Template** page is the exception: it renders no lock
 card and its routes carry no `_require_editable`, so email copy
-stays editable in every lifecycle state — see
-`spec/email_template_editor.md` §5.
+stays editable in every lifecycle state but `archived`, where its
+writes answer 409 under the session lock and its fields render
+disabled — see `spec/email_template_editor.md` §5.
 
 **Visual treatment:** `--card-warning-border` border,
 `--card-warning-bg` interior, outline-amber button. Documented in

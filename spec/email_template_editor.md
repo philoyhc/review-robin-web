@@ -174,16 +174,20 @@ rather than hard-coding field lists.
 
 ## 5. Lifecycle behaviour
 
-**The editor is editable in every lifecycle state.** Neither route
-carries `_require_editable` or `_require_not_archived`, and the
-template renders no lock card. An operator can change the reminder
-copy while a session is `ready`, `expired` or `archived`, and the
-change takes effect on the next render. This is consistent with the
-reminder being *sent* mid-session — the copy has to be adjustable
-after activation — but it is unlike every other Setup-row page, all of
-which lock at `ready` (`spec/lifecycle.md` §5). Whether `archived`
-should also lock this page is an open question rather than a decided
-contract; today it does not.
+**The editor is editable in every lifecycle state but `archived`.**
+An operator can change the reminder copy while a session is `draft`,
+`validated`, `ready` or `expired`, and the change takes effect on the
+next render. This is consistent with the reminder being *sent*
+mid-session — the copy has to be adjustable after activation — but it
+is unlike every other Setup-row page, all of which lock at `ready`
+(`spec/lifecycle.md` §5). On an `archived` session both POST routes
+answer 409, refused by `email_templates.lock_for_edit` under the
+session lock so an archive committed since the page loaded refuses too, and the page renders its fields disabled, with no Reset
+buttons, under the line "This session is archived, so its email
+templates can no longer be edited." An edit there moved `updated_at`,
+which the Archive page reads as the date the session was archived
+(findings O2, author's ruling 2026-10-22). No lock card is used, and
+Save stays disabled, since no field can be edited.
 
 ---
 
