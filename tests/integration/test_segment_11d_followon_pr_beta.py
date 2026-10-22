@@ -176,6 +176,38 @@ def test_no_deadline_and_no_description_leave_their_parts_out(
     assert "rs-status-panel" not in body
 
 
+def test_the_description_is_under_the_title_and_the_closed_banner_under_the_rows(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19X Item 13: the description follows the title row directly; the
+    session-closed banner stays under the participant row."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-closed",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        description="Some context for the reviewers.",
+    )
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
+    db.flush()
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
+    header = body.index('class="rs-page-header"')
+    title_end = body.index("</div>", header) + len("</div>")
+    description = body.index('<p class="rs-session-description">')
+    assert body[title_end:description].strip() == ""
+    assert (
+        description
+        < body.index('class="rs-role-nav"')
+        < body.index('class="banner banner-warning"')
+    )
+    assert "no longer accepting responses" in body
+
+
 def test_no_assignments_leave_no_separator_and_no_pills(
     db: Session,
     alice: AuthenticatedUser,

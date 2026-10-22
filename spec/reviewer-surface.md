@@ -1571,8 +1571,9 @@ before the `_surface` catch-all.
 
 ## Role-navigator chip strip
 
-A shared partial rendered below the page header on the four
-role-specific surfaces, so a multi-role user can swap surfaces
+A shared partial rendered as the page header's participant row (§ 3 of
+the page anatomy, under the title row and the session description) on
+the four role-specific surfaces, so a multi-role user can swap surfaces
 without going back through `/me`:
 
 | Surface route | Template | `active_role` |

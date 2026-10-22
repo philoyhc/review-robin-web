@@ -1181,7 +1181,20 @@ None.
 
 ### Status
 
-**Closed 2026-10-22, in one PR.** As planned.
+**Closed 2026-10-22, in one PR.** As planned, plus a test that the
+description follows the title row directly and the closed banner stays
+under the participant row.
+
+**Reads:**
+- **`diff-reviewer`**, one read: no high findings.
+  - Acted on: this Status (M1); the banner and directly-under test (L2);
+    stale comments in `test_segment_11d_pr_c.py`, `results.html`,
+    `_role_chips.html` and the spec's role-strip section (L4–L6).
+  - L3, a preview-mode order test, not added: the template has no
+    preview branch around the description.
+- **`spec-writer`** at the close: one stale line in
+  `spec/reviewer-surface.md`'s role-strip section; flagged a stale
+  `base.html` comment and doubled blank lines, both fixed.
 
 ### Doc impact
 

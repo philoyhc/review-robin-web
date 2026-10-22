@@ -377,9 +377,9 @@ def test_review_surface_session_description_renders_in_overview_card(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Session description renders under the header rows as a
-    `.rs-session-description` paragraph, with no card around it
-    (19X Item 11)."""
+    """Session description renders as a `.rs-session-description`
+    paragraph with no card around it (19X Item 11), between the title
+    row and the participant row (19X Item 13)."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
