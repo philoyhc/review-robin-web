@@ -48,5 +48,5 @@ def add_landing_page(host: FastAPI, links: Sequence[LandingLink]) -> None:
         return _templates.TemplateResponse(
             request,
             "landing.html",
-            {"links": [(link.title, f"{root}{link.href}") for link in links], "root": root},
+            {"links": [(link.title, f"{root}{link.href}") for link in links]},
         )

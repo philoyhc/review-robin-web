@@ -65,7 +65,7 @@ STUBS = {
 }
 
 
-def test_host_alone_serves_health_and_nothing_else() -> None:
+def test_host_alone_serves_no_application_path() -> None:
     client = TestClient(create_app(apps=()))
     assert client.get("/health").json() == {"status": "ok"}
     assert client.get("/operator", follow_redirects=False).status_code == 404

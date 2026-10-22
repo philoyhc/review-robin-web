@@ -110,10 +110,10 @@ Still to confirm / decide before the first deploy:
 - **CI workflows** `.github/workflows/ci.yml` + `ci-postgres.yml`. Untouched.
 - **App code + migrations.** Changing hosts takes no code change —
   everything is configuration (App Settings + secrets + the deploy
-  workflow's target name). What did change, in code, is the path: since
-  segment 21D RRW answers under `/reviewrobin`, and the host's `/`
-  redirects there, so the gateway's routes and the health probes are
-  set for that path.
+  workflow's target name). RRW's path is the one thing that is not
+  configuration: since segment 21D it answers under `/reviewrobin`, and
+  the host's `/` redirects there, so the Easy Auth steps in §3 name both
+  probes and RRW's own paths under that prefix.
 
 ---
 
@@ -165,10 +165,12 @@ step 14).
   - Require authentication; unauthenticated → 302 to Entra.
   - Identity provider = the NUS app registration above.
   - **Token store: enabled** (app needs the rich `X-MS-CLIENT-PRINCIPAL`).
-  - **Excluded path `/health`** (`authsettingsV2 → globalValidation.excludedPaths`)
-    so probes don't bounce through sign-in.
-- [ ] Verify (§7) that `/auth/me` returns your NUS identity with
-  `provider: "aad"`.
+  - **Excluded paths `/health` and `/reviewrobin/health`**
+    (`authsettingsV2 → globalValidation.excludedPaths`) so probes don't
+    bounce through sign-in: the first is the Cordware host's, the second
+    RRW's.
+- [ ] Verify (§7) that `/reviewrobin/auth/me` returns your NUS identity
+  with `provider: "aad"`.
 
 > The app already consumes Easy Auth headers (`app/auth/identity.py`); no
 > code change. **Never** set `ALLOW_FAKE_AUTH=true` in App Settings.
@@ -400,11 +402,13 @@ than start clean:
 
 ## 10. Verification checklist (on NUS, before flipping the trigger)
 
-- [ ] `GET https://<nus-webapp>.../health` → `{"status": "ok"}` (unauth).
-- [ ] `GET /auth/me` → 302 to **NUS** Microsoft sign-in; after sign-in,
-  returns your NUS `email` / `name` / `provider: "aad"`.
-- [ ] A **whitelisted** NUS email lands on the **Sessions lobby**; a
-  non-whitelisted one is bounced to `/me`.
+- [ ] `GET https://<nus-webapp>.../health` and `.../reviewrobin/health` →
+  `{"status": "ok"}` (unauth).
+- [ ] `GET /reviewrobin/auth/me` → 302 to **NUS** Microsoft sign-in; after
+  sign-in, returns your NUS `email` / `name` / `provider: "aad"`.
+- [ ] A **whitelisted** NUS email lands on the **Sessions lobby**
+  (`/` → `/reviewrobin/`); a non-whitelisted one is bounced to
+  `/reviewrobin/me`.
 - [ ] `migrate` (or manual migration) applied cleanly — `alembic_version` is
   at head on the NUS DB.
 - [ ] Full smoke test: create a session → CSV-import a couple of
