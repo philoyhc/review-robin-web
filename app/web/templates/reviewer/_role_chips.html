@@ -67,7 +67,11 @@
       {% endif %}
     {% endfor %}
     {# 19X Item 11 — the reviewer surface's instrument status pills end
-       the row, after a `|`; the two travel together when the row wraps. #}
+       the row, after a `|`; the two travel together when the row wraps.
+       19X Item 12 — once the pills wrap below the role pills, the `|`
+       has nothing to separate: the script drops it and gives the pills
+       the whole line, so they cannot rise back without it. Without
+       script the `|` stays. #}
     {% if role_row_statuses %}
       <span class="rs-role-nav-statuses">
         <span class="rs-role-nav-sep" aria-hidden="true">|</span>
@@ -75,6 +79,26 @@
           <span class="pill {{ status.css }}">{{ status.label }}</span>
         {% endfor %}
       </span>
+      <script>
+        (function () {
+          var group = document.currentScript.parentNode.querySelector(".rs-role-nav-statuses");
+          var before = group && group.previousElementSibling;
+          if (!before) return;
+          var WRAPPED = "rs-role-nav-statuses-wrapped";
+          function sync() {
+            group.classList.remove(WRAPPED);
+            var wrapped = group.getBoundingClientRect().top
+              >= before.getBoundingClientRect().bottom - 1;
+            group.classList.toggle(WRAPPED, wrapped);
+          }
+          sync();
+          // A frame later, so the row never resizes inside the observer's
+          // own callback (as base.html's fit boxes do).
+          function later() { window.requestAnimationFrame(sync); }
+          if (window.ResizeObserver) new ResizeObserver(later).observe(group.parentNode);
+          else window.addEventListener("resize", later);
+        })();
+      </script>
     {% endif %}
   </div>
 {% endif %}
