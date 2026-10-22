@@ -25,7 +25,7 @@ from ._builder import (
     seed_rosters,
     session_pk,
 )
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 
 def _hide_help_text(database_url: str, session_id: str) -> None:
@@ -304,7 +304,7 @@ def test_the_reviewer_surface_takes_the_instruments_layout(
     give_a_field_help_text(live_server.database_url, session_id)
     activate(api, live_server.database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
-    reviewer.goto(f"/me/sessions/{session_id}")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}"))
     intro = reviewer.locator(".rs-intro-columns").first
     expect(intro).to_have_attribute("data-intro-layout", "layout_1")
     boxes = intro.evaluate(_BOXES)
@@ -497,7 +497,7 @@ def _reviewer_intro(
     activate(api, database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
     reviewer.set_viewport_size({"width": 1400, "height": 1000})
-    reviewer.goto(f"/me/sessions/{session_id}")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}"))
     return reviewer.locator(".rs-intro-columns").first
 
 

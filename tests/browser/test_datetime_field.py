@@ -12,12 +12,14 @@ import httpx
 import pytest
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 
 def test_the_box_takes_text_clears_in_one_press_and_saves(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     end = page.locator("#mock-end")
     field = page.locator("[data-dt-field]", has=end)
     pick = field.locator("[data-dt-pick]")
@@ -57,7 +59,7 @@ def test_the_buttons_hide_with_the_box_when_locked(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     card = page.locator("#session-config")
     expect(card).to_have_attribute("data-config-mode", "display")
     expect(page.locator("#mock-end")).to_be_hidden()
@@ -70,7 +72,7 @@ def test_create_flags_an_out_of_order_box_and_saves_text(page: Page) -> None:
     of a pair out of order, as the server words it, and blocks the
     submit; put back in order, the 24-hour text saves."""
     code = f"dt{uuid.uuid4().hex[:8]}"
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     page.locator("#name").fill(f"Fields {code}")
     page.locator("#code").fill(code)
     page.locator("#display_timezone").fill("UTC")
@@ -116,7 +118,7 @@ def test_the_lobby_expanders_end_is_the_field(
     )
     assert response.status_code == 303, response.text
     session_id = response.headers["location"].split("?")[0].rsplit("/", 1)[1]
-    page.goto("/operator/sessions")
+    page.goto(app_url("/operator/sessions"))
     row = page.locator(f'tr[data-session-id="{session_id}"]')
     row.locator(".sessions-list-select-row").check()
     end = page.locator('[data-expander-field="deadline"]')
@@ -153,7 +155,7 @@ def test_a_pick_writes_24_hour_text_and_counts_as_an_edit(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     save = page.locator("[data-config-save]")
     expect(save).to_be_disabled()
     _pick(page, "#mock-end", "2027-05-06T21:45")
@@ -170,7 +172,7 @@ def test_a_pick_then_a_zone_change_leaves_create_submittable(page: Page) -> None
     """The read of this item: a picked End used to stay in its picker,
     under bounds the zone change then moved, and blocked the submit on
     an invisible control."""
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     page.locator("#name").fill("Picked")
     page.locator("#code").fill(f"pk{uuid.uuid4().hex[:8]}")
     page.locator("#display_timezone").fill("UTC")
@@ -185,7 +187,7 @@ def test_a_pick_then_a_zone_change_leaves_create_submittable(page: Page) -> None
 def test_a_zone_change_leaves_an_impossible_time_as_typed(page: Page) -> None:
     """Text that names no real moment is left for the server to refuse,
     not rolled by the zone conversion into another day."""
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     page.locator("#display_timezone").fill("UTC")
     for text in ("2027-02-31 10:00", "2027-13-01 10:00", "2027-01-01 10:99"):
         page.locator("#deadline").fill(text)
@@ -201,7 +203,7 @@ def test_both_buttons_are_squares_as_tall_as_the_box(
     """The calendar glyph is wider than ✕; neither widens its button
     (19X Item 8), at the default font size and at a larger or smaller
     one (Codex on #3167)."""
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     if root_font:
         page.add_style_tag(content=f"html {{ font-size: {root_font}; }}")
     field = page.locator("[data-dt-field]", has=page.locator("#deadline"))

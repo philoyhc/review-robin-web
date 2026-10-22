@@ -13,6 +13,8 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page
 
+from .conftest import app_url
+
 
 def _gap(page: Page, field: str) -> float:
     return page.evaluate(
@@ -45,7 +47,7 @@ def test_both_reset_links_sit_the_same_gap_below_their_field(
     )
     assert response.status_code == 303, response.text
 
-    page.goto(f"/operator/sessions/{session_id}/setup-invite")
+    page.goto(app_url(f"/operator/sessions/{session_id}/setup-invite"))
 
     subject, body = _gap(page, "subject"), _gap(page, "body")
     # The row has no margin (author, 2026-10-13: closer is fine as long

@@ -7,21 +7,23 @@ from __future__ import annotations
 
 from playwright.sync_api import Browser, Page, expect
 
+from .conftest import app_url
+
 MISSING = "/operator/no/such/page"
 
 
 def test_a_direct_visit_offers_only_the_pages_own_link(page: Page) -> None:
-    page.goto(MISSING)
+    page.goto(app_url(MISSING))
     expect(page.locator("[data-error-home]")).to_be_visible()
     expect(page.locator("[data-error-home]")).to_have_attribute(
-        "href", "/operator/sessions"
+        "href", app_url("/operator/sessions")
     )
     expect(page.locator("[data-error-history]")).to_be_hidden()
 
 
 def test_arriving_from_an_app_page_offers_go_back_to_it(page: Page) -> None:
-    page.goto("/about")
-    page.evaluate(f"window.location.href = {MISSING!r}")
+    page.goto(app_url("/about"))
+    page.evaluate(f"window.location.href = {app_url(MISSING)!r}")
     page.wait_for_url(f"**{MISSING}")
     back = page.locator("[data-error-history]")
     expect(back).to_be_visible()
@@ -39,10 +41,11 @@ def test_a_new_tab_from_an_app_page_still_goes_back(
     context = browser.new_context(base_url=live_server.base_url)
     try:
         tab = context.new_page()
-        tab.goto(MISSING, referer=f"{live_server.base_url}/about")
+        about = live_server.base_url + app_url("/about")
+        tab.goto(app_url(MISSING), referer=about)
         back = tab.locator("[data-error-history]")
         expect(back).to_be_visible()
-        assert back.get_attribute("href") == f"{live_server.base_url}/about"
+        assert back.get_attribute("href") == about
     finally:
         context.close()
 
@@ -53,7 +56,8 @@ def test_the_sign_in_service_is_not_somewhere_to_go_back_to(
     context = browser.new_context(base_url=live_server.base_url)
     try:
         tab = context.new_page()
-        tab.goto(MISSING, referer=f"{live_server.base_url}/.auth/login/done")
+        # Easy Auth's paths are the host's, outside the mount.
+        tab.goto(app_url(MISSING), referer=f"{live_server.base_url}/.auth/login/done")
         expect(tab.locator("[data-error-history]")).to_be_hidden()
     finally:
         context.close()

@@ -20,7 +20,7 @@ from collections.abc import Callable
 from playwright.sync_api import Dialog, Page, expect
 
 from ._builder import open_unlocked, rows, session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 
 def _decline_dialogs(page: Page) -> list[str]:
@@ -94,7 +94,7 @@ def test_observers_declined_leave_arms_no_bar(
     session_id = new_session()
     _seed_observers(live_server.database_url, session_id)
     # The rule is edited from `Edit` since operator pages Item 4.
-    page.goto(f"/operator/sessions/{session_id}/observers")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers"))
     page.locator("input.observer-select").first.check()
     page.locator(".exp-edit").click()
     page.wait_for_load_state("load")

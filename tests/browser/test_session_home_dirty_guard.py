@@ -16,6 +16,8 @@ from collections.abc import Callable
 
 from playwright.sync_api import Dialog, Page, expect
 
+from .conftest import app_url
+
 
 def _record_dialogs(page: Page, *, accept: bool = False) -> list[str]:
     seen: list[str] = []
@@ -32,7 +34,7 @@ def _record_dialogs(page: Page, *, accept: bool = False) -> list[str]:
 
 
 def _edit_description(page: Page, session_id: str, text: str) -> None:
-    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     expect(page.locator("#session-config")).to_have_attribute("data-config-mode", "edit")
     field = page.locator("#mock-description")
     field.click()
@@ -77,7 +79,7 @@ def test_accepting_the_prompt_leaves_and_drops_the_edit(
 
     assert seen == ["beforeunload"]
     assert f"/operator/sessions/{session_id}/" in page.url
-    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     expect(page.locator("#mock-description")).not_to_have_value("Dropped")
 
 

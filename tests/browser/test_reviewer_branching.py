@@ -21,7 +21,7 @@ from ._builder import (
     save,
     seed_rosters,
 )
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 
 def _answer(reviewer: Page, field: str) -> Locator:
@@ -65,7 +65,7 @@ def test_a_branch_opens_as_the_answer_meets_its_condition(
     """Item 6, 'The branch for a reviewer'."""
     session_id = _branched_session(page, api, live_server, new_session)
     reviewer = page_as(REVIEWER_EMAIL)
-    reviewer.goto(f"/me/sessions/{session_id}/1")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     rating, why = _answer(reviewer, "rating"), _answer(reviewer, "why")
     why_cell = why.locator("xpath=ancestor::td[1]")
     expect(why).to_be_disabled()
@@ -84,13 +84,13 @@ def test_a_branch_opens_as_the_answer_meets_its_condition(
     # Saved while open, the answer persists ...
     rating.fill("5")
     _save_answers(reviewer)
-    reviewer.goto(f"/me/sessions/{session_id}/1")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     expect(_answer(reviewer, "why")).to_have_value("Clear and specific")
 
     # ... and a Save with the branch closed deletes it on the server.
     _answer(reviewer, "rating").fill("3")
     _save_answers(reviewer)
-    reviewer.goto(f"/me/sessions/{session_id}/1")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     expect(_answer(reviewer, "rating")).to_have_value("3")
     expect(_answer(reviewer, "why")).to_have_value("")
 
@@ -105,7 +105,7 @@ def test_a_required_governed_field_is_required_only_while_open(
     """Item 6, 'Required only while open'."""
     session_id = _branched_session(page, api, live_server, new_session, required=True)
     reviewer = page_as(REVIEWER_EMAIL)
-    reviewer.goto(f"/me/sessions/{session_id}/1")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     why = _answer(reviewer, "why")
     required_pill = reviewer.get_by_text(re.compile(r"Required items completed: \d+/\d+"))
 
@@ -142,10 +142,10 @@ def test_a_refused_parent_keeps_the_text_without_javascript(
     session_id = _branched_session(page, api, live_server, new_session, opens_at="2")
     reviewer = page_as(REVIEWER_EMAIL, javascript=False)
     url = f"/me/sessions/{session_id}/1"
-    reviewer.goto(url)
+    reviewer.goto(app_url(url))
     _answer(reviewer, "rating").fill("3")
     _save_answers(reviewer)
-    reviewer.goto(url)
+    reviewer.goto(app_url(url))
     expect(_answer(reviewer, "why")).to_be_enabled()
 
     _answer(reviewer, "rating").fill("2.5")
@@ -159,6 +159,6 @@ def test_a_refused_parent_keeps_the_text_without_javascript(
     expect(_answer(reviewer, "why")).to_have_value("Clear and specific")
 
     # Neither was written: the stored answers are what they were.
-    reviewer.goto(url)
+    reviewer.goto(app_url(url))
     expect(_answer(reviewer, "rating")).to_have_value("3")
     expect(_answer(reviewer, "why")).to_have_value("")

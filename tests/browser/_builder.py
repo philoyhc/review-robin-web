@@ -5,6 +5,8 @@ from __future__ import annotations
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
+from .conftest import app_url
+
 REVIEWERS_CSV = b"ReviewerName,ReviewerEmail\nRana,rana@example.edu\n"
 REVIEWEES_CSV = b"RevieweeName,RevieweeEmail,Tag1\nCarol,carol@example.edu,Blue\n"
 
@@ -30,7 +32,7 @@ def add_instrument(api: httpx.Client, session_id: str) -> None:
 
 def open_card(page: Page, session_id: str, index: int = 0) -> Locator:
     """Load the Instruments page and expand one card, still locked."""
-    page.goto(f"/operator/sessions/{session_id}/instruments")
+    page.goto(app_url(f"/operator/sessions/{session_id}/instruments"))
     card = page.locator("[data-instrument-card]").nth(index)
     # A card opens collapsed, as it does for a person; its summary expands it.
     card.locator("summary.instrument-card-summary").click()
@@ -176,7 +178,7 @@ def activate(api: httpx.Client, database_url: str, session_id: str) -> None:
     # A refused activation redirects too, with super_status=failed in the
     # query string; success lands on bare Session Home.
     assert activated.status_code == 303, activated.text
-    assert activated.headers["location"] == base, activated.headers["location"]
+    assert activated.headers["location"] == app_url(base), activated.headers["location"]
 
 
 def branch_rating(page: Page, session_id: str, *, op: str = "ge", value: str = "4") -> Locator:

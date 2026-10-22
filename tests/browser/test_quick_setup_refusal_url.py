@@ -10,6 +10,8 @@ from pathlib import Path
 
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 
 def test_a_refused_upload_lands_on_homes_own_path(
     page: Page, new_session: Callable[[], str], tmp_path
@@ -17,7 +19,7 @@ def test_a_refused_upload_lands_on_homes_own_path(
     session_id = new_session()
     bad = tmp_path / "reviewers.csv"
     bad.write_text("not,a,roster\n1,2,3\n")
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     page.locator('input[name="reviewers_file"]').set_input_files(str(bad))
     page.locator("#quick-setup-confirm-replace-toggle").check()
     with page.expect_navigation():
@@ -25,7 +27,7 @@ def test_a_refused_upload_lands_on_homes_own_path(
     page.wait_for_load_state("load")
 
     expect(page.locator("[data-quick-setup-reason]").first).to_be_visible()
-    assert page.evaluate("window.location.pathname") == f"/operator/sessions/{session_id}"
+    assert page.evaluate("window.location.pathname") == app_url(f"/operator/sessions/{session_id}")
 
     response = page.reload()
     assert response is not None and response.status == 200
@@ -40,7 +42,7 @@ def test_dismiss_clears_the_banner_on_homes_own_path(
     session_id = new_session()
     bad = tmp_path / "reviewers.csv"
     bad.write_text("not,a,roster\n1,2,3\n")
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     page.locator('input[name="reviewers_file"]').set_input_files(str(bad))
     page.locator("#quick-setup-confirm-replace-toggle").check()
     with page.expect_navigation():
@@ -53,7 +55,7 @@ def test_dismiss_clears_the_banner_on_homes_own_path(
 
     expect(banner).to_be_hidden()
     expect(page.locator("[data-quick-setup-reason]")).to_have_count(0)
-    assert page.evaluate("window.location.pathname") == f"/operator/sessions/{session_id}"
+    assert page.evaluate("window.location.pathname") == app_url(f"/operator/sessions/{session_id}")
 
 
 _CHECKLIST = Path(__file__).resolve().parents[1] / "fixtures/quick_setup"
@@ -75,7 +77,7 @@ def test_the_deletion_ask_holds_the_file_and_dismiss_ends_it(
     the whole answer. Dismiss on such an ask ends the hold and reloads
     Home without the banner or its tick."""
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     _submit_settings(page, _CHECKLIST / "05_settings.csv")
     _submit_settings(page, _CHECKLIST / "09_settings_one_instrument.csv")
 
@@ -100,7 +102,7 @@ def test_the_held_settings_file_applies_with_the_tick_alone(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     _submit_settings(page, _CHECKLIST / "05_settings.csv")
     _submit_settings(page, _CHECKLIST / "09_settings_one_instrument.csv")
 
@@ -120,8 +122,10 @@ def test_dismiss_still_navigates_when_the_query_differs(
     loads Home rather than hiding the banner in place."""
     session_id = new_session()
     page.goto(
-        f"/operator/sessions/{session_id}"
-        "?quick_setup_error=reviewers&quick_setup_reason=refused"
+        app_url(
+            f"/operator/sessions/{session_id}"
+            "?quick_setup_error=reviewers&quick_setup_reason=refused"
+        )
     )
     banner = page.locator("#quick-setup-reviewers-error-banner")
     expect(banner).to_be_visible()
@@ -143,7 +147,7 @@ def test_a_refused_later_slot_lands_a_line_above_the_card(
     top (segment 19X Item 2)."""
     page.set_viewport_size({"width": 1280, "height": 500})
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     _submit_settings(page, _CHECKLIST / "05_settings.csv")
     _submit_settings(page, _CHECKLIST / "09_settings_one_instrument.csv")
     expect(page.locator("#quick-setup-settings-error-banner")).to_be_visible()

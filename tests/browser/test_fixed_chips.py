@@ -14,7 +14,7 @@ from collections.abc import Callable
 from playwright.sync_api import Locator, Page
 
 from ._builder import open_card, session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 
 def _style(chip: Locator, prop: str, pseudo: str | None = None) -> str:
@@ -80,7 +80,7 @@ def test_session_home_tab_with_data_is_a_fixed_switch(
 ) -> None:
     session_id = new_session()
     _seed_relationship(live_server.database_url, session_id)
-    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     chips = page.locator("[data-edit-only] label.tag-chip")
     fixed = chips.filter(has=page.locator('input[name="relationships_enabled"]'))
     assert "is-fixed" in (fixed.get_attribute("class") or "")

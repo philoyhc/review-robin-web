@@ -1,4 +1,4 @@
-"""The Cordware host: alone, with RRW mounted at `/`, and its contracts.
+"""The Cordware host: alone, with RRW mounted at `/reviewrobin`, and its contracts.
 
 Segment 21A rung A1 (`guide/segment_21A_cordware_foundations.md`).
 """
@@ -71,24 +71,31 @@ def test_host_alone_serves_health_and_nothing_else() -> None:
     assert client.get("/operator", follow_redirects=False).status_code == 404
 
 
-def test_host_with_rrw_mounts_it_at_root() -> None:
+def test_host_with_rrw_mounts_it_at_reviewrobin() -> None:
     client = TestClient(create_app(apps=("reviewrobin",)))
     assert client.get("/health").json() == {"status": "ok"}
-    # RRW's own unguarded redirect, unchanged at `/`.
-    response = client.get("/operator", follow_redirects=False)
+    # RRW's own unguarded redirect, under the mount.
+    response = client.get("/reviewrobin/operator", follow_redirects=False)
     assert response.status_code == 302
-    assert response.headers["location"] == "/operator/sessions"
+    assert response.headers["location"] == "/reviewrobin/operator/sessions"
+    # The old root path is gone: no redirects from it (v0.8 non-goal).
+    assert client.get("/operator", follow_redirects=False).status_code == 404
 
 
-def test_host_shadows_nothing_of_rrw_but_health() -> None:
+def test_host_shadows_nothing_of_rrw() -> None:
     client = TestClient(create_app(apps=("reviewrobin",)))
-    assert client.get("/openapi.json").json()["info"]["title"] == "Review Robin Web"
-    assert client.get("/docs").status_code == 200
+    openapi = client.get("/reviewrobin/openapi.json").json()
+    assert openapi["info"]["title"] == "Review Robin Web"
+    assert client.get("/reviewrobin/docs").status_code == 200
+    assert client.get("/reviewrobin/health").json() == {"status": "ok"}
 
 
-def test_registry_mounts_rrw_at_root() -> None:
+def test_registry_mounts_rrw_at_reviewrobin() -> None:
     assert REGISTRY["reviewrobin"] == AppEntry(
-        path="/", factory="app.main:create_app", logger="app", title="Review Robin"
+        path="/reviewrobin",
+        factory="app.main:create_app",
+        logger="app",
+        title="Review Robin",
     )
 
 

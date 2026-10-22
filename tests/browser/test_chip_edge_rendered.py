@@ -16,6 +16,8 @@ import uuid
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
+from .conftest import app_url
+
 
 def _edge(chip: Locator) -> tuple[str, str]:
     return tuple(
@@ -54,7 +56,7 @@ def test_lobby_chips_wear_a_two_pixel_edge(page: Page, api: httpx.Client) -> Non
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
-    page.goto("/operator/sessions")
+    page.goto(app_url("/operator/sessions"))
     strip = page.locator("#sessions-tag-filter")
     tag = strip.locator(".tag-chip").first
     expect(tag).to_be_visible()
@@ -65,7 +67,7 @@ def test_lobby_chips_wear_a_two_pixel_edge(page: Page, api: httpx.Client) -> Non
 
 
 def test_guide_samples_live_and_fixed(page: Page) -> None:
-    page.goto("/guide")
+    page.goto(app_url("/guide"))
     card = page.locator("#guide-controls")
     _assert_two_pixel_edge(card.locator("label.tag-chip", has_text="Tag1"))
     _assert_two_pixel_edge(card.locator("[data-guide-unset-chip]"))

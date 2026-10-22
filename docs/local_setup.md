@@ -164,11 +164,12 @@ alembic upgrade head
 uvicorn cordware.main:app --reload
 ```
 
-Open `http://127.0.0.1:8000/health` — expect `{"status": "ok"}`.
+Open `http://127.0.0.1:8000/reviewrobin/health` — expect `{"status": "ok"}`.
 
-`cordware.main:app` is the Cordware host with RRW mounted at `/`, the only
-way RRW is served (segment 21A; `docs/cordware_repository_strategy_v0.8.md`
-§3). `app.main` only defines RRW's `create_app()`. The host's
+`cordware.main:app` is the Cordware host with RRW mounted at `/reviewrobin`,
+the only way RRW is served (segments 21A and 21D;
+`docs/cordware_repository_strategy_v0.8.md` §3). With RRW the only
+application, the host's `/` redirects to `/reviewrobin/`. `app.main` only defines RRW's `create_app()`. The host's
 `CORDWARE_APPS` setting chooses what it mounts. Leave it unset to mount
 RRW; set it empty (`CORDWARE_APPS=`) to run the host alone, which serves
 only `/health`.
@@ -221,15 +222,20 @@ makes a missing browser fail the run instead.
 
 ## 6. Verifying each surface area
 
-After the app is running on `http://127.0.0.1:8000/`:
+After the app is running on `http://127.0.0.1:8000/reviewrobin/`, these
+paths are under that prefix (`/auth/me` is
+`http://127.0.0.1:8000/reviewrobin/auth/me`):
 
 | URL                         | Expected (with `ALLOW_FAKE_AUTH=true`)                       |
 |-----------------------------|--------------------------------------------------------------|
 | `/health`                   | `200` JSON `{"status": "ok"}`                                |
-| `/`                         | `302` to `/operator/sessions` (operator) or `/me`.           |
-| `/auth/me`                       | `200` JSON for the fake user (`is_fake: true`).              |
-| `/auth/me/debug`                 | `200` HTML page; "fake auth" pill shown; "No claims found".  |
+| `/`                         | `302` to `/reviewrobin/operator/sessions` (operator) or `/reviewrobin/me`. |
+| `/auth/me`                  | `200` JSON for the fake user (`is_fake: true`).              |
+| `/auth/me/debug`            | `200` HTML page; "fake auth" pill shown; "No claims found".  |
 | `/docs`                     | FastAPI's automatic Swagger UI.                              |
+
+The host's own `/health`, outside the prefix, answers too; it is the
+probe Azure's health check uses.
 
 If `/auth/me` returns `401`, your `.env` is missing or `ALLOW_FAKE_AUTH` is not
 set to `true`.
@@ -516,10 +522,10 @@ points inside `...\review-robin-web\.venv\Scripts`.
 ```powershell
 pytest -n auto                    # full suite
 ruff check .                      # lint
-uvicorn cordware.main:app --reload  # then open http://127.0.0.1:8000/health
+uvicorn cordware.main:app --reload  # then open http://127.0.0.1:8000/reviewrobin/health
 ```
 
-Expect `{"status": "ok"}` at `/health`. That's the whole loop; from here the
+Expect `{"status": "ok"}` at `/reviewrobin/health`. That's the whole loop; from here the
 rest of this guide ([§5](#5-running-the-test-suite) onward) applies as
 written.
 

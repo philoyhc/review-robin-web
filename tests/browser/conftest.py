@@ -1,11 +1,16 @@
 """Browser tests: the app served live, driven by a real Chromium.
 
 Plan: ``guide/archive/browser_test.md``. A session-scoped server runs
-``uvicorn cordware.main:app`` (the Cordware host, RRW mounted at ``/``)
-against a freshly migrated SQLite file with fake
+``uvicorn cordware.main:app`` (the Cordware host, RRW mounted at
+``/reviewrobin``) against a freshly migrated SQLite file with fake
 auth, so a Save reaches the server and a reload proves it persisted. Tests
 seed through the app's own routes over HTTP and make their own session, so
 they share the server but not data.
+
+RRW answers under its mount, as deployed (segment 21D). A page's URL is
+written ``app_url("/operator/…")``, which ``tests/unit/test_browser_app_urls.py``
+holds every navigation and URL assertion here to; the ``api`` client's
+base URL carries the mount already.
 
 Without a Chromium build the tests skip, saying why (``playwright`` itself
 is a dev dependency, so its absence is an import error, not a skip).
@@ -29,6 +34,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from _mounted import MOUNT
 from playwright.sync_api import Browser, Error, Page, sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -41,6 +47,14 @@ FAKE_OPERATOR_EMAIL = "operator@example.edu"
 # OPERATOR_EMAILS on first sign-in (``_builder.sign_in``).
 COLLEAGUE_EMAIL = "colleague@example.edu"
 SECOND_COLLEAGUE_EMAIL = "second@example.edu"
+
+
+def app_url(path: str) -> str:
+    """RRW's ``path`` under the mount the live server serves it at, for
+    Playwright to resolve against a context's ``base_url`` (the host's
+    origin). An absolute URL is ``live_server.base_url + app_url(path)``."""
+    assert path.startswith("/"), path
+    return MOUNT + path
 
 
 def _unavailable(reason: str) -> None:
@@ -193,8 +207,9 @@ def _wait_for_health(base_url: str, server: subprocess.Popen, log_path: Path) ->
 
 @pytest.fixture
 def api(live_server: LiveServer) -> Iterator[httpx.Client]:
-    """An HTTP client on the live server, signed in as the fake operator."""
-    with httpx.Client(base_url=live_server.base_url) as client:
+    """An HTTP client on the live server, signed in as the fake operator.
+    Its base URL is RRW's mount, so a request path is RRW's own."""
+    with httpx.Client(base_url=live_server.base_url + MOUNT) as client:
         yield client
 
 
@@ -212,7 +227,7 @@ def new_session(api: httpx.Client) -> Callable[[], str]:
             follow_redirects=False,
         )
         assert response.status_code == 303, response.text
-        # Location: /operator/sessions/<public_id>?editing=1
+        # Location: /reviewrobin/operator/sessions/<public_id>?editing=1
         return response.headers["location"].split("?")[0].rsplit("/", 1)[1]
 
     return make

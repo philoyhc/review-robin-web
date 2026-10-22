@@ -18,6 +18,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from ._builder import add_instrument, unlock
+from .conftest import app_url
 
 
 def _card(page: Page, index: int):
@@ -53,7 +54,7 @@ def test_delete_leaves_the_landing_card_collapsed(
     session_id = new_session()
     add_instrument(api, session_id)
     add_instrument(api, session_id)
-    page.goto(f"/operator/sessions/{session_id}/instruments")
+    page.goto(app_url(f"/operator/sessions/{session_id}/instruments"))
     expect(page.locator("[data-instrument-card]")).to_have_count(3)
 
     # The first card open, the rest collapsed until one is deleted.

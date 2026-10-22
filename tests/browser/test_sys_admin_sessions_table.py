@@ -10,11 +10,13 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 PAGE = "/operator/sys-admin/sessions"
 
 
 def _invite(page: Page, email: str) -> None:
-    page.goto("/operator/sys-admin/users")
+    page.goto(app_url("/operator/sys-admin/users"))
     page.fill("#invite-email", email)
     with page.expect_navigation():
         page.click("[data-invite-submit]")
@@ -37,14 +39,14 @@ def test_the_filter_matches_an_owner_and_clear_empties_it(
     )
     assert response.status_code == 303, response.text
 
-    page.goto(PAGE)
+    page.goto(app_url(PAGE))
     total = _visible_rows(page).count()
     assert total >= 2
     box = page.locator("[data-diagnostics-filter]")
     box.fill(owner.upper())  # case doesn't matter
     expect(_visible_rows(page)).to_have_count(1)
     expect(_visible_rows(page).first.locator("a").first).to_have_attribute(
-        "href", f"/operator/sessions/{owned}"
+        "href", app_url(f"/operator/sessions/{owned}")
     )
     box.fill("no-such-session-anywhere")
     expect(_visible_rows(page)).to_have_count(0)
@@ -63,7 +65,7 @@ def test_a_header_sorts_and_the_actions_stay_on_one_line(
     new_session()
     new_session()
     page.set_viewport_size({"width": 1280, "height": 900})
-    page.goto(PAGE)
+    page.goto(app_url(PAGE))
     page.context.clear_cookies(name="rrw-sort-sys-admin-sessions")
     page.reload()
     codes = page.locator("#diagnostics-sessions tbody tr td:nth-child(2) code")
@@ -92,7 +94,7 @@ def test_a_sort_survives_a_reload(page: Page, new_session: Callable[[], str]) ->
     ``sys``, session ``admin``, and the order was lost on reload."""
     new_session()
     new_session()
-    page.goto(PAGE)
+    page.goto(app_url(PAGE))
     page.context.clear_cookies(name="rrw-sort-sys-admin-sessions")
     page.reload()
     codes = page.locator("#diagnostics-sessions tbody tr td:nth-child(2) code")
@@ -101,13 +103,13 @@ def test_a_sort_survives_a_reload(page: Page, new_session: Callable[[], str]) ->
     page.click(button)
     descending = codes.all_inner_texts()
     [cookie] = [c for c in page.context.cookies() if c["name"] == "rrw-sort-sys-admin-sessions"]
-    assert cookie["path"] == "/"
+    assert cookie["path"] == app_url("/")
     page.reload()
     assert codes.all_inner_texts() == descending
 
 
 def test_each_table_id_maps_to_its_cookie_path(page: Page) -> None:
-    page.goto(PAGE)
+    page.goto(app_url(PAGE))
     cases = {
         "rrw-sort-lobby": "/",
         "rrw-sort-archived": "/",
@@ -117,4 +119,4 @@ def test_each_table_id_maps_to_its_cookie_path(page: Page) -> None:
         "rrw-sort-rs-k7m2p9q4rs-3": "/me/sessions/k7m2p9q4rs",
     }
     found = page.evaluate("ids => ids.map(id => _rrwCookiePath(id))", list(cases))
-    assert dict(zip(cases, found)) == cases
+    assert dict(zip(cases, found)) == {name: app_url(path) for name, path in cases.items()}

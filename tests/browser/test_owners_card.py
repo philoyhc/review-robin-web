@@ -17,8 +17,9 @@ from ._builder import activate, seed_rosters, sign_in
 from .conftest import (
     COLLEAGUE_EMAIL,
     FAKE_OPERATOR_EMAIL,
-    SECOND_COLLEAGUE_EMAIL,
     LiveServer,
+    SECOND_COLLEAGUE_EMAIL,
+    app_url,
 )
 
 
@@ -35,7 +36,7 @@ def _owner_row(page: Page, email: str) -> Locator:
 
 
 def _open_home(page: Page, session_id: str) -> None:
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
 
 
 def _add(page: Page, email: str) -> None:
@@ -62,7 +63,7 @@ def test_the_card_is_live_with_no_lock(
     the picker, Add owner and another owner's Remove are live on load."""
     session_id = _two_owner_session(page, api, new_session)
     sign_in(api, SECOND_COLLEAGUE_EMAIL)
-    page.goto("/operator/sessions")
+    page.goto(app_url("/operator/sessions"))
     _open_home(page, session_id)
 
     expect(page.locator("#owners-lock-toggle")).to_have_count(0)
@@ -78,7 +79,7 @@ def test_add_and_remove_each_save_at_once(
 ) -> None:
     """Item 5, 'Add owner saves at once' and 'Remove saves at once'."""
     session_id = _two_owner_session(page, api, new_session)
-    expect(page).to_have_url(f"/operator/sessions/{session_id}#owners-card")
+    expect(page).to_have_url(app_url(f"/operator/sessions/{session_id}#owners-card"))
     expect(_card(page).locator("[role=alert]")).to_have_count(0)
     expect(page.locator(f"#owners-candidates option[value='{COLLEAGUE_EMAIL}']")).to_have_count(0)
 
@@ -153,7 +154,7 @@ def test_removing_yourself_asks_and_cancel_posts_nothing(
     page.once("dialog", lambda dialog: dialog.accept())
     with page.expect_navigation():
         remove_self.click()
-    expect(page).to_have_url("/operator/sessions")
+    expect(page).to_have_url(app_url("/operator/sessions"))
 
 
 def test_owners_change_in_an_activated_session(
@@ -194,7 +195,7 @@ def test_add_and_self_remove_work_without_javascript(
         # no confirm to ask, and landing on the lobby shows it removed you.
         with page.expect_navigation():
             _owner_row(page, FAKE_OPERATOR_EMAIL).get_by_role("button", name="Remove").click()
-        expect(page).to_have_url("/operator/sessions")
+        expect(page).to_have_url(app_url("/operator/sessions"))
     finally:
         context.close()
 
@@ -208,7 +209,7 @@ def test_an_owners_refusal_lands_the_card_not_its_banner(
     scrolling the banner itself."""
     page.set_viewport_size({"width": 1280, "height": 500})
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}?owners_error=already_owner#owners-card")
+    page.goto(app_url(f"/operator/sessions/{session_id}?owners_error=already_owner#owners-card"))
     expect(page.locator("#owners-card .banner-scroll-target")).to_be_visible()
     page.wait_for_function(
         "Math.abs(document.getElementById('owners-card')"

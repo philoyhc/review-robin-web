@@ -8,13 +8,15 @@ from __future__ import annotations
 
 from playwright.sync_api import Locator, Page, expect
 
+from .conftest import app_url
+
 
 def _bg(locator: Locator) -> str:
     return locator.evaluate("el => getComputedStyle(el).backgroundColor")
 
 
 def test_the_chip_samples_answer_a_click(page: Page) -> None:
-    page.goto("/guide")
+    page.goto(app_url("/guide"))
     card = page.locator("#guide-controls")
     email = card.locator("label.tag-chip", has_text="Email")
     tag = card.locator("label.tag-chip", has_text="Tag1")
@@ -84,7 +86,7 @@ def test_the_chip_samples_answer_a_click(page: Page) -> None:
 
 
 def test_the_delete_guard_turns_its_button_on(page: Page) -> None:
-    page.goto("/guide")
+    page.goto(app_url("/guide"))
     card = page.locator("#guide-controls")
     button = card.locator('[data-delete-btn="guide-demo"]')
     expect(button).to_be_disabled()
@@ -97,7 +99,7 @@ def test_the_delete_guard_turns_its_button_on(page: Page) -> None:
 def test_every_sample_has_a_tooltip(page: Page) -> None:
     """Each button, pill and chip sample, and the guard's box and button,
     says on hover what it is (the author, 2026-10-10)."""
-    page.goto("/guide")
+    page.goto(app_url("/guide"))
     samples = page.locator(
         "#guide-controls .guide-controls-table td:first-child > *,"
         " #guide-controls .guide-controls-demo input,"

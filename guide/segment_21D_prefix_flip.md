@@ -140,6 +140,16 @@ with its own template. `AppEntry.title` defaults to empty, and the page
 then shows the registry name. The redirect and links keep the host's
 `root_path`.
 
+**D2 (2026-10-22).** As laddered. `app_url` is a path helper in
+`tests/browser/conftest.py`, on `tests/_mounted.py`'s `MOUNT`; the `api`
+client's base URL carries the mount, so its 34 request paths are
+unchanged. Beyond the measured sites, the flip also reached Home's
+scroll-seat `sessionStorage` key and the sort-cookie paths, both read
+from the page's pathname. The guard is `tests/unit/test_browser_app_urls.py`
+(fails 35 files on the pre-flip tree). Of the local-URL grep's hits, two
+are not app URLs and stay: `README.md` names the bare origin as the
+redirect's source, and `docs/security_posture.md` names the origin.
+
 ## PR ladder
 
 1. **D0, this plan**, prose only.

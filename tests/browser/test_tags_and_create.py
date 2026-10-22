@@ -22,8 +22,9 @@ from ._builder import session_pk, sign_in
 from .conftest import (
     COLLEAGUE_EMAIL,
     FAKE_OPERATOR_EMAIL,
-    SECOND_COLLEAGUE_EMAIL,
     LiveServer,
+    SECOND_COLLEAGUE_EMAIL,
+    app_url,
 )
 
 
@@ -57,7 +58,7 @@ def test_tag_suggestions_complete_only_the_last_tag(
         if where == "create"
         else f"/operator/sessions/{session_id}?editing=1"
     )
-    page.goto(url)
+    page.goto(app_url(url))
     box = page.locator("input[data-tag-typeahead]:visible").first
 
     box.fill("a")
@@ -75,7 +76,7 @@ def test_enter_in_a_lobby_tag_box_never_submits(
     """Item 5, 'The keyboard picks' (Chromium; Safari stays a hand check)."""
     # The lobby's checkbox carries the session's key, not its public ID.
     session_id = session_pk(live_server.database_url, _tagged_session(api, "pilot"))
-    page.goto("/operator/sessions")
+    page.goto(app_url("/operator/sessions"))
     posted: list[str] = []
     page.on("request", lambda r: posted.append(r.url) if r.method == "POST" else None)
 
@@ -99,7 +100,7 @@ def test_create_stages_owners_and_saves_what_remains(
     """Item 5, 'Create is unchanged' (JavaScript on)."""
     sign_in(api, COLLEAGUE_EMAIL)
     sign_in(api, SECOND_COLLEAGUE_EMAIL)
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     # With script on, Create waits for Name and Code.
     expect(page.get_by_role("button", name="Create session")).to_be_disabled()
     table = page.locator("#session-owners-table")
@@ -132,7 +133,7 @@ def test_create_without_javascript_saves_the_typed_owner(
     """Item 5, 'Create is unchanged' (JavaScript off)."""
     sign_in(api, COLLEAGUE_EMAIL)
     page = page_as(javascript=False)
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     # With no script the staging buttons stay hidden and the typed
     # address submits with the form, never added.
     expect(page.locator("#session-owners-add")).to_be_hidden()

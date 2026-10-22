@@ -21,7 +21,7 @@ import httpx
 from playwright.sync_api import Locator, Page, expect
 
 from ._builder import session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 
 def _tagged_session(api: httpx.Client, tags: str) -> str:
@@ -53,7 +53,7 @@ def _selected_fill(strip: Locator) -> tuple[str, str]:
 
 def test_lobby_mode_and_clear_chips_stay_dark(page: Page, api: httpx.Client) -> None:
     _tagged_session(api, "chip-alpha, chip-beta")
-    page.goto("/operator/sessions")
+    page.goto(app_url("/operator/sessions"))
     strip = page.locator("#sessions-tag-filter")
     off, on = _selected_fill(strip)
 
@@ -86,7 +86,7 @@ def test_archived_select_all_chip_stays_dark(
     finally:
         engine.dispose()
 
-    page.goto("/operator/sessions/archived")
+    page.goto(app_url("/operator/sessions/archived"))
     strip = page.locator("#archived-tag-filter")
     _off, on = _selected_fill(strip)
     clear = strip.locator("[data-tag-clear]")
@@ -106,7 +106,7 @@ def test_extract_empty_row_chips_stay_dark(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     # An on/off chip on the same page gives the two fills.
     meta = page.locator("[data-by-instrument-chip='include-metadata']")
     on = _fill(meta)

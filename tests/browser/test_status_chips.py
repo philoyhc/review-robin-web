@@ -11,6 +11,8 @@ from collections.abc import Callable
 
 from playwright.sync_api import Locator, Page, expect
 
+from .conftest import app_url
+
 
 def _bg(locator: Locator) -> str:
     return locator.evaluate("el => getComputedStyle(el).backgroundColor")
@@ -56,7 +58,7 @@ def test_severity_chips_fill_by_state_in_both_themes(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sys-admin/sessions/{session_id}/audit-log")
+    page.goto(app_url(f"/operator/sys-admin/sessions/{session_id}/audit-log"))
     light = {v: _token(page, t) for v, t in _ON.items()}
     for token in [*_ON.values(), *_OFF.values()]:
         assert _token(page, token) != _TRANSPARENT, token
@@ -75,7 +77,7 @@ def test_a_severity_chip_filters_and_stays_on(
     page: Page, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sys-admin/sessions/{session_id}/audit-log")
+    page.goto(app_url(f"/operator/sys-admin/sessions/{session_id}/audit-log"))
     warning = page.locator("label.status-chip-warning")
     warning.locator("input").focus()
     page.keyboard.press("Space")
@@ -93,7 +95,7 @@ def test_a_validate_chip_submits_at_once_and_is_remembered(
     a button, and a bare URL later finds it still off."""
     session_id = new_session()
     url = f"/operator/sessions/{session_id}/validate"
-    page.goto(url)
+    page.goto(app_url(url))
     strip = page.locator("form[data-severity-chips]")
     for value in ("error", "warning", "info"):
         expect(strip.locator(f"label.status-chip-{value} input")).to_be_checked()
@@ -103,7 +105,7 @@ def test_a_validate_chip_submits_at_once_and_is_remembered(
     with page.expect_navigation():
         strip.locator("label.status-chip-warning").click()
     assert "severity=error" in page.url and "severity=warning" not in page.url
-    page.goto(url)
+    page.goto(app_url(url))
     strip = page.locator("form[data-severity-chips]")
     expect(strip.locator("label.status-chip-warning input")).not_to_be_checked()
     expect(strip.locator("label.status-chip-error input")).to_be_checked()
@@ -113,7 +115,7 @@ def test_a_validate_chip_submits_at_once_and_is_remembered(
 
 
 def test_the_guide_sample_answers_a_click(page: Page) -> None:
-    page.goto("/guide")
+    page.goto(app_url("/guide"))
     card = page.locator("#guide-controls")
     warning = card.locator("label.status-chip-warning")
     error = card.locator("label.status-chip-error")
