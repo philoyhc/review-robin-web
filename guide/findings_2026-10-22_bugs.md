@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 19 of 19 rows; every author row ruled 2026-10-22 (R3, R4,
+**Open:** 18 of 19 rows (O1 done); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -64,7 +64,7 @@ None.
   operator edits a box they never touched. *Reproduced.* Spec/author:
   `spec/lifecycle.md` §8.2.7 promises a Save is never refused over an
   unedited pair. Skip both-unedited, or cap at import.
-- **O1** — **A session code becomes a zip member's path.** The code is
+- ~~**O1**~~ — **Done in #3228**: every bundle member name is made safe at the zip writers (`spec/extract_data.md` "Zip member names"; `tests/integration/test_zip_member_names.py`). **A session code becomes a zip member's path.** The code is
   free text and enters member names unchanged (`filename()`,
   `app/services/extracts/__init__.py:46`; the by-instrument, shape and
   metadata members): a co-owner's `../../evil` puts `../../evil_*.csv` in
