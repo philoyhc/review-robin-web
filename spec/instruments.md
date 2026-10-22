@@ -858,9 +858,11 @@ The card shows the `link1` and `link2` Composites and their enabled
 rules are all disabled shows as All, as the engine applies neither
 (`spec/assignments.md`, Rule kinds). For a rule set an instrument uses,
 the Settings import refuses a rule the card can't show as stored
-(`spec/csv_contracts.md` §3.3; findings E1, 2026-10-22). It still
-accepts any rule-set combinator, although the card always shows the
-two Links as intersecting (`ALL_OF`).
+(`spec/csv_contracts.md` §3.3; findings E1, 2026-10-22), and a
+rule-set combinator other than `ALL_OF`, since the card always shows
+the two Links as intersecting; only a rule set no instrument uses
+keeps another. A Link holding rules the card shows imports as touched,
+so it never reads as Not set.
 
 ### Preview review instrument
 
