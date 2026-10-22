@@ -588,10 +588,11 @@ async def _run_quick_setup(
     is refused naming them unless it matches (findings S4). Create does
     not ask, since a new session holds only its Default instrument.
 
-    The saves run in the threadpool: they wait on the session row lock,
-    and waiting on the event loop would stall the worker whose other
-    requests hold that lock until their teardown runs on the same loop
-    (findings Bc3)."""
+    The checks and the saves run in the threadpool: they wait on the
+    session row lock (the checks only for a Settings file's short-row
+    report, findings S3), and waiting on the event loop would stall the
+    worker whose other requests hold that lock until their teardown runs
+    on the same loop (findings Bc3)."""
 
     contents = {kind: await upload.read() for kind, upload in uploads.items()}
     filenames = {kind: upload.filename or "" for kind, upload in uploads.items()}
@@ -632,7 +633,10 @@ async def _run_quick_setup_contents(
     if not lifecycle.is_editable(review_session):
         return _SlotRefusal(first, _SlotFailure("lifecycle"))
 
-    staged = _check_uploads(
+    # In the threadpool too: a Settings file with a short row is
+    # validated under the session lock (findings S3).
+    staged = await run_in_threadpool(
+        _check_uploads,
         db,
         review_session=review_session,
         contents=contents,

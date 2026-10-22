@@ -229,11 +229,16 @@ async def read_upload(
 ) -> UploadIn:
     """Read a Setup upload card's file, falling back to the held one.
 
-    A newly chosen file wins over the hold. The held bytes are parsed
-    again by the caller, exactly as a fresh upload's would be."""
+    A newly chosen file wins over the hold, even an empty one: a file
+    is chosen when it has a filename, as Quick Setup's ``_attached``
+    reads it, since an untouched input posts an empty-named part. An
+    empty chosen file is then refused as empty (findings S2). The held
+    bytes are parsed again by the caller, exactly as a fresh upload's
+    would be."""
     token = (held_token or "").strip() or None
     content = await file.read() if file is not None else b""
-    if content or token is None:
+    chosen = file is not None and bool(file.filename)
+    if content or chosen or token is None:
         return UploadIn(
             content=content,
             filename=file.filename if file is not None else None,
