@@ -833,6 +833,34 @@ Taken 2026-10-22 at `5395f19`.
 | Browser tests on these boxes | 2: `test_preview_response_box.py` (no handle in the preview), `test_help_box_grows.py` (the fit being shared) | `ls tests/browser \| grep -E "preview_response\|help_box"` |
 | Specs | `spec/reviewer-surface.md` (render table, "Textarea height derivation"), `spec/instruments.md` ("Preview row", "Help rows"), `spec/ui_elements.md` (the textarea resize rule) | `grep -rln "textarea_rows_for\|resize" spec` |
 
+### Status
+
+**Closed 2026-10-22, in #3220 (plan) and #3221 (build).** As planned, with
+these confirmed at build:
+- **The shared fit** is `base.html`'s `data-fit-box` script
+  (`window.rrwFitBoxes` / `rrwUnfitBoxes`). It sets `data-fit-on`, and
+  only then do the handle and scrollbar go.
+- **A one-line box flattens only what is typed or pasted.** A stored
+  answer shows as saved, breaks included. Enter is skipped inside an IME
+  composition. The listener runs in the capture phase, so the branch
+  check sees the flattened text.
+- **Beyond the plan:** the server keeps a posted CRLF as LF
+  (`parse_form_payload`), so its length check counts a line break once,
+  as `maxlength` does. Before this, a box over 100 refused an answer at
+  its limit, and 51–100 boxes now take breaks too.
+- **One behavior change, per the ruling:** Enter in a short String
+  answer no longer saves the page, as it did in the old text input.
+
+**Reads:**
+- **`diff-reviewer`**, one read: no high findings.
+  - Acted on: the CRLF count (M2); the load-time flatten, branch-check
+    order and IME Enter (L3, L4); stale comments and an unused export
+    (L1, L2); and the missing tests, a one-line box's handle and the
+    preview's one-line floor (L5).
+  - M1, Enter no longer saving, is the ruling, recorded above.
+- **`spec-writer`** at the close also corrected `spec/rrw_functional_spec.md`,
+  now in `Doc impact`.
+
 ### PR ladder
 
 1. **PR 1, this entry**, prose only.

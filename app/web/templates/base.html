@@ -6460,8 +6460,12 @@
        height of its text above its own floor (its `rows`, or a CSS
        `min-height`), on load, on each edit and when its width changes,
        with no ceiling: `maxlength` bounds it. `data-fit-box="one-line"`
-       also takes no line break: Enter inserts none, and a pasted or
-       dropped break becomes a space. A box added after load (the
+       also takes no new line break: Enter inserts none (outside an IME
+       composition), and a pasted or dropped break becomes a space. A
+       stored answer is shown as saved, breaks included: the box only
+       changes what is typed into it. Its input listener runs in the
+       capture phase, so a page's own listeners see the flattened text.
+       A box added after load (the
        Instruments page's help rows) is wired by `window.rrwFitBoxes(node)`;
        wiring twice is a no-op, and `window.rrwUnfitBoxes(node)` stops
        watching boxes about to be replaced. #}
@@ -6512,12 +6516,10 @@
           root.querySelectorAll(SELECTOR).forEach(function (ta) { found.push(ta); });
           return found;
         }
-        window.rrwFitBox = function (ta) { fitAll([ta]); };
         window.rrwFitBoxes = function (root) {
           var boxes = boxesIn(root).filter(function (ta) {
             if (ta.hasAttribute("data-fit-on")) return false;
             ta.setAttribute("data-fit-on", "");
-            if (oneLine(ta)) flatten(ta);
             if (watch) watch.observe(ta);
             return true;
           });
@@ -6528,7 +6530,8 @@
         };
         document.addEventListener("keydown", function (event) {
           var ta = event.target;
-          if (event.key === "Enter" && ta.matches && ta.matches(SELECTOR) && oneLine(ta)) {
+          if (event.key === "Enter" && !event.isComposing
+              && ta.matches && ta.matches(SELECTOR) && oneLine(ta)) {
             event.preventDefault();
           }
         });
@@ -6537,7 +6540,7 @@
           if (!ta.matches || !ta.matches(SELECTOR)) return;
           if (oneLine(ta)) flatten(ta);
           fitAll([ta]);
-        });
+        }, true);
         window.rrwFitBoxes(document);
       })();
     </script>

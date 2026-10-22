@@ -11,35 +11,11 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Locator, Page, expect
 
-from ._builder import REVIEWER_EMAIL, activate, seed_rosters, session_pk
+from ._builder import REVIEWER_EMAIL, activate, seed_rosters, set_comments_max
 from .conftest import LiveServer, app_url
 
 _BOX = "table textarea.rs-answer"
 _LONG = "They led the planning and kept the team to its deadlines. " * 10
-
-
-def _set_comments(database_url: str, session_id: str, max_length: int) -> None:
-    """The seeded Comments field's maximum, written directly."""
-    from sqlalchemy import create_engine, select
-    from sqlalchemy.orm import Session
-
-    from app.db.models import Instrument, InstrumentResponseField
-
-    engine = create_engine(database_url)
-    try:
-        with Session(engine) as db:
-            field = db.execute(
-                select(InstrumentResponseField)
-                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
-                .where(
-                    Instrument.session_id == session_pk(database_url, session_id),
-                    InstrumentResponseField.label == "Comments",
-                )
-            ).scalar_one()
-            field.validation = {**(field.validation or {}), "max_length": max_length}
-            db.commit()
-    finally:
-        engine.dispose()
 
 
 def _box(
@@ -52,7 +28,7 @@ def _box(
     session_id = new_session()
     seed_rosters(api, session_id)
     if max_length is not None:
-        _set_comments(live_server.database_url, session_id, max_length)
+        set_comments_max(live_server.database_url, session_id, max_length)
     activate(api, live_server.database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
     reviewer.set_viewport_size({"width": 1400, "height": 1000})
@@ -126,7 +102,8 @@ def test_a_short_answer_box_is_one_line_and_takes_no_line_break(
 ) -> None:
     reviewer, box = _box(page_as, api, live_server, new_session, max_length=50)
     assert box.get_attribute("data-fit-box") == "one-line"
-    assert _fit(box)["lines"] == 1
+    fit = _fit(box)
+    assert fit["lines"] == 1 and fit["resize"] == "none", fit
 
     box.click()
     box.press_sequentially("one")

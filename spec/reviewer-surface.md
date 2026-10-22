@@ -730,8 +730,11 @@ the answer, so a saved answer always shows whole. Once the script has
 taken a box on (`data-fit-on`) it has no resize handle and no scrollbar,
 because a drag would be undone by the next keystroke; without script the
 box stays at its floor and keeps the native vertical handle. A one-line
-box takes no line break: Enter inserts none, and a pasted, dropped or
-stored break becomes a space. A two-line box keeps its breaks.
+box takes no new line break: Enter inserts none (outside an IME
+composition), and a pasted or dropped break becomes a space; a stored
+answer shows as saved, breaks included. A two-line box keeps its breaks.
+The server keeps a posted line break (CRLF) as one character (LF), so
+its length check agrees with the box's `maxlength`.
 `rs-textlong` (Header column-width hint above) sizes the column, not the
 box.
 

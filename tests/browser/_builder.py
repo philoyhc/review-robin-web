@@ -217,3 +217,30 @@ def give_a_field_help_text(
             db.commit()
     finally:
         engine.dispose()
+
+
+def set_comments_max(database_url: str, session_id: str, max_length: int) -> None:
+    """The seeded Comments field's maximum length, written directly."""
+    from sqlalchemy import create_engine, select
+    from sqlalchemy.orm import Session
+
+    from app.db.models import Instrument, InstrumentResponseField
+
+    engine = create_engine(database_url)
+    try:
+        with Session(engine) as db:
+            field = db.execute(
+                select(InstrumentResponseField)
+                .join(Instrument, Instrument.id == InstrumentResponseField.instrument_id)
+                .where(
+                    Instrument.session_id == session_pk(database_url, session_id),
+                    InstrumentResponseField.label == "Comments",
+                )
+            ).scalar_one()
+            # Both stores: the surface reads ``validation``, the save
+            # check and the Band 2 preview the ``max`` column.
+            field.validation = {**(field.validation or {}), "max_length": max_length}
+            field._inline_max = float(max_length)
+            db.commit()
+    finally:
+        engine.dispose()
