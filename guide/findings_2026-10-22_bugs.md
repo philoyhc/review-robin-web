@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 17 of 19 rows (O1, R1 done); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 15 of 19 rows (O1, R1, R2, R4 done); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -40,7 +40,7 @@ None.
   re-save refills the group #3098 just cleared. *Reproduced.* Code:
   `spec/reviewer-surface.md` says a stale form is refused. Digest each
   row's group membership too.
-- **R2** — **An unchanged re-save clears a Submit stamp** when the stored
+- ~~**R2**~~ — **Done in #3230**: the change test and the reviewer surface read a stored value as a Save posts it, and a blank of a blank is no change (`spec/reviewer-surface.md` "Persistence semantics"; `tests/integration/test_change_after_submit.py`). **An unchanged re-save clears a Submit stamp** when the stored
   value is CRLF or a non-canonical number (`"04"`): the change test
   (`app/services/responses/_core.py:410`) compares the raw stored value
   with the normalized post (CRLF→LF, 19X; canonical numbers, #3106). The
@@ -48,7 +48,7 @@ None.
   submits again, unprompted. Sources: answers saved before those fixes,
   and the responses import, which stores values verbatim. *Reproduced.*
   Code: normalize the stored value before comparing.
-- **R4** — **Ruled 2026-10-22: include drafts, each marked as unsubmitted.** **The observer per-instrument CSV includes unsubmitted
+- ~~**R4**~~ — **Done in #3230**: the observer CSV carries a `Submitted` column (`spec/participant_model.md`; `tests/integration/test_observer_collation_body.py`). **Ruled 2026-10-22: include drafts, each marked as unsubmitted.** **The observer per-instrument CSV includes unsubmitted
   values** (`app/web/routes_reviewer/_collation.py:188`, no
   `submitted_at` filter) that the collation page's stats and `/results`
   leave out, so an edit R1's ruling says is "not released as submitted"
