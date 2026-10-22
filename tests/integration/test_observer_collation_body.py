@@ -1367,7 +1367,9 @@ def test_collation_csv_marks_an_unsubmitted_answer(
     assert draft["SubmittedAt"] == ""
     assert list(draft.values()).count("4") == 1
 
-    # A row the import stored with no value exports blank: no answer.
-    response.value = None
-    db.commit()
-    assert table()["Submitted"] == ""
+    # A row the import stored with no value, or only whitespace, is no
+    # answer.
+    for blank in (None, "   "):
+        response.value = blank
+        db.commit()
+        assert table()["Submitted"] == ""

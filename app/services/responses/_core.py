@@ -594,15 +594,16 @@ class SaveResult:
 
 
 def stored_as_posted(value: str | None, field: InstrumentResponseField) -> str:
-    """A stored value in the form a post of it arrives in: CRLF as LF,
-    stripped, and a number canonical. The reviewer surface renders this
+    """A stored value in the form a post of it arrives in: line breaks
+    as LF (CRLF and a lone CR alike, as a browser renders and posts
+    them), stripped, and a number canonical. The reviewer surface renders this
     and the change test compares it, so re-saving an answer stored in an
     older form (before 19X's line breaks or #3106's numbers, or by the
     responses import, which stores values as given) is not a change and
     keeps its Submit stamp (findings R2, 2026-10-22). Rendering it
     matters too: a browser posts a number box holding ``+4`` or a List
     holding `` A`` as blank."""
-    text = (value or "").replace("\r\n", "\n").strip()
+    text = (value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
     if text and field.data_type in ("Integer", "Decimal"):
         return canonical_number(field.data_type, text) or text
     return text

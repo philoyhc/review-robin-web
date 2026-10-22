@@ -405,6 +405,7 @@ def test_group_copies_stored_in_different_forms_keep_their_stamps(
         ("Decimal", "x", "x"),
         ("List", " A ", "A"),
         ("String", "  one\r\ntwo ", "one\ntwo"),
+        ("String", "one\rtwo", "one\ntwo"),
         ("String", None, ""),
     ],
 )

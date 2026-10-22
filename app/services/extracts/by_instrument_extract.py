@@ -626,10 +626,12 @@ def _assignment_row(
     values: list[str] = []
     saved_at = None
     submitted_at = None
-    # A row the import stored with no value exports blank, so it is not
-    # an answer here either.
+    # A row the import stored with no value, or only whitespace, is not
+    # an answer here either, as the collation statistics count it.
     answered = [
-        responses[f] for f in field_ids if f in responses and responses[f].value
+        responses[f]
+        for f in field_ids
+        if f in responses and (responses[f].value or "").strip()
     ]
     submitted_state = (
         ""
