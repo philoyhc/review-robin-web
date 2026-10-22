@@ -436,7 +436,10 @@ cannot run it.
 
 "Issued" is the accurate verb for the second row: `generate_invitations`
 discards the raw token, so a URL exists only once an invitation has been
-**sent**.
+**sent**. The first row shows that link built again from its token, as a
+reminder would send it (`invitations.current_invite_url`, findings C1);
+it differs from the one in the reviewer's inbox only if the app's host
+or prefix has changed since.
 
 #### Review Progress card
 

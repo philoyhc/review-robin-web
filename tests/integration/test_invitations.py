@@ -1330,6 +1330,42 @@ def test_detail_page_after_regenerate_reports_the_current_token(
     assert _DELIVERY("sent") not in facts
 
 
+def test_detail_page_shows_a_sent_link_as_it_resolves_now(
+    client: TestClient, db: Session
+) -> None:
+    """findings C1: the card shows the last email's link built again from
+    its token, so one sent under another prefix (before the move under
+    ``/reviewrobin``) shows as the link that works now."""
+    from app.db.models import EmailOutbox
+
+    session = _ready_session(client, db, code="drill-prefix-url")
+    invitation = db.execute(
+        select(Invitation).where(Invitation.session_id == session.id)
+    ).scalar_one()
+    page = (
+        f"/operator/sessions/{session.public_id}"
+        f"/invitations/reviewers/{invitation.reviewer_id}"
+    )
+    client.post(
+        f"/operator/sessions/{session.public_id}/invitations/{invitation.id}/send"
+    )
+    current = re.search(
+        r"https?://[^\s<>\"]*/me/invite/[\w-]+", client.get(page).text
+    ).group(0)
+    outbox = db.execute(
+        select(EmailOutbox).where(EmailOutbox.invitation_id == invitation.id)
+    ).scalar_one()
+    # The suite mounts the app at the root, so a prefix it no longer has
+    # stands in for the one it gained.
+    old = current.replace("/me/invite/", "/old-prefix/me/invite/")
+    outbox.body = outbox.body.replace(current, old)
+    db.commit()
+
+    body = client.get(page).text
+    assert current in body
+    assert old not in body.replace(current, "")
+
+
 def test_detail_page_hides_a_regenerated_link(
     client: TestClient, db: Session
 ) -> None:

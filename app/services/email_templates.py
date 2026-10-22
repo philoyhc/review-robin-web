@@ -228,8 +228,8 @@ def render_invitation(
         **merge,
     )
     body = _body(review_session, "invitation_body", DEFAULT_INVITATION_BODY, merge)
-    # Every invitation carries its link. Reminders reuse the URL found
-    # in the latest invitation's body (``most_recent_invitation_url``),
+    # Every invitation carries its link. Reminders reuse the token in the
+    # link found in the latest invitation's body (``most_recent_invitation_url``),
     # so an override without ``$invite_url`` made every later reminder
     # a fresh invitation that rotated the token (participant audit L5).
     # Checked on the rendered body, so an escaped ``$$invite_url`` (which

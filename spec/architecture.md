@@ -670,9 +670,14 @@ reviewer session-wide; the Invitations page's per-row **Send
 reminder** button (`POST /operator/sessions/{id}/invitations/{iid}/remind`)
 targets one reviewer.
 
-Reminders **reuse the URL from the most recent invitation outbox row**
-verbatim while that link is still current — the token is **not**
-rotated, so the reviewer's previously delivered link keeps working.
+Reminders **reuse the token in the most recent invitation outbox row's
+link** while it is still current — the token is **not** rotated, so the
+reviewer's previously delivered link keeps working. The link is built
+again from that token by the same builder a fresh invitation uses (the
+`reviewer_invite` route, on the request that sends it;
+`invitations.current_invite_url`), so one sent under an older prefix
+goes out, and shows on the reviewer's Invitation card, under the current
+one (findings C1).
 When no prior invitation outbox row exists for an invitation (operator
 never sent the original), or that row's link no longer matches
 `token_hash` because a Regenerate rotated it since, the reminder

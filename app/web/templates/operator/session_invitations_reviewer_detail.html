@@ -137,9 +137,9 @@
         {% endif %}
       </p>
     </div>
-    {# Three branches, not two. `invite_url` is recovered by regex from
-       the body of the most recent invitation EMAIL
-       (`most_recent_invitation_url`), so it is None until the invitation
+    {# Three branches, not two. `invite_url` is rebuilt from the token
+       recovered by regex from the body of the most recent invitation
+       EMAIL (`current_invite_url`), so it is None until the invitation
        is sent — `generate_invitations` discards the raw token
        (`invitations.py:170`) and only the hash is stored. So "no URL"
        and "no invitation" are different states, and "issued" is the
