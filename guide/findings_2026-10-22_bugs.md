@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 12 of 19 rows (every medium done: O1, R1, R2, R4, L1, S1, C1); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 10 of 19 rows (every medium done: O1, R1, R2, R4, L1, S1, C1; lows R3, L2); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -90,12 +90,12 @@ None.
 
 ## 3. Low
 
-- **R3** — **Ruled 2026-10-22: narrow the spec: a blank that leaves nothing on its row needs no new Submit.** Blanking an assignment's only answer after Submit leaves the
+- ~~**R3**~~ — **Done in #3234**: `spec/reviewer-surface.md` "Persistence semantics" says what a lone blank keeps and what it still asks for (`tests/integration/test_change_after_submit.py`). **Ruled 2026-10-22: narrow the spec: a blank that leaves nothing on its row needs no new Submit.** Blanking an assignment's only answer after Submit leaves the
   review reading Submitted: the blank rule unstamps the same assignment's
   other rows (`_core.py:432`) and there are none. *Reproduced.*
   Spec/author: narrow the "must Submit again" sentence, or add a
   session-level marker.
-- **L2** — A year below 1000 renders unpadded (`strftime("%Y")`,
+- ~~**L2**~~ — **Done in #3234**: `date_formatting` pads the year itself (`tests/unit/test_date_formatting.py`). A year below 1000 renders unpadded (`strftime("%Y")`,
   `app/services/date_formatting.py:250`, `:275`): End `0026-10-27`
   saves, re-renders as `26-10-27 12:00`, and every later Save is 422.
   *Reproduced.* Code: `f"{year:04d}"`, or refuse years below 1000.
