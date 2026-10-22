@@ -113,9 +113,10 @@ def canonical_number(data_type: str | None, value: str) -> str | None:
     ``inf``, ``1_000`` and full-width digits, which the builder's and the
     reviewer surface's scripts refuse (``DECIMAL_PATTERN``). A value past
     a float's range is refused too, since min, max and step compare as
-    floats, and so is an Integer longer than ``int`` will read. The
-    stored form is canonical, so ``04`` and ``+4`` read as ``4`` to the
-    data-shape step columns and to branching. It keeps the digits as
+    floats, and so is an Integer longer than ``int`` will read. A save
+    stores the canonical form, so ``04`` and ``+4`` read as ``4`` to the
+    data-shape step columns and to branching (an answer stored before
+    #3106, or by the import, may not be: :func:`stored_as_posted`). It keeps the digits as
     typed (``Decimal``, not ``float``, so ``1e23`` stays exact):
     :func:`app.services.text.decimal_text`, with no exponent and no
     trailing zeros.
@@ -388,7 +389,10 @@ def _apply_upserts(
             )
         ).scalar_one_or_none()
         if u.value == "":
-            if existing is not None:
+            # A stored answer already blank as posted (an import's
+            # whitespace or empty cell) is left alone: blanking it is no
+            # change, so it unstamps nothing (findings R2).
+            if existing is not None and stored_as_posted(existing.value, field):
                 blanked_assignment_ids.add(assignment.id)
                 if group_key is not None:
                     blanked_groups.add((assignment.instrument_id, group_key))
@@ -407,7 +411,7 @@ def _apply_upserts(
                     value=u.value,
                 )
             )
-        elif existing.value != u.value:
+        elif stored_as_posted(existing.value, field) != u.value:
             # ``saved_at`` is when the value last changed and ``version``
             # counts the changes (findings R6): a changed save moves both,
             # an unchanged one touches neither.
@@ -587,6 +591,22 @@ def compute_row_completion(
 class SaveResult:
     upsert_count: int
     errors: list[ValidationError]
+
+
+def stored_as_posted(value: str | None, field: InstrumentResponseField) -> str:
+    """A stored value in the form a post of it arrives in: line breaks
+    as LF (CRLF and a lone CR alike, as a browser renders and posts
+    them), stripped, and a number canonical. The reviewer surface renders this
+    and the change test compares it, so re-saving an answer stored in an
+    older form (before 19X's line breaks or #3106's numbers, or by the
+    responses import, which stores values as given) is not a change and
+    keeps its Submit stamp (findings R2, 2026-10-22). Rendering it
+    matters too: a browser posts a number box holding ``+4`` or a List
+    holding `` A`` as blank."""
+    text = (value or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if text and field.data_type in ("Integer", "Decimal"):
+        return canonical_number(field.data_type, text) or text
+    return text
 
 
 def _split_validated(

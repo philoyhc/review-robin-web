@@ -117,6 +117,7 @@ def serialize_by_instrument(
     identification: str = "raw",
     visible_only: bool = False,
     reviewer_identity: str = "name_email",
+    mark_submitted: bool = False,
 ) -> Iterable[tuple[str, ...]]:
     """Yield CSV rows for one instrument's wide-format extract.
 
@@ -164,6 +165,12 @@ def serialize_by_instrument(
       which can identify as surely as an email, headers kept;
       ``"name_email_profile"`` adds a ``ReviewerProfileLink`` column
       after ``ReviewerEmail``. The operator's extract never passes it.
+    - ``mark_submitted`` — add a ``Submitted`` column after
+      ``SubmittedAt``: ``TRUE`` when every answer on the row is
+      submitted, ``FALSE`` when any is not (a draft, or an edit after
+      Submit), blank with no answers. The observer download carries
+      drafts and marks them so (findings R4, author's ruling
+      2026-10-22); the operator's extract never passes it.
     """
 
     session_zone = resolve_session_timezone(review_session)
@@ -198,6 +205,7 @@ def serialize_by_instrument(
         row_filter=row_filter,
         tokenizer=tokenizer,
         reviewer_identity=level,
+        mark_submitted=mark_submitted,
     )
 
 
@@ -390,8 +398,11 @@ def _data_block(
     row_filter: Callable[[Assignment], bool] | None = None,
     tokenizer: ParticipantTokenizer | None = None,
     reviewer_identity: str = "name_email",
+    mark_submitted: bool = False,
 ) -> Iterable[tuple[str, ...]]:
     header = _header_row(review_session, fields)
+    if mark_submitted:
+        header = (*header, "Submitted")
     with_link = reviewer_identity == "name_email_profile"
     yield _with_profile_column(header, "ReviewerProfileLink") if with_link else header
     for assignment, row in _data_rows(
@@ -405,6 +416,10 @@ def _data_block(
         tokenizer=tokenizer,
         sort_by_reviewer_email=reviewer_identity != "name",
     ):
+        # Each row ends with its submitted state; only a marked
+        # download keeps it.
+        if not mark_submitted:
+            row = row[:-1]
         if reviewer_identity == "name":
             row = (row[0], "", "", "", "", *row[5:])
             if assignment.is_self_review:
@@ -611,6 +626,20 @@ def _assignment_row(
     values: list[str] = []
     saved_at = None
     submitted_at = None
+    # A row the import stored with no value, or only whitespace, is not
+    # an answer here either, as the collation statistics count it.
+    answered = [
+        responses[f]
+        for f in field_ids
+        if f in responses and (responses[f].value or "").strip()
+    ]
+    submitted_state = (
+        ""
+        if not answered
+        else "TRUE"
+        if all(r.submitted_at is not None for r in answered)
+        else "FALSE"
+    )
     for field_id in field_ids:
         response = responses.get(field_id)
         if response is None:
@@ -639,6 +668,7 @@ def _assignment_row(
         self_review,
         iso_in_zone(saved_at, session_zone) if saved_at else "",
         iso_in_zone(submitted_at, session_zone) if submitted_at else "",
+        submitted_state,
     )
 
 

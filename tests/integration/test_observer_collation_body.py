@@ -1324,3 +1324,52 @@ def test_collation_csv_archive_guard_holds_if_a_window_predicate_relaxes(
         _collation.lifecycle, "is_response_release_window_open", lambda s: True
     )
     assert client.get(url).status_code == 404
+
+
+def test_collation_csv_marks_an_unsubmitted_answer(
+    client: TestClient, db: Session
+) -> None:
+    """Findings R4 (author's ruling 2026-10-22): the observer download
+    carries drafts, which the page's statistics leave out, so each row
+    says whether its answers are submitted: ``Submitted`` TRUE when all
+    are, FALSE when any is a draft or an edit after Submit."""
+    import csv
+    import io
+
+    review_session = _make_session(client, db, code="col-csv-draft")
+    seeded = _seed_one_instrument(db, review_session)
+    _add_observer(db, review_session, email="alice@example.edu", cohort_rule=_MATH_RULE)
+    url = (
+        f"/me/sessions/{review_session.public_id}/collation/instruments/"
+        f"{seeded['instrument'].session_seq}.csv"
+    )
+
+    def table() -> dict[str, str]:
+        rows = list(csv.reader(io.StringIO(client.get(url).text)))
+        header = next(r for r in rows if r and r[0] == "ReviewerName")
+        data = rows[rows.index(header) + 1]
+        # The new column is last, and every row lines up with it.
+        assert header[-1] == "Submitted" and len(data) == len(header)
+        return dict(zip(header, data))
+
+    submitted = table()
+    assert submitted["Submitted"] == "TRUE"
+    assert submitted["SubmittedAt"]
+
+    response = db.execute(
+        select(Response).where(Response.assignment_id == seeded["assignment"].id)
+    ).scalar_one()
+    response.submitted_at = None
+    db.commit()
+
+    draft = table()
+    assert draft["Submitted"] == "FALSE"
+    assert draft["SubmittedAt"] == ""
+    assert list(draft.values()).count("4") == 1
+
+    # A row the import stored with no value, or only whitespace, is no
+    # answer.
+    for blank in (None, "   "):
+        response.value = blank
+        db.commit()
+        assert table()["Submitted"] == ""

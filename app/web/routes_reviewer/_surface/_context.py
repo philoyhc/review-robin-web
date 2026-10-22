@@ -344,7 +344,13 @@ def _surface_context(
         values: dict[int, str] = {}
         for field in fields:
             existing = response_rows.get((assignment.id, field.id))
-            value = (existing.value or "") if existing else ""
+            # In the form a Save posts, so an unedited re-save of an
+            # older or imported form is no change (findings R2).
+            value = (
+                responses_service.stored_as_posted(existing.value, field)
+                if existing
+                else ""
+            )
             # On a re-render after server-side validation, the user's
             # typed-but-invalid value (which never reached the DB) wins
             # so they can correct it in place.
