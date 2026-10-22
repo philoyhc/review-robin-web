@@ -470,6 +470,21 @@ def test_settings_import_keeps_both_card_links(db: Session) -> None:
     assert not result.errors, result.errors
 
 
+def test_a_zero_operand_is_a_value_not_blank(db: Session, client: TestClient) -> None:
+    """A numeric ``0`` is a value the card's text box shows as ``0``
+    (Codex on #3237): the import keeps it and the card hydrates it."""
+    rules = [_composite("link2", [_child({**_IS_A, "operand": 0})])]
+    operator, session = _seed_for_import(db, "e1-zero")
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", json.dumps(rules))
+
+    assert not apply_session_config(db, session, rows, user=operator).errors
+
+    _session, instrument = _session_with_tags(db, client, "e1-zero-decode")
+    _store_rules(db, instrument, rules)
+    state = decode_band1_state(instrument, db)
+    assert [rule["operand_value"] for rule in state["link2"]["rules"]] == ["0"]
+
+
 def _store_rules(db: Session, instrument: Instrument, rules: list[dict[str, object]]) -> None:
     rule_set = SessionRuleSet(
         session_id=instrument.session_id,

@@ -782,7 +782,7 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                     f"{link} rule {child_id!r} is case-sensitive; the card "
                     "compares ignoring case, and its next Save stores it so."
                 )
-            if operator not in _NO_OPERAND_OPS and not str(predicate.get("operand") or "").strip():
+            if operator not in _NO_OPERAND_OPS and not _operand_text(predicate).strip():
                 return (
                     f"{link} rule {child_id!r} has no value to compare with; "
                     "the card's next Save drops it."
@@ -844,11 +844,19 @@ def _build_match_rule(
     }
 
 
+def _operand_text(predicate: dict[str, Any]) -> str:
+    """A predicate's operand as the card's text box holds it: a numeric
+    ``0`` is the text ``0``, not blank (Codex on #3237); only a missing
+    or null operand is blank."""
+    operand = predicate.get("operand")
+    return "" if operand is None else str(operand)
+
+
 def _decode_match_rule(child: dict[str, Any]) -> dict[str, str]:
     predicate = child.get("predicate", {})
     engine_op = predicate.get("operator", "equals")
     ui_op = _ENGINE_TO_UI_OP.get(engine_op, "IS")
-    operand = predicate.get("operand", "") or ""
+    operand = _operand_text(predicate)
     field = str(predicate.get("field", ""))
     if engine_op in _TAG_OPERAND_OPS:
         return {
