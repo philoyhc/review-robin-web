@@ -907,8 +907,8 @@ pills.
 
 ### Decision
 
-*Proposed; the author rules on Open questions 1–4.* Two rows and no
-card:
+*The author accepted the recommendations, 2026-10-22 (Open questions).*
+Two rows and no card:
 1. **The title row:** the session name, then the rollup pill (`Draft`
    in the screenshot), then `Deadline: …` when there is a deadline.
 2. **The participant row:**
@@ -954,7 +954,8 @@ Taken 2026-10-22 at `5395f19`.
 2. **PR 2, the build:**
    - the two rows;
    - the card's removal;
-   - the shared row's order, as Open question 1 rules;
+   - the shared row's order on every participant page;
+   - the description-only cards on results and collation;
    - tests and specs.
 
    Must not change a pill's wording or color, or the role chips' links.
@@ -975,19 +976,13 @@ Taken 2026-10-22 at `5395f19`.
 
 ### Open questions
 
-The author decides each; my recommendation is first.
-1. **The own line before the role pills on the other participant
-   pages** (summary, not-open, results, collation): yes, in the shared
-   partial, so every page reads the same. The alternative is to reorder
-   on the reviewer surface only.
-2. **The help contact:** it stays on the title row, after the deadline.
-   The alternative is the end of the participant row.
-3. **The description-only cards** on results and collation: they lose
-   their card too, so every participant page drops it. The alternative
-   is to keep them.
-4. **The rollup pill's wording** (`Draft` / `Saved but not submitted` /
-   `Submitted`): unchanged. Beside the title it reads as the reviewer's
-   own status, which it is.
+All four answered by the author, 2026-10-22, on the recommendation:
+1. ~~The own line before the role pills on the other participant
+   pages~~: yes, in the shared partial, on every page.
+2. ~~The help contact~~: it stays on the title row, after the deadline.
+3. ~~The description-only cards on results and collation~~: they lose
+   their card too.
+4. ~~The rollup pill's wording~~: unchanged.
 
 ### Out of scope
 
@@ -997,6 +992,7 @@ The author decides each; my recommendation is first.
 
 ### Doc impact
 
-- `spec/reviewer-surface.md` — the page's header as two rows; the overview card retired; the role row's order (Item 11).
+- `spec/reviewer-surface.md` — the page's header as two rows; the overview card retired; the role row's order on every participant page (Item 11).
+- `spec/participant_model.md` — results and collation: the description without a card; the own line before the role pills (Item 11).
 - `spec/visual_style_rrw.md` — the status-card example no longer names the reviewer surface (Item 11).
 - `guide/todo_master.md` — Item 11 in the 19X entry (Item 11).
