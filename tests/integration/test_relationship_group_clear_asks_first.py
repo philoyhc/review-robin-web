@@ -493,6 +493,54 @@ def test_an_import_is_refused_with_the_count_then_goes_through(
     assert _responses(db) == 1
 
 
+def test_quick_setup_refuses_with_the_count_then_goes_through(
+    db: Session, client: TestClient
+) -> None:
+    """Findings S1 (author's ruling 2026-10-22): Quick Setup's
+    Relationships slot asks as the Setup card does. The card is locked
+    while answers exist, so a stale tab meets the refusal and only a
+    direct POST carries the count."""
+    from ._quick_setup_refusal import refusal
+
+    session = _seed(db, client, "rgc-quick-setup")
+    csv = (
+        b"ReviewerEmail,RevieweeEmail,PairContextTag1\n"
+        b"rae@example.edu,ann@example.edu,y\n"
+        b"rae@example.edu,bo@example.edu,x\n"
+        b"rae@example.edu,cy@example.edu,y\n"
+        b"rae@example.edu,di@example.edu,y\n"
+    )
+
+    def submit(path: str, field: str, extra: dict[str, str]):
+        return client.post(
+            f"/operator/sessions/{session.public_id}/quick-setup/{path}",
+            files={field: ("relationships.csv", csv, "text/csv")},
+            data={"confirm_replace": "true", **extra},
+            follow_redirects=False,
+        )
+
+    for path, field in (("relationships", "file"), ("submit-all", "relationships_file")):
+        refused = refusal(submit(path, field, {}))
+        assert (refused.kind, refused.reason) == ("relationships", "clears_group_answers")
+        assert "would clear 3 saved group answers" in refused.lead
+        assert _relationship(db, session.id, "Ann").tag_1 == "x"
+        assert _responses(db) == 4
+
+    # A count for another clear is refused again.
+    refused = refusal(
+        submit("submit-all", "relationships_file", {"acknowledge_response_loss": "2"})
+    )
+    assert refused.reason == "clears_group_answers"
+    assert _responses(db) == 4
+
+    accepted = submit(
+        "submit-all", "relationships_file", {"acknowledge_response_loss": "3"}
+    )
+    assert accepted.status_code == 303
+    assert _relationship(db, session.id, "Ann").tag_1 == "y"
+    assert _responses(db) == 1
+
+
 def test_counting_the_delete_leaves_loaded_rows_loaded(
     db: Session, client: TestClient, engine: Engine
 ) -> None:
