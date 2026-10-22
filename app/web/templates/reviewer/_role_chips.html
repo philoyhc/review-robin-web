@@ -21,25 +21,18 @@
 
    Optional: ``reviewer_self_fields`` (``views.reviewer_self_line_for``;
    the reviewer surface, the summary and the not-open page) or ``reviewee_self_fields`` (``views.reviewee_self_line_for``;
-   ``/results``) — the participant's own roster fields, inline after the
-   LAST pill so they never split the role pills of someone who holds
-   other roles too (``guide/participant_info.md`` Items 1, 3 and 4). #}
+   ``/results``) — the participant's own roster fields, leading the row
+   before the role pills (19X Item 11), so the pills stay together for
+   someone who holds other roles too (``guide/participant_info.md``
+   Items 1, 3 and 4). ``role_row_statuses`` (the reviewer surface):
+   ``{label, css}`` pills ending the row after a ``|``. #}
 {% from "_partials/profile_value.html" import profile_value with context %}
 {% if role_chips %}
   <div class="rs-role-nav">
-    {% for chip in role_chips %}
-      {% set label = chip.role | capitalize %}
-      {% if chip.active %}
-        <span class="pill pill-role-{{ chip.role }} rs-role-nav-active">{{ label }}</span>
-      {% elif chip.enabled %}
-        <a class="pill pill-role-{{ chip.role }} rs-role-nav-muted" href="{{ url(chip.target) }}">{{ label }}</a>
-      {% else %}
-        <span class="pill pill-role-{{ chip.role }} rs-role-nav-muted">{{ label }}</span>
-      {% endif %}
-    {% endfor %}
     {# One own-entry line per page: the reviewer's on the reviewer
        pages, the reviewee's on `/results` (Item 4), the observer's on
-       `/collation` (Item 5). The data attribute names whose it is. #}
+       `/collation` (Item 5). The data attribute names whose it is.
+       19X Item 11: it leads the row, before the role pills. #}
     {% if reviewer_self_fields %}
       {% set self_fields, self_role = reviewer_self_fields, "reviewer" %}
     {% elif reviewee_self_fields %}
@@ -61,6 +54,26 @@
             <span>{{ field.value }}</span>
           {%- endif -%}
         {%- endfor -%}
+      </span>
+    {% endif %}
+    {% for chip in role_chips %}
+      {% set label = chip.role | capitalize %}
+      {% if chip.active %}
+        <span class="pill pill-role-{{ chip.role }} rs-role-nav-active">{{ label }}</span>
+      {% elif chip.enabled %}
+        <a class="pill pill-role-{{ chip.role }} rs-role-nav-muted" href="{{ url(chip.target) }}">{{ label }}</a>
+      {% else %}
+        <span class="pill pill-role-{{ chip.role }} rs-role-nav-muted">{{ label }}</span>
+      {% endif %}
+    {% endfor %}
+    {# 19X Item 11 — the reviewer surface's instrument status pills end
+       the row, after a `|`; the two travel together when the row wraps. #}
+    {% if role_row_statuses %}
+      <span class="rs-role-nav-statuses">
+        <span class="rs-role-nav-sep" aria-hidden="true">|</span>
+        {% for status in role_row_statuses %}
+          <span class="pill {{ status.css }}">{{ status.label }}</span>
+        {% endfor %}
       </span>
     {% endif %}
   </div>

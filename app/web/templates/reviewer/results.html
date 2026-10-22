@@ -30,9 +30,7 @@
   {% include "reviewer/_role_chips.html" %}
 
   {% if session.description %}
-    <div class="card rs-status-panel">
-      <p class="rs-session-description">{{ session.description }}</p>
-    </div>
+    <p class="rs-session-description">{{ session.description }}</p>
   {% endif %}
 
   {% if sections %}

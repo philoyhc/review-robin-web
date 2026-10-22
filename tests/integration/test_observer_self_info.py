@@ -2,7 +2,7 @@
 
 `guide/participant_info.md` Item 5: the Observers page's "What observers
 see of their own entry" card and its save, the `Observers see:` readout,
-the observer's own line after the role pills on `/collation`, and the
+the observer's own line before the role pills on `/collation`, and the
 selection's Settings CSV row. The default is name and email; the tag
 starts off. The save is refused only when archived, the Observers
 roster's own gate.
@@ -149,14 +149,14 @@ def _info(html: str) -> str:
     return m.group(1)
 
 
-def test_collation_shows_the_observers_own_line_after_the_pills(
+def test_collation_shows_the_observers_own_line_before_the_pills(
     client: TestClient, db: Session
 ) -> None:
     rs = _session(client, db, "obi-collation")
     _alice(db, rs)
     html = client.get(f"/me/sessions/{rs.public_id}/collation").text
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert nav.index("rs-role-nav-active") < nav.index("data-observer-self-info")
+    assert nav.index("data-observer-self-info") < nav.index("rs-role-nav-active")  # 19X Item 11
     info = _info(html)
     assert "Alice Observer" in info
     assert "alice@example.edu" in info

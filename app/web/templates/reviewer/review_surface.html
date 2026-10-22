@@ -77,8 +77,18 @@
     </div>
   {% endif %}
 
+  {# 19X Item 11 — the header is two rows and no card. The title row:
+     the session name, the reviewer's rollup pill (Submitted / Saved but
+     not submitted / Draft), the deadline and the help contact. The
+     participant row (``_role_chips.html``): the reviewer's own line,
+     the role pills, then `|` and one pill per instrument. #}
   <div class="rs-page-header">
     <h1>{{ session.name }}</h1>
+    {% if page_statuses and session_status %}
+      <span class="pill {% if session_status == 'submitted' %}pill-success{% elif session_status == 'saved' %}pill-warning{% else %}pill-empty{% endif %}" data-rs-session-status>
+        {% if session_status == 'submitted' %}Submitted{% elif session_status == 'saved' %}Saved but not submitted{% else %}Draft{% endif %}
+      </span>
+    {% endif %}
     {% if session.deadline %}
       <span class="muted">Deadline: {{ session.deadline | format_datetime }}
         ({{ deadline_timezone_label }})</span>
@@ -88,62 +98,39 @@
     {% endif %}
   </div>
 
-  {# Role-navigator chips below the header. The operator preview
-     (preview_mode) gets no navigator — its links would lead to the
-     previewed reviewer's other surfaces — but a static `Reviewer`
-     pill, so the reviewer's own line (participant info Item 1) reads
-     on the row it reads on for the reviewer. #}
+  {# The operator preview (preview_mode) gets no navigator — its links
+     would lead to the previewed reviewer's other surfaces — but a
+     static `Reviewer` pill, so the reviewer's own line (participant
+     info Item 1) reads on the row it reads on for the reviewer. #}
   {% if preview_mode %}
     {% set role_chips = [{"role": "reviewer", "active": true, "enabled": false, "target": ""}] %}
   {% endif %}
+  {% set rows_ns = namespace(statuses=[]) %}
+  {% for ps in page_statuses or [] %}
+    {% set p = progress_pill(ps.state) %}
+    {% set rows_ns.statuses = rows_ns.statuses + [{"label": ps.label ~ ": " ~ p.label, "css": p.css}] %}
+  {% endfor %}
+  {% set role_row_statuses = rows_ns.statuses %}
   {% include "reviewer/_role_chips.html" %}
 
-  {# Reviewer-surface overview card — the session description, the
-     transient session-closed banner, and the per-page status pills,
-     rolled into one full-width card. Omitted only when there is
-     neither a description nor any status pills. #}
-  {% if session.description or page_statuses %}
-    <div class="card rs-status-panel">
-      {% if session.description %}
-        <p class="rs-session-description">{{ session.description }}</p>
-      {% endif %}
-      {% if rows and not any_accepting %}
-        <div class="banner banner-warning">
-          This session is no longer accepting responses.
-          {% if any_closed_with_hidden_values and any_closed_with_shown_values %}
-            Some of your previously saved values are hidden by the
-            operator's visibility setting; the rest remain visible in
-            read-only form.
-          {% elif any_closed_with_hidden_values %}
-            Your previously saved values are hidden by the operator's
-            visibility setting.
-          {% else %}
-            Your previously saved values remain visible below in
-            read-only form.
-          {% endif %}
-        </div>
-      {% endif %}
-      {% if page_statuses %}
-        <ul class="rs-page-status-pills">
-          {# Session-wide rollup pill — Submitted / Saved but not
-             submitted / Draft — leads the per-page pills on the
-             same row. #}
-          {% if session_status %}
-            <li>
-              <span class="pill {% if session_status == 'submitted' %}pill-success{% elif session_status == 'saved' %}pill-warning{% else %}pill-empty{% endif %}">
-                {% if session_status == 'submitted' %}Submitted{% elif session_status == 'saved' %}Saved but not submitted{% else %}Draft{% endif %}
-              </span>
-            </li>
-          {% endif %}
-          {% for ps in page_statuses %}
-            <li>
-              {% set p = progress_pill(ps.state) %}
-              <span class="pill {{ p.css }}">
-                {{ ps.label }}: {{ p.label }}
-              </span>
-            </li>
-          {% endfor %}
-        </ul>
+  {# The session description and the session-closed banner, under the
+     rows without a card. #}
+  {% if session.description %}
+    <p class="rs-session-description">{{ session.description }}</p>
+  {% endif %}
+  {% if rows and not any_accepting %}
+    <div class="banner banner-warning">
+      This session is no longer accepting responses.
+      {% if any_closed_with_hidden_values and any_closed_with_shown_values %}
+        Some of your previously saved values are hidden by the
+        operator's visibility setting; the rest remain visible in
+        read-only form.
+      {% elif any_closed_with_hidden_values %}
+        Your previously saved values are hidden by the operator's
+        visibility setting.
+      {% else %}
+        Your previously saved values remain visible below in
+        read-only form.
       {% endif %}
     </div>
   {% endif %}

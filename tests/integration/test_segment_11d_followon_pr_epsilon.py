@@ -270,12 +270,12 @@ def test_missing_required_renders_in_full_width_card(
         follow_redirects=False,
     ).text
     assert 'class="card rs-missing-card"' in body
-    # Card sits *below* the overview card, as its own full-width
-    # card — not inside it.
-    panel_open = body.find('class="card rs-status-panel"')
+    # Card sits below the header rows, as its own full-width card
+    # (19X Item 11 retired the overview card above it).
+    nav_open = body.find('class="rs-role-nav"')
     card_open = body.find('class="card rs-missing-card"')
-    assert panel_open >= 0 and card_open >= 0
-    assert card_open > panel_open
+    assert nav_open >= 0 and card_open >= 0
+    assert card_open > nav_open
 
 
 def test_missing_required_card_uses_two_column_list(

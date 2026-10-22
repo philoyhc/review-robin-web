@@ -4,7 +4,7 @@
 reports `Reviewers see:` (its roster count reads `Reviewers (N)`, a `|` then
 the populated columns), the
 Unlock panel's card stores the selection, and the reviewer surface and
-its preview show the reviewer's own fields after the role pills. With
+its preview show the reviewer's own fields before the role pills. With
 nothing stored: name, email and profile, tags off.
 """
 
@@ -221,7 +221,7 @@ def _info(html: str) -> str:
     return m.group(1)
 
 
-def test_the_surface_shows_the_reviewers_own_fields_after_the_pills(
+def test_the_surface_shows_the_reviewers_own_fields_before_the_pills(
     client: TestClient,
     db: Session,
     rae: AuthenticatedUser,
@@ -231,7 +231,7 @@ def test_the_surface_shows_the_reviewers_own_fields_after_the_pills(
     _activate(client, db, rs)
     html = make_client(rae).get(f"/me/sessions/{rs.public_id}").text
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
+    assert nav.index("data-reviewer-self-info") < nav.index("rs-role-nav-active")  # 19X Item 11
     info = _info(html)
     assert "Rae Reviewer" in info
     assert "rae@example.edu" in info
@@ -482,7 +482,7 @@ def test_duplicate_copies_all_three_selections(
 # ── Item 3: /summary and the pre-open page ───────────────────────────
 
 
-def test_the_summary_shows_the_line_after_the_pills(
+def test_the_summary_shows_the_line_before_the_pills(
     client: TestClient,
     db: Session,
     rae: AuthenticatedUser,
@@ -506,7 +506,7 @@ def test_the_summary_shows_the_line_after_the_pills(
     html = rae_client.get(f"/me/sessions/{rs.public_id}/summary").text
     assert "Your responses" in html, html[:400]
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
+    assert nav.index("data-reviewer-self-info") < nav.index("rs-role-nav-active")  # 19X Item 11
     info = _info(html)
     assert "Rae Reviewer" in info and "Cohort: Blue" in info
     assert "rae@example.edu" not in info
