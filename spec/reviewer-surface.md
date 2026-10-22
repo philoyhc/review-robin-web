@@ -329,9 +329,15 @@ reviewer's own page.
 The form carries a hidden `page_digest`, an HMAC of that ID set keyed
 by the session's secret `sessions.form_key`, which no page renders, so
 it reveals neither the IDs nor their count and nothing can be guessed
-against it. A Save or Submit carrying any answer whose
+against it. On a group-scoped instrument it also covers which of the
+page's rows share a group, since a group's answer is posted under one
+member's ordinal and fans out to that member's group as it stands at
+the post; it covers the grouping, not the tag values, so renaming a
+whole group changes nothing. A page with no group rows digests the ID
+set alone. A Save or Submit carrying any answer whose
 digest doesn't match the page as it stands now (a row joined or left
-the page since it rendered, or no digest at all) is refused with
+the page since it rendered, a member moved between groups, or no
+digest at all) is refused with
 **409**: the page re-renders with a "This page changed after you opened
 it" notice and the typed values listed bare to copy, and nothing is
 saved, rather than ordinals landing on the wrong rows. A post with no

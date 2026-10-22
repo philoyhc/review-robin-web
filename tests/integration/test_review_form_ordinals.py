@@ -301,8 +301,12 @@ def test_the_digest_is_keyed_by_a_secret_the_page_never_shows(
     assert session.form_key not in html
     rows = [SimpleNamespace(id=7), SimpleNamespace(id=9)]
     other_key = SimpleNamespace(form_key="0" * 64)
-    assert page_digest(session, rows) != page_digest(other_key, rows)
-    assert page_digest(session, rows) != page_digest(session, rows[:1])
+    assert page_digest(session, rows, group_keys={}) != page_digest(
+        other_key, rows, group_keys={}
+    )
+    assert page_digest(session, rows, group_keys={}) != page_digest(
+        session, rows[:1], group_keys={}
+    )
 
 
 def test_a_digest_that_is_not_hex_is_a_mismatch_not_an_error(
@@ -358,3 +362,198 @@ def test_the_service_still_drops_an_excluded_or_foreign_assignment(
     assert _rating(db, kept) == "5"
     assert _rating(db, excluded) is None
     assert _rating(db, foreign) is None
+
+
+def _tagged_group_page(db: Session, make_client, *, boundary: str = "reviewee"):
+    """Rae reviews a group instrument whose groups are a ``tag_1``: Ann and
+    Bo red, Cy and Di blue. ``boundary`` is ``"reviewee"`` (the reviewees'
+    tag) or ``"pair_context"`` (each Rae-and-reviewee relationship's tag,
+    the reviewees untagged). Returns the session, the tagged rows by name
+    (reviewees or relationships), the assignments by name and Rae's
+    client."""
+    from app.auth.identity import AuthenticatedUser
+    from app.db.models import Relationship, Reviewee, Reviewer, SessionOperator, User
+    from app.services import instruments as instruments_service
+
+    op = User(email="op-r1@example.edu", display_name="Op")
+    db.add(op)
+    db.flush()
+    session = ReviewSession(name="G", code="ordinals-regroup", created_by_user_id=op.id)
+    db.add(session)
+    db.flush()
+    db.add(SessionOperator(session_id=session.id, user_id=op.id, role="owner"))
+    group = instruments_service.create_instrument(
+        db,
+        review_session=session,
+        actor=op,
+        group_kind=instruments_service.encode_group_kind(
+            [("reviewee", "tag_1") if boundary == "reviewee" else ("pair_context", "1")]
+        ),
+    )
+    reviewer = Reviewer(session_id=session.id, name="Rae", email="rae@example.edu")
+    people = {
+        name: Reviewee(
+            session_id=session.id,
+            name=name,
+            email_or_identifier=f"{name.lower()}@example.edu",
+            tag_1=team if boundary == "reviewee" else None,
+        )
+        for name, team in (("Ann", "red"), ("Bo", "red"), ("Cy", "blue"), ("Di", "blue"))
+    }
+    db.add(reviewer)
+    db.add_all(people.values())
+    db.flush()
+    tagged = people
+    if boundary == "pair_context":
+        tagged = {
+            name: Relationship(
+                session_id=session.id,
+                reviewer_id=reviewer.id,
+                reviewee_id=person.id,
+                tag_1="red" if name in ("Ann", "Bo") else "blue",
+            )
+            for name, person in people.items()
+        }
+        db.add_all(tagged.values())
+        db.flush()
+    rows = {
+        name: Assignment(
+            session_id=session.id,
+            reviewer_id=reviewer.id,
+            reviewee_id=person.id,
+            instrument_id=group.id,
+        )
+        for name, person in people.items()
+    }
+    db.add_all(rows.values())
+    session.status = "ready"
+    db.commit()
+    rae = make_client(
+        AuthenticatedUser(principal_id="rae", email="rae@example.edu", name="Rae", provider="aad")
+    )
+    return session, tagged, rows, rae
+
+
+def _rendered_form(rae, session: ReviewSession) -> dict[str, str]:
+    html = rae.get(f"/me/sessions/{session.public_id}/1").text
+    form = {
+        f"response[{n}][{key}]": "4"
+        for n, key in _ANSWER_NAME.findall(html)
+        if key == "rating"
+    }
+    form["page_digest"] = _DIGEST.search(html).group(1)
+    return form
+
+
+def test_a_group_page_s_rendered_form_posts_back_unchanged(
+    db: Session, make_client
+) -> None:
+    """The digest the page renders is the one a post recomputes: with
+    nothing changed, the form saves, every member taking its group's
+    answer. Guards render and post computing the group keys alike."""
+    session, _people, rows, rae = _tagged_group_page(db, make_client)
+    form = _rendered_form(rae, session)
+    assert len(form) == 3  # two group rows and the digest
+
+    response = rae.post(
+        f"/me/sessions/{session.public_id}/1/save", data=form, follow_redirects=False
+    )
+
+    assert response.status_code == 303, response.text
+    assert [_rating(db, a) for a in rows.values()] == ["4", "4", "4", "4"]
+
+
+def test_a_stale_submit_after_a_regroup_is_refused(db: Session, make_client) -> None:
+    """Submit carries the page's answers too, under the same digest."""
+    session, people, rows, rae = _tagged_group_page(db, make_client)
+    form = _rendered_form(rae, session)
+    people["Ann"].tag_1 = "blue"
+    db.commit()
+
+    response = rae.post(
+        f"/me/sessions/{session.public_id}/submit?page=1",
+        data=form,
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 409
+    assert [_rating(db, a) for a in rows.values()] == [None, None, None, None]
+
+
+def test_a_relationship_tag_regroup_is_refused(db: Session, make_client) -> None:
+    """On a pair-context boundary the groups come from each pair's
+    relationship tag, and a change there regroups just as a reviewee tag
+    does."""
+    session, relationships, rows, rae = _tagged_group_page(
+        db, make_client, boundary="pair_context"
+    )
+    form = _rendered_form(rae, session)
+    relationships["Ann"].tag_1 = "blue"
+    db.commit()
+
+    response = rae.post(
+        f"/me/sessions/{session.public_id}/1/save", data=form, follow_redirects=False
+    )
+
+    assert response.status_code == 409
+    assert [_rating(db, a) for a in rows.values()] == [None, None, None, None]
+
+
+def test_a_form_from_before_a_regroup_is_refused(db: Session, make_client) -> None:
+    """Findings R1 (2026-10-22): the page's rows are the same before and
+    after Ann moves from red to blue, but a group's answer is fanned out
+    to the poster's group as it stands now. The stale form would put
+    blue's answer on Ann and lose red's, so it is refused."""
+    session, people, rows, rae = _tagged_group_page(db, make_client)
+    html = rae.get(f"/me/sessions/{session.public_id}/1").text
+    form = {
+        f"response[{n}][{key}]": "4"
+        for n, key in _ANSWER_NAME.findall(html)
+        if key == "rating"
+    }
+    assert len(form) == 2  # one row per group
+    form["page_digest"] = _DIGEST.search(html).group(1)
+
+    people["Ann"].tag_1 = "blue"
+    db.commit()
+    response = rae.post(
+        f"/me/sessions/{session.public_id}/1/save", data=form, follow_redirects=False
+    )
+
+    assert response.status_code == 409
+    assert "This page changed after you opened it" in response.text
+    assert [_rating(db, a) for a in rows.values()] == [None, None, None, None]
+    # The page as it stands now renders a digest the stale one is not.
+    fresh = rae.get(f"/me/sessions/{session.public_id}/1").text
+    assert _DIGEST.search(fresh).group(1) != form["page_digest"]
+
+
+def test_renaming_a_whole_group_keeps_the_digest(db: Session, make_client) -> None:
+    """The digest covers who shares a group, not the tag's spelling: red
+    becoming crimson for both its members leaves every answer landing
+    where it did."""
+    session, people, _rows, rae = _tagged_group_page(db, make_client)
+    before = _DIGEST.search(rae.get(f"/me/sessions/{session.public_id}/1").text).group(1)
+    people["Ann"].tag_1 = people["Bo"].tag_1 = "crimson"
+    db.commit()
+    after = _DIGEST.search(rae.get(f"/me/sessions/{session.public_id}/1").text).group(1)
+    assert after == before
+
+
+def test_a_page_with_no_group_rows_digests_as_before(
+    db: Session, client: TestClient
+) -> None:
+    """A page with no group instrument keeps the digest 19V gave it, so a
+    tab open across the R1 fix is not refused."""
+    import hashlib
+    import hmac
+
+    session = _session_alice_reviews(db, client)
+    ids = [a.id for a in _assignments(db, session)]
+    legacy = hmac.new(
+        session.form_key.encode("ascii"),
+        ("rrw-page-digest|" + ",".join(str(i) for i in ids)).encode("ascii"),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+    html = client.get(f"/me/sessions/{session.public_id}/1").text
+    assert _DIGEST.search(html).group(1) == legacy

@@ -46,6 +46,10 @@ def answer_form(
         m = matches[key]
         out[f"response[{ordinals[int(m['aid'])]}][{m['key']}]" if m else key] = value
     out[responses_service.PAGE_DIGEST_FIELD] = responses_service.page_digest(
-        review_session, page_rows
+        review_session,
+        page_rows,
+        group_keys=responses_service.group_keys(
+            db, assignments=page_rows, session_id=review_session.id
+        ),
     )
     return out

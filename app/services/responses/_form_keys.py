@@ -18,6 +18,13 @@ land on the wrong row, so it is refused. The digest is keyed by the
 session's own ``form_key``, a random secret never rendered or exported,
 so it reveals neither the IDs nor their count, and can't be brute-forced
 for anything the page hides.
+
+On a group instrument the digest also covers which of the page's rows
+share a group (findings R1, 2026-10-22). A group's answer is posted
+under one member's ordinal and fanned out to that member's group as it
+stands at the post, so a regroup that keeps the page's rows would
+otherwise put one group's answer on another. A page with no group rows
+digests exactly as before.
 """
 
 from __future__ import annotations
@@ -25,7 +32,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -63,11 +70,26 @@ def answer_ordinals(assignment_ids: Sequence[int]) -> dict[int, int]:
     return {aid: n for n, aid in enumerate(assignment_ids, start=1)}
 
 
-def page_digest(review_session: ReviewSession, rows: Sequence[Assignment]) -> str:
-    """A digest of one page's assignment IDs in ID order, keyed by the
-    session's secret ``form_key``. A row joining or leaving the page
-    changes it."""
+def page_digest(
+    review_session: ReviewSession,
+    rows: Sequence[Assignment],
+    *,
+    group_keys: Mapping[int, tuple[str, ...]],
+) -> str:
+    """A digest of one page's assignment IDs in ID order, and of how the
+    group rows among them group, keyed by the session's secret
+    ``form_key``. A row joining or leaving the page changes it, and so
+    does a member moving between groups. ``group_keys`` is
+    ``responses.group_keys`` over the page's rows (or any superset)."""
     message = "rrw-page-digest|" + ",".join(str(a.id) for a in rows)
+    groups: dict[tuple[int, tuple[str, ...]], list[int]] = {}
+    for a in rows:
+        if a.id in group_keys:
+            groups.setdefault((a.instrument_id, group_keys[a.id]), []).append(a.id)
+    if groups:
+        message += "|groups|" + ";".join(
+            ",".join(str(i) for i in ids) for ids in sorted(groups.values())
+        )
     return hmac.new(
         review_session.form_key.encode("ascii"),
         message.encode("ascii"),
@@ -76,7 +98,11 @@ def page_digest(review_session: ReviewSession, rows: Sequence[Assignment]) -> st
 
 
 def digest_matches(
-    posted: str | None, review_session: ReviewSession, rows: Sequence[Assignment]
+    posted: str | None,
+    review_session: ReviewSession,
+    rows: Sequence[Assignment],
+    *,
+    group_keys: Mapping[int, tuple[str, ...]],
 ) -> bool:
     """Whether a posted digest is the page's. Anything not shaped like a
     digest is a mismatch, before any comparison: ``hmac.compare_digest``
@@ -84,5 +110,6 @@ def digest_matches(
     if not posted or not _DIGEST_SHAPE.fullmatch(posted):
         return False
     return hmac.compare_digest(
-        posted.encode("ascii"), page_digest(review_session, rows).encode("ascii")
+        posted.encode("ascii"),
+        page_digest(review_session, rows, group_keys=group_keys).encode("ascii"),
     )
