@@ -8,8 +8,9 @@ would navigate to the host's 404 rather than RRW. These rules find one:
 
 - **B1.** A ``goto`` or ``to_have_url`` argument is ``app_url(...)``, or
   is built from a page's own ``.url`` (already under the mount). A name
-  passed there counts as its assignment does. A compiled pattern passed
-  to ``to_have_url`` is a search, not a path, and is left alone.
+  passed there counts as its assignment does. A ``re.compile(...)``
+  pattern passed to ``to_have_url`` is a search, not a path, and is left
+  alone; any other call is checked like a path.
 - **B2.** No ``href`` asserted through ``to_have_attribute`` is a
   root-path literal.
 - **B3.** No script string assigns ``window.location`` a root-path
@@ -38,6 +39,17 @@ def _is_app_url(node: ast.AST) -> bool:
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
         and node.func.id == "app_url"
+    )
+
+
+def _is_compiled_pattern(node: ast.AST) -> bool:
+    """``re.compile(...)``, the one call ``to_have_url`` may take unchecked."""
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "compile"
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "re"
     )
 
 
@@ -91,7 +103,7 @@ def offences(source: str) -> list[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.args:
             method, arg = node.func.attr, node.args[0]
-            if method == "goto" or (method == "to_have_url" and not isinstance(arg, ast.Call)):
+            if method == "goto" or (method == "to_have_url" and not _is_compiled_pattern(arg)):
                 if not _navigable(arg, bound):
                     found.append(f"B1 line {node.lineno}: {ast.unparse(arg)}")
             if (
@@ -137,6 +149,8 @@ def test_browser_tests_navigate_under_the_mount(path: Path) -> None:
         ('page.goto(f"/operator/sessions/{sid}")', "B1"),
         ('PAGE = "/about"\npage.goto(PAGE)', "B1"),
         ('expect(page).to_have_url("/operator/sessions")', "B1"),
+        ('expect(page).to_have_url(str("/operator/sessions"))', "B1"),
+        ("expect(page).to_have_url(build_url(sid))", "B1"),
         ('expect(link).to_have_attribute("href", "/operator/sessions")', "B2"),
         ('page.evaluate("window.location.href = \'/about\'")', "B3"),
         ('page.evaluate(f"window.location.href = {MISSING!r}")', "B3"),
