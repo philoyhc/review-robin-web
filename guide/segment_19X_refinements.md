@@ -1124,3 +1124,79 @@ frame later, so the row never resizes inside its own callback.
 
 - `spec/reviewer-surface.md` — the `|` drops when the pills wrap below the role pills; the `.rs-role-nav-statuses-wrapped` rules (Item 12).
 - `guide/todo_master.md` — Items 10–12 in the 19X entry (Item 12).
+
+## Item 13 — The session description moves up to the session name
+
+### Opportunity
+
+The author, 2026-10-22, after the browser check of Item 12: the
+description sits under the participant row, away from the session name
+it describes. "Session name and description should be closer to each
+other."
+
+### Decision
+
+The description (`p.rs-session-description`) renders directly under the
+title row, above the participant row, on all three participant pages:
+the reviewer surface, `/results` and `/collation`. Since Item 11 they
+share one header shape, so they move together. The session-closed banner
+stays under the participant row. No CSS changes: the gaps between the
+three stay as they were.
+
+Rejected: *moving it on the reviewer surface alone*. That would split a
+header shape the three pages share.
+
+### Blast radius (measured)
+
+Taken 2026-10-22 at `e548ce6`: three templates
+(`grep -rln "rs-session-description" app/web/templates/reviewer` →
+`review_surface.html`, `results.html`, `collation.html`), two test files
+that pin the order, one spec (`spec/reviewer-surface.md` §3–4 and the
+CSS list; `spec/participant_model.md` does not place the description).
+
+### PR ladder
+
+1. **One PR:** the plan entry, the three templates, the tests and the
+   spec.
+
+### Definition of done
+
+- On all three pages, the description comes after the title row and
+  before the participant row (integration tests in
+  `tests/integration/test_segment_11d_followon_pr_beta.py` and
+  `tests/integration/test_me_results_collation_placeholders.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.13` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- The spacing between the rows, unchanged.
+
+### Status
+
+**Closed 2026-10-22, in one PR.** As planned, plus a test that the
+description follows the title row directly and the closed banner stays
+under the participant row.
+
+**Reads:**
+- **`diff-reviewer`**, one read: no high findings.
+  - Acted on: this Status (M1); the banner and directly-under test (L2);
+    stale comments in `test_segment_11d_pr_c.py`, `results.html`,
+    `_role_chips.html` and the spec's role-strip section (L4–L6).
+  - L3, a preview-mode order test, not added: the template has no
+    preview branch around the description.
+- **`spec-writer`** at the close: one stale line in
+  `spec/reviewer-surface.md`'s role-strip section; flagged a stale
+  `base.html` comment and doubled blank lines, both fixed.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the page header as title row, description, participant row; the closed banner alone under them; the `.rs-session-description` CSS entry (Item 13).
+- `guide/todo_master.md` — Items 10–13 in the 19X entry (Item 13).

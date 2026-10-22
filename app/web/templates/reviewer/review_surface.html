@@ -81,7 +81,8 @@
      the session name, the reviewer's rollup pill (Submitted / Saved but
      not submitted / Draft), the deadline and the help contact. The
      participant row (``_role_chips.html``): the reviewer's own line,
-     the role pills, then `|` and one pill per instrument. #}
+     the role pills, then `|` and one pill per instrument. 19X Item 13:
+     the session description sits between them, by the session name. #}
   <div class="rs-page-header">
     <h1>{{ session.name }}</h1>
     {% if page_statuses and session_status %}
@@ -97,6 +98,9 @@
       <span class="muted">Questions? Contact {{ session.help_contact }}</span>
     {% endif %}
   </div>
+  {% if session.description %}
+    <p class="rs-session-description">{{ session.description }}</p>
+  {% endif %}
 
   {# The operator preview (preview_mode) gets no navigator — its links
      would lead to the previewed reviewer's other surfaces — but a
@@ -113,11 +117,7 @@
   {% set role_row_statuses = rows_ns.statuses %}
   {% include "reviewer/_role_chips.html" %}
 
-  {# The session description and the session-closed banner, under the
-     rows without a card. #}
-  {% if session.description %}
-    <p class="rs-session-description">{{ session.description }}</p>
-  {% endif %}
+  {# The session-closed banner, under the rows without a card. #}
   {% if rows and not any_accepting %}
     <div class="banner banner-warning">
       This session is no longer accepting responses.

@@ -1,7 +1,7 @@
 {# Reviewee results surface — ``/me/sessions/{id}/results``.
 
-   Read-only mirror of the reviewer's summary page. The header /
-   role-chip strip / session-description card stay identical;
+   Read-only mirror of the reviewer's summary page. The title row /
+   session description / role-chip strip stay identical;
    the body is one section per instrument the operator has
    opened up to the reviewee audience (per
    ``app/services/visibility_policies.py::resolve_mode``), in that
@@ -27,11 +27,11 @@
     {% endif %}
   </div>
 
-  {% include "reviewer/_role_chips.html" %}
-
   {% if session.description %}
     <p class="rs-session-description">{{ session.description }}</p>
   {% endif %}
+
+  {% include "reviewer/_role_chips.html" %}
 
   {% if sections %}
     {% for section in sections %}

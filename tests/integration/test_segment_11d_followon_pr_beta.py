@@ -111,8 +111,9 @@ def test_the_header_is_two_rows_and_no_card(
 ) -> None:
     """19X Item 11: the title row holds the session name, the rollup pill
     and the deadline; the participant row the reviewer's own line, the
-    role pill, a `|` and the instrument pills, in that order; the
-    description follows as a paragraph, and no overview card is left."""
+    role pill, a `|` and the instrument pills, in that order; no
+    overview card is left. 19X Item 13: the description sits between the
+    two rows, by the session name."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -133,7 +134,13 @@ def test_the_header_is_two_rows_and_no_card(
     assert title.index("<h1>") < title.index("data-rs-session-status") < title.index("Deadline:")
     assert "Draft" in title
 
-    row = _between(body, 'class="rs-role-nav"', '<p class="rs-session-description"')
+    description = '<p class="rs-session-description">Some context for the reviewers.</p>'
+    assert (
+        body.index('class="rs-page-header"')
+        < body.index(description)
+        < body.index('class="rs-role-nav"')
+    )
+    row = _between(body, 'class="rs-role-nav"', "</div>")
     order = [
         row.index("data-reviewer-self-info"),
         row.index("rs-role-nav-active"),
@@ -142,7 +149,6 @@ def test_the_header_is_two_rows_and_no_card(
     ]
     assert order == sorted(order), order
     assert 'aria-hidden="true">|</span>' in row
-    assert '<p class="rs-session-description">Some context for the reviewers.</p>' in body
 
 
 def test_no_deadline_and_no_description_leave_their_parts_out(
@@ -168,6 +174,38 @@ def test_no_deadline_and_no_description_leave_their_parts_out(
     assert "Deadline:" not in _between(body, 'class="rs-page-header"', "</div>")
     assert 'class="rs-session-description"' not in body
     assert "rs-status-panel" not in body
+
+
+def test_the_description_is_under_the_title_and_the_closed_banner_under_the_rows(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """19X Item 13: the description follows the title row directly; the
+    session-closed banner stays under the participant row."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-closed",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+        description="Some context for the reviewers.",
+    )
+    review_session.deadline = datetime.now(UTC) - timedelta(minutes=1)
+    db.flush()
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
+    header = body.index('class="rs-page-header"')
+    title_end = body.index("</div>", header) + len("</div>")
+    description = body.index('<p class="rs-session-description">')
+    assert body[title_end:description].strip() == ""
+    assert (
+        description
+        < body.index('class="rs-role-nav"')
+        < body.index('class="banner banner-warning"')
+    )
+    assert "no longer accepting responses" in body
 
 
 def test_no_assignments_leave_no_separator_and_no_pills(
