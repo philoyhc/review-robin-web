@@ -679,7 +679,9 @@ clear alone detours it ("Reconcile + regenerate").
 card's Save, a reviewee tag edit, and every relationship create, edit,
 import, Delete all, bulk Inactivate, bulk Activate and bulk Delete
 refuse and persist nothing, then re-offer the Save with the count and a
-`Yes, clear them` tick (`spec/lifecycle.md` §3.2). A change that clears
+`Yes, clear them` tick (`spec/lifecycle.md` §3.2). Quick Setup's
+Relationships slot refuses with the count too, and sends the operator to
+the Relationships page, since its card is locked whenever answers exist. A change that clears
 nothing, such as a group that only shrank, never asks. The service
 parameter `acknowledged_loss` on `responses.clear_changed_groups` is
 that gate; `None`, its default, deletes without asking; Generate asks at its route, as above.

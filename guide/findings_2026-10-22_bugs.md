@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 14 of 19 rows (O1, R1, R2, R4, L1 done); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 13 of 19 rows (O1, R1, R2, R4, L1, S1 done); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -71,7 +71,7 @@ None.
   every operator's `bundle.zip` and `responses_bundle.zip`; `2026/Q1`
   makes a folder; `:` or `*` breaks Windows extraction. *Reproduced.*
   Code: sanitize the code once, as the slugs already are.
-- **S1** — **Ruled 2026-10-22: ask, as the Relationships Setup card does.** **Quick Setup's Relationships slot deletes saved group answers
+- ~~**S1**~~ — **Done in #3232**: the slot refuses with the count unless `acknowledge_response_loss` carries it (`spec/quick_setup_card_spec.md` "Result reporting"; `tests/integration/test_relationship_group_clear_asks_first.py`). **Ruled 2026-10-22: ask, as the Relationships Setup card does.** **Quick Setup's Relationships slot deletes saved group answers
   without asking.** `_save_slot` passes no `acknowledged_loss`
   (`app/web/routes_operator/_quick_setup.py:938`), so on a reverted
   session with responses a Relationships file plus the replace tick

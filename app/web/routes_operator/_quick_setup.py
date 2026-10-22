@@ -41,6 +41,7 @@ from app.services import (
     date_formatting,
     operator_settings,
     relationships as relationships_service,
+    responses as responses_service,
     scheduled_events,
     session_config_io,
     session_owners,
@@ -418,7 +419,8 @@ class _SlotFailure:
     problem (``views.roster_problem_details``), the instruments a
     Settings file would delete — and none for every other reason.
     ``count`` is how many instruments that is, the value the re-offered
-    tick carries (findings S4)."""
+    tick carries (findings S4), or how many saved group answers a
+    Relationships file would clear (findings S1)."""
 
     reason: str
     details: list[str] = field(default_factory=list)
@@ -654,6 +656,7 @@ async def _run_quick_setup_contents(
                 if replacing
                 else None
             ),
+            acknowledged_group_loss=acknowledged_loss(acknowledge_response_loss),
         )
     except _UnitRefused as exc:
         return exc.refusal
@@ -824,6 +827,7 @@ def _save_uploads(
     staged: list[_StagedSlot],
     correlation_id: str,
     acknowledged_deletions: int | None = None,
+    acknowledged_group_loss: int = 0,
 ) -> None:
     """Save every checked file in one ``unit_of_work.atomic``: the
     per-entity savers nest inside it, so nothing commits until the last
@@ -849,6 +853,14 @@ def _save_uploads(
                 for field_name in sessions.FEATURE_TOGGLE_FOR_ROSTER.values()
             }
             populated: list[str] = []
+            # A Settings file in the same submit rebuilds every instrument,
+            # which deletes every response after this slot's save, so
+            # Relationships has nothing to ask about (the read of S1).
+            group_ack = (
+                None
+                if any(item.kind == "settings" for item in staged)
+                else acknowledged_group_loss
+            )
             for item in staged:
                 current = item.kind
                 saved = _save_slot(
@@ -858,6 +870,7 @@ def _save_uploads(
                     user=user,
                     correlation_id=correlation_id,
                     acknowledged_deletions=acknowledged_deletions,
+                    acknowledged_group_loss=group_ack,
                 )
                 if saved:
                     populated.append(item.kind)
@@ -888,9 +901,17 @@ def _save_slot(
     user: User,
     correlation_id: str,
     acknowledged_deletions: int | None = None,
+    acknowledged_group_loss: int | None = 0,
 ) -> int:
     """Save one checked slot; returns how many roster rows it saved
-    (0 for Settings)."""
+    (0 for Settings).
+
+    Relationships asks before clearing saved group answers, as its Setup
+    card does (findings S1, author's ruling 2026-10-22): a file that
+    would clear them is refused with the count unless
+    ``acknowledged_group_loss`` is that count. The card is locked
+    whenever answers exist, so only a stale tab or a direct POST meets
+    the refusal, and only a direct POST can carry the count."""
     common = {
         "session": review_session,
         "user": user,
@@ -935,12 +956,21 @@ def _save_slot(
                     ),
                 )
             )
-        relationships_service.save_relationships(
-            db,
-            rows=result.rows,
-            field_labels_captured=result.field_labels,
-            **common,
-        )
+        try:
+            relationships_service.save_relationships(
+                db,
+                rows=result.rows,
+                field_labels_captured=result.field_labels,
+                acknowledged_loss=acknowledged_group_loss,
+                **common,
+            )
+        except responses_service.GroupAnswersWouldClear as exc:
+            raise _UnitRefused(
+                _SlotRefusal(
+                    "relationships",
+                    _SlotFailure("clears_group_answers", count=exc.count),
+                )
+            ) from exc
         return len(result.rows)
     else:  # settings
         lifecycle.require_editable(db, review_session)
@@ -1115,12 +1145,15 @@ async def quick_setup_relationships_submit(
     request: Request,
     file: UploadFile = File(...),
     confirm_replace: str | None = Form(default=None),
+    acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
     db: Session = Depends(get_db),
 ) -> HTMLResponse | RedirectResponse:
     """Quick Setup card slot 3 (Relationships). Checked against the
-    session's current rosters, since no roster file rides with it."""
+    session's current rosters, since no roster file rides with it.
+    ``acknowledge_response_loss`` is the count of group answers it may
+    clear (findings S1)."""
 
     return await _single_slot(
         "relationships",
@@ -1130,6 +1163,7 @@ async def quick_setup_relationships_submit(
         user=user,
         db=db,
         confirm_replace=confirm_replace,
+        acknowledge_response_loss=acknowledge_response_loss,
     )
 
 

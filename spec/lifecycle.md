@@ -373,8 +373,11 @@ Generate, Rehydrate, and every other service caller that is not an
 operator Save. The cascade gate above never applies here, and a
 reviewee delete only shrinks groups, so it keeps its own gate unchanged.
 
-Ten routes carry it. Surfaces and ticks are in `spec/setup_pages.md`
+Twelve routes carry it. Surfaces and ticks are in `spec/setup_pages.md`
 § *Saves that clear group answers* and `spec/instruments.md` § *Action row*.
+Quick Setup's Relationships slot refuses with its own sentence and no
+tick, since its card is locked whenever answers exist
+(`spec/quick_setup_card_spec.md` "Result reporting").
 
 | Route | Refusal |
 |---|---|
@@ -385,6 +388,7 @@ Ten routes carry it. Surfaces and ticks are in `spec/setup_pages.md`
 | `POST …/relationships/import` | 400, upload card re-rendered |
 | `POST …/relationships/delete-all` | 400, Danger Zone re-rendered; the page's own form sends the count its tick named, so this is a post with no count or a stale one |
 | `POST …/relationships/bulk-inactivate`, `bulk-reactivate`, `bulk-delete` | 400, page re-rendered with the selection kept |
+| `POST …/quick-setup/submit-all` and `…/quick-setup/relationships` | 422, Session Home re-rendered with the slot's banner; no tick |
 
 ### 3.3 `_require_validated_or_ready(session)`
 

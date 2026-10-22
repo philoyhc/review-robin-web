@@ -251,6 +251,15 @@ def build_quick_setup_context(
         and error_count > 0
         else 0
     )
+    # The group answers a refused Relationships file would clear: named,
+    # with no tick, since the card is locked whenever they exist
+    # (findings S1).
+    _clear_count = (
+        error_count
+        if error_kind == "relationships"
+        and error_reason == "clears_group_answers"
+        else 0
+    )
 
     def _error_for(slot_key: str) -> str | None:
         if error_kind != slot_key:
@@ -259,7 +268,7 @@ def build_quick_setup_context(
             slot_key,
             error_reason,
             has_details=bool(error_details),
-            count=_deletion_count,
+            count=_deletion_count or _clear_count,
         )
 
     def _reason_for(slot_key: str) -> str | None:
@@ -516,6 +525,10 @@ def _quick_setup_error_message(
     - ``"deletes_instruments"`` — a valid Settings file would delete
       ``count`` instruments it does not name (findings S4). The banner
       lists them under this sentence and re-offers the tick.
+    - ``"clears_group_answers"`` — a Relationships file would clear
+      ``count`` saved group answers (findings S1). No tick: the card is
+      locked whenever answers exist, so the sentence sends the operator
+      to the Relationships page, which asks.
     - ``"refused"`` — the Create page's code for a staged file it
       refused (findings O7): its lines are not carried, so the sentence
       sends the operator back to Quick Setup to see them.
@@ -544,6 +557,14 @@ def _quick_setup_error_message(
             f"The {label.lower()} file was refused, so none of the files "
             "uploaded with the new session were saved. Upload them again "
             "in Quick Setup to see why."
+        )
+    if reason == "clears_group_answers":
+        one = count == 1
+        return (
+            f"Nothing was imported. This relationships file clears {count} "
+            f"saved response{'' if one else 's'} on groups whose members it "
+            "changes. Upload it on the Relationships page, which asks "
+            f"before clearing {'it' if one else 'them'}."
         )
     if reason == "deletes_instruments" and slot_key == "settings" and count:
         one = count == 1
