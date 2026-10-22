@@ -329,3 +329,59 @@ def test_an_include_change_is_audited(db: Session) -> None:
     assert len(events) == 1
     assert events[0].detail["counts"]["include_changed"] == 1
 
+
+
+def test_the_blank_boundary_group_is_never_the_reviewers_own(
+    db: Session,
+) -> None:
+    """Findings E2, ruled 2026-10-22: the catch-all group of pairs with a
+    blank boundary value holds the reviewer's own pair, but it is every
+    unrelated (or untagged) reviewee at once, so it never counts as the
+    reviewer's group. A real group they share still does."""
+    user = User(email="op-e2@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(
+        name="E2", code="e2", created_by_user_id=user.id, self_reviews_active=True
+    )
+    db.add(review_session)
+    db.flush()
+    db.add(Reviewer(session_id=review_session.id, name="Sam", email="sam@example.edu"))
+    db.add_all(
+        [
+            Reviewee(
+                session_id=review_session.id,
+                name=name,
+                email_or_identifier=email,
+                tag_1=tag,
+            )
+            for name, email, tag in (
+                ("Sam", "sam@example.edu", None),
+                ("Zoe", "zoe@example.edu", None),
+                ("Kit", "kit@example.edu", "TeamB"),
+            )
+        ]
+    )
+    db.flush()
+    instrument = ensure_default_instrument(db, review_session)
+    instrument.group_kind = "r1"
+    db.flush()
+
+    assignments.replace_assignments(
+        db, review_session=review_session, user=user, correlation_id="e2"
+    )
+
+    rows = _rows_by_reviewee(db, instrument)
+    assert rows["Sam"].is_self_review is False
+    assert rows["Zoe"].is_self_review is False
+    assert rows["Kit"].is_self_review is False
+
+    sam_own = db.execute(
+        select(Reviewee).where(
+            Reviewee.session_id == review_session.id, Reviewee.name == "Sam"
+        )
+    ).scalar_one()
+    reviewees_service.update_reviewee(db, reviewee=sam_own, tag_1="TeamB", user=user)
+    rows = _rows_by_reviewee(db, instrument)
+    assert rows["Kit"].is_self_review is True
+    assert rows["Zoe"].is_self_review is False
