@@ -27,11 +27,12 @@
     {% endif %}
   </div>
 
-  {% include "reviewer/_role_chips.html" %}
-
   {% if session.description %}
     <p class="rs-session-description">{{ session.description }}</p>
   {% endif %}
+
+  {% include "reviewer/_role_chips.html" %}
+
 
   {% if sections %}
     {% for section in sections %}

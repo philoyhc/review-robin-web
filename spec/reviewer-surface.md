@@ -128,7 +128,8 @@ Top-to-bottom, the page renders:
    absent for one who resolves none.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
    reuses this template); rendered as `.banner.banner-info`.
-3. **Page header** — two rows and no card.
+3. **Page header** — the title row, the session description and the
+   participant row, in that order, with no card.
    - The **title row** (`.rs-page-header`, a flex row) holds, in order:
      the session name as H1; the **session-wide rollup pill**
      (`data-rs-session-status`; `Submitted` / `Saved but not submitted` /
@@ -140,6 +141,11 @@ Top-to-bottom, the page renders:
      raw IANA id in parentheses — e.g.
      `Deadline: 2026-06-02 07:59 (GMT+10 Australia/Melbourne)` — via
      `date_formatting.gmt_offset_zone_label`.
+   - The session **description** (`p.rs-session-description`), when
+     `session.description` is set, directly under the title row so it
+     reads with the session name. It renders with
+     `white-space: pre-line` so the operator's line / paragraph breaks
+     are preserved.
    - The **participant row** (`.rs-role-nav`, `reviewer/_role_chips.html`;
      § *Role-navigator chip strip*) holds, in order: the reviewer's own
      line, the role pills, then a `|` (`.rs-role-nav-sep`,
@@ -152,15 +158,9 @@ Top-to-bottom, the page renders:
      `.rs-role-nav-statuses-wrapped`: the `|` hides and the group takes
      the whole line, re-checked whenever the row resizes; without script
      the `|` stays.
-4. **Session description and closed banner** — under the two rows, with
-   no card around either:
-   - The session **description** (`p.rs-session-description`), when
-     `session.description` is set. It renders with
-     `white-space: pre-line` so the operator's line / paragraph breaks
-     are preserved.
-   - The **session-closed banner** — a `.banner.banner-warning`, shown
-     when the session is no longer accepting responses (§ *Lifecycle
-     gating*).
+4. **Closed banner** — under the participant row, with no card: the
+   **session-closed banner**, a `.banner.banner-warning`, shown when the
+   session is no longer accepting responses (§ *Lifecycle gating*).
 
    **Save and Submit raise no flash banner**: the page-status pills are
    the canonical signal, and the missing-required and invalid-value
@@ -1713,8 +1713,9 @@ selector scoped under `body.ui-v2`:
   keeps the group from fitting back up once the `|` no longer takes
   width.
 - `.rs-session-description` — `margin: 0 0 var(--space-4) 0;
-  white-space: pre-line;`, the description under the header rows on the
-  reviewer surface, `/results` and `/collation`, with no card.
+  white-space: pre-line;`, the description between the title row and
+  the participant row on the reviewer surface, `/results` and
+  `/collation`, with no card.
 - A linked chip (`a.pill.pill-role-*`) also wears the interactive-chip
   edge (`spec/ui_elements.md` "Label or control"); the `<span>` forms
   do not.

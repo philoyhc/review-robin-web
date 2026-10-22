@@ -28,11 +28,12 @@
     <span>Observer view of the session</span>
   </div>
 
-  {% include "reviewer/_role_chips.html" %}
-
   {% if session.description %}
     <p class="rs-session-description">{{ session.description }}</p>
   {% endif %}
+
+  {% include "reviewer/_role_chips.html" %}
+
 
   {% if collation.cohort_empty %}
     <div class="card">

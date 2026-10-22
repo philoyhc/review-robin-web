@@ -4,7 +4,7 @@ observer URLs that light up behind their respective gates.
 
 Today the body is just the chrome: session-name header, the
 inline body-text caption, and an optional description paragraph
-with no card around it (19X Item 11). The
+with no card around it (19X Item 11), above the role row (Item 13). The
 real content lands with W16 / W17 per
 ``guide/archive/participant_model_upgrade.md`` §3.2.
 """
@@ -76,11 +76,15 @@ def test_results_renders_for_email_identified_reviewee(
     assert "<h1>Cohort A</h1>" in body
     # Inline caption next to the header.
     assert "Results of the review" in body
-    # The session description, under the header rows with no card
-    # around it (19X Item 11).
-    assert '<p class="rs-session-description">Mid-term peer review.</p>' in body
-    before = body[: body.index('<p class="rs-session-description">')]
-    assert before.rstrip().endswith("</div>")  # the participant row
+    # The session description, with no card around it (19X Item 11),
+    # between the title row and the participant row (19X Item 13).
+    description = '<p class="rs-session-description">Mid-term peer review.</p>'
+    assert (
+        body.index('class="rs-page-header"')
+        < body.index(description)
+        < body.index('class="rs-role-nav"')
+    )
+    before = body[: body.index(description)]
     assert not re.search(r'<div class="card[^"]*">\s*$', before)
 
 
@@ -164,11 +168,15 @@ def test_collation_renders_for_observer(
     body = response.text
     assert "<h1>Cohort A</h1>" in body
     assert "Observer view of the session" in body
-    # The session description, under the header rows with no card
-    # around it (19X Item 11).
-    assert '<p class="rs-session-description">External committee observation.</p>' in body
-    before = body[: body.index('<p class="rs-session-description">')]
-    assert before.rstrip().endswith("</div>")  # the participant row
+    # The session description, with no card around it (19X Item 11),
+    # between the title row and the participant row (19X Item 13).
+    description = '<p class="rs-session-description">External committee observation.</p>'
+    assert (
+        body.index('class="rs-page-header"')
+        < body.index(description)
+        < body.index('class="rs-role-nav"')
+    )
+    before = body[: body.index(description)]
     assert not re.search(r'<div class="card[^"]*">\s*$', before)
 
 

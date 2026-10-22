@@ -111,8 +111,9 @@ def test_the_header_is_two_rows_and_no_card(
 ) -> None:
     """19X Item 11: the title row holds the session name, the rollup pill
     and the deadline; the participant row the reviewer's own line, the
-    role pill, a `|` and the instrument pills, in that order; the
-    description follows as a paragraph, and no overview card is left."""
+    role pill, a `|` and the instrument pills, in that order; no
+    overview card is left. 19X Item 13: the description sits between the
+    two rows, by the session name."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -133,7 +134,13 @@ def test_the_header_is_two_rows_and_no_card(
     assert title.index("<h1>") < title.index("data-rs-session-status") < title.index("Deadline:")
     assert "Draft" in title
 
-    row = _between(body, 'class="rs-role-nav"', '<p class="rs-session-description"')
+    description = '<p class="rs-session-description">Some context for the reviewers.</p>'
+    assert (
+        body.index('class="rs-page-header"')
+        < body.index(description)
+        < body.index('class="rs-role-nav"')
+    )
+    row = _between(body, 'class="rs-role-nav"', "</div>")
     order = [
         row.index("data-reviewer-self-info"),
         row.index("rs-role-nav-active"),
@@ -142,7 +149,6 @@ def test_the_header_is_two_rows_and_no_card(
     ]
     assert order == sorted(order), order
     assert 'aria-hidden="true">|</span>' in row
-    assert '<p class="rs-session-description">Some context for the reviewers.</p>' in body
 
 
 def test_no_deadline_and_no_description_leave_their_parts_out(
