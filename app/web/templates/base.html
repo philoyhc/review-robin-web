@@ -5464,7 +5464,8 @@
       // under a root mount the two paths are one, so nothing is
       // expired (findings C2).
       function _rrwExpireRootCopy(tableId, path) {
-        if (path === '/') return;
+        // A one-character path is the host root itself (a root mount).
+        if (path.length === 1) return;
         document.cookie =
           encodeURIComponent(tableId) + '=; Path=/; SameSite=Lax; Max-Age=0';
       }
