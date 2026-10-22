@@ -540,15 +540,20 @@ the round-trip notes below.
    offers — one in Link 1, a person's pair tag (`reviewer.pair_tagN` /
    `reviewee.pair_tagN`, retired from the engine) or one beside a
    cross-side operator — with the reason Band 1's Save gives
-   (`spec/instruments.md`, Band 1). So is a `rules_json` holding a
-   rule Band 1's card can't show (`unrepresented_rule` in
-   `app/services/instruments/_band1.py`; findings E1, 2026-10-22):
-   any rule but a `link1` or `link2` `COMPOSITE` under `AND` / `OR`, a
+   (`spec/instruments.md`, Band 1). So is a `rules_json`, in a rule set
+   an `instruments[N].rule_set_name` in the file names, holding a rule
+   Band 1's card can't show as stored (`unrepresented_rule` in
+   `app/services/instruments/_band1.py`; findings E1, 2026-10-22): any
+   rule but a `link1` or `link2` `COMPOSITE` under `AND` / `OR`, a
    disabled Link or rule, a child that is not `MATCH`, an operator
    outside the card's six, a case-sensitive predicate, or an `IS` /
-   `IS NOT` / cross-side rule with a blank value. The engine would
-   apply it while the card hid it, and the card's next Save would drop
-   or rewrite it. So is an
+   `IS NOT` / cross-side rule with a blank value. The card would hide it
+   or show it as something else, and its next Save would drop or
+   rewrite it; the error names the rule set's `rules_json`, the
+   instrument using it and what the card would do. A rule set no
+   instrument names has no card and imports as it is; instruments are
+   replace-all (phase 2), so the file's are the only ones that can use
+   one. So is an
    `instruments[N].group_kind` beside a `rule_set_name` whose Link 2
    keeps pairs by a relationship-tag `IS` or `IS FILLED`: Band 1's Save
    refuses the same pairing, and the error names the `group_kind` field.
@@ -911,7 +916,13 @@ Concrete guarantees the importers + serialisers maintain:
    destination is updated, and rows the CSV omits are deleted — so
    `uq_session_rule_set_session_name` is **unreachable from this path**,
    whether the target is the source session itself or another that already
-   carries the name.
+   carries the name. The card-shape check (§3.3, phase 1) holds only
+   for a rule set an instrument uses, so a row no instrument uses, such
+   as a legacy seeded `MATCH` or `QUOTA` set, round-trips as stored. A
+   rule set an instrument uses re-imports only in the card's shape,
+   which is the only shape a writer creates for one; one stored before
+   the check in another shape fails the re-import, naming it. Pinned by
+   `tests/integration/test_rule_writes_checked.py::test_settings_import_keeps_a_rule_set_no_instrument_uses`.
    **The one case that could reach the constraint is a bundle naming the
    same rule set twice**, because apply adds per row without flushing
    between them. The parse phase rejects that bundle before phase 2 runs —

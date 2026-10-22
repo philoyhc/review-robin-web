@@ -394,6 +394,7 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
     ("rules", "message"),
     [
         ([{**_child(_IS_A), "id": "extra"}], "not one of the card's Links"),
+        ([{**_child(_IS_A), "id": "link1"}], "is a MATCH rule; the card reads a Link only as a COMPOSITE"),
         ([_composite("link3", [_child(_IS_A)])], "not one of the card's Links"),
         ([_composite("link2", [_child(_IS_A)], enabled=False)], "is disabled"),
         ([_composite("link2", [_child(_IS_A)], op="NOT")], "'NOT'"),
@@ -408,6 +409,7 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
     ],
     ids=[
         "top-level-match",
+        "link-id-not-composite",
         "other-link",
         "disabled-link",
         "not-op",
@@ -494,7 +496,9 @@ def test_the_card_does_not_show_a_disabled_rule_the_engine_skips(
         db,
         instrument,
         [
-            _composite("link1", [_child({**_IS_A, "field": "reviewer.tag1"})], enabled=False),
+            _composite(
+                "link1", [_child({**_IS_A, "field": "reviewer.tag1"}, id="c2")], enabled=False
+            ),
             _composite(
                 "link2",
                 [_child(_IS_A), _child({**_IS_A, "operand": "B"}, id="c1", enabled=False)],
@@ -506,6 +510,87 @@ def test_the_card_does_not_show_a_disabled_rule_the_engine_skips(
 
     assert state["link1"]["mode"] == "all" and state["link1"]["rules"] == []
     assert [rule["operand_value"] for rule in state["link2"]["rules"]] == ["A"]
+
+
+def test_a_link_whose_rules_are_all_disabled_reads_as_all(
+    db: Session, client: TestClient
+) -> None:
+    """The engine skips a Composite with no enabled child, so the card
+    shows that Link as All, not as Filter with no rules."""
+    _session, instrument = _session_with_tags(db, client, "e1-all-off")
+    _store_rules(db, instrument, [_composite("link2", [_child(_IS_A, enabled=False)])])
+
+    state = decode_band1_state(instrument, db)
+
+    assert state["link2"]["mode"] == "all" and state["link2"]["rules"] == []
+
+
+def _add_rule_set(db: Session, session: ReviewSession, name: str, rules: list[object]) -> None:
+    db.add(
+        SessionRuleSet(
+            session_id=session.id,
+            name=name,
+            description="",
+            combinator="ALL_OF",
+            exclude_self_reviews=False,
+            seed=None,
+            rules_json=rules,
+        )
+    )
+    db.commit()
+
+
+# The legacy seeded shapes an older session can still export.
+_LEGACY_MATCH = _child(
+    {"field": "reviewer.tag1", "operator": "same_as", "operand": "reviewee.tag1"}, id="intra_group"
+)
+_LEGACY_QUOTA = {
+    "id": "three_reviewers_each",
+    "enabled": True,
+    "kind": "QUOTA",
+    "scope": "PER_REVIEWEE",
+    "min": 3,
+    "max": 3,
+    "selection": {"strategy": "RANDOM", "seed": 42},
+}
+
+
+def test_settings_import_keeps_a_rule_set_no_instrument_uses(db: Session) -> None:
+    """The export carries every rule set; one no instrument uses has no
+    card to hide its rules, so it round-trips as it did before E1."""
+    operator, session = _seed_for_import(db, "e1-orphan")
+    _add_rule_set(db, session, "Intra-group peer review", [_LEGACY_MATCH])
+    _add_rule_set(db, session, "Three reviewers per reviewee", [_LEGACY_QUOTA])
+
+    result = apply_session_config(db, session, serialize_session_config(db, session), user=operator)
+
+    assert not result.errors, result.errors
+    stored = {
+        rule_set.name: rule_set.rules_json
+        for rule_set in db.execute(
+            select(SessionRuleSet).where(SessionRuleSet.session_id == session.id)
+        ).scalars()
+    }
+    assert stored["Intra-group peer review"] == [_LEGACY_MATCH]
+    assert stored["Three reviewers per reviewee"] == [_LEGACY_QUOTA]
+
+
+def test_settings_import_refuses_the_same_rule_set_once_an_instrument_uses_it(
+    db: Session,
+) -> None:
+    operator, session = _seed_for_import(db, "e1-used")
+    rows = _with_cell(
+        serialize_session_config(db, session), ".rules_json", json.dumps([_LEGACY_MATCH])
+    )
+
+    result = apply_session_config(db, session, rows, user=operator)
+
+    assert any(
+        error.field.endswith(".rules_json")
+        and "instruments[1] uses this rule set" in error.message
+        and "not one of the card's Links" in error.message
+        for error in result.errors
+    ), result.errors
 
 
 def test_a_disabled_link2_does_not_keep_pairs_by_pair_tag() -> None:

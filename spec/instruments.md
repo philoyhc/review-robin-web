@@ -853,12 +853,14 @@ Hydration (re-rendering the saved state on edit) reads
 wraps both into the `new_model_band1_state` and
 `new_model_link3_state` dicts the template iterates.
 
-The card shows only what it can save back unchanged: the `link1` and
-`link2` Composites and their enabled `MATCH` rules. A disabled Link or
-rule is not shown, as the engine does not apply it
-(`spec/assignments.md`, Rule kinds), and the Settings import refuses
-every other shape rather than store a rule the card would hide and its
-next Save drop (`spec/csv_contracts.md` §3.3; findings E1, 2026-10-22).
+The card shows the `link1` and `link2` Composites and their enabled
+`MATCH` rules. A disabled Link or rule is not shown, and a Link whose
+rules are all disabled shows as All, as the engine applies neither
+(`spec/assignments.md`, Rule kinds). For a rule set an instrument uses,
+the Settings import refuses a rule the card can't show as stored
+(`spec/csv_contracts.md` §3.3; findings E1, 2026-10-22). It still
+accepts any rule-set combinator, although the card always shows the
+two Links as intersecting (`ALL_OF`).
 
 ### Preview review instrument
 

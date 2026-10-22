@@ -261,8 +261,12 @@ def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
         if link_id not in ("link1", "link2"):
             continue
         # A disabled rule is not shown, as the engine does not apply it
-        # (findings E1, 2026-10-22); the import no longer stores one.
-        if not entry.get("enabled", True):
+        # (findings E1, 2026-10-22); a Link whose rules are all disabled
+        # reads as All, as the engine skips it.
+        enabled = [
+            child for child in entry.get("rules", []) if child.get("enabled", True)
+        ]
+        if not entry.get("enabled", True) or not enabled:
             continue
         target = state[link_id]
         target["mode"] = "filter"
@@ -270,8 +274,8 @@ def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
         target["combinator"] = "OR" if op == "OR" else "AND"
         target["rules"] = [
             _decode_match_rule(child)
-            for child in entry.get("rules", [])
-            if child.get("kind") == "MATCH" and child.get("enabled", True)
+            for child in enabled
+            if child.get("kind") == "MATCH"
         ]
     return state
 
@@ -724,35 +728,44 @@ _CARD_LINKS: dict[str, str] = {
 
 
 def unrepresented_rule(rules_json: list[Any]) -> str | None:
-    """Why a stored rule set holds a rule Band 1's card cannot show, or
-    ``None``. Call it on a payload ``rules_payload_error`` accepts.
+    """Why a stored rule set holds a rule Band 1's card can't show as
+    stored, or ``None``. Call it on a payload ``rules_payload_error``
+    accepts.
 
     The card reads a ``link1`` and a ``link2`` Composite of enabled
-    ``MATCH`` rules under its six operators, and its next Save rebuilds
-    ``rules_json`` from what it showed: any other rule, a disabled one,
-    a ``NOT``, a case-sensitive comparison or a blank value would be
-    hidden while the engine applied it, then dropped or rewritten
-    (findings E1, 2026-10-22). The Settings import refuses one rather
-    than store it."""
+    ``MATCH`` rules under ``AND`` / ``OR`` and its six operators, and
+    its next Save rebuilds ``rules_json`` from what it showed. Anything
+    else it hides, or shows as something else; each reason says which,
+    and what that Save would store (findings E1, 2026-10-22). The
+    Settings import refuses one in a rule set an instrument uses."""
     for entry in rules_json:
         rule_id = entry.get("id")
-        if entry.get("kind") != "COMPOSITE" or rule_id not in _CARD_LINKS:
+        if rule_id not in _CARD_LINKS:
             return (
-                f"rule {rule_id!r} is not one of the card's Links; the "
-                "Instrument assignment rule holds only a link1 and a link2 "
-                "COMPOSITE, and its next Save would drop any other rule."
+                f"rule {rule_id!r} is not one of the card's Links (link1, "
+                "link2); the card doesn't show it, and its next Save drops it."
             )
         link = _CARD_LINKS[rule_id]
+        if entry.get("kind") != "COMPOSITE":
+            return (
+                f"{link} ({rule_id}) is a {entry.get('kind')} rule; the card "
+                "reads a Link only as a COMPOSITE, so it doesn't show this "
+                "one, and its next Save drops it."
+            )
         if not entry.get("enabled", True):
             return f"{link} ({rule_id}) is disabled; the card has no disabled Link."
-        if entry.get("op") not in ("AND", "OR"):
-            return f"{link} ({rule_id}) combines its rules with {entry.get('op')!r}; the card offers AND or OR."
+        op = entry.get("op")
+        if op not in ("AND", "OR"):
+            return (
+                f"{link} ({rule_id}) combines its rules with {op!r}; the card "
+                "offers AND or OR, and would show and save it as AND."
+            )
         for child in entry.get("rules", []):
             child_id = child.get("id")
             if child.get("kind") != "MATCH":
                 return (
                     f"{link} holds a {child.get('kind')} rule ({child_id!r}); "
-                    "the card's rules are MATCH rules."
+                    "the card shows only MATCH rules, and its next Save drops it."
                 )
             if not child.get("enabled", True):
                 return f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
@@ -762,12 +775,18 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                 return (
                     f"{link} rule {child_id!r} uses the operator {operator!r}; the "
                     "card offers IS, IS NOT, IS THE SAME AS, IS DIFFERENT FROM, "
-                    "IS FILLED and IS EMPTY."
+                    "IS FILLED and IS EMPTY, and would show and save it as IS."
                 )
             if predicate.get("case_sensitive"):
-                return f"{link} rule {child_id!r} is case-sensitive; the card compares ignoring case."
+                return (
+                    f"{link} rule {child_id!r} is case-sensitive; the card "
+                    "compares ignoring case, and its next Save stores it so."
+                )
             if operator not in _NO_OPERAND_OPS and not str(predicate.get("operand") or "").strip():
-                return f"{link} rule {child_id!r} has no value to compare with."
+                return (
+                    f"{link} rule {child_id!r} has no value to compare with; "
+                    "the card's next Save drops it."
+                )
     return None
 
 

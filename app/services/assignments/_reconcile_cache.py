@@ -73,8 +73,10 @@ from app.services.rules.fields import FIELD_MAP
 #: reading survives. ``v3`` (2026-10-17, findings E3): the self-review
 #: flag moved from the session to the instrument. ``v4`` (2026-10-22,
 #: findings E2): a group boundary's blank catch-all group stopped
-#: counting as the reviewer's own.
-STAMP_VERSION = "v4"
+#: counting as the reviewer's own. ``v5`` (2026-10-22, findings E1): a
+#: disabled Composite child, or a Composite with none enabled, stopped
+#: applying.
+STAMP_VERSION = "v5"
 
 
 @dataclass(frozen=True)
