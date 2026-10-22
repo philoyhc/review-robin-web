@@ -5,9 +5,9 @@ The contract of the Cordware host: the process that serves Review Robin Web
 `docs/cordware_repository_strategy_v0.8.md` §3; this file states what the
 host does.
 
-**Stage 1.** RRW is mounted at `/`, so every RRW URL is unchanged. Segment
-21D moves the registry's `path` to `/reviewrobin`. The host serves only
-through `cordware.main:app`; RRW has no standalone entry point.
+RRW is mounted at `/reviewrobin`, and the host's landing page owns `/`. The
+host serves only through `cordware.main:app`; RRW has no standalone entry
+point.
 
 ## Entry point
 
@@ -20,20 +20,21 @@ through `cordware.main:app`; RRW has no standalone entry point.
   (`tests/unit/test_app_main_builds_nothing.py`).
 - `create_app` reads `CordwareSettings`, configures logging, runs the
   fake-auth guard and the super-admin warning (below), builds every selected
-  application, registers `/health`, then mounts them.
+  application, registers `/health` and the landing page, then mounts them.
 
 ## Registry
 
-`REGISTRY` maps an application name to `AppEntry(path, factory, logger)`:
+`REGISTRY` maps an application name to `AppEntry(path, factory, logger, title)`:
 
 | Field | Meaning |
 |---|---|
 | `path` | Mount path. |
 | `factory` | `"module:attribute"` string naming a zero-argument callable that returns a complete ASGI application. |
 | `logger` | Logger-name prefix the application logs under (see Logging). |
+| `title` | How the landing page names the application. Defaults to empty, and the page then shows the registry name. |
 
-- One entry: `reviewrobin` -> `path="/"`, `factory="app.main:create_app"`,
-  `logger="app"`.
+- One entry: `reviewrobin` -> `path="/reviewrobin"`,
+  `factory="app.main:create_app"`, `logger="app"`, `title="Review Robin"`.
 - The mount path is a constant here, not a setting, so no configuration can
   move an application off its path.
 - The host imports an application only by loading its `factory` string at
@@ -41,10 +42,12 @@ through `cordware.main:app`; RRW has no standalone entry point.
 
 ## The host's part in `root_path`
 
-The host emits no URL of its own and rewrites none. Its only part is the
-mount: Starlette's `Mount` sets `root_path` in the ASGI scope to the mount
-path before the application runs, and an application serves what is under
-it. Inside the mount:
+The host rewrites no application's URLs. It emits URLs only on its own
+landing page (§ Landing page), where its redirect and links carry the
+request's `root_path` before the application's path. For an application,
+the host's part is the mount: Starlette's `Mount` sets `root_path` in the
+ASGI scope to the mount path before the application runs, and an
+application serves what is under it. Inside the mount:
 
 - `root_path` is the mount path (empty at `/`), and `request.url.path`
   includes it;
@@ -54,6 +57,22 @@ it. Inside the mount:
 Adding the prefix to the URLs an application emits is the application's
 job (RRW's, in `spec/architecture.md` "URL emission"). Easy Auth's
 `/.auth/*` stays at the host level, outside every mount.
+
+## Landing page
+
+`cordware/web/landing.py` and its template, `cordware/web/templates/landing.html`,
+serve `GET /`. The host registers it before any mount, so it answers ahead of
+an application; if an application is mounted at `/`, the host registers
+nothing there and the application owns `/`.
+
+| Mounted | `/` answers |
+|---|---|
+| Exactly one application | A 302 redirect to that application's path with its trailing slash (`/reviewrobin/` for RRW), prefixed by the request's `root_path`. |
+| None, or two or more | A page listing each mounted application, in mount order, as a link to its path with its title (registry name if the title is empty), and a host-level `Sign out` link to `/.auth/logout`. With none mounted it says no applications are running. |
+
+The page does no identity check and has no roles: it lists what is mounted,
+not what a viewer may use, and each application gates its own routes. Its
+template carries its own inline style and extends nothing of RRW's.
 
 ## `CORDWARE_APPS`
 
@@ -76,6 +95,7 @@ items are ignored. An unknown name, or a name written twice, raises
 - The host's own route: `GET /health` returns `{"status": "ok"}`, route name
   `cordware_health`. It is registered before any mount, so it answers ahead of
   an application mounted at `/`. Easy Auth excludes this path from sign-in.
+  RRW's own probe is `/reviewrobin/health`, inside the mount.
 - The name differs from RRW's own `health` route on purpose: inside a mounted
   application `url_for` resolves through the host's router first, and
   `url_for("health")` must not resolve to the host's route.
@@ -156,7 +176,7 @@ Host events (`extra["event"]`, logger `cordware`):
 The identity events from `cordware.identity` (`identity.header_malformed`,
 `identity.headers_missing`) are in `cordware/spec/identity.md` "Logging". The
 rest of v0.8 §3 "Host logging" (unhandled requests, errors outside any
-application, failing `/health` checks) arrives with 21D.
+application, failing `/health` checks) is not yet built.
 
 ## Import boundary
 
@@ -188,12 +208,16 @@ them. RRW's own suite builds the application through `tests/_rrw_app.py`.
 
 ### The `/reviewrobin` harness
 
-RRW is still served at `/`, so the mounted behavior is proved under a test
-mount. `tests/_mounted.py` (a top-level module, like `_rrw_app`) holds it:
+RRW's own suite builds the application alone (`tests/_rrw_app.py`), at `/`,
+so its requests carry no prefix. Mounted behavior is proved two ways: under a
+test mount, and live. `tests/_mounted.py` (a top-level module, like
+`_rrw_app`) holds the test mount:
 
-- `host_with(factory, path="/reviewrobin")` builds the host through
-  `create_app` with a one-entry registry override. It puts the root
-  logger back as it found it, since `create_app` configures logging.
+- `MOUNT` is `"/reviewrobin"`; a test ties it to `REGISTRY`'s path, so the
+  harness cannot pass at a path nothing serves.
+- `host_with(factory, path=MOUNT)` builds the host through `create_app` with a
+  one-entry registry override. It puts the root logger back as it found it,
+  since `create_app` configures logging.
 - `mounted_rrw()` is that host with RRW's cached `tests/_rrw_app.py`
   instance at `/reviewrobin`, so the `dependency_overrides` a fixture sets
   carry into the mount. `tests/integration/conftest.py`'s `mounted_client`
@@ -207,4 +231,13 @@ mount. `tests/_mounted.py` (a top-level module, like `_rrw_app`) holds it:
   element, by class.
 
 `tests/integration/test_url_crawl.py` drives it over every RRW GET route.
-Browser tests stay on RRW at `/` until 21D moves the registry's `path`.
+`tests/integration/test_mount_requirements.py` pins v0.8 §3's behavior
+requirements under the mount: both health probes, the bare mount's redirect,
+RRW's own 404, 403 and 422 pages, `/.auth/…` links left unprefixed, and an
+invitation link carrying the request's host and `/reviewrobin`.
+
+The browser suite (`tests/browser/`) runs the real host, `uvicorn
+cordware.main:app`, so RRW answers under its mount as deployed. A browser
+test writes every page URL through `app_url(path)` (`tests/browser/conftest.py`),
+which prefixes `MOUNT`; `tests/unit/test_browser_app_urls.py` fails a
+navigation, in-page `window.location` use or URL assertion that skips it.

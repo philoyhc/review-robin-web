@@ -371,7 +371,7 @@ Key landmarks in the codebase:
   `unquote()` before parsing. The three session-list pages carry no
   session id: `rrw-sort-lobby`, `rrw-sort-archived` and
   `rrw-sort-sys-admin-sessions`, which the
-  primitive scopes to the mount root (`/` at `/`) rather than to a
+  primitive scopes to the mount root (`/reviewrobin/`) rather than to a
   session's path.
 - **Tests:**
   - `tests/unit/test_order_rows_by_sort_spec.py` — the pure helper.

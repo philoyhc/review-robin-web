@@ -1,5 +1,7 @@
 # Cordware v0.8 — Implementation Sequence for Stages 1–2
 
+> **Retired 2026-10-22, at segment 21D's close.** Its four workstreams shipped as segments 21A–21D (`guide/archive/segment_21_domain_retrofit.md`). Decision history, not instructions: the live contracts are `cordware/spec/` and `spec/architecture.md`.
+
 **Date:** 20 October 2026  
 **Status:** Accepted by the author (2026-10-20) and written into v0.8 §5. Originally a sequencing proposal. It answers one question: in which order should the v0.8 work before Residential Apps (stages 1 and 2) land? Should Cordware be extracted first, or should RRW's routing move to `/reviewrobin` first?  
 **Baseline:** `cordware_repository_strategy_v0.8.md` §3 and §5. Measurements are from `philoyhc/review-robin-web` `4ed8114` (2026-10-20), read only.

@@ -1,6 +1,6 @@
 """`app/web/urls.py` at `/` and under the `/reviewrobin` mount.
 
-Segment 21B rung B1 (`guide/segment_21B_url_sweep.md`). The first half
+Segment 21B rung B1 (`guide/archive/segment_21B_url_sweep.md`). The first half
 pins what Starlette does to a mounted application's scope, which the
 helpers are built on; the second half pins that every helper returns its
 input at `/` and adds the prefix under the mount.

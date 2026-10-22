@@ -1,6 +1,6 @@
 """The Cordware host: alone, with RRW mounted at `/reviewrobin`, and its contracts.
 
-Segment 21A rung A1 (`guide/segment_21A_cordware_foundations.md`).
+Segment 21A rung A1 (`guide/archive/segment_21A_cordware_foundations.md`).
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 """v0.8 §3's behavior requirements, under the mount (segment 21D, rung D3;
-`guide/segment_21D_prefix_flip.md` § Semantics).
+`guide/archive/segment_21D_prefix_flip.md` § Semantics).
 
 RRW answers at `/reviewrobin`. These pin what the move must keep:
 

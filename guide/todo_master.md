@@ -24,23 +24,14 @@ Two sibling registers hold the open work that is not queued here:
 
 ## Upcoming
 
-### On hold
+### After segment 21
 
-- **21 — RRW under Cordware: on hold** (author, 2026-10-16), lifted
-  sub-segment by sub-segment. v0.8's stages 1–2: RRW hosted by a
-  `cordware/` package and mounted at `/reviewrobin`, proved on the dev
-  slot. The outline, `guide/segment_21_domain_retrofit.md`, was rewritten
-  2026-10-21 against v0.8 and `docs/cordware_implementation_sequence.md`:
-  21A host skeleton (**done** 2026-10-21), 21B URL sweep (**done** 2026-10-21),
-  21C shared identity (**done** 2026-10-21), 21D prefix flip (hold
-  lifted 2026-10-21, author; plan: `guide/segment_21D_prefix_flip.md`). Residential Apps (v0.8 stage 3) and any
-  NUS deploy wait on 21D. The strategy is
-  `docs/cordware_repository_strategy_v0.8.md` (adopted 2026-10-19,
-  revised to 2026-10-21). Its predecessors
-  v0.4–v0.7, the planning notes and integration spec v0.2 are in
-  `docs/archive/` as decision history. The v8 status report,
-  `docs/cordware_nus_azure_status_2026-10-16_v8.md`, is the deployment's
-  status of record (it replaced `docs/archive/nus_azure_status.md`).
+- **Cordware stage 3, Residential Apps** (v0.8 §5), unblocked by segment
+  21's close (2026-10-22); not yet planned. The strategy is
+  `docs/cordware_repository_strategy_v0.8.md`; the deployment's status
+  of record is `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Any
+  NUS deploy first waits for the dev slot's live check under real Easy
+  Auth (`docs/deployment_dev.md` "Resuming the dev slot").
 
 ### Queued segments
 
@@ -78,6 +69,19 @@ concluding** (decision 2026-09-05) and independent of each other.
 
 Small items with no plan doc; each fits one PR and its reasoning fits
 the PR body unless it says otherwise.
+
+- **Cordware host logging, events 4 and 5** *(filed 2026-10-22, at
+  segment 21's close)*. v0.8 §3 "Host logging" names two events the host
+  still does not log:
+  - event 4, requests no mounted application handled;
+  - event 5, errors outside any mounted application, and failing
+    `/health` checks.
+
+  21A deferred event 5 to 21D, whose plan never took it up
+  (`guide/archive/segment_21_domain_retrofit.md` § Status).
+  `cordware/spec/host.md` "Logging" says they are not yet built. Before
+  any NUS deploy, since the logs are the host's only operational
+  record.
 
 - **Technical-support contact (global)** *(filed 2026-05-03)*. A
   deployment-wide "something looks broken" address, distinct from the

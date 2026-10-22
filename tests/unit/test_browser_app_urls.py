@@ -1,6 +1,6 @@
 """The browser suite navigates RRW under its mount, never at `/`.
 
-Segment 21D (`guide/segment_21D_prefix_flip.md`) moves RRW to
+Segment 21D (`guide/archive/segment_21D_prefix_flip.md`) moves RRW to
 `/reviewrobin`, and the live server the browser tests drive serves it
 there. A page's URL is written ``app_url("/operator/…")``
 (`tests/browser/conftest.py`), so a test that slips back to a root path

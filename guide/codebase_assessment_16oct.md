@@ -6,7 +6,7 @@ findings became Segment 19U, the session-state guard. Five small plans then
 shipped and closed in `guide/`: operator pages, UX refinements, ProfileLink,
 participant info and Quick Setup update. Then came Accounts, and an audit of
 what participants see. No plan is in progress. Segment 21 (the domain
-retrofit, `guide/segment_21_domain_retrofit.md`) and the two `docs/` files it
+retrofit, `guide/archive/segment_21_domain_retrofit.md`) and the two `docs/` files it
 rests on are speculative and on hold (author, 2026-10-16). 14B and 20 still
 wait on the institutional Azure deployment.
 

@@ -1,5 +1,5 @@
 """The host's landing page at `/` (segment 21D rung D1,
-`guide/segment_21D_prefix_flip.md`).
+`guide/archive/segment_21D_prefix_flip.md`).
 """
 
 from __future__ import annotations

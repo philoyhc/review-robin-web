@@ -1,7 +1,7 @@
 """The trusted identity Cordware supplies to every mounted application.
 
 v0.8 §3, "Shared identity, application-specific permissions"; the
-interface is segment 21C's (`guide/segment_21C_shared_identity.md`
+interface is segment 21C's (`guide/archive/segment_21C_shared_identity.md`
 § Decision). Cordware is the only reader of Azure Easy Auth's
 `X-MS-CLIENT-PRINCIPAL*` headers, and the only source of the fake local
 identity, which the host refuses outside `APP_ENV=local`

@@ -92,8 +92,9 @@ fragile under concurrent deploys.
 
 ## Resuming the dev slot
 
-The slot has been dormant since 2026-06-03 (above), while segment 21
-moves RRW under the Cordware host (`guide/segment_21_domain_retrofit.md`).
+The slot has been dormant since 2026-06-03 (above). Meanwhile segment 21
+moved RRW under the Cordware host, at `/reviewrobin`
+(`guide/archive/segment_21_domain_retrofit.md`, closed 2026-10-22).
 `main` has moved on since then, so do these steps in order, in the
 Azure portal and on GitHub, when Azure is available. Each step names the
 change on `main` that makes it necessary. Skip a step whose change has

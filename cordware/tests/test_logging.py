@@ -1,6 +1,6 @@
 """Host-owned logging: the JSON shape, the application stamp, host events.
 
-Segment 21A rung A3 (`guide/segment_21A_cordware_foundations.md`). The
+Segment 21A rung A3 (`guide/archive/segment_21A_cordware_foundations.md`). The
 formatter cases moved here from `tests/unit/test_logging_config.py` with
 `configure_logging()`.
 """

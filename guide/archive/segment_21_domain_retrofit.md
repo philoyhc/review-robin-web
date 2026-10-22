@@ -2,17 +2,16 @@
 
 **Opened:** 2026-10-16 · **Rewritten:** 2026-10-21, against
 `docs/cordware_repository_strategy_v0.8.md` (v0.8, as revised to
-2026-10-21) and `docs/cordware_implementation_sequence.md` · **Theme:**
+2026-10-21) and the implementation sequence (archived at the close) · **Theme:**
 RRW hosted by a `cordware/` package and mounted at `/reviewrobin` ·
 **Related:** `docs/cordware_nus_azure_status_2026-10-16_v8.md`,
 `docs/deployment_dev.md`, `docs/deployment_nus.md`,
 `docs/archive/cordware_rrw_integration_spec_v0.2.md`
 
-**On hold (author, 2026-10-16);** lifted for 21A, closed 2026-10-21, and
-for 21B at that close; 21B closed 2026-10-21, and the hold lifted for 21C
-at that close; 21C closed 2026-10-21, and the hold lifted for 21D at that
-close (author).
-Residential Apps (v0.8 stage 3) and any NUS deploy wait on 21D (v0.8 §5).
+**Closed 2026-10-22**, with 21D (§ Status). Held by the author from
+2026-10-16 and lifted one sub-segment at a time, each at the close before.
+Residential Apps (v0.8 stage 3) may start; any NUS deploy still waits for
+the dev slot's live check (v0.8 §5).
 **The dev slot is dormant** until the Azure work settles, and every rung
 is tested on localhost (author, 2026-10-21). Its steps, start command,
 `APP_ENV` and 21D's live check, wait in `docs/deployment_dev.md`
@@ -22,7 +21,8 @@ The **outline** for v0.8's stages 1–2: sub-segments `21A`–`21D`, each
 with its own `guide/segment_21X_<slug>.md` opened when it starts. This
 file holds the split, the cross-cutting rules and the audit, and cites
 v0.8 rather than restating it. The 2026-10-16 outline is under
-`## Superseded plan`.
+`## Superseded plan`; `docs/archive/cordware_implementation_sequence.md`
+is the sequence, retired at the close.
 
 ## Opportunity
 
@@ -166,6 +166,27 @@ The sequence's counts (at `4ed8114`) differ mainly by method.
 | D | RRW's root redirects | `/` (`app/main.py:113`), `/operator` (`:126–133`), the allowlist-denied redirect (`:111`) | `grep -nE 'RedirectResponse\|@app\.get' app/main.py` |
 | — | Test requests at root paths | 3,422 TestClient calls in 296 files (ast), unchanged by design; 79 browser `page.goto`, which move with 21D | ast: calls whose first argument is a `ROOT` constant or f-string; grep on one line finds 797 |
 
+## Status
+
+**Closed 2026-10-22.** The four sub-segments shipped as laddered,
+A → (B ∥ C) → D, from 2026-10-21 to 2026-10-22; each closed with its own
+plan in `guide/archive/` (§ PR ladder), whose `Status` holds its
+divergences. The author checked v0.8 §3's four behavior requirements on
+localhost at 21D's close.
+
+**Left open, each recorded where it waits:**
+- **The dev slot's live check** under real Easy Auth, before any NUS
+  deploy: `docs/deployment_dev.md` "Resuming the dev slot".
+- **The rest of v0.8 §3 "Host logging":**
+  - event 4, requests no mounted application handled;
+  - event 5, errors outside any application and failing `/health`
+    checks.
+
+  21A deferred event 5 to 21D, and 21D's plan never took it up. Both
+  events are queued as a stub in `guide/todo_master.md`.
+- **Open question 7**, console logs reaching Log Analytics: the
+  author's, in Azure.
+
 ## PR ladder
 
 Each sub-segment plan cuts its own rungs from sequence §5; this file
@@ -181,9 +202,8 @@ holds only the gates between them and the constraints a rung must carry.
    **Closed 2026-10-21**: `guide/archive/segment_21B_url_sweep.md`.
 4. **21C**, alongside 21B. The C1–C3 rule in § Semantics holds at every
    rung. **Closed 2026-10-21**: `guide/archive/segment_21C_shared_identity.md`.
-5. **21D**, after 21A–21C close. The landing page lands scaffold-first;
-   D2 is the author's live check (§ Definition of done). Plan:
-   `guide/segment_21D_prefix_flip.md`.
+5. **21D**, after 21A–21C close. The landing page lands scaffold-first.
+   **Closed 2026-10-22**: `guide/archive/segment_21D_prefix_flip.md`.
 
 ## Definition of done
 
@@ -275,7 +295,7 @@ Provisional at outline level; each sub-segment plan takes over its bullets.
 - `docs/deployment_nus.md` — "no code change" retired (21D); its start command moves with stage 4's artifact.
 - `docs/security_posture.md` — the fake-auth guard enforced; identity interpreted by the host (21C).
 - `docs/cordware_repository_strategy_v0.8.md` — §8's stage 1–2 decisions recorded as each sub-segment settles them (21A–21C).
-- `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at 21D's close; the sub-segment plans carry its ladder (21D).
+- `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at 21D's close; the sub-segment plans carry its ladder (21D). <!-- cites: docs/cordware_implementation_sequence.md -->
 - `CLAUDE.md` — the run command; "never write a root-path URL"; "Identity and auth" and the local auth shortcut (21A, 21B, 21C). `AGENTS.md` twinned.
 - `.github/workflows/main_app-review-robin-web-dev.yml` — the dev artifact carries `cordware/` (21A).
 - `pyproject.toml` — package discovery and test paths take in `cordware/` (21A).
