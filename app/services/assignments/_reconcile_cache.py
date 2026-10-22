@@ -71,8 +71,10 @@ from app.services.rules.fields import FIELD_MAP
 #: the same — ``v2`` (2026-10-17, ``guide/archive/assignment_rule_clarify.md``
 #: Item 2) for the empty-value rule, so no verdict cached under the old
 #: reading survives. ``v3`` (2026-10-17, findings E3): the self-review
-#: flag moved from the session to the instrument.
-STAMP_VERSION = "v3"
+#: flag moved from the session to the instrument. ``v4`` (2026-10-22,
+#: findings E2): a group boundary's blank catch-all group stopped
+#: counting as the reviewer's own.
+STAMP_VERSION = "v4"
 
 
 @dataclass(frozen=True)
