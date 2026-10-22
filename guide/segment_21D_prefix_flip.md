@@ -159,6 +159,29 @@ operator: a non-operator on an operator page is redirected to `/me`,
 not refused. `docs/deployment_dev.md` gains the Easy Auth exclusion as
 its own resumption step and the four requirements as the live check.
 
+**Cumulative read (D3, from `7c2512f9`), one read; no high findings.**
+Acted on in D3:
+- The guard gains negative URL assertions, `url=`, `page.request`,
+  `wait_for_url` / `expect_navigation`, `location` without `window.`,
+  `assign` / `replace` and chained comparisons. Its page-URL exemption
+  now needs a value built from `.url`, not one that merely mentions it.
+- Every `/.auth/` link and check RRW emits is pinned (5 cases).
+- `.env.example` and `docs/local_setup.md` give the host-alone landing
+  page. `docs/deployment_nus.md`'s Easy Auth and verification steps,
+  and `docs/deployment_dev.md`'s Authentication section, carry the
+  prefix. The slot's invite check states what it cannot show (the
+  gateway's name is stage 4's).
+- A test ties the suite's `MOUNT` to `REGISTRY`.
+- Two nits: an unused template variable and a test's stale name.
+
+Recorded, not changed: the harness keeps the origin as its contexts'
+`base_url` and prefixes at each call through `app_url`, rather than the
+Decision's prefixed base URL, because Playwright resolves a leading `/`
+against the origin. `page.url` `endswith` / `in` checks and `**` globs
+stay as they are, since they hold under any prefix. The local-URL
+Definition-of-done line is amended at the close for the two
+adjudicated non-URL hits (D2).
+
 ## PR ladder
 
 1. **D0, this plan**, prose only.

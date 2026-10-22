@@ -39,6 +39,16 @@ def _rae() -> AuthenticatedUser:
     )
 
 
+def test_the_suites_mount_is_the_registrys() -> None:
+    """These tests mount RRW through a registry override at `MOUNT`; the
+    deployed path is `REGISTRY`'s. They must agree, or every test here
+    would pass at a path nothing serves."""
+    mounted_rrw()  # imports `cordware.main` with logging restored
+    from cordware.main import REGISTRY
+
+    assert REGISTRY["reviewrobin"].path == MOUNT
+
+
 # --- Requirement 2: both probes ---
 
 
@@ -88,9 +98,37 @@ def test_a_malformed_request_under_the_mount_is_rrws_422(mounted_client: TestCli
 # --- Easy Auth's paths stay the host's ---
 
 
-def test_sign_out_points_at_the_hosts_auth_path(mounted_client: TestClient) -> None:
-    body = mounted_client.get(f"{MOUNT}/operator/sessions").text
-    assert 'href="/.auth/logout"' in body
+def _nameless() -> AuthenticatedUser:
+    """An identity with no email claim: RRW answers it with its 401 page."""
+    return AuthenticatedUser(principal_id="anon-oid", email="", name="", provider="aad")
+
+
+@pytest.mark.parametrize(
+    ("who", "path", "expected"),
+    [
+        # base.html's chrome.
+        (_rae, "/operator/sessions", 'href="/.auth/logout"'),
+        # reviewer/_top_bar.html.
+        (_rae, "/me", 'class="signout" href="/.auth/logout"'),
+        # me_debug.html.
+        (_rae, "/auth/me/debug", 'href="/.auth/logout"'),
+        # error_handlers.py's 401 link, on error.html.
+        (_nameless, "/me", 'href="/.auth/logout" data-error-home'),
+        # error.html's check that a referrer is not the sign-in service.
+        (_rae, "/operator/no/such/page", 'indexOf("/.auth/")'),
+    ],
+    ids=["chrome", "reviewer-bar", "me-debug", "401-page", "error-page-script"],
+)
+def test_easy_auths_paths_stay_the_hosts(
+    make_mounted_client: Callable[[AuthenticatedUser], TestClient],
+    monkeypatch: pytest.MonkeyPatch,
+    who: Callable[[], AuthenticatedUser],
+    path: str,
+    expected: str,
+) -> None:
+    monkeypatch.setattr(settings, "operator_emails", ["rae@example.edu"])
+    body = make_mounted_client(who()).get(f"{MOUNT}{path}", follow_redirects=False).text
+    assert expected in body
     assert f"{MOUNT}/.auth/" not in body
 
 

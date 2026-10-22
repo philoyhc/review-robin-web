@@ -132,7 +132,11 @@ not landed yet.
    - **Request handling:** a missing page such as
      `/reviewrobin/operator/no/such/page` shows RRW's own 404 page.
    - **Absolute URLs:** an invitation sent from the slot links to
-     `https://<the slot's host>/reviewrobin/me/invite/…`.
+     `https://<the slot's host>/reviewrobin/me/invite/…`. On the slot
+     that host is its own `azurewebsites.net` name, so this shows the
+     request's host and the mount carried through, not that a gateway's
+     public name replaces the backend's: that half is stage 4's, behind
+     the gateway.
 6. **Record it:** clear this section's "dormant" note above, and set the
    segment 21 plans' dev-slot lines to done.
 
@@ -303,20 +307,23 @@ Azure App Service Authentication ("Easy Auth") V2 is enabled on the dev app.
 - **Token store:** enabled (so the app receives the rich
   `X-MS-CLIENT-PRINCIPAL` header with claims).
 - **Excluded paths:** `/health` (set on `authsettingsV2` →
-  `globalValidation.excludedPaths` so probes do not bounce through sign-in).
+  `globalValidation.excludedPaths` so probes do not bounce through sign-in);
+  `/reviewrobin/health` joins it when the slot resumes on a build with 21D
+  (step 4 of "Resuming the dev slot").
 
-To verify after a deploy:
+To verify after a deploy (RRW's paths are under `/reviewrobin` once 21D
+is deployed; on an older build, drop the prefix):
 
 1. In a fresh browser, open
-   `https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/auth/me`
+   `https://app-review-robin-web-dev-a5c9f3gpfudaambf.southeastasia-01.azurewebsites.net/reviewrobin/auth/me`
    — you should be redirected to Microsoft sign-in.
-2. After sign-in, `/auth/me` should return JSON with your `email`, `name`,
-   `principal_id`, and `provider: "aad"`.
-3. `/auth/me/debug` renders the same identity as an HTML page plus the full raw
-   claims list and a sign-out link (`/.auth/logout`) — useful for inspecting
-   what Entra is sending for this tenant.
-4. `curl https://.../health` (unauthenticated) should still return
-   `{"status": "ok"}`.
+2. After sign-in, `/reviewrobin/auth/me` should return JSON with your
+   `email`, `name`, `principal_id`, and `provider: "aad"`.
+3. `/reviewrobin/auth/me/debug` renders the same identity as an HTML page
+   plus the full raw claims list and a sign-out link (`/.auth/logout`, the
+   host's) — useful for inspecting what Entra is sending for this tenant.
+4. `curl https://.../health` and `curl https://.../reviewrobin/health`
+   (unauthenticated) should still return `{"status": "ok"}`.
 
 Application code consumes Easy Auth headers; do not enable `ALLOW_FAKE_AUTH`
 in App Service configuration. See `docs/security_posture.md` for details.
