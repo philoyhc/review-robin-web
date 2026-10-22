@@ -474,7 +474,7 @@ Three persistent guarantees the chrome makes regardless of layout details:
 - **Free movement between pages.** The reviewer can switch pages at any time, in any order. **Unsaved typing does not survive the move** — a page change is a server round-trip, there is no dirty-tracking and no `beforeunload` guard, so `Save` before navigating is the reviewer's responsibility (`spec/reviewer-surface.md`, Prev / Next row and "Dirty-state"). Restoring typed-but-unsaved values across a page change is a real improvement and is not built.
 - **No page is "locked" by another page's completion.** The reviewer can fill instruments in any order.
 
-**When the session runs to a single page**, the navigation cluster doesn't render — the action row carries only Save / Cancel / Submit. The per-page status pill in the right-half status panel is then the only signal that pages exist as a concept. (The pill's label is `#{N} {short_label}`, or bare `#{N}` — note it uses a space where the per-instrument H2 uses `#{N}: {short_label}`.)
+**When the session runs to a single page**, the navigation cluster doesn't render — the action row carries only Save / Cancel / Submit. The per-page status pill on the header's participant row is then the only signal that pages exist as a concept. (The pill's label is `#{N} {short_label}`, or bare `#{N}` — note it uses a space where the per-instrument H2 uses `#{N}: {short_label}`.)
 
 ##### Per-reviewee navigation within an instrument
 
@@ -723,9 +723,9 @@ navigation"; restating in this principle's context:
   declaration and no single-line constraint on the H2, here or
   anywhere — so a longer label would wrap rather than break.
 - **Per-page status pills** (per "Multi-instrument navigation")
-  live in the right-half status panel above the action rows, not
-  in the navigation cluster. The panel always renders (one
-  pill per instrument) so the reviewer sees the shape of their
+  live on the header's participant row above the action rows, not
+  in the navigation cluster. The pills render (one per
+  instrument) so the reviewer sees the shape of their
   remaining work at a glance, regardless of which page is visible.
   Within an instrument, completeness is a property of the table
   itself (filled vs. empty rows), so per-row indicators may also
