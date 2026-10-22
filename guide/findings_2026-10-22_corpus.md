@@ -1,0 +1,203 @@
+# Findings — corpus sweep (2026-10-22)
+
+**Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
+(#3225) · **Open:** 49 of 49 rows.
+
+Every spec, `docs/` file and root document, and the two `cordware/spec/`
+files, was read against the code it describes, in six verify-mode reads
+split by area. **Nothing in scope was edited.** A sweeper may not
+re-align a spec to the code (`rrw_sdd_in_practice.md` §4), so each
+divergence is listed here and the fixes ship afterwards as ordinary PRs.
+A row is struck when it is done, with the PR that did it, or marked
+declined with the reason. Code defects found by reading the code for
+bugs, rather than the specs for drift, are in the sibling register
+`guide/findings_2026-10-22_bugs.md`.
+
+**Ids** carry the area of the read: **A** instruments, the reviewer and
+participant surfaces · **B** lifecycle, Session Home, the lobby,
+assignments, Validate · **D** data in and out · **E** UI and visual style
+· **F** architecture, permissions, identity, the functional spec and the
+Cordware specs · **H** `docs/` and root documents. They restart at 1 in
+this file. **Severity** is the reader's. **Decides:** *spec* means the
+spec is wrong and an update in place fixes it; *code* means the code is
+wrong against a spec that is right; *author* means a choice between
+fixing the code and changing the contract; *trim* means provenance or a
+tally to strip, keeping the reason it carried. In `docs/` and root rows,
+*doc* plays the part of *spec*. Line numbers are at `00501f2e`.
+
+## 1. Code defects
+
+- **F2** (low–medium, code) — `spec/architecture.md` says a schema
+  violation in production "logs and writes through"; the code calls
+  `warnings.warn` (`app/services/audit.py:207`, `:1108`) and nothing
+  captures warnings, so the JSON log never sees one.
+- **D1** (medium, author) — Rehydrate matches instruments by
+  `InstrumentShortLabel`, which `spec/rehydrate.md` §6.4 calls unique per
+  session; nothing enforces it (`spec/settings_inventory.md` §10 says
+  labels need not be unique), and `{short_label: instrument}` lets the
+  last of two shared labels win, loading responses onto the wrong
+  instrument. Rehydrate is gated off. Enforce uniqueness, or fall back to
+  the positional key on ambiguity.
+- **F9** (low, author) — `cordware/spec/identity.md` reads the
+  `X-MS-CLIENT-PRINCIPAL-NAME` header as the name's last fallback; the
+  code reads it only when no email was found. Fix the code or loosen the
+  spec.
+- **E8** (low, code) — two stale `base.html` comments: `.rs-help-card`
+  cites a §"Reviewer help cards" `spec/ui_elements.md` no longer has, and
+  `.tab-strip-page` claims to match a tint the spec says it differs from.
+- **B7** (low, author) — `spec/session_owners.md` maps to no routing
+  module in `app/web/spec_registry.py`, so `close_check` never flags an
+  owners-route change against it. Add it to the `_session_home` tuple.
+
+## 2. For the author
+
+- **H1, H2** — the docs that describe the dormant dev slot as live (H1),
+  and `CONTRIBUTING.md`'s reason for waiting on CI (H2), whose premise —
+  every push to `main` migrates Azure Postgres — is false while the slot
+  is disabled. Restate as conditional, or leave until the slot resumes.
+- **H4, H5** — `docs/deployment_nus.md` §3's start command, and whether
+  `docs/cordware_stage0_baseline.md` stays as a dated record (retitle its
+  "Command today" column) or archives.
+- **H10, H11** — dated measurements and "serves today" in
+  `rrw_sdd_in_practice.md` and `rrw_design_rationale.md`: re-take, or
+  drop the tally.
+- **F11** — the functional-spec trim (below), proposed by the 5 and 16
+  October assessments and not yet done.
+- **E5** — `spec/visual_style_rrw.md` "Sign-in surface" describes an
+  in-app sign-in page and magic links that do not exist: mark deferred,
+  or retire the section.
+- **D10** — `band2_state` carries source-session reviewee ids through the
+  Settings CSV and clone, marked ✅ in `spec/roundtrip_coverage.md`
+  (unverified harm; likely preview only).
+
+## 3. Per-file findings
+
+**`spec/` — participant (A)**
+
+- **A1** (low, spec) — `spec/sort_by_reviewee.md` "Locked / unlocked":
+  the Group header on a group-scoped Band 2 preview shows no `↕` when
+  locked and unsorted; the rule needs that exception.
+- **A2** (low, spec) — `spec/timezone_display.md` "Rendering format"
+  omits the summary caption, the pre-open lines and the refused-write
+  notice; state the rule rather than the list.
+- **A3** (low, trim) — provenance (participant-audit ids, finding ids,
+  dated rulings, "19V Item 2") in `spec/reviewer-surface.md` (most),
+  `spec/role_landing_and_visibility.md` §4, `spec/participant_model.md`
+  §4–§5, `spec/instruments.md`, and a migration-history paragraph in
+  `spec/visibility_policy.md` §3.1. Keep revision ids that name a column.
+
+**`spec/` — sessions (B)**
+
+- **B1** (medium, spec) — `spec/lifecycle.md` §3.1 and §5 say eight
+  Observers routes take `_require_not_archived`; there are nine
+  (`self-fields`). Drop the tally.
+- **B2** (low, spec) — `spec/session_home.md` lifecycle table: Release
+  responses is never live in `ready`.
+- **B3** (medium, spec) — `spec/validate_page.md` §1, §5.3 and §9.6 say
+  the GET writes nothing; it runs the scheduled-event pass
+  `spec/lifecycle.md` §8.3 requires. Add the exception, no wider.
+- **B4** (low, spec) — `spec/workflow_card.md` cites a nonexistent
+  `is_prepared`; the check is inline in `_fire_invite_entry`.
+- **B5** (low, spec) — `spec/sessions_overview.md`: `validated` counts as
+  draft in the lobby pills.
+- **B6** (low, spec) — `spec/lifecycle.md` "six exceptions" lists five.
+
+**`spec/` — data (D)**
+
+- **D2** (low, spec) — `spec/rehydrate.md` §6.4: `instrument_{n}` is the
+  n-th by (order, id), not `order = n`.
+- **D3** (low, spec) — `spec/settings_inventory.md` §7 omits
+  `sessionHomeScrollY:{pathname}`.
+- **D4** (low, spec) — `spec/settings_inventory.md` §2 and
+  `spec/roundtrip_coverage.md` omit `sessions.public_id`,
+  `sessions.form_key`, the instrument reconcile-cache columns and
+  `uq_instruments_session_seq`.
+- **D5** (low, spec) — `spec/rehydrate.md` §6.2 omits the rule-set
+  refusals an older extract meets at the settings apply.
+- **D6** (low, spec) — `spec/email_infra_options.md` Option A: port 587
+  is a placeholder, not a default.
+- **D7** (low, spec) — `spec/extract_data.md`: the chip state is keyed to
+  the session's `public_id`.
+- **D8** (low, spec) — `spec/csv_contracts.md` §3.2 omits Save's
+  `acknowledged_loss`.
+- **D9** (low, trim) — provenance in `spec/csv_contracts.md`,
+  `spec/settings_inventory.md`, `spec/roundtrip_coverage.md`,
+  `spec/rehydrate.md` and `spec/setup_pages.md`.
+
+**`spec/` — UI (E)**
+
+- **E1** (low–medium, spec) — `spec/operator_button_audit.md` has no row
+  for the date-time field's 📅 and ✕ buttons (and perhaps the pager
+  steps).
+- **E2** (low, spec) — `spec/visual_style_rrw.md` cites a Rule Based
+  Assignment card that does not exist.
+- **E3** (low, spec) — `spec/visual_style_rrw.md`: the Responses summary
+  card's pills are wrong.
+- **E4** (low–medium, spec) — `spec/visual_style_rrw.md` "Page header"
+  (response surface) predates the shipped header; point at
+  `spec/reviewer-surface.md` and mark the institution name deferred.
+- **E6** (low, trim) — provenance in `spec/ui_elements.md`,
+  `spec/operator_button_audit.md`, `spec/visual_style_rrw.md` and
+  `spec/operator_ui_concept.md`.
+- **E7** (low, trim) — tallies in `spec/ui_elements.md` and
+  `spec/operator_ui_concept.md` (not `spec/color_tokens.md`'s, which a
+  test parses).
+
+**`spec/` and `cordware/spec/` — architecture (F)**
+
+- **F1** (low, spec) — `spec/architecture.md` "Three-layer split" names
+  `Instrument.session_seq` as the only querying column default;
+  `ReviewSession.public_id` is a second.
+- **F3** (low, write) — `spec/architecture.md` is silent on the app-wide
+  `refuse_oversized_ids` dependency.
+- **F4** (low, spec) — `spec/permissions.md` attributes identity to
+  `app/auth/identity.py` (Cordware resolves it) and never says
+  `{session_id}` is the `public_id`.
+- **F5** (low–medium, spec) — `spec/audience_and_identity_model.md` §4:
+  Accounts is multi-select with an all-or-nothing batch, not one user at
+  a time.
+- **F6** (low, spec) — `spec/audience_and_identity_model.md` `/guide`
+  audiences: an archived session discloses no role.
+- **F7** (low–medium, spec) — `spec/README.md` does not index the two
+  Cordware specs, and its `architecture.md` row omits URL emission and
+  the mount.
+- **F8** (low, spec / author) — `spec/rrw_functional_spec.md` §4.3 says
+  the invitation link signs a reviewer in (it never does); §19 omits the
+  Cordware specs (author: add a row or soften "every live spec").
+- **F11** (low, author) — `spec/rrw_functional_spec.md` sections that
+  restate a narrower spec: §9.1, §9.3–9.7, §9.9–9.15, §10.3–10.10,
+  §11.2–11.5, §12.2–12.4, §6.1–6.3 and §16, §4.1, §7.3 and §17. Keep §1–3,
+  §5, §8, §13, §14, §18, §19. Do not cut the §6 table a doc-convention
+  test reads, nor renumber the sections other files cite (§9.5, §10.3,
+  §11, §11.6).
+
+**`docs/` and root (H)**
+
+- **H1** (medium, author) — `docs/operations_runbook.md`,
+  `docs/known_limitations.md`, `docs/deployment_nus.md` §0,
+  `docs/database.md`, `docs/troubleshooting.md` and
+  `docs/backup_restore.md` describe the dev deploy as live; it is
+  disabled (`docs/deployment_dev.md` is right).
+- **H2** (medium, author) — `CONTRIBUTING.md` "When to wait for CI":
+  the migration premise (above); also its checklist says `pytest` where
+  `CLAUDE.md` requires `-n auto` and `ruff`.
+- **H3** (medium, doc) — "Segment 21, on hold" is stale in
+  `docs/README.md`, `docs/architecture.md`, `docs/known_limitations.md`
+  and `docs/deployment_nus.md`'s banner.
+- **H4** (medium, author) — `docs/deployment_nus.md` §3 starts
+  `app.main:app`, which does not exist; it is `cordware.main:app`.
+- **H5** (low–medium, author) — `docs/cordware_stage0_baseline.md`
+  "Command today" and its line citations have moved (above).
+- **H6** (low, doc) — `docs/local_setup.md` §2 omits `cordware/`; §3 and
+  §8 name `/docs`, now `/reviewrobin/docs`.
+- **H7** (low–medium, doc) — `docs/security_posture.md`,
+  `docs/deployment_nus.md` §4 and `docs/architecture.md` attribute the
+  Easy Auth parser to `app/auth/identity.py`; it is `cordware/identity.py`.
+- **H8** (low, doc) — the deployed environment tables omit
+  `CORDWARE_APPS`.
+- **H9** (low, doc) — `docs/deployment_dev.md` "Resuming the dev slot":
+  every "once 21x lands" has landed.
+- **H10** (low, author) — `rrw_sdd_in_practice.md` appendix "4,800 tests"
+  and `CLAUDE.md`'s 172 s are dated measurements.
+- **H11** (low, author) — `rrw_design_rationale.md` §6.6: the dev slot
+  "serves today".
