@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models import (
     Assignment,
     InstrumentResponseField,
@@ -191,6 +192,96 @@ def test_a_long_run_of_digits_in_a_search_is_not_an_id(client: TestClient) -> No
     assert client.get("/operator/sessions?q=99999999999999999999").status_code == 200
 
 
+# Findings 2026-10-22 P2: every route that takes an id list in its form
+# body (`grep -rn "list\[int\] = Form" app/web`), `{sid}` the session's
+# public id.
+_FORM_ID_LIST_ROUTES = [
+    *(
+        (f"/operator/sessions/{action}", "session_ids")
+        for action in (
+            "bulk-tags", "bulk-unarchive", "bulk-delete-archived", "bulk-archive",
+            "bulk-delete",
+        )
+    ),
+    *(
+        (f"/operator/sessions/{{sid}}/{roster}/{action}", f"{roster[:-1]}_ids")
+        for roster in ("reviewers", "reviewees", "observers", "relationships")
+        for action in ("bulk-inactivate", "bulk-reactivate", "bulk-delete")
+    ),
+    ("/operator/sessions/{sid}/assignments/bulk-inactivate", "assignment_ids"),
+    ("/operator/sessions/{sid}/assignments/bulk-activate", "assignment_ids"),
+    ("/operator/sys-admin/users/bulk-demote", "user_ids"),
+]
+
+
+@pytest.fixture
+def owned_session_id(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> str:
+    """A session alice owns, with relationships and observers on, and
+    alice a sys-admin, so every route above reaches its own handler."""
+    monkeypatch.setattr(settings, "sys_admin_emails", ["alice@example.edu"])
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "Spring", "code": "oversized-form"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303, response.text
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "oversized-form")
+    ).scalar_one()
+    review_session.relationships_enabled = True
+    review_session.observers_enabled = True
+    db.commit()
+    return review_session.public_id
+
+
+@pytest.mark.parametrize(("path", "field"), _FORM_ID_LIST_ROUTES)
+def test_an_oversized_id_in_a_form_body_answers_404(
+    client: TestClient, owned_session_id: str, path: str, field: str
+) -> None:
+    url = path.format(sid=owned_session_id)
+
+    def post(row_id: int) -> int:
+        return client.post(
+            url, data={field: [str(row_id)]}, follow_redirects=False
+        ).status_code
+
+    # The largest 64-bit id still binds; one past it was SQLite's 500.
+    # (The Accounts route's own answer to an unknown id is a 404 too.)
+    assert post(MAX_SQL_INT) < 500
+    assert post(MAX_SQL_INT + 1) == 404
+
+
+@pytest.mark.parametrize(
+    "cursor",
+    # The last is past Python's 4,300-digit int limit (Codex on #3236).
+    [str(MAX_SQL_INT + 1), "99999999999999999999", "9" * 5000],
+)
+def test_an_oversized_audit_log_cursor_answers_404(
+    client: TestClient, owned_session_id: str, cursor: str
+) -> None:
+    url = f"/operator/sys-admin/sessions/{owned_session_id}/audit-log"
+
+    assert client.get(f"{url}?cursor={MAX_SQL_INT}").status_code == 200
+    assert client.get(f"{url}?cursor={cursor}").status_code == 404
+
+
+def test_a_route_without_a_form_body_is_not_made_to_read_one(
+    client: TestClient,
+) -> None:
+    """An oversized id in a body the route does not declare is never
+    read, so it cannot refuse the request."""
+    response = client.request(
+        "GET",
+        "/operator/sessions",
+        content=f"session_ids={MAX_SQL_INT + 1}",
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
+
+    assert response.status_code == 200
+
+
 # --- O4: the SMTP port -------------------------------------------------------
 
 
@@ -282,3 +373,42 @@ def test_a_band2_response_field_id_in_unicode_digits_is_a_new_field(db: Session)
         ).scalars()
     )
     assert "Score" in names
+
+
+@pytest.mark.parametrize(
+    ("text", "too_large"),
+    [
+        ("9" * 5000, True),
+        ("0" * 5000 + "7", False),
+        (str(MAX_SQL_INT), False),
+        (str(MAX_SQL_INT + 1), True),
+        ("+" + str(MAX_SQL_INT + 1), True),
+        ("12a", False),
+    ],
+)
+def test_too_large_reads_any_length_of_digits(text: str, too_large: bool) -> None:
+    from app.web.oversized_ids import _too_large
+
+    assert _too_large(text) is too_large
+
+
+def test_a_session_whose_public_id_is_all_digits_is_reachable(
+    client: TestClient, db: Session
+) -> None:
+    """Codex on #3236: a public id may be ten digits (``2222222222``),
+    past the 32-bit id bound, but it is text, not a row id, so the guard
+    leaves it to the session lookup."""
+    created = client.post(
+        "/operator/sessions",
+        data={"name": "Digits", "code": "digits-public-id"},
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    review_session = db.execute(
+        select(ReviewSession).where(ReviewSession.code == "digits-public-id")
+    ).scalar_one()
+    review_session.public_id = "2222222222"
+    db.commit()
+
+    assert client.get("/operator/sessions/2222222222").status_code == 200
+    assert client.get("/operator/sessions/2222222222/reviewees").status_code == 200

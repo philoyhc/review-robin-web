@@ -9,11 +9,19 @@ from __future__ import annotations
 
 import re
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import HeldUpload, Observer, Reviewer, ReviewSession
+from app.db.models import (
+    HeldUpload,
+    Observer,
+    Relationship,
+    Reviewee,
+    Reviewer,
+    ReviewSession,
+)
 
 from .test_relationship_group_clear_asks_first import _base, _relationship, _seed
 
@@ -219,3 +227,95 @@ def test_each_setup_cards_dismiss_route_ends_the_hold(
         )
         # An unknown token deletes nothing and lands on the card.
         assert response.status_code in (303, 404), (page, response.status_code)
+
+
+_EMPTY_FILE_CARDS = {
+    "reviewers": (Reviewer, REVIEWERS_1, REVIEWERS_2),
+    "reviewees": (
+        Reviewee,
+        b"RevieweeName,RevieweeEmail\nAnn,ann@example.edu\n",
+        b"RevieweeName,RevieweeEmail\nBea,bea@example.edu\n",
+    ),
+    "observers": (
+        Observer,
+        b"ObserverEmail,ObserverName\no1@example.edu,O1\n",
+        b"ObserverEmail,ObserverName\no2@example.edu,O2\n",
+    ),
+    "relationships": (
+        Relationship,
+        None,
+        b"ReviewerEmail,RevieweeEmail\nrae@example.edu,ed@example.edu\n",
+    ),
+}
+
+
+def _row_ids(db: Session, model, s: ReviewSession) -> list[int]:
+    db.expire_all()
+    return sorted(
+        db.execute(select(model.id).where(model.session_id == s.id)).scalars()
+    )
+
+
+@pytest.mark.parametrize("page", list(_EMPTY_FILE_CARDS))
+def test_an_empty_file_chosen_is_read_not_swapped_for_the_held_one(
+    db: Session, client: TestClient, page: str
+) -> None:
+    """Findings S2: a file chosen with nothing in it is the operator's
+    upload, refused as an empty one is, not a cue to send the held file.
+    A filename is what marks a file chosen, as Quick Setup's
+    ``_attached`` reads it; an untouched input posts an empty name."""
+    model, first, held = _EMPTY_FILE_CARDS[page]
+    if first is None:
+        s = _seed(db, client, f"held-empty-{page}")
+        url = f"{_base(s)}/import"
+    else:
+        s = _session(client, db, code=f"held-empty-{page}")
+        url = f"/operator/sessions/{s.public_id}/{page}/import"
+        assert _upload(client, url, first).status_code == 303
+    before = _row_ids(db, model, s)
+    asked = _upload(client, url, held)
+    assert asked.status_code == 400
+    assert _held(db) == 1
+
+    sent = client.post(
+        url,
+        files={"file": ("empty.csv", b"", "text/csv")},
+        data={"confirm_replace": "true", "held_token": _token(asked.text)},
+        follow_redirects=False,
+    )
+    assert sent.status_code == 400, sent.text[:300]
+    assert "Holding <strong>" not in sent.text
+    assert _row_ids(db, model, s) == before
+    # A plain refusal, so the hold ends with it.
+    assert _held(db) == 0
+
+
+def test_an_untouched_file_input_still_sends_the_held_file(
+    db: Session, client: TestClient
+) -> None:
+    """The other side of S2: a browser posts an untouched file input as
+    an empty part with ``filename=""``, and that is no file chosen.
+    Written by hand because httpx drops an empty filename."""
+    s = _session(client, db, code="held-untouched")
+    url = f"/operator/sessions/{s.public_id}/reviewers/import"
+    _upload(client, url, REVIEWERS_1)
+    asked = _upload(client, url, REVIEWERS_2)
+
+    fields = {"confirm_replace": "true", "held_token": _token(asked.text)}
+    body = b"".join(
+        f'--BB\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n'
+        f"{value}\r\n".encode()
+        for name, value in fields.items()
+    ) + (
+        b'--BB\r\nContent-Disposition: form-data; name="file"; filename=""\r\n'
+        b"Content-Type: application/octet-stream\r\n\r\n\r\n--BB--\r\n"
+    )
+    answered = client.post(
+        url,
+        content=body,
+        headers={"content-type": "multipart/form-data; boundary=BB"},
+        follow_redirects=False,
+    )
+    assert answered.status_code == 303, answered.text[:300]
+    assert _reviewers(db, s) == ["Bea"]
+    assert _held(db) == 0

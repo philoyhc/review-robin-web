@@ -187,6 +187,49 @@ def test_import_config_short_rows_are_reported_by_row_with_other_errors(
     assert db.get(ReviewSession, review_session.id).name == "Imp"
 
 
+def test_a_short_row_report_takes_the_lock_off_the_event_loop(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    """Findings S3: the short-row report validates the rest of the file
+    under the session lock, so the checks that reach it run in the
+    threadpool, as the saves do; on Postgres a lock waited for on the
+    event loop stalls the worker (findings Bc3). SQLite never blocks, so
+    this asserts where the lock is taken, not that Postgres waits."""
+    import asyncio
+
+    from app.services import session_guard
+
+    review_session = _make_session(client, db, code="ic-short-loop")
+    real = session_guard.lock_session
+    on_loop: list[bool] = []
+
+    def recording(db_, session_, **kwargs):
+        try:
+            asyncio.get_running_loop()
+            on_loop.append(True)
+        except RuntimeError:
+            on_loop.append(False)
+        return real(db_, session_, **kwargs)
+
+    monkeypatch.setattr(session_guard, "lock_session", recording)
+    response = client.post(
+        f"/operator/sessions/{review_session.public_id}/import-config",
+        data={"confirm_replace": "true"},
+        files={
+            "file": (
+                "config.csv",
+                b"field,value,data_type\nsession.name,Renamed\n",
+                "text/csv",
+            )
+        },
+        follow_redirects=False,
+    )
+
+    assert refusal(response).reason == "parse"
+    assert on_loop, "the short-row report took no lock"
+    assert not any(on_loop)
+
+
 def test_import_config_bad_header_rejected(
     client: TestClient, db: Session
 ) -> None:

@@ -141,10 +141,14 @@ def _decode_client_principal(header_value: str) -> dict[str, Any] | None:
     return payload
 
 
-def _claim(payload: dict[str, Any], *types: str) -> str | None:
+def _claim(
+    payload: dict[str, Any], *types: str, blank_counts: bool = True
+) -> str | None:
     """The value of the first of ``types`` the claim set carries, in
     the order ``types`` names them — not the token's own claim order.
-    Within one type the token's first non-empty value wins."""
+    Within one type the token's first non-empty value wins. With
+    ``blank_counts=False`` a whitespace-only value is skipped too, so
+    the next value in that order is used (findings 2026-10-22 P1)."""
     claims = payload.get("claims")
     if not isinstance(claims, list):
         return None
@@ -153,7 +157,7 @@ def _claim(payload: dict[str, Any], *types: str) -> str | None:
             if not isinstance(claim, dict) or claim.get("typ") != typ:
                 continue
             value = claim.get("val")
-            if isinstance(value, str) and value:
+            if isinstance(value, str) and (value if blank_counts else value.strip()):
                 return value
     return None
 
@@ -186,6 +190,9 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
                 "preferred_username",
                 "email",
+                # A whitespace-only email would store `""` and hide a
+                # valid fallback claim; it counts as no email (P1).
+                blank_counts=False,
             )
             name = _claim(
                 payload,

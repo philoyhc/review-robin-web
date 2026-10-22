@@ -175,6 +175,49 @@ def test_claim_priority_falls_through_to_the_next_type() -> None:
     assert user.principal_id == "sub-1"
 
 
+def test_a_whitespace_only_email_claim_yields_to_the_next() -> None:
+    """Findings 2026-10-22 P1: an email claim counts only when non-empty
+    after strip, so a blank one no longer hides a valid fallback."""
+    rich = _encode_principal(
+        {
+            "claims": [
+                {"typ": _EMAILADDRESS, "val": "   "},
+                {"typ": "preferred_username", "val": "\t"},
+                {"typ": "preferred_username", "val": "upn@example.edu"},
+                {"typ": "email", "val": "plain@example.edu"},
+            ]
+        }
+    )
+
+    user = resolve_identity(
+        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
+    )
+
+    assert user.email == "upn@example.edu"
+
+
+def test_whitespace_only_email_claims_leave_no_email() -> None:
+    """With every email claim blank after strip the identity carries no
+    email, which RRW's `get_or_create_user` answers 401."""
+    rich = _encode_principal(
+        {
+            "claims": [
+                {"typ": _EMAILADDRESS, "val": " "},
+                {"typ": "preferred_username", "val": "  "},
+                {"typ": "email", "val": "\n"},
+                {"typ": "name", "val": "Blank Email"},
+            ]
+        }
+    )
+
+    user = resolve_identity(
+        _request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings()
+    )
+
+    assert user.email is None
+    assert user.name == "Blank Email"
+
+
 def test_simple_id_overrides_rich_when_both_present() -> None:
     rich = _encode_principal(
         {
