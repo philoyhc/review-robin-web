@@ -115,11 +115,14 @@ alembic upgrade head
 uvicorn cordware.main:app --reload
 ```
 
-Open `http://127.0.0.1:8000/health` and expect:
+Open `http://127.0.0.1:8000/reviewrobin/health` and expect:
 
 ```json
 {"status":"ok"}
 ```
+
+RRW is served under `/reviewrobin/`; `http://127.0.0.1:8000/` redirects
+there, and `/health` is the Cordware host's own probe.
 
 To sign in locally, set `ALLOW_FAKE_AUTH=true` plus
 `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` in your `.env` (see

@@ -8,12 +8,14 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 
 def test_a_renamed_field_survives_save_and_reload(
     page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}/instruments")
+    page.goto(app_url(f"/operator/sessions/{session_id}/instruments"))
 
     card = page.locator("[data-instrument-card]").first
     expect(card).to_have_attribute("data-instrument-locked", "true")

@@ -16,6 +16,8 @@ from datetime import date, timedelta
 import httpx
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 _CREATE_BOXES = (
     "#scheduled_activate_at",
     "#deadline",
@@ -27,7 +29,7 @@ _HOME_BOXES = ("#mock-start", "#mock-end", "#mock-release-from", "#mock-release-
 
 def test_create_re_renders_every_box_and_stores_the_instants(page: Page) -> None:
     code = f"z{uuid.uuid4().hex[:8]}"
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     page.locator("#name").fill(f"Zone {code}")
     page.locator("#code").fill(code)
     page.locator("#display_timezone").fill("UTC")
@@ -96,7 +98,7 @@ def test_session_home_re_renders_from_the_stored_instant(
 
     save("UTC")
     save("America/New_York")  # the UTC text, untouched: the instant stays
-    page.goto(f"/operator/sessions/{session_id}?editing=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}?editing=1"))
     end = page.locator("#mock-end")
     # Session Home's boxes hold 24-hour text with a space; `data-tz-utc`
     # keeps the `T` form, which the zone script reads either way.
@@ -133,7 +135,7 @@ def test_create_reads_a_skipped_day_as_the_server_does(page: Page) -> None:
     """Pacific/Apia skipped 2011-12-30 whole; a box naming a time on it
     reads, as ``parse_local_datetime`` does, at the offset before the
     jump (08:00 UTC on the 31st), not a day off (the read of #3113)."""
-    page.goto("/operator/sessions/new")
+    page.goto(app_url("/operator/sessions/new"))
     page.locator("#display_timezone").fill("Pacific/Apia")
     page.locator("#responses_release_at").fill("2011-12-30T22:00")
     page.locator("#display_timezone").fill("UTC")

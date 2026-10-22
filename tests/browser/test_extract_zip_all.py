@@ -19,6 +19,7 @@ import httpx
 from playwright.sync_api import Page
 
 from ._builder import add_instrument
+from .conftest import app_url
 
 
 def _zip_all_query(page: Page) -> dict[str, list[str]]:
@@ -31,7 +32,7 @@ def test_zip_all_carries_each_cards_chips(
     page: Page, api: httpx.Client, new_session: Callable[[], str]
 ) -> None:
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
 
     # Every instrument chip on: no id lists, so the link stays short
     # however many instruments the session has (Codex on #2769).
@@ -57,7 +58,8 @@ def test_zip_all_carries_each_cards_chips(
     assert query["data_shapes"] == ["0"]
 
     href = page.locator("#extract-data-zip-all").get_attribute("href")
-    response = api.get(href)
+    # An emitted href carries the mount already: join it to the origin.
+    response = api.get(api.base_url.join(href))
     assert response.status_code == 200, response.text
     names = zipfile.ZipFile(io.BytesIO(response.content)).namelist()
     assert any(name.endswith("_responses.csv") for name in names)
@@ -73,7 +75,7 @@ def test_a_by_instrument_card_with_nothing_chosen_rides_as_off(
     the intro's Zip all leaves its files out rather than asking for
     every instrument, which is what an omitted list means."""
     session_id = new_session()
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     page.locator("[data-by-instrument-chip^='instrument-']").first.click()
 
     card_zip = page.locator("#extract-data-by-instrument-zip")
@@ -91,7 +93,7 @@ def test_a_partial_selection_lists_its_ids(
     no list rides (second D28 URL-bound read)."""
     session_id = new_session()
     add_instrument(api, session_id)
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     for card in ("by-instrument", "reviewer-metadata", "reviewee-metadata"):
         chips = page.locator(f"[data-{card}-chip^='instrument-']")
         assert chips.count() == 2

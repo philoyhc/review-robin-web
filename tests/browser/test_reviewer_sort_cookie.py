@@ -21,7 +21,7 @@ import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from ._builder import REVIEWER_EMAIL, activate, session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 #: Listed out of name and score order, so the roster's (assignment) order
 #: is none of the orders asserted below.
@@ -157,7 +157,7 @@ def test_a_response_only_sort_cookie_orders_rows_on_load(
 
     reviewer = page_as(REVIEWER_EMAIL)
     url = f"/me/sessions/{session_id}/1"
-    reviewer.goto(url)
+    reviewer.goto(app_url(url))
     assert _row_names(reviewer) == ["Echo", "Delta", "Charlie", "Bravo", "Alpha"]
 
     reviewer.context.add_cookies(
@@ -168,11 +168,11 @@ def test_a_response_only_sort_cookie_orders_rows_on_load(
                     json.dumps([{"key": f"response:{rating_key}", "dir": direction}]),
                     safe="",
                 ),
-                "url": f"{live_server.base_url}/me/sessions/{session_id}",
+                "url": live_server.base_url + app_url(f"/me/sessions/{session_id}"),
             }
         ]
     )
-    reviewer.goto(url)
+    reviewer.goto(app_url(url))
     expect(_badge(reviewer, rating_key)).to_have_text("1↑" if direction == "asc" else "1↓")
     assert _row_names(reviewer) == expected
 
@@ -207,7 +207,7 @@ def test_a_reload_orders_tied_rows_as_the_click_did(
     )
 
     reviewer = page_as(REVIEWER_EMAIL)
-    reviewer.goto(f"/me/sessions/{session_id}/1")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}/1"))
     assert _row_names(reviewer) == ["Echo", "Delta", "Charlie", "Bravo", "Alpha"]
     button = reviewer.locator(f"th[data-sort-key='response:{rating_key}'] .rrw-sort-btn")
     for _ in range(clicks):

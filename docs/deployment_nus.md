@@ -108,9 +108,12 @@ Still to confirm / decide before the first deploy:
 - **Localhost.** `.env` with `ALLOW_FAKE_AUTH=true` + SQLite; `uvicorn
   cordware.main:app --reload` (the Cordware host, segment 21A).
 - **CI workflows** `.github/workflows/ci.yml` + `ci-postgres.yml`. Untouched.
-- **App code + migrations.** No code change is required to change hosts —
+- **App code + migrations.** Changing hosts takes no code change —
   everything is configuration (App Settings + secrets + the deploy
-  workflow's target name).
+  workflow's target name). What did change, in code, is the path: since
+  segment 21D RRW answers under `/reviewrobin`, and the host's `/`
+  redirects there, so the gateway's routes and the health probes are
+  set for that path.
 
 ---
 

@@ -1,8 +1,8 @@
 """RRW mounted under `/reviewrobin` through the Cordware host, for tests.
 
-Segment 21B (`guide/segment_21B_url_sweep.md`): RRW is served at `/`
-until 21D, so the mount's behavior is proved here first. The host is
-`cordware.main.create_app` with a registry override, and the mounted
+Segment 21B (`guide/segment_21B_url_sweep.md`) proved the mount's
+behavior here before 21D moved RRW there; the crawl still runs here.
+The host is `cordware.main.create_app` with a registry override, and the mounted
 application is the suite's own cached `tests/_rrw_app.py` instance, so
 the `dependency_overrides` a fixture sets on it carry into the mount.
 

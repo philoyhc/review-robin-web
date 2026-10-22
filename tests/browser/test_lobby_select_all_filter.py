@@ -14,7 +14,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from ._builder import session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 PAGES = {
     "lobby": ("/operator/sessions", "sessions"),
@@ -49,7 +49,7 @@ def test_select_all_ticks_only_the_rows_the_filter_shows(
     url, prefix = PAGES[kind]
     shown_id, shown_code = _make(api, live_server.database_url, archived=kind == "archived")
     hidden_id, _ = _make(api, live_server.database_url, archived=kind == "archived")
-    page.goto(live_server.base_url + url)
+    page.goto(app_url(url))
     box = lambda session_id: page.locator(  # noqa: E731
         f'.{prefix}-list-select-row[value="{session_id}"]'
     )
@@ -85,7 +85,7 @@ def test_the_bulk_panel_follows_the_filter_and_keeps_an_unsaved_edit(
     first, _ = _make(api, live_server.database_url, archived=False, word=word)
     second, _ = _make(api, live_server.database_url, archived=False, word=word)
     other, _ = _make(api, live_server.database_url, archived=False)
-    page.goto(live_server.base_url + "/operator/sessions")
+    page.goto(app_url("/operator/sessions"))
     box = lambda session_id: page.locator(  # noqa: E731
         f'.sessions-list-select-row[value="{session_id}"]'
     )

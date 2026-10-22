@@ -11,7 +11,7 @@ import httpx
 from playwright.sync_api import Page, expect
 
 from ._builder import REVIEWER_EMAIL, activate, open_card, open_unlocked, seed_rosters
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 _PREVIEW_BOX = "[data-new-model-band2] textarea[disabled][aria-hidden='true']"
 
@@ -46,7 +46,7 @@ def test_the_reviewer_box_keeps_its_handle(
     seed_rosters(api, session_id)
     activate(api, live_server.database_url, session_id)
     reviewer = page_as(REVIEWER_EMAIL)
-    reviewer.goto(f"/me/sessions/{session_id}")
+    reviewer.goto(app_url(f"/me/sessions/{session_id}"))
     box = reviewer.locator("table textarea").first
     expect(box).to_be_visible()
     assert _resize(box) == "vertical"

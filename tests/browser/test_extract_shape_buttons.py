@@ -21,6 +21,8 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, Route, expect
 
+from .conftest import app_url
+
 
 def test_edit_and_cancel_swap_the_saved_shapes_buttons(
     page: Page, api: httpx.Client, new_session: Callable[[], str]
@@ -39,7 +41,7 @@ def test_edit_and_cancel_swap_the_saved_shapes_buttons(
     assert response.status_code == 201, response.text
     shape_id = response.json()["id"]
 
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     # By id, not by mode: Edit flips ``data-shape-mode`` to "edit".
     card = page.locator(f'[data-shape][data-shape-id="{shape_id}"]')
     expect(card).to_have_attribute("data-shape-mode", "saved")
@@ -84,7 +86,7 @@ def test_delete_waits_for_its_confirm_tick_and_the_tick_resets(
     first_id = _save_shape(api, session_id, "First")
     second_id = _save_shape(api, session_id, "Second")
 
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     first = page.locator(f'[data-shape][data-shape-id="{first_id}"]')
     second = page.locator(f'[data-shape][data-shape-id="{second_id}"]')
     first_delete = first.locator("[data-shape-delete]")
@@ -175,7 +177,7 @@ def test_deleting_the_only_editing_shape_selects_the_fresh_blank(
     session_id = new_session()
     shape_id = _save_shape(api, session_id, "Only")
 
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     card = page.locator(f'[data-shape][data-shape-id="{shape_id}"]')
     card.locator("[data-shape-edit]").click()
     expect(card).to_have_attribute("data-shape-mode", "edit")
@@ -212,7 +214,7 @@ def test_zip_all_waits_for_a_shape_delete_to_land(
     page.route(
         f"**/extract-data/shapes/{first_id}", lambda route: held.append(route)
     )
-    page.goto(f"/operator/sessions/{session_id}/extract-data")
+    page.goto(app_url(f"/operator/sessions/{session_id}/extract-data"))
     zip_all = page.locator("#extract-data-shaper-zip")
     expect(zip_all).not_to_have_attribute("aria-disabled", "true")
 
@@ -239,7 +241,7 @@ def test_zip_all_waits_for_a_shape_delete_to_land(
         held[0].continue_()
     expect(zip_all).not_to_have_attribute("aria-disabled", "true")
     expect(zip_all).to_have_attribute(
-        "href", f"/operator/sessions/{session_id}/export/data_shapes_bundle.zip"
+        "href", app_url(f"/operator/sessions/{session_id}/export/data_shapes_bundle.zip")
     )
 
     # A failed DELETE on the last card: the server keeps the shape, so

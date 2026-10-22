@@ -12,11 +12,13 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 ACCOUNTS = "/operator/sys-admin/users"
 
 
 def _invite(page: Page, email: str) -> None:
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     page.fill("#invite-email", email)
     with page.expect_navigation():
         page.click("[data-invite-submit]")
@@ -50,7 +52,7 @@ def _setup(page: Page, api: httpx.Client) -> tuple[str, str, str]:
     _invite(page, first)
     _invite(page, second)
     _sign_in(api, unused)
-    page.goto(f"{ACCOUNTS}?show=operators&show=unused&q=exp-{token}")
+    page.goto(app_url(f"{ACCOUNTS}?show=operators&show=unused&q=exp-{token}"))
     expect(page.locator("tr[data-user-id]")).to_have_count(3)
     return first, second, unused
 
@@ -172,7 +174,7 @@ def test_a_narrow_row_wraps_between_groups_not_inside_one(
 def test_a_wrapping_confirm_keeps_its_tick_by_the_first_line(page: Page) -> None:
     """Codex on #3036: the margin reset must not center the tick on a
     long confirm that wraps (the roster pages' longer sentences)."""
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     top = page.evaluate(
         """() => {
           const label = document.createElement("label");
@@ -300,7 +302,7 @@ def test_an_owner_offers_remove_from_all_sessions_not_revoke(
     # no longer renders.
     filtered = page.url
     # Asked for outright: a bare visit takes the chips last asked for.
-    page.goto(f"{ACCOUNTS}?show=admins&q=operator%40example.edu")
+    page.goto(app_url(f"{ACCOUNTS}?show=admins&q=operator%40example.edu"))
     me = page.locator('tr[data-is-self="true"]').get_attribute("data-user-id")
     response = api.post(
         f"/operator/sessions/{session_id}/owners/{me}/remove",

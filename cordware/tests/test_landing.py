@@ -77,10 +77,10 @@ def test_an_application_at_root_keeps_root() -> None:
     assert client.get("/").json() == {"app": "stub"}
 
 
-def test_rrw_at_root_still_owns_root() -> None:
-    """Behavior-neutral with RRW at `/` (D1 must not change it): RRW's
-    own `/` answers, here its 401 without a signed-in user."""
+def test_rrw_alone_opens_at_reviewrobin() -> None:
+    """The deployed shape: RRW is the only application, so `/` sends the
+    browser to it (D2)."""
     client = TestClient(create_app(apps=("reviewrobin",)))
     response = client.get("/", follow_redirects=False)
-    assert response.status_code == 401
-    assert "No applications" not in response.text
+    assert response.status_code == 302
+    assert response.headers["location"] == "/reviewrobin/"

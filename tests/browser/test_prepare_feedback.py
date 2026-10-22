@@ -18,7 +18,7 @@ import httpx
 from playwright.sync_api import Page, expect
 
 from ._builder import pin_full_matrix, seed_rosters
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 
 def test_prepare_says_so_and_takes_one_click(
@@ -30,7 +30,7 @@ def test_prepare_says_so_and_takes_one_click(
     session_id = new_session()
     seed_rosters(api, session_id)
     pin_full_matrix(live_server.database_url, session_id)
-    page.goto(f"/operator/sessions/{session_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}"))
     button = page.locator("button[form='next-action-prepare-form']")
     expect(button).to_have_text("Prepare session", use_inner_text=True)
     # A draft session's Prepare is the primary button; validated, secondary.

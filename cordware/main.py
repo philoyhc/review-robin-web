@@ -48,11 +48,14 @@ class AppEntry:
     title: str = ""
 
 
-# RRW mounts at `/` until segment 21D moves it to `/reviewrobin`. A
-# constant, not a setting, so no configuration can move it by accident.
+# RRW mounts at `/reviewrobin` (segment 21D; v0.8 §3). A constant, not a
+# setting, so no configuration can move it by accident.
 REGISTRY: Mapping[str, AppEntry] = {
     "reviewrobin": AppEntry(
-        path="/", factory="app.main:create_app", logger="app", title="Review Robin"
+        path="/reviewrobin",
+        factory="app.main:create_app",
+        logger="app",
+        title="Review Robin",
     ),
 }
 

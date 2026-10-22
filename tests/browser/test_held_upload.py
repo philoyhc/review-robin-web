@@ -10,6 +10,8 @@ from collections.abc import Callable
 import httpx
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 
 def test_tick_and_upload_with_the_file_held(
     page: Page, new_session: Callable[[], str], api: httpx.Client, tmp_path
@@ -25,7 +27,7 @@ def test_tick_and_upload_with_the_file_held(
 
     second = tmp_path / "second.csv"
     second.write_text("ReviewerName,ReviewerEmail\nBea,bea@example.edu\n")
-    page.goto(f"{url}?unlocked=1#upload-csv")
+    page.goto(app_url(f"{url}?unlocked=1#upload-csv"))
     form = page.locator("#upload-csv-form")
     form.locator('input[name="file"]').set_input_files(str(second))
     # Force the ask: submit without the replace tick, past the browser's

@@ -13,11 +13,13 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 ACCOUNTS = "/operator/sys-admin/users"
 
 
 def _invite(page: Page, email: str) -> None:
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     page.fill("#invite-email", email)
     with page.expect_navigation():
         page.click("[data-invite-submit]")
@@ -30,7 +32,7 @@ def _query(page: Page) -> dict[str, list[str]]:
 def test_a_chip_filters_at_once_and_the_search_waits(page: Page) -> None:
     email = f"chip-{uuid.uuid4().hex[:8]}@example.edu"
     _invite(page, email)  # an operator, under a default chip
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     table = page.locator("#users-table")
     expect(table).to_contain_text(email)
 
@@ -63,7 +65,7 @@ def test_a_chip_filters_at_once_and_the_search_waits(page: Page) -> None:
 
 
 def test_every_chip_off_survives_the_round_trip(page: Page) -> None:
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     for key in ("operators", "admins"):
         with page.expect_navigation():
             page.locator(f'label:has(input[name="show"][value="{key}"])').click()
@@ -94,7 +96,7 @@ def test_the_role_dropdown_and_the_pager(
         )
         assert response.status_code == 200, response.text
 
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     page.select_option('#accounts-filter select[name="role"]', "owner")
     with page.expect_navigation():
         page.click('#accounts-filter button[type="submit"]')
@@ -105,7 +107,7 @@ def test_the_role_dropdown_and_the_pager(
         page.locator('#accounts-filter select[name="role"]')
     ).to_have_value("owner")
 
-    page.goto(f"{ACCOUNTS}?show=unused&q=pager-{token}")
+    page.goto(app_url(f"{ACCOUNTS}?show=unused&q=pager-{token}"))
     rows = page.locator("#users-table tr[data-user-id]")
     expect(rows).to_have_count(200)
     pager = page.locator(".table-pager-cluster").first
@@ -120,7 +122,7 @@ def test_the_role_dropdown_and_the_pager(
 
     # The typeahead's first list stops at the alphabetically first 200,
     # which the 201st account sorts after; typing asks again.
-    page.goto(f"{ACCOUNTS}?show=unused")
+    page.goto(app_url(f"{ACCOUNTS}?show=unused"))
     last = f"pager-{token}-200@example.edu"
     option = page.locator(f'#accounts-search-options option[value="{last}"]')
     expect(option).to_have_count(0)
@@ -133,7 +135,7 @@ def test_the_heading_and_the_filter_share_the_toolbar_top(page: Page) -> None:
     Session role / Search on the right, and the chips sit at the left
     half's foot, level with the filter's buttons."""
     page.set_viewport_size({"width": 1280, "height": 900})
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     toolbar = page.locator("#accounts-table-card .table-card-toolbar")
     heading = toolbar.locator(".toolbar-left > h2").bounding_box()
     right = toolbar.locator(".toolbar-right").bounding_box()

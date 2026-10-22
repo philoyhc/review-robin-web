@@ -12,7 +12,7 @@ import httpx
 from playwright.sync_api import Locator, Page, expect
 
 from ._builder import pin_full_matrix, session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 #: Rana and Carol on both sides: four pairs, two of them self reviews.
 ROSTERS = {
@@ -75,7 +75,7 @@ def test_the_self_review_chip_is_dark_light_or_amber(
 ) -> None:
     session_id = new_session()
     _generated(api, live_server, session_id)
-    page.goto(f"/operator/sessions/{session_id}/assignments")
+    page.goto(app_url(f"/operator/sessions/{session_id}/assignments"))
     name_chip = page.locator("label.tag-chip:has([data-filter-instrument])")
     chip = page.locator("[data-self-review-chip]")
     expect(chip).to_have_text("Include 2 self reviews")
@@ -109,7 +109,7 @@ def test_the_instrument_name_chip_filters_the_preview_table(
 ) -> None:
     session_id = new_session()
     _generated(api, live_server, session_id)
-    page.goto(f"/operator/sessions/{session_id}/assignments")
+    page.goto(app_url(f"/operator/sessions/{session_id}/assignments"))
     rows = page.locator("tr[data-row-instrument]")
     expect(rows.first).to_be_visible()
     name_chip = page.locator("label.tag-chip:has([data-filter-instrument])")

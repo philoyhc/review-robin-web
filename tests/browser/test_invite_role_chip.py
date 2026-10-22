@@ -11,12 +11,14 @@ import uuid
 
 from playwright.sync_api import Page, expect
 
+from .conftest import app_url
+
 ACCOUNTS = "/operator/sys-admin/users"
 
 
 def test_the_cards_sit_side_by_side_at_one_height(page: Page) -> None:
     page.set_viewport_size({"width": 1280, "height": 900})
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     invite = page.locator(".page-grid > .card").nth(0)
     overview = page.locator("#accounts-overview")
     left, right = invite.bounding_box(), overview.bounding_box()
@@ -30,7 +32,7 @@ def test_the_cards_sit_side_by_side_at_one_height(page: Page) -> None:
 
 
 def test_the_chip_cycles_resets_and_invites_an_admin(page: Page) -> None:
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     chip = page.locator("[data-invite-role-chip]")
     expect(chip).to_have_text("Invite as operator")
     solid = chip.evaluate("el => getComputedStyle(el).backgroundColor")
@@ -58,7 +60,7 @@ def test_the_chip_sits_top_left_and_the_buttons_right(page: Page) -> None:
     """One row: the chip at its top-left, Cancel then Invite flush right
     (author, 2026-10-14)."""
     page.set_viewport_size({"width": 1280, "height": 900})
-    page.goto(ACCOUNTS)
+    page.goto(app_url(ACCOUNTS))
     chip = page.locator("[data-invite-role-chip]").bounding_box()
     cancel = page.locator("[data-invite-cancel]").bounding_box()
     invite = page.locator("[data-invite-submit]").bounding_box()
@@ -78,7 +80,7 @@ def test_a_narrow_card_wraps_the_buttons_together(page: Page) -> None:
     of the one-row change, measured at 360–420px)."""
     for width in (420, 360, 320):
         page.set_viewport_size({"width": width, "height": 900})
-        page.goto(ACCOUNTS)
+        page.goto(app_url(ACCOUNTS))
         cancel = page.locator("[data-invite-cancel]").bounding_box()
         invite = page.locator("[data-invite-submit]").bounding_box()
         email = page.locator("#invite-email").bounding_box()

@@ -14,7 +14,7 @@ from collections.abc import Callable
 from playwright.sync_api import Page, expect
 
 from ._builder import session_pk
-from .conftest import LiveServer
+from .conftest import LiveServer, app_url
 
 RULE = {
     "combinator": "OR",
@@ -67,7 +67,7 @@ def test_edit_loads_the_observers_rule_into_the_builder(
 ) -> None:
     session_id = new_session()
     observer_id = _seed_observer(live_server.database_url, session_id)
-    page.goto(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}"))
     builder = page.locator(
         "[data-observer-edit-cohort] [data-observer-cohort-builder]"
     )
@@ -88,7 +88,7 @@ def test_add_starts_from_one_default_cell_and_the_buttons_work(
 ) -> None:
     session_id = new_session()
     _seed_observer(live_server.database_url, session_id)
-    page.goto(f"/operator/sessions/{session_id}/observers?add=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers?add=1"))
     builder = page.locator(
         "[data-observer-edit-cohort] [data-observer-cohort-builder]"
     )
@@ -127,7 +127,7 @@ def test_save_waits_for_an_email_and_a_finished_rule(
     and one click stores both."""
     session_id = new_session()
     _seed_observer(live_server.database_url, session_id)
-    page.goto(f"/operator/sessions/{session_id}/observers?add=1")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers?add=1"))
     save = page.locator("[data-observer-edit-save]")
     builder = page.locator(
         "[data-observer-edit-cohort] [data-observer-cohort-builder]"
@@ -185,7 +185,7 @@ def test_a_rule_the_dropdown_lacks_survives_a_rename(
     finally:
         engine.dispose()
 
-    page.goto(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers?edit_id={observer_id}"))
     builder = page.locator(
         "[data-observer-edit-cohort] [data-observer-cohort-builder]"
     )
@@ -254,7 +254,7 @@ def test_edit_on_several_rows_saves_one_rule_to_each(
     finally:
         engine.dispose()
 
-    page.goto(f"/operator/sessions/{session_id}/observers")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers"))
     boxes = page.locator("input.observer-select")
     boxes.nth(0).check()
     boxes.nth(1).check()
@@ -316,8 +316,8 @@ def test_several_rows_save_waits_for_a_change(
     finally:
         engine.dispose()
 
-    page.goto(f"/operator/sessions/{session_id}/observers"
-              f"?rule_id={first}&rule_id={second_id}")
+    page.goto(app_url(f"/operator/sessions/{session_id}/observers"
+              f"?rule_id={first}&rule_id={second_id}"))
     save = page.locator("[data-observer-edit-save]")
     expect(save, "Save is live over an untouched builder").to_be_disabled()
     page.locator("[data-observer-edit-cohort] [data-observer-combinator-toggle]").click()
