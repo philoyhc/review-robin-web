@@ -798,7 +798,8 @@ def send_reminder(
     outbox_correlation_id: str | None = None,
     commit: bool = True,
 ) -> ReminderResult:
-    """Send a reminder reusing the previously-issued invitation URL.
+    """Send a reminder reusing the previously-issued invitation's token,
+    its link built again by ``build_invite_url`` (findings C1).
 
     Falls back to ``send_invitation`` (rotates the token, writes a fresh
     ``kind='invitation'`` outbox row) when no invitation outbox row exists

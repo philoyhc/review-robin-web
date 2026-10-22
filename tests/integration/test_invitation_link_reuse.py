@@ -5,7 +5,9 @@ invitation text never named ``$invite_url`` (participant audit L5).
 the latest invitation's body. An override without the tag left nothing
 to find, so every later reminder fell back to a fresh invitation that
 rotated the token and killed the links already sent. The renderer now
-appends the link to such an override.
+appends the link to such an override. A reminder also builds that link
+again from its token, so one sent under an older prefix goes out under
+the current one (findings C1).
 """
 
 from __future__ import annotations
