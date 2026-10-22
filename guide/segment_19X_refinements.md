@@ -852,6 +852,9 @@ Taken 2026-10-22 at `5395f19`.
   starts one line high, any other starts two lines high, and each grows
   with its text, with no handle (browser test).
 - A saved long answer shows whole on load (browser test).
+- A one-line box takes no line break the way Open question 1 rules:
+  Enter and a pasted multi-line value are each asserted, and a two-line
+  box keeps its breaks (browser test).
 - `grep -rn "textarea_rows_for\|textareaRowsFor" app tests` finds nothing.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19X.10` exits 0; any warning adjudicated
