@@ -556,11 +556,23 @@
         box-sizing: border-box;
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
+      /* A String answer box (segment 19X Item 10) is a textarea whose
+         ``rows`` is its floor, one line or two; the fit script below
+         grows it with its text. The app-wide 80px textarea floor would
+         override that, so the box drops it. */
+      textarea.rs-answer { min-height: 0; }
+      /* A box the fit script has taken on (``data-fit-on``) loses its
+         handle and its scrollbar: its height is its text's, and a drag
+         would be undone by the next keystroke. Without script the
+         attribute never lands, and the box keeps its native handle. */
+      textarea[data-fit-on],
+      body.ui-v2 textarea[data-fit-on] {
+        resize: none;
+        overflow: hidden;
+      }
       /* Top-align cells in the reviewer-surface form table so
-         multi-row textareas (long-text response fields with the
-         derived ``rows="N"`` from
-         ``views/_instruments.py::textarea_rows_for``) anchor at
-         the top of the row rather than centering vertically.
+         answer boxes taller than one line anchor at the top of the
+         row rather than centering vertically.
          Scoped to ``.rs-instrument-group`` so the rule covers
          both the group-scoped table and the regular per-reviewee
          table without re-aligning other tables in the
