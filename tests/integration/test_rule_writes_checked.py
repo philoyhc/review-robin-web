@@ -400,6 +400,7 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
         ([_composite("link2", [_child(_IS_A)], op="NOT")], "'NOT'"),
         ([_composite("link2", [{**_child(_IS_A), "kind": "FILTER"}])], "a FILTER rule"),
         ([_composite("link2", [_child(_IS_A, enabled=False)])], "a disabled rule"),
+        ([_composite("link2", [_child(_IS_A, enabled="false")])], "a disabled rule"),
         (
             [_composite("link2", [_child({**_IS_A, "operator": "in", "operand": ["A"]})])],
             "operator 'in'",
@@ -432,6 +433,7 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
         "not-op",
         "filter-child",
         "disabled-child",
+        "string-false-child",
         "in-operator",
         "link1-cross-side",
         "case-sensitive",
@@ -577,6 +579,23 @@ def test_the_card_does_not_show_a_disabled_rule_the_engine_skips(
 
     assert state["link1"]["mode"] == "all" and state["link1"]["rules"] == []
     assert [rule["operand_value"] for rule in state["link2"]["rules"]] == ["A"]
+
+
+def test_the_card_reads_a_string_false_as_the_engine_does(
+    db: Session, client: TestClient
+) -> None:
+    """The engine reads ``"false"`` as False (Pydantic's lax bool), so
+    the card hides that Link, and a ``case_sensitive: "false"`` rule
+    imports (Codex on #3237)."""
+    _session, instrument = _session_with_tags(db, client, "e1-str-false")
+    _store_rules(db, instrument, [_composite("link2", [_child(_IS_A)], enabled="false")])
+
+    assert decode_band1_state(instrument, db)["link2"]["mode"] == "all"
+
+    operator, session = _seed_for_import(db, "e1-str-case")
+    rules = [_composite("link2", [_child({**_IS_A, "case_sensitive": "false"})])]
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", json.dumps(rules))
+    assert not apply_session_config(db, session, rows, user=operator).errors
 
 
 def test_a_link_whose_rules_are_all_disabled_reads_as_all(

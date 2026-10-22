@@ -42,6 +42,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.orm import Session, object_session
 
 from app.db.models import Instrument, SessionRuleSet, User
@@ -65,6 +66,20 @@ _TAG_OPERAND_OPS: frozenset[str] = frozenset({"same_as", "different_from"})
 # IS FILLED / IS EMPTY test the field alone; the card's value box is
 # inactive for them, and whatever it holds is not stored.
 _NO_OPERAND_OPS: frozenset[str] = frozenset({"is_not_empty", "is_empty"})
+
+
+_ENGINE_BOOL: TypeAdapter[bool] = TypeAdapter(bool)
+
+
+def _flag(rule: dict[str, Any], key: str, default: bool) -> bool:
+    """A rule's ``enabled`` / ``case_sensitive`` as the engine reads it:
+    Pydantic's lax ``bool``, so a stored ``"false"`` is False, where
+    plain truthiness would read it as True (Codex on #3237)."""
+    value = rule.get(key, default)
+    try:
+        return _ENGINE_BOOL.validate_python(value)
+    except ValidationError:
+        return bool(value)
 
 
 class Band1ParseError(ValueError):
@@ -249,9 +264,9 @@ def _shown_composites(
         if link_id not in ("link1", "link2"):
             continue
         enabled = [
-            child for child in entry.get("rules", []) if child.get("enabled", True)
+            child for child in entry.get("rules", []) if _flag(child, "enabled", True)
         ]
-        if entry.get("enabled", True) and enabled:
+        if _flag(entry, "enabled", True) and enabled:
             shown.append((link_id, entry, enabled))
     return shown
 
@@ -778,7 +793,7 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                 "reads a Link only as a COMPOSITE, so it doesn't show this "
                 "one, and its next Save drops it."
             )
-        if not entry.get("enabled", True):
+        if not _flag(entry, "enabled", True):
             return f"{link} ({rule_id}) is disabled; the card has no disabled Link."
         op = entry.get("op")
         if op not in ("AND", "OR"):
@@ -793,7 +808,7 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                     f"{link} holds a {child.get('kind')} rule ({child_id!r}); "
                     "the card shows only MATCH rules, and its next Save drops it."
                 )
-            if not child.get("enabled", True):
+            if not _flag(child, "enabled", True):
                 return f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
             predicate = child.get("predicate") or {}
             operator = predicate.get("operator")
@@ -806,7 +821,7 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                     "and the card shows it as IS, so its next Save rewrites or "
                     "drops it."
                 )
-            if predicate.get("case_sensitive"):
+            if _flag(predicate, "case_sensitive", False):
                 return (
                     f"{link} rule {child_id!r} is case-sensitive; the card "
                     "compares ignoring case, and its next Save stores it so."
@@ -826,12 +841,12 @@ def keeps_pairs_by_pair_tag(rules_json: list[dict[str, Any]]) -> bool:
     for entry in rules_json:
         if entry.get("id") != "link2" or entry.get("kind") != "COMPOSITE":
             continue
-        if not entry.get("enabled", True):
+        if not _flag(entry, "enabled", True):
             continue
         for child in entry.get("rules", []):
             predicate = child.get("predicate") or {}
             if (
-                child.get("enabled", True)
+                _flag(child, "enabled", True)
                 and predicate.get("operator") in _PAIR_KEEPING_OPS
                 and str(predicate.get("field", "")).startswith(_PAIR_PREFIX)
             ):
