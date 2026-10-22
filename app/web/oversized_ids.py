@@ -1,14 +1,13 @@
-"""An id too large for a 64-bit column answers 404, not 500 (findings O6).
+"""An id too large for an id column answers 404, not 500 (findings O6).
 
-SQLite refuses to bind an integer past ``MAX_SQL_INT`` and raises
-``OverflowError``, a 500; Postgres compares it and finds no row, a 404.
-This app-wide dependency gives both databases the Postgres answer before a
-route reaches the database: a path or query parameter that names an id
-and is past the bound is a page that cannot exist. A form-body id list and
-the audit log's ``cursor`` are refused the same way, though Postgres would
-skip the id or page from it: no page emits such a value, so only a
-hand-made request carries one, and one answer on both databases beats a
-500 on one (findings 2026-10-22 P2).
+Neither database binds an id past ``MAX_SQL_INT``, the 32-bit ``Integer``
+an id column holds: Postgres raises "integer out of range" and SQLite,
+past 64 bits, ``OverflowError``, each a 500. This app-wide dependency
+answers 404 before a route reaches the database: a path or query
+parameter that names an id and is past the bound is a page that cannot
+exist. A form-body id list and the audit log's ``cursor`` are refused the
+same way: no page emits such a value, so only a hand-made request
+carries one (findings 2026-10-22 P2).
 ``request.path_params`` holds the raw text (FastAPI converts it for the
 route, not here), so all are read as digits. A value that isn't digits is
 left to the route, which already refuses it as malformed.

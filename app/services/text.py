@@ -19,10 +19,13 @@ def pluralize(count: int, singular: str, plural: str | None = None) -> str:
     return plural if plural is not None else singular + "s"
 
 
-#: The largest id a 64-bit integer column holds. SQLite refuses to bind
-#: anything above it (``OverflowError``) where Postgres merely compares, so
-#: a longer id is treated as one no row can have (findings O6, R8).
-MAX_SQL_INT = 2**63 - 1
+#: The largest id an id column holds. Every id column is ``Integer``, 32
+#: bits on Postgres, which refuses to bind a parameter past it ("integer
+#: out of range", a 500) as SQLite refuses one past 64 bits
+#: (``OverflowError``), so a larger id is treated as one no row can have
+#: (findings O6, R8; the ``ci-postgres`` run of findings 2026-10-22 P2,
+#: whose first tests probed ids between the two bounds).
+MAX_SQL_INT = 2**31 - 1
 
 
 def parse_id(raw: object) -> int | None:
