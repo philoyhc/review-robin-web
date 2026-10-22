@@ -502,6 +502,18 @@ member pair. Excluding self-reviews on a group-scoped
 instrument rules the whole group out, not just the `(R, R)`
 cell.
 
+**The catch-all group is never the reviewer's own.** The pairs whose
+boundary value is blank form one group: on a relationship-tag boundary,
+every reviewee the reviewer has no relationship with; on a reviewee-tag
+boundary, every untagged reviewee. The reviewer's own pair usually sits
+in it, but it is not a group they belong to, so none of its rows is a
+self-review, the reviewer's own `(R, R)` row included, and excluding
+self-reviews leaves it (findings E2, author's ruling 2026-10-22).
+Generate, the Band 1 preview and the stored column read it alike
+(`responses.is_catch_all_key`). A key with only some parts blank, on a
+boundary of several tags, is an ordinary group. An instrument with no
+boundary is one group, and that one is the reviewer's.
+
 The canonical computation surface is
 `assignments.classify_self_review_pairs(db, session_id=, pairs=)`
 in `app/services/assignments/`; on individual-scoped
@@ -689,12 +701,8 @@ that gate; `None`, its default, deletes without asking; Generate asks at its rou
 ### Self-review interaction
 
 On a group-scoped instrument, a "self review group" is **any
-group containing the reviewer as one of its members**, except the
-catch-all group of pairs whose boundary value is blank: on a
-relationship-tag boundary that is every reviewee the reviewer has no
-relationship with, so it is never the reviewer's own, though their own
-pair sits in it (findings E2, author's ruling 2026-10-22). An
-instrument with no boundary is one group, and that one is theirs. The
+group containing the reviewer as one of its members**, never the
+catch-all group (*Group-scoped instruments* above). The
 self-review toggle drops the **whole group** when toggled off,
 not just the self-row inside it. The toggle reads the
 `Assignment.is_self_review` column (*Source of truth* above), which

@@ -546,9 +546,10 @@ review:
 - **Individual-scoped** — true when reviewer.email matches
   reviewee.email, case-insensitively.
 - **Group-scoped** — the *whole-group* rule: true when the
-  reviewer is a member of the group being reviewed, and when it
-  fires **every assignment in that group is flagged**, not only
-  the reviewer's own cell.
+  reviewer is a member of the group being reviewed (never the
+  blank-boundary catch-all group), and when it fires **every
+  assignment in that group is flagged**, not only the reviewer's own
+  cell.
 
 `spec/assignments.md` § *Self-review policy* is the authority.
 

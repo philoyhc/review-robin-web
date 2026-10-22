@@ -343,7 +343,7 @@ def _diff_one_instrument(
     self_review_groups: set[tuple[int, tuple[str, ...]]] = set()
     if instrument.group_kind is not None:
         from app.services import instruments as instruments_service
-        from app.services.responses import group_key_for_pair
+        from app.services.responses import group_key_for_pair, is_catch_all_key
 
         boundary = instruments_service.decode_group_kind(
             instrument.group_kind
@@ -358,13 +358,14 @@ def _diff_one_instrument(
                 pair_context_lookup=pair_context_lookup,
             )
 
-        # Membership, from the roster.
+        # Membership, from the roster. The catch-all group is never the
+        # reviewer's own, though their own pair sits in it (findings E2).
         for reviewer in reviewers:
             for reviewee in reviewees:
                 if is_self_review(reviewer, reviewee):
-                    self_review_groups.add(
-                        (reviewer.id, _key(reviewer.id, reviewee))
-                    )
+                    key = _key(reviewer.id, reviewee)
+                    if not is_catch_all_key(key):
+                        self_review_groups.add((reviewer.id, key))
         # Keys for the pairs that actually survived.
         for reviewer, reviewee in result.pairs:
             pair_group_key[(reviewer.id, reviewee.id)] = _key(

@@ -148,7 +148,7 @@ def workflow_prepare(
     ):
         try:
             impact = assignments.reconcile_impact(db, review_session)
-        except (lifecycle.LifecycleError, ValueError):
+        except ValueError:
             # A rule set the dry-run cannot load (a pydantic
             # ``ValidationError`` is a ``ValueError``): no detour. The run
             # below meets the same failure at its Generate step, which is

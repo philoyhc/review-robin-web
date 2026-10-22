@@ -215,13 +215,16 @@ def test_a_rule_set_the_dry_run_cannot_load_fails_prepare_at_generate(
     rule_set.rules_json = [{"kind": "no-such-rule"}]
     db.commit()
 
+    # Home: the Assignments and Validate pages answer 500 on such a rule
+    # set however they are reached, which is findings E4, not this.
     response = operator.post(
         f"/operator/sessions/{review_session.public_id}/workflow/prepare",
-        data={"return_to": "assignments"},
+        data={"return_to": "home"},
         follow_redirects=False,
     )
 
     assert response.status_code == 303
     location = response.headers["location"]
     assert "super_status=failed" in location and "super_step=generate" in location
+    assert operator.get(location).status_code == 200
     assert _answers(db, group_id) == {"Carol": "4", "Fay": "4"}

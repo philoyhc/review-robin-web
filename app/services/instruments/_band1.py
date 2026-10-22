@@ -1168,11 +1168,14 @@ def find_sample_in_scope_reviewee(
                 by_address.setdefault(
                     normalize_email(e.email_or_identifier), []
                 ).append(e)
+            from app.services.responses import is_catch_all_key
+
             self_groups = {
                 (r.id, _group_key(r, e))
                 for r in reviewers
                 for e in by_address.get(normalize_email(r.email), [])
                 if is_self_review(r, e)
+                and not is_catch_all_key(_group_key(r, e))
             }
             pairs = [
                 (r, e)

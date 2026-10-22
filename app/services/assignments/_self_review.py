@@ -147,11 +147,6 @@ def classify_self_review(
     )
 
 
-def _catch_all(key: tuple[str, ...]) -> bool:
-    """A boundary's group of pairs whose boundary value is blank."""
-    return bool(key) and all(part == "" for part in key)
-
-
 def classify_self_review_pairs(
     db: Session,
     *,
@@ -166,7 +161,7 @@ def classify_self_review_pairs(
     ``{assignment_id: is_self_review}`` for every pair passed in. The
     two branches are documented on that function.
     """
-    from app.services.responses import group_keys
+    from app.services.responses import group_keys, is_catch_all_key
 
     # (group instrument, reviewer) -> the group keys of the groups that
     # reviewer is a member of. **Membership comes from the roster, not
@@ -212,12 +207,9 @@ def classify_self_review_pairs(
     # drop out here; only group instruments read ``member_keys``.
     member_keys: dict[tuple[int, int], set[tuple[str, ...]]] = {}
     for row in membership:
-        # The catch-all group of pairs with no boundary value — every
-        # reviewee the reviewer has no relationship (or tag) with — is
-        # never the reviewer's own, though their ``(R, R)`` pair sits in
-        # it (findings E2, author's ruling 2026-10-22). An instrument
-        # with no boundary keys every pair ``()``: one group, theirs.
-        if row.id in keys and not _catch_all(keys[row.id]):
+        # The catch-all group is never the reviewer's own, as Generate
+        # and the Band 1 preview read it (findings E2).
+        if row.id in keys and not is_catch_all_key(keys[row.id]):
             member_keys.setdefault(
                 (row.instrument_id, row.reviewer_id), set()
             ).add(keys[row.id])
