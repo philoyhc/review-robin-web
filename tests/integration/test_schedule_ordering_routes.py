@@ -379,3 +379,40 @@ def test_edit_does_not_check_a_release_window_neither_box_changed(
     status_code, body = _save(responses_release_at=_ts(2027, 1, 2, 9))
     assert status_code == 422
     assert "within 365 days of Release responses from" in body
+
+
+def test_edit_does_not_check_an_inverted_release_window_neither_box_changed(
+    client: TestClient, db: Session
+) -> None:
+    """An imported window that closes before it opens is kept the same
+    way; moving Release-until checks the order again (findings L1)."""
+    from app.services import date_formatting, sessions
+
+    review_session = _make_session(client, db, code="ord-l1-inverted")
+    review_session.responses_release_at = _ts(2027, 3, 1, 9)
+    review_session.responses_release_until = _ts(2027, 2, 1, 9)
+    db.commit()
+    zone = sessions.resolve_session_timezone(review_session)
+
+    def _box(value: _dt.datetime) -> str:
+        return date_formatting.format_datetime_local(value, zone)
+
+    status_code, body = _submit_edit(
+        client,
+        review_session,
+        display_timezone=zone,
+        name="Renamed",
+        responses_release_at=_box(review_session.responses_release_at),
+        responses_release_until=_box(review_session.responses_release_until),
+    )
+    assert status_code == 303, body
+
+    status_code, body = _submit_edit(
+        client,
+        review_session,
+        display_timezone=zone,
+        responses_release_at=_box(review_session.responses_release_at),
+        responses_release_until=_box(_ts(2027, 2, 2, 9)),
+    )
+    assert status_code == 422
+    assert "must be after Release responses from" in body
