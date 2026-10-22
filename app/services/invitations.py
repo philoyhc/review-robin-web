@@ -716,14 +716,35 @@ def most_recent_invitation_url(
 ) -> str | None:
     """Pull the raw token URL from the most recent invitation outbox row.
 
-    Reminders reuse the existing URL so the previously-sent link keeps
-    working. Returns None if the invitation has never been sent.
+    Reminders reuse its token, so the previously-sent link keeps
+    working (:func:`current_invite_url` builds the link again). Returns
+    None if the invitation has never been sent.
     """
     row = _most_recent_invitation_outbox(db, invitation_id)
     if row is None:
         return None
     match = _INVITE_URL_PATTERN.search(row.body)
     return match.group(0) if match else None
+
+
+def current_invite_url(
+    url: str | None,
+    invitation: Invitation,
+    build_invite_url: Callable[[str], str],
+) -> str | None:
+    """The link in the last invitation email, built again from its token
+    by today's ``build_invite_url``, or None when there is no such email
+    or its token is no longer the invitation's.
+
+    Rebuilt rather than reused, so a link sent before the app moved under
+    ``/reviewrobin`` (segment 21D), or under any other host or prefix,
+    goes out and shows as it resolves now; the token is unchanged, so the
+    reminder opens the invitation the email did (findings C1, author's
+    ruling 2026-10-22: nothing was sent before the flip, so this is a
+    guard)."""
+    if url is None or not url_matches_current_token(url, invitation):
+        return None
+    return build_invite_url(url.rsplit("/", 1)[-1])
 
 
 def url_matches_current_token(url: str, invitation: Invitation) -> bool:
@@ -798,13 +819,13 @@ def send_reminder(
     commit: the scheduled-reminder pass sends and records an entry in
     one transaction, under the session lock (findings Bc3).
     """
-    existing_url = most_recent_invitation_url(db, invitation_id=invitation.id)
-    if existing_url is not None and not url_matches_current_token(
-        existing_url, invitation
-    ):
-        # The token was regenerated after that email went out, so its
-        # link is dead; send a fresh invitation instead (findings Gc1).
-        existing_url = None
+    # None when the token was regenerated after that email went out, so
+    # its link is dead; send a fresh invitation instead (findings Gc1).
+    existing_url = current_invite_url(
+        most_recent_invitation_url(db, invitation_id=invitation.id),
+        invitation,
+        build_invite_url,
+    )
     if existing_url is None:
         result = send_invitation(
             db,

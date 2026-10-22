@@ -656,7 +656,7 @@ def invitation_reviewer_detail(
             Invitation.reviewer_id == reviewer.id,
         )
     ).scalar_one_or_none()
-    invite_url = (
+    sent_url = (
         invitations.most_recent_invitation_url(db, invitation_id=invitation.id)
         if invitation is not None
         else None
@@ -664,12 +664,18 @@ def invitation_reviewer_detail(
     # The URL comes from the last invitation email, and a regenerate
     # rotates the token without sending one, so that link can be dead.
     # Shown only while it still resolves; otherwise the card says the
-    # new link has not gone out (findings Cc4).
-    invite_url_superseded = invite_url is not None and (
-        not invitations.url_matches_current_token(invite_url, invitation)
+    # new link has not gone out (findings Cc4). Shown as a reminder
+    # would send it: built again from its token (findings C1).
+    invite_url = (
+        invitations.current_invite_url(
+            sent_url,
+            invitation,
+            lambda token: str(request.url_for("reviewer_invite", token=token)),
+        )
+        if invitation is not None
+        else None
     )
-    if invite_url_superseded:
-        invite_url = None
+    invite_url_superseded = sent_url is not None and invite_url is None
     # 19P.6 rung 2b — the Invitation card's delivery slot (Item 6 open
     # question 5). `invitation.sent_at` says a send was attempted on the
     # current token; this says what became of it. Different facts from
