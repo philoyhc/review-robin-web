@@ -786,7 +786,7 @@ reviewer surface a String answer is still one of two fixed shapes
 
 ### Decision
 
-*Proposed; the author rules on Open questions 1–4.*
+*The author accepted the recommendations, 2026-10-22 (Open questions).*
 - **Every String answer is a `<textarea>` that fits its text.** Its
   height is its content's, above a floor, with no handle.
 - **The floor, by `max_length`:**
@@ -810,7 +810,7 @@ Rejected:
 
 ### Semantics
 
-- **A one-line box takes no line break** (Open question 1). Enter inserts
+- **A one-line box takes no line break** (Open question 1, answered). Enter inserts
   none, and a pasted break becomes a space, so its answer reads as the
   short answer its maximum implies. A two-line box keeps line breaks.
 - **No ceiling** (Open question 2). The box grows to its whole answer, as
@@ -852,9 +852,9 @@ Taken 2026-10-22 at `5395f19`.
   starts one line high, any other starts two lines high, and each grows
   with its text, with no handle (browser test).
 - A saved long answer shows whole on load (browser test).
-- A one-line box takes no line break the way Open question 1 rules:
-  Enter and a pasted multi-line value are each asserted, and a two-line
-  box keeps its breaks (browser test).
+- A one-line box takes no line break: Enter inserts none and a pasted
+  multi-line value arrives with spaces, while a two-line box keeps its
+  breaks (browser test).
 - `grep -rn "textarea_rows_for\|textareaRowsFor" app tests` finds nothing.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19X.10` exits 0; any warning adjudicated
@@ -864,17 +864,12 @@ Taken 2026-10-22 at `5395f19`.
 
 ### Open questions
 
-The author decides each; my recommendation is first.
-1. **A line break in a one-line box:** none, so Enter does nothing there
-   and a pasted break becomes a space. The alternative is to allow
-   breaks, and the box grows. Today's input takes none, and Enter in it
-   saves the page.
-2. **A ceiling:** none, as the help boxes have. The alternative is about
-   ten lines, then the box scrolls inside.
-3. **`rs-textlong`'s threshold:** it stays at 100, since it is the
-   column's minimum width, not the box's. The alternative is to move it
-   to 50 with the boxes.
-4. **A String with no `max_length`:** two lines, since it is unbounded.
+All four answered by the author, 2026-10-22, on the recommendation:
+1. ~~A line break in a one-line box~~: none. Enter inserts nothing, and a
+   pasted break becomes a space.
+2. ~~A ceiling~~: none, as the help boxes have.
+3. ~~`rs-textlong`'s threshold~~: stays at 100.
+4. ~~A String with no `max_length`~~: two lines.
 
 ### Out of scope
 
