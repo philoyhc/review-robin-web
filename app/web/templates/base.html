@@ -573,11 +573,23 @@
         box-sizing: border-box;
       }
       th.rs-textlong, td.rs-textlong { min-width: 14em; }
+      /* A String answer box (segment 19X Item 10) is a textarea whose
+         ``rows`` is its floor, one line or two; the fit script below
+         grows it with its text. The app-wide 80px textarea floor would
+         override that, so the box drops it. */
+      textarea.rs-answer { min-height: 0; }
+      /* A box the fit script has taken on (``data-fit-on``) loses its
+         handle and its scrollbar: its height is its text's, and a drag
+         would be undone by the next keystroke. Without script the
+         attribute never lands, and the box keeps its native handle. */
+      textarea[data-fit-on],
+      body.ui-v2 textarea[data-fit-on] {
+        resize: none;
+        overflow: hidden;
+      }
       /* Top-align cells in the reviewer-surface form table so
-         multi-row textareas (long-text response fields with the
-         derived ``rows="N"`` from
-         ``views/_instruments.py::textarea_rows_for``) anchor at
-         the top of the row rather than centering vertically.
+         answer boxes taller than one line anchor at the top of the
+         row rather than centering vertically.
          Scoped to ``.rs-instrument-group`` so the rule covers
          both the group-scoped table and the regular per-reviewee
          table without re-aligning other tables in the
@@ -6441,6 +6453,92 @@
           root.querySelectorAll("[data-dt-field]").forEach(wire);
         };
         window.rrwDateTimeFields(document);
+      })();
+    </script>
+    {# Boxes that fit their text (segment 19X Item 10; first built for
+       the help boxes, 19Y Item 5). A `textarea[data-fit-box]` takes the
+       height of its text above its own floor (its `rows`, or a CSS
+       `min-height`), on load, on each edit and when its width changes,
+       with no ceiling: `maxlength` bounds it. `data-fit-box="one-line"`
+       also takes no line break: Enter inserts none, and a pasted or
+       dropped break becomes a space. A box added after load (the
+       Instruments page's help rows) is wired by `window.rrwFitBoxes(node)`;
+       wiring twice is a no-op, and `window.rrwUnfitBoxes(node)` stops
+       watching boxes about to be replaced. #}
+    <script>
+      (function () {
+        var SELECTOR = "textarea[data-fit-box]";
+        function shown(ta) { return ta.getClientRects().length > 0; }
+        // Collapsing a box to measure it can pull a page scrolled near
+        // its foot upward; put the scroll back.
+        function fitAll(boxes) {
+          boxes = boxes.filter(shown);
+          if (!boxes.length) return;
+          var scrollY = window.scrollY;
+          boxes.forEach(function (ta) { ta.style.height = "auto"; });
+          var heights = boxes.map(function (ta) {
+            var cs = getComputedStyle(ta);
+            return ta.scrollHeight
+              + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+          });
+          boxes.forEach(function (ta, i) { ta.style.height = heights[i] + "px"; });
+          if (window.scrollY !== scrollY) window.scrollTo(window.scrollX, scrollY);
+        }
+        // A width change rewraps the text; the fit waits a frame so the
+        // box never resizes inside the observer's own callback.
+        var watch = window.ResizeObserver ? new ResizeObserver(function (entries) {
+          var changed = [];
+          entries.forEach(function (entry) {
+            var ta = entry.target;
+            var width = entry.contentRect.width;
+            if (ta.__rrwFitWidth === width) return;
+            ta.__rrwFitWidth = width;
+            changed.push(ta);
+          });
+          if (changed.length) {
+            window.requestAnimationFrame(function () { fitAll(changed); });
+          }
+        }) : null;
+        function oneLine(ta) { return ta.getAttribute("data-fit-box") === "one-line"; }
+        function flatten(ta) {
+          if (!/[\r\n]/.test(ta.value)) return;
+          var at = ta.selectionStart;
+          ta.value = ta.value.replace(/\r\n|[\r\n]/g, " ");
+          if (at !== null) ta.setSelectionRange(at, at);
+        }
+        function boxesIn(root) {
+          var found = [];
+          if (root.matches && root.matches(SELECTOR)) found.push(root);
+          root.querySelectorAll(SELECTOR).forEach(function (ta) { found.push(ta); });
+          return found;
+        }
+        window.rrwFitBox = function (ta) { fitAll([ta]); };
+        window.rrwFitBoxes = function (root) {
+          var boxes = boxesIn(root).filter(function (ta) {
+            if (ta.hasAttribute("data-fit-on")) return false;
+            ta.setAttribute("data-fit-on", "");
+            if (oneLine(ta)) flatten(ta);
+            if (watch) watch.observe(ta);
+            return true;
+          });
+          fitAll(boxes);
+        };
+        window.rrwUnfitBoxes = function (root) {
+          boxesIn(root).forEach(function (ta) { if (watch) watch.unobserve(ta); });
+        };
+        document.addEventListener("keydown", function (event) {
+          var ta = event.target;
+          if (event.key === "Enter" && ta.matches && ta.matches(SELECTOR) && oneLine(ta)) {
+            event.preventDefault();
+          }
+        });
+        document.addEventListener("input", function (event) {
+          var ta = event.target;
+          if (!ta.matches || !ta.matches(SELECTOR)) return;
+          if (oneLine(ta)) flatten(ta);
+          fitAll([ta]);
+        });
+        window.rrwFitBoxes(document);
       })();
     </script>
   </body>

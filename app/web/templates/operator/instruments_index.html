@@ -2839,9 +2839,6 @@
                 // the JSON ``response_fields[i].width_px`` slot retired.
                 saveBand2Widths(card);
               }
-              // Long-text boxes re-measure at their new width, as the
-              // surface's do once laid out.
-              adjustPreviewTextareaRows(table);
             }
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
@@ -3035,14 +3032,13 @@
                 + 'data-help-card-key="' + keyAttr + '">';
               html += '<strong>' + esc(p.label || '') + '</strong>';
               if (unlocked) {
-                html += '<textarea data-help-card-textarea '
+                html += '<textarea data-help-card-textarea data-fit-box '
                   + 'data-help-card-key="' + keyAttr + '" '
                   + 'aria-label="Help text for ' + esc(p.label || '') + '" '
                   + 'oninput="newModelHelpCardInput(this)" '
                   + 'maxlength="1000" '
                   + 'style="display: block; width: 100%; margin-top: 4px; '
                   + 'min-height: 60px; box-sizing: border-box; '
-                  + 'resize: none; overflow: hidden; '
                   + 'font: inherit; padding: 4px 6px;">'
                   + esc(helpText) + '</textarea>';
               } else if (helpText) {
@@ -3063,44 +3059,15 @@
             var heading = intro.querySelector('[data-rs-help-rows="heading"]');
             var helpCard = intro.querySelector('[data-rs-help-rows="card"]');
             // The boxes about to be replaced leave the watch with them.
-            if (helpBoxWatch) {
-              intro.querySelectorAll('[data-help-card-textarea]').forEach(function (ta) {
-                helpBoxWatch.unobserve(ta);
-              });
-            }
+            window.rrwUnfitBoxes(intro);
             if (heading) { heading.innerHTML = inCard ? '' : html; }
             if (helpCard) { helpCard.innerHTML = inCard ? html : ''; }
-            intro.querySelectorAll('[data-help-card-textarea]').forEach(function (ta) {
-              fitHelpBox(ta);
-              if (helpBoxWatch) { helpBoxWatch.observe(ta); }
-            });
+            window.rrwFitBoxes(intro);
           }
           // 19Y Item 5 — a help text's edit box grows with its text (the
           // author, 2026-10-20): its height follows its content above the
           // 60px floor, on build, on each keystroke and when its width
-          // changes. Not drawn (a hidden card) leaves it for the watch.
-          function fitHelpBox(ta) {
-            if (!ta.getClientRects().length) { return; }
-            var cs = getComputedStyle(ta);
-            var borders = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-            // Measuring collapses the box for one layout, which can pull a
-            // page scrolled near its foot upward; put the scroll back.
-            var scrollY = window.scrollY;
-            ta.style.height = 'auto';
-            ta.style.height = (ta.scrollHeight + borders) + 'px';
-            if (window.scrollY !== scrollY) { window.scrollTo(window.scrollX, scrollY); }
-          }
-          // A width change rewraps the text; the fit waits a frame so the
-          // box never resizes inside the observer's own callback.
-          var helpBoxWatch = window.ResizeObserver ? new ResizeObserver(function (entries) {
-            entries.forEach(function (entry) {
-              var ta = entry.target;
-              var width = entry.contentRect.width;
-              if (ta.__rrwFitWidth === width) { return; }
-              ta.__rrwFitWidth = width;
-              window.requestAnimationFrame(function () { fitHelpBox(ta); });
-            });
-          }) : null;
+          // changes, through ``base.html``'s shared fit (19X Item 10).
           // The layout chip's script lives outside this closure.
           window.newModelPlaceHelpRows = placeHelpRows;
           // Refresh the intro card's "Required items completed"
@@ -3170,37 +3137,15 @@
             if (!key || !band2) { return; }
             var row = rfRowByKey(band2, key);
             if (row) { row.setAttribute('data-help-text', ta.value); }
-            fitHelpBox(ta);
           };
-          // Render a disabled placeholder input/textarea/select for
-          // a selected response-field cell in the preview row. Shape
-          // matches the reviewer surface (review_surface.html lines
-          // 345-410): short String → <input type=text>, long String
-          // (max_len > 100) → <textarea rows=2>, Integer / Decimal →
-          // <input type=number>, List → <select>. The placeholder
-          // string mirrors ``views/_instruments.py::placeholder_for_field``.
-          // ``textareaRowsFor`` mirrors
-          // ``views/_instruments.py::textarea_rows_for`` — keep the
-          // constants in sync if you tune either side.
-          function textareaRowsFor(maxChars, columnWidthPx) {
-            var DEFAULT_RESPONSE_COL_WIDTH_PX = 224;
-            var PX_PER_CHAR = 8;
-            var TYPICAL_RESPONSE_FRACTION = 0.5;
-            var MIN_TEXTAREA_ROWS = 2;
-            var MAX_TEXTAREA_ROWS = 8;
-            var MIN_CHARS_PER_ROW = 20;
-            if (!maxChars || maxChars <= 0) { return MIN_TEXTAREA_ROWS; }
-            var width = columnWidthPx || DEFAULT_RESPONSE_COL_WIDTH_PX;
-            var typical = maxChars * TYPICAL_RESPONSE_FRACTION;
-            var charsPerRow = Math.max(
-              MIN_CHARS_PER_ROW, width / PX_PER_CHAR
-            );
-            var raw = Math.ceil(typical / charsPerRow);
-            return Math.max(
-              MIN_TEXTAREA_ROWS,
-              Math.min(MAX_TEXTAREA_ROWS, raw)
-            );
-          }
+          // Render a disabled placeholder box/select for a selected
+          // response-field cell in the preview row. Shape matches the
+          // reviewer surface (``review_surface.html``): a String is an
+          // answer box one line high when its maximum is 50 or fewer
+          // characters and two lines otherwise (19X Item 10), Integer /
+          // Decimal an <input type=number>, List a <select>. The
+          // placeholder string mirrors
+          // ``views/_instruments.py::placeholder_for_field``.
           // 19T Item 1 — the committed type and bounds the preview shows
           // (``data-rf-*``): rendered from the saved field, rewritten
           // whenever the row's live shape is valid (19T Item 9,
@@ -3217,7 +3162,6 @@
             };
           };
           function buildResponseFieldPreviewCell(card, r) {
-            var instrumentCard = card.closest('[id^="instrument-"]') || card;
             var row = rfRowByKey(card, r.key);
             if (!row || !rfRowCommitted(row)) { return '<span class="muted">—</span>'; }
             var bounds = window.newModelRfCommittedShape(row);
@@ -3232,38 +3176,18 @@
             var maxLenInt = parseInt(bounds.max || '0', 10) || 0;
             var commonAttrs = 'disabled tabindex="-1" aria-hidden="true" '
               + 'style="width: 100%; box-sizing: border-box; font: inherit;"';
-            if (dataType === 'string' && maxLenInt > 100) {
-              // Mirror ``views/_instruments.py::textarea_rows_for``
-              // so the Band 2 preview shows the same initial row
-              // count the reviewer surface will render. Reads the
-              // current ``<col>`` width from the same Band 2
-              // table; falls back to the helper's default when
-              // unset.
-              var colEl = instrumentCard.querySelector(
-                'col[data-col-key="resp_' + r.key + '"]'
-              );
-              var colPx = null;
-              if (colEl) {
-                var cw = parseInt(colEl.style.width, 10);
-                if (cw > 0) { colPx = cw; }
-              }
-              var rows = textareaRowsFor(maxLenInt, colPx);
-              // 19Y Item 4 — no resize handle in the preview: a drag here
-              // would persist nowhere. The reviewer surface keeps its own,
-              // from the same starting height (textareaRowsFor).
-              return '<textarea ' + commonAttrs.replace(
+            if (dataType === 'string') {
+              // 19X Item 10 — the reviewer surface's floor. The preview
+              // box is empty, so it needs no fit; 19Y Item 4 — and no
+              // resize handle: a drag here would persist nowhere.
+              var rows = (maxLenInt && maxLenInt <= 50) ? 1 : 2;
+              return '<textarea class="rs-answer" ' + commonAttrs.replace(
                 'width: 100%;',
-                'width: 100%; min-height: 44px; resize: none;'
+                'width: 100%; resize: none;'
               ) + ' rows="' + rows + '"'
                 + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
                 + (maxLenInt ? ' maxlength="' + maxLenInt + '"' : '')
                 + '></textarea>';
-            }
-            if (dataType === 'string') {
-              return '<input type="text" ' + commonAttrs
-                + (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '')
-                + (maxLenInt ? ' maxlength="' + maxLenInt + '"' : '')
-                + '>';
             }
             if (dataType === 'integer' || dataType === 'decimal') {
               // Numeric inputs deliberately drop the placeholder
@@ -3379,51 +3303,8 @@
             placeHelpRows(card);
             container.innerHTML = buildProgressAndConstraintsRow(card)
               + tableHtml;
-            // Post-render adjustment: the initial ``rows`` baked into
-            // each textarea by ``buildResponseFieldPreviewCell`` used
-            // the formula's 224px fallback because the ``<col>`` had
-            // no inline width yet. Now that the table is in the DOM,
-            // measure each response column's actual rendered width
-            // and recompute ``rows`` against it. Captures both
-            // operator-resized widths (``<col style="width: Npx">``)
-            // and auto-distributed widths (no inline style).
-            adjustPreviewTextareaRows(container);
             // 19T Item 8 — refresh the display-field table's arrows.
             syncDfTable(card);
-          }
-          // Walk every textarea inside the just-rendered preview
-          // table, measure the actual rendered width of its column
-          // (preferring the ``<col>``'s ``offsetWidth``, falling
-          // back to the cell ``<td>``'s ``getBoundingClientRect``),
-          // and overwrite ``rows`` via ``textareaRowsFor``. The
-          // initial render already wrote a sane fallback value;
-          // this pass tightens it once the layout box exists.
-          function adjustPreviewTextareaRows(container) {
-            container.querySelectorAll(
-              'td[data-col-key] textarea[maxlength]'
-            ).forEach(function (ta) {
-              var maxLenInt = parseInt(ta.getAttribute('maxlength'), 10);
-              if (!maxLenInt || maxLenInt <= 100) { return; }
-              var cell = ta.closest('td[data-col-key]');
-              if (!cell) { return; }
-              var colKey = cell.getAttribute('data-col-key');
-              var table = cell.closest('table');
-              var colPx = null;
-              if (table) {
-                var col = table.querySelector(
-                  'col[data-col-key="' + colKey + '"]'
-                );
-                if (col && col.offsetWidth > 0) {
-                  colPx = col.offsetWidth;
-                }
-              }
-              if (!colPx) {
-                var rect = cell.getBoundingClientRect();
-                if (rect && rect.width > 0) { colPx = rect.width; }
-              }
-              if (!colPx) { return; }
-              ta.rows = textareaRowsFor(maxLenInt, colPx);
-            });
           }
           // 19T Item 9 — set a response field's selection on its row,
           // from its Active checkbox. Hiding a field with

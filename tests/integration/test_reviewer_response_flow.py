@@ -527,79 +527,67 @@ def test_surface_applies_column_classes_by_response_type(
     assert '<td class="rs-textlong"' in body
 
 
-def test_surface_sizes_textarea_rows_from_max_chars_and_column_width(
+@pytest.mark.parametrize(
+    ("max_length", "rows", "fit"),
+    [
+        (2000, "2", 'data-fit-box '),
+        (51, "2", 'data-fit-box '),
+        (50, "1", 'data-fit-box="one-line"'),
+        (10, "1", 'data-fit-box="one-line"'),
+        (None, "2", 'data-fit-box '),
+    ],
+)
+def test_a_string_answer_is_a_box_with_a_one_or_two_line_floor(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
+    max_length: int | None,
+    rows: str,
+    fit: str,
 ) -> None:
-    """Regression for the 2026-05-28 textarea-sizing policy
-    (``views/_instruments.py::textarea_rows_for``). The
-    long-text Comments field (max_length=2000) renders with the
-    derivation's cap of ``rows="8"`` at the default column width,
-    NOT the prior static ``rows="2"``. Widening the column via
-    ``Instrument.column_widths["rf_<id>"]`` shrinks the row
-    count — proving the formula is consuming the operator-set
-    width."""
+    """19X Item 10: every String answer is a ``textarea.rs-answer`` that
+    fits its text (``base.html``'s ``data-fit-box`` script). Its floor is
+    one line at a maximum of 50 or fewer characters, which also marks it
+    one-line, and two lines otherwise, with no maximum included; the
+    column's width no longer sets it."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
         db,
-        code="rae-tarows",
+        code=f"rae-box-{max_length}",
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
-
-    rae_client = make_client(rae)
-    body_default = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    ).text
-
-    # Default seeded Comments is max_length=2000 → at default
-    # 224px column → typical 1000 chars / 28 chars/row → 36 →
-    # clamped to the 8-row cap.
-    assert 'rows="8"' in body_default
-    # Sanity check: the legacy hard-coded ``rows="2"`` is gone.
-    assert 'rows="2"' not in body_default
-
-    # The 2000-char field's typical-response still caps at every
-    # realistic width. Switch to a smaller field that WILL shrink:
-    # shorten max_length to 300 and re-render.
     from app.db.models import Instrument
 
     instrument = db.execute(
-        select(Instrument).where(
-            Instrument.session_id == review_session.id
-        )
+        select(Instrument).where(Instrument.session_id == review_session.id)
     ).scalars().first()
     assert instrument is not None
-    comments = next(
-        rf for rf in instrument.response_fields if rf.label == "Comments"
-    )
-    # Shrink max_length so the formula has headroom to vary with
-    # column width.
+    comments = next(rf for rf in instrument.response_fields if rf.label == "Comments")
     validation = dict(comments.validation or {})
-    validation["max_length"] = 300
+    if max_length is None:
+        validation.pop("max_length", None)
+    else:
+        validation["max_length"] = max_length
     comments.validation = validation
+    # A wide operator-set column no longer changes the floor.
+    instrument.column_widths = {**(instrument.column_widths or {}), f"rf_{comments.id}": 800}
     db.flush()
-    body_narrow = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    ).text
-    # 300 max → typical 150 / 28 chars/row (default 224px) =
-    # ceil(5.36) = 6.
-    assert 'rows="6"' in body_narrow
 
-    # Now widen the column for the Comments field to 800px and
-    # re-render — chars/row jumps to 100, typical 150 / 100 =
-    # ceil(1.5) = 2 → floor 2 (the MIN_TEXTAREA_ROWS clamp).
-    widths = dict(instrument.column_widths or {})
-    widths[f"rf_{comments.id}"] = 800
-    instrument.column_widths = widths
-    db.flush()
-    body_wide = rae_client.get(
-        f"/me/sessions/{review_session.public_id}"
-    ).text
-    assert 'rows="2"' in body_wide
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}").text
+    box = re.search(r'<textarea name="response\[[^"]*\]\[[^"]*\]"[^>]*>', body)
+    assert box is not None, body
+    tag = re.sub(r"\s+", " ", box.group(0))
+    assert 'class="rs-answer"' in tag
+    assert f'rows="{rows}"' in tag
+    assert fit in tag + " "
+    if max_length is None:
+        assert "maxlength" not in tag
+    else:
+        assert f'maxlength="{max_length}"' in tag
+    assert '<input type="text" name="response[' not in body
 
 
 def test_surface_dedupes_reviewee_name_and_email_display_fields(

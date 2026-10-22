@@ -18,7 +18,6 @@ from app.web.views import (
     constraint_summary_for_field,
     instrument_heading,
     placeholder_for_field,
-    textarea_rows_for,
 )
 
 
@@ -243,48 +242,6 @@ def test_constraint_summary_for_field_table(
     data_type: str, validation: dict | None, expected: str
 ) -> None:
     assert constraint_summary_for_field(_field(data_type=data_type, validation=validation)) == expected
-
-
-# ── textarea_rows_for — String response-field height derivation ──────────
-
-
-@pytest.mark.parametrize(
-    "max_chars,column_width_px,expected_rows",
-    [
-        # Default column (None → 224px ≈ 28 chars/row), typical = 0.5 * max
-        (200, None, 4),    # typical 100 / 28 = ceil(3.57) = 4
-        (500, None, 8),    # typical 250 / 28 = ceil(8.93) → cap 8
-        (2000, None, 8),   # typical 1000 / 28 = ceil(35.71) → cap 8
-        # Operator widens column → fewer rows needed
-        (200, 600, 2),     # typical 100 / 75 = ceil(1.33) → floor 2
-        (500, 600, 4),     # typical 250 / 75 = ceil(3.33) = 4
-        (2000, 600, 8),    # typical 1000 / 75 = ceil(13.33) → cap 8
-        # Operator narrows column → MIN_CHARS_PER_ROW floor of 20 chars/row
-        # kicks in (150px / 8 = 18.75 < 20 floor)
-        (200, 150, 5),     # typical 100 / 20 = 5
-        # Short fields hit the 2-row floor regardless of column width
-        (101, 600, 2),     # typical 50.5 / 75 = ceil(0.67) → floor 2
-        (101, None, 2),    # typical 50.5 / 28 = ceil(1.80) = 2
-        # Sentinel: no max_chars at all → floor (defensive — the
-        # template branch only reaches this helper when max_len > 100,
-        # but the helper is conservative for cleanliness).
-        (None, None, 2),
-        (0, None, 2),
-    ],
-)
-def test_textarea_rows_for_table(
-    max_chars: int | None, column_width_px: int | None, expected_rows: int
-) -> None:
-    assert textarea_rows_for(max_chars, column_width_px) == expected_rows
-
-
-def test_textarea_rows_for_never_returns_below_floor_or_above_cap() -> None:
-    """Defensive — the clamp guarantees every output stays in
-    ``[MIN_TEXTAREA_ROWS, MAX_TEXTAREA_ROWS]`` regardless of inputs."""
-    for max_chars in (1, 50, 200, 999, 10_000, 50_000):
-        for col_px in (None, 1, 50, 200, 500, 1000, 5000):
-            rows = textarea_rows_for(max_chars, col_px)
-            assert 2 <= rows <= 8, (max_chars, col_px, rows)
 
 
 def test_integer_bounds_round_trip_the_validation_block() -> None:

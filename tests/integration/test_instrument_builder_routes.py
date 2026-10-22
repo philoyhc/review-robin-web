@@ -7510,32 +7510,22 @@ def test_card_title_save_endpoint_persists_short_label(
     assert new_model.short_label is None
 
 
-def test_band2_preview_ships_textarea_rows_for_helper(
+def test_band2_preview_draws_the_surfaces_answer_box_floors(
     client: TestClient, db: Session
 ) -> None:
-    """The Band 2 preview-cell builder
-    (``buildResponseFieldPreviewCell`` in
-    ``instruments_index.html``) calls a JS port of
-    ``views/_instruments.py::textarea_rows_for`` so the preview
-    textarea height matches what the reviewer surface will render.
-    Regression guard for both: the helper is defined on the page
-    AND the cell builder invokes it (so a future refactor that
-    deletes the helper or stops calling it surfaces here).
-    """
+    """19X Item 10: the Band 2 preview draws every String as the
+    reviewer surface's answer box, one line high at a maximum of 50 or
+    fewer characters and two lines otherwise, with no width-derived rows
+    formula left to keep in step with the surface."""
     review_session, new_model = _new_model_with_tags(
         client, db, code="band2-preview-rows"
     )
     body = client.get(
         f"/operator/sessions/{review_session.public_id}/instruments"
     ).text
-    # Helper is defined.
-    assert "function textareaRowsFor(" in body
-    # And called from the cell builder. The relevant constants
-    # match the Python side; if you tune one, tune both.
-    assert "DEFAULT_RESPONSE_COL_WIDTH_PX = 224" in body
-    assert "PX_PER_CHAR = 8" in body
-    assert "TYPICAL_RESPONSE_FRACTION = 0.5" in body
-    assert "textareaRowsFor(maxLenInt, colPx)" in body
+    assert "var rows = (maxLenInt && maxLenInt <= 50) ? 1 : 2;" in body
+    assert "textareaRowsFor" not in body
+    assert "adjustPreviewTextareaRows" not in body
 
 # --------------------------------------------------------------------------- #
 # 18R follow-up — instrument-card UX edits (description box height; Link 2
