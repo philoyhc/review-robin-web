@@ -503,6 +503,40 @@ def test_a_zero_operand_is_a_value_not_blank(db: Session, client: TestClient) ->
     assert [rule["operand_value"] for rule in state["link2"]["rules"]] == ["0"]
 
 
+def test_settings_import_refuses_a_combinator_the_card_cant_show(db: Session) -> None:
+    """The card joins its Links with ALL_OF and never shows the rule
+    set's combinator, which its Save keeps (Codex on #3237)."""
+    operator, session = _seed_for_import(db, "e1-any-of")
+    rows = _with_cell(serialize_session_config(db, session), ".combinator", "ANY_OF")
+
+    result = apply_session_config(db, session, rows, user=operator)
+
+    assert any(
+        error.field.endswith(".combinator") and "'ANY_OF'" in error.message
+        for error in result.errors
+    ), result.errors
+
+
+def test_settings_import_marks_a_link_with_rules_touched(db: Session) -> None:
+    """A Link holding rules the card shows, left out of
+    ``band1_touched_links``, would read as Not set and lose its rules at
+    the next Save; the import marks it touched (Codex on #3237)."""
+    operator, session = _seed_for_import(db, "e1-touched")
+    rules = [_composite("link2", [_child(_IS_A)])]
+    rows = _with_cell(serialize_session_config(db, session), ".rules_json", json.dumps(rules))
+    rows = _with_cell(rows, ".band1_touched_links", '["link3"]')
+
+    assert not apply_session_config(db, session, rows, user=operator).errors
+
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == session.id)
+    ).scalar_one()
+    assert instrument.band1_touched_links == ["link3", "link2"]
+    state = decode_band1_state(instrument, db)
+    assert state["link2"]["touched"] and state["link2"]["mode"] == "filter"
+    assert not state["link1"]["touched"]
+
+
 def _store_rules(db: Session, instrument: Instrument, rules: list[dict[str, object]]) -> None:
     rule_set = SessionRuleSet(
         session_id=instrument.session_id,

@@ -552,7 +552,13 @@ the round-trip notes below.
    `IS NOT` / cross-side rule with a blank value. The card would hide it
    or show it as something else, and its next Save would drop or
    rewrite it; the error names the rule set's `rules_json`, the
-   instrument using it and what the card would do. A rule set no
+   instrument using it and what the card would do. So is a
+   `combinator` other than `ALL_OF` on such a rule set: the card joins
+   its Links with `ALL_OF` and never shows the combinator, which its
+   Save keeps. A Link holding rules the card shows imports as touched,
+   added to `band1_touched_links` if the file left it out, since a Link
+   that is Not set would post All at the card's next Save and drop them.
+   A rule set no
    instrument names has no card and imports as it is; instruments are
    replace-all (phase 2), so the file's are the only ones that can use
    one. So is an

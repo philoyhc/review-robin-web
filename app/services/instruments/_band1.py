@@ -234,6 +234,37 @@ def set_band1_assignment_rules(
     return instrument
 
 
+def _shown_composites(
+    rules_json: list[Any],
+) -> list[tuple[str, dict[str, Any], list[dict[str, Any]]]]:
+    """Each ``link1`` / ``link2`` Composite the card shows as Filter,
+    with its enabled children. A disabled rule is not shown, as the
+    engine does not apply it (findings E1, 2026-10-22); a Link whose
+    rules are all disabled reads as All, as the engine skips it."""
+    shown = []
+    for entry in rules_json:
+        if entry.get("kind") != "COMPOSITE":
+            continue
+        link_id = entry.get("id")
+        if link_id not in ("link1", "link2"):
+            continue
+        enabled = [
+            child for child in entry.get("rules", []) if child.get("enabled", True)
+        ]
+        if entry.get("enabled", True) and enabled:
+            shown.append((link_id, entry, enabled))
+    return shown
+
+
+def shown_links(rules_json: list[Any]) -> set[str]:
+    """The Links the card shows as Filter for ``rules_json``. A Link
+    the card writes rules to is one its operator has set, so the
+    Settings import marks each touched; left out of
+    ``band1_touched_links`` it would show as Not set, and its next Save
+    would post All and drop the rules (Codex on #3237)."""
+    return {link_id for link_id, _entry, _enabled in _shown_composites(rules_json)}
+
+
 def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
     """Read the instrument's stored Band 1 state back into the same
     shape the UI submits. Returns ``{"link1": {...}, "link2": {...}}``
@@ -254,20 +285,7 @@ def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
     rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
     if rule_set is None:
         return state
-    for entry in rule_set.rules_json or []:
-        if entry.get("kind") != "COMPOSITE":
-            continue
-        link_id = entry.get("id")
-        if link_id not in ("link1", "link2"):
-            continue
-        # A disabled rule is not shown, as the engine does not apply it
-        # (findings E1, 2026-10-22); a Link whose rules are all disabled
-        # reads as All, as the engine skips it.
-        enabled = [
-            child for child in entry.get("rules", []) if child.get("enabled", True)
-        ]
-        if not entry.get("enabled", True) or not enabled:
-            continue
+    for link_id, entry, enabled in _shown_composites(rule_set.rules_json or []):
         target = state[link_id]
         target["mode"] = "filter"
         op = entry.get("op", "AND")

@@ -749,6 +749,21 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
             users_by_name.setdefault(instrument.rule_set_name, n)
     for n, spec in sorted(plan.session_rule_sets.items()):
         user = users_by_name.get(spec.name or "")
+        if user is not None and (spec.combinator or "ALL_OF") != "ALL_OF":
+            # The card joins its Links with ALL_OF and never shows the
+            # rule set's own combinator, which its Save keeps: another
+            # would apply unseen (Codex on #3237).
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"session_rule_sets[{n}].combinator",
+                    message=(
+                        f"instruments[{user}] uses this rule set, whose "
+                        f"combinator {spec.combinator!r} the card can't show: "
+                        "it requires both Links (ALL_OF)."
+                    ),
+                )
+            )
         unshown = unrepresented_rule(spec.rules_json or []) if user is not None else None
         if unshown is not None:
             errors.append(
