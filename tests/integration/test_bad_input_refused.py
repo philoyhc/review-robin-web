@@ -253,7 +253,11 @@ def test_an_oversized_id_in_a_form_body_answers_404(
     assert post(MAX_SQL_INT + 1) == 404
 
 
-@pytest.mark.parametrize("cursor", [str(MAX_SQL_INT + 1), "99999999999999999999"])
+@pytest.mark.parametrize(
+    "cursor",
+    # The last is past Python's 4,300-digit int limit (Codex on #3236).
+    [str(MAX_SQL_INT + 1), "99999999999999999999", "9" * 5000],
+)
 def test_an_oversized_audit_log_cursor_answers_404(
     client: TestClient, owned_session_id: str, cursor: str
 ) -> None:
@@ -369,3 +373,20 @@ def test_a_band2_response_field_id_in_unicode_digits_is_a_new_field(db: Session)
         ).scalars()
     )
     assert "Score" in names
+
+
+@pytest.mark.parametrize(
+    ("text", "too_large"),
+    [
+        ("9" * 5000, True),
+        ("0" * 5000 + "7", False),
+        (str(MAX_SQL_INT), False),
+        (str(MAX_SQL_INT + 1), True),
+        ("+" + str(MAX_SQL_INT + 1), True),
+        ("12a", False),
+    ],
+)
+def test_too_large_reads_any_length_of_digits(text: str, too_large: bool) -> None:
+    from app.web.oversized_ids import _too_large
+
+    assert _too_large(text) is too_large

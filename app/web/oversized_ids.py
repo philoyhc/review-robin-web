@@ -48,7 +48,15 @@ def _too_large(value: object) -> bool:
     if isinstance(value, int):
         return abs(value) > MAX_SQL_INT
     text = str(value).strip().lstrip("+-")
-    return text.isascii() and text.isdigit() and int(text) > MAX_SQL_INT
+    if not (text.isascii() and text.isdigit()):
+        return False
+    # Compared by length first: ``int`` refuses a string past Python's
+    # 4,300-digit limit with a ``ValueError``, which answered 500 (Codex
+    # on #3236).
+    digits = text.lstrip("0")
+    if len(digits) != len(str(MAX_SQL_INT)):
+        return len(digits) > len(str(MAX_SQL_INT))
+    return int(digits) > MAX_SQL_INT
 
 
 def _declares_form_body(request: Request) -> bool:
