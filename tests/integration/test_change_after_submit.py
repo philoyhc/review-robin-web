@@ -316,3 +316,43 @@ def test_group_blanking_a_submitted_answer_unsubmits_every_copy(
     assert _stamps(db, first) == {"rating": False}
     assert _stamps(db, second) == {"rating": False}
     assert _pill(db, reviewer, review_session) == "in progress"
+
+
+def _restamp_stored(db: Session, assignment: Assignment, **stored: str) -> None:
+    """Overwrite submitted rows' stored values in place, as an older build
+    or the responses import left them."""
+    for row in db.execute(
+        select(Response).where(Response.assignment_id == assignment.id)
+    ).scalars():
+        key = row.response_field.field_key
+        if key in stored:
+            row.value = stored[key]
+    db.flush()
+
+
+def test_re_saving_an_answer_stored_in_an_older_form_keeps_its_stamp(
+    db: Session,
+) -> None:
+    """Findings R2 (2026-10-22): a post arrives CRLF-as-LF and with numbers
+    canonical, so an answer stored as CRLF, with outer spaces, or as
+    ``04`` read as changed on every Save and lost its stamp. The change
+    test now compares the stored value in the form a post of it takes."""
+    op, reviewer, review_session, [a] = _seed(db)
+    _submit(db, op, reviewer, review_session, a, rating="4", comments="one\ntwo")
+    _restamp_stored(db, a, rating="04", comments="  one\r\ntwo ")
+    assert _stamps(db, a) == {"rating": True, "comments": True}
+
+    _save(db, op, reviewer, review_session, a, rating="4", comments="one\ntwo")
+
+    assert _stamps(db, a) == {"rating": True, "comments": True}
+    assert _pill(db, reviewer, review_session) == "submitted"
+
+
+def test_a_real_change_to_an_older_form_still_clears_its_stamp(db: Session) -> None:
+    op, reviewer, review_session, [a] = _seed(db)
+    _submit(db, op, reviewer, review_session, a, rating="4", comments="one\ntwo")
+    _restamp_stored(db, a, rating="04", comments="one\r\ntwo")
+
+    _save(db, op, reviewer, review_session, a, rating="5", comments="one\nthree")
+
+    assert _stamps(db, a) == {"rating": False, "comments": False}

@@ -353,7 +353,10 @@ answers needs no digest.
   released as submitted until the reviewer submits again, as a new
   answer after Submit isn't (findings R1, author's ruling
   2026-10-17); an unchanged value, which every Save re-posts, keeps
-  its stamp. On a group-scoped instrument a change clears the stamp
+  its stamp. "Changed" compares the stored value in the form a post of
+  it takes (line breaks as LF, stripped, a number canonical), so an
+  answer stored in an older form, or by the responses import, is not
+  changed by re-saving it. On a group-scoped instrument a change clears the stamp
   on every member's copy of that field in the group. Blanking a
   submitted answer is a change too ("Submit" below). The
   `responses.saved` event counts the cleared stamps as

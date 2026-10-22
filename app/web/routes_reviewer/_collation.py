@@ -196,6 +196,9 @@ def observer_collation_instrument_csv(
             # How much of the reviewer Raw names (ProfileLink updates
             # Item 2); the extract ignores it for Anonymized.
             reviewer_identity=visibility_policies.reviewer_identity(policy),
+            # Drafts ride along, marked ``Submitted`` FALSE (findings R4,
+            # author's ruling 2026-10-22).
+            mark_submitted=True,
         ):
             writer.writerow(row)
             yield buffer.getvalue().encode("utf-8")

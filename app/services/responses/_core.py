@@ -407,7 +407,7 @@ def _apply_upserts(
                     value=u.value,
                 )
             )
-        elif existing.value != u.value:
+        elif _stored_as_posted(existing.value, field) != u.value:
             # ``saved_at`` is when the value last changed and ``version``
             # counts the changes (findings R6): a changed save moves both,
             # an unchanged one touches neither.
@@ -587,6 +587,19 @@ def compute_row_completion(
 class SaveResult:
     upsert_count: int
     errors: list[ValidationError]
+
+
+def _stored_as_posted(value: str | None, field: InstrumentResponseField) -> str:
+    """A stored value in the form a post of it arrives in: CRLF as LF,
+    stripped, and a number canonical. The change test compares this, so
+    re-saving an answer stored in an older form (before 19X's line
+    breaks or #3106's numbers, or by the responses import, which stores
+    values as given) is not a change and keeps its Submit stamp
+    (findings R2, 2026-10-22)."""
+    text = (value or "").replace("\r\n", "\n").strip()
+    if text and field.data_type in ("Integer", "Decimal"):
+        return canonical_number(field.data_type, text) or text
+    return text
 
 
 def _split_validated(
