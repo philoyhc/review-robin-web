@@ -113,12 +113,27 @@ not landed yet.
    or `gh workflow enable main_app-review-robin-web-dev.yml`. Then
    dispatch it, or let the next push to `main` run it. Its migrate job
    brings the dev database from the June head up to the current one.
-4. **Check** `/health` unauthenticated. Then sign in through Easy Auth
-   and reach the lobby. Once 21D has landed, run the live check its plan
-   owes: RRW at `/reviewrobin`, Cordware's landing page at `/`, deep links
-   and sign-in/sign-out returns, and v0.8 §3's behavior requirements
-   under real Easy Auth (`docs/cordware_repository_strategy_v0.8.md` §3).
-5. **Record it:** clear this section's "dormant" note above, and set the
+4. **Easy Auth's excluded paths** (needed once 21D's D2 is on `main`,
+   which moves RRW to `/reviewrobin`): add `/reviewrobin/health` beside
+   `/health` in `authsettingsV2` → `globalValidation.excludedPaths`, so
+   both probes answer without sign-in. `/health` is the host's;
+   `/reviewrobin/health` is RRW's.
+5. **Check** `/health` and `/reviewrobin/health` unauthenticated. Then
+   sign in through Easy Auth and reach the lobby. Once 21D has landed,
+   run the live check its plan owes, v0.8 §3's four behavior
+   requirements under real Easy Auth
+   (`docs/cordware_repository_strategy_v0.8.md` §3):
+   - **Deep links:** signed out, open a deep link such as
+     `/reviewrobin/operator/sessions`; sign-in returns to it. Sign out
+     (`/.auth/logout`, the host's) and sign in again from `/`, which
+     redirects to `/reviewrobin/`.
+   - **Probes:** both health paths answer `{"status": "ok"}`, signed
+     out.
+   - **Request handling:** a missing page such as
+     `/reviewrobin/operator/no/such/page` shows RRW's own 404 page.
+   - **Absolute URLs:** an invitation sent from the slot links to
+     `https://<the slot's host>/reviewrobin/me/invite/…`.
+6. **Record it:** clear this section's "dormant" note above, and set the
    segment 21 plans' dev-slot lines to done.
 
 ## Production deployment (planned)
@@ -254,9 +269,11 @@ Expected response:
 {"status": "ok"}
 ```
 
-The root endpoint `/` does not serve a JSON body: it 302-redirects a signed-in
-operator to `/operator/sessions` and anyone else to `/me`. `/health` is the
-only liveness endpoint.
+The root endpoint `/` does not serve a JSON body. Once 21D is deployed it
+302-redirects to `/reviewrobin/`, RRW's root, which sends a signed-in
+operator to `/reviewrobin/operator/sessions` and anyone else to
+`/reviewrobin/me`. `/health` is the host's liveness endpoint and
+`/reviewrobin/health` is RRW's.
 
 ## Viewing logs
 

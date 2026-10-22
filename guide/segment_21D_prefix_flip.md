@@ -150,6 +150,15 @@ from the page's pathname. The guard is `tests/unit/test_browser_app_urls.py`
 are not app URLs and stay: `README.md` names the bare origin as the
 redirect's source, and `docs/security_posture.md` names the origin.
 
+**D3 (2026-10-22).** As laddered, in
+`tests/integration/test_mount_requirements.py`. The invitation route is
+`/me/invite/{token}`, so requirement 4's link reads
+`http://reviews.example.edu/reviewrobin/me/invite/…` (Semantics wrote
+`/reviewrobin/invite/…`). The 403 is a Sys Admin page refusing a plain
+operator: a non-operator on an operator page is redirected to `/me`,
+not refused. `docs/deployment_dev.md` gains the Easy Auth exclusion as
+its own resumption step and the four requirements as the live check.
+
 ## PR ladder
 
 1. **D0, this plan**, prose only.
