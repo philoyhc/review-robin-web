@@ -377,9 +377,9 @@ def test_review_surface_session_description_renders_in_overview_card(
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """Session description renders inside the overview card
-    (`.card.rs-status-panel`) as a `.rs-session-description`
-    paragraph — rolled together with the per-page status pills."""
+    """Session description renders under the header rows as a
+    `.rs-session-description` paragraph, with no card around it
+    (19X Item 11)."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -393,7 +393,7 @@ def test_review_surface_session_description_renders_in_overview_card(
 
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}").text
-    assert 'class="card rs-status-panel"' in body
+    assert "rs-status-panel" not in body
     assert 'class="rs-session-description"' in body
     assert "Please rate each reviewee on the rubric." in body
 

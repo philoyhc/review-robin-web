@@ -2,7 +2,7 @@
 
 `guide/participant_info.md` Item 4: the Reviewees page's "What reviewees
 see of their own entry" card and its save, the `Reviewees see:` readout,
-the reviewee's own line after the role pills on `/results`, and the
+the reviewee's own line before the role pills on `/results`, and the
 selection's Settings CSV row. The default is name, email or identifier
 and profile; tags start off.
 """
@@ -60,7 +60,7 @@ def _div_at(html: str, marker: str) -> str:
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-reviewee-self-info>(.*?)</span>\s*</div>',
+        r'<span class="rs-self-info" data-reviewee-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
         html, re.S,
     )
     assert m, "no reviewee info on the role row"
@@ -124,7 +124,7 @@ def test_a_failed_import_still_renders_the_card_and_readout(
     ]
 
 
-def test_results_shows_the_reviewees_own_line_after_the_pills(
+def test_results_shows_the_reviewees_own_line_before_the_pills(
     client: TestClient, db: Session, grant_reviewee_visibility
 ) -> None:
     rs = _session(client, db, "rei-results")
@@ -132,7 +132,7 @@ def test_results_shows_the_reviewees_own_line_after_the_pills(
     grant_reviewee_visibility(rs)
     html = client.get(f"/me/sessions/{rs.public_id}/results").text
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert nav.index("rs-role-nav-active") < nav.index("data-reviewee-self-info")
+    assert nav.index("data-reviewee-self-info") < nav.index("rs-role-nav-active")  # 19X Item 11
     info = _info(html)
     assert "Alice Reviewee" in info and "alice@example.edu" in info
     assert f'<a href="{LINK}">Profile</a>' in info

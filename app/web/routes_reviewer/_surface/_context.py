@@ -620,8 +620,8 @@ def _surface_context(
         )
         flat_rows.extend(group_rows)
 
-    # Per-instrument status pills in the overview card at the top of
-    # the surface. Labels follow the same ``#N {short_label}`` (or
+    # Per-instrument status pills on the header's participant row
+    # (19X Item 11). Labels follow the same ``#N {short_label}`` (or
     # bare ``#N``) convention as the instrument heading so the pill
     # row reads as a quick index into the form below. Also feeds
     # ``_session_status`` for the lead rollup pill (Submitted /

@@ -128,33 +128,39 @@ Top-to-bottom, the page renders:
    absent for one who resolves none.
 2. **Preview banner** — `body.ui-v2` only (operator preview mode
    reuses this template); rendered as `.banner.banner-info`.
-3. **Page header** — `.rs-page-header` flex row carrying the session
-   name as H1 plus the deadline inline as `.muted`. The deadline
-   renders in the session's resolved zone followed by that zone's
-   compact GMT-offset + raw IANA id in parentheses — e.g.
-   `Deadline: 2026-06-02 07:59 (GMT+10 Australia/Melbourne)` — via
-   `date_formatting.gmt_offset_zone_label`. When `session.help_contact`
-   is non-blank, a `.muted` "Questions? Contact {help_contact}" follows
-   in the same row.
-4. **Overview card** — a single full-width `.card.rs-status-panel`
-   rolling together, top to bottom:
-   - The session **description**, when `session.description` is set.
-     Renders with `white-space: pre-line` (the `.rs-session-description`
-     class) so the operator's line / paragraph breaks are preserved.
-   - The transient **session-closed banner** — a
-     `.banner.banner-warning` shown inline in the card when the
-     session is no longer accepting responses; does not push other
-     layout around.
-   - **Per-page status pills** — one pill per instrument labelled
-     `{label}: {state}`, e.g. `#1 Skills: in progress`, `#2: complete`.
-     State computed
-     server-side from response data (see "Per-page status" below).
+3. **Page header** — two rows and no card.
+   - The **title row** (`.rs-page-header`, a flex row) holds, in order:
+     the session name as H1; the **session-wide rollup pill**
+     (`data-rs-session-status`; `Submitted` / `Saved but not submitted` /
+     `Draft` — § *Session-wide status pill*), shown when the reviewer has
+     page statuses; `Deadline: …` as `.muted`, when the session has one;
+     and, when `session.help_contact` is non-blank, a `.muted`
+     "Questions? Contact {help_contact}". The deadline renders in the
+     session's resolved zone followed by that zone's compact GMT-offset +
+     raw IANA id in parentheses — e.g.
+     `Deadline: 2026-06-02 07:59 (GMT+10 Australia/Melbourne)` — via
+     `date_formatting.gmt_offset_zone_label`.
+   - The **participant row** (`.rs-role-nav`, `reviewer/_role_chips.html`;
+     § *Role-navigator chip strip*) holds, in order: the reviewer's own
+     line, the role pills, then a `|` (`.rs-role-nav-sep`,
+     `aria-hidden`) and one **per-page status pill** per instrument
+     labelled `{label}: {state}`, e.g. `#1 Skills: in progress`,
+     `#2: complete` (state computed server-side — § *Per-page status*).
+     The `|` and the pills sit in one `.rs-role-nav-statuses` group, so
+     they wrap together; with no page statuses there is no `|`.
+4. **Session description and closed banner** — under the two rows, with
+   no card around either:
+   - The session **description** (`p.rs-session-description`), when
+     `session.description` is set. It renders with
+     `white-space: pre-line` so the operator's line / paragraph breaks
+     are preserved.
+   - The **session-closed banner** — a `.banner.banner-warning`, shown
+     when the session is no longer accepting responses (§ *Lifecycle
+     gating*).
 
-   The card is omitted entirely only when there is neither a
-   description nor any status pills. **Save and Submit raise no flash
-   banner**: the per-page status pills are the canonical signal, and the
-   missing-required and invalid-value warnings render as their own
-   full-width cards below rather than inside this one.
+   **Save and Submit raise no flash banner**: the page-status pills are
+   the canonical signal, and the missing-required and invalid-value
+   warnings render as their own full-width cards below rather than here.
 5. **Action row (top)** — `.rs-action-row.rs-action-row-top`,
    **left-aligned** so it reads as the lead-in to the form (the
    bottom action row is flush right — see §8). The surface's main
@@ -197,7 +203,7 @@ Top-to-bottom, the page renders:
 6. **Instrument body** — heading, help-text rows, reviewer table,
    once for each instrument on the page, in position order.
 7. **Missing-required warning card** — `.rs-missing-card`, full-width
-   below the overview card, two-column flow. Renders only after a
+   below the header, two-column flow. Renders only after a
    blocked Submit attempt; enumerates gaps as `#N Label: Reviewee X —
    field Y`, naming the instrument as its status pill does (bare `#N`
    without a short label). `N` is the instrument's position, not a
@@ -260,7 +266,7 @@ intentional-nav escape prompts on the app's own controls.
 
 | Button | Scope | HTTP | Behavior |
 |---|---|---|---|
-| **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill in the overview card is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
+| **Save** | Page | POST `…/{page_n}/save` | Submit the page `<form>` to persist the **current page's** inputs to the database. Always enabled (no dirty-tracking gate). On success: 303 → `…/{page_n}` (no flash; the page-status pill on the participant row is the canonical save indicator). On invalid numeric value: re-render with the `data-rs-errors-card` warning card and the typed value preserved in the input. |
 | **Cancel** | Page | GET `…/{page_n}` | An `<a href>` back to the current page URL — a plain server reload. Unsaved typing lives only in the current page's DOM, so the reload re-renders from the last-saved server values, dropping the edits. No JS, no separate write, no audit. Other pages' saved state is untouched. |
 | **Prev / Next** | Page | GET `…/{N}` | `<a href>` links to the adjacent page — plain HTTP navigation. Server-side render returns that page's instruments. At a page boundary the link renders as a disabled `<button>`. There is no per-instrument page button and no client-side swap. Unsaved typing on the current page is lost on navigation (no `beforeunload` guard). |
 | **Submit** | Review-session | POST `/me/sessions/{id}/submit` | First persist the current page's inputs (the form posts only this page; other pages contribute what their own Save stored), then validate required fields across every instrument and stamp `submitted_at` on every saved `Response` row of the reviewer's assignments in the session. Submit is a **hard gate** on missing required (no acknowledge-and-submit-anyway path): on missing-required, 400 + re-render the page Submit was pressed on (`?page={page_n}`) with the full-width `.rs-missing-card` enumerating gaps. On invalid numeric value: 400 + re-render with the `data-rs-errors-card` (validation gate fires before missing-required). On success: 303 → the bare session URL (which 303s on to `/1`), or to the summary page once every assignment is submitted (no flash; the per-page pill of every instrument with a saved answer flips to `submitted` and the status column shows the complete icon on every row whose required fields are filled). |
@@ -392,9 +398,8 @@ answer lands.
 
 ## Per-page status
 
-The overview card renders one status pill per instrument,
-positioned immediately above any transient flash banners that may
-land. Status is computed **server-side from saved response data**;
+The participant row (§ *Page anatomy*, part 3) renders one status pill
+per instrument. Status is computed **server-side from saved response data**;
 client-side dirty edits don't shift a pill until the reviewer
 clicks Save (and the page re-renders).
 
@@ -421,8 +426,7 @@ Pill copy is `{label}: {state}`, where `label` is `#{N} {short_label}`
 (or bare `#{N}` when no short label is set) — a space where the
 per-instrument heading has a colon (`#{N}: {short_label}`) — e.g.
 `#1 Skills: in progress`, `#2: complete`. Single-instrument sessions still show
-one pill, since the overview card renders whenever there are
-status pills.
+one pill.
 
 The route threads a `page_statuses: list[PageStatus]` into context
 (`PageStatus = {position: int, label: str, state: Literal[…]}`),
@@ -432,9 +436,9 @@ one pill per entry.
 
 ### Session-wide status pill
 
-Leading the per-page pills — first on the same flex-wrap row — the
-overview card renders a single session-wide rollup pill, the
-at-a-glance "where is this review overall", set from the per-page
+In the title row (§ *Page anatomy*, part 3), beside the session name,
+the page renders a single session-wide rollup pill
+(`data-rs-session-status`), the at-a-glance "where is this review overall", set from the per-page
 states:
 
 | Pill | Pill class | Condition |
@@ -705,7 +709,7 @@ In rendered order:
    ``Response.submitted_at`` itself stays in the data model: it
    drives the `submitted` page pills, audit-event counts, the
    session-status pill (``Submitted`` / ``Saved but not
-   submitted`` / ``Draft``) on the overview card, and the summary
+   submitted`` / ``Draft``) in the title row, and the summary
    page's session-level timestamp.
 
 ### Cell renderers
@@ -950,7 +954,7 @@ field before the submit lands.
    blank anywhere in the session.
 2. Server returns 400 + re-renders the page they were on (whichever
    `{page_n}` they submitted from) with the full-width
-   `.rs-missing-card` below the overview card, enumerating the gaps as
+   `.rs-missing-card` below the header, enumerating the gaps as
    `#N Label: Reviewee X — field Y` so the reviewer knows which
    instrument to find.
 3. The reviewer fills the gaps (using the per-page navigation
@@ -1050,7 +1054,7 @@ GET requests behave differently depending on which gate fails:
     links stay so the reviewer can walk through their other
     pages.
   - The Danger Zone card hides (no Clear all).
-  - A `.banner.banner-warning` lands inline in the overview card
+  - A `.banner.banner-warning` lands under the header rows
     explaining the state, e.g. "This session is no longer
     accepting responses." Three variants, depending on whether the
     reviewer may read their own values back, across the session's
@@ -1198,11 +1202,11 @@ In preview mode:
   the operator can type into the form to test it; their keystrokes
   go nowhere because the surrounding `<form>` is a `<div>` and the
   Save/Cancel/Submit buttons are disabled.
-- The role strip shows a static `Reviewer` pill followed by the
-  previewed reviewer's own line (§ *Role-navigator chip strip*), so the
+- The role strip shows the previewed reviewer's own line followed by a
+  static `Reviewer` pill (§ *Role-navigator chip strip*), so the
   operator sees what that reviewer sees of their own entry.
-- The overview card renders normally — `_surface_context` builds
-  the per-page status pills the same way as for the reviewer. They
+- The header renders normally — `_surface_context` builds
+  the rollup pill and the per-page status pills the same way as for the reviewer. They
   can differ in one case: preview does not apply the reviewer's
   read-back policy, so once responses close, a page whose saved
   values the reviewer may not read back can read `in_progress` here
@@ -1404,8 +1408,8 @@ dashboard's Session column once Reviewer Status is
   redirect to `/me?notice=summary`, where one line says the summary is
   available once every review is submitted (participant audit M11).
 - **H1** — "Your responses — {session.name}".
-- **Role row** — under the H1: the role-navigator chips with the
-  reviewer's own line after the last pill, as on the surface (§
+- **Role row** — under the H1: the reviewer's own line, then the
+  role-navigator chips, as on the surface (§
   *Role-navigator chip strip*).
 - **Caption** — "Submitted on {YYYY-MM-DD HH:MM} ({zone})"
   built from `MAX(response.submitted_at)` across the
@@ -1473,8 +1477,8 @@ draft. Under the headline, each when it applies:
 - **"Questions? Contact {help_contact}"** — when the session has one.
 
 Then a link back to the reviewer dashboard. Under the h1, a role row
-holds a static `Reviewer` pill (this
-page has no role navigator) and the reviewer's own line, so they can
+holds the reviewer's own line and a static `Reviewer` pill (this
+page has no role navigator), so they can
 check their details before the review opens (§ *Role-navigator chip
 strip*). See
 `spec/lifecycle.md` §4.1 "The reviewer write-path predicate"
@@ -1636,8 +1640,8 @@ summary and the pre-open page (`/results` and `/collation` have the reviewee's
 and the observer's lines, below), the partial
 takes an optional
 `reviewer_self_fields` and renders it in a muted `.rs-self-info` span
-**inline after the last role pill**, so it never splits the pills of a
-reviewer who also holds another role. The span is absent when the list
+**leading the row, before the role pills**, so it never splits the pills
+of a reviewer who also holds another role. The span is absent when the list
 is empty. The list comes from `views.reviewer_self_line_for`
 (`app/web/views/_reviewer_self.py`): the fields the session selects
 (`participant_info.effective_reviewer_self_fields`; the selection, its
@@ -1674,8 +1678,8 @@ The partial branches on chip state, never on role, so a fourth role
 would touch only `_ROLE_PRIORITY`, the per-role branch in
 `build_role_chips`, and a `.pill-role-<role>` palette in `base.html`.
 A new surface adds the strip by passing `role_chips` from its route
-and including the partial under its page header and before any
-description card; if it also renders as an operator preview, the
+and including the partial under its page header and before the
+description; if it also renders as an operator preview, the
 preview must say what the strip shows there (the reviewer surface's
 static pill is the precedent).
 
@@ -1691,9 +1695,17 @@ selector scoped under `body.ui-v2`:
   text-decoration: underline;`, the affordance that says clickable.
 - `.rs-role-nav .rs-role-nav-active` — `font-weight: 600;`, keeping the
   role's own palette to read as selected.
-- `.rs-role-nav .rs-self-info` — `align-self: center; margin-left:
+- `.rs-role-nav .rs-self-info` — `align-self: center; margin-right:
   var(--space-2); color: var(--text-subtle);`, a participant's own line
-  beside the pills.
+  leading the pills.
+- `.rs-role-nav .rs-role-nav-statuses` — `display: inline-flex;
+  flex-wrap: wrap; align-items: center; gap: var(--space-1);`, the
+  reviewer surface's `|` and instrument pills, which wrap as one group.
+- `.rs-role-nav .rs-role-nav-sep` — `margin: 0 var(--space-2);
+  color: var(--text-subtle);`.
+- `.rs-session-description` — `margin: 0 0 var(--space-4) 0;
+  white-space: pre-line;`, the description under the header rows on the
+  reviewer surface, `/results` and `/collation`, with no card.
 - A linked chip (`a.pill.pill-role-*`) also wears the interactive-chip
   edge (`spec/ui_elements.md` "Label or control"); the `<span>` forms
   do not.
@@ -1827,8 +1839,8 @@ re-architecting; see "Designed-for-extensibility" below.
 - **Standalone submission-confirmation page for a *partial* submit.**
   A submit that closes out the whole session already has one — the
   per-session summary page. A submit that leaves pages outstanding
-  returns to the surface, where the per-page `submitted` pill in the
-  overview card and the status column's per-row complete icon are the
+  returns to the surface, where the per-page `submitted` pill on the
+  participant row and the status column's per-row complete icon are the
   whole signal.
 - **Large-table ergonomics** (cell autosave, return-to-place,
   filter-to-incomplete) — targeted progressive enhancement. A wholesale JS data-grid swap (AG Grid or
@@ -1877,7 +1889,7 @@ makes today + the small follow-on the deferred work needs.
   session lands on `/me/sessions/{id}/summary`, the read-only capstone
   page specified above. A submit that leaves pages outstanding returns
   to the surface, with no flash banner: the per-page `submitted` pill
-  in the overview card and the status column's per-row complete icon
+  on the participant row and the status column's per-row complete icon
   are the signal.
 - **Design call — one helper owns the target.** The submit route's
   redirect target is computed by `submit_redirect_url(...)` rather than

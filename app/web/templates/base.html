@@ -4104,11 +4104,23 @@
       body.ui-v2 .rs-role-nav .rs-role-nav-active {
         font-weight: 600;
       }
-      /* participant info Item 1 — the reviewer's own roster fields,
-         inline after the last role pill. */
+      /* participant info Item 1 — the participant's own roster fields,
+         leading the row before the role pills (19X Item 11). */
       body.ui-v2 .rs-role-nav .rs-self-info {
         align-self: center;
-        margin-left: var(--space-2);
+        margin-right: var(--space-2);
+        color: var(--text-subtle);
+      }
+      /* 19X Item 11 — the reviewer surface's instrument status pills end
+         the row after a `|`, and wrap as one group. */
+      body.ui-v2 .rs-role-nav .rs-role-nav-statuses {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-1);
+      }
+      body.ui-v2 .rs-role-nav .rs-role-nav-sep {
+        margin: 0 var(--space-2);
         color: var(--text-subtle);
       }
       /* Banners — single .banner shell + four semantic variants. */
@@ -4657,41 +4669,17 @@
         font-size: var(--fs-small);
         margin: 0 0 var(--space-2) 0;
       }
-      /* Reviewer-surface overview card — one full-width card rolling
-         together the session description, the transient
-         session-closed banner, and the per-page status pills. */
-      body.ui-v2 .rs-status-panel .rs-session-description {
-        margin: 0;
+      /* The session description on the participant pages, under the
+         header rows with no card (19X Item 11). */
+      body.ui-v2 .rs-session-description {
+        margin: 0 0 var(--space-4) 0;
         /* Preserve the operator's line + paragraph breaks — the
            description is authored in a <textarea>. */
         white-space: pre-line;
       }
-      body.ui-v2 .rs-status-panel .rs-session-description:not(:last-child) {
-        margin-bottom: var(--space-3);
-      }
       /* .session-detail-description retired with the old read-only Session
          Details card (18R Item 4 Slice 5b); the #session-config description
          uses .config-value-multiline (white-space: pre-wrap). */
-      body.ui-v2 .rs-status-panel .rs-page-status-pills {
-        list-style: none;
-        margin: 0 0 var(--space-3) 0;
-        padding: 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-2);
-      }
-      body.ui-v2 .rs-status-panel .rs-page-status-pills:last-child {
-        margin-bottom: 0;
-      }
-      body.ui-v2 .rs-status-panel .rs-page-status-pills li {
-        margin: 0;
-      }
-      body.ui-v2 .rs-status-panel .banner {
-        margin-bottom: var(--space-3);
-      }
-      body.ui-v2 .rs-status-panel .banner:last-child {
-        margin-bottom: 0;
-      }
       /* Half-width Clear-all (Danger Zone) flush-right at the foot
          of the reviewer surface. Collapses to full width below the
          800px breakpoint. */

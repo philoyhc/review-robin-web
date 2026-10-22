@@ -977,6 +977,32 @@ Taken 2026-10-22 at `5395f19`.
 | Tests naming these classes | 8 integration files, 46 references (`test_me_surface_role_chips.py` 17, `test_reviewer_self_info.py` 10) | `grep -rc "rs-status-panel\|rs-page-status-pills\|rs-role-nav\|rs-self-info" tests` |
 | Specs | `spec/reviewer-surface.md` (the page's parts 3–4, "Overview card", the role-navigator markup); `spec/visual_style_rrw.md` (status cards) | `grep -rln "rs-status-panel\|overview card\|rs-role-nav" spec` |
 
+### Status
+
+**Closed 2026-10-22, in #3220 (plan) and #3222 (build).** As planned, with
+these confirmed at build:
+- **The participant row is `_role_chips.html`** on every participant
+  page: the own line, then the role pills, then (the reviewer surface
+  only, as `role_row_statuses`) `|` and the instrument pills, wrapping as
+  one group. The pills render only where the role row does, which every
+  reviewer-surface render has, the preview included.
+- **The instrument pills are spans in the row**, no longer a list.
+- **The help contact** ends the title row whether or not there is a
+  deadline, so with no deadline the row ends at the contact, not the pill.
+- **`.rs-session-description` is now a page-level rule** in `base.html`,
+  shared by the reviewer surface, results and collation.
+
+**Reads:**
+- **`diff-reviewer`**, one read: no high findings.
+  - Acted on: a no-assignments test (M1); the no-link and own-line checks
+    on the new order (M2, L2); exact description tests on results and
+    collation (L1); a deadline relative to now (L4); a stale comment (L6).
+  - L3 (pills follow the role row) and L5 (spans, not a list) stay, as
+    recorded above.
+- **`spec-writer`** at the close: `spec/reviewer-surface.md`,
+  `spec/participant_model.md`, `spec/visual_style_rrw.md`; no flags
+  changed a decision.
+
 ### PR ladder
 
 1. **PR 1, this entry**, prose only, with Item 10.

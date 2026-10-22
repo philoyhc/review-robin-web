@@ -4,7 +4,7 @@
 reports `Reviewers see:` (its roster count reads `Reviewers (N)`, a `|` then
 the populated columns), the
 Unlock panel's card stores the selection, and the reviewer surface and
-its preview show the reviewer's own fields after the role pills. With
+its preview show the reviewer's own fields before the role pills. With
 nothing stored: name, email and profile, tags off.
 """
 
@@ -214,14 +214,14 @@ def test_locked_the_readout_stays_and_the_card_goes(
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*</div>',
+        r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
         html, re.S,
     )
     assert m, "no reviewer info on the role row"
     return m.group(1)
 
 
-def test_the_surface_shows_the_reviewers_own_fields_after_the_pills(
+def test_the_surface_shows_the_reviewers_own_fields_before_the_pills(
     client: TestClient,
     db: Session,
     rae: AuthenticatedUser,
@@ -231,7 +231,7 @@ def test_the_surface_shows_the_reviewers_own_fields_after_the_pills(
     _activate(client, db, rs)
     html = make_client(rae).get(f"/me/sessions/{rs.public_id}").text
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
+    assert nav.index("data-reviewer-self-info") < nav.index("rs-role-nav-active")  # 19X Item 11
     info = _info(html)
     assert "Rae Reviewer" in info
     assert "rae@example.edu" in info
@@ -251,7 +251,8 @@ def test_the_preview_shows_a_static_reviewer_pill_and_the_line(
     nav = _div_at(html, 'class="rs-role-nav"')
     assert re.search(r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>', nav)
     # No navigator links to the previewed reviewer's other surfaces.
-    assert "<a " not in nav.split("data-reviewer-self-info")[0]
+    # The pills follow the own line (19X Item 11), whose Profile is a link.
+    assert "<a " not in nav[nav.index('class="pill pill-role'):]
     assert "Rae Reviewer" in _info(html)
 
 
@@ -482,7 +483,7 @@ def test_duplicate_copies_all_three_selections(
 # ── Item 3: /summary and the pre-open page ───────────────────────────
 
 
-def test_the_summary_shows_the_line_after_the_pills(
+def test_the_summary_shows_the_line_before_the_pills(
     client: TestClient,
     db: Session,
     rae: AuthenticatedUser,
@@ -506,7 +507,7 @@ def test_the_summary_shows_the_line_after_the_pills(
     html = rae_client.get(f"/me/sessions/{rs.public_id}/summary").text
     assert "Your responses" in html, html[:400]
     nav = _div_at(html, 'class="rs-role-nav"')
-    assert nav.index("rs-role-nav-active") < nav.index("data-reviewer-self-info")
+    assert nav.index("data-reviewer-self-info") < nav.index("rs-role-nav-active")  # 19X Item 11
     info = _info(html)
     assert "Rae Reviewer" in info and "Cohort: Blue" in info
     assert "rae@example.edu" not in info
@@ -532,7 +533,8 @@ def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
         r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>',
         nav,
     )
-    assert "<a " not in nav.split("data-reviewer-self-info")[0]
+    # The pills follow the own line (19X Item 11), whose Profile is a link.
+    assert "<a " not in nav[nav.index('class="pill pill-role'):]
     info = _info(html)
     assert "Rae Reviewer" in info and "rae@example.edu" in info
 

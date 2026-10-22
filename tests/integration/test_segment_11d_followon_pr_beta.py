@@ -10,10 +10,11 @@ assigned on, plus transient flash banners.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
@@ -94,19 +95,24 @@ def rae() -> AuthenticatedUser:
     )
 
 
-# ── Overview card — description + status pills rolled into one card ───
+# ── The header: two rows, no card (19X Item 11) ─────────────────────
 
 
-def test_overview_card_carries_description_and_pills(
+def _between(body: str, start: str, end: str) -> str:
+    i = body.index(start)
+    return body[i:body.index(end, i)]
+
+
+def test_the_header_is_two_rows_and_no_card(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """The reviewer surface's overview card (`.card.rs-status-panel`)
-    rolls the session description and the per-page status pills into
-    one full-width card — no separate description card, no
-    `.bottom-grid` 2-column row."""
+    """19X Item 11: the title row holds the session name, the rollup pill
+    and the deadline; the participant row the reviewer's own line, the
+    role pill, a `|` and the instrument pills, in that order; the
+    description follows as a paragraph, and no overview card is left."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -116,24 +122,37 @@ def test_overview_card_carries_description_and_pills(
         reviewee_ident="carol@example.edu",
         description="Some context for the reviewers.",
     )
+    review_session.deadline = datetime.now(UTC) + timedelta(days=30)
+    db.flush()
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
-    assert 'class="card rs-status-panel"' in body
-    assert 'class="rs-session-description"' in body
-    assert 'class="card rs-description-card"' not in body
-    # Description content lives inside the overview card.
-    assert "Some context for the reviewers." in body
+    assert "rs-status-panel" not in body
+    assert "rs-page-status-pills" not in body
+
+    title = _between(body, 'class="rs-page-header"', "</div>")
+    assert title.index("<h1>") < title.index("data-rs-session-status") < title.index("Deadline:")
+    assert "Draft" in title
+
+    row = _between(body, 'class="rs-role-nav"', '<p class="rs-session-description"')
+    order = [
+        row.index("data-reviewer-self-info"),
+        row.index("rs-role-nav-active"),
+        row.index('class="rs-role-nav-sep"'),
+        row.index("#1: not started"),
+    ]
+    assert order == sorted(order), order
+    assert 'aria-hidden="true">|</span>' in row
+    assert '<p class="rs-session-description">Some context for the reviewers.</p>' in body
 
 
-def test_overview_card_renders_when_no_description(
+def test_no_deadline_and_no_description_leave_their_parts_out(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
     make_client: Callable[[AuthenticatedUser], TestClient],
 ) -> None:
-    """When the session has no description, the overview card still
-    renders — the per-page status pills alone are enough content —
-    but it carries no `.rs-session-description` paragraph."""
+    """With no deadline the title row has no `Deadline:`; with no
+    description there is no paragraph."""
     operator = make_client(alice)
     review_session = _operator_creates_session_with_pair(
         operator,
@@ -142,11 +161,41 @@ def test_overview_card_renders_when_no_description(
         reviewer_email="rae@example.edu",
         reviewee_ident="carol@example.edu",
     )
+    review_session.deadline = None
+    db.flush()
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
-    assert 'class="card rs-status-panel"' in body
-    # No description paragraph when the session has no description.
+    assert "Deadline:" not in _between(body, 'class="rs-page-header"', "</div>")
     assert 'class="rs-session-description"' not in body
+    assert "rs-status-panel" not in body
+
+
+def test_no_assignments_leave_no_separator_and_no_pills(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """With nothing to review there are no instrument pills, so the
+    participant row ends at the role pill — no `|` — and the title row
+    carries no rollup pill."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-noassign",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    db.execute(delete(Assignment).where(Assignment.session_id == review_session.id))
+    db.flush()
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
+    assert "You have nothing to review in this session right now." in body
+    row = _between(body, 'class="rs-role-nav"', "</div>")
+    assert "rs-role-nav-active" in row
+    assert 'class="rs-role-nav-sep"' not in row
+    assert 'class="rs-role-nav-statuses"' not in row
+    assert "data-rs-session-status" not in _between(body, 'class="rs-page-header"', "</div>")
 
 
 # ── Per-page status pill — fresh "not started" session ────────────────
@@ -170,11 +219,11 @@ def test_page_status_pill_is_not_started_on_fresh_session(
     )
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
-    assert 'class="rs-page-status-pills"' in body
-    # `pill-empty` is the v2 alias mapped to amber for "needs-action"
-    # states; matches the spec's pill-class table for not_started.
-    assert 'class="pill pill-empty">' in body
-    assert "#1: not started" in body
+    assert 'class="rs-role-nav-statuses"' in body
+    # The page pill (``views.progress_pill``) and, beside the title, the
+    # session-wide rollup's Draft.
+    assert '<span class="pill pill-info">#1: not started</span>' in body
+    assert 'class="pill pill-empty" data-rs-session-status' in body
 
 
 # ── Per-page status pill — Save flips to in_progress ──────────────────
@@ -312,7 +361,7 @@ def test_session_status_pill_rolls_up_draft_saved_submitted(
     rae_client = make_client(rae)
 
     fresh = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
-    assert 'class="rs-page-status-pills"' in fresh
+    assert "data-rs-session-status" in fresh
     assert "Draft" in fresh
 
     rae_client.post(
