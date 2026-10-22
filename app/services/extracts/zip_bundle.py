@@ -22,6 +22,7 @@ either bundle (it lives behind the diagnostics doorway).
 from __future__ import annotations
 
 import io
+import unicodedata
 import zipfile
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -96,7 +97,7 @@ def build_setup_bundle(
     per-CSV data-row-count map for the
     ``session.setup_bundle_extracted`` audit envelope. Each CSV
     is named ``{code}_{kind}.csv`` inside the archive, matching
-    the per-entity downloads.
+    the per-entity downloads (made safe as a zip member).
     """
     reviewers = list(serialize_reviewers(db, review_session))
     reviewees = list(serialize_reviewees(db, review_session))
@@ -148,7 +149,8 @@ def build_responses_bundle(
 
     Always ``{code}_responses.csv``, the file Rehydrate needs. Then,
     for each intro-card chip that is on, exactly the files that
-    card's own button downloads, under the same names:
+    card's own button downloads, under the same names (made safe as
+    zip members, :func:`_member_name`):
 
     * ``by_instrument`` — the By instrument card's Zip all,
       flattened: one ``{code}_by_instrument_{slug}.csv`` per chosen
@@ -366,6 +368,40 @@ def _by_instrument_members(
         yield f"{code}_by_instrument_{slug}.csv", rows
 
 
+#: Path separators and the characters Windows refuses in a file name.
+_UNSAFE_ASCII = frozenset('\\/:*?"<>|')
+#: Slashes with no compatibility decomposition that an extractor's
+#: best-fit code page still maps to a separator.
+_SLASH_LOOKALIKES = frozenset("\u2044\u2215\u29f8\u29f9")
+
+
+def _unsafe_in_member(ch: str) -> bool:
+    """A separator, a Windows-refused character, anything whose
+    compatibility form holds one (``／``, ``＼``, ``﹨``, ``：`` …), a
+    slash lookalike, or a control or format character (C0, DEL, C1, and
+    every bidi mark, override and isolate)."""
+    return (
+        ch in _UNSAFE_ASCII
+        or ch in _SLASH_LOOKALIKES
+        or unicodedata.category(ch) in ("Cc", "Cf")
+        or not _UNSAFE_ASCII.isdisjoint(unicodedata.normalize("NFKC", ch))
+    )
+
+
+def _member_name(name: str) -> str:
+    """``name`` made safe as a zip member (findings O1, 2026-10-22).
+
+    A session code is free text and names every member, so ``../../x``
+    would reach outside the extraction folder, ``2026/Q1`` would make a
+    folder, and ``a:b`` would not extract on Windows. Each such
+    character becomes ``_`` and leading dots and spaces go; every
+    other character, non-Latin ones included, is kept. A standalone
+    download keeps its name, which the browser cleans.
+    """
+    safe = "".join("_" if _unsafe_in_member(ch) else ch for ch in name)
+    return safe.lstrip(". ") or "session.csv"
+
+
 def _zip_named(members: list[tuple[str, list[tuple[str, ...]]]]) -> bytes:
     """Write ``(name, rows)`` members in order. A name already
     taken gains ``_2``, ``_3`` … before ``.csv``, so no member
@@ -374,6 +410,7 @@ def _zip_named(members: list[tuple[str, list[tuple[str, ...]]]]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for name, rows in members:
+            name = _member_name(name)
             stem, dot, ext = name.rpartition(".")
             candidate, n = name, 2
             while candidate in used:
@@ -392,7 +429,7 @@ def _write_archive(
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for kind, rows in members.items():
             archive.writestr(
-                filename(review_session, kind),
+                _member_name(filename(review_session, kind)),
                 b"".join(stream_csv(rows)),
             )
     return buffer.getvalue()
