@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -33,13 +34,13 @@ _VALID_TEMPLATES = ("invitation", "reminder", "responses_received")
 
 
 def _require_editable_templates(review_session: ReviewSession) -> None:
-    """An archived session's email templates are read-only: an edit
-    moved ``updated_at``, which the Archive page reads as the date the
-    session was archived (findings O2, author's ruling 2026-10-22)."""
+    """The early refusal for an archived session; the rule itself is
+    ``email_templates.lock_for_edit``, under the session lock (findings
+    O2)."""
     if lifecycle.is_archived(review_session):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Session is archived; its email templates are read-only.",
+            detail=email_templates.ARCHIVED_MESSAGE,
         )
 
 
@@ -115,6 +116,10 @@ async def setupinvite_save(
         )
     _require_editable_templates(review_session)
     form = await request.form()
+    # The lock waits off the event loop (``spec/lifecycle.md``).
+    review_session = await run_in_threadpool(
+        email_templates.lock_for_edit, db, review_session
+    )
     updates: dict[str, str | None] = {}
     for spec in email_templates.TEMPLATE_FIELDS[template]:
         raw = form.get(spec["field"])
@@ -165,6 +170,7 @@ def setupinvite_reset(
             detail="Unknown template",
         )
     _require_editable_templates(review_session)
+    review_session = email_templates.lock_for_edit(db, review_session)
     spec = next(
         (s for s in email_templates.TEMPLATE_FIELDS[template] if s["field"] == field),
         None,

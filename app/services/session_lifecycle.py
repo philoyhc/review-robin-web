@@ -179,16 +179,20 @@ def require_editable(db: Session, review_session: ReviewSession) -> ReviewSessio
 
 
 def require_not_archived(
-    db: Session, review_session: ReviewSession
+    db: Session,
+    review_session: ReviewSession,
+    *,
+    message: str = "Session is archived; observer edits are not allowed.",
 ) -> ReviewSession:
     """Lock + re-read, refuse an ``archived`` session — the Observers
-    roster's gate, which stays open while the session runs."""
+    roster's gate, which stays open while the session runs, and the
+    email template editor's (findings O2)."""
     return session_guard.require_state(
         db,
         review_session,
         lambda locked: not is_archived(locked),
         code="archived",
-        message="Session is archived; observer edits are not allowed.",
+        message=message,
     )
 
 

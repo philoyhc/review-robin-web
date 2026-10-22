@@ -132,7 +132,7 @@
          template / field inputs and is targeted by a button via the
          HTML5 ``form="..."`` attribute. #}
       {% for row in rows %}
-        {% if row.has_override %}
+        {% if row.has_override and not locked %}
           <form method="post"
                 action="{{ url('/operator/sessions/' ~ session.public_id ~ '/setup-invite/reset') }}"
                 id="setupinvite-reset-{{ row.field }}-form"

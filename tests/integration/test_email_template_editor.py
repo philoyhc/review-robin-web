@@ -547,5 +547,35 @@ def test_an_archived_sessions_templates_are_read_only(
 
     page = client.get(f"{base}?template=reminder").text
     assert "data-setupinvite-locked" in page
-    assert 'name="subject"' in page and "disabled" in page
+    import re
+
+    for name in ("subject", "body"):
+        tag = re.search(rf'<(?:input|textarea)[^>]*name="{name}"[^>]*>', page).group(0)
+        assert re.search(r"\bdisabled\b", tag), tag
     assert "Reset subject to default" not in page
+
+
+def test_an_archive_committed_since_the_page_loaded_still_refuses(
+    client: TestClient, db: Session
+) -> None:
+    """The cold read of O2: the route's check reads the row as loaded, so
+    the rule is ``email_templates.lock_for_edit``, which locks and
+    re-reads it."""
+    import pytest
+    from sqlalchemy import update
+
+    from app.services import email_templates
+    from app.services.session_guard import SessionStateConflict
+
+    review_session = _make_session(client, db, code="tpl-race")
+    assert review_session.status != "archived"
+    db.execute(
+        update(ReviewSession)
+        .where(ReviewSession.id == review_session.id)
+        .values(status="archived")
+        .execution_options(synchronize_session=False)
+    )
+    assert review_session.status != "archived", "premise: the object is stale"
+
+    with pytest.raises(SessionStateConflict):
+        email_templates.lock_for_edit(db, review_session)
