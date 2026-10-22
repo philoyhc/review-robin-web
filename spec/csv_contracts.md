@@ -868,8 +868,11 @@ The Reviewers, Reviewees, Relationships and Settings pairs are
 **byte-stable** on round-trip:
 `serialize(session) → write to file → read file → apply to
 session → serialize` yields a byte-identical CSV. A session holding a
-tag value stored with a comma before §1 *Tag commas* is the exception:
-its roster export is refused on import until the tag is changed.
+tag value stored with a comma before §1 *Tag commas* is one exception:
+its roster export is refused on import until the tag is changed. A
+rule set an instrument uses, stored before §3.3's card-shape check in a
+shape the card can't show, is the other: its Settings export is refused
+on import, naming the rule set (item 7, findings E1).
 
 **Observers is not claimed here.** It has a wired
 importer and an extract, and `Status` and `CohortRule` both read back — but
@@ -910,8 +913,9 @@ Concrete guarantees the importers + serialisers maintain:
    empty CSV cell on serialise; an empty CSV cell on parse is
    `None`. No `"None"` strings, no `"null"` strings.
 7. **Every `session_rule_sets` row is emitted, and re-importing one
-   cannot collide.** Nothing seeds a rule set on session create, so every
-   row is operator-authored and there is no seeded set to filter. Apply is
+   cannot collide.** Nothing seeds a rule set on session create now, so a
+   new session's rows are all operator-authored and there is no seeded set
+   to filter (an older session may still hold a legacy seeded one). Apply is
    an **upsert by name**: a row whose name already exists in the
    destination is updated, and rows the CSV omits are deleted — so
    `uq_session_rule_set_session_name` is **unreachable from this path**,

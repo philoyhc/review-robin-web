@@ -142,9 +142,9 @@ Band 1 (the only authoring surface today) emits only `MATCH`
 and `COMPOSITE`. The other two are honoured by the engine but
 not surfaced in the UI. The Settings import refuses them, with every
 other rule the card can't show, in a rule set an instrument uses
-(`spec/csv_contracts.md` §3.3), so no writer creates one; Duplicate
-and Replicate still copy one already stored, and a rule set no
-instrument uses imports as it is.
+(`spec/csv_contracts.md` §3.3), so no writer creates one for an
+instrument; Duplicate and Replicate still copy one already stored, and
+a rule set no instrument uses imports as it is.
 
 **`enabled`** (findings E1, 2026-10-22). Every rule carries an
 `enabled` flag, and the engine skips a disabled rule at any depth: a
