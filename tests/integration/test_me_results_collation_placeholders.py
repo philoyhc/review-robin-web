@@ -3,12 +3,15 @@
 observer URLs that light up behind their respective gates.
 
 Today the body is just the chrome: session-name header, the
-inline body-text caption, and an optional description card. The
+inline body-text caption, and an optional description paragraph
+with no card around it (19X Item 11). The
 real content lands with W16 / W17 per
 ``guide/archive/participant_model_upgrade.md`` §3.2.
 """
 
 from __future__ import annotations
+
+import re
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -73,9 +76,12 @@ def test_results_renders_for_email_identified_reviewee(
     assert "<h1>Cohort A</h1>" in body
     # Inline caption next to the header.
     assert "Results of the review" in body
-    # Session description rendered inside the rs-status-panel card.
-    assert "rs-session-description" in body
-    assert "Mid-term peer review." in body
+    # The session description, under the header rows with no card
+    # around it (19X Item 11).
+    assert '<p class="rs-session-description">Mid-term peer review.</p>' in body
+    before = body[: body.index('<p class="rs-session-description">')]
+    assert before.rstrip().endswith("</div>")  # the participant row
+    assert not re.search(r'<div class="card[^"]*">\s*$', before)
 
 
 def test_results_renders_without_description_card_when_none(
@@ -98,8 +104,8 @@ def test_results_renders_without_description_card_when_none(
     assert "<h1>Cohort A</h1>" in body
     assert "Results of the review" in body
     # The class name appears in the inline ``<style>`` block in
-    # base.html, so match on the actual card opening tag.
-    assert '<div class="card rs-status-panel">' not in body
+    # base.html, so match on the paragraph itself.
+    assert '<p class="rs-session-description">' not in body
 
 
 def test_results_404_for_inactive_reviewee(
@@ -158,8 +164,12 @@ def test_collation_renders_for_observer(
     body = response.text
     assert "<h1>Cohort A</h1>" in body
     assert "Observer view of the session" in body
-    assert "rs-session-description" in body
-    assert "External committee observation." in body
+    # The session description, under the header rows with no card
+    # around it (19X Item 11).
+    assert '<p class="rs-session-description">External committee observation.</p>' in body
+    before = body[: body.index('<p class="rs-session-description">')]
+    assert before.rstrip().endswith("</div>")  # the participant row
+    assert not re.search(r'<div class="card[^"]*">\s*$', before)
 
 
 def test_collation_renders_without_description_card_when_none(
@@ -179,7 +189,7 @@ def test_collation_renders_without_description_card_when_none(
     ).text
     assert "<h1>Cohort A</h1>" in body
     assert "Observer view of the session" in body
-    assert '<div class="card rs-status-panel">' not in body
+    assert '<p class="rs-session-description">' not in body
 
 
 def test_collation_404_for_inactive_observer(

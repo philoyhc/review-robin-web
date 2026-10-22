@@ -214,7 +214,7 @@ def test_locked_the_readout_stays_and_the_card_goes(
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*</div>',
+        r'<span class="rs-self-info" data-reviewer-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
         html, re.S,
     )
     assert m, "no reviewer info on the role row"
@@ -251,7 +251,8 @@ def test_the_preview_shows_a_static_reviewer_pill_and_the_line(
     nav = _div_at(html, 'class="rs-role-nav"')
     assert re.search(r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>', nav)
     # No navigator links to the previewed reviewer's other surfaces.
-    assert "<a " not in nav.split("data-reviewer-self-info")[0]
+    # The pills follow the own line (19X Item 11), whose Profile is a link.
+    assert "<a " not in nav[nav.index('class="pill pill-role'):]
     assert "Rae Reviewer" in _info(html)
 
 
@@ -532,7 +533,8 @@ def test_the_pre_open_page_shows_a_reviewer_pill_and_the_line(
         r'<span class="pill pill-role-reviewer rs-role-nav-active">Reviewer</span>',
         nav,
     )
-    assert "<a " not in nav.split("data-reviewer-self-info")[0]
+    # The pills follow the own line (19X Item 11), whose Profile is a link.
+    assert "<a " not in nav[nav.index('class="pill pill-role'):]
     info = _info(html)
     assert "Rae Reviewer" in info and "rae@example.edu" in info
 

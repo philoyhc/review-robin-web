@@ -60,7 +60,7 @@ def _div_at(html: str, marker: str) -> str:
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-reviewee-self-info>(.*?)</span>\s*</div>',
+        r'<span class="rs-self-info" data-reviewee-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
         html, re.S,
     )
     assert m, "no reviewee info on the role row"

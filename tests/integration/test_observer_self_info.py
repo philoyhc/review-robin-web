@@ -142,7 +142,7 @@ def test_a_failed_import_still_renders_the_card_and_readout(
 
 def _info(html: str) -> str:
     m = re.search(
-        r'<span class="rs-self-info" data-observer-self-info>(.*?)</span>\s*</div>',
+        r'<span class="rs-self-info" data-observer-self-info>(.*?)</span>\s*<(?:span|a) class="pill',
         html, re.S,
     )
     assert m, "no observer info on the role row"

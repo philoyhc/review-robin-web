@@ -10,11 +10,11 @@ assigned on, plus transient flash banners.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
@@ -122,7 +122,7 @@ def test_the_header_is_two_rows_and_no_card(
         reviewee_ident="carol@example.edu",
         description="Some context for the reviewers.",
     )
-    review_session.deadline = datetime(2026, 12, 1, 9, 0, tzinfo=UTC)
+    review_session.deadline = datetime.now(UTC) + timedelta(days=30)
     db.flush()
     rae_client = make_client(rae)
     body = rae_client.get(f"/me/sessions/{review_session.public_id}/1").text
@@ -145,7 +145,7 @@ def test_the_header_is_two_rows_and_no_card(
     assert '<p class="rs-session-description">Some context for the reviewers.</p>' in body
 
 
-def test_no_deadline_and_no_assignments_leave_their_parts_out(
+def test_no_deadline_and_no_description_leave_their_parts_out(
     db: Session,
     alice: AuthenticatedUser,
     rae: AuthenticatedUser,
@@ -168,6 +168,34 @@ def test_no_deadline_and_no_assignments_leave_their_parts_out(
     assert "Deadline:" not in _between(body, 'class="rs-page-header"', "</div>")
     assert 'class="rs-session-description"' not in body
     assert "rs-status-panel" not in body
+
+
+def test_no_assignments_leave_no_separator_and_no_pills(
+    db: Session,
+    alice: AuthenticatedUser,
+    rae: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """With nothing to review there are no instrument pills, so the
+    participant row ends at the role pill — no `|` — and the title row
+    carries no rollup pill."""
+    operator = make_client(alice)
+    review_session = _operator_creates_session_with_pair(
+        operator,
+        db,
+        code="rae-noassign",
+        reviewer_email="rae@example.edu",
+        reviewee_ident="carol@example.edu",
+    )
+    db.execute(delete(Assignment).where(Assignment.session_id == review_session.id))
+    db.flush()
+    body = make_client(rae).get(f"/me/sessions/{review_session.public_id}/1").text
+    assert "You have nothing to review in this session right now." in body
+    row = _between(body, 'class="rs-role-nav"', "</div>")
+    assert "rs-role-nav-active" in row
+    assert 'class="rs-role-nav-sep"' not in row
+    assert 'class="rs-role-nav-statuses"' not in row
+    assert "data-rs-session-status" not in _between(body, 'class="rs-page-header"', "</div>")
 
 
 # ── Per-page status pill — fresh "not started" session ────────────────
