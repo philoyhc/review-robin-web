@@ -39,7 +39,7 @@ from app.services.instruments import ensure_default_instrument
 
 
 def _seed(
-    db: Session, *, group: bool = False
+    db: Session, *, group: bool = False, two: bool = False
 ) -> tuple[User, Reviewer, ReviewSession, list[Assignment]]:
     op = User(email="op@example.edu", display_name="Op")
     db.add(op)
@@ -71,7 +71,7 @@ def _seed(
             name=name,
             email_or_identifier=f"{name.lower()}@example.edu",
         )
-        for name in (["Carol", "Dan"] if group else ["Carol"])
+        for name in (["Carol", "Dan"] if group or two else ["Carol"])
     ]
     db.add_all(reviewees)
     db.flush()
@@ -439,7 +439,7 @@ def test_the_page_renders_a_stored_number_as_a_save_posts_it(
     assert '"+4"' not in body
 
 
-def test_blanking_an_assignments_only_answer_leaves_it_submitted(
+def test_blanking_a_lone_assignments_only_answer_leaves_no_answer(
     db: Session,
 ) -> None:
     """Findings R3, ruled 2026-10-22 (narrow the spec): with nothing
@@ -453,3 +453,21 @@ def test_blanking_an_assignments_only_answer_leaves_it_submitted(
 
     assert _stamps(db, a) == {}
     assert _pill(db, reviewer, review_session) == "not started"
+
+
+def test_blanking_one_assignments_only_answer_keeps_the_others_stamps(
+    db: Session,
+) -> None:
+    """Findings R3, the read of the narrowing: the blank unstamps nothing
+    else, so the other assignment stays submitted, but the required
+    rating it left empty asks for an answer and a new Submit."""
+    op, reviewer, review_session, [a, b] = _seed(db, two=True)
+    _save(db, op, reviewer, review_session, a, rating="4", comments="")
+    _submit(db, op, reviewer, review_session, b, rating="3", comments="")
+    assert _stamps(db, a) == {"rating": True}
+
+    _save(db, op, reviewer, review_session, a, rating="", comments="")
+
+    assert _stamps(db, a) == {}
+    assert _stamps(db, b) == {"rating": True}
+    assert _pill(db, reviewer, review_session) == "in progress"

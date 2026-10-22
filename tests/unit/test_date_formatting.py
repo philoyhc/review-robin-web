@@ -243,4 +243,5 @@ def test_a_year_below_1000_renders_four_digits_and_reads_back() -> None:
     assert box == "0026-10-27 12:00"
     assert date_formatting.format_datetime_local(value, "UTC") == "0026-10-27T12:00"
     assert date_formatting.format_date(value) == "0026-10-27"
+    assert date_formatting.format_datetime(value, "UTC").startswith("0026-10-27 12:00")
     assert date_formatting.parse_local_datetime(box, "UTC") == value

@@ -376,18 +376,20 @@ answers needs no digest.
   clears its stamp as a Save's does. Editing a
   previously-submitted required field to empty deletes its
   `Response` row (including the `submitted_at` stamp), which flips
-  the dashboard pill back to `in progress` on next render. Emptying
+  the dashboard pill back to `in progress` on next render (`not
+  started` when the reviewer has no answer left). Emptying
   any submitted answer, optional ones included, is a change: it
   deletes the row and clears `submitted_at` on the assignment's
   remaining rows (on a group-scoped instrument, on every member's
   copy in the group), so the rest is not released as submitted
-  without it and the reviewer must Submit again. A blank that leaves
-  its assignment no answer at all asks for no new Submit: nothing of
-  it is left to release, and the reviewer's other assignments keep
-  their stamps (findings R3, author's ruling 2026-10-22). Emptying an answer
+  without it and the reviewer must Submit again. Emptying an answer
   saved since the Submit does the same: one changed and saved before
   it was emptied has already lost its stamp, and nothing tells the two
-  apart.
+  apart. A blank that leaves its assignment no answer at all has
+  nothing left to unstamp, and the reviewer's other assignments keep
+  their stamps; only a required field it left empty asks for an answer
+  and a new Submit (findings R3, author's ruling 2026-10-22: the
+  contract narrows, the code stands).
 - **Clear all** deletes every `Response` row of this reviewer's
   included assignments in this session, across every instrument, and
   an excluded member's copy in a group they still review (a group
