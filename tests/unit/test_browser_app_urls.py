@@ -9,7 +9,7 @@ assertion on one would pass whatever the app did. These rules find one:
 
 - **B1.** The URL a test navigates to, requests or asserts (``goto``,
   ``to_have_url`` and ``not_to_have_url``, and ``page.request``'s
-  verbs, positionally or as ``url=``) is ``app_url(...)``, or is built
+  verbs, positionally or by Playwright's keyword for it) is ``app_url(...)``, or is built
   from a page's own ``.url`` (already under the mount): the ``.url``
   itself, a method or index on it, or a string that starts with it. A
   name counts as its assignment does. A ``re.compile(...)`` pattern
@@ -45,6 +45,9 @@ _URL_ASSERTIONS = {"to_have_url", "not_to_have_url"}
 _HREF_ASSERTIONS = {"to_have_attribute", "not_to_have_attribute"}
 _REQUEST_VERBS = {"get", "post", "put", "patch", "delete", "head", "fetch"}
 _GLOB_WAITS = {"wait_for_url", "expect_navigation"}
+# Playwright's own names for the URL argument, which a caller may pass by
+# keyword: `goto(url=)`, `to_have_url(url_or_reg_exp=)`, `fetch(url_or_request=)`.
+_URL_KEYWORDS = ("url", "url_or_reg_exp", "url_or_request")
 
 
 def _is_app_url(node: ast.AST) -> bool:
@@ -113,10 +116,15 @@ def _navigable(arg: ast.AST, bound: dict[str, list[ast.AST]]) -> bool:
     return False
 
 
+def _argument(call: ast.Call, position: int, names: tuple[str, ...]) -> ast.AST | None:
+    """The argument at ``position``, or passed by one of ``names``."""
+    if len(call.args) > position:
+        return call.args[position]
+    return next((k.value for k in call.keywords if k.arg in names), None)
+
+
 def _url_argument(call: ast.Call) -> ast.AST | None:
-    if call.args:
-        return call.args[0]
-    return next((k.value for k in call.keywords if k.arg == "url"), None)
+    return _argument(call, 0, _URL_KEYWORDS)
 
 
 def _is_request_verb(func: ast.Attribute) -> bool:
@@ -138,10 +146,20 @@ def _pathname_read(node: ast.AST) -> bool:
 
 def _call_offences(node: ast.Call, bound: dict[str, list[ast.AST]]) -> list[str]:
     assert isinstance(node.func, ast.Attribute)
-    method, arg = node.func.attr, _url_argument(node)
+    method, line = node.func.attr, f"line {node.lineno}"
+    if method in _HREF_ASSERTIONS:
+        name, value = _argument(node, 0, ("name",)), _argument(node, 1, ("value",))
+        if (
+            isinstance(name, ast.Constant)
+            and name.value == "href"
+            and value is not None
+            and _root_literal(value)
+        ):
+            return [f"B2 {line}: {ast.unparse(value)}"]
+        return []
+    arg = _url_argument(node)
     if arg is None:
         return []
-    line = f"line {node.lineno}"
     if method in _NAVIGATIONS or _is_request_verb(node.func):
         if method in _URL_ASSERTIONS and _is_compiled_pattern(arg):
             return []
@@ -149,14 +167,6 @@ def _call_offences(node: ast.Call, bound: dict[str, list[ast.AST]]) -> list[str]
             return [f"B1 {line}: {ast.unparse(arg)}"]
     if method in _GLOB_WAITS and _root_literal(arg):
         return [f"B1 {line}: {ast.unparse(arg)}"]
-    if (
-        method in _HREF_ASSERTIONS
-        and len(node.args) == 2
-        and isinstance(node.args[0], ast.Constant)
-        and node.args[0].value == "href"
-        and _root_literal(node.args[1])
-    ):
-        return [f"B2 {line}: {ast.unparse(node.args[1])}"]
     return []
 
 
@@ -211,10 +221,14 @@ def test_browser_tests_navigate_under_the_mount(path: Path) -> None:
         ('expect(page).to_have_url(str("/operator/sessions"))', "B1"),
         ("expect(page).to_have_url(build_url(sid))", "B1"),
         ('page.request.post("/operator/sessions")', "B1"),
+        ('expect(page).to_have_url(url_or_reg_exp="/operator/sessions")', "B1"),
+        ('page.request.fetch(url_or_request="/operator/sessions")', "B1"),
         ('page.wait_for_url("/operator/sessions")', "B1"),
         ('page.expect_navigation(url="/operator/sessions")', "B1"),
         ('expect(link).to_have_attribute("href", "/operator/sessions")', "B2"),
         ('expect(link).not_to_have_attribute("href", "/operator/sessions")', "B2"),
+        ('expect(link).to_have_attribute(name="href", value="/operator/sessions")', "B2"),
+        ('expect(link).to_have_attribute("href", value="/operator/sessions")', "B2"),
         ('page.evaluate("window.location.href = \'/about\'")', "B3"),
         ('page.evaluate("location.href = \'/about\'")', "B3"),
         ('page.evaluate("window.location.assign(\'/about\')")', "B3"),
