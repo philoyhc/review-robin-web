@@ -884,6 +884,7 @@ All four answered by the author, 2026-10-22, on the recommendation:
 - `spec/reviewer-surface.md` — String answers are fitting textareas with a one- or two-line floor; "Textarea height derivation" retires (Item 10).
 - `spec/instruments.md` — the preview's String box mirrors the floors; the help boxes' fit is shared (Item 10).
 - `spec/ui_elements.md` — answer boxes fit their text, with no handle (Item 10).
+- `spec/rrw_functional_spec.md` — cell rendering: a String answer box grows to fit its text, one or two lines to start (Item 10; found by `spec-writer` at the close).
 - `guide/todo_master.md` — Item 10 in the 19X entry (Item 10).
 
 ## Item 11 — The reviewer surface's header loses its card

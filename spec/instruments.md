@@ -1005,10 +1005,11 @@ card fades with the intro card.
 row whose text is empty is skipped, as on the reviewer surface.
 **Unlocked**, the row is the label over a `help_text` textarea
 (`aria-label="Help text for <field>"`, `maxlength` 1000) on `dfsave-{id}`;
-an empty row stays, to be typed into. The box grows with its text: its height
-is its content's, above a 60px floor, with no ceiling (`maxlength` bounds it),
-and it takes no resize handle and no scrollbar (`resize: none; overflow:
-hidden`), since a drag would be undone by the next keystroke. It re-fits on
+an empty row stays, to be typed into. The box grows with its text through `base.html`'s shared fit (`data-fit-box`;
+`window.rrwFitBoxes` / `window.rrwUnfitBoxes`, which the Instruments page calls
+around a rebuild): its height is its content's, above a 60px floor, with no
+ceiling (`maxlength` bounds it), and it takes no resize handle and no
+scrollbar, since a drag would be undone by the next keystroke. It re-fits on
 build and rebuild (the layout chip's move included), on each keystroke and
 when its width changes; a box not drawn is fitted once it is. `placeHelpRows` puts them in the home the
 instrument's `intro_layout` names, as on the reviewer surface: inside the
@@ -1110,13 +1111,14 @@ fixed, as saving a width will turn the surface's. A group-flavor
 preview is always fixed, as the surface's group table is, its number
 columns starting the same way. A dragged width wins.
 
-**The preview's long-text response box has no resize handle.** A `String`
-over 100 characters previews as a disabled `<textarea>` whose `rows` come
-from `textareaRowsFor` (the mirror of `views.textarea_rows_for`), so it
-starts at the height the reviewer surface renders. It takes `resize: none`
-(`buildResponseFieldPreviewCell`): a drag there persists nowhere, so a handle would
-promise a setting that does not exist. The reviewer surface keeps its
-vertical handle (`spec/reviewer-surface.md`; `spec/ui_elements.md` §8).
+**The preview draws every `String` as the surface's answer box.**
+`buildResponseFieldPreviewCell` renders a disabled `<textarea
+class="rs-answer">` at the surface's floors (`rows` 1 at a `max_length` of 50
+or fewer, else 2; `spec/reviewer-surface.md`, "Cell renderers"). It is empty,
+so it takes no fit (no `data-fit-box`), and it takes `resize: none`: a drag
+there persists nowhere, so a handle would promise a setting that does not
+exist. The reviewer surface's box fits its text instead
+(`spec/reviewer-surface.md`; `spec/ui_elements.md` §8).
 
 Widths never POST on their own. A resize stages the live widths
 into a hidden `column_widths_snapshot` input (JSON); the bulk
