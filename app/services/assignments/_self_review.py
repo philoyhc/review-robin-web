@@ -161,7 +161,7 @@ def classify_self_review_pairs(
     ``{assignment_id: is_self_review}`` for every pair passed in. The
     two branches are documented on that function.
     """
-    from app.services.responses import group_keys
+    from app.services.responses import group_keys, is_catch_all_key
 
     # (group instrument, reviewer) -> the group keys of the groups that
     # reviewer is a member of. **Membership comes from the roster, not
@@ -207,7 +207,9 @@ def classify_self_review_pairs(
     # drop out here; only group instruments read ``member_keys``.
     member_keys: dict[tuple[int, int], set[tuple[str, ...]]] = {}
     for row in membership:
-        if row.id in keys:
+        # The catch-all group is never the reviewer's own, as Generate
+        # and the Band 1 preview read it (findings E2).
+        if row.id in keys and not is_catch_all_key(keys[row.id]):
             member_keys.setdefault(
                 (row.instrument_id, row.reviewer_id), set()
             ).add(keys[row.id])

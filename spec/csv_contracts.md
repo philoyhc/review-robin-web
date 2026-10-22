@@ -192,7 +192,7 @@ The file has two parts:
 | Instrument (2) | `InstrumentName` (the positional id `instrument_{n}` — the operator's typed name is not exported), `InstrumentShortLabel` |
 | Field context (3) | `FieldKey`, `FieldLabel`, `ResponseType` |
 | Value (1) | `Value` (empty cell ⇒ reviewer cleared the field) |
-| Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Read from the assignment's stored `Assignment.is_self_review` column: on individual-scoped instruments a case-insensitive match of the reviewer's email against the reviewee's email-or-identifier (`FALSE` for a non-email identifier); on group-scoped instruments the whole-group rule (every member row of a group the reviewer belongs to on the session roster counts, even when a rule filtered out the reviewer's own row). |
+| Self-review (1) | `SelfReview` — uppercase `TRUE` / `FALSE` per Excel idiom. Read from the assignment's stored `Assignment.is_self_review` column: on individual-scoped instruments a case-insensitive match of the reviewer's email against the reviewee's email-or-identifier (`FALSE` for a non-email identifier); on group-scoped instruments the whole-group rule (every member row of a group the reviewer belongs to on the session roster counts, even when a rule filtered out the reviewer's own row; never the blank-boundary catch-all group, so the reviewer's own row in it reads `FALSE`, `spec/assignments.md`). |
 | Lifecycle (3) | `SavedAt`, `SubmittedAt`, `Version` |
 | Instrument flavour (1) | `InstrumentFlavour` — derived `per-reviewee` / `group-scoped`. **Appended last, not grouped with the other instrument columns**, so the preceding 20 column indices stay stable for analyst pipelines that read by position. |
 
@@ -540,7 +540,28 @@ the round-trip notes below.
    offers — one in Link 1, a person's pair tag (`reviewer.pair_tagN` /
    `reviewee.pair_tagN`, retired from the engine) or one beside a
    cross-side operator — with the reason Band 1's Save gives
-   (`spec/instruments.md`, Band 1). So is an
+   (`spec/instruments.md`, Band 1). So is a `rules_json`, in a rule set
+   an `instruments[N].rule_set_name` in the file names, holding a rule
+   Band 1's card can't show as stored (`unrepresented_rule` in
+   `app/services/instruments/_band1.py`; findings E1, 2026-10-22): any
+   rule but a `link1` or `link2` `COMPOSITE` under `AND` / `OR`, a
+   disabled Link or rule, a child that is not `MATCH`, an operator
+   its Link's card doesn't offer (`link2` offers six; `link1` the four
+   that take no tag, without `IS THE SAME AS` / `IS DIFFERENT FROM`),
+   a case-sensitive predicate, or an `IS` /
+   `IS NOT` / cross-side rule with a blank value. The card would hide it
+   or show it as something else, and its next Save would drop or
+   rewrite it; the error names the rule set's `rules_json`, the
+   instrument using it and what the card would do. So is a
+   `combinator` other than `ALL_OF` on such a rule set: the card joins
+   its Links with `ALL_OF` and never shows the combinator, which its
+   Save keeps. A Link holding rules the card shows imports as touched,
+   added to `band1_touched_links` if the file left it out, since a Link
+   that is Not set would post All at the card's next Save and drop them.
+   A rule set no
+   instrument names has no card and imports as it is; instruments are
+   replace-all (phase 2), so the file's are the only ones that can use
+   one. So is an
    `instruments[N].group_kind` beside a `rule_set_name` whose Link 2
    keeps pairs by a relationship-tag `IS` or `IS FILLED`: Band 1's Save
    refuses the same pairing, and the error names the `group_kind` field.
@@ -855,8 +876,11 @@ The Reviewers, Reviewees, Relationships and Settings pairs are
 **byte-stable** on round-trip:
 `serialize(session) → write to file → read file → apply to
 session → serialize` yields a byte-identical CSV. A session holding a
-tag value stored with a comma before §1 *Tag commas* is the exception:
-its roster export is refused on import until the tag is changed.
+tag value stored with a comma before §1 *Tag commas* is one exception:
+its roster export is refused on import until the tag is changed. A
+rule set an instrument uses, stored before §3.3's card-shape check in a
+shape the card can't show, is the other: its Settings export is refused
+on import, naming the rule set (item 7, findings E1).
 
 **Observers is not claimed here.** It has a wired
 importer and an extract, and `Status` and `CohortRule` both read back — but
@@ -897,13 +921,20 @@ Concrete guarantees the importers + serialisers maintain:
    empty CSV cell on serialise; an empty CSV cell on parse is
    `None`. No `"None"` strings, no `"null"` strings.
 7. **Every `session_rule_sets` row is emitted, and re-importing one
-   cannot collide.** Nothing seeds a rule set on session create, so every
-   row is operator-authored and there is no seeded set to filter. Apply is
+   cannot collide.** Nothing seeds a rule set on session create now, so a
+   new session's rows are all operator-authored and there is no seeded set
+   to filter (an older session may still hold a legacy seeded one). Apply is
    an **upsert by name**: a row whose name already exists in the
    destination is updated, and rows the CSV omits are deleted — so
    `uq_session_rule_set_session_name` is **unreachable from this path**,
    whether the target is the source session itself or another that already
-   carries the name.
+   carries the name. The card-shape check (§3.3, phase 1) holds only
+   for a rule set an instrument uses, so a row no instrument uses, such
+   as a legacy seeded `MATCH` or `QUOTA` set, round-trips as stored. A
+   rule set an instrument uses re-imports only in the card's shape,
+   which is the only shape a writer creates for one; one stored before
+   the check in another shape fails the re-import, naming it. Pinned by
+   `tests/integration/test_rule_writes_checked.py::test_settings_import_keeps_a_rule_set_no_instrument_uses`.
    **The one case that could reach the constraint is a bundle naming the
    same rule set twice**, because apply adds per row without flushing
    between them. The parse phase rejects that bundle before phase 2 runs —

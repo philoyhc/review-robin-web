@@ -24,6 +24,7 @@ from app.db.models import (
     Reviewer,
     ReviewSession,
     SessionOperator,
+    SessionRuleSet,
     User,
 )
 from app.services import session_rehydrate
@@ -201,3 +202,59 @@ def test_orchestrator_lands_draft_with_note(db: Session) -> None:
     # A clean set places every response, so there is nothing to report.
     assert outcome.dropped == []
     assert outcome.dropped_count == 0
+
+
+_LEGACY_MATCH = {
+    "id": "intra_group",
+    "enabled": True,
+    "kind": "MATCH",
+    "predicate": {
+        "field": "reviewer.tag1",
+        "operator": "same_as",
+        "operand": "reviewee.tag1",
+        "case_sensitive": False,
+    },
+}
+
+
+def _legacy_rule_set(db: Session, rs: ReviewSession) -> SessionRuleSet:
+    rule_set = SessionRuleSet(
+        session_id=rs.id,
+        name="Intra-group peer review",
+        description="",
+        combinator="ALL_OF",
+        exclude_self_reviews=False,
+        seed=None,
+        rules_json=[_LEGACY_MATCH],
+    )
+    db.add(rule_set)
+    db.flush()
+    return rule_set
+
+
+def test_rehydrate_keeps_a_rule_set_no_instrument_uses(db: Session) -> None:
+    """Findings E1: the card-shape check holds only for a rule set an
+    instrument uses, so an exported legacy rule set still rehydrates."""
+    rs, user = _seed(db)
+    _legacy_rule_set(db, rs)
+
+    outcome = session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user)
+
+    copied = db.execute(
+        select(SessionRuleSet).where(SessionRuleSet.session_id == outcome.session.id)
+    ).scalar_one()
+    assert copied.rules_json == [_LEGACY_MATCH]
+
+
+def test_rehydrate_refuses_a_used_rule_set_the_card_cant_show(db: Session) -> None:
+    rs, user = _seed(db)
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == rs.id)
+    ).scalar_one()
+    instrument.rule_set_id = _legacy_rule_set(db, rs).id
+    db.flush()
+
+    with pytest.raises(session_rehydrate.RehydrateError) as exc_info:
+        session_rehydrate.rehydrate_session(db, files=_file_set(db, rs), user=user)
+
+    assert "rule the card can't show" in str(exc_info.value)

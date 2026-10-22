@@ -42,6 +42,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import TypeAdapter, ValidationError
 from sqlalchemy.orm import Session, object_session
 
 from app.db.models import Instrument, SessionRuleSet, User
@@ -65,6 +66,20 @@ _TAG_OPERAND_OPS: frozenset[str] = frozenset({"same_as", "different_from"})
 # IS FILLED / IS EMPTY test the field alone; the card's value box is
 # inactive for them, and whatever it holds is not stored.
 _NO_OPERAND_OPS: frozenset[str] = frozenset({"is_not_empty", "is_empty"})
+
+
+_ENGINE_BOOL: TypeAdapter[bool] = TypeAdapter(bool)
+
+
+def _flag(rule: dict[str, Any], key: str, default: bool) -> bool:
+    """A rule's ``enabled`` / ``case_sensitive`` as the engine reads it:
+    Pydantic's lax ``bool``, so a stored ``"false"`` is False, where
+    plain truthiness would read it as True (Codex on #3237)."""
+    value = rule.get(key, default)
+    try:
+        return _ENGINE_BOOL.validate_python(value)
+    except ValidationError:
+        return bool(value)
 
 
 class Band1ParseError(ValueError):
@@ -234,6 +249,37 @@ def set_band1_assignment_rules(
     return instrument
 
 
+def _shown_composites(
+    rules_json: list[Any],
+) -> list[tuple[str, dict[str, Any], list[dict[str, Any]]]]:
+    """Each ``link1`` / ``link2`` Composite the card shows as Filter,
+    with its enabled children. A disabled rule is not shown, as the
+    engine does not apply it (findings E1, 2026-10-22); a Link whose
+    rules are all disabled reads as All, as the engine skips it."""
+    shown = []
+    for entry in rules_json:
+        if entry.get("kind") != "COMPOSITE":
+            continue
+        link_id = entry.get("id")
+        if link_id not in ("link1", "link2"):
+            continue
+        enabled = [
+            child for child in entry.get("rules", []) if _flag(child, "enabled", True)
+        ]
+        if _flag(entry, "enabled", True) and enabled:
+            shown.append((link_id, entry, enabled))
+    return shown
+
+
+def shown_links(rules_json: list[Any]) -> set[str]:
+    """The Links the card shows as Filter for ``rules_json``. A Link
+    the card writes rules to is one its operator has set, so the
+    Settings import marks each touched; left out of
+    ``band1_touched_links`` it would show as Not set, and its next Save
+    would post All and drop the rules (Codex on #3237)."""
+    return {link_id for link_id, _entry, _enabled in _shown_composites(rules_json)}
+
+
 def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
     """Read the instrument's stored Band 1 state back into the same
     shape the UI submits. Returns ``{"link1": {...}, "link2": {...}}``
@@ -254,19 +300,14 @@ def decode_band1_state(instrument: Instrument, db: Session) -> dict[str, Any]:
     rule_set = db.get(SessionRuleSet, instrument.rule_set_id)
     if rule_set is None:
         return state
-    for entry in rule_set.rules_json or []:
-        if entry.get("kind") != "COMPOSITE":
-            continue
-        link_id = entry.get("id")
-        if link_id not in ("link1", "link2"):
-            continue
+    for link_id, entry, enabled in _shown_composites(rule_set.rules_json or []):
         target = state[link_id]
         target["mode"] = "filter"
         op = entry.get("op", "AND")
         target["combinator"] = "OR" if op == "OR" else "AND"
         target["rules"] = [
             _decode_match_rule(child)
-            for child in entry.get("rules", [])
+            for child in enabled
             if child.get("kind") == "MATCH"
         ]
     return state
@@ -713,6 +754,86 @@ def unoffered_pair_rule(rules_json: list[Any]) -> str | None:
     return None
 
 
+_CARD_LINKS: dict[str, str] = {
+    "link1": "Who does the review",
+    "link2": "Who is being reviewed",
+}
+# The operators each Link's card cycles through: Link 1 compares with a
+# value, never a tag, so it has no IS THE SAME AS / IS DIFFERENT FROM
+# (Codex on #3237).
+_CARD_LINK_OPS: dict[str, tuple[str, ...]] = {
+    "link1": ("equals", "not_equals", "is_not_empty", "is_empty"),
+    "link2": tuple(_ENGINE_TO_UI_OP),
+}
+
+
+def unrepresented_rule(rules_json: list[Any]) -> str | None:
+    """Why a stored rule set holds a rule Band 1's card can't show as
+    stored, or ``None``. Call it on a payload ``rules_payload_error``
+    accepts.
+
+    The card reads a ``link1`` and a ``link2`` Composite of enabled
+    ``MATCH`` rules under ``AND`` / ``OR`` and the operators each Link
+    offers (``_CARD_LINK_OPS``), and
+    its next Save rebuilds ``rules_json`` from what it showed. Anything
+    else it hides, or shows as something else; each reason says which,
+    and what that Save would store (findings E1, 2026-10-22). The
+    Settings import refuses one in a rule set an instrument uses."""
+    for entry in rules_json:
+        rule_id = entry.get("id")
+        if rule_id not in _CARD_LINKS:
+            return (
+                f"rule {rule_id!r} is not one of the card's Links (link1, "
+                "link2); the card doesn't show it, and its next Save drops it."
+            )
+        link = _CARD_LINKS[rule_id]
+        if entry.get("kind") != "COMPOSITE":
+            return (
+                f"{link} ({rule_id}) is a {entry.get('kind')} rule; the card "
+                "reads a Link only as a COMPOSITE, so it doesn't show this "
+                "one, and its next Save drops it."
+            )
+        if not _flag(entry, "enabled", True):
+            return f"{link} ({rule_id}) is disabled; the card has no disabled Link."
+        op = entry.get("op")
+        if op not in ("AND", "OR"):
+            return (
+                f"{link} ({rule_id}) combines its rules with {op!r}; the card "
+                "offers AND or OR, and would show and save it as AND."
+            )
+        for child in entry.get("rules", []):
+            child_id = child.get("id")
+            if child.get("kind") != "MATCH":
+                return (
+                    f"{link} holds a {child.get('kind')} rule ({child_id!r}); "
+                    "the card shows only MATCH rules, and its next Save drops it."
+                )
+            if not _flag(child, "enabled", True):
+                return f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
+            predicate = child.get("predicate") or {}
+            operator = predicate.get("operator")
+            offered = _CARD_LINK_OPS[rule_id]
+            if operator not in offered:
+                labels = [_ENGINE_TO_UI_OP[op] for op in offered]
+                return (
+                    f"{link} rule {child_id!r} uses the operator {operator!r}; "
+                    f"{link} offers {', '.join(labels[:-1])} and {labels[-1]}, "
+                    "and the card shows it as IS, so its next Save rewrites or "
+                    "drops it."
+                )
+            if _flag(predicate, "case_sensitive", False):
+                return (
+                    f"{link} rule {child_id!r} is case-sensitive; the card "
+                    "compares ignoring case, and its next Save stores it so."
+                )
+            if operator not in _NO_OPERAND_OPS and not _operand_text(predicate).strip():
+                return (
+                    f"{link} rule {child_id!r} has no value to compare with; "
+                    "the card's next Save drops it."
+                )
+    return None
+
+
 def keeps_pairs_by_pair_tag(rules_json: list[dict[str, Any]]) -> bool:
     """Whether Link 2 holds an enabled pair-tag ``IS`` or ``IS FILLED``:
     a rule that keeps pairs one by one, so the instrument cannot be
@@ -720,10 +841,12 @@ def keeps_pairs_by_pair_tag(rules_json: list[dict[str, Any]]) -> bool:
     for entry in rules_json:
         if entry.get("id") != "link2" or entry.get("kind") != "COMPOSITE":
             continue
+        if not _flag(entry, "enabled", True):
+            continue
         for child in entry.get("rules", []):
             predicate = child.get("predicate") or {}
             if (
-                child.get("enabled", True)
+                _flag(child, "enabled", True)
                 and predicate.get("operator") in _PAIR_KEEPING_OPS
                 and str(predicate.get("field", "")).startswith(_PAIR_PREFIX)
             ):
@@ -765,11 +888,19 @@ def _build_match_rule(
     }
 
 
+def _operand_text(predicate: dict[str, Any]) -> str:
+    """A predicate's operand as the card's text box holds it: a numeric
+    ``0`` is the text ``0``, not blank (Codex on #3237); only a missing
+    or null operand is blank."""
+    operand = predicate.get("operand")
+    return "" if operand is None else str(operand)
+
+
 def _decode_match_rule(child: dict[str, Any]) -> dict[str, str]:
     predicate = child.get("predicate", {})
     engine_op = predicate.get("operator", "equals")
     ui_op = _ENGINE_TO_UI_OP.get(engine_op, "IS")
-    operand = predicate.get("operand", "") or ""
+    operand = _operand_text(predicate)
     field = str(predicate.get("field", ""))
     if engine_op in _TAG_OPERAND_OPS:
         return {
@@ -1168,11 +1299,14 @@ def find_sample_in_scope_reviewee(
                 by_address.setdefault(
                     normalize_email(e.email_or_identifier), []
                 ).append(e)
+            from app.services.responses import is_catch_all_key
+
             self_groups = {
                 (r.id, _group_key(r, e))
                 for r in reviewers
                 for e in by_address.get(normalize_email(r.email), [])
                 if is_self_review(r, e)
+                and not is_catch_all_key(_group_key(r, e))
             }
             pairs = [
                 (r, e)

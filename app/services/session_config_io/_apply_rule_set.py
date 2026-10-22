@@ -65,6 +65,9 @@ def _apply_rule_set_kv(
         rules_error = rules_payload_error(rules)
         if rules_error is not None:
             raise _ParseError(f"rules_json is not a valid rule list: {rules_error}")
+        # The card-shape check (``unrepresented_rule``) is cross-row: it
+        # holds only for a rule set an instrument uses (findings E1,
+        # 2026-10-22; ``_apply_parse._cross_row_errors``).
         spec.rules_json = rules
     else:
         raise _ParseError(f"unknown session_rule_sets[] attribute {attr!r}")

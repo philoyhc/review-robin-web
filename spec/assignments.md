@@ -140,7 +140,19 @@ Band 1 of the instrument card is its only operator-facing entry.
 The internal `Rule` discriminated union supports four kinds.
 Band 1 (the only authoring surface today) emits only `MATCH`
 and `COMPOSITE`. The other two are honoured by the engine but
-not surfaced in the UI.
+not surfaced in the UI. The Settings import refuses them, with every
+other rule the card can't show, in a rule set an instrument uses
+(`spec/csv_contracts.md` §3.3), so no writer creates one for an
+instrument; Duplicate and Replicate still copy one already stored, and
+a rule set no instrument uses imports as it is.
+
+**`enabled`** (findings E1, 2026-10-22). Every rule carries an
+`enabled` flag, and the engine skips a disabled rule at any depth: a
+Composite is read without its disabled children, and a Composite left
+with no enabled child is skipped as a disabled rule is, rather than read
+as an empty `AND` (every pair) or an empty `OR` (none). Band 1's
+hydration and the pair-tag group check skip a disabled rule the same
+way. Band 1 itself stores every rule enabled.
 
 | Kind | Purpose | Surfaced in UI? |
 |---|---|---|
@@ -502,6 +514,18 @@ member pair. Excluding self-reviews on a group-scoped
 instrument rules the whole group out, not just the `(R, R)`
 cell.
 
+**The catch-all group is never the reviewer's own.** The pairs whose
+boundary value is blank form one group: on a relationship-tag boundary,
+every reviewee the reviewer has no relationship with; on a reviewee-tag
+boundary, every untagged reviewee. The reviewer's own pair usually sits
+in it, but it is not a group they belong to, so none of its rows is a
+self-review, the reviewer's own `(R, R)` row included, and excluding
+self-reviews leaves it (findings E2, author's ruling 2026-10-22).
+Generate, the Band 1 preview and the stored column read it alike
+(`responses.is_catch_all_key`). A key with only some parts blank, on a
+boundary of several tags, is an ordinary group. An instrument with no
+boundary is one group, and that one is the reviewer's.
+
 The canonical computation surface is
 `assignments.classify_self_review_pairs(db, session_id=, pairs=)`
 in `app/services/assignments/`; on individual-scoped
@@ -689,7 +713,8 @@ that gate; `None`, its default, deletes without asking; Generate asks at its rou
 ### Self-review interaction
 
 On a group-scoped instrument, a "self review group" is **any
-group containing the reviewer as one of its members**. The
+group containing the reviewer as one of its members**, never the
+catch-all group (*Group-scoped instruments* above). The
 self-review toggle drops the **whole group** when toggled off,
 not just the self-row inside it. The toggle reads the
 `Assignment.is_self_review` column (*Source of truth* above), which

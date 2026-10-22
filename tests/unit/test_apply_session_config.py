@@ -1370,19 +1370,29 @@ def test_stale_field_label_rows_silently_ignored(db: Session) -> None:
 
 def test_json_rules_apply_writes_through(db: Session) -> None:
     review_session = _bare_session(db, code="jsw")
-    # A rule the engine loads: phase 1 now refuses one it would reject
-    # (findings S2; ``tests/integration/test_rule_writes_checked.py``).
+    # A rule the engine loads, in the shape Band 1's card shows: phase 1
+    # refuses one the engine would reject (findings S2) and one the card
+    # cannot show (findings E1, 2026-10-22;
+    # ``tests/integration/test_rule_writes_checked.py``).
     rules_payload = [
         {
-            "id": "r1",
+            "id": "link2",
             "enabled": True,
-            "kind": "MATCH",
-            "predicate": {
-                "field": "reviewee.tag1",
-                "operator": "same_as",
-                "operand": "reviewer.tag1",
-                "case_sensitive": False,
-            },
+            "kind": "COMPOSITE",
+            "op": "AND",
+            "rules": [
+                {
+                    "id": "link2-r0",
+                    "enabled": True,
+                    "kind": "MATCH",
+                    "predicate": {
+                        "field": "reviewee.tag1",
+                        "operator": "same_as",
+                        "operand": "reviewer.tag1",
+                        "case_sensitive": False,
+                    },
+                }
+            ],
         }
     ]
     rows = [

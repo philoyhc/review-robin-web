@@ -102,6 +102,7 @@ from ._group_reconciliation import (
     session_group_instrument_ids,
     snapshot_group_partitions,
     group_key_for_pair,
+    is_catch_all_key,
     GroupKeyable,
     group_keys,
 )
@@ -183,6 +184,7 @@ __all__ = [
     "session_group_instrument_ids",
     "snapshot_group_partitions",
     "group_key_for_pair",
+    "is_catch_all_key",
     "GroupKeyable",
     "group_keys",
 ]

@@ -196,3 +196,35 @@ def test_a_team_that_only_loses_a_member_projects_no_clear(
     assert (impact.deleted, impact.new) == (1, 1)
     assert impact.responses_deleted == 1
     assert impact.group_responses_cleared == 0
+
+
+def test_a_rule_set_the_dry_run_cannot_load_fails_prepare_at_generate(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings E3 (2026-10-22): the saved-response dry-run ran before the
+    step's ``try``, so a stored rule set it could not load answered 500.
+    Prepare now reports it as the Generate step's failure, and nothing
+    is cleared."""
+    from app.db.models import Instrument, SessionRuleSet
+
+    operator = make_client(alice)
+    review_session, group_id = _session_with_two_answered_teams(db, operator, "clr-bad-rules")
+    rule_set = db.get(SessionRuleSet, db.get(Instrument, group_id).rule_set_id)
+    rule_set.rules_json = [{"kind": "no-such-rule"}]
+    db.commit()
+
+    # Home: the Assignments and Validate pages answer 500 on such a rule
+    # set however they are reached, which is findings E4, not this.
+    response = operator.post(
+        f"/operator/sessions/{review_session.public_id}/workflow/prepare",
+        data={"return_to": "home"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert "super_status=failed" in location and "super_step=generate" in location
+    assert operator.get(location).status_code == 200
+    assert _answers(db, group_id) == {"Carol": "4", "Fay": "4"}

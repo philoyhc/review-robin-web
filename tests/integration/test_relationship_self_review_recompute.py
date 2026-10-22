@@ -160,8 +160,12 @@ def test_importing_relationships_moves_zoe_into_the_group(db: Session) -> None:
 
 
 def test_deleting_every_relationship_empties_both_keys(db: Session) -> None:
-    world = _seed(db, own_tag="A", zoe_tag="B")
-    assert not _zoe_is_self_review(db, world)
+    """Both keys empty puts Sam's own pair and Zoe's in the catch-all
+    group of unrelated pairs, which is never Sam's own (findings E2,
+    author's ruling 2026-10-22); before it, this flipped Zoe to a
+    self-review. The recompute still runs: Sam's own pair is re-read."""
+    world = _seed(db, own_tag="A", zoe_tag="A")
+    assert _zoe_is_self_review(db, world)
 
     relationships_service.delete_all_relationships(
         db,
@@ -170,7 +174,7 @@ def test_deleting_every_relationship_empties_both_keys(db: Session) -> None:
         correlation_id="b33",
     )
 
-    assert _zoe_is_self_review(db, world)
+    assert not _zoe_is_self_review(db, world)
 
 
 def test_deleting_the_selected_relationship_moves_zoe_out(db: Session) -> None:

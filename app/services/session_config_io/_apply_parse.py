@@ -20,7 +20,7 @@ from ._apply_shared import (
     _ParseError,
 )
 from ._rows import Row
-from app.services.instruments._band1 import keeps_pairs_by_pair_tag
+from app.services.instruments._band1 import keeps_pairs_by_pair_tag, unrepresented_rule
 from app.services.instruments._band2 import INTEGER_WHOLE_BOUNDS_MESSAGE
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
@@ -737,6 +737,45 @@ def _cross_row_errors(plan: _ParsedConfig) -> list[ApplyError]:
         for spec in plan.session_rule_sets.values()
         if spec.name
     }
+    # A rule set an instrument uses holds only what Band 1's card shows:
+    # a rule it can't show would be hidden there and dropped or
+    # rewritten at its next Save (findings E1, 2026-10-22). An unused
+    # one — the export carries every row, legacy shapes included — has
+    # no card and imports as before. Instruments are replace-all, so
+    # the file's own are the only ones left to use one.
+    users_by_name: dict[str, int] = {}
+    for n, instrument in sorted(plan.instruments.items()):
+        if instrument.rule_set_name:
+            users_by_name.setdefault(instrument.rule_set_name, n)
+    for n, spec in sorted(plan.session_rule_sets.items()):
+        user = users_by_name.get(spec.name or "")
+        if user is not None and (spec.combinator or "ALL_OF") != "ALL_OF":
+            # The card joins its Links with ALL_OF and never shows the
+            # rule set's own combinator, which its Save keeps: another
+            # would apply unseen (Codex on #3237).
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"session_rule_sets[{n}].combinator",
+                    message=(
+                        f"instruments[{user}] uses this rule set, whose "
+                        f"combinator {spec.combinator!r} the card can't show: "
+                        "it requires both Links (ALL_OF)."
+                    ),
+                )
+            )
+        unshown = unrepresented_rule(spec.rules_json or []) if user is not None else None
+        if unshown is not None:
+            errors.append(
+                ApplyError(
+                    row_number=0,
+                    field=f"session_rule_sets[{n}].rules_json",
+                    message=(
+                        f"instruments[{user}] uses this rule set, which holds "
+                        f"a rule the card can't show: {unshown}"
+                    ),
+                )
+            )
     for n, instrument in sorted(plan.instruments.items()):
         if (
             instrument.group_kind

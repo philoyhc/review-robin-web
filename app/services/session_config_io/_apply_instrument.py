@@ -8,6 +8,7 @@ transaction.
 from __future__ import annotations
 
 import copy
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,7 +29,7 @@ from app.services.instruments._field_refs import (
     sort_from_positions,
     widths_from_positions,
 )
-from app.services.instruments._band1 import _band1_rule_set_name
+from app.services.instruments._band1 import _band1_rule_set_name, shown_links
 from app.services.instruments._response_fields import (
     DEFAULT_RESPONSE_FIELDS,
     FieldKeyError,
@@ -305,6 +306,18 @@ def _apply_instrument_kv(
     del data_type  # unused; type-checked by parser per attr
 
 
+def _touched_with_rules(
+    touched: list[str] | None, rules_json: list[Any] | None
+) -> list[str] | None:
+    """``touched`` plus each Link the card shows rules on (``shown_links``):
+    a Link left out would read as Not set, and the card's next Save would
+    drop its rules (Codex on #3237)."""
+    missing = sorted(shown_links(rules_json or []) - set(touched or []))
+    if not missing:
+        return touched
+    return [*(touched or []), *missing]
+
+
 def _apply_branches(
     db: Session,
     n: int,
@@ -430,14 +443,15 @@ def _apply_instruments(
     # ``_apply_session_rule_sets`` earlier in the apply pipeline.
     # Wave 5 PR 5.2 retired the seed-materialiser safety net here —
     # seeded RuleSets no longer ship on new sessions.
-    rule_set_id_by_name = {
-        snap.name: snap.id
+    rule_sets_by_name = {
+        snap.name: snap
         for snap in db.execute(
             select(SessionRuleSet).where(
                 SessionRuleSet.session_id == review_session.id
             )
         ).scalars()
     }
+    rule_set_id_by_name = {name: snap.id for name, snap in rule_sets_by_name.items()}
 
     # Rule sets already pinned to an earlier instrument of this file.
     pinned_rule_set_ids: set[int] = set()
@@ -473,7 +487,12 @@ def _apply_instruments(
             # the pre-PR-5 import would silently NULL out.
             starts_new_page=spec.starts_new_page,
             band2_state=spec.band2_state,
-            band1_touched_links=spec.band1_touched_links,
+            band1_touched_links=_touched_with_rules(
+                spec.band1_touched_links,
+                rule_sets_by_name[spec.rule_set_name].rules_json
+                if spec.rule_set_name
+                else None,
+            ),
         )
         # Findings E3 — absent from an older file, the column's default
         # seeds it from the session's flag, applied above.

@@ -146,8 +146,16 @@ def workflow_prepare(
         acknowledge_response_loss != "true"
         and lifecycle.session_has_responses(db, review_session)
     ):
-        impact = assignments.reconcile_impact(db, review_session)
-        if impact.responses_lost > 0:
+        try:
+            impact = assignments.reconcile_impact(db, review_session)
+        except ValueError:
+            # A rule set the dry-run cannot load (a pydantic
+            # ``ValidationError`` is a ``ValueError``): no detour. The run
+            # below meets the same failure at its Generate step, which is
+            # one unit that rolls back, and reports it there rather than
+            # answering 500 (findings E3).
+            impact = None
+        if impact is not None and impact.responses_lost > 0:
             return urls.redirect(request,
                 url=_redirect_url(
                     review_session.public_id, return_to, prepare_confirm=True

@@ -173,6 +173,16 @@ def _group_key_by_assignment(
     return keys
 
 
+def is_catch_all_key(key: tuple[str, ...]) -> bool:
+    """Whether ``key`` is a boundary's catch-all group, the pairs whose
+    boundary value is blank — on a relationship-tag boundary, every
+    reviewee the reviewer has no relationship with. Never the reviewer's
+    own group, though their ``(R, R)`` pair sits in it (findings E2,
+    author's ruling 2026-10-22). ``()``, an instrument with no boundary,
+    is one group and is not a catch-all."""
+    return bool(key) and all(part == "" for part in key)
+
+
 def group_key_for_pair(
     *,
     reviewee: object,
