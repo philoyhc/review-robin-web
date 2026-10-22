@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 10 of 19 rows (every medium done: O1, R1, R2, R4, L1, S1, C1; lows R3, L2); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 10 of 22 rows (every medium done: O1, R1, R2, R4, L1, S1, C1; lows R3, L2, O2, O3, C2; S4, P3, E4 added by the fixes' reads); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -99,11 +99,11 @@ None.
   `app/services/date_formatting.py:250`, `:275`): End `0026-10-27`
   saves, re-renders as `26-10-27 12:00`, and every later Save is 422.
   *Reproduced.* Code: `f"{year:04d}"`, or refuse years below 1000.
-- **O2** — **Ruled 2026-10-22: lock the email template editor on archived sessions.** The Archive page's Archived column and sort read `updated_at`
+- ~~**O2**~~ — **Done in #3235**: both writes answer 409 under the session lock and the page renders read-only (`spec/email_template_editor.md` §5; `tests/integration/test_email_template_editor.py`). **Ruled 2026-10-22: lock the email template editor on archived sessions.** The Archive page's Archived column and sort read `updated_at`
   (`app/web/views/_sessions_table.py:56`), which the email template
   editor (writable on archived sessions) moves. *Reproduced.*
   Spec/author: an archived timestamp, or lock the editor.
-- **O3** — **Ruled 2026-10-22: store the password as typed.** The SMTP password is `strip()`ped before it is stored
+- ~~**O3**~~ — **Done in #3235** (`tests/integration/test_operator_settings.py`). **Ruled 2026-10-22: store the password as typed.** The SMTP password is `strip()`ped before it is stored
   (`app/services/operator_settings.py:316`); latent, since nothing
   sends. *By reading.* Author.
 - **S2** — An empty file chosen on a Setup upload card sends the held
@@ -136,10 +136,26 @@ None.
   dry-run cannot load a rule set (`app/web/routes_operator/_workflow.py:145`,
   before the step's `try`). *By reading* past a reproduced
   `ValidationError`. Code.
-- **C2** — An old `Path=/` sort cookie beats the new `/reviewrobin/` one
+- ~~**C2**~~ — **Done in #3235**: the sort script expires the `Path=/` copy on load and on sort (`spec/sessions_overview.md`; `tests/browser/test_sys_admin_sessions_table.py`). An old `Path=/` sort cookie beats the new `/reviewrobin/` one
   on the server (Starlette keeps the last value, the JS the first), so
   the lobby sorts by a stale order the operator cannot clear.
   *Reproduced.* Code: `_rrwWriteCookie` also expires `Path=/`.
+- **S4** — *Found by the cold read of the S3 fix.* Create with Quick
+  Setup files takes a user-row lock on the event loop: `create_session`
+  is `async def` and calls `session_owners.lock_owner_eligible` (`FOR
+  SHARE`), and `write_staged_owners` → `add_owner` locks each staged
+  owner (`app/web/routes_operator/_quick_setup.py:253`, `:319`).
+  Postgres only. *By reading.* Code: `run_in_threadpool`, as S3.
+- **P3** — *Found by the cold read of the P1 fix.* A whitespace-only
+  `objectidentifier` claim still counts as the principal id
+  (`cordware/identity.py`, `_claim` with `blank_counts=True`), hiding a
+  valid `oid`; `find_signed_in_user` never matches a blank one, so the
+  object-id identity is lost. *By reading.* Code: as P1.
+- **E4** — *Found by the cold read of the E3 fix.* A stored rule set
+  that cannot load makes the Assignments and Validate pages answer 500
+  however they are reached (`staleness_by_instrument` →
+  `_session_rule_set_to_schema`, `app/web/views/_assignments.py:153`,
+  `app/services/validation.py:879`). *Reproduced.* Code.
 
 ## 4. What the reads tried and found sound
 
