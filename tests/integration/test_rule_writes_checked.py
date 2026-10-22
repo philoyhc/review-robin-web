@@ -404,6 +404,23 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
             [_composite("link2", [_child({**_IS_A, "operator": "in", "operand": ["A"]})])],
             "operator 'in'",
         ),
+        (
+            [
+                _composite(
+                    "link1",
+                    [
+                        _child(
+                            {
+                                "field": "reviewer.tag1",
+                                "operator": "same_as",
+                                "operand": "reviewee.tag1",
+                            }
+                        )
+                    ],
+                )
+            ],
+            "operator 'same_as'; Who does the review offers IS, IS NOT, IS FILLED and IS EMPTY",
+        ),
         ([_composite("link2", [_child({**_IS_A, "case_sensitive": True})])], "case-sensitive"),
         ([_composite("link2", [_child({**_IS_A, "operand": "  "})])], "no value"),
     ],
@@ -416,6 +433,7 @@ _IS_A = {"field": "reviewee.tag1", "operator": "equals", "operand": "A", "case_s
         "filter-child",
         "disabled-child",
         "in-operator",
+        "link1-cross-side",
         "case-sensitive",
         "blank-value",
     ],

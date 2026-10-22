@@ -546,7 +546,9 @@ the round-trip notes below.
    `app/services/instruments/_band1.py`; findings E1, 2026-10-22): any
    rule but a `link1` or `link2` `COMPOSITE` under `AND` / `OR`, a
    disabled Link or rule, a child that is not `MATCH`, an operator
-   outside the card's six, a case-sensitive predicate, or an `IS` /
+   its Link's card doesn't offer (`link2` offers six; `link1` the four
+   that take no tag, without `IS THE SAME AS` / `IS DIFFERENT FROM`),
+   a case-sensitive predicate, or an `IS` /
    `IS NOT` / cross-side rule with a blank value. The card would hide it
    or show it as something else, and its next Save would drop or
    rewrite it; the error names the rule set's `rules_json`, the

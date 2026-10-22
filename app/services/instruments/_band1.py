@@ -725,6 +725,13 @@ _CARD_LINKS: dict[str, str] = {
     "link1": "Who does the review",
     "link2": "Who is being reviewed",
 }
+# The operators each Link's card cycles through: Link 1 compares with a
+# value, never a tag, so it has no IS THE SAME AS / IS DIFFERENT FROM
+# (Codex on #3237).
+_CARD_LINK_OPS: dict[str, tuple[str, ...]] = {
+    "link1": ("equals", "not_equals", "is_not_empty", "is_empty"),
+    "link2": tuple(_ENGINE_TO_UI_OP),
+}
 
 
 def unrepresented_rule(rules_json: list[Any]) -> str | None:
@@ -733,7 +740,8 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
     accepts.
 
     The card reads a ``link1`` and a ``link2`` Composite of enabled
-    ``MATCH`` rules under ``AND`` / ``OR`` and its six operators, and
+    ``MATCH`` rules under ``AND`` / ``OR`` and the operators each Link
+    offers (``_CARD_LINK_OPS``), and
     its next Save rebuilds ``rules_json`` from what it showed. Anything
     else it hides, or shows as something else; each reason says which,
     and what that Save would store (findings E1, 2026-10-22). The
@@ -771,11 +779,14 @@ def unrepresented_rule(rules_json: list[Any]) -> str | None:
                 return f"{link} holds a disabled rule ({child_id!r}); the card has no disabled rule."
             predicate = child.get("predicate") or {}
             operator = predicate.get("operator")
-            if operator not in _ENGINE_TO_UI_OP:
+            offered = _CARD_LINK_OPS[rule_id]
+            if operator not in offered:
+                labels = [_ENGINE_TO_UI_OP[op] for op in offered]
                 return (
-                    f"{link} rule {child_id!r} uses the operator {operator!r}; the "
-                    "card offers IS, IS NOT, IS THE SAME AS, IS DIFFERENT FROM, "
-                    "IS FILLED and IS EMPTY, and would show and save it as IS."
+                    f"{link} rule {child_id!r} uses the operator {operator!r}; "
+                    f"{link} offers {', '.join(labels[:-1])} and {labels[-1]}, "
+                    "and the card shows it as IS, so its next Save rewrites or "
+                    "drops it."
                 )
             if predicate.get("case_sensitive"):
                 return (
