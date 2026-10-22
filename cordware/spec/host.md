@@ -42,10 +42,12 @@ point.
 
 ## The host's part in `root_path`
 
-The host emits no URL of its own and rewrites none. Its only part is the
-mount: Starlette's `Mount` sets `root_path` in the ASGI scope to the mount
-path before the application runs, and an application serves what is under
-it. Inside the mount:
+The host rewrites no application's URLs. It emits URLs only on its own
+landing page (§ Landing page), where its redirect and links carry the
+request's `root_path` before the application's path. For an application,
+the host's part is the mount: Starlette's `Mount` sets `root_path` in the
+ASGI scope to the mount path before the application runs, and an
+application serves what is under it. Inside the mount:
 
 - `root_path` is the mount path (empty at `/`), and `request.url.path`
   includes it;

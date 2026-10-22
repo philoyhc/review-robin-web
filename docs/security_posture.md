@@ -379,10 +379,11 @@ What this means for the trust boundary:
   Authorization model above) are layered **on top** of that
   authenticated identity — they decide *what* an authenticated
   user may do, not *whether* they are who they claim.
-- The two health probes are the only routes excluded from Easy Auth
-  (so platform probes don't bounce through sign-in): the Cordware
-  host's `/health` and RRW's own `/reviewrobin/health`. Neither exposes
-  data. RRW is served under `/reviewrobin` (segment 21D); Easy Auth's
+- The health probes are the only routes excluded from Easy Auth (so
+  platform probes don't bounce through sign-in), and neither exposes
+  data. Today's dev configuration excludes only the Cordware host's
+  `/health`; RRW's own `/reviewrobin/health` joins it when the dormant
+  slot resumes (below). RRW is served under `/reviewrobin` (segment 21D); Easy Auth's
   `/.auth/*` paths stay at the host level, so sign-out is
   `/.auth/logout` from every page.
 

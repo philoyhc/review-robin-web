@@ -1,5 +1,5 @@
 """Cordware's identity: the Easy Auth parser, the fake user, the switches
-and the guard (segment 21C rung C1, `guide/segment_21C_shared_identity.md`).
+and the guard (segment 21C rung C1, `guide/archive/segment_21C_shared_identity.md`).
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """RRW's pages under the `/reviewrobin` mount emit no unprefixed URL.
 
-Segment 21B (`guide/segment_21B_url_sweep.md`): the static rules in
+Segment 21B (`guide/archive/segment_21B_url_sweep.md`): the static rules in
 `tests/unit/test_url_leaks.py` say every emission goes through the
 helpers; this renders real pages under the mount and checks what they
 emit (`tests/_mounted.py`'s `leaks()`). The B7 crawl visits every GET

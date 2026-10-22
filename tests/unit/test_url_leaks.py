@@ -1,6 +1,6 @@
 """No URL RRW emits may lose the mount's prefix.
 
-Segment 21B (`guide/segment_21B_url_sweep.md`): app-relative values
+Segment 21B (`guide/archive/segment_21B_url_sweep.md`): app-relative values
 travel, and the prefix is added once, at emission (`app/web/urls.py`).
 These static rules find every emission that skips it:
 
