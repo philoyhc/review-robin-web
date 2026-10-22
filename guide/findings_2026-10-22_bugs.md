@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 10 of 22 rows (every medium done: O1, R1, R2, R4, L1, S1, C1; lows R3, L2, O2, O3, C2; S4, P3, E4 added by the fixes' reads); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 6 of 22 rows (every medium done: O1, R1, R2, R4, L1, S1, C1; lows R3, L2, O2, O3, C2, S2, S3, P1, P2; S4, P3, E4 added by the fixes' reads); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -106,20 +106,20 @@ None.
 - ~~**O3**~~ — **Done in #3235** (`tests/integration/test_operator_settings.py`). **Ruled 2026-10-22: store the password as typed.** The SMTP password is `strip()`ped before it is stored
   (`app/services/operator_settings.py:316`); latent, since nothing
   sends. *By reading.* Author.
-- **S2** — An empty file chosen on a Setup upload card sends the held
+- ~~**S2**~~ — **Done in #3236**: a file is chosen when it has a filename (`spec/setup_pages.md`; `tests/integration/test_held_upload_setup_cards.py`). An empty file chosen on a Setup upload card sends the held
   file instead (`read_upload`, `app/web/routes_operator/_shared.py:236`),
   on all four cards. *Reproduced.* Code: a non-blank filename means
   chosen, as Quick Setup's `_attached` does.
-- **S3** — Quick Setup can take the session-row lock on the event loop:
+- ~~**S3**~~ — **Done in #3236**: `_check_uploads` runs through `run_in_threadpool` (`tests/integration/test_import_config_route.py`). Quick Setup can take the session-row lock on the event loop:
   `_check_uploads` runs inside the async path and, on a malformed
   Settings row, reaches `lock_session` (`_quick_setup.py:633`, `:796`).
   Postgres only. *By reading.* Code: `run_in_threadpool`.
-- **P1** — A whitespace-only email claim counts as an email
+- ~~**P1**~~ — **Done in #3236**: an email claim counts only when non-empty after strip (`cordware/spec/identity.md`; `tests/integration/test_blank_email_claim.py`). A whitespace-only email claim counts as an email
   (`cordware/identity.py:156`): the user row stores `""`, the next
   sign-in answers 500 on the unique email, and a valid fallback claim is
   hidden. `spec/permissions.md` §2 says 401. *Reproduced.* Code, plus
   "non-empty after strip" in `cordware/spec/identity.md`.
-- **P2** — Oversized ids in form bodies (`session_ids`, `user_ids` and
+- ~~**P2**~~ — **Done in #3236**: `refuse_oversized_ids` reads a declared form body and the `cursor` (`tests/integration/test_bad_input_refused.py`). Oversized ids in form bodies (`session_ids`, `user_ids` and
   the roster and assignment `*_ids` lists) and the audit-log `cursor`
   still answer 500 on SQLite; `app/web/oversized_ids.py` reads only path
   and query. *Reproduced* on nine routes. Code.
