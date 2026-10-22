@@ -8,10 +8,12 @@ the author with the 22 October assessment; not due by the cadence (15 of
 
 <!-- sweep-scope: corpus -->
 
-**Read in full, all 63**, the long `docs/cordware_*` and `rrw_*` files
-spot-checked (§6). Since 2026-10-07 the corpus gained the two
+**Read in full, all 63.** The first six reads spot-checked the four long
+documents (`docs/cordware_*`, `rrw_sdd_in_practice.md`,
+`rrw_design_rationale.md`); a seventh read them in full after Codex
+noted, on #3226, that a corpus marker needs a corpus read (H12–H21). Since 2026-10-07 the corpus gained the two
 `cordware/spec/` files (segment 21), and 59 of the other 61 changed;
-only `CONTRIBUTING.md` and `constitution.md` did not (`close_check --stale`). Six
+only `CONTRIBUTING.md` and `constitution.md` did not (`close_check --stale`). Seven
 `spec-writer` reads ran in verify mode, split by area, each reading every
 file in its area against the code; none edited a file. **This sweep
 changed no file in scope.** Every divergence is in
@@ -37,6 +39,7 @@ three items stayed carried by name:
 - `spec/operator_button_audit.md`: the date-time field's buttons (E1).
 - `spec/rehydrate.md`: the rule-set refusals at the settings apply (D5).
 - `docs/deployment_dev.md`, `docs/deployment_nus.md`: `CORDWARE_APPS` (H8).
+- `rrw_sdd_in_practice.md`, `rrw_design_rationale.md`: RRW under the Cordware host (H21).
 
 ## 2. Update in place
 
@@ -74,15 +77,17 @@ Ids are in the register; a **bold** count includes a medium finding.
 - `docs/operations_runbook.md`, `docs/known_limitations.md`,
   `docs/database.md`, `docs/troubleshooting.md`, `docs/backup_restore.md`:
   **1** each (H1); `docs/known_limitations.md` also H3.
-- `docs/deployment_nus.md`: **3** (H1, H3, H4), plus H7.
+- `docs/deployment_nus.md`: **4** (H1, H3, H4, H17), plus H7.
 - `docs/README.md`, `docs/architecture.md`: **1** each (H3); `docs/architecture.md` also H7.
 - `docs/cordware_stage0_baseline.md`: 1 (H5).
+- `docs/cordware_repository_strategy_v0.8.md`: **3** (H12, H13, H14).
+- `docs/cordware_nus_azure_status_2026-10-16_v8.md`: 2 (H15, H16).
 - `docs/local_setup.md`: 1 (H6).
 - `docs/security_posture.md`: 1 (H7).
 - `docs/deployment_dev.md`: 1 (H9), plus H8 above.
 - `CONTRIBUTING.md`: **1** (H2).
-- `rrw_sdd_in_practice.md`: 1 (H10).
-- `rrw_design_rationale.md`: 1 (H11).
+- `rrw_sdd_in_practice.md`: 2 (H10, H20).
+- `rrw_design_rationale.md`: 3 (H11, H18, H19).
 
 ## 3. Consolidate
 
@@ -110,10 +115,8 @@ None.
   `docs/cli_setup.md`, `README.md`, `CLAUDE.md` / `AGENTS.md` (twins
   identical), `constitution.md`, `new_project_practices_setup.md`,
   `azure_ask.md`.
-- **Spot-checked only:** `docs/cordware_nus_azure_status_2026-10-16_v8.md`
-  (header, banner, commands), `docs/cordware_repository_strategy_v0.8.md`
-  (§1, the stage lists, code references), and the narrative sections of
-  `rrw_sdd_in_practice.md` and `rrw_design_rationale.md`.
+- The four long documents were read in full by the seventh read; apart
+  from H12–H21 they are current where the repository can check them.
 
 ## 7. Not read
 
@@ -126,6 +129,6 @@ browser-only behavior, and Postgres lock semantics (read, not run).
 | | |
 |---|---|
 | In scope | 63 |
-| Read | 63 (4 in part) |
-| Findings | 49 (write 4 / update 43 / consolidate 1 / retire 1 / move 0) |
+| Read | 63 |
+| Findings | 59 (write 5 / update 52 / consolidate 1 / retire 1 / move 0) |
 | Carried in / closed / still open | 3 / 0 / 3 |

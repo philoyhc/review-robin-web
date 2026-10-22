@@ -46,7 +46,7 @@ window, `cordware/spec/` are the contract, and
 `spec/rrw_functional_spec.md` and its siblings are what §3 audits
 against. `guide/todo_master.md` holds the open work. **A bug sweep and a
 corpus drift sweep ran beside it at the same commit**: seven code-reading
-agents produced `guide/findings_2026-10-22_bugs.md`, and six verify-mode
+agents produced `guide/findings_2026-10-22_bugs.md`, and seven verify-mode
 `spec-writer` reads produced `guide/sweep_2026-10-22_corpus.md` and
 `guide/findings_2026-10-22_corpus.md`. §3, §5 and §6 lean on them.
 
@@ -270,9 +270,9 @@ window.** A `⚠ drift` row names its finding: *bugs R1* is in
 | Operator theming | `spec/visual_style_rrw.md` | ⏸ planned. `guide/deferred_consolidated.md` Part A |
 
 **Doc drift: a corpus sweep ran at this commit.** All 63 files were
-read (four long ones in part), and 49 findings were filed with nothing
-edited. Seven are medium: three in specs (corpus B1, B3, D1) and four in
-`docs/` and root (corpus H1–H4). Most of the `docs/` findings are one
+read in full, and 59 findings were filed with nothing edited. Nine are
+medium: three in specs (corpus B1, B3, D1) and six in `docs/` and root
+(corpus H1–H4, H12, H17). Most of the `docs/` findings are one
 story, deployment prose that predates the host and the dormant slot.
 The spec count held at 35 files, plus the two in `cordware/spec/`. `spec/rrw_functional_spec.md` rose 2,575 →
 2,596 lines; the trim the last two snapshots proposed now has a section
@@ -324,12 +324,15 @@ list (corpus F11).
   is its mirror. My read: each change shipped its tests against new data,
   and nothing asks "what is already stored that this now refuses?" No
   plan; the register is new.
-- **The deployment prose has fallen behind the host.** Nine of the eleven
-  `docs/` and root findings concern deployment or Cordware:
+- **The deployment prose has fallen behind the host.** Eighteen of the
+  21 `docs/` and root findings concern deployment or Cordware, including:
   - the dev deploy described as live (corpus H1);
   - a start command that does not exist (corpus H4);
   - the parser attributed to the wrong module (corpus H7);
-  - a missing environment variable (corpus H8).
+  - a missing environment variable (corpus H8);
+  - the strategy still saying the fake-auth guard and URL emission are
+    unbuilt (corpus H12);
+  - section pointers into a superseded status record (corpus H17).
 
   `.github/workflows/deploy_nus.yml` does not yet ship `cordware/` (stage
   4). Nothing is deployed, so nothing is broken yet, but these are the
@@ -444,7 +447,7 @@ nothing is deployed**.
    at once makes that a habit rather than five patches. Rule R4, S1 and
    C1 first; they are the author's calls.
 2. **Bring the deployment documents up to the host before any NUS deploy**
-   (corpus H1–H9, with `deploy_nus.yml` shipping `cordware/`). The next
+   (corpus H1–H9 and H12–H17, with `deploy_nus.yml` shipping `cordware/`). The next
    deploy will be run from these pages, and a wrong start command fails
    on day one.
 3. **Rule the functional-spec trim (corpus F11) and let the spec-update

@@ -1,11 +1,12 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 49 of 49 rows.
+(#3225) · **Open:** 59 of 59 rows.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
 files, was read against the code it describes, in six verify-mode reads
-split by area. **Nothing in scope was edited.** A sweeper may not
+split by area, plus a seventh that read the four long documents the
+first six only spot-checked (H12–H21). **Nothing in scope was edited.** A sweeper may not
 re-align a spec to the code (`rrw_sdd_in_practice.md` §4), so each
 divergence is listed here and the fixes ship afterwards as ordinary PRs.
 A row is struck when it is done, with the PR that did it, or marked
@@ -200,4 +201,36 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
 - **H10** (low, author) — `rrw_sdd_in_practice.md` appendix "4,800 tests"
   and `CLAUDE.md`'s 172 s are dated measurements.
 - **H11** (low, author) — `rrw_design_rationale.md` §6.6: the dev slot
-  "serves today".
+  "serves today"; §7 also calls it "the only live environment" (H18).
+- **H12** (medium, doc) — `docs/cordware_repository_strategy_v0.8.md` §3
+  still says, in decision-time "today" sentences, that nothing enforces
+  the fake-auth guard and that RRW writes root-path links; both shipped
+  (`cordware/main.py`, `app/web/urls.py`). Its §8 ledger is right.
+- **H13** (low, author) — the strategy's §2 tree lists `cordware/AGENTS.md`,
+  `docs/`, `guide/`, `tools/` and `deployment/` (none exist) and omits
+  `cordware/settings.py` and `cordware/logging.py`; it says the root
+  `AGENTS.md` routes work by owner, which it does not. Label the tree as
+  the target, or add the routing.
+- **H14** (low, doc) — the strategy's §5: the NUS workflow also packages
+  `pyproject.toml`.
+- **H15** (low–medium, doc) — `docs/cordware_nus_azure_status_2026-10-16_v8.md`
+  §4.3 says the landing page shows only eligible applications; it lists
+  every mounted one (`cordware/web/landing.py`), as the strategy says.
+- **H16** (low, author) — the status record's banner misses §1, §18.5,
+  §21 and §22 step 4 (a Cordware repo and federated credential the
+  strategy dropped), and §21's "RRW Cordware retrofit: Not started"
+  (Segment 21 shipped it). Extend the banner.
+- **H17** (medium, doc) — `docs/deployment_nus.md` §1, §3, §5 and §13
+  cite headings of the v7 status record that v8 does not have; the v8
+  equivalents are §8.1, §12.1, §16.1 and §18.1–18.2.
+- **H18** (low, doc) — `rrw_design_rationale.md` §7: "the only live
+  environment" (with H11).
+- **H19** (low, doc) — `rrw_design_rationale.md` §6.3 and its appendix
+  spell the visibility modes as prose; `CLAUDE.md` asks for the shipped
+  `Anonymized` / `Summarized`.
+- **H20** (low, doc) — `rrw_sdd_in_practice.md` §1 ("two thousand six
+  hundred pull requests", undated) and §6.7 (`CLAUDE.md` "297" lines, now
+  309): date or drop.
+- **H21** (low, author) — neither narrative document says RRW now runs
+  under the Cordware host, which parses identity; one pointer to the
+  strategy would do.
