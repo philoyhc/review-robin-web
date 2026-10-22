@@ -4106,6 +4106,14 @@
         margin: 0 var(--space-2);
         color: var(--text-subtle);
       }
+      /* 19X Item 12 — pills wrapped below the role pills take the whole
+         line, without the `|` (set by `_role_chips.html`'s script). */
+      body.ui-v2 .rs-role-nav .rs-role-nav-statuses-wrapped {
+        flex-basis: 100%;
+      }
+      body.ui-v2 .rs-role-nav .rs-role-nav-statuses-wrapped .rs-role-nav-sep {
+        display: none;
+      }
       /* Banners — single .banner shell + four semantic variants. */
       body.ui-v2 .banner {
         border: 1px solid var(--border-subtle);

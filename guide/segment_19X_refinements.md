@@ -1051,3 +1051,65 @@ All four answered by the author, 2026-10-22, on the recommendation:
 - `spec/participant_model.md` — results and collation: the description without a card; the own line before the role pills (Item 11).
 - `spec/visual_style_rrw.md` — the status-card example no longer names the reviewer surface (Item 11).
 - `guide/todo_master.md` — Item 11 in the 19X entry (Item 11).
+
+## Item 12 — The participant row's `|` goes when the pills wrap
+
+### Opportunity
+
+The author's browser check of Item 11, 2026-10-22, with screenshots: at
+a narrower window the instrument pills wrap below the role pills, and
+the `|` that led them starts the new line, where it separates nothing.
+
+### Decision
+
+When the status group wraps below the role pills, a script in
+`reviewer/_role_chips.html` marks it `.rs-role-nav-statuses-wrapped`.
+That hides the `|` and gives the group the whole line (`flex-basis:
+100%`), so losing the `|` cannot let it fit back up. It re-checks
+whenever the row's size changes. Without script the `|` stays, as in
+Item 11.
+
+Rejected: *a CSS-only clip*, offsetting the row so a line-leading `|`
+falls outside an `overflow: hidden` edge. It would also clip the focus
+rings of the Profile link and the role chips.
+
+### Blast radius (measured)
+
+Taken 2026-10-22 at `6fd5e6a`: one partial
+(`reviewer/_role_chips.html`), two `base.html` rules, one spec
+(`grep -rln "rs-role-nav-sep" app spec` → `_role_chips.html`,
+`base.html`, `spec/reviewer-surface.md`).
+
+### PR ladder
+
+1. **One PR:** the plan entry, the script and rules, a browser test, and
+   the spec.
+
+### Definition of done
+
+- At a wide window the `|` shows; at a narrow one the pills sit on their
+  own line without it; widening brings it back
+  (`tests/browser/test_role_row_separator.py`).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.12` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+None.
+
+### Out of scope
+
+- The own line or role pills wrapping inside the row; only the `|`
+  changes.
+
+### Status
+
+**Closed 2026-10-22, in one PR.** As planned.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — the `|` drops when the pills wrap below the role pills; the `.rs-role-nav-statuses-wrapped` rules (Item 12).
+- `guide/todo_master.md` — Items 10–12 in the 19X entry (Item 12).
