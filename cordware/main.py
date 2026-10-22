@@ -26,6 +26,7 @@ from starlette.types import ASGIApp
 from cordware.identity import is_local, missing_header_count, super_admin_configured
 from cordware.logging import configure_logging
 from cordware.settings import IdentitySettings, identity_settings
+from cordware.web.landing import LandingLink, add_landing_page
 
 log = logging.getLogger("cordware")
 
@@ -38,17 +39,21 @@ class AppEntry:
     ``factory`` is a ``"module:attribute"`` path to a zero-argument
     callable returning a complete ASGI application. Records from
     ``logger`` and its children are stamped with the application's
-    name."""
+    name. ``title`` is how the host's landing page names it; empty, the
+    page uses the registry name."""
 
     path: str
     factory: str
     logger: str
+    title: str = ""
 
 
 # RRW mounts at `/` until segment 21D moves it to `/reviewrobin`. A
 # constant, not a setting, so no configuration can move it by accident.
 REGISTRY: Mapping[str, AppEntry] = {
-    "reviewrobin": AppEntry(path="/", factory="app.main:create_app", logger="app"),
+    "reviewrobin": AppEntry(
+        path="/", factory="app.main:create_app", logger="app", title="Review Robin"
+    ),
 }
 
 
@@ -217,6 +222,15 @@ def create_app(
     @host.get("/health", include_in_schema=False, name="cordware_health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    # Also ahead of the mounts; it stands aside for an application at `/`.
+    add_landing_page(
+        host,
+        [
+            LandingLink(title=entry.title or name, path=entry.path)
+            for name, (entry, _) in zip(names, mounted, strict=True)
+        ],
+    )
 
     for entry, sub_app in mounted:
         host.mount(entry.path, sub_app)

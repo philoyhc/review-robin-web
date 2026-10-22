@@ -131,6 +131,15 @@ Taken 2026-10-21 at `d3420be9`.
 | Docs naming the local URL | 7 lines in `README.md`, `CLAUDE.md`, `docs/local_setup.md`, `docs/security_posture.md` | `grep -rn "127.0.0.1:8000" README.md CLAUDE.md docs/*.md` |
 | TestClient calls at root | 3,422, unchanged by design | outline § Blast radius |
 
+## Status
+
+Item base for the cumulative read: `7c2512f9`.
+
+**D1 (2026-10-22).** As laddered. The page is `cordware/web/landing.py`
+with its own template. `AppEntry.title` defaults to empty, and the page
+then shows the registry name. The redirect and links keep the host's
+`root_path`.
+
 ## PR ladder
 
 1. **D0, this plan**, prose only.

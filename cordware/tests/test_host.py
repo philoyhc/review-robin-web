@@ -88,7 +88,7 @@ def test_host_shadows_nothing_of_rrw_but_health() -> None:
 
 def test_registry_mounts_rrw_at_root() -> None:
     assert REGISTRY["reviewrobin"] == AppEntry(
-        path="/", factory="app.main:create_app", logger="app"
+        path="/", factory="app.main:create_app", logger="app", title="Review Robin"
     )
 
 
