@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 6 of 22 rows (every medium done: O1, R1, R2, R4, L1, S1, C1; lows R3, L2, O2, O3, C2, S2, S3, P1, P2; S4, P3, E4 added by the fixes' reads); every author row ruled 2026-10-22 (R3, R4,
+**Open:** 3 of 22 rows, S4, P3, E4, each found by a fix's cold read (every medium and every original low done); S4, P3, E4 added by the fixes' reads); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -123,16 +123,16 @@ None.
   the roster and assignment `*_ids` lists) and the audit-log `cursor`
   still answer 500 on SQLite; `app/web/oversized_ids.py` reads only path
   and query. *Reproduced* on nine routes. Code.
-- **E1** — The engine and the shape gates read a stored rule set
+- ~~**E1**~~ — **Done in #3237**: the engine skips a disabled rule at any depth, the card hides one, and the import refuses a used rule set the card can't show (`spec/csv_contracts.md` §3.3; `tests/integration/test_rule_writes_checked.py`). The engine and the shape gates read a stored rule set
   differently: the engine ignores a Composite child's `enabled`, and the
   gates look only at `link1` / `link2`, so a hand-edited Settings CSV
   stores rules the card hides and its next Save drops. *Reproduced.*
   Code.
-- **E2** — **Ruled 2026-10-22: the empty-key catch-all group never counts as the reviewer's own.** On a relationship-tag boundary a reviewer's whole "no
+- ~~**E2**~~ — **Done in #3237**: `responses.is_catch_all_key`, read by Generate, the preview and the column (`spec/assignments.md`; `tests/integration/test_group_self_review_roster.py`). **Ruled 2026-10-22: the empty-key catch-all group never counts as the reviewer's own.** On a relationship-tag boundary a reviewer's whole "no
   relationship" group counts as a self-review: the (R, R) pair keys to
   `("",)`, like every unrelated reviewee. Only stored or imported
   boundaries reach it. *Reproduced.* Author.
-- **E3** — Prepare answers 500 instead of reporting a failure when the
+- ~~**E3**~~ — **Done in #3237** (`tests/integration/test_prepare_counts_group_clears.py`). Prepare answers 500 instead of reporting a failure when the
   dry-run cannot load a rule set (`app/web/routes_operator/_workflow.py:145`,
   before the step's `try`). *By reading* past a reproduced
   `ValidationError`. Code.
