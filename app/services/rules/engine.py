@@ -35,6 +35,7 @@ from app.schemas.rules import (
     FilterRule,
     MatchRule,
     QuotaRule,
+    Rule,
     RuleSetSchema,
 )
 from app.services.email_identity import normalize_email
@@ -166,8 +167,9 @@ def _evaluate_inner(
     # Step 3 — partition rules into content vs quota.
     content_rules: list[FilterRule | MatchRule | CompositeRule] = []
     quota_rules: list[QuotaRule] = []
-    for rule in rule_set.rules:
-        if not rule.enabled:
+    for stored in rule_set.rules:
+        rule = _enabled_rule(stored)
+        if rule is None:
             continue
         if isinstance(rule, QuotaRule):
             quota_rules.append(rule)
@@ -321,6 +323,32 @@ def _is_self_review(reviewer: object, reviewee: object) -> bool:
     if not a or not b:
         return False
     return a == b
+
+
+def _enabled_rule(rule: Rule) -> Rule | None:
+    """``rule`` as the engine reads it: ``None`` when it is disabled, and
+    a Composite pruned of its disabled children, at any depth.
+
+    A Composite left with no enabled child reads as disabled itself, as
+    an empty top-level rule list reads as no constraint, rather than as
+    an empty ``AND`` that keeps every pair or an empty ``OR`` that keeps
+    none (findings E1, 2026-10-22: the engine ignored a child's
+    ``enabled`` while ``keeps_pairs_by_pair_tag`` honored it).
+    """
+    if not rule.enabled:
+        return None
+    if not isinstance(rule, CompositeRule):
+        return rule
+    children = [
+        child
+        for child in (_enabled_rule(stored) for stored in rule.rules)
+        if child is not None
+    ]
+    if not children:
+        return None
+    if children == rule.rules:
+        return rule
+    return rule.model_copy(update={"rules": children})
 
 
 def _apply_content_rules(

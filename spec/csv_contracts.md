@@ -540,7 +540,15 @@ the round-trip notes below.
    offers — one in Link 1, a person's pair tag (`reviewer.pair_tagN` /
    `reviewee.pair_tagN`, retired from the engine) or one beside a
    cross-side operator — with the reason Band 1's Save gives
-   (`spec/instruments.md`, Band 1). So is an
+   (`spec/instruments.md`, Band 1). So is a `rules_json` holding a
+   rule Band 1's card can't show (`unrepresented_rule` in
+   `app/services/instruments/_band1.py`; findings E1, 2026-10-22):
+   any rule but a `link1` or `link2` `COMPOSITE` under `AND` / `OR`, a
+   disabled Link or rule, a child that is not `MATCH`, an operator
+   outside the card's six, a case-sensitive predicate, or an `IS` /
+   `IS NOT` / cross-side rule with a blank value. The engine would
+   apply it while the card hid it, and the card's next Save would drop
+   or rewrite it. So is an
    `instruments[N].group_kind` beside a `rule_set_name` whose Link 2
    keeps pairs by a relationship-tag `IS` or `IS FILLED`: Band 1's Save
    refuses the same pairing, and the error names the `group_kind` field.

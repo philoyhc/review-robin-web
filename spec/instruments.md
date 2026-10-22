@@ -853,6 +853,13 @@ Hydration (re-rendering the saved state on edit) reads
 wraps both into the `new_model_band1_state` and
 `new_model_link3_state` dicts the template iterates.
 
+The card shows only what it can save back unchanged: the `link1` and
+`link2` Composites and their enabled `MATCH` rules. A disabled Link or
+rule is not shown, as the engine does not apply it
+(`spec/assignments.md`, Rule kinds), and the Settings import refuses
+every other shape rather than store a rule the card would hide and its
+next Save drop (`spec/csv_contracts.md` §3.3; findings E1, 2026-10-22).
+
 ### Preview review instrument
 
 Band 2 declares **what reviewee context** the reviewer sees

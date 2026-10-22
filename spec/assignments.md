@@ -140,7 +140,17 @@ Band 1 of the instrument card is its only operator-facing entry.
 The internal `Rule` discriminated union supports four kinds.
 Band 1 (the only authoring surface today) emits only `MATCH`
 and `COMPOSITE`. The other two are honoured by the engine but
-not surfaced in the UI.
+not surfaced in the UI, and the Settings import refuses them with
+every other rule the card can't show (`spec/csv_contracts.md` §3.3),
+so no writer stores one.
+
+**`enabled`** (findings E1, 2026-10-22). Every rule carries an
+`enabled` flag, and the engine skips a disabled rule at any depth: a
+Composite is read without its disabled children, and a Composite left
+with no enabled child is skipped as a disabled rule is, rather than read
+as an empty `AND` (every pair) or an empty `OR` (none). Band 1's
+hydration and the pair-tag group check skip a disabled rule the same
+way. Band 1 itself stores every rule enabled.
 
 | Kind | Purpose | Surfaced in UI? |
 |---|---|---|

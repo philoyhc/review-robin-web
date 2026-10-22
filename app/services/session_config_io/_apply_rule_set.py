@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ReviewSession, SessionRuleSet
 from app.schemas.rules import rules_payload_error
-from app.services.instruments._band1 import unoffered_pair_rule
+from app.services.instruments._band1 import unoffered_pair_rule, unrepresented_rule
 
 from ._apply_shared import (
     _RX_RULE_SET,
@@ -65,6 +65,12 @@ def _apply_rule_set_kv(
         rules_error = rules_payload_error(rules)
         if rules_error is not None:
             raise _ParseError(f"rules_json is not a valid rule list: {rules_error}")
+        # And to the shape Band 1's card shows: a rule it cannot show
+        # would apply unseen and fall away at the card's next Save
+        # (findings E1, 2026-10-22).
+        unshown = unrepresented_rule(rules)
+        if unshown is not None:
+            raise _ParseError(f"rules_json holds a rule the card can't show: {unshown}")
         spec.rules_json = rules
     else:
         raise _ParseError(f"unknown session_rule_sets[] attribute {attr!r}")

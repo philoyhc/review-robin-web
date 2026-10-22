@@ -327,6 +327,73 @@ def test_composite_and_or_nest_correctly() -> None:
     }
 
 
+def _tag_match(rule_id: str, field: str, operand: str, *, enabled: bool = True) -> MatchRule:
+    return MatchRule(
+        id=rule_id,
+        enabled=enabled,
+        predicate=Predicate(field=field, operator="equals", operand=operand),
+    )
+
+
+_PAIRS_REVIEWERS = [Reviewer(email="a@x.edu", tag_1="A"), Reviewer(email="b@x.edu", tag_1="B")]
+_PAIRS_REVIEWEES = [Reviewee(email_or_identifier="c@x.edu", tag_1="C")]
+
+
+def _surviving(rules: list) -> set[tuple[str, str]]:
+    result = evaluate(
+        _ruleset(rules=rules, exclude_self=False),
+        reviewers=_PAIRS_REVIEWERS,
+        reviewees=_PAIRS_REVIEWEES,
+    )
+    return {(r.email, e.email_or_identifier) for r, e in result.pairs}
+
+
+def test_a_disabled_composite_child_is_not_applied() -> None:
+    """Findings E1 (2026-10-22): the engine skipped a disabled top-level
+    rule but applied a disabled Composite child, which
+    ``keeps_pairs_by_pair_tag`` and the card skip."""
+    composite = CompositeRule(
+        id="link1",
+        op=CompositeOp.AND,
+        rules=[
+            _tag_match("keep_a", "reviewer.tag1", "A"),
+            _tag_match("keep_b", "reviewer.tag1", "B", enabled=False),
+        ],
+    )
+
+    assert _surviving([composite]) == {("a@x.edu", "c@x.edu")}
+
+
+def test_a_nested_disabled_child_is_not_applied() -> None:
+    inner = CompositeRule(
+        id="inner",
+        op=CompositeOp.AND,
+        rules=[
+            _tag_match("keep_b", "reviewer.tag1", "B"),
+            _tag_match("nobody", "reviewee.tag1", "Z", enabled=False),
+        ],
+    )
+    outer = CompositeRule(
+        id="outer",
+        op=CompositeOp.OR,
+        rules=[_tag_match("keep_a", "reviewer.tag1", "A"), inner],
+    )
+
+    assert _surviving([outer]) == {("a@x.edu", "c@x.edu"), ("b@x.edu", "c@x.edu")}
+
+
+def test_a_composite_with_no_enabled_child_reads_as_disabled() -> None:
+    """Not as an empty ``OR`` that keeps no pair: a rule list with no
+    enabled rule constrains nothing, at the top level or inside."""
+    composite = CompositeRule(
+        id="link2",
+        op=CompositeOp.OR,
+        rules=[_tag_match("nobody", "reviewee.tag1", "Z", enabled=False)],
+    )
+
+    assert _surviving([composite]) == {("a@x.edu", "c@x.edu"), ("b@x.edu", "c@x.edu")}
+
+
 # ---------------------------------------------------------------------------
 # Quotas
 # ---------------------------------------------------------------------------
