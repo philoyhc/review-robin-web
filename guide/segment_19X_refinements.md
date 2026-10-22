@@ -1076,7 +1076,8 @@ rings of the Profile link and the role chips.
 ### Blast radius (measured)
 
 Taken 2026-10-22 at `6fd5e6a`: one partial
-(`reviewer/_role_chips.html`), two `base.html` rules, one spec
+(`reviewer/_role_chips.html`), two `base.html` rules and their
+generated mirror in `tools/theme_customizer.html`, one spec
 (`grep -rln "rs-role-nav-sep" app spec` → `_role_chips.html`,
 `base.html`, `spec/reviewer-surface.md`).
 
@@ -1107,7 +1108,17 @@ None.
 
 ### Status
 
-**Closed 2026-10-22, in one PR.** As planned.
+**Closed 2026-10-22, in one PR.** As planned; the observer re-checks a
+frame later, so the row never resizes inside its own callback.
+
+**Reads:**
+- **`diff-reviewer`**, one read: no high findings.
+  - Acted on: the in-callback resize, which raised a ResizeObserver loop
+    error on widening (M1); this Status (M2); tests for the band where
+    the pills fit only without the `|`, a narrow window on load, and no
+    script (L3, L4); the blast radius's generated mirror (L5).
+- **`spec-writer`** at the close: two wording fixes to
+  `spec/reviewer-surface.md`, no flags.
 
 ### Doc impact
 

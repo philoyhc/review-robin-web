@@ -92,8 +92,11 @@
             group.classList.toggle(WRAPPED, wrapped);
           }
           sync();
-          if (window.ResizeObserver) new ResizeObserver(sync).observe(group.parentNode);
-          else window.addEventListener("resize", sync);
+          // A frame later, so the row never resizes inside the observer's
+          // own callback (as base.html's fit boxes do).
+          function later() { window.requestAnimationFrame(sync); }
+          if (window.ResizeObserver) new ResizeObserver(later).observe(group.parentNode);
+          else window.addEventListener("resize", later);
         })();
       </script>
     {% endif %}
