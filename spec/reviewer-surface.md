@@ -151,7 +151,7 @@ Top-to-bottom, the page renders:
      group wraps below the role pills, the partial's script marks it
      `.rs-role-nav-statuses-wrapped`: the `|` hides and the group takes
      the whole line, re-checked whenever the row resizes; without script
-     the `|` stays (19X Item 12).
+     the `|` stays.
 4. **Session description and closed banner** — under the two rows, with
    no card around either:
    - The session **description** (`p.rs-session-description`), when
@@ -1709,7 +1709,9 @@ selector scoped under `body.ui-v2`:
   color: var(--text-subtle);`.
 - `.rs-role-nav .rs-role-nav-statuses-wrapped` — `flex-basis: 100%;`,
   and its `.rs-role-nav-sep` `display: none;`: pills wrapped below the
-  role pills take their own line, without the `|`.
+  role pills take their own line, without the `|`. The full line is what
+  keeps the group from fitting back up once the `|` no longer takes
+  width.
 - `.rs-session-description` — `margin: 0 0 var(--space-4) 0;
   white-space: pre-line;`, the description under the header rows on the
   reviewer surface, `/results` and `/collation`, with no card.
