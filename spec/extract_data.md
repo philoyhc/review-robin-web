@@ -1206,9 +1206,11 @@ a runbook.
 
 **Zip member names.** Every bundle names its members as the
 standalone downloads are named, from the free-text session code, made
-safe as zip members: a path separator (`/`, `\`), a character Windows
-refuses in a file name (`: * ? " < > |`) or a control character
-becomes `_`, and leading dots and spaces are dropped. So a code
+safe as zip members: a path separator (`/`, `\`) or a lookalike an
+extractor's code page can turn into one (fullwidth `／` `＼`, the
+division and fraction slashes), a character Windows refuses in a file
+name (`: * ? " < > |`), a control character or a bidi control becomes
+`_`, and leading dots and spaces are dropped. So a code
 `../../x` cannot place a file outside the extraction folder and
 `2026/Q1` makes no folder; any other character, non-Latin ones
 included, is kept. The standalone download keeps the code as typed in

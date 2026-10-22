@@ -50,6 +50,10 @@ def _members(client: TestClient, review_session: ReviewSession, path: str) -> li
         (" .hidden_reviewers.csv", "hidden_reviewers.csv"),
         ("课程 2026_reviewers.csv", "课程 2026_reviewers.csv"),
         ("PSY-101_reviewers.csv", "PSY-101_reviewers.csv"),
+        ("nel\x85here_reviewers.csv", "nel_here_reviewers.csv"),
+        ("\uff0e\uff0e\uff0fevil_reviewers.csv", "\uff0e\uff0e_evil_reviewers.csv"),
+        ("a\u2215b\u2044c_reviewers.csv", "a_b_c_reviewers.csv"),
+        ("abc\u202edcba_reviewers.csv", "abc_dcba_reviewers.csv"),
     ],
 )
 def test_a_member_name_is_made_safe(name: str, safe: str) -> None:

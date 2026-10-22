@@ -97,7 +97,7 @@ def build_setup_bundle(
     per-CSV data-row-count map for the
     ``session.setup_bundle_extracted`` audit envelope. Each CSV
     is named ``{code}_{kind}.csv`` inside the archive, matching
-    the per-entity downloads.
+    the per-entity downloads (made safe as a zip member).
     """
     reviewers = list(serialize_reviewers(db, review_session))
     reviewees = list(serialize_reviewees(db, review_session))
@@ -149,7 +149,8 @@ def build_responses_bundle(
 
     Always ``{code}_responses.csv``, the file Rehydrate needs. Then,
     for each intro-card chip that is on, exactly the files that
-    card's own button downloads, under the same names:
+    card's own button downloads, under the same names (made safe as
+    zip members, :func:`_member_name`):
 
     * ``by_instrument`` — the By instrument card's Zip all,
       flattened: one ``{code}_by_instrument_{slug}.csv`` per chosen
@@ -367,9 +368,15 @@ def _by_instrument_members(
         yield f"{code}_by_instrument_{slug}.csv", rows
 
 
-#: What a zip member name may not hold: a path separator, a character
-#: Windows refuses in a file name, or a control character.
-_UNSAFE_IN_MEMBER = re.compile(r'[\\/:*?"<>|\x00-\x1f\x7f]')
+#: What a zip member name may not hold: a path separator or a lookalike
+#: an extractor's best-fit code page turns into one (fullwidth, division
+#: and fraction slashes), a character Windows refuses in a file name, a
+#: control character (C0, DEL, C1), or a bidi control that can disguise
+#: the name.
+_UNSAFE_IN_MEMBER = re.compile(
+    r'[\\/:*?"<>|\x00-\x1f\x7f-\x9f'
+    r"\uff0f\uff3c\u2215\u2044\u202a-\u202e\u2066-\u2069]"
+)
 
 
 def _member_name(name: str) -> str:
