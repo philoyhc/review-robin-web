@@ -769,3 +769,121 @@ from its table (moved) and a test name that claimed the lobby's total
 - `spec/sessions_overview.md` — what the Sessions card's pills count (Item 9).
 - `guide/todo_master.md` — Item 9 in the 19X entry (Item 9).
 
+
+## Item 10 — String answer boxes fit their text
+
+### Opportunity
+
+The author, 2026-10-22: the help-text boxes that grow with their text
+(19Y Item 5) "proved the value of self expanding editboxes". On the
+reviewer surface a String answer is still one of two fixed shapes
+(`spec/reviewer-surface.md`, the render table):
+- **`max_length` ≤ 100:** a one-line `<input type="text">`, where a long
+  answer scrolls sideways out of sight;
+- **over 100:** a `<textarea>` whose `rows` are guessed from half the
+  maximum and the column's width (`views.textarea_rows_for`, clamped to
+  2–8), plus a handle the reviewer drags when the guess is wrong.
+
+### Decision
+
+*Proposed; the author rules on Open questions 1–4.*
+- **Every String answer is a `<textarea>` that fits its text.** Its
+  height is its content's, above a floor, with no handle.
+- **The floor, by `max_length`:**
+  - **50 or fewer:** one line, matching the height of the row's number
+    and list inputs.
+  - **More than 50, or none set:** two lines.
+- **When it refits:** on load (a saved or disabled answer shows whole),
+  on each keystroke and paste, and when its width changes (a column
+  drag, a window resize).
+- **One shared fit.** The help boxes' fit (`fitHelpBox` in
+  `operator/instruments_index.html`) moves to one `base.html` helper,
+  which both boxes use.
+- **Band 2's preview** draws the same floors, so the operator sees what
+  the reviewer will.
+- **`textarea_rows_for`, and its two JS ports, retire.**
+
+Rejected:
+- *A taller fixed box:* the guess is the problem, whatever its size.
+- *Keeping the handle beside the fit:* the next keystroke would undo a
+  drag, as the help boxes found.
+
+### Semantics
+
+- **A one-line box takes no line break** (Open question 1). Enter inserts
+  none, and a pasted break becomes a space, so its answer reads as the
+  short answer its maximum implies. A two-line box keeps line breaks.
+- **No ceiling** (Open question 2). The box grows to its whole answer, as
+  the help boxes do, and `maxlength` bounds it.
+- **Without JavaScript**, a box stays at its floor, scrolls, and keeps its
+  native handle. The handle goes only when the script runs.
+- **The column is unchanged** (Open question 3): `rs-textlong`'s 14em
+  minimum still marks a String over 100. It sizes the column, not the box.
+- **What is saved is unchanged.** Same names, same `maxlength`, the same
+  server checks.
+
+### Blast radius (measured)
+
+Taken 2026-10-22 at `5395f19`.
+
+| What | Count | Command |
+|---|---|---|
+| `textarea_rows_for` / `textareaRowsFor` sites | 22 in 10 files: `review_surface.html` 6, `instruments_index.html` 8, `views/_instruments.py` 2, `views/__init__.py` 2, two env globals, `base.html` 1; tests: `test_reviewer_view_helpers.py` 6, `test_instrument_builder_routes.py` 4, `test_reviewer_response_flow.py` 1 | `grep -rn "textarea_rows_for\|textareaRowsFor" app tests --include=*.py --include=*.html` |
+| The 100-character split | 4 template sites (`review_surface.html` 403, 468, 507; `instruments_index.html` 3235); the column class's 3 more (`instruments_index.html` 2704, `_reviewer_summary.py` 480, `_reviewee_results.py` 573) stay | `grep -rn "> 100" app --include=*.py --include=*.html` |
+| Browser tests on these boxes | 2: `test_preview_response_box.py` (no handle in the preview), `test_help_box_grows.py` (the fit being shared) | `ls tests/browser \| grep -E "preview_response\|help_box"` |
+| Specs | `spec/reviewer-surface.md` (render table, "Textarea height derivation"), `spec/instruments.md` ("Preview row", "Help rows"), `spec/ui_elements.md` (the textarea resize rule) | `grep -rln "textarea_rows_for\|resize" spec` |
+
+### PR ladder
+
+1. **PR 1, this entry**, prose only.
+2. **PR 2, the build:**
+   - the shared fit;
+   - every String a fitting textarea at its floor, on the surface and
+     in the preview;
+   - the formula retired;
+   - tests and specs.
+
+   One PR: the floors cannot ship without the fit. It must not change
+   names, `maxlength`, server checks or `rs-textlong`.
+
+### Definition of done
+
+- On the reviewer surface a String answer of 50 or fewer characters
+  starts one line high, any other starts two lines high, and each grows
+  with its text, with no handle (browser test).
+- A saved long answer shows whole on load (browser test).
+- `grep -rn "textarea_rows_for\|textareaRowsFor" app tests` finds nothing.
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 19X.10` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` 19X entry updated to drop this item; the entry itself goes only when the segment closes
+
+### Open questions
+
+The author decides each; my recommendation is first.
+1. **A line break in a one-line box:** none, so Enter does nothing there
+   and a pasted break becomes a space. The alternative is to allow
+   breaks, and the box grows. Today's input takes none, and Enter in it
+   saves the page.
+2. **A ceiling:** none, as the help boxes have. The alternative is about
+   ten lines, then the box scrolls inside.
+3. **`rs-textlong`'s threshold:** it stays at 100, since it is the
+   column's minimum width, not the box's. The alternative is to move it
+   to 50 with the boxes.
+4. **A String with no `max_length`:** two lines, since it is unbounded.
+
+### Out of scope
+
+- Integer, Decimal and List answers.
+- Operator-side text boxes, other than the preview and the help boxes'
+  shared fit.
+- Read-only answer displays (`/summary`, results, collation), which show
+  text rather than boxes.
+
+### Doc impact
+
+- `spec/reviewer-surface.md` — String answers are fitting textareas with a one- or two-line floor; "Textarea height derivation" retires (Item 10).
+- `spec/instruments.md` — the preview's String box mirrors the floors; the help boxes' fit is shared (Item 10).
+- `spec/ui_elements.md` — answer boxes fit their text, with no handle (Item 10).
+- `guide/todo_master.md` — Item 10 in the 19X entry (Item 10).
