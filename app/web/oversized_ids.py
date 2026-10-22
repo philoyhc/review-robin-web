@@ -3,8 +3,12 @@
 SQLite refuses to bind an integer past ``MAX_SQL_INT`` and raises
 ``OverflowError``, a 500; Postgres compares it and finds no row, a 404.
 This app-wide dependency gives both databases the Postgres answer before a
-route reaches the database: a path or query parameter, or a form-body
-field, that names an id and is past the bound is a page that cannot exist.
+route reaches the database: a path or query parameter that names an id
+and is past the bound is a page that cannot exist. A form-body id list and
+the audit log's ``cursor`` are refused the same way, though Postgres would
+skip the id or page from it: no page emits such a value, so only a
+hand-made request carries one, and one answer on both databases beats a
+500 on one (findings 2026-10-22 P2).
 ``request.path_params`` holds the raw text (FastAPI converts it for the
 route, not here), so all are read as digits. A value that isn't digits is
 left to the route, which already refuses it as malformed.
@@ -14,8 +18,10 @@ parameters (findings 2026-10-22 P2). FastAPI parses that body before it
 solves any dependency, and Starlette caches the ``FormData`` on the
 request, so ``request.form()`` here hands back the parsed body rather
 than reading it again. A route that declares no form body is never made
-to read one; the handlers that read ``request.form()`` themselves parse
-their ids with ``parse_id``, which already refuses one past the bound.
+to read one. Of the handlers that read ``request.form()`` themselves, the
+Observers ones parse their ids with ``parse_id``, which refuses one past
+the bound; the Instruments display-field saves read theirs with ``int``
+and only compare them in Python, never binding them in SQL.
 """
 
 from __future__ import annotations
