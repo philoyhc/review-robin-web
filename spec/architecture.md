@@ -192,11 +192,25 @@ state) lives here.
 **Construction and hosting.** RRW is a mounted application, not a
 process: `create_app()` in `app/main.py` builds it, once per process, and
 importing `app.main` builds nothing. It is served through the Cordware
-host (`cordware.main:app`; contract in `cordware/spec/host.md`), and its
-routes are app-relative. `return_to`'s GET-route check reads the routes of
+host (`cordware.main:app`; contract in `cordware/spec/host.md`) at
+**`/reviewrobin`** (`REGISTRY` in `cordware/main.py`), and its routes are
+app-relative: every path in `spec/` is written without the prefix, and a
+browser sees it under `/reviewrobin`. `return_to`'s GET-route check reads the routes of
 the app handling the request (`request.app.routes`). The host owns root
 logging; RRW logs under named `app.*` loggers via
 `app.logging_config.get_logger` and never configures the root logger.
+
+What a browser meets at the mount's edge:
+
+- `/` is the host's. With RRW the only application it redirects (302) to
+  `/reviewrobin/`, RRW's role-aware root.
+- `/reviewrobin` redirects (307, Starlette's slash redirect) to
+  `/reviewrobin/`.
+- A root path from before the mount, such as `/operator/sessions`, answers
+  the host's 404. Nothing redirects from the old paths.
+- `/health` is the host's probe and `/reviewrobin/health` is RRW's.
+- Easy Auth's `/.auth/*` stays host-level, outside the mount; RRW links to
+  it unprefixed.
 
 **Identity is Cordware's** (`cordware/identity.py`; contract in
 `cordware/spec/identity.md`). Cordware is the only reader of the Easy Auth
@@ -256,7 +270,7 @@ pipeline this directory exists without.
 ### URL emission
 
 RRW is mounted, so the prefix its host serves it under (`root_path` in the
-ASGI scope; empty at `/`) is not RRW's to know. **App-relative values
+ASGI scope; `/reviewrobin`) is not RRW's to know. **App-relative values
 travel; the prefix is added once, at emission.** Routes, views, services,
 breadcrumbs and `return_to` build app-relative strings
 (`/operator/sessions/…`), and a URL leaves RRW only through
@@ -287,8 +301,11 @@ route or helper that redirects takes `request`.
 - **Services may build app-relative URL strings** (`services/validation.py`'s
   `fix_url`); templates add the prefix. A service never imports
   `app.web.urls`.
-- **Absolute links** (`request.url_for("reviewer_invite", …)`) already carry
-  the prefix and are not routed through these helpers.
+- **Absolute links** (`request.url_for("reviewer_invite", …)`, the
+  invitation and reminder links) are built from the request's own scheme,
+  host and `root_path`, so they carry the prefix and are not routed through
+  these helpers. No setting names a public base URL. Without a request there
+  is no URL builder, and the scheduled invite trigger does nothing.
 - **A script's URL comes from the template.** A URL a route passes to an
   inline script through context still needs `url()` where the template
   emits it; the static rules cannot see that value, the crawl can.

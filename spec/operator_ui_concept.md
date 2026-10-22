@@ -228,7 +228,7 @@ Visual treatment (typography, spacing, link colors) is per `spec/visual_style_ge
 
 ## Entry & landing
 
-The app has no page of its own at the root or the bare operator prefix — both are **role-aware redirects** so a freshly-signed-in user lands somewhere useful without knowing a deep URL.
+The app has no page of its own at the root or the bare operator prefix (paths here are app-relative; the root is `/reviewrobin/` in the browser, and the host's own `/` redirects to it) — both are **role-aware redirects** so a freshly-signed-in user lands somewhere useful without knowing a deep URL.
 
 - **`GET /`** — a **302** redirect by role: an **operator or sys-admin** lands on `/operator/sessions` (the lobby); **everyone else** (a participant, or a signed-in user with no roles yet) lands on `/me`, which renders its own empty state. Routes on `is_operator OR is_sys_admin`. Temporary (302), never 301 — the target follows the user's role, which can change. The root serves no JSON; liveness / metadata live only at `/health`.
 - **`GET /operator`** (and `/operator/`) — 302 to `/operator/sessions`. Defined app-level and **unguarded** so the lobby's router-level `require_operator` is the single place that decides operator access.

@@ -379,8 +379,12 @@ What this means for the trust boundary:
   Authorization model above) are layered **on top** of that
   authenticated identity — they decide *what* an authenticated
   user may do, not *whether* they are who they claim.
-- `/health` is the one route excluded from Easy Auth (so platform
-  probes don't bounce through sign-in). It exposes no data.
+- The two health probes are the only routes excluded from Easy Auth
+  (so platform probes don't bounce through sign-in): the Cordware
+  host's `/health` and RRW's own `/reviewrobin/health`. Neither exposes
+  data. RRW is served under `/reviewrobin` (segment 21D); Easy Auth's
+  `/.auth/*` paths stay at the host level, so sign-out is
+  `/.auth/logout` from every page.
 
 ### Identity-subsystem mechanics
 
@@ -391,7 +395,9 @@ injects.*
 - **Dev Easy Auth config** (`app-review-robin-web-dev`): authentication
   enabled, "Require authentication", unauthenticated → HTTP 302 to
   Microsoft, token store enabled, `/health` set in
-  `globalValidation.excludedPaths` of the `authsettingsV2` resource.
+  `globalValidation.excludedPaths` of the `authsettingsV2` resource;
+  `/reviewrobin/health` joins it when the dormant slot resumes
+  (`docs/deployment_dev.md` "Resuming the dev slot").
 - **Headers consumed** by `app/auth/identity.py`:
   `X-MS-CLIENT-PRINCIPAL-NAME` (UPN/email),
   `X-MS-CLIENT-PRINCIPAL-ID` (Entra object id),
@@ -412,7 +418,7 @@ injects.*
   `is_fake=True` / `provider="fake"`. Activates only when no Easy Auth
   headers are present. See "`ALLOW_FAKE_AUTH` gating" below for the
   deployed-environment guard.
-- **Diagnostic routes:** `GET /auth/me` (JSON — `principal_id`,
+- **Diagnostic routes** (under RRW's `/reviewrobin` prefix): `GET /auth/me` (JSON — `principal_id`,
   `email`, `name`, `provider`, `is_fake`, `is_super_admin`) and `GET /auth/me/debug`
   (HTML — the parsed `AuthenticatedUser`, the raw decoded claims list,
   a fake-auth pill when the local fallback is in use, and a

@@ -3,7 +3,7 @@
 **Opened:** 2026-10-21 · **Outline:** `guide/segment_21_domain_retrofit.md`
 (sub-segment 21D) · **Strategy:** `docs/cordware_repository_strategy_v0.8.md`
 §3 "Behavior under the mount" · **Sequence:**
-`docs/cordware_implementation_sequence.md` §5 D1–D2 · **Hold:** lifted for
+`docs/archive/cordware_implementation_sequence.md` §5 D1–D2 · **Hold:** lifted for
 21D by the author at 21C's close (2026-10-21).
 
 This is the last step of v0.8's stage 2, and the only one that changes
@@ -133,54 +133,56 @@ Taken 2026-10-21 at `d3420be9`.
 
 ## Status
 
-Item base for the cumulative read: `7c2512f9`.
+**Closed 2026-10-22.** PRs **#3215** (plan), **#3216** (D1), **#3217**
+(D2), **#3218** (D3) and the close; the author checked all four
+requirements on localhost. Item base for the cumulative read: `7c2512f9`.
 
-**D1 (2026-10-22).** As laddered. The page is `cordware/web/landing.py`
-with its own template. `AppEntry.title` defaults to empty, and the page
-then shows the registry name. The redirect and links keep the host's
-`root_path`.
+**Intended vs done:** as laddered, with these divergences.
+- **The harness prefixes at each call** through `app_url`
+  (`tests/browser/conftest.py`). Each context's `base_url` stays the
+  origin, not the Decision's prefixed base URL, because Playwright
+  resolves a leading `/` against the origin. The `api` client's base URL
+  carries the mount. `page.url` `endswith` / `in` checks and `**` globs
+  stay, since they hold under any prefix.
+- **Two sites outside the measured count** read the page's pathname
+  and moved too: Home's scroll-seat `sessionStorage` key and the
+  sort-cookie paths.
+- **Requirement 4's link** is `…/reviewrobin/me/invite/…`: the route is
+  `/me/invite/{token}`, where Semantics wrote `/reviewrobin/invite/…`.
+- **The 403 under the mount** is a Sys Admin page refusing a plain
+  operator. A non-operator on an operator page is redirected to `/me`,
+  not refused.
+- **The Easy Auth exclusion of `/reviewrobin/health`** is its own
+  resumption step in `docs/deployment_dev.md`. The slot's invite check
+  says what it cannot show: the gateway's public name is stage 4's.
 
-**D2 (2026-10-22).** As laddered. `app_url` is a path helper in
-`tests/browser/conftest.py`, on `tests/_mounted.py`'s `MOUNT`; the `api`
-client's base URL carries the mount, so its 34 request paths are
-unchanged. Beyond the measured sites, the flip also reached Home's
-scroll-seat `sessionStorage` key and the sort-cookie paths, both read
-from the page's pathname. The guard is `tests/unit/test_browser_app_urls.py`
-(fails 35 files on the pre-flip tree). Of the local-URL grep's hits, two
-are not app URLs and stay: `README.md` names the bare origin as the
-redirect's source, and `docs/security_posture.md` names the origin.
+**Decisions confirmed at build:** `AppEntry.title` defaults to empty, and
+the page then shows the registry name; the landing redirect and links
+keep the host's `root_path`. The guard is
+`tests/unit/test_browser_app_urls.py`. It failed 35 files on the
+pre-flip tree, and its self-tests pin each form it refuses and passes.
 
-**D3 (2026-10-22).** As laddered, in
-`tests/integration/test_mount_requirements.py`. The invitation route is
-`/me/invite/{token}`, so requirement 4's link reads
-`http://reviews.example.edu/reviewrobin/me/invite/…` (Semantics wrote
-`/reviewrobin/invite/…`). The 403 is a Sys Admin page refusing a plain
-operator: a non-operator on an operator page is redirected to `/me`,
-not refused. `docs/deployment_dev.md` gains the Easy Auth exclusion as
-its own resumption step and the four requirements as the live check.
+**Reads:**
+- **`diff-reviewer`, one cumulative read** at D3, from `7c2512f9`: no
+  high findings; four medium and five low, all acted on in D3.
+  - Guard gaps, including negative URL assertions that would pass
+    vacuously.
+  - Stale Easy Auth and verification steps in the two deployment
+    runbooks.
+  - The dev-slot invite check's limit.
+  - `/.auth/` pinned on every emitter.
+  - The suite's `MOUNT` tied to `REGISTRY`.
+  - Two nits.
+- **Codex** found two further guard gaps (#3217, #3218), both fixed.
+- **`spec-writer`** wrote the close (`spec/architecture.md`,
+  `cordware/spec/host.md`) and found three more specs naming `/` as the
+  mount root, now in `Doc impact`. Its one flag kept a requirement:
+  host-logging events 4 and 5 were never built, and are queued
+  (`guide/archive/segment_21_domain_retrofit.md` § Status).
 
-**Cumulative read (D3, from `7c2512f9`), one read; no high findings.**
-Acted on in D3:
-- The guard gains negative URL assertions, `url=`, `page.request`,
-  `wait_for_url` / `expect_navigation`, `location` without `window.`,
-  `assign` / `replace` and chained comparisons. Its page-URL exemption
-  now needs a value built from `.url`, not one that merely mentions it.
-- Every `/.auth/` link and check RRW emits is pinned (5 cases).
-- `.env.example` and `docs/local_setup.md` give the host-alone landing
-  page. `docs/deployment_nus.md`'s Easy Auth and verification steps,
-  and `docs/deployment_dev.md`'s Authentication section, carry the
-  prefix. The slot's invite check states what it cannot show (the
-  gateway's name is stage 4's).
-- A test ties the suite's `MOUNT` to `REGISTRY`.
-- Two nits: an unused template variable and a test's stale name.
-
-Recorded, not changed: the harness keeps the origin as its contexts'
-`base_url` and prefixes at each call through `app_url`, rather than the
-Decision's prefixed base URL, because Playwright resolves a leading `/`
-against the origin. `page.url` `endswith` / `in` checks and `**` globs
-stay as they are, since they hold under any prefix. The local-URL
-Definition-of-done line is amended at the close for the two
-adjudicated non-URL hits (D2).
+**Waiting:** the real-Easy-Auth check on the dev slot, step 5 of
+`docs/deployment_dev.md` "Resuming the dev slot"; the gateway's path
+forwarding and host header, at stage 4.
 
 ## PR ladder
 
@@ -228,7 +230,9 @@ adjudicated non-URL hits (D2).
 - A test under the mount shows an invite link carrying the request's
   host and `/reviewrobin`, and RRW's own 404, 403 and 422 pages (D3).
 - Every local URL that `grep -rn "127.0.0.1:8000" README.md CLAUDE.md docs/*.md`
-  finds is a `/reviewrobin/` form (D2).
+  finds is a `/reviewrobin/` form (D2), but for the two hits that name
+  the bare origin: `README.md`'s redirect source and
+  `docs/security_posture.md`'s single-origin note.
 - The author has checked all four requirements on localhost (close). The
   real-Easy-Auth check waits for the dev slot (outline § Definition of
   done).
@@ -242,8 +246,9 @@ adjudicated non-URL hits (D2).
 
 1. ~~The public host for absolute links~~: the request's own host, no
    configured base (author, 2026-10-21, on the recommendation).
-2. ~~Browser tests under the mount~~: the real mount, through a
-   prefixing `page` fixture (author, 2026-10-21, on the recommendation).
+2. ~~Browser tests under the mount~~: the real mount (author,
+   2026-10-21, on the recommendation), through `app_url` at each call
+   (Status).
 3. ~~The landing page with one application~~: `/` redirects to that
    application's path; the page lists applications when none or two or
    more are mounted (author, 2026-10-21, overruling the recommendation
@@ -260,12 +265,16 @@ adjudicated non-URL hits (D2).
 ## Doc impact
 
 - `spec/architecture.md` — RRW served at `/reviewrobin`; old root paths answer the host's 404; absolute URLs from the request's host (close).
+- `spec/settings_inventory.md` — the session-list sort cookies' path is the mount root, `/reviewrobin/` (close; found by `spec-writer`).
+- `spec/sort_by_reviewee.md` — the same cookie paths (close; found by `spec-writer`).
+- `spec/operator_ui_concept.md` — "Entry & landing": the browser root is `/reviewrobin/`, which the host's `/` redirects to (close; found by `spec-writer`).
 - `docs/local_setup.md` — the local URL is `http://127.0.0.1:8000/reviewrobin/`; `/` redirects there while RRW is the only application (D2).
 - `docs/deployment_dev.md` — `/reviewrobin/health` excluded from Easy Auth; the four-requirement live check (D3).
 - `docs/security_posture.md` — `/health` and `/reviewrobin/health` as the unauthenticated probes; sign-out stays host-level (close).
 - `docs/cordware_repository_strategy_v0.8.md` — §8: the public host and the browser harness settled (close).
 - `README.md` — the local URL (D2).
+- `.env.example` — an empty `CORDWARE_APPS` serves the landing page and `/health` (D3).
 - `CLAUDE.md` — the local URL the author checks at (D2). `AGENTS.md` twinned.
 - `docs/deployment_nus.md` — the "no code change" line retired; its start command moves with stage 4's artifact (D2; carried from the outline).
-- `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at the close; the sub-segment plans carry its ladder (close; carried from the outline).
+- `docs/cordware_implementation_sequence.md` — retired to `docs/archive/` at the close; the sub-segment plans carry its ladder (carried from the outline). <!-- cites: docs/cordware_implementation_sequence.md -->
 - `cordware/spec/host.md` — the landing page and the one-application redirect, `AppEntry.title`, RRW at `/reviewrobin` (close); checked by hand.
