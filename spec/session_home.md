@@ -389,7 +389,10 @@ plain `<label>` above its value:
   A kept Start, and the stored offsets on a kept Start or End, skip
   only the lead-time floor: a schedule that aged past it after saving
   stays put (`spec/lifecycle.md` §8.3), so a rename is never refused
-  over it. Every other check still runs.
+  over it. A pair of boxes both kept (Start ↔ End, End ↔ Release-from,
+  or the Release window, its 365-day cap included) skips its ordering
+  check (`spec/lifecycle.md` §8.2.7, findings L6 and L1). Every other
+  check still runs.
 
 Two more fields follow Description in the left column. The card holds
 no sub-card, `.card` or `.bottom-grid`; Owners is a card of its own
