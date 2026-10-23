@@ -32,7 +32,7 @@ see `guide/deferred_consolidated.md` and `docs/security_posture.md`
 
 ## App startup
 
-Startup command, once the slot resumes (step 2 of "Resuming the dev
+Startup command, once the slot resumes (step 3 of "Resuming the dev
 slot" below; the dormant slot is still set to `app.main:app`):
 
 ```bash
@@ -103,16 +103,20 @@ change on `main` that makes it necessary; every one of them has landed.
    value such as `dev`. Cordware refuses to start with `ALLOW_FAKE_AUTH`
    on and `APP_ENV` anything but `local`, so a deployed environment
    names itself, and keeps `ALLOW_FAKE_AUTH` `false`.
-2. **Startup command** (needed since 21A's A2 removed `app.main:app`):
-   change it to
-   `gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app`.
-   Its target exists from 21A's A1 on. The June build the slot serves is
-   older than A1 and needs the old command, so change it as step 3's
-   deploy lands.
-3. **Re-enable the workflow**: Actions → the workflow → *Enable workflow*,
+2. **Re-enable the workflow**: Actions → the workflow → *Enable workflow*,
    or `gh workflow enable main_app-review-robin-web-dev.yml`. Then
    dispatch it, or let the next push to `main` run it. Its migrate job
-   brings the dev database from the June head up to the current one.
+   brings the dev database from the June head up to the current one, and
+   its deploy job runs only once that succeeds.
+3. **Startup command** (needed since 21A's A2 removed `app.main:app`):
+   once step 2's deploy job has succeeded, and not before, change it to
+   `gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app`.
+   The workflow does not set it. The June build the slot serves predates
+   21A's A1 and has no `cordware.main`, so the new command set early
+   would take the slot down, and a failed migrate would leave it down;
+   the new build has no `app.main`, so between the deploy and this
+   change the slot does not start. Make the change straight after the
+   deploy.
 4. **Easy Auth's excluded paths** (needed since 21D's D2 moved RRW to
    `/reviewrobin`): add `/reviewrobin/health` beside
    `/health` in `authsettingsV2` → `globalValidation.excludedPaths`, so
