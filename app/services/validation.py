@@ -13,7 +13,8 @@ became one rule per check; the public signature is unchanged
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -101,6 +102,10 @@ class ValidationInputs:
     #: …with at least one ``InstrumentDisplayField`` row.
     instruments_with_display_fields: frozenset[int]
     included_count_by_instrument: Mapping[int, int]
+    #: Loads filled on first use and shared for the run, for checks that
+    #: need a heavier read only some runs reach: ``staleness``, the
+    #: engine's per-instrument verdicts (findings E4's cold read).
+    _memo: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 
     @property
     def active_reviewees(self) -> tuple[Reviewee, ...]:
@@ -824,6 +829,21 @@ def _check_new_model_no_visible_response_fields(
         )
 
 
+def _staleness(
+    db: Session, review_session: ReviewSession, inputs: ValidationInputs
+) -> Mapping[int, Any]:
+    """``staleness_by_instrument`` once per run: the unloadable and the
+    stale checks both read it, and each call reloads the rosters and
+    re-stamps every instrument."""
+    if "staleness" not in inputs._memo:
+        from app.services import assignments as assignments_service
+
+        inputs._memo["staleness"] = assignments_service.staleness_by_instrument(
+            db, review_session
+        )
+    return inputs._memo["staleness"]
+
+
 def _check_instruments_rule_set_unloadable(
     db: Session,
     review_session: ReviewSession,
@@ -832,12 +852,9 @@ def _check_instruments_rule_set_unloadable(
     """``instruments.rule_set_unloadable`` — one error per instrument
     whose stored rule set the engine can't load (findings E4,
     2026-10-22). Generate would fail on it, so Prepare can't pass; the
-    Band 1 card's Save rebuilds the rules from what it shows."""
-    from app.services import assignments as assignments_service
-
-    state_by_instrument = assignments_service.staleness_by_instrument(
-        db, review_session
-    )
+    Band 1 card's Save rebuilds the rules from what it shows, once a
+    rule it refuses to keep is removed."""
+    state_by_instrument = _staleness(db, review_session, inputs)
     for instrument in inputs.instruments:
         state = state_by_instrument.get(instrument.id)
         if state is None or state.load_error is None:
@@ -847,8 +864,9 @@ def _check_instruments_rule_set_unloadable(
             source="instruments",
             message=(
                 f"Instrument {_instrument_label(instrument)!r}'s assignment "
-                f"rule can't be loaded ({state.load_error}). Save its "
-                f"Instrument assignment rule to replace it."
+                f"rule can't be loaded ({state.load_error}). Change or "
+                f"remove that rule in its Instrument assignment rule, then "
+                f"Save."
             ),
             fix_anchor=f"#instrument-{instrument.id}",
         )
@@ -904,11 +922,7 @@ def _check_instruments_stale_generated(
     than its absence, because the operator reads the silence as an
     answer.
     """
-    from app.services import assignments as assignments_service
-
-    state_by_instrument = assignments_service.staleness_by_instrument(
-        db, review_session
-    )
+    state_by_instrument = _staleness(db, review_session, inputs)
     if not any(state.stale for state in state_by_instrument.values()):
         return
     for instrument in inputs.instruments:
@@ -1354,8 +1368,8 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
             "Generate runs each instrument's stored assignment rule. "
             "One the engine can't load, written before the writers "
             "checked or edited outside the app, fails Generate, so "
-            "Prepare can't finish until the instrument's Instrument "
-            "assignment rule is saved again."
+            "Prepare can't finish until the rule is changed or removed "
+            "in the instrument's Instrument assignment rule and saved."
         ),
         fix_url=_instruments_url,
         fix_page_label="Instruments Setup",

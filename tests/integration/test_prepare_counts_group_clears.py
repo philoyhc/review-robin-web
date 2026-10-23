@@ -250,6 +250,11 @@ def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
     assert page.status_code == 200
     assert "data-rule-load-errors" in page.text
     assert "assignment rule can't be loaded" in page.text
+    # The Workflow card's confirmation re-runs the dry-run on a refresh.
+    confirm = operator.get(
+        f"/operator/sessions/{review_session.public_id}/assignments?prepare_confirm=responses"
+    )
+    assert confirm.status_code == 200
 
     assert operator.get(f"/operator/sessions/{review_session.public_id}/validate").status_code == 200
     issues = [

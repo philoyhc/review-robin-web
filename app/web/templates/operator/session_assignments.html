@@ -146,11 +146,11 @@
     {% if _unloadable %}
       <div class="banner banner-error" role="alert" data-rule-load-errors>
         {% for block in _unloadable %}
-          <p style="margin: 0;">
+          <p class="banner-lead">
             {{ block.instrument_label }}'s assignment rule can't be loaded
-            ({{ block.rule_load_error }}). Save its Instrument assignment
-            rule on the <a href="{{ url(block.edit_url) }}">Instruments page</a>
-            to replace it.
+            ({{ block.rule_load_error }}). Change or remove that rule in its
+            Instrument assignment rule on the
+            <a href="{{ url(block.edit_url) }}">Instruments page</a>, then Save.
           </p>
         {% endfor %}
       </div>

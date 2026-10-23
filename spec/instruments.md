@@ -567,7 +567,9 @@ rather than rewritten, because a rewrite would change who reviews whom;
 pre-Azure sessions are disposable, so there is no migration (author,
 2026-10-17). Until it is removed, a stored person-level rule also fails
 every reader that loads the rule set through the engine: the
-Assignments page and Validate answer 500, and Prepare reports a failure.
+Assignments page names the instrument in a banner, Validate reports
+`instruments.rule_set_unloadable`, and Prepare reports a failure at
+Generate (findings E4, 2026-10-22).
 A Settings import refuses the same rules (`spec/csv_contracts.md` §3.3).
 
 A rule or boundary stored with a tag the card does not offer (a roster
@@ -1899,6 +1901,10 @@ of rules against instruments. Active ones that surface here
   § *Staleness* states. An instrument that has never generated is
   **not** flagged. `spec/validate_page.md` §3.2 carries the full
   rule, including why.
+- **`instruments.rule_set_unloadable`** (error) — the engine can't
+  load the instrument's stored rule set, so Generate would fail on it.
+  The message gives the reason; changing or removing that rule in the
+  card and saving replaces it (`spec/validate_page.md` §3.2).
 - **`instruments.zero_included`** (warning) — every assignment row
   is excluded (`include=False`). The reviewer page would render
   zero rows even though Generate ran.
