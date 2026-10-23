@@ -48,10 +48,10 @@ Batch fixes from all of these into one push where possible, then repeat Stage 1.
 - False positive, or out of scope → reply with a one-line reason; change nothing. Note out-of-scope items for the hand-off report.
 - Needs a judgment call → STOP (see below).
 
-**Codex stalls** (author's ruling, 2026-10-23). Codex sometimes shows "running" on the head and never reports. Time it from the trigger (marked ready, or the last `@codex review`):
+**Codex stalls** (author's ruling, 2026-10-23). Codex sometimes shows "running" on the head and never reports. Time both marks from the trigger (the PR marked ready, or the `@codex review` posted after a push); the 15-minute re-ping does not restart the clock:
 - **15 minutes** with no review on the head → post one PR comment `@codex review`, saying the review stalled.
 - **30 minutes** still silent → a **prose-only** PR merges on green CI with the other gates held; say in the PR body and the hand-off report that Codex did not review the head. Any **other** class → STOP and ask for a ruling.
-- An explicit instruction from the user ("merge as soon as CI is green") overrides this for that PR.
+- An explicit instruction from the user ("merge as soon as CI is green") skips the Codex wait for that PR; every other gate still holds.
 
 **After any fix pushed while the PR is ready:** the PR stays ready. Re-run Stage 1 on the new head (the `pytest`/`ruff` gates are owed on every push). Once CI is green again, check whether Codex has reviewed the new head; if not, post a PR comment `@codex review` to request it. Do not toggle the PR back to draft and ready again to force a review.
 
