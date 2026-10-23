@@ -1049,9 +1049,9 @@ save path; the settings themselves are
 
 ### 9.5 Populate rosters
 
-Up to four Setup pages share one shape: Reviewers, Reviewees,
-**Relationships** and **Observers** (each shown by its toggle,
-[§5.17](#517-feature-toggles)). Each carries a preview table whose card
+Up to four Setup pages share one shape: Reviewers and Reviewees,
+always, and **Relationships** and **Observers**, each shown by its
+toggle ([§5.17](#517-feature-toggles)). Each carries a preview table whose card
 opens with a two-pane toolbar, and a row expander for the selected
 rows; the preview-count line sits in the toolbar's left pane and is
 shared by every preview page. Upload, Delete all and, except on
@@ -1296,7 +1296,10 @@ data type and bounds. The operator's page breaks divide the instruments
 into numbered pages, each its own server-rendered URL. Above each table
 a read-only card shows who can see what the reviewer wrote
 ([§5.16](#516-visibility-policy)); a governed field follows its branch
-([§5.7](#57-response-field)); and the reviewer can sort by any column.
+([§5.7](#57-response-field)); and the reviewer can sort by any Reviewee,
+display-field or response-field column, though not a group-scoped
+instrument's **Group** column or the trailing status column
+(`spec/sort_by_reviewee.md`).
 When the reviewer's own email matches a reviewee row, their row for
 themselves carries a **Self review** marker and writes are not blocked;
 whether that row is active is the operator's
