@@ -421,13 +421,13 @@
        * Stacked in the per-instrument intro's right column
        * (`.rs-intro-columns` below), as wide as that column.
        */
-      /* Tinted slab in the per-instrument intro's columns, rather than
-         a regular card with a contrasting border + interior.
+      /* Tinted slab for the lobby's first-run tiles and the Guide's
+         callout (`spec/ui_elements.md` §4, "Help cards"), rather than a
+         regular card with a contrasting border + interior; the
+         per-instrument intro does not use it.
 
          Its own `--card-help-*` family, the shape `.danger-zone` already
-         uses. The fill is what `spec/ui_elements.md` §"Reviewer help
-         cards" has always called for ("bg-muted tinted blocks", recorded
-         value `#f5f5f7`); it used to borrow `--border-default` — a border
+         uses. The fill is a muted tint; it used to borrow `--border-default` — a border
          colour used as a surface — which looked right only while that
          token was very light, and stopped being right the moment the
          border moved to `--slate-dim` for the 3:1 boundary work (body
@@ -942,9 +942,9 @@
       .tab-strip-setup { background: var(--surface-muted); grid-column: 3; grid-row: 1; }
       .tab-strip-ops   { background: var(--nav-strip-ops-bg); grid-column: 3; grid-row: 2; }
       /* Page-internal nav-tab strip — same `.nav-tab` children as the
-         chrome but framed for page body usage: light grey row tint
-         (matches the Setup-row tint from `.tab-strip-setup`), thin
-         border, rounded corners. Active tab reads white-on-grey,
+         chrome but framed for page body usage: a grey `--surface-muted`
+         row tint (not the Setup row's pale blue), thin border, rounded
+         corners. Active tab reads white-on-grey,
          hover lightens to white. Used by the Email Template selector
          and the Previews-page email-tab strip. */
       .tab-strip-page {

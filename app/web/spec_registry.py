@@ -67,7 +67,8 @@ SPEC_PENDING: tuple[str, ...] = ()
 # the surface those routes serve** — not every document that touches the
 # subject. A second entry earns its place only where it carries
 # route-level contract the first does not (``_session_home`` →
-# ``spec/permissions.md`` for the two owner routes; ``_operations`` →
+# ``spec/permissions.md`` and ``spec/session_owners.md`` for the owner
+# routes; ``_operations`` →
 # the Validate page and the reviewer surface its redirects land on).
 SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     # --- operator: session-scoped setup -------------------------------
@@ -75,6 +76,7 @@ SPEC_COVERAGE: dict[str, tuple[str, ...]] = {
     "app.web.routes_operator._session_home": (
         "spec/session_home.md",
         "spec/permissions.md",  # owners/add, owners/{id}/remove
+        "spec/session_owners.md",  # the Owners card's routes (findings B7)
     ),
     "app.web.routes_operator._quick_setup": ("spec/quick_setup_card_spec.md",),
     "app.web.routes_operator._setup_reviewers": ("spec/setup_pages.md",),

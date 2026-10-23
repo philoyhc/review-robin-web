@@ -43,6 +43,7 @@ from app.db.models import (
 from app.services import audit
 from app.services.instruments._field_refs import repoint_sort, repoint_widths
 from app.services.instruments import copy_view_policies
+from app.services.instruments._band2 import portable_band2_state
 
 CLONE_MODES: tuple[str, ...] = ("all", "config")
 
@@ -217,6 +218,7 @@ def clone_session(
                 },
             ),
         )
+        new_instrument.band2_state = portable_band2_state(new_instrument.band2_state)
         db.add(new_instrument)
         db.flush()
         instrument_map[instrument.id] = new_instrument.id

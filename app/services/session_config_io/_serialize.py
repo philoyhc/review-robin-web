@@ -21,6 +21,7 @@ from app.db.models import (
     SessionTag,
 )
 from app.services.date_formatting import iso_in_zone
+from app.services.instruments._band2 import portable_band2_state
 from app.services.instruments._instrument_crud import effective_intro_layout
 from app.services.instruments._field_refs import (
     sort_to_positions,
@@ -439,7 +440,7 @@ def _instrument_rows(
         ),
         Row(
             f"{prefix}.band2_state",
-            _json(instrument.band2_state or {}),
+            _json(portable_band2_state(instrument.band2_state) or {}),
             "json",
         ),
         # Segment 18P PR D2 — the Band 1 "set"-pill state (which links

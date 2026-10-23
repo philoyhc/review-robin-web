@@ -402,9 +402,12 @@ Responses are the one facet with no other import path;
 identity to the newly-created PKs and insert a `Response`:
 
 - **Reviewer** ← `ReviewerEmail` (matched case-insensitively) → new `Reviewer.id`.
-- **Instrument** ← `InstrumentShortLabel` (primary key for the match;
-  unique per session), falling back to the positional `InstrumentName`
-  = `instrument_{n}` → the instrument at `order = n`.
+- **Instrument** ← `InstrumentShortLabel` (primary key for the match),
+  falling back to the positional `InstrumentName` = `instrument_{n}` →
+  the n-th instrument by `(order, id)`. Short labels need not be unique
+  (`spec/settings_inventory.md` §10): a label two instruments share
+  matches neither, and the positional key settles the row (findings D1
+  and D2, 2026-10-22).
 - **Response field** ← `(instrument, FieldKey)` →
   `InstrumentResponseField.id` (unique `(instrument_id, field_key)`).
 - **Per-reviewee rows** (`InstrumentFlavour = per-reviewee`) — **Reviewee**

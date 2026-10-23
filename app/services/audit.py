@@ -17,6 +17,7 @@ we're auditing.
 """
 from __future__ import annotations
 
+import logging
 import os
 import warnings
 from dataclasses import dataclass, field
@@ -35,6 +36,11 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
+
+# Production's record of a detail that breaks its schema: the row writes
+# through and this line reaches the host's JSON log (findings F2,
+# 2026-10-22), which ``warnings.warn`` never did.
+_log = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -204,10 +210,11 @@ def write_event(
     except AuditDetailValidationError as exc:
         if _audit_strict_mode():
             raise
-        warnings.warn(
-            f"audit.write_event {exc}; writing the row anyway because "
-            f"settings.audit_strict_mode is False",
-            stacklevel=2,
+        _log.warning(
+            "audit.write_event %s; writing the row anyway because "
+            "settings.audit_strict_mode is False",
+            exc,
+            extra={"event": "audit.detail_schema_violation", "event_type": event_type},
         )
 
     event = AuditEvent(
@@ -1108,10 +1115,14 @@ def record_audit_log_extract(
         except AuditDetailValidationError as exc:
             if _audit_strict_mode():
                 raise
-            warnings.warn(
-                f"audit.record_audit_log_extract {exc}; writing the row "
-                f"anyway because settings.audit_strict_mode is False",
-                stacklevel=2,
+            _log.warning(
+                "audit.record_audit_log_extract %s; writing the row "
+                "anyway because settings.audit_strict_mode is False",
+                exc,
+                extra={
+                    "event": "audit.detail_schema_violation",
+                    "event_type": event.event_type,
+                },
             )
         event.summary = _summary(rows)
         event.detail = detail
