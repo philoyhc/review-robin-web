@@ -199,6 +199,39 @@ def test_create_skips_a_staged_owner_revoked_since_the_check(
     assert sorted(owners) == sorted([review_session.created_by_user_id, carl.id])
 
 
+def test_create_takes_every_owner_lock_off_the_event_loop(
+    db: Session, client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Findings S4: Create is ``async``, and the owner-add lock waits on
+    a revoke (Postgres only), so the creator's lock and each staged
+    owner's run in the threadpool, as Quick Setup's session lock does
+    (findings S3). SQLite never blocks, so this asserts where each lock
+    is taken, not that Postgres waits."""
+    import asyncio
+
+    _seed(db, "bob@example.edu", is_operator=True)
+    real = session_owners.lock_owner_eligible
+    on_loop: list[bool] = []
+
+    def recording(db_: Session, user: User) -> bool:
+        try:
+            asyncio.get_running_loop()
+            on_loop.append(True)
+        except RuntimeError:
+            on_loop.append(False)
+        return real(db_, user)
+
+    monkeypatch.setattr(session_owners, "lock_owner_eligible", recording)
+    response = client.post(
+        "/operator/sessions",
+        data={"name": "S", "code": "lock-off-loop", "owners": ["bob@example.edu"]},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert len(on_loop) >= 2 and not any(on_loop), on_loop
+
+
 # --- The conflict itself, on Postgres ----------------------------------------
 #
 # Each test holds one side's lock open in a transaction, as that side does

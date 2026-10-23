@@ -65,6 +65,7 @@ _RULE_KEY_GATE: dict[str, Gate] = {
     "observers.cross_roster_identity": "setup",
     "instruments.no_fields": "setup",
     "instruments.no_display_fields": "setup",
+    "instruments.rule_set_unloadable": "setup",
     "email_template.no_help_contact": "setup",
     "instruments.no_rule_pinned": "operations",
     "instruments.no_visible_response_fields": "operations",

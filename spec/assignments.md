@@ -869,6 +869,12 @@ Columns (left → right):
 | Included | Pill carrying the count of `include=True` rows. "—" before Generate. |
 | (action) | "Edit on Instruments page" deep-link to the instrument's card. |
 
+Below the table, a `banner banner-error` names each instrument whose
+stored rule set the engine can't load, with the reason, and points at
+its Instruments card: change or remove that rule there and save. Its
+row reads as it would before Generate; the page answers 200 rather than
+500 (findings E4, 2026-10-22; "Staleness").
+
 **There is no Rule column**, and re-adding one buys nothing: the
 rule lives on Band 1, and with the implicit Full Matrix default a
 rule name here names either Band 1 or nothing.
@@ -1306,6 +1312,13 @@ changed, or the rosters or relationships moved after Generate.
 Generated count on this page, and an `instruments.stale_generated`
 warning on Validate naming each affected instrument. There is no
 page-level badge and no Workflow-card affordance.
+
+**A rule set the engine can't load has no verdict.** The diff never
+runs, so the instrument reads neither stale nor fresh and its eligible
+count is 0; the verdict carries the reason (`load_error`) instead, the
+Assignments page's banner and Validate's `instruments.rule_set_unloadable`
+error name it, and Generate would fail on it (findings E4, 2026-10-22).
+It is never cached, so a repaired rule set reads afresh.
 
 **The verdict is the engine's own diff**, not a comparison of counts.
 Two properties follow, and both are the contract rather than an

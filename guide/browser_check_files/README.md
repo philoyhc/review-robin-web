@@ -11,4 +11,4 @@ checks.
 
 ## Current sets
 
-None open: `round_2/`, the last, went on 2026-10-20 once its run passed.
+- `round_3/` — the 2026-10-22 bug fixes (#3235–#3238).

@@ -96,6 +96,10 @@ class InstrumentStatusBlock:
       a run would insert their whole fan-out, and an always-on badge
       is one the operator learns to ignore.
     - ``edit_url`` — deep link to the matching Instrument card.
+    - ``rule_load_error`` — why the instrument's stored rule set can't
+      be loaded (``InstrumentReconcileState.load_error``), else
+      ``None``; the row says so rather than the page answering 500
+      (findings E4, 2026-10-22).
     """
 
     instrument_id: int
@@ -113,6 +117,7 @@ class InstrumentStatusBlock:
     self_review_excluded_by_rule: bool
     is_stale: bool
     edit_url: str
+    rule_load_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -234,6 +239,7 @@ def build_assignments_page_context(
         included_count = included_by_instrument.get(instrument.id, 0)
         state = reconcile_state.get(instrument.id)
         is_stale = state.stale if state is not None else False
+        rule_load_error = state.load_error if state is not None else None
         eligible_count = state.eligible if state is not None else 0
         sr_active, sr_deactivated = self_review_breakdown.get(
             instrument.id, (0, 0)
@@ -274,6 +280,7 @@ def build_assignments_page_context(
                     and state.self_reviews_excluded > 0
                 ),
                 is_stale=is_stale,
+                rule_load_error=rule_load_error,
                 edit_url=(
                     f"/operator/sessions/{review_session.public_id}/instruments"
                     f"#instrument-{instrument.id}"

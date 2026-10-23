@@ -2,7 +2,7 @@
 
 **Found by:** seven bug-hunting reads run beside
 `guide/codebase_assessment_22oct.md` · **Read at:** `00501f2e` (#3225) ·
-**Open:** 3 of 22 rows, S4, P3, E4, each found by a fix's cold read (every medium and every original low done); every author row ruled 2026-10-22 (R3, R4,
+**Open:** none of 22 rows (S4, P3 and E4, each found by a fix's cold read, done in #3238); every author row ruled 2026-10-22 (R3, R4,
 L1, O2, O3, S1, E2, C1), so each is now a fix.
 
 Like the 2026-10-16 sweep (`guide/archive/findings_2026-10-16_bugs.md`,
@@ -140,18 +140,18 @@ None.
   on the server (Starlette keeps the last value, the JS the first), so
   the lobby sorts by a stale order the operator cannot clear.
   *Reproduced.* Code: `_rrwWriteCookie` also expires `Path=/`.
-- **S4** — *Found by the cold read of the S3 fix.* Create with Quick
+- ~~**S4**~~ — **Done in #3238**: Create takes both owner locks through `run_in_threadpool` (`tests/integration/test_owner_add_lock.py`). *Found by the cold read of the S3 fix.* Create with Quick
   Setup files takes a user-row lock on the event loop: `create_session`
   is `async def` and calls `session_owners.lock_owner_eligible` (`FOR
   SHARE`), and `write_staged_owners` → `add_owner` locks each staged
   owner (`app/web/routes_operator/_quick_setup.py:253`, `:319`).
   Postgres only. *By reading.* Code: `run_in_threadpool`, as S3.
-- **P3** — *Found by the cold read of the P1 fix.* A whitespace-only
+- ~~**P3**~~ — **Done in #3238**: a blank object id, claim or header, yields to the next (`cordware/tests/test_identity.py`). *Found by the cold read of the P1 fix.* A whitespace-only
   `objectidentifier` claim still counts as the principal id
   (`cordware/identity.py`, `_claim` with `blank_counts=True`), hiding a
   valid `oid`; `find_signed_in_user` never matches a blank one, so the
   object-id identity is lost. *By reading.* Code: as P1.
-- **E4** — *Found by the cold read of the E3 fix.* A stored rule set
+- ~~**E4**~~ — **Done in #3238**: the Assignments page names the instrument and Validate reports `instruments.rule_set_unloadable` (`tests/integration/test_prepare_counts_group_clears.py`). *Found by the cold read of the E3 fix.* A stored rule set
   that cannot load makes the Assignments and Validate pages answer 500
   however they are reached (`staleness_by_instrument` →
   `_session_rule_set_to_schema`, `app/web/views/_assignments.py:153`,

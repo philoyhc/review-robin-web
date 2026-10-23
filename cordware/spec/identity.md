@@ -86,7 +86,7 @@ takes the first source that has a value:
 |---|---|
 | `email` | claim `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`, `preferred_username`, `email`, each counting only when non-empty after strip; then `X-MS-CLIENT-PRINCIPAL-NAME` if it contains `@` |
 | `name` | claim `name`, `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name`; then `X-MS-CLIENT-PRINCIPAL-NAME` if it has no `@` |
-| `principal_id` | `X-MS-CLIENT-PRINCIPAL-ID`; then claim `http://schemas.microsoft.com/identity/claims/objectidentifier`, `oid`, `sub` |
+| `principal_id` | `X-MS-CLIENT-PRINCIPAL-ID`; then claim `http://schemas.microsoft.com/identity/claims/objectidentifier`, `oid`, `sub`; the header and each claim counting only when non-empty after strip |
 | `provider` | `X-MS-CLIENT-PRINCIPAL-IDP`; then the payload's `auth_typ`, then `identityProvider` |
 
 A malformed `X-MS-CLIENT-PRINCIPAL` with none of the simple headers still

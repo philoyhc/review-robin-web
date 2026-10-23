@@ -173,7 +173,9 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
         return None
     email: str | None = None
     name: str | None = None
-    principal_id: str | None = simple_id
+    # A whitespace-only id is no id, as for the email claim (P3): it
+    # would hide the principal header's object id.
+    principal_id: str | None = simple_id if simple_id and simple_id.strip() else None
     provider: str | None = simple_idp
 
     if rich:
@@ -204,6 +206,8 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 "http://schemas.microsoft.com/identity/claims/objectidentifier",
                 "oid",
                 "sub",
+                # A blank object id would hide a valid ``oid`` (P3).
+                blank_counts=False,
             )
             provider = provider or next(
                 (

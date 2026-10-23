@@ -218,6 +218,27 @@ def test_whitespace_only_email_claims_leave_no_email() -> None:
     assert user.name == "Blank Email"
 
 
+def test_a_whitespace_only_object_id_yields_to_the_next() -> None:
+    """Findings 2026-10-22 P3: a blank object id, as a claim or as the
+    ``X-MS-CLIENT-PRINCIPAL-ID`` header, no longer hides a valid ``oid``."""
+    rich = _encode_principal(
+        {
+            "claims": [
+                {"typ": _OID_URI, "val": "  "},
+                {"typ": "oid", "val": "oid-1"},
+                {"typ": "sub", "val": "sub-1"},
+            ]
+        }
+    )
+
+    for headers in (
+        {"X-MS-CLIENT-PRINCIPAL": rich},
+        {"X-MS-CLIENT-PRINCIPAL": rich, "X-MS-CLIENT-PRINCIPAL-ID": " "},
+    ):
+        user = resolve_identity(_request(headers), _settings())
+        assert user.principal_id == "oid-1"
+
+
 def test_simple_id_overrides_rich_when_both_present() -> None:
     rich = _encode_principal(
         {

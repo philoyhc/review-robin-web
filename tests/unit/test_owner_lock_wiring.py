@@ -106,16 +106,32 @@ def test_the_three_routes_are_found() -> None:
     assert len(_route_callers()) == 3
 
 
-def _is_lock_gate(statement: ast.stmt) -> bool:
-    """``if not session_owners.lock_owner_eligible(db, user): raise …``."""
-    return (
+def _locked_user(statement: ast.stmt) -> ast.expr | None:
+    """The user a lock gate locks, or ``None`` if ``statement`` isn't one:
+    ``if not session_owners.lock_owner_eligible(db, user): raise …``, or,
+    in an ``async`` route, the same through ``await run_in_threadpool(
+    session_owners.lock_owner_eligible, db, user)`` (findings S4)."""
+    if not (
         isinstance(statement, ast.If)
         and isinstance(statement.test, ast.UnaryOp)
         and isinstance(statement.test.op, ast.Not)
-        and isinstance(statement.test.operand, ast.Call)
-        and _name(statement.test.operand) == "lock_owner_eligible"
         and any(isinstance(s, ast.Raise) for s in statement.body)
-    )
+    ):
+        return None
+    call = statement.test.operand
+    if isinstance(call, ast.Await) and isinstance(call.value, ast.Call):
+        call = call.value
+        if not (
+            _name(call) == "run_in_threadpool"
+            and len(call.args) == 3
+            and isinstance(call.args[0], ast.Attribute)
+            and call.args[0].attr == "lock_owner_eligible"
+        ):
+            return None
+        return call.args[2]
+    if isinstance(call, ast.Call) and _name(call) == "lock_owner_eligible":
+        return call.args[1]
+    return None
 
 
 def _owner_arg(call: ast.Call) -> str | None:
@@ -136,9 +152,9 @@ def test_the_lock_gates_the_route_before_the_session_is_made(
     makes = next(
         i for i, s in enumerate(body) if any(_name(c) in MAKES_AN_OWNER for c in _calls(s))
     )
-    gates = [i for i, s in enumerate(body[:makes]) if _is_lock_gate(s)]
+    gates = [i for i, s in enumerate(body[:makes]) if _locked_user(s) is not None]
     assert gates, f"{where}: no top-level lock gate before the session is made"
-    locked = body[gates[-1]].test.operand.args[1]
+    locked = _locked_user(body[gates[-1]])
     make = next(c for c in _calls(body[makes]) if _name(c) in MAKES_AN_OWNER)
     assert isinstance(locked, ast.Name) and locked.id == _owner_arg(make), (
         f"{where}: the lock is not on the session's owner"

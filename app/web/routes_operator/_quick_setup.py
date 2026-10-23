@@ -250,7 +250,9 @@ async def create_session(
     # read their flag unlocked, so it is re-read under the owner-add
     # lock, held until ``create_session`` commits: a revoke committed
     # since bounces as the gate would have.
-    if not session_owners.lock_owner_eligible(db, user):
+    # The lock waits off the event loop, as Quick Setup's session lock
+    # does (findings S4; S3).
+    if not await run_in_threadpool(session_owners.lock_owner_eligible, db, user):
         raise OperatorAllowlistDenied()
     review_session = sessions.create_session(
         db,
@@ -325,14 +327,14 @@ async def create_session(
             skip_refused=True,
         )
 
-    def quick_setup_error_redirect(kind: str) -> RedirectResponse:
+    async def quick_setup_error_redirect(kind: str) -> RedirectResponse:
         # The typed tags are written here too, so a failed upload does
         # not silently discard something the operator typed on this
         # page. Safe on every slot: a refused upload saved nothing, the
         # Settings file included, so this is still "after the settings
         # CSV" in the only sense that matters.
         write_typed_tags()
-        write_staged_owners()
+        await run_in_threadpool(write_staged_owners)
         # A redirect, not a re-render: the session is committed, and
         # rendering Home at this POST's URL would replay the create on a
         # refresh. So the file's lines are not carried, only the fixed
@@ -366,10 +368,11 @@ async def create_session(
         correlation_id=correlation_id,
     )
     if refusal is not None:
-        return quick_setup_error_redirect(refusal.kind)
+        return await quick_setup_error_redirect(refusal.kind)
 
     write_typed_tags()
-    write_staged_owners()
+    # ``add_owner`` takes the owner-add lock per staged owner (findings S4).
+    await run_in_threadpool(write_staged_owners)
 
     # Staged files that all applied land at the top of Session Home, the
     # new session as a whole, rather than at the last slot that ran

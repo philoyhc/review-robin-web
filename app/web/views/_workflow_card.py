@@ -146,8 +146,13 @@ def build_workflow_card_context(
     if prepare_confirm == "responses" and lifecycle.session_has_responses(
         db, review_session
     ):
-        impact = assignments.reconcile_impact(db, review_session)
-        if impact.responses_lost > 0:
+        try:
+            impact = assignments.reconcile_impact(db, review_session)
+        except ValueError:
+            # A rule set the dry-run can't load: no confirmation to show,
+            # and the pages name the instrument (findings E4).
+            impact = None
+        if impact is not None and impact.responses_lost > 0:
             prepare_confirm_ctx = {
                 "responses_lost": impact.responses_lost,
                 "responses_deleted": impact.responses_deleted,
