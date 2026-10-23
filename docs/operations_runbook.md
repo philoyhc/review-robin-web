@@ -3,6 +3,10 @@
 Day-to-day procedures for operating the deployed Review Robin Web
 service. Scoped to the current single Azure **dev** slot — there
 is no production environment yet (see `docs/known_limitations.md`).
+The slot's deploys have been dormant since 2026-06-03: its workflow is
+disabled and it serves a build from then or earlier
+(`docs/deployment_dev.md`). The procedures below apply when the slot is
+live.
 
 The NUS environment is provisioned but not yet serving. Its deploy
 path, App Settings and cutover steps are in `docs/deployment_nus.md`
@@ -15,9 +19,10 @@ see `docs/deployment_dev.md`. For symptom-driven diagnosis see
 
 ## Deploying a change
 
-Deployment is automatic: a push to `main` triggers the
-`build → migrate → deploy` GitHub Actions workflow. There is no
-manual step. `migrate` runs `alembic upgrade head` against Azure
+When the slot is live, deployment is automatic: a push to `main`
+triggers the `build → migrate → deploy` GitHub Actions workflow. There
+is no manual step. While it is dormant nothing deploys; bring it back
+with `docs/deployment_dev.md` "Resuming the dev slot". `migrate` runs `alembic upgrade head` against Azure
 Postgres; if it fails the `deploy` job is skipped, so the app is
 never served against a stale schema.
 

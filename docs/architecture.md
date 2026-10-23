@@ -59,8 +59,10 @@ open blockers are in [`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus
 **That report also records where production is heading:** one shared
 Cordware App Service, deployed from a Cordware integration repository, with
 RRW as a module inside it (its §§3 and 5). The diagram above is the
-standalone RRW topology as provisioned; it stays the model here until that
-integration (Segment 21, on hold) is planned.
+standalone RRW topology as provisioned. Segment 21 (closed 2026-10-22)
+put RRW under the Cordware host, at `/reviewrobin`; the diagram stays the
+model here until the integrated release deploys it
+([`cordware_repository_strategy_v0.8.md`](cordware_repository_strategy_v0.8.md) §5).
 **Easy Auth** delegates sign-in to Entra ID and hands the app
 a verified identity — the application holds no passwords and runs no login
 code. Everything the app persists lives in one PostgreSQL database inside a
@@ -91,7 +93,8 @@ retired [`archive/azure_provision.md`](archive/azure_provision.md).
 
 - **Identity.** Sign-in is **Microsoft Entra ID** via App Service Easy
   Auth. Easy Auth performs the OIDC flow and injects
-  `X-MS-CLIENT-PRINCIPAL*` headers that `app/auth/identity.py` parses; the
+  `X-MS-CLIENT-PRINCIPAL*` headers that the Cordware host parses
+  (`cordware/identity.py`) and RRW consumes through `app/auth/identity.py`; the
   app implements no password store, no OAuth code, and makes no Microsoft
   Graph calls. See [`security_posture.md`](security_posture.md).
 - **Data.** One **PostgreSQL Flexible Server**. Every mutating action

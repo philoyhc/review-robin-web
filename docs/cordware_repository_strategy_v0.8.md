@@ -33,7 +33,9 @@ Cordware's functions are limited to trusted identity resolution, application mou
 
 ## 2. Repository layout and development practice
 
-RRW's files stay substantially at the repository root:
+RRW's files stay substantially at the repository root. The tree is the
+target layout: a folder or file it names is created when it is needed
+(below), and several do not exist yet.
 
 ```text
 review-robin-web/                    # GitHub rename to cordware is optional, later
@@ -45,6 +47,7 @@ review-robin-web/                    # GitHub rename to cordware is optional, la
 ├── cordware/                        # Stateless host package
 │   ├── main.py                      # Assembled entry point; mounts the configured apps
 │   ├── identity.py                  # Trusted institutional principal (stage 2)
+│   ├── settings.py  logging.py      # Host settings; root-logger setup
 │   ├── web/                         # Landing template/assets
 │   ├── spec/  docs/  guide/
 │   ├── tests/  tools/
@@ -78,7 +81,7 @@ Create host files only when they are needed. **Do not** add a Cordware ORM, user
 
 RRW's practice, documented in `rrw_sdd_in_practice.md`, carries over: **plan on the way in; spec on the way out.** An open segment plan records the planned changes, decisions, blast radius, PR ladder and documentation impact; at its close, approved behavior is reconciled into the owner's `spec/`, reference docs are updated and the plan is archived. Outside an open segment, a code/spec discrepancy is reported rather than silently resolved. Maker/checker separation, close checks and the author's browser verification carry over too. Archives record history, not live requirements.
 
-Root `AGENTS.md` routes work to the right owner; each nested `AGENTS.md` carries local instructions. RRW's tools and history-based metrics that assume the whole repository is RRW's need path scoping once the other owners have code.
+In the target layout, root `AGENTS.md` routes work to the right owner and each nested `AGENTS.md` carries local instructions; today the root file is RRW's alone. RRW's tools and history-based metrics that assume the whole repository is RRW's need path scoping once the other owners have code.
 
 ## 3. Hosting, independence and trusted identity
 
@@ -110,7 +113,7 @@ Cordware owns `/` (the landing page) and `/health`. Easy Auth's `/.auth/*` paths
 
 **The mount supplies the prefix.** `host.mount("/reviewrobin", …)` strips the prefix before RRW sees a request and sets `root_path`, so route-aware URLs (`url_for`, `request.url_for`) gain `/reviewrobin` without help. No `BASE_PATH` setting or path-rewriting shim is needed, on one condition: **Application Gateway forwards the public path unchanged**, with no path override in its backend settings, so a request for `/reviewrobin/...` reaches Cordware with its prefix intact. A gateway that stripped the prefix would leave Cordware nothing to route on. The production listener and backend settings still to be configured (v8 status report §8.1) must preserve the path.
 
-**Mounting is not URL rewriting.** RRW still writes many links as literal root paths, such as `/operator/sessions` and `/me`. Every redirect, template link, form action, script request path, static URL, cookie path, auth return link and emailed link is swept onto mount-aware emission: an app-relative path travels through RRW and gains the mount's `root_path` once, where it is emitted (`app/web/urls.py`). Links are never written with a hard-coded `/reviewrobin` prefix.
+**Mounting is not URL rewriting.** At decision time RRW wrote many links as literal root paths, such as `/operator/sessions` and `/me`. Every redirect, template link, form action, script request path, static URL, cookie path, auth return link and emailed link has since been swept onto mount-aware emission (§8, segment 21B): an app-relative path travels through RRW and gains the mount's `root_path` once, where it is emitted (`app/web/urls.py`). Links are never written with a hard-coded `/reviewrobin` prefix.
 
 **Old root links are not kept.** There are no redirects from `/operator/...` or `/me` to `/reviewrobin/...`: nothing consequential links to them.
 
@@ -164,7 +167,7 @@ RRW's tested Easy Auth parsing moves into `cordware/identity.py` once the host e
 
 **`APP_ENV` is a platform setting** (author, 2026-10-21). Cordware reads it and exposes it as a host-level value; applications consult that value rather than reading the setting themselves. It keeps its name and its default, `local`. Today RRW reads it in two places, both asking only whether it is `local`: its fail-fast startup check (`validate_critical_settings`, which refuses to start when no one could sign in) and the empty-super-admin startup warning, which moves to Cordware (host logging, event 1).
 
-**Cordware enforces the fake-auth guard.** It refuses to start when `ALLOW_FAKE_AUTH` is on and `APP_ENV` is anything other than `local`. Today nothing enforces this: fake auth is gated only by `ALLOW_FAKE_AUTH`, and "never enable it when deployed" is a documented rule. Every deployed environment, the personal dev slot included, therefore sets `APP_ENV` to a non-`local` value (NUS uses `production`).
+**Cordware enforces the fake-auth guard.** It refuses to start when `ALLOW_FAKE_AUTH` is on and `APP_ENV` is anything other than `local`. At decision time nothing enforced this: fake auth was gated only by `ALLOW_FAKE_AUTH`, and "never enable it when deployed" was a documented rule. The host now refuses at startup (`cordware/main.py`; §8, segment 21C). Every deployed environment, the personal dev slot included, therefore sets `APP_ENV` to a non-`local` value (NUS uses `production`).
 
 **Local testing switches keep their names, defaults and behavior.** Every environment switch RRW reads today stays settable in the repository-root `.env` or per run (`$env:NAME=…` in PowerShell, `export NAME=…` in a POSIX shell), with the shell value overriding `.env`, and a restart picking up a change. One `.env` is read by Cordware and every mounted application. Ownership splits as follows:
 
@@ -234,7 +237,7 @@ Make small, reviewable changes. **Nothing is deployed to the NUS host until this
 | **3. Establish Residential** | Import its skeleton, architectural decisions, specs, plans, tests, tools, agent guidance and Alembic; re-namespace `app`; consume Cordware identity; mount at `/residentialapps`. Settle B or C **before production database setup**, not necessarily before the code import. | Cordware + Residential runs without RRW; both applications coexist |
 | **4. Integrated release** | Resolve the one dependency environment; package the applications and assets; run each mounted application's migrations with its own database and credentials; verify in staging, then a controlled production cutover. | One validated build and release, with documented rollback and recovery |
 
-The NUS deploy workflow currently packages `app/`, `alembic/`, `alembic.ini`, requirements and `antenv/`. Broaden the artifact only when the integrated application is ready. The **deployment workflow** runs each mounted application's migrations; Cordware does not become a migration service. Prefer backward-compatible migrations: reverting code does not reverse a database change.
+The NUS deploy workflow currently packages `app/`, `alembic/`, `alembic.ini`, requirements, `pyproject.toml` and `antenv/`. Broaden the artifact only when the integrated application is ready. The **deployment workflow** runs each mounted application's migrations; Cordware does not become a migration service. Prefer backward-compatible migrations: reverting code does not reverse a database change.
 
 ## 6. Scoped CI and shared-runtime risks
 

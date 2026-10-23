@@ -7,22 +7,27 @@ bugs — they trace to the Segment 14A plan and
 
 ## Deployment / infrastructure
 
-The entries below describe the **personal Azure dev slot**, which is
-still the only environment serving the app. The **NUS environment is
+The entries below describe the **personal Azure dev slot**, the only
+environment that has served the app. Its deploys have been dormant
+since 2026-06-03 (`docs/deployment_dev.md`), so the entries apply when
+the slot is live. The **NUS environment is
 provisioned but not yet serving**: a P0V3 App Service and Key Vault
 behind private endpoints, a privately provisioned Postgres (no public
 access), an Application Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and on DNS and TLS for its production hostname
 (`docs/cordware_nus_azure_status_2026-10-16_v8.md`), and on project-side
-work that has not started: the Cordware repository and production
-workflow, and RRW's integration into Cordware (Segment 21, on hold). At cutover the F1 and public-database
+work. RRW already runs under the Cordware host (Segment 21, closed
+2026-10-22); the integrated release that deploys it, with its
+production workflow, has not started
+(`docs/cordware_repository_strategy_v0.8.md` §5). At cutover the F1 and public-database
 entries stop applying; secrets stay plain App Settings until Key Vault
 references are wired, and the app's logs reach Application Insights
 only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
 
 - **Single environment.** One Azure **dev** slot. There is no
   staging slot and no production environment; no manual-approval
-  deploy gate. A push to `main` deploys straight to the dev slot.
+  deploy gate. When the slot is live, a push to `main` deploys
+  straight to it.
 - **F1 (free) App Service plan.** No Always On — the app
   cold-starts, so the first request after an idle period can
   take several seconds. Limited CPU/memory.

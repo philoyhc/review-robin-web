@@ -17,8 +17,8 @@ only `CONTRIBUTING.md` and `constitution.md` did not (`close_check --stale`). Se
 `spec-writer` reads ran in verify mode, split by area, each reading every
 file in its area against the code; none edited a file. **This sweep
 changed no file in scope.** Every divergence is in
-`guide/findings_2026-10-22_corpus.md` with who decides it. A bug sweep
-ran beside it at the same commit (`guide/findings_2026-10-22_bugs.md`).
+`guide/archive/findings_2026-10-22_corpus.md` with who decides it. A bug sweep
+ran beside it at the same commit (`guide/archive/findings_2026-10-22_bugs.md`).
 The mechanical passes: no dead cross-reference in `spec/`, `docs/` or
 `cordware/spec/`; one surprising orphan, `spec/session_owners.md` (B7).
 

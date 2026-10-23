@@ -1,6 +1,8 @@
 # Troubleshooting
 
-Symptom-driven diagnosis for the deployed dev slot. For routine
+Symptom-driven diagnosis for the deployed dev slot, when it is live:
+its deploys have been dormant since 2026-06-03
+(`docs/deployment_dev.md`). For routine
 procedures see `docs/operations_runbook.md`; for resource names
 and the deploy pipeline see `docs/deployment_dev.md`.
 

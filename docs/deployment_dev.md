@@ -32,7 +32,7 @@ see `guide/deferred_consolidated.md` and `docs/security_posture.md`
 
 ## App startup
 
-Startup command, once the slot resumes (step 2 of "Resuming the dev
+Startup command, once the slot resumes (step 3 of "Resuming the dev
 slot" below; the dormant slot is still set to `app.main:app`):
 
 ```bash
@@ -97,31 +97,34 @@ moved RRW under the Cordware host, at `/reviewrobin`
 (`guide/archive/segment_21_domain_retrofit.md`, closed 2026-10-22).
 `main` has moved on since then, so do these steps in order, in the
 Azure portal and on GitHub, when Azure is available. Each step names the
-change on `main` that makes it necessary. Skip a step whose change has
-not landed yet.
+change on `main` that makes it necessary; every one of them has landed.
 
-1. **`APP_ENV`** (needed once 21C's guard lands): set it to a non-`local`
+1. **`APP_ENV`** (needed for 21C's guard): set it to a non-`local`
    value such as `dev`. Cordware refuses to start with `ALLOW_FAKE_AUTH`
    on and `APP_ENV` anything but `local`, so a deployed environment
    names itself, and keeps `ALLOW_FAKE_AUTH` `false`.
-2. **Startup command** (needed once 21A's A2 is on `main`, which removes
-   `app.main:app`): change it to
-   `gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app`.
-   Its target exists from 21A's A1 on, so the new command is safe to set
-   ahead of a deploy that carries A1. A build older than A1 needs the
-   old command.
-3. **Re-enable the workflow**: Actions → the workflow → *Enable workflow*,
+2. **Re-enable the workflow**: Actions → the workflow → *Enable workflow*,
    or `gh workflow enable main_app-review-robin-web-dev.yml`. Then
    dispatch it, or let the next push to `main` run it. Its migrate job
-   brings the dev database from the June head up to the current one.
-4. **Easy Auth's excluded paths** (needed once 21D's D2 is on `main`,
-   which moves RRW to `/reviewrobin`): add `/reviewrobin/health` beside
+   brings the dev database from the June head up to the current one, and
+   its deploy job runs only once that succeeds.
+3. **Startup command** (needed since 21A's A2 removed `app.main:app`):
+   once step 2's deploy job has succeeded, and not before, change it to
+   `gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app`.
+   The workflow does not set it. The June build the slot serves predates
+   21A's A1 and has no `cordware.main`, so the new command set early
+   would take the slot down, and a failed migrate would leave it down;
+   the new build has no `app.main`, so between the deploy and this
+   change the slot does not start. Make the change straight after the
+   deploy.
+4. **Easy Auth's excluded paths** (needed since 21D's D2 moved RRW to
+   `/reviewrobin`): add `/reviewrobin/health` beside
    `/health` in `authsettingsV2` → `globalValidation.excludedPaths`, so
    both probes answer without sign-in. `/health` is the host's;
    `/reviewrobin/health` is RRW's.
 5. **Check** `/health` and `/reviewrobin/health` unauthenticated. Then
-   sign in through Easy Auth and reach the lobby. Once 21D has landed,
-   run the live check its plan owes, v0.8 §3's four behavior
+   sign in through Easy Auth and reach the lobby. Then run the live
+   check 21D's plan owes, v0.8 §3's four behavior
    requirements under real Easy Auth
    (`docs/cordware_repository_strategy_v0.8.md` §3):
    - **Deep links:** signed out, open a deep link such as
@@ -169,6 +172,7 @@ restart the app after a change.
 | Variable | Default | Purpose |
 |---|---|---|
 | `APP_ENV` | `local` | Environment name. Any value other than `local` activates the fail-fast startup checks (`validate_critical_settings`). |
+| `CORDWARE_APPS` | unset | The applications the Cordware host mounts, comma-separated (`cordware/main.py`). Unset mounts every registered application (today only `reviewrobin`); an empty value runs the host alone, with its landing page and `/health`. |
 | `DATABASE_URL` | local SQLite | Database connection string. Postgres in deployed environments — see "Database configuration" below. |
 | `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup, which the Cordware host owns (`cordware/logging.py`, segment 21A). |
 | `OPERATOR_EMAILS` | empty | Comma-separated operator allowlist (first-sign-in bootstrap). |
