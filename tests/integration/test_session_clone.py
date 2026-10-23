@@ -615,3 +615,26 @@ def test_a_clone_copies_each_instruments_visibility_grid(db: Session) -> None:
         assert not clone.invite_offsets
         assert not clone.reminder_offsets
         assert clone.archive_offset is None
+
+
+def test_a_clone_leaves_the_preview_member_ids_behind(db: Session) -> None:
+    """Findings D10 (author's ruling 2026-10-22): Band 2's sample group
+    member ids are the source's reviewee ids, so the clone drops them,
+    keeping the rest of ``band2_state``; its next Refresh recomputes."""
+    source, op = _source_session(db, "clone-b2")
+    instrument = db.execute(
+        select(Instrument).where(Instrument.session_id == source.id)
+    ).scalar_one()
+    instrument.band2_state = {
+        "sample_reviewee_name": "E One",
+        "sample_group_member_ids": [7, 8],
+    }
+    db.commit()
+
+    clone = session_clone.clone_session(db, source=source, user=op, mode="config")
+
+    copied = db.execute(
+        select(Instrument).where(Instrument.session_id == clone.id)
+    ).scalar_one()
+    assert copied.band2_state == {"sample_reviewee_name": "E One"}
+    assert instrument.band2_state["sample_group_member_ids"] == [7, 8]

@@ -16,7 +16,6 @@ in the per-feature tests; this file pins the gate itself.
 from __future__ import annotations
 
 import re
-import warnings
 
 import pytest
 from sqlalchemy.orm import Session
@@ -315,14 +314,15 @@ def test_operator_email_settings_cleared_with_none_detail_passes(
 
 
 def test_lenient_mode_logs_and_writes_anyway(
-    db: Session, monkeypatch: pytest.MonkeyPatch
+    db: Session, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Production lenient mode lets the row through with a warning so
-    a shape bug doesn't hide the mutation it was auditing."""
+    """Production lenient mode lets the row through and logs the
+    violation, so a shape bug doesn't hide the mutation it was auditing.
+    A log record, not a ``warnings.warn``: nothing captures warnings in
+    production, so the JSON log never saw one (findings F2, 2026-10-22)."""
     monkeypatch.setattr(settings, "audit_strict_mode", False)
     user, review_session = _make_user_and_session(db, "lenient")
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
+    with caplog.at_level("WARNING", logger="app.services.audit"):
         event = audit.write_event(
             db,
             event_type="instrument.field_added",
@@ -340,10 +340,47 @@ def test_lenient_mode_logs_and_writes_anyway(
         "session_id": review_session.id,
     }
     matched = [
-        w for w in caught
-        if re.search(r"instrument\.field_added", str(w.message))
+        r for r in caplog.records
+        if getattr(r, "event", None) == "audit.detail_schema_violation"
+        and r.event_type == "instrument.field_added"
+        and re.search(r"instrument\.field_added", r.getMessage())
     ]
     assert matched, (
-        "lenient mode should emit a UserWarning naming the event_type "
+        "lenient mode should log a warning naming the event_type "
         "so the shape violation is visible in production logs"
     )
+
+
+@pytest.mark.parametrize(
+    ("detail", "slot"),
+    [
+        ({"snapshot": "alice@example.edu"}, "snapshot"),
+        # A validator's message quotes the offending key (Codex on #3239).
+        ({"refs": {"alice@example.edu": 123}}, "refs"),
+    ],
+    ids=["value", "validator-message"],
+)
+def test_the_lenient_log_line_names_no_value(
+    db: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    detail: dict[str, object],
+    slot: str,
+) -> None:
+    """The violation reaches the production log, outside the purge's
+    reach, so it names the event type, the slot and the error type,
+    never text from the payload (findings F2's cold read)."""
+    monkeypatch.setattr(settings, "audit_strict_mode", False)
+    user, review_session = _make_user_and_session(db, f"lenient-pii-{slot}")
+    with caplog.at_level("WARNING", logger="app.services.audit"):
+        audit.write_event(
+            db,
+            event_type="reviewer.added",
+            summary="malformed",
+            actor_user_id=user.id,
+            session_id=review_session.id,
+            detail=detail,
+        )
+    lines = [r.getMessage() for r in caplog.records]
+    assert any(slot in line for line in lines), lines
+    assert not any("alice@example.edu" in line for line in lines), lines

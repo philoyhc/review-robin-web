@@ -112,20 +112,18 @@ def test_write_event_packs_identity_payload_and_orthogonal_slots(
     """
     monkeypatch.setattr(settings, "audit_strict_mode", False)
     user, review_session = _make_user_and_session(db, "wrt-canon")
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        event = audit.write_event(
-            db,
-            event_type="session.updated",
-            summary="Session wrt-canon updated",
-            actor_user_id=user.id,
-            session=review_session,
-            payload=audit.changes({"name": ["A", "B"]}),
-            reason="operator_edit",
-            refs={"reviewer_id": 42},
-            context={"source": "edit_form"},
-            correlation_id="corr-1",
-        )
+    event = audit.write_event(
+        db,
+        event_type="session.updated",
+        summary="Session wrt-canon updated",
+        actor_user_id=user.id,
+        session=review_session,
+        payload=audit.changes({"name": ["A", "B"]}),
+        reason="operator_edit",
+        refs={"reviewer_id": 42},
+        context={"source": "edit_form"},
+        correlation_id="corr-1",
+    )
     assert event.session_id == review_session.id
     assert event.detail == {
         "session_id": review_session.id,

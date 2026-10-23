@@ -429,3 +429,43 @@ def test_group_row_named_by_its_tags_alone_still_matches(db: Session) -> None:
         ).all()
     )
     assert stored == {"Carol": "4", "Eve": "4", "Dan": "2"}
+
+
+def test_a_shared_short_label_falls_back_to_the_position(db: Session) -> None:
+    """Findings D1 (author's ruling 2026-10-22): short labels need not be
+    unique, and a label two instruments share used to send every row to
+    the last of them. The positional ``InstrumentName`` settles it."""
+
+    def _second(rs: ReviewSession) -> tuple[Instrument, InstrumentResponseField]:
+        inst = Instrument(session_id=rs.id, name="Inst 2", short_label="INST", order=2)
+        db.add(inst)
+        db.flush()
+        f = InstrumentResponseField(
+            instrument_id=inst.id, field_key="q1", label="Q1", order=1,
+            help_text="Help", visible=True, **_INLINE,
+        )
+        db.add(f)
+        db.flush()
+        return inst, f
+
+    src, s_inst, s_field = _build(db, "dup-src")
+    s_inst2, _ = _second(src)
+    rvr = _reviewer(db, src, "r@e.edu")
+    ree = _reviewee(db, src, "a@e.edu", "A")
+    a = _assignment(db, src, rvr, ree, s_inst)
+    _assignment(db, src, rvr, ree, s_inst2)
+    _response(db, a, s_field, "3")
+
+    dst, d_inst, d_field = _build(db, "dup-dst")
+    d_inst2, d_field2 = _second(dst)
+    d_rvr = _reviewer(db, dst, "r@e.edu")
+    d_ree = _reviewee(db, dst, "a@e.edu", "A")
+    _assignment(db, dst, d_rvr, d_ree, d_inst)
+    _assignment(db, dst, d_rvr, d_ree, d_inst2)
+
+    parsed = parse_responses_csv(_csv_bytes(list(serialize_responses(db, src))))
+    result = load_responses(db, review_session=dst, rows=parsed)
+
+    assert result.dropped == [] and result.responses == 1
+    stored = db.execute(select(Response.response_field_id)).scalars().all()
+    assert d_field.id in stored and d_field2.id not in stored

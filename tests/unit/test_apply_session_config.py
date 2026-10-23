@@ -586,7 +586,7 @@ def test_empty_rules_json_round_trips_unchanged(db: Session) -> None:
 #   - ``Instrument.column_widths`` (drag-gripper widths).
 #   - ``Instrument.starts_new_page`` (18M page-break flag).
 #   - ``Instrument.band2_state`` (Band 2 chip selections + sample-
-#     reviewee pick + sample group member ids).
+#     reviewee pick; the sample group member ids stay behind, D10).
 #
 # This block pins each gap end-to-end via a
 # serialize → apply round-trip onto a fresh session.
@@ -1214,8 +1214,9 @@ def test_round_trip_carries_starts_new_page(db: Session) -> None:
 
 def test_round_trip_carries_band2_state(db: Session) -> None:
     """``Instrument.band2_state`` JSON blob (the Band 2 chip
-    selections + sample-reviewee pick + sample group member ids)
-    survives the round-trip byte-for-byte."""
+    selections + sample-reviewee pick) survives the round-trip, less
+    the sample group member ids: they are reviewee ids of the source
+    session (findings D10, author's ruling 2026-10-22)."""
     src = _populated_round_trip_session(db, code="rt-b2-src")
     rows = serialize_session_config(db, src)
     dst = _bare_session(db, code="rt-b2-dst")
@@ -1229,8 +1230,9 @@ def test_round_trip_carries_band2_state(db: Session) -> None:
     assert dst_inst.band2_state == {
         "selected_display_keys": ["reviewee.name"],
         "sample_reviewee_name": "Carol",
-        "sample_group_member_ids": [42, 43],
     }
+    exported = next(r.value for r in rows if r.field.endswith(".band2_state"))
+    assert "sample_group_member_ids" not in exported
 
 
 def test_round_trip_carries_response_field_inline_type_and_bounds(
@@ -1846,3 +1848,28 @@ def test_reminders_are_checked_against_the_end_the_session_keeps(
     ).errors == []
     db.refresh(blank)
     assert blank.reminder_offsets == ["-P1D"]
+
+
+def test_an_older_file_s_preview_member_ids_are_dropped_on_import(db: Session) -> None:
+    """Findings D10: a file exported before the strip still carries the
+    source session's reviewee ids; the import drops them too."""
+    src = _populated_round_trip_session(db, code="rt-b2-old-src")
+    rows = [
+        Row(
+            r.field,
+            json.dumps({"sample_reviewee_name": "Carol", "sample_group_member_ids": [42, 43]}),
+            r.data_type,
+        )
+        if r.field.endswith(".band2_state")
+        else r
+        for r in serialize_session_config(db, src)
+    ]
+    dst = _bare_session(db, code="rt-b2-old-dst")
+    apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-b2-old@e.edu")
+    )
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    assert dst_inst.band2_state == {"sample_reviewee_name": "Carol"}

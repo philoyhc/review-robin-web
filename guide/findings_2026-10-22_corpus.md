@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 59 of 59 rows; every author row ruled 2026-10-22, as
+(#3225) · **Open:** 53 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -29,11 +29,11 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
 
 ## 1. Code defects
 
-- **F2** (low–medium, code) — `spec/architecture.md` says a schema
+- ~~**F2**~~ — **Done in #3239**: production logs a `WARNING` record (`audit.detail_schema_violation`) that names no value (`tests/unit/test_audit_detail_schema.py`). (low–medium, code) — `spec/architecture.md` says a schema
   violation in production "logs and writes through"; the code calls
   `warnings.warn` (`app/services/audit.py:207`, `:1108`) and nothing
   captures warnings, so the JSON log never sees one.
-- **D1** (medium, author) — **Ruled 2026-10-22: fall back to the positional key when two short labels collide; no uniqueness rule.** Rehydrate matches instruments by
+- ~~**D1**~~ — **Done in #3239**: a shared short label falls back to the positional key (`tests/integration/test_responses_import.py`). (medium, author) — **Ruled 2026-10-22: fall back to the positional key when two short labels collide; no uniqueness rule.** Rehydrate matches instruments by
   `InstrumentShortLabel`, which `spec/rehydrate.md` §6.4 calls unique per
   session; nothing enforces it (`spec/settings_inventory.md` §10 says
   labels need not be unique), and `{short_label: instrument}` lets the
@@ -44,10 +44,10 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
   `X-MS-CLIENT-PRINCIPAL-NAME` header as the name's last fallback; the
   code reads it only when no email was found. Fix the code or loosen the
   spec.
-- **E8** (low, code) — two stale `base.html` comments: `.rs-help-card`
+- ~~**E8**~~ — **Done in #3239**: both comments, and a third above them; the theme customizer regenerated. (low, code) — two stale `base.html` comments: `.rs-help-card`
   cites a §"Reviewer help cards" `spec/ui_elements.md` no longer has, and
   `.tab-strip-page` claims to match a tint the spec says it differs from.
-- **B7** (low, author) — **Ruled 2026-10-22: map it to the `_session_home` routing module.** `spec/session_owners.md` maps to no routing
+- ~~**B7**~~ — **Done in #3239**: `app/web/spec_registry.py`. (low, author) — **Ruled 2026-10-22: map it to the `_session_home` routing module.** `spec/session_owners.md` maps to no routing
   module in `app/web/spec_registry.py`, so `close_check` never flags an
   owners-route change against it. Add it to the `_session_home` tuple.
 
@@ -70,7 +70,7 @@ All ruled 2026-10-22, each as its row records.
 - **E5** — **Ruled 2026-10-22: retire the section.** `spec/visual_style_rrw.md` "Sign-in surface" describes an
   in-app sign-in page and magic links that do not exist: mark deferred,
   or retire the section.
-- **D10** — **Ruled 2026-10-22: strip the sample-group ids on export and clone.** `band2_state` carries source-session reviewee ids through the
+- ~~**D10**~~ — **Done in #3239**: `portable_band2_state` drops the ids on export, Duplicate and import (`tests/integration/test_session_clone.py`). — **Ruled 2026-10-22: strip the sample-group ids on export and clone.** `band2_state` carries source-session reviewee ids through the
   Settings CSV and clone, marked ✅ in `spec/roundtrip_coverage.md`
   (unverified harm; likely preview only).
 
@@ -108,7 +108,7 @@ All ruled 2026-10-22, each as its row records.
 
 **`spec/` — data (D)**
 
-- **D2** (low, spec) — `spec/rehydrate.md` §6.4: `instrument_{n}` is the
+- ~~**D2**~~ — **Done in #3239**: `spec/rehydrate.md` §6.4, with D1. (low, spec) — `spec/rehydrate.md` §6.4: `instrument_{n}` is the
   n-th by (order, id), not `order = n`.
 - **D3** (low, spec) — `spec/settings_inventory.md` §7 omits
   `sessionHomeScrollY:{pathname}`.

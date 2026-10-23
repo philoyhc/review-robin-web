@@ -35,6 +35,13 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
+from app.logging_config import get_logger
+
+# Production's record of a detail that breaks its schema: the row writes
+# through and this line reaches the host's JSON log (findings F2,
+# 2026-10-22), which ``warnings.warn`` never did. The message names the
+# event type and where the shape breaks, never a value.
+_log = get_logger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -204,10 +211,11 @@ def write_event(
     except AuditDetailValidationError as exc:
         if _audit_strict_mode():
             raise
-        warnings.warn(
-            f"audit.write_event {exc}; writing the row anyway because "
-            f"settings.audit_strict_mode is False",
-            stacklevel=2,
+        _log.warning(
+            "audit.write_event %s; writing the row anyway because "
+            "settings.audit_strict_mode is False",
+            exc.loggable,
+            extra={"event": "audit.detail_schema_violation", "event_type": event_type},
         )
 
     event = AuditEvent(
@@ -286,11 +294,19 @@ class AuditDetailValidationError(ValueError):
     """
 
     def __init__(
-        self, event_type: str, detail: dict[str, Any] | None, message: str
+        self,
+        event_type: str,
+        detail: dict[str, Any] | None,
+        message: str,
+        *,
+        loggable: str | None = None,
     ) -> None:
         super().__init__(f"{event_type}: {message}")
         self.event_type = event_type
         self.detail = detail
+        #: What the production log may carry: names the schema defines,
+        #: never text derived from the payload (Codex on #3239).
+        self.loggable = f"{event_type}: {loggable if loggable is not None else message}"
 
 
 class _SetChangesShape(BaseModel):
@@ -856,8 +872,19 @@ def validate_detail(
     try:
         _CanonicalDetail.model_validate(detail)
     except ValidationError as exc:
+        # The production log gets the top-level slot and the error type
+        # only: a deeper ``loc`` can be a dict key, and a validator's
+        # ``msg`` can quote the payload, either of which may be a
+        # participant's email (findings F2's cold read; Codex on #3239).
+        problems = [
+            (".".join(str(part) for part in error["loc"]), error["msg"])
+            for error in exc.errors(include_input=False)
+        ]
+        loggable = sorted(
+            {(str(error["loc"][0]) if error["loc"] else "", error["type"]) for error in exc.errors()}
+        )
         raise AuditDetailValidationError(
-            event_type, detail, f"shape: {exc.errors()!r}"
+            event_type, detail, f"shape: {problems!r}", loggable=f"shape: {loggable!r}"
         ) from exc
 
     schema = EVENT_SCHEMAS.get(event_type)
@@ -1108,10 +1135,14 @@ def record_audit_log_extract(
         except AuditDetailValidationError as exc:
             if _audit_strict_mode():
                 raise
-            warnings.warn(
-                f"audit.record_audit_log_extract {exc}; writing the row "
-                f"anyway because settings.audit_strict_mode is False",
-                stacklevel=2,
+            _log.warning(
+                "audit.record_audit_log_extract %s; writing the row "
+                "anyway because settings.audit_strict_mode is False",
+                exc.loggable,
+                extra={
+                    "event": "audit.detail_schema_violation",
+                    "event_type": event.event_type,
+                },
             )
         event.summary = _summary(rows)
         event.detail = detail

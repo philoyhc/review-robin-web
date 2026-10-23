@@ -1029,11 +1029,11 @@ def _drop_sample_group_members(instrument: Instrument) -> None:
     old boundary, and the client partition intersects with any set it
     finds, so a stale one would keep the preview narrowed until the
     next Refresh."""
+    from app.services.instruments._band2 import portable_band2_state
+
     state = instrument.band2_state
     if isinstance(state, dict) and "sample_group_member_ids" in state:
-        instrument.band2_state = {
-            k: v for k, v in state.items() if k != "sample_group_member_ids"
-        }
+        instrument.band2_state = portable_band2_state(state)
 
 
 def _snapshot_groups(db: Session, instrument: Instrument) -> GroupPartitions:

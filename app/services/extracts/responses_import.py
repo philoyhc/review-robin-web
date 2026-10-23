@@ -240,9 +240,21 @@ def load_responses(
             .order_by(Instrument.order, Instrument.id)
         ).scalars()
     )
-    instr_by_short = {
-        i.short_label: i for i in instruments if i.short_label
-    }
+    # A label two instruments share names neither: the positional
+    # ``InstrumentName`` settles it, as the data-shape apply does (D20),
+    # rather than the last of them taking every row (findings D1,
+    # author's ruling 2026-10-22). Short labels need not be unique.
+    instr_by_short: dict[str, Instrument] = {}
+    ambiguous_labels: set[str] = set()
+    for inst in instruments:
+        short = (inst.short_label or "").strip()
+        if not short:
+            continue
+        if short in instr_by_short:
+            ambiguous_labels.add(short)
+        instr_by_short[short] = inst
+    for short in ambiguous_labels:
+        del instr_by_short[short]
     instr_by_position = {
         f"instrument_{n}": inst
         for n, inst in enumerate(instruments, start=1)

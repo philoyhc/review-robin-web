@@ -63,7 +63,7 @@ responses. See `spec/rehydrate.md`.
 
 | Setting | Settings CSV | Clone | Notes |
 |---|:--:|:--:|---|
-| `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths. `sort_display_fields` and `column_widths` name fields by id, so both paths re-point them at the copy's fields: the clone through its id maps, the Settings CSV by field position (`spec/csv_contracts.md` §3.3) |
+| `name`, `short_label`, `description`, `sort_display_fields`, `group_kind`, `rule_set_id` (by name), `column_widths`, `starts_new_page`, `band2_state` | ✅ | ✅ | Full config round-trip both paths. `sort_display_fields` and `column_widths` name fields by id, so both paths re-point them at the copy's fields: the clone through its id maps, the Settings CSV by field position (`spec/csv_contracts.md` §3.3). `band2_state` leaves its session without `sample_group_member_ids`, the preview's reviewee ids, on both paths and on import; the next Refresh recomputes them (findings D10, 2026-10-22) |
 | `accepting_responses` | ✅ | ❌ | Settings-CSV restores the runtime open/closed flag; clone resets it (fresh draft) |
 | `order` | ⚠️ | ✅ | Settings-CSV serializes + parses it but **apply ignores it**: the `instruments[n]` number decides, stored as its 0-based rank. The cell round-trips because the export writes the 0-based position, not the stored value |
 | **`band1_touched_links`** | ✅ | ✅ | `instruments[n].band1_touched_links` in the Settings CSV; clone copies the column |

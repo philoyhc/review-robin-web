@@ -784,7 +784,10 @@ The convention is enforced by the typed helpers in
 `event_type` must be registered in. A Pydantic write-validation
 gate holds the shape — strict mode (flipped on in tests) raises
 `AuditDetailValidationError` on any registered-but-malformed
-event; production mode logs and writes through.
+event; production mode logs and writes through: a `WARNING` record
+under `app.services.audit` carrying `event` `audit.detail_schema_violation`
+and the `event_type`, which the host's JSON log keeps (findings F2,
+2026-10-22).
 
 ### Identity slots (top-level, almost always present)
 

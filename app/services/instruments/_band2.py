@@ -108,6 +108,17 @@ def _band2_branch_entry(raw: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def portable_band2_state(state: dict[str, Any] | None) -> dict[str, Any] | None:
+    """``band2_state`` as it may leave its session: without
+    ``sample_group_member_ids``, the preview's rule-surviving reviewee
+    ids, which name rows of this session only. The Settings export,
+    Duplicate session and the Settings import drop them, and the next
+    Refresh recomputes them (findings D10, author's ruling 2026-10-22)."""
+    if not isinstance(state, dict) or "sample_group_member_ids" not in state:
+        return state
+    return {k: v for k, v in state.items() if k != "sample_group_member_ids"} or None
+
+
 def set_band2_state(
     db: Session,
     *,

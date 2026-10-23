@@ -23,7 +23,10 @@ from app.db.models import (
     ReviewSession,
     SessionRuleSet,
 )
-from app.services.instruments._band2 import _BAND2_DATA_TYPE_TO_INLINE
+from app.services.instruments._band2 import (
+    _BAND2_DATA_TYPE_TO_INLINE,
+    portable_band2_state,
+)
 from app.services.instruments._display_fields import is_locked_display_source
 from app.services.instruments._field_refs import (
     sort_from_positions,
@@ -295,7 +298,7 @@ def _apply_instrument_kv(
         # stored made the page answer 500 (findings S2, 2026-10-16).
         if not isinstance(state, dict):
             raise _ParseError("band2_state must be a JSON object")
-        instrument.band2_state = state or None
+        instrument.band2_state = portable_band2_state(state or None)
     elif attr == "band1_touched_links":
         # Segment 18P PR D2 — the Band 1 "set"-pill link list.
         instrument.band1_touched_links = (
