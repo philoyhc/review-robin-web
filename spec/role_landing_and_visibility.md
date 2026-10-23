@@ -125,9 +125,8 @@ The surface route admits `is_ready` **or `is_expired`** — a **closed**
 session's review surface still opens. Draft and validated render the
 not-open page instead; archived is refused by the gate.
 
-**One status rule for every role** (participant audit M6, author's
-ruling 2026-10-15; `spec/reviewer-surface.md` "Session-status pill
-vocabulary"). "Open" and "Closed" say whether the review accepts
+**One status rule for every role** (`spec/reviewer-surface.md`
+"Session-status pill vocabulary"). "Open" and "Closed" say whether the review accepts
 responses; "Available" is closed to responses but viewable by one of
 the row's roles now. An archived session has no label, because it is
 not listed.
@@ -178,11 +177,11 @@ not irrelevant to it either.
 
 **A reviewee with no current grant is indistinguishable from a
 stranger** — the same empty `/me`, the same 404 — which is the point of
-the segment rather than a side effect. If they also hold a reviewer or
+the rule rather than a side effect. If they also hold a reviewer or
 observer role on that session, the row survives on *that* role and only
 the Reviewee pill is missing.
 
-**Learning it through another role is accepted** (author, 2026-10-15).
+**Learning it through another role is accepted.**
 The rule above covers the reviewee role. Another role on the same session
 can show someone that they are a reviewee, and two such routes are
 deliberate exceptions. Each works only where that role is shown who the
@@ -214,8 +213,8 @@ windows (`/collation`). Neither route opens anything before then:
   either mode, including the while-ongoing `Summarized` view, but that
   stays inside an observer window.
 
-**Making a reviewee an observer is the operator allowing this**
-(author, 2026-10-15). The operator who makes a reviewee an observer
+**Making a reviewee an observer is the operator allowing this.**
+The operator who makes a reviewee an observer
 accepts three consequences, and none of them is a defect:
 
 - The observer's `Summarized` aggregates, while the session is still
@@ -247,8 +246,7 @@ that they are an observer before their window opens — which is why the
 link is live on `draft` and `validated` as well as `ready` and
 `expired`.
 
-**Archived is off limits to every participant** (participant audit M4;
-author's rulings 2026-10-15 and 2026-10-16). The three participant gates
+**Archived is off limits to every participant.** The three participant gates
 (`require_reviewer_in_session`, `require_reviewee_in_session`,
 `require_observer_in_session`) answer a bare **404** once a session is
 archived, before any roster lookup: the same answer a stranger gets. So

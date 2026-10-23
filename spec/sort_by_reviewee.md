@@ -77,7 +77,9 @@ them as parallel arrays.
 ### Locked / unlocked
 
 - **Locked (default):** no buttons. A column in the spec shows its badge as
-  static text; every other sortable header shows the inert `↕`.
+  static text; every other sortable header shows the inert `↕`, except
+  the Group header of a group-scoped preview, which shows nothing until
+  it is in the spec.
 - **Unlocked (Edit):** the badges are buttons. A click marks the card dirty.
 - **Save:** the card's consolidated Save persists the spec through
   `set_sort_display_fields` — emits the audit event and lifecycle-invalidates
