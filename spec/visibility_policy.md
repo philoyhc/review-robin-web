@@ -146,17 +146,12 @@ its own message: a **half-set** cell (one member of the pair set, the
 other empty), which would otherwise read as "off"; and the
 **reserved-incoherent** `aggregated` + `identified` pair.
 
-**Stored rows obey it too.** Rows written before the rule existed (the
-`a7e3b1d92c64` backfill from the old `visible_when` columns) were
-normalized by migration `14db60023e88`: a cell with one legal
-value took it (the reviewer's *Session ongoing* `raw`, the reviewee's
-off), an observer *Session ongoing* `raw` / `anonymized` became
-`summarized`, and anything else illegal became off. Only the reviewer's
-*Session ongoing* cell can read wider afterwards, and only as a stored
-value: no access check reads it — the reviewer sees their own answers
-while the session is `ready` regardless — but the reviewer surface's
-transparency table shows `Raw responses` there, as the editor does. So every stored row passes both writers, and an Instrument
-card's Save or a Settings re-import never meets one it refuses.
+**Stored rows obey it too.** Every stored row passes both writers, so
+an Instrument card's Save or a Settings re-import never meets one it
+refuses. No access check reads the reviewer's *Session ongoing* cell —
+the reviewer sees their own answers while the session is `ready`
+regardless — but the reviewer surface's transparency table shows
+`Raw responses` there, as the editor does.
 
 **The database enforces it.** `instrument_view_policies` carries the
 CHECK constraint `ck_view_policy_cell` (migration `e5c1a9d3b7f2`,
@@ -169,9 +164,7 @@ that skipped the validator, and it fails loudly as an `IntegrityError`.
 `tests/db/test_view_policy_cell_constraint.py` inserts every audience ×
 pair × pair combination and requires the database to accept exactly
 what `_PER_CELL_VALID_MODES` accepts, so the two statements of the rule
-cannot drift. The migration first re-applies `14db60023e88`'s
-normalization, logs the ids of the rows it rewrote, and stops on a row
-whose audience is none of the three. Because nothing can store an
+cannot drift. Because nothing can store an
 illegal cell, nothing has to look for one after the fact. The cell
 that matters most is an observer `raw` / `anonymized` grant on
 `while_ongoing`, which would let an observer read individual responses

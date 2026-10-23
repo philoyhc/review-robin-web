@@ -151,7 +151,7 @@ accepting_responses) two booleans carry operator settings. One
 is the Assignments page's per-instrument **Self review** toggle:
 
 - **`self_reviews_active: Boolean NOT NULL`** (Alembic revision
-  `f3a7c1e9d5b2`, findings E3). Whether this instrument's
+  `f3a7c1e9d5b2`). Whether this instrument's
   self-review rows are included; Prepare / Generate writes each
   self-review row whose sides are both active with this value
   (`spec/assignments.md` "Self-review policy"). A new instrument
@@ -535,8 +535,7 @@ spills either.
 | Centre | Link 2 — Who is being reviewed | `reviewee.tag1 / 2 / 3` + the relationship tags (with reviewer-tag operands) |
 | Right | Link 3 — Unit of review | Individual vs Group; if Group, picks reviewee boundary tags |
 
-**Relationship tags** (author, 2026-10-18;
-`guide/archive/pair_context_tags_further_clarify.md` Item 1) are offered under
+**Relationship tags** are offered under
 their labels as "Pair: <label>", as a Link 2 field only. A relationship
 pair joins two people, so a rule on one works like a hand-made
 assignment or exclusion of that pair. Every operator on it judges the
@@ -564,8 +563,8 @@ that relationship slot is populated, its key otherwise), and Save
 answers with a banner naming the problem (422, or 400 from
 `/fields/save`), storing nothing, until it is removed. It is refused
 rather than rewritten, because a rewrite would change who reviews whom;
-pre-Azure sessions are disposable, so there is no migration (author,
-2026-10-17). Until it is removed, a stored person-level rule also fails
+pre-Azure sessions are disposable, so there is no migration. Until it
+is removed, a stored person-level rule also fails
 every reader that loads the rule set through the engine: the
 Assignments page names the instrument in a banner, Validate reports
 `instruments.rule_set_unloadable`, and Prepare reports a failure at
@@ -736,7 +735,7 @@ stacked list of MATCH-rule cells. Each cell has:
   `reviewee.tag1 / tag2 / tag3`, "Pair: …"), under a caption: "Reviewer's
   tag" in Link 1, "Reviewee's tag" in Link 2 — except "Pairwise tag"
   while a Link 2 cell holds a relationship tag, which judges the pair
-  under every operator (author, 2026-10-18). The caption follows the
+  under every operator. The caption follows the
   cell's field as it changes.
   Only namespaces with at least one populated row in the
   session appear — the dropdown's options come from
@@ -744,7 +743,7 @@ stacked list of MATCH-rule cells. Each cell has:
 - An operator-cycle button. Link 1 cycles through
   `IS | IS NOT | IS FILLED | IS EMPTY`; Link 2 cycles through
   `IS THE SAME AS | IS DIFFERENT FROM | IS | IS NOT | IS FILLED | IS EMPTY`,
-  starting on `IS THE SAME AS`, the most common (author, 2026-10-16), so a
+  starting on `IS THE SAME AS`, the most common, so a
   new Link 2 cell opens on it (the cross-side operators take a reviewer
   tag as operand, under the caption "Reviewer's tag", for "same as the
   reviewer's role" semantics). A Link 2 cell holding a relationship tag
@@ -754,7 +753,7 @@ stacked list of MATCH-rule cells. Each cell has:
   tag, Link 2's cycle drops the two cross-side operators and opens on
   `IS`, except in a cell holding a stored operand the card no longer
   offers, which keeps the full cycle and its operand.
-  `IS FILLED` / `IS EMPTY` (author, 2026-10-16) store as `is_not_empty` /
+  `IS FILLED` / `IS EMPTY` store as `is_not_empty` /
   `is_empty` and test the field alone.
 - An operand input. Either a free-text value (for `IS` / `IS NOT`)
   or a tag dropdown (for the cross-side operators). The JS
@@ -860,7 +859,7 @@ The card shows the `link1` and `link2` Composites and their enabled
 rules are all disabled shows as All, as the engine applies neither
 (`spec/assignments.md`, Rule kinds). For a rule set an instrument uses,
 the Settings import refuses a rule the card can't show as stored
-(`spec/csv_contracts.md` §3.3; findings E1, 2026-10-22), and a
+(`spec/csv_contracts.md` §3.3), and a
 rule-set combinator other than `ALL_OF`, since the card always shows
 the two Links as intersecting; only a rule set no instrument uses
 keeps another. A Link holding rules the card shows imports as touched,

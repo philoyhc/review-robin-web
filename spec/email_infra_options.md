@@ -326,9 +326,12 @@ with credentials and submits the email. The SMTP server can be:
 **Note on Azure outbound SMTP.** Microsoft blocks outbound SMTP
 on port 25 from Azure data centers since 2017. SMTP relay use
 must go through an authenticated relay service on port 587 or
-465. The app's SMTP implementation defaults to authenticated
-submission on port 587 with STARTTLS; port 465 with implicit SSL
-is also supported via the `smtp_encryption` setting.
+465. The app sets no port of its own: `/operator/settings` shows
+587 as the port field's placeholder, not a default, and a blank
+port leaves the credentials incomplete, so nothing sends
+(`operator_settings.get_email_settings`). The operator picks
+STARTTLS (usual on 587) or implicit SSL (usual on 465) through the
+`smtp_encryption` setting.
 
 **Required configuration.**
 

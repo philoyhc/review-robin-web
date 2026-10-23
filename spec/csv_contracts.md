@@ -411,10 +411,21 @@ import is an open product question, not a documented
 intent.
 
 **Save:** `save_relationships(db, *, session, user, rows, filename,
-correlation_id, field_labels_captured=None)` wipe-and-replace,
-then call `seed_display_fields_from_assignments` — **named for
+correlation_id, field_labels_captured=None, acknowledged_loss=None)`
+wipe-and-replace, then call `seed_display_fields_from_assignments` — **named for
 assignments, but it reads `relationships.tag_N`**; the name is kept
 because renaming it buys a reader nothing and costs every caller.
+
+**`acknowledged_loss` is the count gate for a replace that would clear
+group answers** (`spec/setup_pages.md` § *Saves that clear group
+answers*). The replace can add a member to a group that has saved
+answers, which deletes them (`responses.clear_changed_groups`). The
+value is the count the operator's `Yes, clear them` tick was shown, or
+0 unticked; unless it equals the number of responses the replace would
+delete, the save raises `GroupAnswersWouldClear` with that number and
+persists nothing. `None`, the default, deletes without asking. The
+Relationships card and Quick Setup pass the tick's count; rehydrate
+passes none.
 
 ### 3.2b Observers — `csv_imports.py`
 
@@ -543,7 +554,7 @@ the round-trip notes below.
    (`spec/instruments.md`, Band 1). So is a `rules_json`, in a rule set
    an `instruments[N].rule_set_name` in the file names, holding a rule
    Band 1's card can't show as stored (`unrepresented_rule` in
-   `app/services/instruments/_band1.py`; findings E1, 2026-10-22): any
+   `app/services/instruments/_band1.py`): any
    rule but a `link1` or `link2` `COMPOSITE` under `AND` / `OR`, a
    disabled Link or rule, a child that is not `MATCH`, an operator
    its Link's card doesn't offer (`link2` offers six; `link1` the four
@@ -575,8 +586,8 @@ the round-trip notes below.
    deletes the rows the CSV omits (§4 item 7). A rule set is per
    instrument, so a second instrument naming one gets its own copy
    (`spec/instruments.md`, `Delete` semantics).
-   **Instruments stay replace-all, and the import warns first**
-   (findings S4, author's ruling). An instrument survives
+   **Instruments stay replace-all, and the import warns first.**
+   An instrument survives
    only as a file row carrying its `name`, one row each, so a file
    with no instrument rows deletes them all. Between the phases, a
    caller that passes `acknowledged_deletions` gets
@@ -589,7 +600,7 @@ the round-trip notes below.
    upload seeds those), its Self review flag the session's, its intro layout `layout_1`, and no
    other setting made (`is_untouched_default`). It holds nothing
    of the operator's, so Quick Setup on a fresh session takes a file as
-   Create does (the author, 2026-10-19). A file that deletes no other
+   Create does. A file that deletes no other
    instrument never asks. Quick Setup on an
    existing session asks: the Settings banner lists them and offers a
    `Yes, delete` tick carrying the count as
@@ -620,7 +631,7 @@ If phase 1 finds errors, phase 2 is **not attempted** — the
 `ApplyResult` carries `errors` and the route surfaces them. On an
 existing session Quick Setup renders Session Home again at 422 with
 the errors under the Settings banner, never in a URL, so a link cannot
-put text on the page (findings O7, author's ruling). The New session
+put text on the page. The New session
 page keeps its 303, since its session is committed and a re-render
 would replay the create on a refresh, and shows a fixed sentence
 instead of the lines (`quick_setup_reason=refused`); uploading the
@@ -880,7 +891,7 @@ tag value stored with a comma before §1 *Tag commas* is one exception:
 its roster export is refused on import until the tag is changed. A
 rule set an instrument uses, stored before §3.3's card-shape check in a
 shape the card can't show, is the other: its Settings export is refused
-on import, naming the rule set (item 7, findings E1).
+on import, naming the rule set (item 7 below).
 
 **Observers is not claimed here.** It has a wired
 importer and an extract, and `Status` and `CohortRule` both read back — but

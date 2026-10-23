@@ -1097,7 +1097,7 @@ answers.
   newly chosen file wins over it. A file is chosen when it has a
   filename, as an untouched input posts none, so an empty file chosen
   is refused as a fresh empty upload is ("CSV has no header row")
-  rather than swapped for the held one (findings S2). The held bytes are parsed again as a fresh upload's would be.
+  rather than swapped for the held one. The held bytes are parsed again as a fresh upload's would be.
 - **The replace tick.** After a group-clear or response-loss ask it
   renders ticked again, since the operator had ticked it to get there.
   After a missing-replace ask it renders unticked.
@@ -1735,7 +1735,7 @@ Instruments page (`new_model_rule_list("link2", …)` in
     same pair-level deferral.
 
 **Empty values** follow the assignment rule's (`spec/assignments.md`,
-Predicate vocabulary; author, 2026-10-17): a blank value is no value,
+Predicate vocabulary): a blank value is no value,
 `IS` and `CONTAINS` fail no value while `IS NOT` and `DOES NOT CONTAIN`
 pass it, `IS THE SAME AS` passes when the two sides
 hold the same value with no value counting as one, and `IS DIFFERENT
@@ -1831,7 +1831,7 @@ decided" for the storage rationale.
 
 Route gate: `require_observers_enabled_session` +
 `_require_not_archived` on `create`, `update` and `cohort-rule` alike, as
-on every Observers route (19P.2 rung 2): cohort rules govern observer
+on every Observers route: cohort rules govern observer
 visibility, not response data or roster shape, so mid-session refinement
 (during `ready` / `expired`) is the legitimate flow. Only `archived` is a
 hard stop, and on `archived` neither editor opens. `cohort-rule` emits

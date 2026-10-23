@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 47 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240); every author row ruled 2026-10-22, as
+(#3225) · **Open:** 37 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -78,13 +78,13 @@ All ruled 2026-10-22, each as its row records.
 
 **`spec/` — participant (A)**
 
-- **A1** (low, spec) — `spec/sort_by_reviewee.md` "Locked / unlocked":
+- ~~**A1**~~ — **Done in #3241**: `spec/sort_by_reviewee.md`. (low, spec) — `spec/sort_by_reviewee.md` "Locked / unlocked":
   the Group header on a group-scoped Band 2 preview shows no `↕` when
   locked and unsorted; the rule needs that exception.
-- **A2** (low, spec) — `spec/timezone_display.md` "Rendering format"
+- ~~**A2**~~ — **Done in #3241**: `spec/timezone_display.md`. (low, spec) — `spec/timezone_display.md` "Rendering format"
   omits the summary caption, the pre-open lines and the refused-write
   notice; state the rule rather than the list.
-- **A3** (low, trim) — provenance (participant-audit ids, finding ids,
+- ~~**A3**~~ — **Done in #3241**: five specs trimmed; revision ids naming a column kept. (low, trim) — provenance (participant-audit ids, finding ids,
   dated rulings, "19V Item 2") in `spec/reviewer-surface.md` (most),
   `spec/role_landing_and_visibility.md` §4, `spec/participant_model.md`
   §4–§5, `spec/instruments.md`, and a migration-history paragraph in
@@ -110,21 +110,21 @@ All ruled 2026-10-22, each as its row records.
 
 - ~~**D2**~~ — **Done in #3239**: `spec/rehydrate.md` §6.4, with D1. (low, spec) — `spec/rehydrate.md` §6.4: `instrument_{n}` is the
   n-th by (order, id), not `order = n`.
-- **D3** (low, spec) — `spec/settings_inventory.md` §7 omits
+- ~~**D3**~~ — **Done in #3241**: `spec/settings_inventory.md` §7. (low, spec) — `spec/settings_inventory.md` §7 omits
   `sessionHomeScrollY:{pathname}`.
-- **D4** (low, spec) — `spec/settings_inventory.md` §2 and
+- ~~**D4**~~ — **Done in #3241**: `spec/settings_inventory.md` §2, §4 and §10, `spec/roundtrip_coverage.md`. (low, spec) — `spec/settings_inventory.md` §2 and
   `spec/roundtrip_coverage.md` omit `sessions.public_id`,
   `sessions.form_key`, the instrument reconcile-cache columns and
   `uq_instruments_session_seq`.
-- **D5** (low, spec) — `spec/rehydrate.md` §6.2 omits the rule-set
+- ~~**D5**~~ — **Done in #3241**: `spec/rehydrate.md` §6.2. (low, spec) — `spec/rehydrate.md` §6.2 omits the rule-set
   refusals an older extract meets at the settings apply.
-- **D6** (low, spec) — `spec/email_infra_options.md` Option A: port 587
+- ~~**D6**~~ — **Done in #3241**: `spec/email_infra_options.md`. (low, spec) — `spec/email_infra_options.md` Option A: port 587
   is a placeholder, not a default.
-- **D7** (low, spec) — `spec/extract_data.md`: the chip state is keyed to
+- ~~**D7**~~ — **Done in #3241**: `spec/extract_data.md`. (low, spec) — `spec/extract_data.md`: the chip state is keyed to
   the session's `public_id`.
-- **D8** (low, spec) — `spec/csv_contracts.md` §3.2 omits Save's
+- ~~**D8**~~ — **Done in #3241**: `spec/csv_contracts.md` §3.2. (low, spec) — `spec/csv_contracts.md` §3.2 omits Save's
   `acknowledged_loss`.
-- **D9** (low, trim) — provenance in `spec/csv_contracts.md`,
+- ~~**D9**~~ — **Done in #3241**: five specs trimmed. (low, trim) — provenance in `spec/csv_contracts.md`,
   `spec/settings_inventory.md`, `spec/roundtrip_coverage.md`,
   `spec/rehydrate.md` and `spec/setup_pages.md`.
 

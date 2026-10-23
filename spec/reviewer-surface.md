@@ -53,7 +53,7 @@ route.
 A GET on any of the four POST addresses answers 303 to a page, as the
 table below sets out, so pressing Enter in the address bar after a refused
 POST, or signing in again on that URL, lands on a page rather than a
-405 or 422 (participant audit M10):
+405 or 422:
 
 | GET on | Lands on |
 |---|---|
@@ -314,7 +314,7 @@ each of its instruments. The route distinguishes:
   applies the session-wide submission semantics. Its inputs are read
   against the page Submit was pressed on (`?page={page_n}`).
 
-**Answer names** (19V Item 2). Each input is named
+**Answer names.** Each input is named
 `response[{ordinal}][{field_key}]`. The ordinal is the row's 1-based
 rank among the page's assignments (the reviewer's included assignments
 on `{page_n}`'s instruments) in assignment-ID order, never the
@@ -351,13 +351,12 @@ answers needs no digest.
   non-empty value upserts. A **changed** value clears that
   `Response` row's `submitted_at`, so an edit after Submit is not
   released as submitted until the reviewer submits again, as a new
-  answer after Submit isn't (findings R1, author's ruling
-  2026-10-17); an unchanged value, which every Save re-posts, keeps
+  answer after Submit isn't; an unchanged value, which every Save re-posts, keeps
   its stamp. "Changed" compares the stored value in the form a post of
   it takes (line breaks as LF, stripped, a number canonical), and the
   page renders it in that form, so an answer stored in an older form,
   or by the responses import, is not changed by re-saving it; nor is
-  one already blank in that form changed by a blank (findings R2). On a group-scoped instrument a change clears the stamp
+  one already blank in that form changed by a blank. On a group-scoped instrument a change clears the stamp
   on every member's copy of that field in the group. Blanking a
   submitted answer is a change too ("Submit" below). The
   `responses.saved` event counts the cleared stamps as
@@ -388,8 +387,7 @@ answers needs no digest.
   apart. A blank that leaves its assignment no answer at all has
   nothing left to unstamp, and the reviewer's other assignments keep
   their stamps; only a required field it left empty asks for an answer
-  and a new Submit (findings R3, author's ruling 2026-10-22: the
-  contract narrows, the code stands).
+  and a new Submit.
 - **Clear all** deletes every `Response` row of this reviewer's
   included assignments in this session, across every instrument, and
   an excluded member's copy in a group they still review (a group
@@ -404,9 +402,8 @@ answers needs no digest.
 saved `Response` row of the reviewer's in the session has
 `submitted_at` set. The dashboard's session-level pill ("submitted" /
 "in progress" / "not started", "Reviewer-status pill vocabulary"
-below) and this surface's pills follow **one answers-based rule**
-(findings R7, author's ruling 2026-10-17): no saved answer is `not
-started`, even when nothing is required; `submitted` needs a saved
+below) and this surface's pills follow **one answers-based rule**:
+no saved answer is `not started`, even when nothing is required; `submitted` needs a saved
 answer, every required field filled and no saved answer without
 `submitted_at`, so a row left blank on an all-optional instrument
 doesn't hold it off and a new or changed answer after Submit does.
@@ -430,14 +427,14 @@ clicks Save (and the page re-renders).
 | `submitted` | `.pill.pill-success` | At least one saved answer, every required field filled, and every saved answer carries `submitted_at`. A blank row with nothing required doesn't hold it off; a new or changed answer since the Submit does, and the page reads `complete` or `in progress` until the next one. |
 
 The states are the dashboard's (§ "Reviewer-status pill vocabulary"),
-read over this instrument's rows (findings R7): no answer is `not
+read over this instrument's rows: no answer is `not
 started` on both, every answer submitted is `submitted` on both, and
 anything between is the dashboard's `in progress`, which covers both
 `in progress` and `complete` here (one exception: a saved answer the
 lifecycle hides, with a required field unmet, reads `not started` here
 and `in progress` there). `complete` is the part of it where
 nothing required is missing, so a page whose answers a changed value
-just un-submitted (findings R1) reads `complete` here and `in
+just un-submitted reads `complete` here and `in
 progress` there, by design. A group-scoped instrument's row is its
 representative member's, the one the dashboard counts.
 
@@ -923,7 +920,7 @@ reviewer-surface specifics:
   on the lowest-id member — the tag pills the operator's Band 2
   preview shows — falling back to the boundary tag values when none
   yields a value. A second line lists the members, always (Name stays
-  shown on a group instrument; findings G1) — the first
+  shown on a group instrument) — the first
   `GROUP_MEMBER_NAME_LIMIT` (10) names, then a `+N more` suffix. No separate display-field
   columns render. When the group is a self-review group, a
   `.pill.pill-info` **Self review** follows on its own line: every
@@ -1008,7 +1005,7 @@ session closed or reverted after that check, before the service's
 locked re-check (`spec/lifecycle.md` §8.3), is refused the same way,
 its cause read afresh once the write is rolled back. The
 refusal renders the page again rather than the standalone error page,
-which used to throw away what the reviewer typed (participant audit P3):
+which would throw away what the reviewer typed:
 the page the reviewer was on (page 1 for Clear, and for a page number
 out of range), read-only as a GET would now show it, or the pre-open
 page when the session is neither `ready` nor `expired`. A
@@ -1037,7 +1034,7 @@ An entry is labeled `{instrument}: {reviewee} — {field}` only when a GET
 would show that row now: an included assignment of this reviewer, on a
 visible field, in a `ready` or `expired` session, named by an ordinal
 the page has. Answers map to rows only when the form's page digest
-matches the page now (19V Item 2), so a stale form's values are never
+matches the page now, so a stale form's values are never
 listed under rows they weren't typed into. Any other value (an excluded
 row, a session that never opened, an ordinal the page doesn't have, a
 stale form) is listed bare, so the card labels only the reviewer's own
@@ -1050,8 +1047,7 @@ GET requests behave differently depending on which gate fails:
 
 - **Session `archived`.** The gate (`require_reviewer_in_session`)
   answers a bare 404 before anything else, for a GET or a write: once
-  archived a session is off limits to participants (author's ruling
-  2026-10-16).
+  archived a session is off limits to participants.
 - **Session `draft` or `validated`.** The route short-circuits to the
   **pre-open page** (`reviewer/pre_open.html`, § "Pre-open page"
   below): "This review is not currently open." No response form is
@@ -1263,7 +1259,7 @@ participant role** (reviewer / reviewee / observer), as a
 cross-role union. The query hits all three rosters
 (`reviewers`, `reviewees`, `observers`) with case-insensitive email
 matching; only `status == "active"` rows contribute; an **archived
-session is left out** for every role (author's ruling 2026-10-16); the
+session is left out** for every role; the
 result is deduplicated per session and sorted newest-created first
 (`created_at`, then `id`), so an operator's edit never moves a row.
 
@@ -1296,7 +1292,7 @@ reviewee-/observer-only rows show `—` in those cells.
     once it is `ready` or `expired`; while `validated`,
     its scheduled opening (`scheduled_activate_at`); for a `draft`,
     nothing, since an `activated_at` left from before a revert is not
-    a start (participant audit M6). Formatted in the session's
+    a start. Formatted in the session's
     resolved zone as a `pill-count` chip (neutral data);
     `<span class="muted">—</span>` when there is none.
   - **End** — `session.deadline` formatted in the session zone,
@@ -1317,7 +1313,7 @@ reviewee-/observer-only rows show `—` in those cells.
     of a `0/0`. Renders `—` when the user is a reviewee / observer
     only.
 - **Notice** — `?notice=` picks one line from a fixed set
-  (`views.me_notice`; participant audit M11), shown as a
+  (`views.me_notice`), shown as a
   `.banner.banner-info` (`data-me-notice`) under the H1: `summary`
   ("Your summary is available once every review is submitted.") from a
   summary that isn't ready yet, and `organizers` ("That page is for the
@@ -1332,7 +1328,7 @@ reviewee-/observer-only rows show `—` in those cells.
   (`/about?return_to=/me`). One wording for everyone it reaches
   (a stranger, a reviewee with no current grant, a deactivated
   roster row, a reviewee under a non-email identifier), so it never
-  implies something is waiting (author's ruling, 2026-10-15). Active
+  implies something is waiting. Active
   reviewers and observers always have a row, so they never see it.
 
 ### Cross-role union and reachability
@@ -1355,8 +1351,7 @@ The cross-role union is built inline in `_dashboard.py` rather than behind a sha
 
 ### Session-status pill vocabulary
 
-One rule for every role (participant audit M6, author's ruling
-2026-10-15), computed by `app/web/views/_participant_status.py`
+One rule for every role, computed by `app/web/views/_participant_status.py`
 `participant_session_status`. `Open` and `Closed` say whether the
 review is accepting responses; `Available` is the period after that
 when one of the row's roles can still see something, which differs by
@@ -1380,8 +1375,7 @@ row (§ "Cross-role union and reachability").
 Computed by `app/services/responses::session_pill_for_reviewer`
 (`RollupParts.pill_state`, which the operator's Invitations page reads
 too, through `monitoring.per_reviewer_progress`). The reviewer
-surface's pills follow the same rule (§ "Per-page status", findings
-R7):
+surface's pills follow the same rule (§ "Per-page status"):
 
 | Pill | Style | Condition |
 |---|---|---|
@@ -1421,11 +1415,10 @@ dashboard's Session column once Reviewer Status is
 `submitted`.
 
 - **Gate** — a bare 404 once the session is archived, from
-  `require_reviewer_in_session` before anything else (participant audit
-  M4). Otherwise
+  `require_reviewer_in_session` before anything else. Otherwise
   `responses.reviewer_session_state.pill_state == "submitted"`, or a
   redirect to `/me?notice=summary`, where one line says the summary is
-  available once every review is submitted (participant audit M11).
+  available once every review is submitted.
 - **H1** — "Your responses — {session.name}".
 - **Role row** — under the H1: the reviewer's own line, then the
   role-navigator chips, as on the surface (§
@@ -1444,7 +1437,7 @@ dashboard's Session column once Reviewer Status is
   only while the session is still `ready` and its deadline has not
   passed (`can_recall`): past either, the form it would land on is
   read-only and Submit is refused, so a recall would strand the
-  reviewer at "Saved but not submitted" (participant audit M1). The
+  reviewer at "Saved but not submitted". The
   route refuses the same states with a 403, and so does a Recall the
   service refuses after the session closed under it. Recall rolls the
   reviewer's submission back to draft (nulls `submitted_at`) and 303s
@@ -1484,7 +1477,7 @@ A dedicated **pre-open** rendering serves a reviewer who reaches a
 session that is `draft` or `validated` — through an invitation, a
 bookmark or an old link — instead of a 403 or a silently-disabled form.
 An archived session gets no page at all: the gate answers 404. One
-wording for both (participant audit M3, author's ruling 2026-10-15):
+wording for both:
 the h1 is the session name and the banner reads "This review is not
 currently open.", whether the review has yet to open or was reverted to
 draft. Under the headline, each when it applies:
@@ -1569,8 +1562,8 @@ not learn that.
 
 Observers are **not** grant-gated the way reviewees are: being appointed
 an observer is not a disclosure *about* the observer, so the surface
-opens in every lifecycle state but archived, where the gate answers 404
-(participant audit M4), and simply renders nothing until their window
+opens in every lifecycle state but archived, where the gate answers 404,
+and simply renders nothing until their window
 does.
 
 **What renders** — reviewer-surface chrome (`reviewer/collation.html`)
@@ -1767,8 +1760,7 @@ Behaviour:
    a Regenerate rotates the token and kills the links in earlier
    emails. An ordinary reminder reuses the current link; only one that
    falls back to a fresh invitation (no current link on file, as after a
-   Regenerate) rotates it
-   (participant audit M12).
+   Regenerate) rotates it.
 3. **Email match check** — case-insensitive comparison of the
    signed-in email against the invited reviewer's `Reviewer.email`,
    both sides through `normalize_email` (strip + `str.lower`).
@@ -1781,7 +1773,7 @@ Behaviour:
 
 ### Invitation-mismatch page
 
-A single `.banner.banner-warning` (participant audit M9) that:
+A single `.banner.banner-warning` that:
 
 - names the signed-in address in full and the invited one **partly
   masked**
@@ -1844,8 +1836,7 @@ optional:
 The system handle `Instrument.name` (`String(255)`, auto-generated
 as `instrument_N` on instrument create) is **not** reviewer-facing.
 It travels only in the Settings CSV and audit-event detail snapshots;
-audit summaries, like operator pages, use the short label (author,
-2026-10-13).
+audit summaries, like operator pages, use the short label.
 
 The 32-char ceiling on `short_label` is a **Setup-side concern** —
 this surface trusts the value it's given, and the Instruments Setup

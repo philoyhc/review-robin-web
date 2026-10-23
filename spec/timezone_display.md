@@ -115,18 +115,19 @@ To days match the page's.
   uniform token is not possible; the token is instead available
   behind the `date_formatting.SHOW_ZONE_TOKEN` source switch
   (`spec/settings_inventory.md` §8.5).
-- Where a **zone identity** is shown to a person — the Operator
-  Settings page's live preview (the only surface that has one), the
-  session timezone pickers' options on the Create page and the
-  Session details card, that card's Timezone item, the review-surface
-  deadline labels, the reviewer emails' `$deadline` / `$submitted_at`
-  (in parentheses after the time) — it renders as the **compact GMT-offset followed by the
-  raw IANA id**, e.g. `GMT+8 Asia/Singapore`, via
-  `date_formatting.gmt_offset_zone_label`. The offset gives
+- Wherever a **zone identity** is shown to a person — on any page,
+  card, label or email that names the zone beside a time or as a
+  setting, such as the session timezone pickers, the Session details
+  card, the review surface's deadline and summary lines, its pre-open
+  lines and refused-write notice, and the reviewer emails' `$deadline` /
+  `$submitted_at` (in parentheses after the time) — it renders as the
+  **compact GMT-offset followed by the raw IANA id**, e.g.
+  `GMT+8 Asia/Singapore`, via `date_formatting.gmt_offset_zone_label`.
+  The columns below are the one tighter form. The offset gives
   at-a-glance orientation; the IANA id is the unambiguous
   identifier. A bare `UTC` is shown once, not doubled.
-- The **sessions-lobby, archived-page and reviewer-dashboard
-  Timezone columns** are tighter still: the cell shows just the compact GMT-offset
+- The **sessions-lobby, archived-page, Sessions Diagnostics and
+  reviewer-dashboard Timezone columns** are tighter still: the cell shows just the compact GMT-offset
   (`gmt_offset_label`, e.g. `GMT+8`), with the full
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
 - **The calendar's edge.** `parse_local_datetime` refuses a moment
