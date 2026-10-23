@@ -103,6 +103,20 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    under the `/me/` prefix (`_dashboard.py`, `_surface/`,
    `_summary.py`, `_results.py`, `_collation.py`, `_invite.py`).
 
+   **One dependency runs before every route.** `create_app()` gives
+   the app `refuse_oversized_ids` (`app/web/oversized_ids.py`), so an
+   id past `MAX_SQL_INT` (the 32-bit `Integer` an id column holds)
+   answers a bare **404** before any route's own dependencies reach
+   the database, which would otherwise fail to bind it and answer
+   500. It reads the path and query parameters that name an id (`id`,
+   `*_id`, `*_ids`, and `sid`, `editing`, `saved`, `selected`,
+   `focus`, `cursor`), and the form fields that do, but only on a route
+   that declares a `Form` or `File` body. It skips any path or query
+   parameter the route, or a dependency of it, declares `str` (form
+   fields are checked whatever their type; a session's `{session_id}`
+   is its `public_id`, which may be all digits), and leaves a value
+   that is not digits to the route, which refuses it as malformed.
+
 2. **Service modules** (`app/services/*.py`) hold all business logic —
    querying, mutation, validation, lifecycle transitions, audit-event
    emission. Several are **packages split by concern**, each
@@ -155,16 +169,20 @@ three-layer separation (mirrors CLAUDE.md "Architecture at a glance"):
    `sqlalchemy.dialects.postgresql` imports here** — Postgres-specific
    column types are deferred infrastructure.
 
-   **One column default queries** (`Instrument.session_seq`): a
-   context-sensitive default reading `max(session_seq) + 1` within the
-   row's session. Recorded rather than hidden, because a
-   reader auditing "no logic in models" will find it. It sits here
-   instead of in a service so that *no* creation path can forget it —
-   the alternative was the same arithmetic repeated at every creation
+   **Three column defaults query**, each context-sensitive:
+   `Instrument.session_seq` reads `max(session_seq) + 1` within the
+   row's session; `Instrument.self_reviews_active` reads the owning
+   session's `self_reviews_active`; and `ReviewSession.public_id`
+   draws again while the value it drew is taken. Recorded rather than
+   hidden, because a
+   reader auditing "no logic in models" will find them. They sit here
+   instead of in a service so that *no* creation path can forget them —
+   the alternative was the same logic repeated at every creation
    path, including every test fixture that constructs `Instrument(...)`
-   directly rather than through a creation service.
-   `app/db/models/instrument.py` is the only model that does this; the
-   rule otherwise holds.
+   or `ReviewSession(...)` directly rather than through a creation
+   service. `app/db/models/instrument.py` and
+   `app/db/models/review_session.py` are the only models that do this;
+   the rule otherwise holds.
 
    **Branching between response fields** (`InstrumentResponseField
    .branch_parent_id` / `.branch_op` / `.branch_value` / `.branch_mode`):

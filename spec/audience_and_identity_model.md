@@ -152,8 +152,10 @@ Two surfaces:
    promote / demote `users.is_sys_admin`, delete `users` rows
    outright, and bulk-remove a user from every session they
    appear on, all via the Sys Admin → Accounts Management page
-   (a row checkbox that selects one user at a time, and an action
-   toolbar that acts on that user). Server-side guards
+   (row checkboxes that select one or more users, and a row expander
+   whose action applies to the whole selection, all or nothing:
+   `users.apply_batch` refuses the batch at its first refusal, in
+   row-id order, and changes nothing). Server-side guards
    (`app/services/users.py`):
    - **Actor guard** — `promote` / `demote`, and an `invite` that
      grants the admin flag, require the **actor** to be a super-admin
@@ -410,7 +412,7 @@ card.
 | Audience | Held when |
 |---|---|
 | Operator | `user.is_operator or user.is_sys_admin` — the same predicate `require_operator` gates on, derived from it rather than restated (sys-admin implies operator) |
-| Reviewer / Observer | An **active** roster row in **any** session matching the signed-in email, case-insensitively — `participants.disclosable_roles`, applying the same rules as the per-session gates in `app/web/deps.py` |
+| Reviewer / Observer | An **active** roster row in **any** session that is not archived, matching the signed-in email, case-insensitively — `participants.disclosable_roles`, applying the same rules as the per-session gates in `app/web/deps.py` |
 | Reviewee | The same, **plus** a currently-resolving visibility grant on at least one of those sessions (`visibility_policies.reviewee_has_current_grant`) |
 
 The roles are **unioned, not exclusive**: an operator who reviews on

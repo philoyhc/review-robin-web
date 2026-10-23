@@ -257,8 +257,10 @@ sessions through Sessions Diagnostics ([§4.1](#41-system-administrator-three-ti
 A session-scoped participant — the person who fills in the review
 form. Reviewers can:
 
-- **Sign in** through institutional identity or through a unique
-  invitation link.
+- **Sign in** through institutional identity. The unique invitation
+  link signs no one in: it needs that sign-in first, and takes a
+  reviewer whose signed-in email matches the invitation's to their
+  review surface.
 - **See the `/me` dashboard** — a cross-role lobby of every
   session they touch in any participant role (reviewer / reviewee
   / observer).
@@ -2595,6 +2597,7 @@ reader, so a spec missing from it is a spec nobody is sent to.
 | Round-trip coverage (export → import) | `spec/roundtrip_coverage.md` |
 | Validate page | `spec/validate_page.md` |
 | Visibility policy (audience × window grid) | `spec/visibility_policy.md` |
+| Cordware host + identity (the process that serves RRW at `/reviewrobin`; who a request is from) | `cordware/spec/host.md`; `cordware/spec/identity.md` |
 
 For what is still to be built, read `guide/todo_master.md`; for
 segment-by-segment history, the archived plans indexed in

@@ -16,9 +16,10 @@ the contract those two documents assume, and it is the file the
 `diff-reviewer` should open when a route's gate changes.
 
 Identity itself (who the signed-in user *is*) is resolved by
-`app/auth/identity.py` from the Easy Auth headers and is out of
-scope here; every gate below starts from an already-authenticated
-`AuthenticatedUser`.
+Cordware from the Easy Auth headers (`cordware/identity.py`; contract
+in `cordware/spec/identity.md`), which `app/auth/identity.py`
+re-exports under RRW's names, and is out of scope here; every gate
+below starts from an already-authenticated `AuthenticatedUser`.
 
 ---
 
@@ -90,6 +91,12 @@ predicate, what it returns on success, and exactly what happens on
 failure. The `deps.py` gates emit a
 `log.warning("permission denied", gate=…)` when they refuse a
 signed-in user.
+
+A session-scoped path's `{session_id}` (written `{id}` below) is the
+session's `public_id`, not its integer `id` (`spec/architecture.md`).
+It is looked up with `sessions.get_by_public_id`, so an integer
+in the path matches no session and answers the same as an unknown
+one.
 
 | Gate | Predicate | Returns | On miss |
 |---|---|---|---|

@@ -85,7 +85,7 @@ takes the first source that has a value:
 | Field | Sources, in order |
 |---|---|
 | `email` | claim `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`, `preferred_username`, `email`, each counting only when non-empty after strip; then `X-MS-CLIENT-PRINCIPAL-NAME` if it contains `@` |
-| `name` | claim `name`, `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name`; then `X-MS-CLIENT-PRINCIPAL-NAME` if it has no `@` |
+| `name` | claim `name`, `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name`; then `X-MS-CLIENT-PRINCIPAL-NAME` if it has no `@` and no claim gave an email |
 | `principal_id` | `X-MS-CLIENT-PRINCIPAL-ID`; then claim `http://schemas.microsoft.com/identity/claims/objectidentifier`, `oid`, `sub`; the header and each claim counting only when non-empty after strip |
 | `provider` | `X-MS-CLIENT-PRINCIPAL-IDP`; then the payload's `auth_typ`, then `identityProvider` |
 
