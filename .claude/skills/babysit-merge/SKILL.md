@@ -33,14 +33,15 @@ For each PR, repeat until it passes all gates or hits a stop condition.
 **Stage 1 — CI and repo checks, concurrently.** Pushing starts CI (`CI` and `CI - Postgres`). While it runs, run the repo checks in the session container instead of waiting idle:
 - `pytest -n auto` and `ruff check .`, with `node` present. **Read the skip list, not just the exit code** — `tests/integration/test_inline_scripts_parse.py` skips silently without `node`. A lint-only pass is not evidence: the doc-convention tests (`test_doc_references.py`, `test_index_currency.py` and the rest) only run under `pytest`.
 - `diff-reviewer`, if this PR's class calls for it (see above). It reports; you decide. Act on findings in this PR.
+- `spec-writer`, as a verification pass, when the PR touches `spec/`, touches a path its plan's `Doc impact` names, or is the closing slice (`CLAUDE.md` "Where work runs"). Outside a close it reports divergence and does not re-align; act on its flags in this PR.
 - If the suite could not run at all, say so in the PR body and name what did run.
 
 Then `gh pr checks <n> --watch`.
 - CI failure → read the failing job log (`gh run view <run-id> --log-failed`), reproduce locally, fix.
-- Repo-check or `diff-reviewer` finding → fix (or, for a reader finding you judge wrong, note why in the PR body).
+- Repo-check, `diff-reviewer` or `spec-writer` finding → fix (or, for a reader finding you judge wrong, note why in the PR body).
 Batch fixes from all of these into one push where possible, then repeat Stage 1.
 
-**Stage 2 — mark ready.** Only when BOTH CI is green on the head commit AND the repo checks (including any required `diff-reviewer` read) have passed on that same commit, mark the PR ready: `gh pr ready <n>`. This triggers the Codex review, so it must see the commit that is actually a merge candidate. If anything is still running or has findings outstanding, stay in Stage 1.
+**Stage 2 — mark ready.** Only when BOTH CI is green on the head commit AND the repo checks (including any required `diff-reviewer` read and `spec-writer` pass) have passed on that same commit, mark the PR ready: `gh pr ready <n>`. This triggers the Codex review, so it must see the commit that is actually a merge candidate. If anything is still running or has findings outstanding, stay in Stage 1.
 
 **Stage 3 — Codex review.** Wait for a review **on the current head commit** — a review of an earlier commit does not count. Triage every comment:
 - Real defect within this PR's scope → fix, push, reply on the thread with the commit SHA.
@@ -52,7 +53,7 @@ Batch fixes from all of these into one push where possible, then repeat Stage 1.
 **Merge.** `main` has no branch protection by design — the gate is this checklist. Merge only when all hold on the head commit:
 - `CI` green.
 - `CI - Postgres` green — **required** for database-reaching PRs. Every merge to `main` deploys and runs `alembic upgrade head` against Azure Postgres without waiting on CI, so a Postgres-only failure that lands is found in production. For prose-only and `tools/`-only PRs, merging ahead of a still-running `CI - Postgres` is allowed by `CONTRIBUTING.md`; never merge on a red one.
-- Repo checks pass; any required `diff-reviewer` read done and acted on.
+- Repo checks pass; any required `diff-reviewer` read and `spec-writer` pass done and acted on.
 - The latest Codex review is on the head commit and has no unaddressed actionable comments.
 
 Then `gh pr merge <n> --squash --delete-branch` (or the repo's established merge method if different), pull `main`, and move to the next PR.
