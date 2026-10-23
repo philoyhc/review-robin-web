@@ -52,10 +52,13 @@ sections below.
 
 ```text
 review-robin-web/
+  cordware/                 The host: the entry point (main.py) that mounts RRW
+                            at /reviewrobin, the Easy Auth identity parser
+                            (identity.py), host settings and logging
   app/                      Application code
     main.py                 FastAPI app factory
     config.py               Pydantic settings (env vars)
-    auth/                   Easy Auth identity parser
+    auth/                   Identity re-export and roles
     db/                     SQLAlchemy 2.x base, session, models
       models/               the domain models (User, ReviewSession, ...)
     web/                    Routes and Jinja templates
@@ -87,7 +90,8 @@ The repo intentionally does not commit machine-specific files. You'll need:
 
 ### `.env` (required)
 
-Without fake auth every page but `/health` and `/docs` returns 401, so copy
+Without fake auth every page but `/health`, `/reviewrobin/health` and
+`/reviewrobin/docs` returns 401, so copy
 the template and turn fake auth on:
 
 ```bash
@@ -276,7 +280,7 @@ Either the venv is not activated or `pip install -e .[dev]` was not run.
 ### Every page returns 401 locally
 `ALLOW_FAKE_AUTH=true` is missing in `.env`. Easy Auth headers don't exist
 locally, so without fake auth there is no identity, and every page but
-`/health` and `/docs` returns 401.
+`/health`, `/reviewrobin/health` and `/reviewrobin/docs` returns 401.
 
 ### Alembic complains about `sqlalchemy.url`
 `alembic.ini` deliberately leaves `sqlalchemy.url` blank — `alembic/env.py`

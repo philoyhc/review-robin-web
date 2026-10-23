@@ -1,6 +1,7 @@
 # Backup, restore, and data retention
 
-Scoped to the current single Azure **dev** slot. This is a pilot
+Scoped to the current single Azure **dev** slot, whose deploys have
+been dormant since 2026-06-03 (`docs/deployment_dev.md`). This is a pilot
 / dev deployment, so the notes below are deliberately simple; an
 institutional deployment would need to align them with
 institutional policy.

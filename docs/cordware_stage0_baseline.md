@@ -45,7 +45,10 @@ audit kwarg, plus SQLite's datetime adapter. None fails a test.
 
 ## Launch configuration
 
-| Surface | Command today | Where |
+Both columns record `b03fd1be`, line numbers included; they have moved
+since.
+
+| Surface | Command at `b03fd1be` | Where |
 |---|---|---|
 | Local | `uvicorn app.main:app --reload` | `README.md:115`, `CLAUDE.md:95`, `docs/local_setup.md:159, 507` |
 | Codespaces | `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` after `alembic upgrade head` | `.devcontainer/devcontainer.json:23`, `docs/setup_codespaces.md:31, 54`, `docs/local_setup.md:326` |

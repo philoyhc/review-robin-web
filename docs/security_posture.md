@@ -366,8 +366,9 @@ headers (`X-MS-CLIENT-PRINCIPAL` and friends).
 
 What this means for the trust boundary:
 
-- `app/auth/identity.py` **trusts** the `X-MS-CLIENT-PRINCIPAL*`
-  headers. That trust is only sound because Easy Auth strips
+- `cordware/identity.py`, the host's Easy Auth parser, which
+  `app/auth/identity.py` re-exports, **trusts** the
+  `X-MS-CLIENT-PRINCIPAL*` headers. That trust is only sound because Easy Auth strips
   client-supplied copies of those headers before forwarding — a
   caller cannot forge identity by setting the header themselves.
   This holds **only** while the app is reached through the App
@@ -399,7 +400,7 @@ injects.*
   `globalValidation.excludedPaths` of the `authsettingsV2` resource;
   `/reviewrobin/health` joins it when the dormant slot resumes
   (`docs/deployment_dev.md` "Resuming the dev slot").
-- **Headers consumed** by `app/auth/identity.py`:
+- **Headers consumed** by `cordware/identity.py`:
   `X-MS-CLIENT-PRINCIPAL-NAME` (UPN/email),
   `X-MS-CLIENT-PRINCIPAL-ID` (Entra object id),
   `X-MS-CLIENT-PRINCIPAL-IDP` (provider, e.g. `aad`), and

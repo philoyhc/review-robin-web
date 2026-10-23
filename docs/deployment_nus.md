@@ -27,8 +27,9 @@ test on localhost exactly as today**. After NUS is verified and serving,
 > and its Azure secrets stay in this repository, but NUS is deployed only
 > as the assembled Cordware application, never as RRW alone. §§6 and 9
 > below configure and deploy RRW on its own, so do not cut over from
-> them; they await a rewrite with the Cordware integration (Segment 21, on
-> hold).
+> them; they await a rewrite for the integrated release (v0.8 stage 4).
+> Segment 21, which moved RRW under the Cordware host, closed on
+> 2026-10-22.
 
 ---
 
@@ -38,12 +39,12 @@ test on localhost exactly as today**. After NUS is verified and serving,
 |---|---|---|
 | Local dev loop | SQLite + `ALLOW_FAKE_AUTH=true` on localhost | **unchanged** |
 | CI (GitHub Actions) | SQLite job + `ci-postgres` job | **unchanged** |
-| Deploy trigger | push to `main` → personal Azure | push to `main` → **NUS Azure** |
+| Deploy trigger | push to `main` → personal Azure, when the slot is live | push to `main` → **NUS Azure** |
 | App Service | `app-review-robin-web-dev` (personal) | `<nus-webapp>` (NUS) |
 | Postgres | personal Flexible Server | **NUS** Flexible Server |
 | Sign-in tenant (Easy Auth) | personal Entra tenant | **NUS Entra tenant** |
 | Deploy identity (OIDC) | SP in personal tenant | **SP/MI in NUS tenant** |
-| Personal Azure | live | **deleted** (final step) |
+| Personal Azure | live when the slot is; deploys dormant since 2026-06-03 (`docs/deployment_dev.md`) | **deleted** (final step) |
 
 **Nothing about the deploy-target change touches localhost or CI.** The
 local loop reads `.env` (SQLite, fake auth) and never talks to Azure; CI
@@ -83,7 +84,7 @@ Still to confirm / decide before the first deploy:
 - [x] **DB name** — the application database is **`reviewrobin`**
   (provisioned, per the status doc).
 - [ ] **App user** — the least-privilege PostgreSQL application role is still
-  to be created (status doc, "Remaining project-side work" step 5). This runbook calls
+  to be created (status doc §12.1). This runbook calls
   it `rrw_app`.
 - [ ] **Ownership** — do you have Contributor on `rg-nrrw-prd-compute-01`, or
   does NUS IT run the portal steps? (The `admazclhc` admin account suggests
@@ -93,10 +94,10 @@ Still to confirm / decide before the first deploy:
 - [x] **Networking** — **private endpoint / VNet.** The Web App, Postgres and
   Key Vault are private; public ingress is through an Application Gateway.
   So every job in `deploy_nus.yml` needs the self-hosted runner (§5), whose
-  VM is blocked on regional capacity (status doc, "External blocker 1").
+  VM is blocked on regional capacity (status doc §16.1).
 - [ ] **Custom domain** — a production hostname is required (the default
   `*.azurewebsites.net` name is a backend identity only) and awaits the NUS
-  naming decision (status doc, "External blocker 2").
+  naming decision (status doc §18.1–18.2).
 - [ ] **Whitelist** — `SYS_ADMIN_EMAILS` / `OPERATOR_EMAILS` = NUS emails.
 - [ ] **Data carry-over** — clean start on NUS, or migrate from personal
   Postgres (§8)?
@@ -120,25 +121,24 @@ Still to confirm / decide before the first deploy:
 ## 3. Azure side — the NUS environment
 
 NUS IT has provisioned it. The inventory and the network design are the status doc's
-"Completed / verified" and are not repeated here; the project's remaining
-Azure work is the status doc's "Application Gateway work remaining" and "Remaining
-project-side work after blockers clear". This runbook adds the detail for
-four of those items:
+§§7–14 and are not repeated here; the project's remaining Azure work is
+the status doc's §8.1 (the gateway's production configuration) and §22
+steps 8–12. This runbook adds the detail for four of those items:
 
 - [ ] **Do not dispatch `deploy_nus.yml` until stage 4.** Since segment
   21A's A2, `main` has no `app.main:app`, and this workflow's artifact does
   not yet carry `cordware/`, so a deploy from `main` could not start. Stage
-  4 broadens the artifact and moves the command below to
-  `cordware.main:app` together (`docs/cordware_repository_strategy_v0.8.md`
+  4 broadens the artifact (`docs/cordware_repository_strategy_v0.8.md`
   §5).
-- [ ] **Startup command** on the Web App (Python 3.12), as on the dev slot:
+- [ ] **Startup command** on the Web App (Python 3.12), the one
+  `docs/deployment_dev.md` gives the dev slot:
   ```bash
-  gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app
+  gunicorn -w 2 -k uvicorn.workers.UvicornWorker cordware.main:app
   ```
   Turn **Always On** on, and **App Service logs → Application logging
   (Filesystem)** so Log stream is populated.
-- [ ] **Application role `rrw_app`** in the `reviewrobin` database (status doc step
-  5); record its password for `NUS_DATABASE_URL` (§6.2), then run §8.
+- [ ] **Application role `rrw_app`** in the `reviewrobin` database (status doc
+  §12.1); record its password for `NUS_DATABASE_URL` (§6.2), then run §8.
 - [ ] **Key Vault references** — put `DATABASE_URL` / `SMTP_ENCRYPTION_KEY`
   in the provisioned Key Vault and wire the App Settings to them through
   the Web App's managed identity (`guide/deferred_consolidated.md` §1).
@@ -153,7 +153,7 @@ four of those items:
 Sign-in must move to the **NUS Entra tenant** so students/operators log in
 with NUS MS365 accounts. Easy Auth v2 is already enabled and admin consent
 is complete (status doc); the redirect URI waits on the production hostname (status doc
-step 14).
+§11.1).
 
 - [ ] **App registration** in the NUS Entra tenant for the web app:
   - Redirect URI: `https://<nus-webapp>.azurewebsites.net/.auth/login/aad/callback`
@@ -172,8 +172,9 @@ step 14).
 - [ ] Verify (§7) that `/reviewrobin/auth/me` returns your NUS identity
   with `provider: "aad"`.
 
-> The app already consumes Easy Auth headers (`app/auth/identity.py`); no
-> code change. **Never** set `ALLOW_FAKE_AUTH=true` in App Settings.
+> The app already consumes Easy Auth headers: the Cordware host parses
+> them (`cordware/identity.py`) and RRW re-exports that interface
+> (`app/auth/identity.py`); no code change. **Never** set `ALLOW_FAKE_AUTH=true` in App Settings.
 
 ---
 
@@ -183,10 +184,10 @@ The Web App, Postgres and Key Vault are private (status doc), so a GitHub-hosted
 runner reaches none of them: not the database the `migrate` job writes,
 and not the Web App the `deploy` job pushes to. Every job in
 `deploy_nus.yml` therefore moves to the private self-hosted runner in the
-VNet's runner subnet (status doc, "Remaining project-side work" step 8), which
+VNet's runner subnet (status doc §16), which
 also does the Key Vault and Postgres administration. Today every job is
 still `runs-on: ubuntu-latest`, and the runner VM is blocked on regional
-capacity (status doc, "External blocker 1"), so the workflow cannot deploy NUS
+capacity (status doc §16.1), so the workflow cannot deploy NUS
 yet.
 
 Keep the invariant: **schema is migrated before the new code serves** (no
@@ -290,6 +291,7 @@ start — restart after changes.
 | Setting | NUS value |
 |---|---|
 | `APP_ENV` | `production` (any non-`local` value activates fail-fast startup checks) |
+| `CORDWARE_APPS` | unset, or `reviewrobin` — the applications the host mounts (`cordware/main.py`); unset mounts every registered one, and an empty value runs the host alone |
 | `DATABASE_URL` | same NUS connection string as the GitHub secret (identical value in both places) |
 | `SYS_ADMIN_EMAILS` | NUS sys-admin (admin) email(s), comma-separated |
 | `OPERATOR_EMAILS` | NUS operator email(s), comma-separated |
@@ -458,7 +460,7 @@ Application Gateway in front), admin consent in the NUS tenant, and the
 provisioned database. Still open:
 
 - Production hostname under `nus.edu.sg` — awaiting the NUS naming decision
-  (status doc, "External blocker 2").
-- A deployable runner VM SKU — awaiting Microsoft Support (status doc, "External
-  blocker 1").
+  (status doc §18.1–18.2).
+- A deployable runner VM SKU — awaiting Microsoft Support (status doc
+  §16.1).
 - Data carry-over required, or clean start on NUS?

@@ -12,7 +12,7 @@ Thanks for contributing to Review Robin Web.
 
 ## Pull request checklist
 
-- [ ] Tests pass locally (`pytest`).
+- [ ] Tests and lint pass locally (`pytest -n auto`, `ruff check .`).
 - [ ] New behavior has tests.
 - [ ] Documentation is updated if needed.
 - [ ] No unrelated refactoring is included.
@@ -31,10 +31,13 @@ more permissive of the two in several ways that have bitten this project
 see the migration-portability notes in `AGENTS.md`). That job is the only
 check covering the gap: it round-trips the whole Alembic chain in both
 directions and runs the full suite against a real `postgres:16`. It
-matters because the deploy workflow runs `alembic upgrade head` against
-Azure Postgres on every push to `main` and does **not** depend on either
-CI workflow — so a Postgres-only migration failure that reaches `main`
-is first discovered during a production migration.
+matters because, while the dev slot runs its deploy workflow, that
+workflow runs `alembic upgrade head` against Azure Postgres on every
+push to `main` and does **not** depend on either CI workflow — so a
+Postgres-only migration failure that reaches `main` is first discovered
+during a production migration. The workflow has been disabled since
+2026-06-03 (`docs/deployment_dev.md`); the policy holds anyway, so the
+gate is already in place when the slot resumes.
 
 **Merging ahead of it is fine** for changes that cannot reach the
 database: documentation, and dev-only tooling under `tools/`. The faster

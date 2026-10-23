@@ -140,7 +140,7 @@ The surface has to hold two quite different load shapes, and a dense grid serves
 
 ### 6.3 Granular, per-audience visibility
 
-**Decision.** Make visibility an explicit, per-instrument, per-audience, and per-window policy: each instrument can be shown to reviewees or observers as raw, anonymised, or summarised, and gated on whether responses have been released. Anonymised downloads use per-session opaque tokens, with a separate operator-only key for de-anonymisation.
+**Decision.** Make visibility an explicit, per-instrument, per-audience, and per-window policy: each instrument can be shown to reviewees or observers as `Raw`, `Anonymized` or `Summarized`, and gated on whether responses have been released. Anonymised downloads use per-session opaque tokens, with a separate operator-only key for de-anonymisation.
 
 **Why.** "Who may see what" is a first-class requirement in real review, not an afterthought. Different audiences legitimately deserve different views of the same responses, and getting this wrong is both an ethical and an institutional risk. Making it a declared policy rather than an emergent behaviour keeps it auditable and defensible.
 
@@ -168,9 +168,11 @@ The surface has to hold two quite different load shapes, and a dense grid serves
 
 **Why.** For institutional review, staying in-tenant is the difference between a tool that can be sanctioned and one that cannot. It aligns with the second wall coming down (Section 4): in-principle approval to host sandboxed citizen projects on institutional Azure under a workable data policy. Reusing institutional identity also means no separate credentials to manage and a permission story the institution already understands.
 
-One honesty caveat belongs here. At the pilot stage, the safety of "inside the institution" rests on the **platform sandbox and the institutional data policy**, not yet on the application's own hardening: on the developer-owned dev slot that serves today, database access is guarded by a firewall allow-list rather than private networking, secrets are held as plain application settings, and there is no monitoring layer. The NUS environment that replaces it is provisioned with private networking, Key Vault and Application Insights, and awaits cutover (`docs/cordware_nus_azure_status_2026-10-16_v8.md`). The in-tenant posture is what makes the tool *sanctionable now*; the deeper hardening follows. Saying so is part of the same honesty the design otherwise insists on.
+One honesty caveat belongs here. At the pilot stage, the safety of "inside the institution" rests on the **platform sandbox and the institutional data policy**, not yet on the application's own hardening: on the developer-owned dev slot that served as of 2026-10-16 (its deploys dormant since 2026-06-03, `docs/deployment_dev.md`), database access is guarded by a firewall allow-list rather than private networking, secrets are held as plain application settings, and there is no monitoring layer. The NUS environment that replaces it is provisioned with private networking, Key Vault and Application Insights, and awaits cutover (`docs/cordware_nus_azure_status_2026-10-16_v8.md`). The in-tenant posture is what makes the tool *sanctionable now*; the deeper hardening follows. Saying so is part of the same honesty the design otherwise insists on.
 
 **Trade-off.** RRW is bound to Easy Auth and has no standalone login fallback; it must run behind the platform's identity layer. That coupling is accepted deliberately — it is a feature, not a limitation, for the intended setting.
+
+RRW now runs under the Cordware host, which parses the Easy Auth identity and hands it to RRW; RRW keeps its own users, permissions and audit (`docs/cordware_repository_strategy_v0.8.md`).
 
 ### 6.7 Accountability by construction
 
@@ -192,7 +194,7 @@ One honesty caveat belongs here. At the pilot stage, the safety of "inside the i
 
 ## 7. What RRW deliberately is not
 
-Scope discipline is a design feature, so it is worth stating the exclusions directly. RRW does not analyse or present data (Section 6.5). It is not a case-management or HR platform, and does not replace substantive human judgment or the operator's oversight. It does not guarantee fairness or good decision-making; it makes the *collection* of judgment reliable and defensible. And, as a pilot-stage build, several things remain deliberately unfinished — email is recorded, not sent (each message is logged to the outbox, and no transport delivers it until the Azure-side wiring lands), the developer-owned dev slot is the only live environment until the provisioned NUS environment is cut over, retention is operator-driven, app-level security hardening (private networking, managed secret storage, monitoring) arrives with that cutover, and accessibility has had a basic pass rather than a full audit. These are honest boundaries, most of them chosen rather than missed.
+Scope discipline is a design feature, so it is worth stating the exclusions directly. RRW does not analyse or present data (Section 6.5). It is not a case-management or HR platform, and does not replace substantive human judgment or the operator's oversight. It does not guarantee fairness or good decision-making; it makes the *collection* of judgment reliable and defensible. And, as a pilot-stage build, several things remain deliberately unfinished — email is recorded, not sent (each message is logged to the outbox, and no transport delivers it until the Azure-side wiring lands), the developer-owned dev slot was the only live environment as of 2026-10-16, until the provisioned NUS environment is cut over, retention is operator-driven, app-level security hardening (private networking, managed secret storage, monitoring) arrives with that cutover, and accessibility has had a basic pass rather than a full audit. These are honest boundaries, most of them chosen rather than missed.
 
 ---
 
@@ -218,7 +220,7 @@ RRW exists to solve one structurally hard, widely recurring problem — **routin
 | Large symmetric course peer review (the TEAMMATES use case) | Shared pool with self-review excluded; small groups via group-scoped rules; CSV roster import instead of block paste |
 | Reviewer work is tabular and long | Paginated tabular response surface with typed fields and page-by-page drafts — serving both many-reviewers-few-rows and few-reviewers-many-rows load shapes |
 | Returns must be collatable and analysable | Typed fields + validation at authoring time; structured CSV/zip export |
-| Different audiences may see different views | Per-instrument, per-audience, per-window visibility policy (raw/anonymised/summarised) with tokenised downloads |
+| Different audiences may see different views | Per-instrument, per-audience, per-window visibility policy (`Raw` / `Anonymized` / `Summarized`) with tokenised downloads |
 | Cycles are discrete, not tied to a standing roster | Session as the unit of organisation; duplicate-and-tag to reuse a population |
 | Judgments must be defended later | Typed audit envelope on every mutation; lifecycle locks; scoped permissions; reconciling (non-destructive) regeneration |
 | Must be sanctioned to run in the institution | Microsoft 365 / Entra identity; in-tenant Azure hosting under a workable data policy (pilot safety rests on sandbox + policy; app-level hardening on the roadmap) |
