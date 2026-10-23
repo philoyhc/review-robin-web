@@ -140,7 +140,7 @@ The surface has to hold two quite different load shapes, and a dense grid serves
 
 ### 6.3 Granular, per-audience visibility
 
-**Decision.** Make visibility an explicit, per-instrument, per-audience, and per-window policy: each instrument can be shown to reviewees or observers as `Raw`, `Anonymized` or `Summarized`, and gated on whether responses have been released. Anonymised downloads use per-session opaque tokens, with a separate operator-only key for de-anonymisation.
+**Decision.** Make visibility an explicit, per-instrument, per-audience, and per-window policy: each instrument can be shown to reviewees or observers as `Raw`, `Anonymized` or `Summarized`, and gated on whether responses have been released. Anonymized downloads use per-session opaque tokens, with a separate operator-only key for de-anonymization.
 
 **Why.** "Who may see what" is a first-class requirement in real review, not an afterthought. Different audiences legitimately deserve different views of the same responses, and getting this wrong is both an ethical and an institutional risk. Making it a declared policy rather than an emergent behaviour keeps it auditable and defensible.
 
@@ -194,7 +194,7 @@ RRW now runs under the Cordware host, which parses the Easy Auth identity and ha
 
 ## 7. What RRW deliberately is not
 
-Scope discipline is a design feature, so it is worth stating the exclusions directly. RRW does not analyse or present data (Section 6.5). It is not a case-management or HR platform, and does not replace substantive human judgment or the operator's oversight. It does not guarantee fairness or good decision-making; it makes the *collection* of judgment reliable and defensible. And, as a pilot-stage build, several things remain deliberately unfinished — email is recorded, not sent (each message is logged to the outbox, and no transport delivers it until the Azure-side wiring lands), the developer-owned dev slot was the only live environment as of 2026-10-16, until the provisioned NUS environment is cut over, retention is operator-driven, app-level security hardening (private networking, managed secret storage, monitoring) arrives with that cutover, and accessibility has had a basic pass rather than a full audit. These are honest boundaries, most of them chosen rather than missed.
+Scope discipline is a design feature, so it is worth stating the exclusions directly. RRW does not analyze or present data (Section 6.5). It is not a case-management or HR platform, and does not replace substantive human judgment or the operator's oversight. It does not guarantee fairness or good decision-making; it makes the *collection* of judgment reliable and defensible. And, as a pilot-stage build, several things remain deliberately unfinished — email is recorded, not sent (each message is logged to the outbox, and no transport delivers it until the Azure-side wiring lands), the developer-owned dev slot was the only live environment as of 2026-10-16, until the provisioned NUS environment is cut over, retention is operator-driven, app-level security hardening (private networking, managed secret storage, monitoring) arrives with that cutover, and accessibility has had a basic pass rather than a full audit. These are honest boundaries, most of them chosen rather than missed.
 
 ---
 
@@ -220,7 +220,7 @@ RRW exists to solve one structurally hard, widely recurring problem — **routin
 | Large symmetric course peer review (the TEAMMATES use case) | Shared pool with self-review excluded; small groups via group-scoped rules; CSV roster import instead of block paste |
 | Reviewer work is tabular and long | Paginated tabular response surface with typed fields and page-by-page drafts — serving both many-reviewers-few-rows and few-reviewers-many-rows load shapes |
 | Returns must be collatable and analysable | Typed fields + validation at authoring time; structured CSV/zip export |
-| Different audiences may see different views | Per-instrument, per-audience, per-window visibility policy (`Raw` / `Anonymized` / `Summarized`) with tokenised downloads |
+| Different audiences may see different views | Per-instrument, per-audience, per-window visibility policy (`Raw` / `Anonymized` / `Summarized`) with tokenized downloads |
 | Cycles are discrete, not tied to a standing roster | Session as the unit of organisation; duplicate-and-tag to reuse a population |
 | Judgments must be defended later | Typed audit envelope on every mutation; lifecycle locks; scoped permissions; reconciling (non-destructive) regeneration |
 | Must be sanctioned to run in the institution | Microsoft 365 / Entra identity; in-tenant Azure hosting under a workable data policy (pilot safety rests on sandbox + policy; app-level hardening on the roadmap) |
