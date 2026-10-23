@@ -126,8 +126,8 @@ To days match the page's.
   The columns below are the one tighter form. The offset gives
   at-a-glance orientation; the IANA id is the unambiguous
   identifier. A bare `UTC` is shown once, not doubled.
-- The **sessions-lobby, archived-page and reviewer-dashboard
-  Timezone columns** are tighter still: the cell shows just the compact GMT-offset
+- The **sessions-lobby, archived-page, Sessions Diagnostics and
+  reviewer-dashboard Timezone columns** are tighter still: the cell shows just the compact GMT-offset
   (`gmt_offset_label`, e.g. `GMT+8`), with the full
   `GMT+8 Asia/Singapore` in the cell's hover tooltip.
 - **The calendar's edge.** `parse_local_datetime` refuses a moment
