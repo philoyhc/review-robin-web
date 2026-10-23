@@ -349,3 +349,25 @@ def test_lenient_mode_logs_and_writes_anyway(
         "lenient mode should log a warning naming the event_type "
         "so the shape violation is visible in production logs"
     )
+
+
+def test_the_lenient_log_line_names_no_value(
+    db: Session, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The violation reaches the production log, outside the purge's
+    reach, so it names the event type and where the shape breaks, never
+    the failing value (findings F2's cold read)."""
+    monkeypatch.setattr(settings, "audit_strict_mode", False)
+    user, review_session = _make_user_and_session(db, "lenient-pii")
+    with caplog.at_level("WARNING", logger="app.services.audit"):
+        audit.write_event(
+            db,
+            event_type="reviewer.added",
+            summary="malformed",
+            actor_user_id=user.id,
+            session_id=review_session.id,
+            detail={"snapshot": "alice@example.edu"},
+        )
+    lines = [r.getMessage() for r in caplog.records]
+    assert any("snapshot" in line for line in lines), lines
+    assert not any("alice@example.edu" in line for line in lines), lines

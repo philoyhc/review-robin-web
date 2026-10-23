@@ -1848,3 +1848,28 @@ def test_reminders_are_checked_against_the_end_the_session_keeps(
     ).errors == []
     db.refresh(blank)
     assert blank.reminder_offsets == ["-P1D"]
+
+
+def test_an_older_file_s_preview_member_ids_are_dropped_on_import(db: Session) -> None:
+    """Findings D10: a file exported before the strip still carries the
+    source session's reviewee ids; the import drops them too."""
+    src = _populated_round_trip_session(db, code="rt-b2-old-src")
+    rows = [
+        Row(
+            r.field,
+            json.dumps({"sample_reviewee_name": "Carol", "sample_group_member_ids": [42, 43]}),
+            r.data_type,
+        )
+        if r.field.endswith(".band2_state")
+        else r
+        for r in serialize_session_config(db, src)
+    ]
+    dst = _bare_session(db, code="rt-b2-old-dst")
+    apply_session_config(
+        db, review_session=dst, rows=rows, user=_user(db, email="rt-b2-old@e.edu")
+    )
+    db.expire_all()
+    dst_inst = db.execute(
+        select(Instrument).where(Instrument.session_id == dst.id)
+    ).scalar_one()
+    assert dst_inst.band2_state == {"sample_reviewee_name": "Carol"}

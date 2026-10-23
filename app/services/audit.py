@@ -17,7 +17,6 @@ we're auditing.
 """
 from __future__ import annotations
 
-import logging
 import os
 import warnings
 from dataclasses import dataclass, field
@@ -36,11 +35,13 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models import AuditEvent, ReviewSession
+from app.logging_config import get_logger
 
 # Production's record of a detail that breaks its schema: the row writes
 # through and this line reaches the host's JSON log (findings F2,
-# 2026-10-22), which ``warnings.warn`` never did.
-_log = logging.getLogger(__name__)
+# 2026-10-22), which ``warnings.warn`` never did. The message names the
+# event type and where the shape breaks, never a value.
+_log = get_logger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -863,8 +864,15 @@ def validate_detail(
     try:
         _CanonicalDetail.model_validate(detail)
     except ValidationError as exc:
+        # Where the shape breaks and how, never the failing value: the
+        # message reaches the production log, and a value can be a
+        # participant's email or answer (findings F2's cold read).
+        problems = [
+            (".".join(str(part) for part in error["loc"]), error["msg"])
+            for error in exc.errors(include_input=False)
+        ]
         raise AuditDetailValidationError(
-            event_type, detail, f"shape: {exc.errors()!r}"
+            event_type, detail, f"shape: {problems!r}"
         ) from exc
 
     schema = EVENT_SCHEMAS.get(event_type)
