@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 30 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244); every author row ruled 2026-10-22, as
+(#3225) · **Open:** 22 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244; F1, F3–F9 in #3245); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -40,7 +40,7 @@ tally to strip, keeping the reason it carried. In `docs/` and root rows,
   last of two shared labels win, loading responses onto the wrong
   instrument. Rehydrate is gated off. Enforce uniqueness, or fall back to
   the positional key on ambiguity.
-- **F9** (low, author) — **Ruled 2026-10-22: loosen the spec to what the code does.** `cordware/spec/identity.md` reads the
+- ~~**F9**~~ — **Done in #3245**: (low, author) — **Ruled 2026-10-22: loosen the spec to what the code does.** `cordware/spec/identity.md` reads the
   `X-MS-CLIENT-PRINCIPAL-NAME` header as the name's last fallback; the
   code reads it only when no email was found. Fix the code or loosen the
   spec.
@@ -149,23 +149,23 @@ All ruled 2026-10-22, each as its row records.
 
 **`spec/` and `cordware/spec/` — architecture (F)**
 
-- **F1** (low, spec) — `spec/architecture.md` "Three-layer split" names
+- ~~**F1**~~ — **Done in #3245**: (low, spec) — `spec/architecture.md` "Three-layer split" names
   `Instrument.session_seq` as the only querying column default;
   `ReviewSession.public_id` is a second.
-- **F3** (low, write) — `spec/architecture.md` is silent on the app-wide
+- ~~**F3**~~ — **Done in #3245**: (low, write) — `spec/architecture.md` is silent on the app-wide
   `refuse_oversized_ids` dependency.
-- **F4** (low, spec) — `spec/permissions.md` attributes identity to
+- ~~**F4**~~ — **Done in #3245**: (low, spec) — `spec/permissions.md` attributes identity to
   `app/auth/identity.py` (Cordware resolves it) and never says
   `{session_id}` is the `public_id`.
-- **F5** (low–medium, spec) — `spec/audience_and_identity_model.md` §4:
+- ~~**F5**~~ — **Done in #3245**: (low–medium, spec) — `spec/audience_and_identity_model.md` §4:
   Accounts is multi-select with an all-or-nothing batch, not one user at
   a time.
-- **F6** (low, spec) — `spec/audience_and_identity_model.md` `/guide`
+- ~~**F6**~~ — **Done in #3245**: (low, spec) — `spec/audience_and_identity_model.md` `/guide`
   audiences: an archived session discloses no role.
-- **F7** (low–medium, spec) — `spec/README.md` does not index the two
+- ~~**F7**~~ — **Done in #3245**: (low–medium, spec) — `spec/README.md` does not index the two
   Cordware specs, and its `architecture.md` row omits URL emission and
   the mount.
-- **F8** (low, spec / author) — **Ruled 2026-10-22: fix §4.3, and add a row for the Cordware specs to §19.** `spec/rrw_functional_spec.md` §4.3 says
+- ~~**F8**~~ — **Done in #3245**: (low, spec / author) — **Ruled 2026-10-22: fix §4.3, and add a row for the Cordware specs to §19.** `spec/rrw_functional_spec.md` §4.3 says
   the invitation link signs a reviewer in (it never does); §19 omits the
   Cordware specs (author: add a row or soften "every live spec").
 - **F11** (low, author) — **Ruled 2026-10-22: trim it, carried by the spec-update PRs.** `spec/rrw_functional_spec.md` sections that
