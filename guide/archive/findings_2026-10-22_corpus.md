@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 21 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244; F1, F3–F9 in #3245; F11 in #3247); every author row ruled 2026-10-22, as
+(#3225) · **Open:** none of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244; F1, F3–F9 in #3245; F11 in #3247; H1–H21 in #3248); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -13,7 +13,7 @@ divergence is listed here and the fixes ship afterwards as ordinary PRs.
 A row is struck when it is done, with the PR that did it, or marked
 declined with the reason. Code defects found by reading the code for
 bugs, rather than the specs for drift, are in the sibling register
-`guide/findings_2026-10-22_bugs.md`.
+`guide/archive/findings_2026-10-22_bugs.md`.
 
 **Ids** carry the area of the read: **A** instruments, the reviewer and
 participant surfaces · **B** lifecycle, Session Home, the lobby,
@@ -177,63 +177,63 @@ All ruled 2026-10-22, each as its row records.
 
 **`docs/` and root (H)**
 
-- **H1** (medium, author) — **Ruled 2026-10-22: restate as "when the slot is live".** `docs/operations_runbook.md`,
+- ~~**H1**~~ — **Done in #3248**: (medium, author) — **Ruled 2026-10-22: restate as "when the slot is live".** `docs/operations_runbook.md`,
   `docs/known_limitations.md`, `docs/deployment_nus.md` §0,
   `docs/database.md`, `docs/troubleshooting.md` and
   `docs/backup_restore.md` describe the dev deploy as live; it is
   disabled (`docs/deployment_dev.md` is right).
-- **H2** (medium, author) — **Ruled 2026-10-22: restate the reason as conditional; keep the policy.** `CONTRIBUTING.md` "When to wait for CI":
+- ~~**H2**~~ — **Done in #3248**: (medium, author) — **Ruled 2026-10-22: restate the reason as conditional; keep the policy.** `CONTRIBUTING.md` "When to wait for CI":
   the migration premise (above); also its checklist says `pytest` where
   `CLAUDE.md` requires `-n auto` and `ruff`.
-- **H3** (medium, doc) — "Segment 21, on hold" is stale in
+- ~~**H3**~~ — **Done in #3248**: (medium, doc) — "Segment 21, on hold" is stale in
   `docs/README.md`, `docs/architecture.md`, `docs/known_limitations.md`
   and `docs/deployment_nus.md`'s banner.
-- **H4** (medium, author) — **Ruled 2026-10-22: fix the command.** `docs/deployment_nus.md` §3 starts
+- ~~**H4**~~ — **Done in #3248**: (medium, author) — **Ruled 2026-10-22: fix the command.** `docs/deployment_nus.md` §3 starts
   `app.main:app`, which does not exist; it is `cordware.main:app`.
-- **H5** (low–medium, author) — **Ruled 2026-10-22: keep it as a dated record; retitle the column "at `b03fd1be`".** `docs/cordware_stage0_baseline.md`
+- ~~**H5**~~ — **Done in #3248**: (low–medium, author) — **Ruled 2026-10-22: keep it as a dated record; retitle the column "at `b03fd1be`".** `docs/cordware_stage0_baseline.md`
   "Command today" and its line citations have moved (above).
-- **H6** (low, doc) — `docs/local_setup.md` §2 omits `cordware/`; §3 and
+- ~~**H6**~~ — **Done in #3248**: (low, doc) — `docs/local_setup.md` §2 omits `cordware/`; §3 and
   §8 name `/docs`, now `/reviewrobin/docs`.
-- **H7** (low–medium, doc) — `docs/security_posture.md`,
+- ~~**H7**~~ — **Done in #3248**: (low–medium, doc) — `docs/security_posture.md`,
   `docs/deployment_nus.md` §4 and `docs/architecture.md` attribute the
   Easy Auth parser to `app/auth/identity.py`; it is `cordware/identity.py`.
-- **H8** (low, doc) — the deployed environment tables omit
+- ~~**H8**~~ — **Done in #3248**: (low, doc) — the deployed environment tables omit
   `CORDWARE_APPS`.
-- **H9** (low, doc) — `docs/deployment_dev.md` "Resuming the dev slot":
+- ~~**H9**~~ — **Done in #3248**: (low, doc) — `docs/deployment_dev.md` "Resuming the dev slot":
   every "once 21x lands" has landed.
-- **H10** (low, author) — **Ruled 2026-10-22: date each figure rather than re-take it.** `rrw_sdd_in_practice.md` appendix "4,800 tests"
+- ~~**H10**~~ — **Done in #3248**: (low, author) — **Ruled 2026-10-22: date each figure rather than re-take it.** `rrw_sdd_in_practice.md` appendix "4,800 tests"
   and `CLAUDE.md`'s 172 s are dated measurements.
-- **H11** (low, author) — **Ruled 2026-10-22: date it, with H18.** `rrw_design_rationale.md` §6.6: the dev slot
+- ~~**H11**~~ — **Done in #3248**: (low, author) — **Ruled 2026-10-22: date it, with H18.** `rrw_design_rationale.md` §6.6: the dev slot
   "serves today"; §7 also calls it "the only live environment" (H18).
-- **H12** (medium, doc) — `docs/cordware_repository_strategy_v0.8.md` §3
+- ~~**H12**~~ — **Done in #3248**: (medium, doc) — `docs/cordware_repository_strategy_v0.8.md` §3
   still says, in decision-time "today" sentences, that nothing enforces
   the fake-auth guard and that RRW writes root-path links; both shipped
   (`cordware/main.py`, `app/web/urls.py`). Its §8 ledger is right.
-- **H13** (low, author) — **Ruled 2026-10-22: label the tree as the target layout.** the strategy's §2 tree lists `cordware/AGENTS.md`,
+- ~~**H13**~~ — **Done in #3248**: (low, author) — **Ruled 2026-10-22: label the tree as the target layout.** the strategy's §2 tree lists `cordware/AGENTS.md`,
   `docs/`, `guide/`, `tools/` and `deployment/` (none exist) and omits
   `cordware/settings.py` and `cordware/logging.py`; it says the root
   `AGENTS.md` routes work by owner, which it does not. Label the tree as
   the target, or add the routing.
-- **H14** (low, doc) — the strategy's §5: the NUS workflow also packages
+- ~~**H14**~~ — **Done in #3248**: (low, doc) — the strategy's §5: the NUS workflow also packages
   `pyproject.toml`.
-- **H15** (low–medium, doc) — `docs/cordware_nus_azure_status_2026-10-16_v8.md`
+- ~~**H15**~~ — **Done in #3248**: (low–medium, doc) — `docs/cordware_nus_azure_status_2026-10-16_v8.md`
   §4.3 says the landing page shows only eligible applications; it lists
   every mounted one (`cordware/web/landing.py`), as the strategy says.
-- **H16** (low, author) — **Ruled 2026-10-22: extend the banner.** the status record's banner misses §1, §18.5,
+- ~~**H16**~~ — **Done in #3248**: (low, author) — **Ruled 2026-10-22: extend the banner.** the status record's banner misses §1, §18.5,
   §21 and §22 step 4 (a Cordware repo and federated credential the
   strategy dropped), and §21's "RRW Cordware retrofit: Not started"
   (Segment 21 shipped it). Extend the banner.
-- **H17** (medium, doc) — `docs/deployment_nus.md` §1, §3, §5 and §13
+- ~~**H17**~~ — **Done in #3248**: (medium, doc) — `docs/deployment_nus.md` §1, §3, §5 and §13
   cite headings of the v7 status record that v8 does not have; the v8
   equivalents are §8.1, §12.1, §16.1 and §18.1–18.2.
-- **H18** (low, doc) — `rrw_design_rationale.md` §7: "the only live
+- ~~**H18**~~ — **Done in #3248**: (low, doc) — `rrw_design_rationale.md` §7: "the only live
   environment" (with H11).
-- **H19** (low, doc) — `rrw_design_rationale.md` §6.3 and its appendix
+- ~~**H19**~~ — **Done in #3248**: (low, doc) — `rrw_design_rationale.md` §6.3 and its appendix
   spell the visibility modes as prose; `CLAUDE.md` asks for the shipped
   `Anonymized` / `Summarized`.
-- **H20** (low, doc) — **Ruled 2026-10-22: date each figure.** `rrw_sdd_in_practice.md` §1 ("two thousand six
+- ~~**H20**~~ — **Done in #3248**: (low, doc) — **Ruled 2026-10-22: date each figure.** `rrw_sdd_in_practice.md` §1 ("two thousand six
   hundred pull requests", undated) and §6.7 (`CLAUDE.md` "297" lines, now
   309): date or drop.
-- **H21** (low, author) — **Ruled 2026-10-22: one pointer to the strategy in each.** neither narrative document says RRW now runs
+- ~~**H21**~~ — **Done in #3248**: (low, author) — **Ruled 2026-10-22: one pointer to the strategy in each.** neither narrative document says RRW now runs
   under the Cordware host, which parses identity; one pointer to the
   strategy would do.

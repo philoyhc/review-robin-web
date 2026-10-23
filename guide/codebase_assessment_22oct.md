@@ -46,9 +46,9 @@ window, `cordware/spec/` are the contract, and
 `spec/rrw_functional_spec.md` and its siblings are what §3 audits
 against. `guide/todo_master.md` holds the open work. **A bug sweep and a
 corpus drift sweep ran beside it at the same commit**: seven code-reading
-agents produced `guide/findings_2026-10-22_bugs.md`, and seven verify-mode
+agents produced `guide/archive/findings_2026-10-22_bugs.md`, and seven verify-mode
 `spec-writer` reads produced `guide/sweep_2026-10-22_corpus.md` and
-`guide/findings_2026-10-22_corpus.md`. §3, §5 and §6 lean on them.
+`guide/archive/findings_2026-10-22_corpus.md`. §3, §5 and §6 lean on them.
 
 **Development context:** a single author, with AI agents building. The
 author checks each change in a browser against a local run with fake
@@ -241,8 +241,8 @@ The roster route modules' duplication fell again, to **40% / 28% / 27% /
 Every row was checked against code at `00501f2e` by the six corpus reads
 and the seven bug reads at the same commit. **Bold rows changed this
 window.** A `⚠ drift` row names its finding: *bugs R1* is in
-`guide/findings_2026-10-22_bugs.md`, *corpus B3* in
-`guide/findings_2026-10-22_corpus.md`.
+`guide/archive/findings_2026-10-22_bugs.md`, *corpus B3* in
+`guide/archive/findings_2026-10-22_corpus.md`.
 
 | Area | Spec | Status |
 | --- | --- | --- |
@@ -356,7 +356,7 @@ list (corpus F11).
 ## 6. Bugs and regressions
 
 **Known open bugs at `00501f2e`: 0 high, 7 medium, 12 low**, all in
-`guide/findings_2026-10-22_bugs.md`, none yet fixed; 16 reproduced by a
+`guide/archive/findings_2026-10-22_bugs.md`, none yet fixed; 16 reproduced by a
 scratch test, 3 by reading. The medium ones:
 
 - a stale group form writes its answers into a different group after a
@@ -372,7 +372,7 @@ scratch test, 3 by reading. The medium ones:
 
 Also checked: no open GitHub issues; no open pull requests; 0 xfails;
 four skips, all named in §2. Five corpus findings are code defects rather
-than spec drift (`guide/findings_2026-10-22_corpus.md` §1), the largest
+than spec drift (`guide/archive/findings_2026-10-22_corpus.md` §1), the largest
 Rehydrate's short-label match (corpus D1, gated off).
 
 Worth remembering from the window, each now with a guard:
