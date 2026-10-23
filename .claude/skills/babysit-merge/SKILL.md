@@ -14,7 +14,7 @@ Use this for work that is already decided: a batch of low-intensity fixes from a
 1. Establish the queue before starting: the list of PRs (existing numbers, or planned rungs/items to turn into PRs) in order. Write it as a task list so progress is visible.
 2. For an item ladder, note which rung you expect to be the item's **last build rung** — it carries the cumulative `diff-reviewer` read. Record the `main` SHA before rung 1 merges in rung 1's PR body, so the last rung can cite it.
 3. Work one PR at a time. Do not open the next PR's branch until the current one is merged or parked.
-4. Branch each new PR from up-to-date `main` (`git fetch && git switch main && git pull`), so every PR is tested against what is really there. For a PR that already exists, check out its branch (`gh pr checkout <n>`) before classifying it or running any gate, so the local checks run on the PR's head and not on `main`.
+4. Branch each new PR from up-to-date `main` (`git fetch && git switch main && git pull`), so every PR is tested against what is really there. For a PR that already exists, check out its branch (`gh pr checkout <n>`) before classifying it or running any gate, so the local checks run on the PR's head and not on `main`; if that head is behind current `main` (an earlier PR in the batch merged), merge `origin/main` into it and push first — a merge commit, never a rebase or force-push on a branch you did not create — so both the local checks and CI test the tree that will land.
 5. Open each new PR as a **draft** (`gh pr create --draft`). Codex review is triggered by marking it ready, so it must not start ready.
 
 ## Classify each PR
