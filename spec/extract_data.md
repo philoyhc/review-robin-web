@@ -120,7 +120,8 @@ Each card on the grid shares a uniform body shape:
   download.
 
 Chip state on every grid card persists via `localStorage`,
-keyed to the session id (`rrw-extract-data-chips-{session_id}`;
+keyed to the session's `public_id`, not its integer id
+(`rrw-extract-data-chips-{session_id}`;
 the Self-review handling chips use
 `rrw-self-review-handling-{session_id}`). Reload preserves the
 operator's selection.
@@ -1183,7 +1184,8 @@ reviewers to download yet" and so on.
 
 **Chip-state persistence.** Every chip on the four canned-lens
 cards persists its `aria-pressed` state via `localStorage` keyed
-to the session id (`rrw-extract-data-chips-{session_id}`). The
+to the session's `public_id` (`rrw-extract-data-chips-{session_id}`,
+`{session_id}` being the `public_id`). The
 two metadata cards' Self-review handling chips keep their
 three-state value in a separate store,
 `rrw-self-review-handling-{session_id}`. Reload restores the

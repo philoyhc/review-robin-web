@@ -369,6 +369,14 @@ so only an older session can carry one; the analysis step does not
 catch it, and the rehydrate fails at this step with the import's
 whole-number message.
 
+**So does an older extract whose instruments use a rule set Band 1's
+card can't show.** The import refuses a rule set an instrument uses
+when its `rules_json` holds a rule the card can't show as stored, or
+when its `combinator` is not `ALL_OF`, naming the rule set and the
+instrument (`spec/csv_contracts.md` §3.3, phase 1), and the rehydrate
+fails at this step like any other settings error. A rule set no
+instrument uses imports as stored.
+
 ### 6.3 Import populations and regenerate assignments
 
 1. **Reviewers / Reviewees / Observers** via `csv_imports.save_reviewers`
@@ -406,8 +414,7 @@ identity to the newly-created PKs and insert a `Response`:
   falling back to the positional `InstrumentName` = `instrument_{n}` →
   the n-th instrument by `(order, id)`. Short labels need not be unique
   (`spec/settings_inventory.md` §10): a label two instruments share
-  matches neither, and the positional key settles the row (findings D1
-  and D2, 2026-10-22).
+  matches neither, and the positional key settles the row.
 - **Response field** ← `(instrument, FieldKey)` →
   `InstrumentResponseField.id` (unique `(instrument_id, field_key)`).
 - **Per-reviewee rows** (`InstrumentFlavour = per-reviewee`) — **Reviewee**
@@ -454,7 +461,7 @@ to every member assignment of the matching group. The group is matched by
 so the import identity is byte-identical to what the export composed — then
 the value is written to each member assignment's `Response`. A row naming
 the group by its tag values alone (`"Team A"`), as a file exported before
-findings G1 may when the instrument's Name was hidden, also matches,
+2026-10-07 may when the instrument's Name was hidden, also matches,
 wherever that label names one group and is not another group's composed
 identity; otherwise it is dropped as unmatched. (This is why
 the responses round-trip needs the assignments regenerated first: the
