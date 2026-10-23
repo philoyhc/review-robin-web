@@ -279,6 +279,9 @@ before it counts owned sessions, so either the add commits first and `still_owne
 or it waits and sees the flag cleared. A Create owner revoked, demoted
 or deleted between the 422 check and the write is skipped, silently;
 the owners staged after them still land (`spec/session_owners.md` §1).
+Create is an `async` handler, so it takes each of these locks through
+`run_in_threadpool`, and a wait never blocks the event loop
+(findings S4, 2026-10-22).
 
 ---
 

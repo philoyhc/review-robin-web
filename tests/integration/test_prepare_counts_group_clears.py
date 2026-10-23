@@ -215,8 +215,6 @@ def test_a_rule_set_the_dry_run_cannot_load_fails_prepare_at_generate(
     rule_set.rules_json = [{"kind": "no-such-rule"}]
     db.commit()
 
-    # Home: the Assignments and Validate pages answer 500 on such a rule
-    # set however they are reached, which is findings E4, not this.
     response = operator.post(
         f"/operator/sessions/{review_session.public_id}/workflow/prepare",
         data={"return_to": "home"},
@@ -228,3 +226,42 @@ def test_a_rule_set_the_dry_run_cannot_load_fails_prepare_at_generate(
     assert "super_status=failed" in location and "super_step=generate" in location
     assert operator.get(location).status_code == 200
     assert _answers(db, group_id) == {"Carol": "4", "Fay": "4"}
+
+
+def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
+    db: Session,
+    alice: AuthenticatedUser,
+    make_client: Callable[[AuthenticatedUser], TestClient],
+) -> None:
+    """Findings E4 (2026-10-22): the Assignments and Validate pages read
+    each instrument's staleness, which ran the engine on the stored rule
+    set and answered 500 when it could not load. They now say which
+    instrument's rule can't be loaded, and Validate counts it an error."""
+    from app.db.models import Instrument, SessionRuleSet
+    from app.services import validation
+
+    operator = make_client(alice)
+    review_session, group_id = _session_with_two_answered_teams(db, operator, "e4-bad-rules")
+    instrument = db.get(Instrument, group_id)
+    db.get(SessionRuleSet, instrument.rule_set_id).rules_json = [{"kind": "no-such-rule"}]
+    db.commit()
+
+    page = operator.get(f"/operator/sessions/{review_session.public_id}/assignments")
+    assert page.status_code == 200
+    assert "data-rule-load-errors" in page.text
+    assert "assignment rule can't be loaded" in page.text
+
+    assert operator.get(f"/operator/sessions/{review_session.public_id}/validate").status_code == 200
+    issues = [
+        issue
+        for issue in validation.validate_session_setup(db, review_session)
+        if issue.rule_key == "instruments.rule_set_unloadable"
+    ]
+    # The helper pins one shared rule set on both instruments.
+    pinned = db.scalars(
+        select(Instrument.id).where(Instrument.rule_set_id == instrument.rule_set_id)
+    ).all()
+    assert sorted(issue.fix_anchor for issue in issues) == sorted(f"#instrument-{i}" for i in pinned)
+    assert {issue.severity.value for issue in issues} == {"error"}
+    state = assignments_service.staleness_by_instrument(db, review_session)[group_id]
+    assert state.load_error and not state.stale

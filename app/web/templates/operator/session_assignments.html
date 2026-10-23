@@ -139,6 +139,22 @@
       </tbody>
     </table>
     </div>
+    {# Findings E4 — an instrument whose stored rule set the engine
+       can't load: Generate would fail on it, so the page says which
+       and why rather than answering 500. #}
+    {% set _unloadable = page_ctx.status_blocks | selectattr("rule_load_error") | list %}
+    {% if _unloadable %}
+      <div class="banner banner-error" role="alert" data-rule-load-errors>
+        {% for block in _unloadable %}
+          <p style="margin: 0;">
+            {{ block.instrument_label }}'s assignment rule can't be loaded
+            ({{ block.rule_load_error }}). Save its Instrument assignment
+            rule on the <a href="{{ url(block.edit_url) }}">Instruments page</a>
+            to replace it.
+          </p>
+        {% endfor %}
+      </div>
+    {% endif %}
   </section>
 
   {# Yellow ``card lock`` retired with the Workflow-card-as-Operations-

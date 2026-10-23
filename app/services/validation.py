@@ -824,6 +824,36 @@ def _check_new_model_no_visible_response_fields(
         )
 
 
+def _check_instruments_rule_set_unloadable(
+    db: Session,
+    review_session: ReviewSession,
+    inputs: ValidationInputs,
+) -> Iterable[ValidationIssue]:
+    """``instruments.rule_set_unloadable`` — one error per instrument
+    whose stored rule set the engine can't load (findings E4,
+    2026-10-22). Generate would fail on it, so Prepare can't pass; the
+    Band 1 card's Save rebuilds the rules from what it shows."""
+    from app.services import assignments as assignments_service
+
+    state_by_instrument = assignments_service.staleness_by_instrument(
+        db, review_session
+    )
+    for instrument in inputs.instruments:
+        state = state_by_instrument.get(instrument.id)
+        if state is None or state.load_error is None:
+            continue
+        yield ValidationIssue(
+            severity=Severity.error,
+            source="instruments",
+            message=(
+                f"Instrument {_instrument_label(instrument)!r}'s assignment "
+                f"rule can't be loaded ({state.load_error}). Save its "
+                f"Instrument assignment rule to replace it."
+            ),
+            fix_anchor=f"#instrument-{instrument.id}",
+        )
+
+
 def _check_instruments_stale_generated(
     db: Session,
     review_session: ReviewSession,
@@ -1315,6 +1345,21 @@ REGISTERED_RULES: tuple[ValidationRule, ...] = (
         fix_url=_assignments_url,
         fix_page_label="Assignments",
         check=_check_instruments_stale_generated,
+    ),
+    ValidationRule(
+        key="instruments.rule_set_unloadable",
+        source="instruments",
+        severity=Severity.error,
+        why=(
+            "Generate runs each instrument's stored assignment rule. "
+            "One the engine can't load, written before the writers "
+            "checked or edited outside the app, fails Generate, so "
+            "Prepare can't finish until the instrument's Instrument "
+            "assignment rule is saved again."
+        ),
+        fix_url=_instruments_url,
+        fix_page_label="Instruments Setup",
+        check=_check_instruments_rule_set_unloadable,
     ),
     ValidationRule(
         key="instruments.zero_included",

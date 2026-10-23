@@ -784,6 +784,21 @@ class InstrumentReconcileState:
     when the roster actually contains a self-review the rule removed,
     so a surface can tell *the rule excluded these* from *there was
     nothing to exclude* (19O Item 1; Codex P2 on #2386)."""
+    load_error: str | None = None
+    """Why the instrument's stored rule set can't be loaded, or ``None``.
+    Set, the rest is empty: the engine never ran, so ``stale`` and
+    ``eligible`` say nothing, and Generate would fail on the same rule
+    set (findings E4, 2026-10-22). Never cached, so a fixed rule set
+    reads afresh."""
+
+
+def _rule_set_load_error(row: SessionRuleSet, exc: ValueError) -> str:
+    """The reason a stored rule set fails to load, in the words the
+    writers' check gives (``rules_payload_error``), else the error's
+    own first line."""
+    from app.schemas.rules import rules_payload_error
+
+    return rules_payload_error(row.rules_json) or str(exc).splitlines()[0]
 
 
 def _cached_state(
@@ -992,16 +1007,30 @@ def staleness_by_instrument(
             _store_state(instrument, stamp, computed)
             warmed = True
             continue
-        diff = _diff_one_instrument(
-            db,
-            review_session=review_session,
-            instrument=instrument,
-            session_rule_set=session_rule_set,
-            reviewers=inputs.reviewers,
-            reviewees=inputs.reviewees,
-            pair_context_lookup=inputs.pair_context_lookup,
-            override_exclude_self_reviews=override_exclude_self_reviews,
-        )
+        try:
+            diff = _diff_one_instrument(
+                db,
+                review_session=review_session,
+                instrument=instrument,
+                session_rule_set=session_rule_set,
+                reviewers=inputs.reviewers,
+                reviewees=inputs.reviewees,
+                pair_context_lookup=inputs.pair_context_lookup,
+                override_exclude_self_reviews=override_exclude_self_reviews,
+            )
+        except ValueError as exc:
+            # A stored rule set the engine can't load (a pydantic
+            # ``ValidationError`` is a ``ValueError``): the pages that
+            # read this verdict report it rather than answer 500
+            # (findings E4, 2026-10-22).
+            if session_rule_set is None:
+                raise
+            state[instrument.id] = InstrumentReconcileState(
+                stale=False,
+                eligible=0,
+                load_error=_rule_set_load_error(session_rule_set, exc),
+            )
+            continue
         # Never-generated is not stale. An instrument with no
         # materialised rows would otherwise report stale on every fresh
         # session, since a run would insert its whole fan-out — and an
