@@ -183,7 +183,11 @@ The file has two parts:
    no preamble and no gap.
 2. **Data table** — the 21-column long format below, one row per
    answer, inactive pairs' answers included (the analysis lenses read
-   active pairs only; `spec/extract_data.md`).
+   active pairs only; `spec/extract_data.md`). On a group-scoped
+   instrument the members' copies of a group answer collapse to one
+   row per reviewer, group and field: `RevieweeName` carries the composed group identity
+   (the boundary tag values, then the member names), and the other four
+   reviewee columns are empty.
 
 | Block | Columns |
 |---|---|

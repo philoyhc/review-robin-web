@@ -177,51 +177,20 @@ elevation of the operator role, not a separate login.
 ### 4.1 System administrator (three-tier model)
 
 Workspace governance is a **strict three-tier hierarchy** with
-**nested capabilities** (super-admin ⊇ admin ⊇ operator) and a
-**config-anchored top tier**:
+**nested capabilities** (super-admin ⊇ admin ⊇ operator). Operator and
+admin are flags granted in-app, the admin flag by a super-admin only;
+super-admin is derived from the deployer's configuration, never stored
+and never changed in-app, and with none configured any admin may
+manage admins. On top of operator capability an admin has Accounts
+Management (the allowlist, invites, and removing a user from all
+sessions), Sessions Diagnostics, and every session's audit log and its
+CSV. Reading a session's diagnostics grants no edit rights: an admin
+edits a session they do not own only after the audited **Manage**
+self-add, so every config change is by a recorded owner.
 
-| Tier | Held as | Added / revoked by |
-|---|---|---|
-| **Operator** | an operator flag on the user | Admins (and super-admins by nesting) |
-| **Admin** | an admin flag on the user | Super-admins only |
-| **Super-admin** | *derived*: the email is on the deployment's super-admin list | The deployer's configuration only — never in-app |
-
-Super-admin is **derived, never stored**, so it can't drift from the
-configuration or be flipped in-app. A super-admin is given the admin
-and operator flags on every sign-in, so every admin and operator gate
-passes with no special case. **With no super-admin configured** the top
-tier is absent and any admin may grant, promote and demote admins
-rather than nobody; a deployed instance logs a warning at startup in
-that state.
-
-An **admin** can, on top of operator capability:
-
-- **Manage the workspace allowlist** on the Accounts Management page —
-  **invite** a user by email before their first sign-in (as an
-  operator, or as an admin), admit / revoke operator status, and
-  delete accounts that have no activity. A **super-admin** actor is additionally
-  required to promote / demote the admin flag or to invite an admin;
-  destructive actions refuse when the target is a super-admin.
-  Revoking operator status or deleting a user refuses while they still
-  own a session (remove them from all sessions first); deleting also
-  refuses anyone who created a session or acted in the audit log, whose
-  attribution stays, so Revoke is how an operator's access is taken
-  away. Demoting or deleting the last admin refuses.
-- **Bulk-remove a user from all sessions** they appear on
-  (departure cleanup).
-- **View cross-session diagnostics** — a Sessions Diagnostics
-  surface listing every session in the workspace with summary
-  state.
-- **Read the per-session audit log viewer** and **download the
-  audit-events CSV** for any session.
-
-Reading a non-owned session's diagnostics does **not** grant
-edit rights. Editing a non-owned
-session requires **ownership**: the Diagnostics **"Manage"**
-action self-adds the admin as an owner (audited
-`session.owner_added`) and opens the session, after which they
-act through the normal operator path. There is no shadow
-editing — every config change is by a recorded owner.
+`spec/permissions.md` §1, §3 and §4.1 own the roles, the gates and every
+Accounts Management guard; `spec/audience_and_identity_model.md` §4 owns
+the rationale.
 
 ### 4.2 Operator
 
@@ -725,89 +694,42 @@ treats the session in lobby and extract surfaces.
 
 ### 6.1 Transitions
 
-- **`draft → validated`**: Operator runs Prepare session; its
-  validation step passes with no blocking errors.
-- **`validated → draft`** (auto-invalidate): Any setup change the
-  readiness check reads (roster import, instrument edit, rule change,
-  assignment regenerate) automatically flips the session back to
-  `draft`. This is silent and invariant; the operator does not opt
-  in. The session's own Details, tags and owners, and the
-  Assignments page's include toggles, leave it `validated`
-  (`spec/lifecycle.md` §2.3).
-- **`validated → ready`** (activate): Operator clicks the Workflow
-  card's **Activate session**, or a scheduled activation fires.
-  Activation is from `validated` only. If warnings exist, the operator
-  must explicitly acknowledge them; if blocking errors exist, the
-  transition is refused.
-- **`ready → draft`** (revert): Operator clicks **Revert to draft**.
-  The operator must tick a confirmation checkbox; the reviewer surface
-  closes; responses are preserved.
-- **`ready → expired`** (Close session): Operator clicks the
-  Workflow card's **Close session** button. Every instrument is
-  closed and all responses are preserved. From `expired` the
-  operator can **Revert to draft** to reopen the session for
-  editing (the revert path accepts both `ready` and `expired`).
-- **`* → archived`**: The Workflow card offers **Archive session** only in
-  `expired`. The lobby's **Purge and archive** (row or bulk
-  expander) and the Extract data page's **Archive session** card
-  archive from `draft`, `validated` or `expired` — never `ready`,
-  which must be reverted first — optionally purging responses,
-  rosters and the audit log first ([§16.5](#165-operator-triggered-purge-and-archive)).
-  Unarchive returns the session to `draft`.
-- **Release-responses window**: open only while the session is
-  `expired`, from its Release-from moment until its Release-until
-  moment ([§8.3](#83-schedule-fields)). In
-  `expired` the Workflow card offers **Release responses** to open
-  it now and **Stop releasing responses** to end it.
+Prepare session moves `draft → validated` on a clean validation, and
+any setup change the readiness check reads flips the session back to
+`draft`. Activate moves `validated → ready`, by the operator or on
+schedule; Close session moves `ready → expired`; Revert to draft
+returns `ready` or `expired` to `draft` with responses kept. The
+Workflow card offers **Archive session** only in `expired`, while the
+lobby's **Purge and archive** and the Extract data page's **Archive
+session** card archive from `draft`, `validated` or `expired`, never
+`ready` ([§16.5](#165-operator-triggered-purge-and-archive)); Unarchive
+returns the session to `draft`. The release-responses window opens only
+while the session is `expired` ([§8.3](#83-schedule-fields)). The
+reviewer surface takes writes only in `ready`, before the deadline
+([§10.2](#102-pre-open-and-post-close-behaviour)).
 
-The reviewer surface is open for writes **only in `ready`**, before
-the deadline. Past the deadline, and in `expired`, it still loads
-read-only: inputs render disabled and the Save / Submit / Clear
-affordances are hidden. In `draft` and
-`validated` the reviewer gets the not-open page instead
-([§10.2](#102-pre-open-and-post-close-behaviour)); in `archived` the
-gate answers 404.
+`spec/lifecycle.md` §1 and §2 own each transition, its guard and its
+audit event, and §8 the scheduled ones.
 
 ### 6.2 Editable vs locked semantics
 
-In `draft` and `validated`, every setup page is fully editable.
-In every other state — `ready`, `expired`, `archived` — the
-Reviewers, Reviewees and Relationships pages and Instruments render a
-prominent yellow **lock card** explaining why setup is locked and
-offering the way out that state has: `ready` and `expired` carry an
-inline Revert form, `archived` links the lobby's Unarchive and offers
-no control, because Revert is refused from there. **Observers**
-locks only in `archived`: its roster stays editable through `ready`
-and `expired` ([§9.5](#95-populate-rosters)). All four roster
-pages share one lock card; `spec/lifecycle.md` §5 is the contract.
+Setup is editable in `draft` and `validated` only. In every other state
+the roster pages and Instruments render a yellow **lock card** naming
+the way out, and their mutating controls are hidden or disabled by the
+same test; **Observers** alone stays editable until `archived`
+([§9.5](#95-populate-rosters)). The Email Template page carries no lock,
+and Assignments, Invitations and Responses rely on the Workflow card.
 
-Not *every* setup page: the **Email Template** page renders no
-lock card and carries no editable gate at all (deliberate —
-`spec/email_template_editor.md` §5), and Assignments /
-Invitations / Responses carry none either — the Workflow card is
-the lifecycle chrome on those.
-
-While locked, upload affordances and destructive-action cards are
-hidden, the row-selection surface is absent rather than inert, and
-form controls inside builders — including the friendly-label
-editor — are disabled. Every one of those answers the same
-editability test as the card, so the explanation and the
-controls cannot disagree.
-
-The Session details config card on Session Home is also
-lifecycle-gated — its edit mode is only reachable in `draft` /
-`validated`; on an active session the Lock toggle renders inert with
-a "revert to draft to edit" tooltip, and a direct save is refused
-server-side.
+`spec/lifecycle.md` §3 and §5 own the gates and the lock-card pattern;
+`spec/session_home.md` owns the Session details card's own gate.
 
 ### 6.3 Lazy deadline closure
 
-When the deadline passes, the system **lazily closes** each
-instrument on the first request that observes the past-deadline
-state. Closure turns off each instrument's accepting-responses flag
-and emits one `instrument.closed` audit event (reason: deadline) per
-instrument. After closure the reviewer surface remains
-viewable (read-only) for the configured visibility window.
+Once the deadline passes, the first request that observes it closes
+every instrument and writes one `instrument.closed` event per
+instrument. `spec/lifecycle.md` §4 owns the lazy close, and
+`spec/reviewer-surface.md` "Lazy deadline-close" what the reviewer sees
+after it.
 
 ---
 
@@ -867,26 +789,12 @@ Reviewers can access only the sessions they are listed in.
 
 ### 7.3 Workspace allowlist
 
-The workspace allowlist is the gate between authenticated
-identity and operator capability. A user is one of (three-tier
-model, [§4.1](#41-system-administrator-three-tier-model)):
-
-- **Not allowlisted** — authenticated but cannot reach operator
-  routes; a request for one is redirected (303) to
-  `/me?notice=organizers`, which says the page is for the people who
-  run reviews.
-- **Operator** — can create sessions and is
-  automatically the owner of sessions they create; can be added
-  as co-owner to other operators' sessions.
-- **Admin** — operator capability plus workspace
-  governance (Accounts Management, Sessions Diagnostics, audit-log
-  viewer).
-- **Super-admin** — derived from the deployer's configuration;
-  the only actor who can promote / demote the admin flag (while one
-  is configured), and protected from demotion / deletion in-app.
-
-The allowlist is managed on the Accounts Management page;
-promotion, demotion, and removal are audit-logged.
+The workspace allowlist is the gate between authenticated identity and
+operator capability. A user not on it who requests an operator route is
+redirected (303) to `/me?notice=organizers`; a user on it holds one of
+the tiers of [§4.1](#41-system-administrator-three-tier-model). It is
+managed on the Accounts Management page, and every change is
+audit-logged. `spec/permissions.md` §1, §2 and §4.1 own the contract.
 
 ### 7.4 Session ownership
 
@@ -1076,52 +984,19 @@ A full catalogue of every persisted setting lives in
 
 ### 9.1 Lobby management
 
-The Sessions lobby (`/operator/sessions`) lists every session the
-operator owns. The lobby shows session name, code, created-by,
-created-at, deadline, timezone (compact GMT-offset per row),
-status, and tag chips per session.
+The Sessions lobby (`/operator/sessions`) lists the sessions the
+operator owns, with sort, search and a tag filter, and a row expander
+for single-row and bulk actions: edits, tags, **Duplicate** /
+**Duplicate settings only**, **Purge and archive**
+([§16.5](#165-operator-triggered-purge-and-archive)) and Delete. A clone
+is a fresh `draft` owned by the operator who cloned it; the copy's
+trail opens with `session.cloned`, and the original's records
+`session.duplicated`. The archived-sessions child page
+(`/operator/sessions/archived`) lists `archived` sessions with Unarchive
+and Delete.
 
-Each row carries a checkbox; ticking opens an **inline row
-expander** for single-row actions (Name, Code and Deadline edits
-while the session is `draft` or `validated`, read-only otherwise;
-Tags in any state; duplicate, purge and archive, delete). Multiple
-tickings open the bulk-action variant of the expander.
-
-The lobby supports:
-
-- **Sort** on any column header (cookie-persisted).
-- **Free-text search** filtering the visible rows.
-- **Tag-filter strip** with an AND/OR mode chip and a clickable
-  chip per tag (LocalStorage-persisted).
-- **Bulk delete** of selected sessions (confirm-gated).
-- **Purge and archive** of one or more selected sessions in
-  `draft`, `validated` or `expired` (an activated session is
-  skipped), optionally purging responses, rosters and the audit log
-  first; with nothing ticked to purge it is a plain archive
-  ([§16.5](#165-operator-triggered-purge-and-archive)).
-- **Per-row clone** in two flavours: **Duplicate** (the setup plus
-  every roster: reviewers, reviewees, relationships and observers,
-  with their cohort rules) and **Duplicate settings only** (metadata,
-  email templates, instruments, rules, friendly labels, tags and saved
-  data shapes; no rosters). Both copy each instrument's visibility
-  grid. Neither copies responses, assignments, invitations or audit
-  history, and neither carries the deadline or the schedule (its
-  anchors and offsets), which reset on purpose: the clone is a fresh
-  `draft`, owned by the operator who cloned it, for a new cycle the
-  operator schedules. The copy's trail opens with `session.cloned`;
-  the original's records `session.duplicated`, naming who copied it
-  and the copy's id and code.
-
-The **archived-sessions child page** (`/operator/sessions/archived`)
-lists sessions in `archived` state with the lobby's table, sort, search
-and tag-filter affordances. Its expander does **not** mirror the
-lobby's: there is one template, the bulk one, and it opens on any
-selection of one or more rows rather than switching on the count. It
-offers Unselect all, Unarchive, Delete (gated behind "Yes, delete"),
-and a **Download button that is disabled** — a placeholder with no route
-behind it. See `spec/sessions_overview.md` "Row affordances" for the
-selection and bracket behaviour, which is recorded there because this
-page has no section of its own.
+`spec/sessions_overview.md` owns the lobby and the archived page;
+`spec/roundtrip_coverage.md` owns what each clone mode carries.
 
 ### 9.2 Create session
 
@@ -1149,263 +1024,75 @@ Home the same way.
 
 ### 9.3 Session Home
 
-The Session Home page (`/operator/sessions/{id}`) is the
-operator's primary working surface for a session. Session config
-is both **displayed and edited** here ([§9.4](#94-session-details-config-card)).
-Top → bottom:
+Session Home (`/operator/sessions/{id}`) is the operator's working
+surface for a session: the Workflow card
+([§9.8](#98-validation-and-activation)), the Session details card
+([§9.4](#94-session-details-config-card)), the Quick Setup card, the
+Owners card ([§7.4](#74-session-ownership)) and the Danger Zone
+([§16.3](#163-delete-data), [§16.4](#164-delete-session)). The setup CSV
+downloads are on the Extract data tab ([§9.12](#912-extract-data)).
 
-- **Workflow card** (full width) — the lifecycle-driven card
-  explaining the current state and offering the single
-  most-important next action(s). The card frame is constant (H2
-  "Workflow", blue-framed, height grows to fit); the
-  contents differ across the lifecycle states (see
-  [§9.8](#98-validation-and-activation)).
-- **Session details card** (full width, below Workflow) — every
-  config field, displayed and edited in place
-  ([§9.4](#94-session-details-config-card)).
-- **Quick Setup card** (bottom left) — a
-  bulk-import surface with one CSV upload affordance per roster /
-  settings slot (Reviewers / Reviewees / Relationships / Observers /
-  Settings, whatever the feature toggles; an upload that gives
-  Observers or Relationships rows turns that tab on) and one
-  **Submit** button that checks every staged file, then saves them all
-  or none, in dependency order.
-  It is available only while setup is editable (`draft` or
-  `validated`) and the session holds no responses: then it is live on
-  load; otherwise it is greyed with its controls disabled.
-- **Danger Zone card** (bottom right) —
-  **Delete Data** (wipes every reviewer response, preserves setup)
-  and **Delete Session** (removes the session entirely). Both are
-  confirm-gated, live in every state but `ready`, and
-  visible-but-disabled in `ready`, route-enforced server-side.
-- **Owners card**, stacked above Danger Zone — the session's own
-  owner set, editable in every session state, with no Lock / Unlock;
-  removing another owner asks first. `spec/session_owners.md` carries the full contract.
-
-The round-trip **setup CSV download tiles** are not on Session
-Home: they live on the Operations-strip **Extract data** tab (see
-[§9.12](#912-extract-data)).
+`spec/session_home.md` owns the page, and
+`spec/quick_setup_card_spec.md` the Quick Setup card.
 
 ### 9.4 Session details config card
 
 The Session details card on Session Home is the only surface for
-session config; there is no separate Edit page, and an old Edit link
-redirects to the card in edit mode.
+session config. Each field swaps between its value and its input; edit
+mode is reachable only while the session is `draft` or `validated`; and
+a save is non-destructive, so it leaves a `validated` session
+`validated`. Tags are stored lower case.
 
-- **Display ↔ edit swap.** Each field holds one slot — a read-only
-  value in display mode, its input in edit mode. Edit mode lives in
-  the page address, and is reachable only while the session is
-  editable (`draft` / `validated`), so a stale link on an active
-  session degrades to display mode.
-- **Fields.** Name / Code, Description, Help contact, Timezone,
-  and the four schedule datetimes (Start / End / Release-from /
-  Release-until) plus the Send-invites and Send-reminders offset
-  lists — each offset shown in display mode next to its resolved
-  send datetime.
-- **Owners is a card of its own**, not part of this one — see §9.3
-  and `spec/session_owners.md`. This card holds no sub-cards.
-- **Tags** — a field under Description: the session's tags as
-  pills, like the sessions lobby's, in display mode; one text box in
-  edit mode, saved with the card's **Save** (emptying the box clears
-  them). Tags are stored lower case.
-- **Optional setup tabs and pages** — the Relationships and Observers
-  selector chips ([§5.17](#517-feature-toggles)), each lock-on-data,
-  under Tags; inert while the card is locked.
-- **Save** returns to Home with the card still unlocked, at the
-  operator's scroll position; **Lock** locks it. Editing metadata is
-  non-destructive (never touches assignments or responses), so
-  there is no response-loss acknowledgement gate, and it leaves a
-  `validated` session `validated`.
+`spec/session_home.md` "4. Session details card" owns the fields and the
+save path; the settings themselves are
+[§8](#8-per-session-metadata-and-settings)'s.
 
 ### 9.5 Populate rosters
 
-Up to four Setup pages share an identical chrome shape: Reviewers,
-Reviewees, **Relationships** and **Observers** (each shown by its
-toggle, [§5.17](#517-feature-toggles)).
+Up to four Setup pages share one shape: Reviewers, Reviewees,
+**Relationships** and **Observers** (each shown by its toggle,
+[§5.17](#517-feature-toggles)). Each carries a preview table whose card
+opens with a two-pane toolbar, and a row expander for the selected
+rows; the preview-count line sits in the toolbar's left pane and is
+shared by every preview page. Upload, Delete all and, except on
+Observers, the friendly-label editor sit in the roster card's Unlock
+panel. CSV import is wipe-and-replace and all or nothing; replacing
+Reviewers or Reviewees while the session holds responses takes a
+response-loss acknowledgement ([§14](#14-reconciling-regeneration)).
+Observers is the one roster that stays editable through `ready` and
+`expired`, and its expander carries the per-observer cohort match rule.
 
-Each page offers the following. **Observers is the exception on some
-of these points**, flagged inline; `spec/setup_pages.md`
-§ *Observers page* § *Body layout* lists them in one place.
-
-- **Friendly-label editor card** — inline editors for the
-  display labels of this entity's **tag slots only**: an identity
-  or photo slot is refused, and its built-in default always renders
-  (see [§8.5](#85-friendly-labels)). The editor answers the same
-  editability gate as the rest of the page. **Not on Observers**,
-  which has one fixed tag slot and no editor.
-- **Preview table** — every row in the roster (paginated by
-  search + filter), with sortable headers (**not on Observers**,
-  which orders by id), column-visibility toggles for the three
-  optional tag columns and the photo-link column (**not on
-  Observers**, whose one fixed slot has nothing to toggle), and a
-  trailing **Updated** timestamp. Its
-  card opens with a **two-pane toolbar** carrying the search +
-  status-filter strip, `Clear`, `Add new` and `Search`; the
-  leftmost checkbox column drives an injected **row expander**
-  holding the selection-driven actions (Edit, Inactivate,
-  Activate, Delete), the selected count (`N of M selected`,
-  where M is the rendered window) and the delete confirmation.
-  In Edit / Add mode the row's cells become inputs and a Save +
-  Cancel pair renders in an expander bar beneath it, and the
-  toolbar strip locks with `Add new` and `Search` disabled. The
-  preview-count line sits in the toolbar's left pane and is
-  shared by every preview page.
-- **Upload card** and **Danger Zone card** — CSV file input +
-  Upload submit, replacing the roster wholesale on success; and
-  Delete All, confirm-gated, wiping it. Both live in the roster
-  card's **Unlock panel** above the table, alongside the
-  friendly-label editor on the three pages that have one; on
-  Observers the panel holds these two alone. Upload is on the left on
-  every page.
-  **Nothing renders below the table.**
-
-All four pages share this shape. `spec/setup_pages.md` § *The roster
-card and the Unlock panel* and § *Roster controls and their route
-contracts* are authoritative. **Three of the four share their gates
-too; Observers does not**, and the paragraph below is that exception.
-
-**Observers differs in one further respect, and it is a behavior
-change rather than a layout one:** its roster stays editable through
-`ready` and `expired`, closing only at `archived`. Observers never
-appear in assignments and produce no responses, so freezing their
-roster at Activate protects nothing, while refining who sees what
-mid-session is a legitimate flow. It is the only roster page whose
-mutating surface outlives the editable states; `spec/lifecycle.md` §5 states
-the exception and governs any second one. Its expander also carries a
-surface no other roster page has — the per-observer **cohort match
-rule** builder, which decides what that observer sees.
-
-The Reviewers page collects: name, email, tag 1 / 2 / 3, photo
-link, status.
-The Reviewees page collects: name, email or identifier, tag 1 /
-2 / 3, photo link, status.
-The Relationships page collects: reviewer email, reviewee email,
-pair-context tag 1 / 2 / 3, status.
-The Observers page collects: email, display name, a single tag,
-the per-observer cohort match rule, status — no friendly-label
-editor (single-tag observers don't need one).
-
-CSV import is **wipe-and-replace**: on each upload the whole
-existing roster is dropped and the new file's rows take its
-place. Validation errors block the import wholesale — partial
-loads do not happen. Replacing a non-empty roster takes a
-replace confirmation; on Reviewers and Reviewees, whose rows carry
-assignments, it also takes a response-loss acknowledgement when the
-session holds responses, since the dropped rows take their
-responses with them ([§14](#14-reconciling-regeneration)).
+`spec/setup_pages.md` owns the shared shape and each page's columns;
+`spec/lifecycle.md` §5 states the Observers exception.
 
 ### 9.6 Configure instruments
 
-The Instruments page (`/operator/sessions/{id}/instruments`)
-is a consolidated per-instrument editor.
+The Instruments page (`/operator/sessions/{id}/instruments`) edits each
+instrument on one collapsible card, at most one unlocked at a time. A
+card carries the instrument's identity; its assignment rule (Band 1,
+the only place a rule is authored, behind the "Not set" safety gate,
+where Link 3 picks Individual or Group and, for Group, the **boundary
+tags**); a live preview with the visibility-policy editor (Band 2,
+[§5.16](#516-visibility-policy)); its display and response fields
+(Band 3, [§5.7](#57-response-field), [§5.8](#58-display-field)); and an
+action row whose one Save commits the card.
 
-**The session status card** sits at the top beside the guidance
-card, **half-width**. It carries a one-line
-pill row (session deadline, `N accepting`, `M not accepting`) and
-the **Expand all / Collapse all instruments** buttons, which act on
-the page rather than on any instrument.
-
-Accepting follows the lifecycle: Activate opens every instrument,
-and the deadline, Close session, Revert or Archive closes them all. What a
-participant sees once an instrument closes follows its visibility
-policy. `spec/instruments.md` owns that contract and states it in
-full.
-
-Below the status card, one **per-instrument card** per instrument,
-each collapsible, with a locked/unlocked edit state (at
-most one instrument unlocked at a time). Its stripes:
-
-- **Identity** (in the card's always-visible header) — the reviewer-facing
-  short label (editable inline when unlocked), Set-up / Not-set-up
-  and Locked / Unlocked pills, and drag handle for reorder.
-- **Instrument assignment rule** (Band 1) — three "Links" of equal
-  width: Link 1 *Who does the review*, Link 2 *Who is being
-  reviewed*, Link 3 *Unit of review* (Individual vs Group). Each
-  Link cycles a `Not set → All → Filter/Group` pill. A **"Not set"
-  safety gate** requires the operator to deliberately touch every
-  Link before the instrument reads as configured, so the implicit
-  Full Matrix default can't ship silently. When Link 3 is Group, it
-  picks the **boundary tags** — reviewee and pair-context tags whose
-  shared values define a group ([§10.4](#104-group-scoped-review-surface)).
-  Below Link 3, once every Link is set, sits the **Include / Exclude
-  self reviews** chip ([§8.6](#86-self-review-behaviour)). (The card's
-  heading is **Instrument assignment rule**; "Band 1" is this spec's
-  shorthand for it. It is the only place a rule is authored.)
-- **Band 2 — Preview** — a live preview of one sample reviewee row
-  (display fields, then response fields), with
-  drag-resizable column widths and the instrument description
-  (lock-driven edit swap). Band 2 also carries the "Who can see what
-  you wrote" card: locked, the reviewer's read-only view of the
-  visibility policy; unlocked, the **per-audience visibility-policy
-  editor** — a chip grid (You (reviewer) / Reviewees / Observers ×
-  Session-ongoing / Responses-released) picking, per audience per
-  window, among the modes that cell allows
-  (`spec/visibility_policy.md` §3.1; see
-  [§5.16](#516-visibility-policy)).
-- **Band 3 — Display and response fields** — two tables, 15% and
-  85% of the band. The left picks and orders the display fields
-  (Reviewee Name / Email always shown; the populated tag sources
-  opt-in). The right is the response-field table, one row per field:
-  a name chip (per-field surface visibility, labeled with the field's
-  name), Name, **Type**
-  (String / Integer / Decimal / List, plus a Quick-fill group of List
-  presets), inline bounds (min / max / step, or the list options),
-  Required toggle, help-text toggle, ▲ ▼ for order, and a fork control
-  that turns an Integer, Decimal or List field into the parent of a
-  **branch** over the fields directly beneath it
-  ([§5.7](#57-response-field)). Type + bounds lock once the
-  field has saved responses. Both tables
-  show in the preview at once and persist with the card's Save
-  (`spec/instruments.md`).
-- **Action row** — Save / Cancel (edit only) / Replicate / Delete
-  (confirm-gated; blocked when only one instrument) / **+Instrument**
-  / **+Page break** / Lock-Unlock. One bulk Save commits identity,
-  Band 1, Band 3, visibility policies, and column widths together.
+`spec/instruments.md` owns the page, and `spec/visibility_policy.md`
+§3.1 the policy grid.
 
 ### 9.7 Configure assignments
 
-The Assignments page (`/operator/sessions/{id}/assignments`) is
-on the Operations row of the chrome. It carries:
+The Assignments page (`/operator/sessions/{id}/assignments`), on the
+Operations row, shows the pairs generation produced: a per-instrument
+status card, with pair counts, a `stale` pill and the self-review
+include toggle ([§8.6](#86-self-review-behaviour)), and a preview table
+whose row expander inactivates or activates the selected pairs.
+Assignments are not edited row by row: the operator changes the rule
+(Band 1, [§9.6](#96-configure-instruments)) or the rosters and
+regenerates through Prepare session ([§14](#14-reconciling-regeneration)).
 
-- **Per-instrument status card** — one block per instrument,
-  showing type (Individual / Group), generated pair count (with a
-  `stale` pill when the current rule + roster would produce a
-  different set), group count, per-instrument "Include N self reviews"
-  chip (locked outside `draft` / `validated`), included
-  count, and the instrument's name as a chip filtering the preview
-  table.
-- **Assignments preview table** — every materialised pair,
-  with reviewer identity + tag columns, reviewee identity +
-  tag columns, pair-context tag columns, an Include yes / no pill,
-  Instrument column, sortable headers, column-visibility
-  toggles. Its card opens with the same **two-pane toolbar**
-  the roster pages carry: chips, pager and preview-count line
-  left; the filter strip — status filter, a Search-by dropdown
-  (All / Reviewers / Reviewees), a search box with typeahead
-  suggestions, `Clear`, `Search` — right, in that order.
-- **Row expander** — ticking rows injects a panel beneath the
-  selection carrying the selected count and the
-  selection-driven bulk **Inactivate** / **Activate** —
-  whichever is actionable for the selection, so one where every
-  ticked pair is the same way and both where it is mixed.
-  **Self-review assignments are flipped
-  active/inactive** per instrument from the status card's Self
-  review column; the session's self-reviews-active flag seeds the
-  include value at generation time and this column overrides
-  it after (see [§8.6](#86-self-review-behaviour)). An instrument
-  whose rule excludes self-reviews has none to flip, and the column
-  reads *Excluded by rule*.
-
-Assignments are not edited row by row. The operator changes
-which pairs exist by changing the rule (in the **Instrument
-assignment rule** card / Band 1 on the Instruments page — the
-only place a rule is authored) or the
-rosters and **regenerating** via the Workflow card's Prepare
-action. Generation runs a per-instrument rule pass over the
-session's reviewer × reviewee matrix; an instrument with no
-stored rule uses the synthetic Full Matrix. See
-[§14](#14-reconciling-regeneration) for what regeneration
-preserves.
+`spec/assignments.md` "Assignments operator page" owns the page, and
+"Reconcile + regenerate" what regeneration keeps.
 
 ### 9.8 Validation and activation
 
@@ -1456,196 +1143,87 @@ opens.
 
 ### 9.9 Manage invitations
 
-The Invitations page (`/operator/sessions/{id}/invitations`) is
-a reviewer-centric Operations-row tab.
+The Invitations page (`/operator/sessions/{id}/invitations`) is the
+reviewer-centric Operations tab: lifecycle counters, then one row per
+reviewer with email status, progress and the per-row Send, Send
+reminder and Regenerate actions. The auto-send captions sit in the
+Workflow card's right-hand column ([§11.4](#114-scheduling--auto-send)),
+and the session top-nav carries a four-state Invitations pill
+(`Not created`, `Not sent`, `Partially sent`, `All sent`).
 
-- **Info card** at the top, full width — lifecycle
-  counters (eligible reviewers, invitations created / sent /
-  pending, reminders sent / pending, completed / incomplete
-  reviews).
-- **Two-pane table toolbar** — the table card opens with it.
-  Left pane: column chips, pager cluster, preview-count line.
-  Right pane: the filter strip — Status dropdown + free-text
-  search + Clear / **`Search`**.
-- **Invitations table** — one row per reviewer carrying:
-  reviewer name + email, email status (the latest invitation
-  outbox row's status, or `not sent` with no row or while the
-  invitation is pending after a Regenerate), email-sent timestamp
-  (`Invitation.sent_at`), per-reviewer progress
-  (not started / in progress / submitted), required-fields-
-  filled count, last-reminder timestamp, per-row Send /
-  Send-reminder / Regenerate actions (lifecycle-gated).
-
-The **auto-send captions** — how the next scheduled invitation and
-reminder sends will resolve given the current schedule, including any
-skip reason — are not on this page's body: they sit in the Workflow
-card's right-hand column, which this page carries as chrome
-([§11.4](#114-scheduling--auto-send)).
-
-The chrome's session top-nav bar carries a **four-state
-Invitations pill** — `Not created`, `Not sent`, `Partially
-sent`, `All sent` — reflecting the session-wide invitation
-status at a glance. The four states are what the pill is for: a
-single present-or-absent indicator cannot distinguish "created but
-unsent" from "partially sent".
+`spec/operations_pages.md` "Invitations page" owns the page, and
+`spec/visual_style_rrw.md` the pill.
 
 ### 9.10 Monitor responses
 
-The Responses page (`/operator/sessions/{id}/responses`) is a
-reviewee-centric Operations-row tab.
-
-- **Info card**, full width — counts of reviewees with
-  responses, without responses, total reviewees.
-- **Two-pane table toolbar** — the same shape as Invitations':
-  chips, pager and count line left; the filter strip (search +
-  status filter, Clear / **`Search`**) right.
-- **Responses table** — one row per reviewee, with name +
-  email, coverage status (complete / adequate / at risk /
-  no responses), reviewers-completed count over total assigned, last-
-  response timestamp.
-
-A per-row drill-in opens a per-reviewee detail view showing
-each reviewer's status for that reviewee.
-
-The Responses page is monitoring-only; per-cell response
-content is not readable here — that channel is the Extract
-Data download.
+The Responses page (`/operator/sessions/{id}/responses`) is the
+reviewee-centric Operations tab: coverage counters, then one row per
+reviewee with its coverage status and a per-reviewee drill-in. It is
+monitoring-only; response content is read through Extract data
+([§9.12](#912-extract-data)). `spec/operations_pages.md` "Responses page"
+owns it.
 
 ### 9.11 Reviewer and email previews
 
 The Invitations per-reviewer drill-in carries the three rendered email
-previews and an **Open reviewer surface** link. The latter opens an inert
-operator view of that reviewer's production surface in a new tab, using the
-same template and context path as the live surface. There is no separate
-Previews page; its old URL permanently redirects to Invitations
-(`spec/operations_pages.md` "Page identity").
+previews and an **Open reviewer surface** link to an inert operator
+view of that reviewer's surface; there is no separate Previews page.
+`spec/operations_pages.md` "Per-row drill-in" and "Page identity" own
+both, and `spec/reviewer-surface.md` "Operator preview mode" the view.
 
 ### 9.12 Extract data
 
-Extraction splits across two surfaces:
+The Extract data Operations tab (`/operator/sessions/{id}/extract-data`)
+cuts the response data for offline analysis — Extract all data, By
+instrument, Reviewer / Reviewee response metadata, the Data shaper,
+Token keys and an Archive session card
+([§16.5](#165-operator-triggered-purge-and-archive)) — and hosts the
+Extract Setup card with the round-trip setup CSVs. It is not an in-app
+analysis tool. Every download emits an audit event; the audit-events
+CSV sits behind the admin gate instead; and Rehydrate is built but
+switched off by deployment setting (`spec/rehydrate.md`).
 
-**Extract Setup card** (the round-trip / porting CSVs) — on the
-**Extract data** Operations tab, not on Session Home.
-It offers per-entity download tiles — Reviewers, Reviewees,
-Relationships (always shown, whatever the Relationships toggle says),
-Settings, and an Observers tile when the Observers toggle is on —
-plus a Zip-all footer bundling the setup CSVs as
-`{code}_setup.zip`. Each tile greys its Download button when its roster is empty; Settings is
-always clickable. Filenames follow `{session_code}_{kind}.csv`.
-
-**Extract data page** (`/operator/sessions/{id}/extract-data`) —
-the Operations-strip workbench for **shaping response data** for
-offline analysis. It is deliberately not an in-app analysis tool
-(no charts, no pivots); it cuts the response data along the
-dimension the operator asks for. Cards:
-
-- **Extract all data** — a top-level `Zip all`
-  (`{code}_responses.zip`): always the unified responses file, plus
-  each other card's files, as that card is configured, for each of
-  its chips that is on.
-- **By instrument** — one wide CSV per instrument (rows =
-  reviewer × reviewee pairs, columns = response fields
-  side-by-side) for cross-reviewer comparison.
-- **Reviewer / Reviewee response metadata** — per-entity activity
-  rollups (assigned / answered counts + per-field aggregates by
-  data type), with a Self-review handling chip (`Include self` /
-  `Exclude self` / `Both`).
-- **Data shaper** — a generalised builder: pick axis (reviewer /
-  reviewee), instrument / response-field scope, identification and
-  aggregate columns via chips, see a live preview row, save the
-  shape under a name, and download its CSV.
-- **Token keys** (when the Observers toggle is on) — the
-  operator-side deanonymization key (Role / Name / Email / Token)
-  mapping each participant to the per-session opaque token used in
-  Anonymized observer downloads.
-- **Archive session** — the lobby's purge-and-archive on one
-  session: archive it from `draft`, `validated` or `expired`,
-  optionally purging responses, rosters and the audit log first, then
-  land on the archived-sessions page
-  ([§16.5](#165-operator-triggered-purge-and-archive)). Inert in
-  `ready` and once archived.
-
-Every download emits an audit event. The **audit-events CSV**
-lives behind the admin gate, not here. **Rehydrate** — rebuilding a
-session from a complete extract set — is built but switched off by
-deployment setting, so it is not exposed to operators: its pages are
-not found and the lobby shows no button (`spec/rehydrate.md`).
-
-Full export contracts: see [§12](#12-data-export).
+`spec/extract_data.md` owns the page, `spec/session_home.md` "2. Extract
+Setup card" the setup card, and [§12](#12-data-export) the files.
 
 ### 9.13 Operator settings
 
-The operator's Settings page (`/operator/settings`) carries:
+The operator's Settings page (`/operator/settings`) carries their own
+email-send (SMTP) credentials, their default display timezone, and a
+confirm-gated **Clear all settings (SMTP)**. Every SMTP field but
+display name is required: until all are set, email reads as not
+configured. The Email send (SMTP) card sits alone in the left column,
+its "Bring your own SMTP" intro shown only until an SMTP host is saved;
+Date & time and Clear all settings (SMTP) stack on the right.
 
-- **Email send (SMTP)** — host, port, from-email / username,
-  password (encrypted at rest), display name, encryption mode
-  (`starttls` or `ssl`, the latter implicit TLS). Every field but
-  display name is required: until all are set, email reads as not
-  configured.
-- **Date & time** — the operator's default display timezone (IANA
-  typeahead with a worked-example live preview).
-- **Clear all settings (SMTP)** — wipes the SMTP fields on the account,
-  behind a "Yes, delete…" confirm box.
-
-The cards sit in two columns: Email send (SMTP) alone
-on the left, its "Bring your own SMTP" intro (shown only until an SMTP
-host is saved) below its header and above its fields; Date & time and
-Clear all settings (SMTP) stacked on the right.
+`spec/settings_inventory.md` §1 owns the stored fields, and
+`spec/email_infra_options.md` the SMTP option.
 
 ### 9.14 Sys admin surface
 
-The sys-admin surface is workspace-scoped and reachable from
-the chrome's plain **Admin** link, shown to sys admins beside
-Settings, Guide and About. It carries:
+The sys-admin surface, reached from the chrome's **Admin** link, carries
+Accounts Management (the allowlist, its bulk actions and invite by
+email), Sessions Diagnostics (every session, with the audited
+**Manage** self-add), and each session's Outbox viewer
+([§11.3](#113-the-outbox)), Audit Log viewer and audit-events CSV. It
+has no per-session owner management ([§7.4](#74-session-ownership)).
 
-- **Accounts Management** — workspace allowlist whose rows can be
-  selected and admitted, revoked, promoted, demoted, removed from their
-  sessions or deleted together, all or nothing, and an **Invite
-  by email** card that pre-seeds a user before their first sign-in,
-  as an operator or as an admin; the refusals are
-  [§4.1](#41-system-administrator-three-tier-model)'s.
-- **Sessions Diagnostics** — cross-workspace listing of every
-  session with summary state. Its **"Manage"** row action self-adds
-  the sys-admin as an owner (audited) and opens the session — the
-  explicit elevation door, since editing a non-owned session requires
-  ownership.
-- **Per-session Outbox viewer** — the session's email outbox
-  ([§11.3](#113-the-outbox)).
-- **Per-session Audit Log viewer** — filter strip + pretty-
-  printed detail expander over the session's audit-events
-  history.
-- **Audit-events CSV download** per session.
-
-There is no per-session owner management here: owners are added and
-removed on Session Home's Owners card by the session's own owners
-([§7.4](#74-session-ownership)), and a non-owner sys-admin's only
-per-session door is the self-add. Accounts Management's **remove
-from all sessions** is the one bulk exception.
+`spec/permissions.md` §3 and §4.1 own its gates and actions, and
+`spec/operator_ui_concept.md` §6 its pages.
 
 ### 9.15 Guide, About and theme
 
 The operator chrome and the participant top bar carry **Guide** and
-**About** links, each carrying where the viewer came from so the
-page can link back, and a **Light / Dark** theme toggle.
-The standalone error page has no chrome. Neither link renders on its
-own page or on the account-debug page, and the Guide link is also omitted
-for a viewer the Guide has nothing for.
+**About** links and a **Light / Dark** theme toggle. `/guide` is the
+in-app documentation: a viewer sees only the sections for the roles
+they hold, and one who holds none is redirected (303) to `/about`.
+`/about` says what the software is, who is signed in, and whom to ask
+for operator access. The theme is a per-browser preference, never
+stored on the server.
 
-- **`/guide`** is the in-app documentation: one page of sections
-  addressed to operators, reviewers, observers and reviewees. A viewer
-  sees only the sections for the roles they hold — operator from the
-  workspace allowlist (sys-admins included), the participant roles
-  from their roster rows
-  (a reviewee only while a visibility grant resolves). It grants
-  nothing and holds nothing privileged. A viewer who holds no role is
-  redirected (303) to `/about`, and the chrome omits their Guide link.
-- **`/about`** is identity and access: what the software is, who is
-  signed in, and whom to contact for operator access. Any signed-in
-  user can open it.
-- **Theme** is a per-browser display preference kept in the
-  browser's local storage, applied before first paint. It is never stored on
-  the server and does not follow the operating system's setting;
-  `spec/settings_inventory.md` lists it.
+`spec/role_landing_and_visibility.md` §3 and
+`spec/operator_ui_concept.md` own the two pages, and
+`spec/settings_inventory.md` §7 the theme key.
 
 ---
 
@@ -1653,12 +1231,15 @@ for a viewer the Guide has nothing for.
 
 ### 10.1 Access
 
-A reviewer reaches their work through one of two entry points
-(see [§7.2](#72-reviewer-identity)):
+A reviewer reaches their work through one of two entry points, both
+behind institutional sign-in (see [§7.2](#72-reviewer-identity)):
 
-- The unique invitation link in the email they received.
-- A direct link to the session (e.g., bookmarked from a prior
-  visit) — sign-in match required.
+- The unique invitation link in the email they received. It asks for
+  sign-in first, then takes a reviewer whose signed-in email matches
+  the invitation's to their review surface.
+- A direct link to the session (for example, bookmarked from a prior
+  visit), which needs an active reviewer row matching the signed-in
+  email.
 
 After sign-in, the reviewer lands on:
 
@@ -1707,223 +1288,100 @@ invited address.
 
 ### 10.3 Review surface
 
-The review surface (`/me/sessions/{id}/{page}`) is a
-**dense tabular form** — one row per reviewee (or one row per
-group, for group-scoped instruments) and one column per
-display field plus one column per response field.
+The review surface (`/me/sessions/{id}/{page}`) is a **dense tabular
+form**: one row per reviewee (or per group,
+[§10.4](#104-group-scoped-review-surface)) and one column per display
+field and per response field, each cell's control set by the field's
+data type and bounds. The operator's page breaks divide the instruments
+into numbered pages, each its own server-rendered URL. Above each table
+a read-only card shows who can see what the reviewer wrote
+([§5.16](#516-visibility-policy)); a governed field follows its branch
+([§5.7](#57-response-field)); and the reviewer can sort by any column.
+When the reviewer's own email matches a reviewee row, their row for
+themselves carries a **Self review** marker and writes are not blocked;
+whether that row is active is the operator's
+([§9.7](#97-configure-assignments)).
 
-**Pages.** The operator's page breaks divide the
-session's instruments into numbered pages, each holding one or more
-instruments; a session without breaks is one page. Each page is its
-own server-rendered URL, and a multi-page session carries **Prev /
-Page N of M / Next** links that load the adjacent page from the
-server; there is no per-instrument page button. Only the current
-page's inputs are on screen: other pages' values live in the
-database from their own Saves, and unsaved typing on the current page
-is dropped on navigating away.
-
-**Who can see what you wrote.** Above each instrument's table a
-read-only card titled *Who can see what you wrote (other than admin)*
-shows, for **You** and for **Reviewees**, the mode the instrument's
-visibility policy grants while the session is ongoing and once
-responses are released — Raw responses, Anonymized responses,
-Anonymized summaries, or Not shown for none. Observers are not listed. It is
-the reviewer's view of the policy the operator sets on the same card,
-unlocked, in Band 2 ([§9.6](#96-configure-instruments),
-`spec/visibility_policy.md`).
-
-**Cell rendering** is driven by each response field's own
-data type and inline bounds:
-
-- **String** fields render as a text box that grows to fit what
-  is typed, starting one line tall for a short length cap (50 or
-  fewer) and two lines otherwise; a one-line box takes no line
-  break.
-- **Integer** / **Decimal** fields render as a number box
-  with min / max / step from the field's bounds.
-- **List** fields render as a drop-down with an empty leading
-  option plus the field's list options.
-
-Display columns render as plain text (or as a link for
-photo / profile-link sources).
-
-**Branching** — a governed response field renders muted and
-disabled while its branch is closed, and is required only while §5.7
-says so; it follows the parent live as the reviewer edits it, and the
-server applies the same rule on Save, deleting a governed answer whose
-branch is closed, whatever the page shows
-(`spec/reviewer-surface.md` § "Branching between response fields").
-
-**Sortability** — every Reviewee, display-field and response-field
-column header is clickable to sort the rows by that column alone (a
-group-scoped instrument's **Group** column and the trailing status
-column are not sortable); Shift-click adds
-a secondary priority, up to three. There is no Reset link:
-clearing the sort returns to the operator-configured default
-(`spec/sort_by_reviewee.md`). The reviewer's choices persist in a
-per-(browser, session, instrument) cookie.
-
-**Self-review** — when the reviewer's own email matches a
-reviewee row in the session (case-insensitive), the reviewer
-sees a row for themselves. The reviewer surface marks the row
-visually but does not block writes. Whether such a row is active
-at all is the operator's: the session's self-reviews-active flag
-seeds it at generation, and the **Assignments page flips
-self-review assignments active/inactive per instrument**
-thereafter (see [§9.7](#97-configure-assignments)).
+`spec/reviewer-surface.md` owns the surface, and
+`spec/sort_by_reviewee.md` its sort.
 
 ### 10.4 Group-scoped review surface
 
-For an instrument the operator has set to **group-scoped**, the
-surface presents **one row per group** instead of one row per
-reviewee. Groups are computed by partitioning the reviewer's
-rule-eligible universe by the **boundary tags** picked in Link 3 of
-the instrument's assignment rule ([§9.6](#96-configure-instruments))
-— reviewee and pair-context tags; reviewees sharing every boundary
-value form one group.
-
-The group row's identity column is a **composed display**: on one
-line, the values of the instrument's visible reviewee-tag display
-fields (or, with none visible, the group's boundary values); on the
-next, always (the name stays locked on a group instrument), the first
-ten member names, with a "+N more" overflow indicator. Reviewer writes to
-a group cell **fan out** to one response row per group member; reads
-aggregate back to one row per instrument per group.
-
-Missing-required and validation errors surface once per group,
-not once per member.
+A group-scoped instrument shows one row per group instead of one per
+reviewee, the groups drawn by the boundary tags of its assignment rule
+([§9.6](#96-configure-instruments)). A write to a group cell fans out to
+every member, reads collapse back to one row per group, and errors
+surface once per group. `spec/reviewer-surface.md` "Group-scoped
+instruments" owns the surface, and `spec/assignments.md` "Group-scoped
+fan-out" the storage.
 
 ### 10.5 Saving
 
-The reviewer surface uses an **explicit Save** model. **Save** is
-always enabled — there is no dirty tracking — and persists the
-current page's inputs, then reloads that page; saving with no edits
-is a harmless no-op. If a value is invalid, Save answers 400 and
-re-renders the page in place with a warning card and the typed value
-kept; the valid values still save. **Cancel** reloads the page from
-its last-saved values, dropping unsaved typing. There is no unsaved-changes warning
-on leaving a page.
-
-Clearing a cell to empty deletes that response row. There is
-no per-cell autosave today; this is an intentional simple
-contract.
+The surface saves on an explicit **Save**, always enabled, which stores
+the current page's inputs and reloads it; an invalid value answers 400
+and re-renders the page with the typed value kept, while the valid ones
+save. **Cancel** reloads the last-saved values, clearing a cell deletes
+its response, and there is no autosave. `spec/reviewer-surface.md`
+"Save / Cancel / Page navigation / Submit / Clear all" and "Persistence
+semantics" own it.
 
 ### 10.6 Submission
 
-**Submit** is a one-click session-wide action available on
-every page. On click:
-
-1. The current page's inputs are saved (implicit save); other
-   pages contribute what their own Saves stored.
-2. Required-field validation runs across every instrument's
-   every assigned row.
-3. If any required cell is empty, the submit is blocked and the
-   page Submit was pressed on re-renders with a full-width
-   "Required fields missing." card enumerating the gaps row-by-row
-   (`#N Label: Reviewee X — field Y`, the instrument named as its
-   status pill names it). No partial submit happens.
-4. If validation passes, every populated cell receives a
-   submitted-at timestamp in one atomic transaction; the status
-   pill of every page holding a saved answer flips to `submitted`
-   and each row's trailing
-   status column shows a complete (✓) icon where its required
-   fields are filled — an icon only, with no per-row
-   timestamp. The reviewer lands on the summary page once every
-   assignment is submitted, otherwise back on page 1.
-
-After submission, the reviewer **may continue to edit** — the
-session is not locked. Re-editing a previously-submitted
-required field back to empty deletes the row and flips the
-operator's monitoring view back to "in progress". Changing a
-submitted value clears that answer's submission, as a new answer
-has none, and blanking any answer after Submit clears the submission
-of that assignment's remaining answers. Until the reviewer submits
-again, the assignment reads "in progress" on the monitoring view
-and not "submitted" on the reviewer's own pills. A blank that leaves
-the assignment no answer at all unstamps nothing else, and the
-reviewer's other assignments keep their stamps; it reads "not started"
-until answered again (`spec/reviewer-surface.md` "Persistence
-semantics", findings R3).
-Submission in RRW is a status marker, not an enforcement gate.
+**Submit** is one session-wide action on every page: it saves the
+current page, refuses with a list of the gaps if any required cell is
+empty anywhere, and otherwise stamps every populated answer as
+submitted in one transaction. Submission is a status marker, not a
+lock: the reviewer may keep editing; changing a submitted answer clears
+its submission, and blanking one clears the submission of that
+assignment's other answers, until they submit again.
+`spec/reviewer-surface.md` "Missing required flow" and "Persistence
+semantics" own it.
 
 ### 10.7 Clear all
 
-A reviewer-facing destructive action (in their own danger
-zone) wipes every response across every instrument for that
-reviewer. Confirmation checkbox required. Audit-logged as
-`responses.cleared`.
+A confirm-gated **Clear all** in the reviewer's own danger zone wipes
+every response they hold across every instrument, audited as
+`responses.cleared`. `spec/reviewer-surface.md` owns it.
 
 ### 10.8 Reviewer's own CSV download and summary page
 
-Once the session has fully submitted (every required cell
-populated and stamped), the reviewer sees a read-only
-**summary page** (`/me/sessions/{id}/summary`; 404 once archived, as
-is its CSV) — one section per
-instrument they responded on and may read now (each instrument's
-visibility policy decides), a submitted-on
-timestamp, a
-**Recall my submission** control (rolls the submission back to
-draft while the review is still open: activated and before its
-deadline), and a **Download my
-responses (CSV)** button (when any section shows) emitting `{code}_my_responses.csv` (same
-21-column shape as the operator Responses extract, narrowed to
-this reviewer's rows).
+Once every assignment is submitted, the reviewer can open a read-only
+**summary page** (`/me/sessions/{id}/summary`), **recall** the
+submission while the review is still open, and download
+`{code}_my_responses.csv`, their own rows in the operator Responses
+extract's shape ([§12.6](#126-reviewers-personal-extract)).
+`spec/reviewer-surface.md` "Per-session summary" owns the page, and
+`spec/csv_contracts.md` the file.
 
 ### 10.9 Reviewee results surface
 
-An email-identified reviewee reaches
-`/me/sessions/{id}/results` through the two checks of
-[§4.4](#44-reviewee) — the roster check plus a currently-resolving
-visibility grant; without one the page answers 404. The body is
-per-instrument sections — one section per instrument whose reviewee
-visibility policy resolves to a mode and that has an included
-assignment to this
-reviewee — rendering the responses collected *about this
-reviewee* in the policy's mode:
-
-- **Raw** — one row per reviewer with an included assignment to this
-  reviewee, identified; a reviewer who has not submitted shows empty
-  value cells.
-- **Anonymized** — the same per-row table with every
-  identification cell stripped to a muted em-dash.
-- **Summarized** — one aggregate row per instrument, with
-  per-data-type stats (Integer/Decimal: average / median / min /
-  max / N; List: per-choice frequency; String: total + average
-  length).
-
-A reviewee grant is after-release only: outside the open
-response-release window no section renders, and nothing opens while
-the session is ongoing. An **Acknowledge card** at the foot lets the
-reviewee confirm they've seen their results — a one-shot, idempotent
-gesture that records when, and emits
-`reviewee.results_acknowledged`.
+An email-identified reviewee reaches `/me/sessions/{id}/results`
+through the two checks of [§4.4](#44-reviewee). For each instrument
+whose policy releases something to them, they see the responses about
+them as Raw, Anonymized or Summarized, only inside the response-release
+window, plus a one-shot **Acknowledge** (`reviewee.results_acknowledged`).
+`spec/participant_model.md` §4.1 and `spec/reviewer-surface.md`
+"Reviewee results" own the surface, and `spec/visibility_policy.md` the
+modes.
 
 ### 10.10 Observer collation surface
 
-An observer reaches `/me/sessions/{id}/collation` through an
-active observer row matching their email, case-insensitively; unlike
-the reviewee surface, the page needs no current grant to load. The
-body is a per-instrument
-3-row collation table scoped to the observer's **cohort**: a
-distinct-reviewer headcount + shared aggregate, a
-distinct-reviewee headcount + the same aggregate, and a
-conditional per-instrument **Download CSV** button. Identification
-mode follows the per-instrument observer visibility policy (Raw /
-Anonymized rows / Anonymized summaries); Anonymized downloads
-substitute per-session opaque tokens for names (reversible via the
-operator's Extract-data Token keys card). Each instrument renders
-only while its observer policy resolves a mode for the current
-window: its session-ongoing mode (Summarized, or nothing) while the
-session is `ready`, and its responses-released mode while it is
-`expired` and inside the release window. Once the session is archived
-the page and its downloads answer 404.
+An observer reaches `/me/sessions/{id}/collation` through an active
+observer row matching their email; the page needs no current grant to
+load. It shows per-instrument collation tables over the observer's
+**cohort**, with CSV downloads, in the form and window the observer
+policy allows. Anonymized downloads use per-session tokens the operator
+can reverse ([§9.12](#912-extract-data)), and an archived session
+answers 404. `spec/reviewer-surface.md` "Observer collation surface" and
+`spec/participant_model.md` own it.
 
 ---
 
 ## 11. Invitations and email
 
 The invitation and email subsystem is a central functional
-contract of RRW, described here in full. One leg — handing a
+contract of RRW, summarized here; each subsection names the spec
+that owns its detail. One leg — handing a
 rendered message to a mail server — is not part of the send path;
 [§11.6](#116-dispatch) states what a send does instead.
 
@@ -1963,115 +1421,44 @@ session's review surface.
 
 ### 11.2 What an email is
 
-Each kind of message — invitation, reminder, responses-
-received — is rendered from the session's operator-editable
-template by substituting per-reviewer merge fields:
-
-- **Invitation**: `$reviewer_name`, `$session_name`,
-  `$deadline`, `$help_contact`, `$invite_url`.
-- **Reminder**: `$reviewer_name`, `$session_name`,
-  `$deadline`, `$help_contact`, `$invite_url` — the same set
-  as the invitation; the default reminder body repeats the
-  sign-in link.
-- **Responses received**: `$reviewer_name`, `$session_name`,
-  `$deadline`, `$help_contact`, `$submitted_at`.
-
-An unrecognised merge tag is left in the text verbatim — never
-blanked, never an error — so a typo cannot fail a send. Subjects
-are capped at 255 characters by the editor; bodies carry no
-length limit. Full editor contract: `spec/email_template_editor.md`.
-
-Per-template **cc** and **bcc** override fields let the
-operator copy a help-contact mailbox or an audit address on
-every send.
+Each kind of message — invitation, reminder, responses-received — is
+rendered from the session's operator-editable template by substituting
+per-reviewer merge tags, with per-template cc and bcc. An unrecognized
+tag is left in the text as typed, so a typo cannot fail a send.
+`spec/email_template_editor.md` §6 owns the merge-tag sets and the
+rendering, and §2 the editor.
 
 ### 11.3 The outbox
 
-Every send attempt — manual or scheduled — writes to the
-**email outbox** ledger *before* dispatch is attempted. Each
-row carries:
-
-- Session id, reviewer id, invitation id.
-- Kind (invitation / reminder / responses-received).
-- To-email, cc, bcc.
-- Merged subject and body — exactly as they would go on the
-  wire.
-- Status (`queued`, `sending`, `sent`, `failed`).
-- Audit columns: from-address, backend identifier, backend
-  message id, delivered-at, payload hash, correlation id,
-  error message.
-
-The outbox is the **system of record** for what was sent.
-Write-before-dispatch makes the queue crash-safe; on restart,
-no message is lost and (with correlation-id dedupe) none is
-double-sent.
-
-A diagnostic outbox viewer behind the sys-admin gate shows
-the per-session queue with kind, recipient, status, sent-at,
-and the rendered body.
+Every send attempt, manual or scheduled, writes an **email outbox** row
+before any dispatch: the recipients, the kind, the merged subject and
+body exactly as they would go out, and a status. The outbox is the
+system of record for what was sent, and sys admins read it in a
+per-session viewer ([§9.14](#914-sys-admin-surface)).
+`spec/email_infra_options.md` "Audit log" and "Idempotency" own the
+table and its retry rules.
 
 ### 11.4 Scheduling — auto-send
 
-The operator can configure **invite offsets** anchored on the
-scheduled-activation moment and **reminder offsets** anchored
-on the deadline. Each offset triggers one auto-send pass over
-the eligible reviewers:
+The operator sets **invite offsets** anchored on the
+scheduled-activation moment and **reminder offsets** anchored on the
+deadline. Each offset fires one auto-send pass over the eligible
+reviewers, a reminder falling back to a fresh invitation where the
+reviewer has no current link ([§11.1](#111-what-an-invitation-is)), and
+each firing or skip is audited. The Session details card shows every
+resolved fire moment, and the Workflow card's right-hand column carries
+them as auto-send captions.
 
-- **Auto-send invitations** fires at each invite-offset moment
-  for sessions that are `validated` or `ready` and have
-  invitations created, sending every invitation not yet sent whose
-  reviewer is still eligible.
-- **Auto-send reminders** fires at each reminder-offset moment
-  for sessions that are `ready`, before their deadline, with
-  invitations created, sending to every reviewer who has an
-  invitation and has not submitted. A reviewer whose invitation was
-  never sent, or whose link a Regenerate has since rotated, is sent
-  a fresh invitation in place of the reminder ([§11.1](#111-what-an-invitation-is)).
-
-Per-offset audit events (`session.scheduled_invites_fired`,
-`session.scheduled_reminders_fired`, plus per-skip events with
-reasons) record every firing. A per-reviewer, per-offset key on
-the outbox row prevents duplicate reminders to the same reviewer for
-the same offset.
-
-The Session details config card previews every resolved fire
-moment inline next to its offset; the Workflow card's right-hand
-column, on Session Home and every Operations-row page, carries the
-same information as auto-send captions.
+`spec/lifecycle.md` §8 owns the schedule and its fire-time rules, and
+`spec/workflow_card.md` "Signal lines" the captions.
 
 ### 11.5 Backend options
 
-The dispatch leg of the subsystem is **pluggable**: one transport
-seam, with one concrete backend selected per deployment.
-
-Four options exist in the design space, in increasing order of
-infrastructure ambition:
-
-1. **SMTP relay (Option A).** The operator's personal SMTP
-   credentials, configured on the operator settings page,
-   speak directly to the institution's submission server.
-   Per-operator "send-as-me" identity. Supports STARTTLS
-   (port 587) and implicit TLS (port 465). Cheap; works
-   anywhere. Bounce / delivery confirmation is best-effort.
-
-2. **Microsoft Graph (Option B).** The deployment's Entra
-   application credentials send through a shared
-   institutional mailbox via the Graph `Mail.Send`
-   application permission. Friendly-name customisation
-   without spoofing; aggressive throttles at high volume.
-
-3. **Azure Communication Services (Option C).** First-party
-   Azure transactional email. Verified sending domain,
-   SPF / DKIM-handled deliverability, per-message cost.
-
-4. **Third-party transactional (Option D).** SendGrid /
-   Mailgun / Postmark / Resend / AWS SES / equivalent. Each
-   provider has its own API surface; the seam accommodates
-   per-provider concrete implementations.
-
-A full discussion of each option's deliverability,
-infrastructure, and cost trade-offs lives in
-`spec/email_infra_options.md`.
+Dispatch sits behind one pluggable transport seam, with one backend per
+deployment. Four options are in the design space: an SMTP relay using
+the operator's own credentials (Option A), Microsoft Graph (B), Azure
+Communication Services (C) and a third-party transactional provider
+(D). `spec/email_infra_options.md` owns each option and its trade-offs.
 
 ### 11.6 Dispatch
 
@@ -2112,55 +1499,29 @@ exception, called out on the file's surface).
 
 ### 12.2 Per-entity files
 
-- **Reviewers.csv** — `ReviewerName, ReviewerEmail,
-  ReviewerTag1, ReviewerTag2, ReviewerTag3, ProfileLink, Status`.
-  Active rows first, then by name, then by email.
-- **Reviewees.csv** — `RevieweeName, RevieweeEmail,
-  RevieweeTag1, RevieweeTag2, RevieweeTag3, ProfileLink, Status`.
-  Same sort discipline.
-- **Relationships.csv** — `ReviewerEmail, RevieweeEmail,
-  PairContextTag1, PairContextTag2, PairContextTag3, Status`.
-  Active rows first, by reviewer email, then by reviewee
-  identifier. Not gated on the Relationships toggle.
-- **Observers.csv** — `ObserverEmail, ObserverName, ObserverTag1,
-  Status, CohortRule`. Conditional on the Observers toggle.
-- **Settings.csv** — three-column `field, value, data_type`
-  format spanning session-level fields, email templates,
-  instruments, session RuleSets, data shapes, and session tags.
-  Round-trips perfectly back through the Settings import path.
-  It carries **no** response-type section and **no**
-  friendly-labels section — tag friendly labels ride the roster
-  CSV headers instead — and `rtds[...]` / `field_labels.*` rows in
-  an older bundle are silently ignored on import rather than
-  rejected.
+The setup files are Reviewers.csv, Reviewees.csv, Relationships.csv
+(not gated on its toggle), Observers.csv (only with the Observers
+toggle on) and Settings.csv, the three-column `field, value, data_type`
+file that carries session config back through the Settings import.
+`spec/csv_contracts.md` §2 and §3 own each file's columns, row order and
+import rules.
 
 ### 12.3 Responses extract
 
-A 21-column long-format file, in this order:
-`ReviewerName, ReviewerEmail, ReviewerTag1/2/3, RevieweeName,
-RevieweeEmail, RevieweeTag1/2/3, InstrumentName,
-InstrumentShortLabel, FieldKey, FieldLabel, ResponseType,
-Value, SelfReview, SavedAt, SubmittedAt, Version,
-InstrumentFlavour`. A per-instrument preamble at the top of
-the file lists each instrument's field dictionary.
-
-`RevieweeEmail` deliberately mirrors the roster CSV header even
-though the value is the reviewee's email or other identifier. The
-column names and their positions are both part of the contract
-[§12.5](#125-round-trip-stability) promises, and both break a
-downstream consumer if they move.
-
-Group-scoped instruments collapse one row per group rather
-than per member. The file streams to the operator without
-buffering the full dataset in memory.
+The responses extract is one long-format file: a per-instrument field
+dictionary as a preamble, then one row per answer under 21 fixed
+columns. The column names and their positions are both part of the
+contract [§12.5](#125-round-trip-stability) promises. A group-scoped
+instrument's answers collapse to one row per reviewer, group and field
+rather than one per member. `spec/csv_contracts.md` §2.4 owns the columns, the row order
+and the collapse.
 
 ### 12.4 Audit-events file
 
-`{code}_audit_log.csv` —
-`EventType, Severity, Summary, ActorEmail, CorrelationId,
-CreatedAt, DetailJson`, with `CreatedAt` in UTC. Reached from the sys-admin
-audit-log viewer; not surfaced on the operator-facing Extract
-Data card.
+`{code}_audit_log.csv` holds the session's audit events, with
+`CreatedAt` in UTC. It is reached from the sys-admin audit-log viewer,
+not from the Extract data tab. `spec/csv_contracts.md` §2.5 owns its
+columns.
 
 ### 12.5 Round-trip stability
 
@@ -2356,140 +1717,70 @@ deletion and operator-triggered purge.
 
 ### 16.1 Close session
 
-Operator-driven, reversible. From `ready`, the Workflow card's
-**Close session** button moves the session to `expired`
-(display label "Closed"): every instrument closes, all responses
-are preserved, and the operator can Revert to draft to reopen for
-editing. Distinct from Revert to draft (`ready → draft`) — Close is
-the end-of-cycle transition; Revert is a mid-cycle setup edit.
+From `ready`, the Workflow card's **Close session** moves the session
+to `expired` (Closed): every instrument closes, every response is kept,
+and Revert to draft reopens it. `spec/lifecycle.md` §2.7 owns it.
 
 ### 16.2 Archive
 
-Operator-driven, reversible. The Workflow card offers **Archive
-session** once the session is `expired`; the Sessions lobby's **Purge and
-archive** and the Extract data page's **Archive session** card
-archive a `draft`, `validated` or `expired` session, never a `ready`
-one ([§6.1](#61-transitions)). Archived sessions:
-
-- Disappear from the main Sessions lobby.
-- Are visible on the archived-sessions child page.
-- Have all data preserved on disk, unless purged on the way in
-  (§16.5) or deleted afterwards from Session Home's Danger Zone
-  (§16.3, §16.4).
-- Can be unarchived back to `draft` at any time.
+Archive files a session out of the lobby onto the archived-sessions
+page and keeps its data, unless it is purged on the way in (§16.5) or
+deleted afterwards (§16.3, §16.4); Unarchive returns it to `draft`.
+Which control archives from which state is [§6.1](#61-transitions)'s,
+and `spec/lifecycle.md` §1 owns the transition.
 
 ### 16.3 Delete data
 
-A per-session operator action on the Session Home Danger Zone.
-Wipes every reviewer response in the session while preserving the
-rosters, instruments, assignments, and configuration. Available in
-every state but `ready` (`draft`, `validated`, `expired`,
-`archived`); an Activated session takes **Revert to draft** first.
-Audit-logged as `responses.deleted_all`. Useful for
-clearing a session between two pilot runs without rebuilding the
-configuration.
+**Delete Data**, on Session Home's Danger Zone, wipes every reviewer
+response and keeps the rosters, instruments, assignments and
+configuration. It is available in every state but `ready` and is
+audited as `responses.deleted_all`. `spec/session_home.md` "3. Danger
+Zone card" owns it.
 
 ### 16.4 Delete session
 
-A per-session operator action on the Session Home Danger Zone.
-Removes the session entirely and cascades to every dependent row
-(rosters, assignments, responses, audit events for the session).
-Available in every state but `ready`, so a finished (`expired`) or
-`archived` session can be deleted from its Home; visible-but-disabled
-while the session is `ready`, which takes **Revert to draft** first.
+**Delete Session**, on the same card, removes the session and every row
+that depends on it, the session's audit events included. It is
+available in every state but `ready`. `spec/session_home.md` "3. Danger
+Zone card" owns the card, and `spec/sessions_overview.md` "Bulk delete"
+the lobby's delete.
 
 ### 16.5 Operator-triggered purge and archive
 
-An action on the Sessions lobby's row and bulk expanders, and on
-the Extract data page's **Archive session** card. It hard-deletes
-whichever of the session's responses, rosters and audit log the
-operator ticks, then archives what remains; with nothing ticked it
-is a plain archive. It applies to `draft`, `validated` and `expired`
-sessions; an activated (`ready`) one is skipped. Useful for sessions
-that have served their purpose but whose configuration the operator
-wants to keep as a template.
+**Purge and archive**, from the lobby's expanders or the Extract data
+page's **Archive session** card, hard-deletes whichever of the session's
+responses, rosters and audit log the operator ticks, then archives what
+remains; with nothing ticked it is a plain archive. It applies to
+`draft`, `validated` and `expired` sessions. `spec/extract_data.md`
+"`Archive session` card" owns the options, and `spec/sessions_overview.md`
+"Row affordances" the lobby side.
 
 ### 16.6 Per-session retention
 
-Two inert columns sit on each session — a per-session
-retention exception and a per-session retention overrides
-JSON — pending a scheduled-purge subsystem that has been
-deferred. The functional intent is to let an operator (or
-the workspace) configure a per-session retention window
-distinct from a workspace default; the manual archive +
-operator-triggered purge cover the per-session needs in the
-meantime.
+Two per-session retention columns exist, but nothing acts on them yet;
+the manual archive and the operator-triggered purge cover per-session
+retention meanwhile. `spec/settings_inventory.md` §2 lists them.
 
 ### 16.7 Scheduled archive and purge
 
-Deferred. The functional intent — auto-archive after a
-configurable offset from the deadline; auto-purge per a
-deployment-or-session retention policy — is captured in the
-schema but not currently fired. Operators today rely on the
-manual archive (lobby row expander) and the operator-
-triggered purge for these needs.
+Deferred. The schedule stores an archive offset, but nothing fires it,
+and there is no auto-purge. `spec/lifecycle.md` §8 owns the intent.
 
 ---
 
 ## 17. Permissions and access control
 
-RRW enforces access at six gates (the full catalogue, with
-failure semantics and the per-route matrix, is
-`spec/permissions.md`):
+Every gate is enforced server-side. Three apply to operator surfaces —
+workspace operator, per-session owner and sys admin — and three to
+participant surfaces, each by a case-insensitive email match against an
+**active** roster row: reviewer, reviewee with a current visibility
+grant ([§4.4](#44-reviewee)), and observer. An invitation token grants
+nothing on its own. Destructive actions take an explicit confirmation
+and write audit events, reviewer posts act only on the reviewer's own
+assignments, and SMTP passwords are encrypted at rest.
 
-1. **Workspace operator** — applies to every `/operator/*`
-   surface. The signed-in identity must be on the workspace
-   allowlist (operator or admin flag).
-2. **Per-session operator** — applies to session-scoped
-   `/operator/sessions/{id}/*` surfaces. The signed-in
-   identity must be an owner of that session. An admin who
-   is not an owner may *read* the session's diagnostics but
-   must self-add as owner (an audited action) before editing.
-3. **Sys admin** — applies to the workspace governance and
-   diagnostics surfaces. The signed-in identity must carry
-   the admin flag; changing *who is an admin* additionally
-   requires the config-derived super-admin tier.
-
-Three gates apply to participant surfaces, each by
-case-insensitive email match against an **active** roster row —
-and gate 5 additionally by a visibility grant:
-
-4. **Reviewer in session** — the reviewer surface, save /
-   submit / clear, and the post-submit summary.
-5. **Reviewee in session, with a current grant** — the reviewee
-   results surface. The roster match alone is not enough: at
-   least one instrument must grant this reviewee a mode inside the
-   open response-release window, or the route answers 404
-   ([§4.4](#44-reviewee)). A reviewee whose identifier is not
-   an email can never reach it.
-6. **Observer in session** — the observer collation surface.
-
-An invitation token grants nothing on its own: the token
-landing checks the signed-in email against the invitation's
-reviewer email (403 on mismatch) and then forwards to the
-reviewer surface, which applies gate 4.
-
-Every gate is enforced server-side; UI affordances that the
-current identity cannot use render either inert (with an
-explanatory tooltip) or hidden, depending on the surface.
-
-Destructive actions require **explicit confirmation** (a
-tick-box gating the destructive submit) and write one or more
-audit events. A tag or relationship change that moves a pair to
-another group on a group-scoped instrument, or redraws an instrument's
-groups, deletes the answers of every group that gains a member, and
-asks the operator first ([§14](#14-reconciling-regeneration)).
-
-Per-cell trust: reviewer POST endpoints build the assignment
-index from the authenticated reviewer's own assignments;
-foreign assignment ids supplied in form bodies are silently
-ignored rather than dispatched against.
-
-Secrets at rest (SMTP passwords) are encrypted with a
-deployment-managed key.
-
-A full security-posture catalogue lives in
-`docs/security_posture.md`.
+`spec/permissions.md` owns the gates, the per-route matrix and the
+failure codes, and `docs/security_posture.md` the security audit.
 
 ---
 
