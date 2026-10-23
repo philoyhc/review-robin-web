@@ -48,9 +48,9 @@ commits one derived cache: the reconcile verdict it warmed
 so the next load reads it rather than recomputing. The Assignments
 GET commits the same cache the same way. **The one exception is the
 scheduled-event pass** every Operations page's GET runs first
-(`spec/lifecycle.md` §8.3): an invitation, reminder, close or release
-past its scheduled time fires there, with its own audit event, as it
-would from Session Home.
+(`spec/lifecycle.md` §8.3, `scheduled_events.observe_scheduled_events`):
+a scheduled activation, invitation send or reminder past its time fires
+there, with its own audit event, as it would from Session Home.
 
 **Query params:**
 
