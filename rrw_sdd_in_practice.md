@@ -216,7 +216,7 @@ The snapshots have paid. One fixed two real logic bugs with regression tests. Th
 
 **Decision.** End-to-end verification of anything the test suite cannot exercise is done by the author looking at it. That covers templates, redirects, layout, in-browser JS and real auth. The author runs the app locally with fake auth and looks at each change in a browser; what only a deployment shows, real auth and the network, waits for one and is carried in `guide/post_azure_todo_checklist.md` until it can be made. A PR description must say what was not verified rather than claim that it was.
 
-No agent runs unattended. An agent follows a pull request it opened through CI and review, under the instruction that opened it. It does not start new work on its own, and it does not merge; the author merges.
+No agent runs unattended. An agent follows a pull request it opened through CI and review, under the instruction that opened it. It does not start new work on its own, and it does not merge; the author merges. The one exception, ruled 2026-10-23, is a batch the author hands over by name as `babysit-merge`: there the agent merges each PR once its gates hold on the head, and the author's browser check follows the batch rather than each merge.
 
 **Why.** Half of RRW's real defects live where no reader can see them. The audit's census put **fifteen of thirty** fix commits (50%) in the browser-only class: caption selectability, a 4 px misalignment, a keypress toggling a card, all "touching only templates and `tools/`". Against SDD's central claim that specs catch what unit tests cannot, this is the class *neither* catches, because a layout has no machine-checkable definition of done.
 

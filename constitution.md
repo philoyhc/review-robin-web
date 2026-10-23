@@ -94,7 +94,10 @@ such things says so in
 its description rather than claiming verification. No autonomous loop,
 no scheduled agent, no agent that merges: the definition of done is not
 machine-checkable for the defects that actually occur here, and a loop
-without one has no exit.
+without one has no exit. The one exception is a batch the author hands
+over by name (`babysit-merge`, ruled 2026-10-23): there the agent merges
+each PR once its gates hold on the head, and the author's browser check
+follows the batch rather than each merge.
 
 *Trade-off.* Throughput is bounded by one person's attention, and the
 largest measured class of real defects is the one only that person
