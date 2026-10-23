@@ -22,7 +22,7 @@ always goes somewhere real, chosen from the request alone
 "Go back" shows beside it only when the page was reached from a page of
 the app (a same-origin `document.referrer` outside `/.auth/`), and links
 to that page, so it never follows a sign-in redirect and works in a new
-tab (participant audit P2).
+tab.
 
 > **Reference implementation.** `app/web/templates/operator/session_reviewers.html`
 > + the `body.ui-v2`-scoped block in `app/web/templates/base.html`
@@ -103,10 +103,10 @@ to CSS classes.
 > does not.
 > Nor does it arm, for a link or a submit, while the page says it will
 > ask before being left (`window.rrwLeaveWillPrompt()` returns `true`).
-> Three pages set it, each to the predicate its `beforeunload` guard
-> reads: Session Home's details card over unsaved edits, the Instruments
+> Session Home's details card sets it over unsaved edits, the Instruments
 > page over a dirty card, and the Observers row editor over unsaved
-> changes to the row or its cohort rule. Without the hook the bar would
+> changes to the row or its cohort rule — each to the predicate its
+> `beforeunload` guard reads. Without the hook the bar would
 > sit behind the prompt, and an operator who stays gets no load to clear
 > it. A leave the operator confirms loads without a bar.
 > *Busy control:* the clicked link or submit button gets
@@ -252,7 +252,7 @@ to CSS classes.
 > enables it. The checkbox is also `required` — belt-and-suspenders
 > against a JS-off submit — **wherever the gate owns its form**: e.g.
 > the `Danger Zone`'s `delete-all` and the Upload card's
-> `replace-roster` on all four roster pages, Session Home's
+> `replace-roster` on every roster page, Session Home's
 > `delete-data` / `delete-session`, and Settings' `clear-settings`.
 >
 > **It is not `required` where the gate shares a form with
@@ -345,10 +345,9 @@ to CSS classes.
 > callout (`guide.html`). **The per-instrument intro does not use them.**
 > Its help texts are rows (`.rs-help-row`) in a normal-infill card, not a
 > card per field: inside the heading card under the description (parted
-> from it by a 1px `--border-default` rule, none when the rows sit alone;
-> the author's ruling, 2026-10-20, drawn as the `.quick-setup-slot` rule in
-> §10, not a `.col-divider`: it marks where the guidance starts, not a
-> misattribution) in
+> from it by a 1px `--border-default` rule, none when the rows sit alone,
+> drawn as the `.quick-setup-slot` rule in §10 rather than a `.col-divider`
+> because it marks where the guidance starts, not a misattribution) in
 > Layout 1, the default, or all in one `.rs-intro-help` card in the right
 > column in Layout 2 (`spec/reviewer-surface.md`, "Intro and help cards").
 > There is no full-width variant: `test_reviewer_response_flow.py`
@@ -384,7 +383,7 @@ to CSS classes.
 > after a redirect-back-with-banner from a mutating route. Carries
 > `.banner-scroll-target` so the page-wide auto-scroll script jumps
 > to it on load.
-> Four variants, matched to the four semantic accents:
+> One variant per semantic accent:
 > - `.banner.banner-info` (`--status-info-bg` / `--status-info-border`)
 >   — preview-mode notice on reviewer surface.
 > - `.banner.banner-success` (`--status-success-*`) — the Rehydrate
@@ -398,7 +397,7 @@ to CSS classes.
 > radius, border-width and margin come from the single `.banner` base,
 > and body text is the page's `--text-body`. Cancel button per the
 > "Banner behaviour conventions" sub-section below.
-> Three sub-elements sit inside the family: **`.banner-headline`**, the
+> Inside the family sit **`.banner-headline`**, the
 > bolded first line; **`.banner-lead`**, a plain first sentence over a
 > list (Quick Setup's slot banner and the Setup pages' upload problems);
 > and **`.banner-actions`**, the right-aligned control row that carries
@@ -409,7 +408,7 @@ to CSS classes.
 > `.card` plus `role="alert"`, or with a paragraph styled by its own
 > parent card's rule — carrying the scroll hook and the ARIA role but no
 > error accent. Those are outside this family and outside this catalogue,
-> so a page audit should expect them alongside the four variants rather
+> so a page audit should expect them alongside the variants rather
 > than reading a missing accent as a defect.
 
 #### 5a. Banner behaviour conventions
@@ -418,7 +417,7 @@ Operator-page mutating routes (Save / Add / Delete) commonly
 reject a payload with a redirect-back-with-banner pattern: the
 route 303s to the GET page with a query-string flag, and the
 GET template renders an inline banner card describing what
-went wrong. Three conventions govern every banner the surface
+went wrong. These conventions govern every banner the surface
 renders.
 
 **Cancel button.** Every such banner — both red error banners
@@ -484,7 +483,7 @@ doesn't fire on the dismissed page because no
 
 ### 6. Buttons
 
-Five canonical roles — **Primary**, **Secondary**, **Destructive**
+The canonical roles are **Primary**, **Secondary**, **Destructive**
 (outline red), **Outline-amber** (serious but recoverable) and
 **Toggle** (a two-state per-row flag). A serious but recoverable act
 takes the amber outline, never a fill, so it never reads louder than Destructive.
@@ -493,7 +492,7 @@ padding, `var(--radius-button)` radius, `--fs-small` at weight 500, a 1px
 border, single-line label. **Roles differ by token, not by shape**, so a
 role change is a colour change and nothing else. The one exception is the
 date-time field's pair of square buttons (§8). If a button does not fit
-one of the five, ask before inventing a sixth.
+one of these roles, ask before inventing another.
 The Guide's "Reading the controls" card (`app/web/templates/guide.html`)
 shows one sample of each role on the classes in the table below, so a
 role's look reaches it unedited; a new role adds a row there.
@@ -540,7 +539,7 @@ everywhere, so "you can click this" reads the same way on every control.
 
 > **Disabled anchor-as-button** — an anchor doing button duty that has to
 > render inert, such as the table toolbar's `Add new` while a row is
-> being edited. **One rule covers all four forms** —
+> being edited. **One rule covers every form** —
 > `body.ui-v2 .btn:disabled`, `button.btn:disabled`, `a.btn.disabled` and
 > `.btn[aria-disabled="true"]` — at `opacity: 0.5`, `cursor: not-allowed`,
 > `pointer-events: none`. Markup carries the class **and**
@@ -705,7 +704,7 @@ everywhere, so "you can click this" reads the same way on every control.
 > describes the box and a locked card has none — only the pills.
 > (Create's Owners card takes one too, but is not this case: it holds a table and
 > a picker, and the picker has its own `<label for>`.)
-> `validation_results.html`'s two severity empty-state lines (*"No
+> `validation_results.html`'s severity empty-state lines (*"No
 > issues shown. …"* and *"No issues match the severity chips that are
 > on."*) sit in the subtitle position but are neither: each is an
 > empty-state line under an `<h2>`.
@@ -756,7 +755,7 @@ no edge either (`.tag-chip.is-fixed`, below), and that includes the
 display-field table's locked Name / Email chips (`spec/instruments.md`
 "Display-field table").
 
-Three rules make that work:
+These rules make that work:
 
 - **The fill is untouched.** The edge is additive over whatever a
   modifier gives the chip, because a Band 1 link chip in the "not set"
@@ -793,8 +792,8 @@ that are:
   (`spec/setup_pages.md` § *Reviewers page*, § *Reviewees page*,
   § *Observers page*);
 - Accounts' invite role chip, a cycle chip `Invite as operator` ↔ `Invite as sys-admin` around the `invite_as_sys_admin` box (`spec/operator_ui_concept.md` §6). Its label is rewritten by script on the box's `change` and on the form's `reset`.
-- the Sys Admin audit log's three Severity chips (`info`, `warning`, `error`), on/off chips in a status color around the `severity` boxes; none on is no severity filter (`spec/operator_button_audit.md` §20).
-- the Validate page's three severity chips (`Errors`, `Warnings`, `Info`), on/off chips in a status color around the `severity` boxes, all on by default (`spec/validate_page.md` §2.3).
+- the Sys Admin audit log's Severity chips (`info`, `warning`, `error`), on/off chips in a status color around the `severity` boxes; none on is no severity filter (`spec/operator_button_audit.md` §20).
+- the Validate page's severity chips (`Errors`, `Warnings`, `Info`), on/off chips in a status color around the `severity` boxes, all on by default (`spec/validate_page.md` §2.3).
 
 `.tag-chip:has(> input:checked)` is the
 `.is-selected` fill (a status-colored chip's own on-fill instead: the chip-types table below), read off the box itself, so a form reset repaints
@@ -806,7 +805,7 @@ it still says on or off. On takes the card's display-value colors
 (`--config-value-bg` / `--config-value-fg`) rather than the reserved
 shade; off is faded. **A locked Instruments card's chips read as plain
 `pill-count` pills**, Band 3's, Band 1's
-self-review chip and Band 1's three link chips alike: no edge, pointer
+self-review chip and Band 1's link chips alike: no edge, pointer
 or lock glyph, an unticked field faded (a cycle chip names its state
 and is not faded; a link chip on "Not set" keeps its amber, a status),
 read off the card's
@@ -819,7 +818,7 @@ exception): a locked chip may carry it to say "on", and
 `.tag-chip.is-locked.is-selected` repaints it in the display-value
 colors.
 
-**Six chip types, one look each.** What a chip's states mean decides
+**Each chip type has one look.** What a chip's states mean decides
 its fill; a fixed switch keeps the fill of the state it is held at. **Solid** is the
 `.is-selected` fill (`--selected-bg`, a solid blue in both themes);
 **faint** is the plain `pill-count` fill (`--status-info-bg`, pale blue in
@@ -849,7 +848,7 @@ instrument the fields a group row can't show (`spec/instruments.md`
 "Display-field table"), and a response field whose branch parent is
 hidden ("Response fields"). It is per item: a card's locked view stays
 `is-locked`, or on a locked Instruments card the plain pill (above). Its other use is the Instruments
-Visibility card's two cells whose mode isn't the operator's to choose
+Visibility card's cells whose mode isn't the operator's to choose
 (`spec/instruments.md` "Visibility card"), and the Assignments page's
 self-review chip on a session that isn't editable, which keeps its
 amber when mixed.
@@ -859,8 +858,8 @@ page's Select all / Clear all, are cycle chips (`.tag-mode-chip`,
 `.pill-tag-clear` take `--selected-bg` / `--selected-fg` outright).
 Select all / Clear all is the edge case whose label names the next click
 rather than a state. The Instruments Visibility cells that can change
-are cycle chips too, "Not shown" being a deliberate off. So are Extract's three empty-row chips
-("All reviewers ↔ Reviewers with responses" and its two siblings), which
+are cycle chips too, "Not shown" being a deliberate off. So are Extract's empty-row chips
+("All reviewers ↔ Reviewers with responses" and its siblings), which
 keep `is-selected` on in both labels (`spec/extract_data.md`).
 `tests/browser/test_cycle_chips.py` pins the lobby, Archived and Extract
 fills;
@@ -868,8 +867,8 @@ fills;
 `tests/unit/test_reserved_shade.py` keeps the shade off anything static
 except `.tag-chip.is-fixed`.
 
-> **Lifecycle badges** — one `.pill-lifecycle-*` set covers all five
-> states, each on its own token pair so a state's colour can move without
+> **Lifecycle badges** — one `.pill-lifecycle-*` set covers every
+> state, each on its own token pair so a state's colour can move without
 > touching the status vocabulary:
 > - `draft` → `--lifecycle-draft-bg` / `-fg` (warning amber — the same
 >   "needs work" treatment as `.pill-empty`, because a draft session is
@@ -923,13 +922,13 @@ One row per primitive. Colours and spacing come from tokens throughout.
 | `rf-table` | Band 3's response-field table (`spec/instruments.md` § *Response fields*). One `<tbody>` per field, ruled underneath (`border-bottom: 1px solid var(--border-default)` on the `<tbody>`) and not inside it (`border-bottom: 0` on each `<td>`), so a branch's parent, condition row and governed fields share one `<tbody>` as one ruled group (`td.rf-branch-bar` draws the branch's bar, 4px at 0.35 opacity, from a parent's + column (`td.rf-branch-bar-start`), and `--rf-glyph-width` (2rem, R and X's own width) gives every row button — +, ⑂, ↰ / ↳, R, ≡, ▲, ▼, X — one width; `td.rf-active-cell` is every row's first column, holding the field's name chip (`label.rf-name-chip`: an on/off chip around the Active checkbox, flush left, `max-width: 8em` border box, a longer name ending in "…"), `td.rf-slot` is an empty column of the glyph width, two after ↰ / ↳, into which a branch's rows shift one column per level (a level-1 row fills both, its ↰ in the first and its ↳ in the second), `tr.rf-inner-top` / `tr.rf-inner-end` rule a branch inside a branch above its parent and below its last field from the parent's + column (`td:nth-child(n+3)`) rightward, and the condition row's `td.rf-condition-lead` / `td.rf-condition-op` (on a List parent `tr.rf-condition-list`, the operator shrunk and its box beside it) put "If the above" right-aligned before the name column and the operator in it). The table keeps `min-width: 66rem` and scrolls in its `.table-scroll` on a narrow card, locked or not: a locked card makes the table inert, never its `.table-scroll`. The name column takes a fixed share (20%) and the type column `8.5rem`, about an "Agreement" select; the bounds column takes the rest, its boxes no narrower than `3.5rem` (room for "2000"). An empty name box (`td.rf-name input`) shows its default label muted, as its placeholder (`color: var(--text-subtle)`, `opacity: 1`, so the color alone mutes it whatever opacity a browser gives placeholders by default) |
 | `.btn-short` | A shorter `.btn` for a compact table row — same role and outline, 19px tall inside a 32px row. Used by the display-field table's ▲ ▼ (`spec/instruments.md` § *Display-field table*); the response-field table's ▲ ▼ stay full-size |
 | `.chip-group` | One labelled group of chips inside a `.col-chip-row`, so a row carrying several groups wraps **between** them rather than stranding a label from its chips |
-| `.col-chip-row.is-grouped` | The modifier a chip row takes **when its chips are in `.chip-group` boxes**: it swaps the parent's `gap` for a wider `column-gap` between the groups. A `gap` applies on both axes, so a wrapped second line arrived indented against the line above it; a column-gap is between-items-on-a-line by definition and cannot. A **modifier and not a change to `.col-chip-row`**, because the four roster rows put their label and chips directly in the row — widening the gap there would space a label from its own chips. Assignments is the only caller (its three groups sit in the half-width left pane, where they do not fit on one line) |
+| `.col-chip-row.is-grouped` | The modifier a chip row takes **when its chips are in `.chip-group` boxes**: it swaps the parent's `gap` for a wider `column-gap` between the groups. A `gap` applies on both axes, so a wrapped second line arrived indented against the line above it; a column-gap is between-items-on-a-line by definition and cannot. A **modifier and not a change to `.col-chip-row`**, because the roster pages' chip rows put their label and chips directly in the row — widening the gap there would space a label from its own chips. Assignments is the only caller (its groups sit in the half-width left pane, where they do not fit on one line) |
 | `.col-chip-row` (+ `[data-col-toggles-for]`, `[data-col-toggle]`, `[data-rrw-col-toggles]`) | The column-visibility chips above a table. A chip is `role="button" tabindex="0"` and toggles `col-hidden-{slot}` on the table it names; each page maps its own slots to its own column classes, so the slot vocabulary is not fixed here. The storage key lives on the **table** (`[data-rrw-col-toggles]`) and a page may carry several chip rows against one table, grouping its slots. **Both behaviours are delegated on `document`**: a chip rendered after load works with no registration, because the handler resolves its row, table and storage key from the event target with `closest`. **A re-rendered table card must call two hooks** — `window._rrwHydrateColToggles()` to restore the operator's saved columns, and `_rrwHydrateFromCookies()` to repaint the sort badges (and to re-sort the rows when the stored spec holds a `response:` key, which the server cannot apply) — because delegation keeps a chip *clickable* while the server re-renders it all-visible, and neither state is in the markup |
-| `.session-row-selected` | A selected or edited row on the sessions lobby, its archived page, the four roster pages and Assignments. **A rail at each end, and no fill**: `--selected-bg` as a `box-shadow: inset 6px 0 0` on `td:first-child` and `inset -6px 0 0` on `td:last-child`. Detailed below |
-| `.table-pager-cluster` (+ `.table-pager-cluster-bottom`, `.table-pager-step`, `.table-pager-menu`, `.table-pager-menu-panel`, `.table-pager-menu-item`, `.table-pager-anchored`) | The row pager on a roster-bearing table, rendered above the table and again below it. **Five cells**: `«` first, `‹` back, a range menu, `›` forward, `»` last — so any page is one move away whatever the roster size. Ranges (`201–400`), not page numbers. Suppressed whenever a search or status filter is active — except on Accounts, whose Session role can match every account, so its pager stays (`spec/operator_ui_concept.md` §6). The four steps are the `.btn-icon` role and carry no link underline; at the ends they render **in place and inactive** (`<span aria-disabled>`, never absent, or the other cells shift sideways as the operator pages) and take no accent fill — the shade `--blue-strong` / `--blue-glow` stays reserved for things that act, and an inactive step does not. The menu is a `<details>` holding every range as an anchor, **not** a `<select>`: a select navigating on `change` fires on every arrow key, so a keyboard user reaching the fifth option would navigate five times. Its summary names the current range, so one element says where you are and is the way to leave; the current entry is a `<span aria-current="page">` marked by weight and a muted fill. Every cell is an anchor — the pager needs no script to navigate; one delegated `document` listener closes the menu on an outside click or Escape. Each href carries a `#<noun>-table-card` fragment so a page turn arrives at the **table's card**: its top edge, then the column chips, then the cluster, then the new rows. The id sits on the card with a `scroll-margin-top` so the top border reads as a boundary rather than a crop; the route supplies the id, the pager never derives it. **This is one of three landing targets, and the only one that is a card** — see the landing-target entry below; the filter strip's controls now take this same anchor, so the contract is no longer the pager's alone. The cluster shares the chip line where it fits and wraps to its own line where it does not — the chip row's width is operator data, and a roster with no tags renders no chip row at all, so the row belongs to the cluster and the chips join it |
-| **Landing targets** — `#<noun>-table-card`, `tr.row-action-target`, `#<noun>-row-editor` / `#<noun>-row-<id>` | **Three targets, and only the first is a card.** A page turn, and a filter or a Search / Clear, lands on the **table card** (`scroll-margin-top: var(--space-4)` — enough to keep the top border off the viewport edge so it reads as a boundary rather than a crop). A **row action** lands on the row it acted on, via `tr.row-action-target` at **`scroll-margin-top: 88px`** — deliberately larger than the cards' 16px, because a row flush against the viewport edge reads as the table's first row rather than as one row among others, and because the row's own expander renders *below* it: 88px clears one 68px row plus 16px, putting the acted-on row second from the top with a neighbour visible for context. Nothing on these pages is `position: sticky`, so there is no fixed chrome to land underneath. **Entering edit mode takes the third**: `#<noun>-row-editor` is an **add-mode-only id on the `<tr>` itself**, and `Edit` builds `#<noun>-row-<id>` from the id it already has — there is no editor card in the contract, the row is the editor. A fourth anchor, `.roster-card`, exists for the same reason as the first: a control inside the Unlock panel returns to `#roster-card` so the panel stays open, and without a `scroll-margin-top` it arrived cropped. On the three pages with a tag-label editor that is the labels save, the delete-all and a successful import; on Observers, which has none, the latter two. **A fragment that does not resolve is ignored by the browser and lands at the top of the document**, so any surface using a row fragment must also ship the fallback that catches a missing target — at most **two** cases reach it — a row the active filter excludes, and a row moved by a cookie-held sort. A delete is **not** one of them: it is handled a step earlier by the route, which has no row to land on and so sends the table card itself, and the script never fires. Two is the ceiling, not the count on every page — a page whose table is not sortable reaches only the first, as Observers does; Reviewers, Reviewees and Relationships are all sortable and reach both. `spec/setup_pages.md` § *Per-row Edit / Add / bulk actions* states the same rule for the page that implements it |
+| `.session-row-selected` | A selected or edited row on the sessions lobby, its archived page, every roster page and Assignments. **A rail at each end, and no fill**: `--selected-bg` as a `box-shadow: inset 6px 0 0` on `td:first-child` and `inset -6px 0 0` on `td:last-child`. Detailed below |
+| `.table-pager-cluster` (+ `.table-pager-cluster-bottom`, `.table-pager-step`, `.table-pager-menu`, `.table-pager-menu-panel`, `.table-pager-menu-item`, `.table-pager-anchored`) | The row pager on a roster-bearing table, rendered above the table and again below it. **Five cells**: `«` first, `‹` back, a range menu, `›` forward, `»` last — so any page is one move away whatever the roster size. Ranges (`201–400`), not page numbers. Suppressed whenever a search or status filter is active — except on Accounts, whose Session role can match every account, so its pager stays (`spec/operator_ui_concept.md` §6). The steps are the `.btn-icon` role and carry no link underline; at the ends they render **in place and inactive** (`<span aria-disabled>`, never absent, or the other cells shift sideways as the operator pages) and take no accent fill — the shade `--blue-strong` / `--blue-glow` stays reserved for things that act, and an inactive step does not. The menu is a `<details>` holding every range as an anchor, **not** a `<select>`: a select navigating on `change` fires on every arrow key, so a keyboard user reaching the fifth option would navigate five times. Its summary names the current range, so one element says where you are and is the way to leave; the current entry is a `<span aria-current="page">` marked by weight and a muted fill. Every cell is an anchor — the pager needs no script to navigate; one delegated `document` listener closes the menu on an outside click or Escape. Each href carries a `#<noun>-table-card` fragment so a page turn arrives at the **table's card**: its top edge, then the column chips, then the cluster, then the new rows. The id sits on the card with a `scroll-margin-top` so the top border reads as a boundary rather than a crop; the route supplies the id, the pager never derives it. **This is one of three landing targets, and the only one that is a card** — see the landing-target entry below; the filter strip's controls now take this same anchor, so the contract is no longer the pager's alone. The cluster shares the chip line where it fits and wraps to its own line where it does not — the chip row's width is operator data, and a roster with no tags renders no chip row at all, so the row belongs to the cluster and the chips join it |
+| **Landing targets** — `#<noun>-table-card`, `tr.row-action-target`, `#<noun>-row-editor` / `#<noun>-row-<id>` | **Three targets, and only the first is a card.** A page turn, and a filter or a Search / Clear, lands on the **table card** (`scroll-margin-top: var(--space-4)` — enough to keep the top border off the viewport edge so it reads as a boundary rather than a crop). A **row action** lands on the row it acted on, via `tr.row-action-target` at **`scroll-margin-top: 88px`** — deliberately larger than the cards' 16px, because a row flush against the viewport edge reads as the table's first row rather than as one row among others, and because the row's own expander renders *below* it: 88px clears one 68px row plus 16px, putting the acted-on row second from the top with a neighbour visible for context. Nothing on these pages is `position: sticky`, so there is no fixed chrome to land underneath. **Entering edit mode takes the third**: `#<noun>-row-editor` is an **add-mode-only id on the `<tr>` itself**, and `Edit` builds `#<noun>-row-<id>` from the id it already has — there is no editor card in the contract, the row is the editor. A fourth anchor, `.roster-card`, exists for the same reason as the first: a control inside the Unlock panel returns to `#roster-card` so the panel stays open, and without a `scroll-margin-top` it arrived cropped. On the pages with a tag-label editor (every roster page but Observers) that is the labels save, the delete-all and a successful import; on Observers, which has none, the latter two. **A fragment that does not resolve is ignored by the browser and lands at the top of the document**, so any surface using a row fragment must also ship the fallback that catches a missing target — at most **two** cases reach it — a row the active filter excludes, and a row moved by a cookie-held sort. A delete is **not** one of them: it is handled a step earlier by the route, which has no row to land on and so sends the table card itself, and the script never fires. Two is the ceiling, not the count on every page — a page whose table is not sortable reaches only the first, as Observers does; Reviewers, Reviewees and Relationships are all sortable and reach both. `spec/setup_pages.md` § *Per-row Edit / Add / bulk actions* states the same rule for the page that implements it |
 | `.filter-row` (+ `.filter-row > label`, `.filter-actions`) | **The search + status filter strip, as one unscoped base with narrowings.** It was three private per-card copies; declaring the shape once means a move carries it, which is what let Reviewers lift the strip into its table toolbar without restyling it. The base sets the row (`flex`, `--space-4` gap; status a third of the width, search two thirds, so the typeahead's `Name (email)` labels stay readable while the dropdown collapses to its short options) and the action row (`flex`, `flex-end`, wrapping). Each named scope narrows **only what genuinely differs**, and says why. One `body.ui-v2` prefix on the generic label rule is **load-bearing specificity, not scoping**: the global `body.ui-v2 label` is (0,1,2) and would otherwise beat a bare `.filter-row > label` at (0,1,1), re-blockifying the label, un-stacking it from its input, and blockifying the select with it — which is only `display: block` by virtue of being a flex item |
-| `.table-card-toolbar` (+ `.is-split`, `.toolbar-pane`, `.toolbar-left`, `.toolbar-right`) | **Two bare panes at the head of a table card**, on **all eight table pages** — the four rosters, the three Operations tables (Assignments, Invitations and Responses) and Accounts Management. Sessions Diagnostics carries its filter in the lobby's half-width Filter card above the table instead (`.sessions-lobby-row`, 2026-10-15). Card geometry — the same half-and-half split and gutter `.card-columns` gives — with **no border, fill or padding of its own**, because these are regions of one card rather than two cards. That is the distinction §10 already draws against `.card-columns`, now with a name. Left pane: what the table is showing (column chips — category chips on Accounts — pager cluster, count line) — **and it renders empty where a page has none of those**, as Observers does on an unpaged roster: it has one fixed tag slot so no chips exist to toggle, and the pager appears only past one page. The pane stays so the split holds; an asymmetric toolbar is the intended shape, not a gap to fill. Right pane: the filter strip that decides it. The strip moved here from a card a grid away, so the controls sit with the rows they act on. **`is-split` stays a modifier now that every carrier opts in**, which looks redundant and is not: the shared class stays `display: flex`, so the next page to open a table card with a toolbar is not silently re-laid-out by a grid it never asked for. A pager-only toolbar is the sharp case — as a grid item the cluster would right-align into the second column. **The two panes are gated differently by page family, and deliberately**: the rosters include the pager and count line unconditionally and let those partials self-guard, while the three Operations pages wrap the whole left pane in a has-rows conditional — `{% if rows %}` on Invitations and Responses, `{% if pair_sample %}` on Assignments, whose rows are generated rather than rostered. Accounts is a third shape: the whole toolbar sits inside `{% if account_total %}`, since an empty workspace has nothing to filter, and inside it the partials self-guard as on the rosters. An empty pane and an absent pane render the same, so nothing turns on it visually; recorded so the next reader does not take one for a bug. **`.toolbar-left.has-heading`** (Accounts only) puts the card's `<h2>` at the left pane's top: the pane stretches to the row (`align-self: stretch`) and the heading's `margin-bottom: auto` keeps the chips, pager and count line at its foot, so the filter strip starts level with the heading rather than below it |
+| `.table-card-toolbar` (+ `.is-split`, `.toolbar-pane`, `.toolbar-left`, `.toolbar-right`) | **Two bare panes at the head of a table card**, on the roster pages, the Operations tables (Assignments, Invitations and Responses) and Accounts Management. The sessions lobby, Archived and Sessions Diagnostics carry their filter in the lobby's half-width Filter card above the table instead (`.sessions-lobby-row`). Card geometry — the same half-and-half split and gutter `.card-columns` gives — with **no border, fill or padding of its own**, because these are regions of one card rather than two cards. That is the distinction §10 already draws against `.card-columns`, now with a name. Left pane: what the table is showing (column chips — category chips on Accounts — pager cluster, count line) — **and it renders empty where a page has none of those**, as Observers does on an unpaged roster: it has one fixed tag slot so no chips exist to toggle, and the pager appears only past one page. The pane stays so the split holds; an asymmetric toolbar is the intended shape, not a gap to fill. Right pane: the filter strip that decides it. The strip moved here from a card a grid away, so the controls sit with the rows they act on. **`is-split` stays a modifier now that every carrier opts in**, which looks redundant and is not: the shared class stays `display: flex`, so the next page to open a table card with a toolbar is not silently re-laid-out by a grid it never asked for. A pager-only toolbar is the sharp case — as a grid item the cluster would right-align into the second column. **The two panes are gated differently by page family, and deliberately**: the rosters include the pager and count line unconditionally and let those partials self-guard, while the Operations pages wrap the whole left pane in a has-rows conditional — `{% if rows %}` on Invitations and Responses, `{% if pair_sample %}` on Assignments, whose rows are generated rather than rostered. Accounts is a third shape: the whole toolbar sits inside `{% if account_total %}`, since an empty workspace has nothing to filter, and inside it the partials self-guard as on the rosters. An empty pane and an absent pane render the same, so nothing turns on it visually; recorded so the next reader does not take one for a bug. **`.toolbar-left.has-heading`** (Accounts only) puts the card's `<h2>` at the left pane's top: the pane stretches to the row (`align-self: stretch`) and the heading's `margin-bottom: auto` keeps the chips, pager and count line at its foot, so the filter strip starts level with the heading rather than below it |
 
 **A lone card in a two-column grid is a decision, not a default.** A
 single child of a `1fr 1fr` grid lands in column 1 and reads as a card
@@ -937,8 +936,8 @@ that failed to fill the row. Half width flush right suits a *control*,
 full width a *readout* — the author's call each time. Where the answer
 is full width, the grid goes: a grid with one child is not a grid, and a
 plain card is page width with no rule at all. Invitations and Responses
-take that answer for their counters card, because eight pills in half a
-page wrap badly (`spec/operations_pages.md` § *Shared page shape*).
+take that answer for their counters card, because Invitations' line of
+counter pills wraps badly in half a page (`spec/operations_pages.md` § *Shared page shape*).
 
 **Do not bring back the range strip.** `.table-pager`,
 `.table-pager-bottom`, `.table-pager-link`, `.table-pager-gap` and
@@ -950,7 +949,7 @@ fifty to the middle of 40,000. The cluster's five fixed cells reach any
 page in one move instead. A rule for markup nothing renders leaves the
 next reader working out whether it is dead or whether they have missed
 the page that uses it, which is why none may come back.
-`tests/integration/test_pager_link_style.py` pins **four** of the five —
+`tests/integration/test_pager_link_style.py` pins
 `.table-pager-link`, `.table-pager-link.is-current`, `.table-pager-gap`
 and `.table-pager-bottom`. **Bare `.table-pager` and
 `.table-pager-jump` are held by this paragraph alone**, so a rule for
@@ -1006,7 +1005,7 @@ a rewrite.
   it reopens the collision one storey down.
 - **Opt-in by class.** These templates inject panels with the same
   `session-expander` class names from their own scripts, which differ
-  deliberately: `sessions_list.html`, `sessions_archived.html`, the four
+  deliberately: `sessions_list.html`, `sessions_archived.html`, the
   roster pages (`session_reviewers.html`, `session_observers.html`,
   `session_reviewees.html`, `session_relationships.html`),
   `session_assignments.html` and Accounts' `sys_admin_users.html`. An unscoped rule would style every one of
@@ -1021,12 +1020,12 @@ a rewrite.
   alone.
 - **One selection funnel per page.** The class is applied in the page's
   single selection funnel, which clears all rows each pass before
-  marking the selected set: `refreshExpander()` on the two lobby pages,
+  marking the selected set: `refreshExpander()` on the lobby and Archived pages,
   `render()` on Reviewers, Reviewees, Relationships and Assignments,
   `renderPanel()` on Observers, `refresh()` on Accounts. The contract is the funnel, not its
   name. **A page with a client-side filter counts only visible rows**:
   Assignments, whose instrument-name chips hide rows with
-  `display: none`, and the two lobby pages, whose tag chips and filter
+  `display: none`, and the lobby and Archived pages, whose tag chips and filter
   box do the same. The header select-all checkbox ticks the rows shown
   and reads them alone, and a row the filter hides is unticked, so no
   bulk action reaches a session nobody can see. (The lobby's Select all
@@ -1040,7 +1039,7 @@ a rewrite.
   then dispatches `rrw:sorted` once the rows have landed. Removal rather
   than hiding, because a hidden row still occupies an index: a panel
   counted at stamping time shifts every row after it by one, so clearing
-  the sort stops restoring the server's order. The six injecting pages
+  the sort stops restoring the server's order. The injecting pages
   that sort — `sessions_list`, `sessions_archived`, `session_reviewers`,
   `session_reviewees`, `session_relationships` and `session_assignments`
   — listen for `rrw:sorted` and rebuild through their funnel, with no
@@ -1114,8 +1113,8 @@ rendered width**: which tables overflow depends on the viewport, and an
 exceptions list is a judgment nobody re-measures. A wrapper on a table
 that never overflows costs nothing.
 
-Three things the rule has to say out loud, because a template-level check
-cannot see them:
+What the rule has to say out loud, because a template-level check
+cannot see it:
 
 - **A table built in JavaScript needs the wrapper on or directly around its host.** The
   Instrument card's Band 2 preview is assembled in `rebuildPreview` and

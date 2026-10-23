@@ -124,7 +124,7 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 **Status / info card** — read-mostly, no primary action. Renders pills, counts, summaries, identifying metadata. Default visual treatment (white background, neutral border). Examples:
 
 - Session Details card on Session Home.
-- Summary card on the Responses page (assigned / invited / opened / submitted / incomplete pills).
+- The counters card at the top of the Responses page (`#responses-info-card`): Number of reviewees, With responses and Without responses, each a count pill, the last amber (`pill-empty`) while any reviewee has no responses.
 - Session status card at the top of Instruments (session deadline and accepting / not-accepting counts; `spec/instruments.md`).
 
 **Action card** — primary content is a form or affordance. The card exists to host the action, with framing copy and any required confirmation around it. Default visual treatment (white background, neutral border). Examples:
@@ -132,7 +132,6 @@ A page is composed of cards drawn from a small named vocabulary. The kind sets t
 - Upload card on Reviewers / Reviewees / Relationships.
 - Quick Setup card on Session Home.
 - Next Action card on Session Home (the state-conditional Workflow card; its transitions are Prepare / Activate / Revert to draft / Close).
-- The Rule Based Assignment card on the Operations Assignments page.
 
 **Lock card (yellow warning)** — lifecycle-locked or otherwise non-interactive surface, with optional recovery action. `--card-warning-bg` background, `--card-warning-border` border (the warning brown). The recovery action inside follows P7 and uses the outline-amber button. See "Warning surfaces — shared brown framing" below for the per-page application matrix.
 
@@ -223,7 +222,7 @@ Zero reads `none` rather than `0 / 0`, matching Reviewers and Reviewees; instrum
 The `Not created` vs `Not sent` split matters because the operator's next action differs: generate the invitation rows first vs. press Send. Collapsing both into a single "not sent" pill would hide that.
 
 While email sending is off, the three send states carry a `title` saying
-a send is recorded, not delivered, until Segment 14B wires real sending.
+a send is recorded, not delivered, until email sending is switched on.
 
 **Responses state values.** The Responses pill is **reviewee-centric** and **data-driven**, computed by `app.web.views.session_status_pills` (composed in `SessionStatusPills.responses_label`) — *not* gated on lifecycle state:
 
@@ -296,10 +295,10 @@ Per `spec/audience_and_identity_model.md`, the app comprises three distinct surf
        │                           │
    ┌───┴───┐                       │
    │       │                       │
-Session-  Non-session         Sign-in +
-scoped    operator pages      review list +
-operator  (this section)      response form
-pages                         (this section)
+Session-  Non-session         Review list +
+scoped    operator pages      response form
+operator  (this section)      (this section)
+pages
 (above)
 ```
 
@@ -398,30 +397,14 @@ Reviewer-facing pages have a top bar, but lighter than the operator's:
 - **Left:** "Review Robin" — small, `--text-subtle`. App identity as a trust anchor. No version info (operators care about that; reviewers don't).
 - **Right:** A small **user menu** containing:
   - "Signed in as [Reviewer Name]" — informational, with the same tier suffix as the operator's. Lets the reviewer confirm correct identity (important on shared computers, useful in institutions where SSO might silently log the wrong person in).
-  - "Your reviews" — link back to `/me` on every participant page but `/me` itself, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back (participant audit P4; "Your reviews" is the dashboard's one name, author's ruling 2026-10-15).
+  - "Your reviews" — link back to `/me` on every participant page but `/me` itself, whatever the number of sessions, so a one-session reviewer, a reviewee and an observer always have a way back ("Your reviews" is the dashboard's one name).
   - "Guide" — opens the Guide (`/guide?return_to=<path>`, skipped on `/guide` itself and on Sign-in details), rendered only for a viewer who resolves at least one Guide audience. Gated on the same `request.state.guide_hidden` **hide** flag the operator chrome reads, and **fails open**: an unset flag renders the link, because `/guide` itself bounces a viewer who resolves nothing to `/about`, so a stray link is cosmetic while a missing one hides a page someone is entitled to.
   - "About" — opens the About / access-help page (`/about?return_to=<path>`, skipped on `/about` itself and on Sign-in details), same as the operator chrome's About link.
   - "Sign out" — ends the reviewer's session.
 
-The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions. About, Guide and Sign-in details (`/auth/me/debug`) are shared with operators and show it to everyone but an operator or system admin, who keep the operator chrome there (`views.uses_participant_chrome`; participant audit M8).
+The top bar is consistent across all reviewer pages. Its presence is what makes the reviewer surface recognizable as Review Robin across sessions. About, Guide and Sign-in details (`/auth/me/debug`) are shared with operators and show it to everyone but an operator or system admin, who keep the operator chrome there (`views.uses_participant_chrome`).
 
-#### Sign-in surface
-
-The first page a reviewer sees, reached by clicking a sign-in link in their invitation email or by direct URL. This page has elevated trust significance: the reviewer is about to authenticate, and they need to verify they're on the right system before doing so.
-
-**Chrome:**
-
-- Standard top bar with Review Robin identity (no user menu yet, since the reviewer isn't signed in).
-- Page body centered on the sign-in flow:
-  - **H1:** "Sign in to Review Robin" or similar.
-  - Brief explanation of the auth flow ("You'll be redirected to your institution's sign-in page.").
-  - Primary action: "Sign in with [Institution]" (SSO trigger, branded with the institution name when known from the invitation context).
-  - Secondary affordance: magic-link option, for reviewers without SSO access. Less prominent than the SSO action.
-
-After authentication, the reviewer is delivered to either:
-
-- The specific response surface they were invited to (if the sign-in link was for a specific session), or
-- Their reviewer review list (if no specific destination is associated with the sign-in).
+Sign-in has no page of its own: it is Azure Easy Auth's (`spec/audience_and_identity_model.md` "Auth posture").
 
 #### Reviewer's review list
 
@@ -448,11 +431,7 @@ The main task surface, where the reviewer completes their evaluations.
 **Chrome:**
 
 - Standard reviewer top bar (Review Robin identity + user menu).
-- **Page header** with session context:
-  - Session name — rendered at H1 size.
-  - Deadline — small reminder in `--text-subtle`, near the session name.
-  - Optional: institution or operator name (small, `--text-subtle`) — useful for reviewers participating across institutions or with multiple operators in mind.
-  - Optional: operator-configured welcome message / instructions, shown above the form on first visit. Plain text or limited markdown.
+- **Page header** with session context: the session name as H1, the deadline, the session description and the participant row. `spec/reviewer-surface.md` § *Page anatomy* (part 3) owns its contract. An institution name near the session name is **deferred**, not built (`spec/audience_and_identity_model.md` "Operator customization boundary").
 - **Page navigation** (only when the session has more than one instrument; see "Multi-instrument navigation" below).
 - **Form body.**
 
