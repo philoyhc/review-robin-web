@@ -14,7 +14,7 @@ Use this for work that is already decided: a batch of low-intensity fixes from a
 1. Establish the queue before starting: the list of PRs (existing numbers, or planned rungs/items to turn into PRs) in order. Write it as a task list so progress is visible.
 2. For an item ladder, note which rung you expect to be the item's **last build rung** — it carries the cumulative `diff-reviewer` read. Record the `main` SHA before rung 1 merges in rung 1's PR body, so the last rung can cite it.
 3. Work one PR at a time. Do not open the next PR's branch until the current one is merged or parked.
-4. Branch each new PR from up-to-date `main` (`git fetch && git switch main && git pull`), so every PR is tested against what is really there. For a PR that already exists, check out its branch (`gh pr checkout <n>`) before classifying it or running any gate, so the local checks run on the PR's head and not on `main`; if that head is behind current `main` (an earlier PR in the batch merged), merge `origin/main` into it and push first — a merge commit, never a rebase or force-push on a branch you did not create — so both the local checks and CI test the tree that will land.
+4. Branch each new PR from up-to-date `main` (`git fetch && git switch main && git pull`), so every PR is tested against what is really there. For a PR that already exists, check out its branch (`gh pr checkout <n>`) before classifying it or running any gate, so the local checks run on the PR's head and not on `main`; then `git fetch origin main` (checkout fetches only the PR head) and, if that head is behind `origin/main`, merge `origin/main` into it and push first — a merge commit, never a rebase or force-push on a branch you did not create — so both the local checks and CI test the tree that will land.
 5. Open each new PR as a **draft** (`gh pr create --draft`). Codex review is triggered by marking it ready, so it must not start ready.
 
 ## Classify each PR
@@ -41,7 +41,7 @@ Then `gh pr checks <n> --watch`.
 - Repo-check, `diff-reviewer` or `spec-writer` finding → fix (or, for a reader finding you judge wrong, note why in the PR body).
 Batch fixes from all of these into one push where possible, then repeat Stage 1.
 
-**Stage 2 — mark ready.** Only when BOTH CI is green on the head commit AND the repo checks (including any required `diff-reviewer` read and `spec-writer` pass) have passed on that same commit, mark the PR ready: `gh pr ready <n>`. This triggers the Codex review, so it must see the commit that is actually a merge candidate. If anything is still running or has findings outstanding, stay in Stage 1.
+**Stage 2 — mark ready.** Only when BOTH CI is green on the head commit AND the repo checks (including any required `diff-reviewer` read and `spec-writer` pass) have passed on that same commit, mark the PR ready: `gh pr ready <n>`. This triggers the Codex review, so it must see the commit that is actually a merge candidate. If anything is still running or has findings outstanding, stay in Stage 1. If the PR is already ready (an existing PR, or one step 4 just updated), `gh pr ready` cannot re-trigger Codex: post a PR comment `@codex review` instead whenever the latest Codex review is not on the head.
 
 **Stage 3 — Codex review.** Wait for a review **on the current head commit** — a review of an earlier commit does not count. Triage every comment:
 - Real defect within this PR's scope → fix, push, reply on the thread with the commit SHA.
@@ -63,7 +63,7 @@ Then `gh pr merge <n> --squash --delete-branch --match-head-commit <sha>` (or th
 - A Codex comment, `diff-reviewer` finding or failure raises a design, spec or behaviour question rather than a bug.
 - The fix would touch migrations, auth, deployment/infra config, a spec contract, or public interfaces beyond what the plan covered.
 - The only way to get green is to skip, delete, loosen or `xfail` a test.
-- A PR has gone 3 fix rounds without clearing, or a check is flaky (fails, then passes with no change — say so rather than re-running silently).
+- A PR has gone 5 fix rounds without clearing, or a check is flaky (fails, then passes with no change — say so rather than re-running silently).
 - The plan turns out to be wrong or incomplete for what the code actually needs.
 
 When stopping: park that PR (leave it open), say exactly what the ruling is with the options, and wait. Do not skip ahead to later PRs unless the user says to.
