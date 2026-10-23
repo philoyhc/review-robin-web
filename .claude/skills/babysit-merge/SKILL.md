@@ -48,13 +48,18 @@ Batch fixes from all of these into one push where possible, then repeat Stage 1.
 - False positive, or out of scope → reply with a one-line reason; change nothing. Note out-of-scope items for the hand-off report.
 - Needs a judgment call → STOP (see below).
 
+**Codex stalls** (author's ruling, 2026-10-23). Codex sometimes shows "running" on the head and never reports. Time both marks from the trigger (the PR marked ready, or the `@codex review` posted after a push); the 15-minute re-ping does not restart the clock:
+- **15 minutes** with no review on the head → post one PR comment `@codex review`, saying the review stalled.
+- **30 minutes** still silent → a PR whose diff is **Markdown only** (every changed path ends `.md`) merges on green CI with the other gates held; say in the PR body and the hand-off report that Codex did not review the head. Anything else → STOP and ask for a ruling — prose-only as classified above still admits executable paths (`cordware/`, `.github/workflows/`, `.claude/hooks/`, `tools/`), and those do not merge unreviewed.
+- An explicit instruction from the user ("merge as soon as CI is green") skips the Codex wait for that PR; every other gate still holds.
+
 **After any fix pushed while the PR is ready:** the PR stays ready. Re-run Stage 1 on the new head (the `pytest`/`ruff` gates are owed on every push). Once CI is green again, check whether Codex has reviewed the new head; if not, post a PR comment `@codex review` to request it. Do not toggle the PR back to draft and ready again to force a review.
 
 **Merge.** `main` has no branch protection by design — the gate is this checklist. Merge only when all hold on the head commit:
 - `CI` green.
 - `CI - Postgres` green — **required** for database-reaching PRs. Every merge to `main` deploys and runs `alembic upgrade head` against Azure Postgres without waiting on CI, so a Postgres-only failure that lands is found in production. For prose-only and `tools/`-only PRs, merging ahead of a still-running `CI - Postgres` is allowed by `CONTRIBUTING.md`; never merge on a red one.
 - Repo checks pass; any required `diff-reviewer` read and `spec-writer` pass done and acted on.
-- The latest Codex review is on the head commit and has no unaddressed actionable comments.
+- The latest Codex review is on the head commit and has no unaddressed actionable comments — or, for a Markdown-only PR, Codex stalled past the 30 minutes above.
 
 Then `gh pr merge <n> --squash --delete-branch --match-head-commit <sha>` (or the repo's established merge method if different), where `<sha>` is the head commit the checklist above passed on. If the head has moved, the merge is refused: restart the gates on the new head. Then pull `main` and move to the next PR.
 
@@ -72,7 +77,7 @@ When stopping: park that PR (leave it open), say exactly what the ruling is with
 
 - Force-push to `main`, or merge with any check red.
 - Merge a database-reaching PR before `CI - Postgres` is green.
-- Merge a PR whose Codex review is stale (older than the head commit).
+- Merge a PR whose Codex review is stale (older than the head commit), except a Markdown-only PR under the stall rule in Stage 3.
 - Widen a fix beyond its comment — no opportunistic refactors mid-batch (`CLAUDE.md` forbids bundling).
 - Claim browser or end-to-end verification. That is the author's; when a PR touches UI or anything the suite can't exercise, say so in the PR body.
 
@@ -83,7 +88,7 @@ Merging is delegated; the close is not. When the queue is empty:
 - Post a hand-off report:
   - each PR: number, title, class, merged SHA, fix rounds taken
   - `diff-reviewer` reads: how many, on which PRs, and what they turned up (the item's `Status` block needs this at close)
-  - Codex comments declined, with the reason
+  - Codex comments declined, with the reason; PRs merged under the stall rule
   - out-of-scope items noted for later
   - parked PRs and the ruling each needs
   - **browser checklist**: the pages, flows and roles to exercise at `http://127.0.0.1:8000/reviewrobin/`, derived from what the merged PRs touched
