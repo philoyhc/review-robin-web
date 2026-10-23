@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 22 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244; F1, F3–F9 in #3245); every author row ruled 2026-10-22, as
+(#3225) · **Open:** 21 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244; F1, F3–F9 in #3245; F11 in #3247); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -168,7 +168,7 @@ All ruled 2026-10-22, each as its row records.
 - ~~**F8**~~ — **Done in #3245**: (low, spec / author) — **Ruled 2026-10-22: fix §4.3, and add a row for the Cordware specs to §19.** `spec/rrw_functional_spec.md` §4.3 says
   the invitation link signs a reviewer in (it never does); §19 omits the
   Cordware specs (author: add a row or soften "every live spec").
-- **F11** (low, author) — **Ruled 2026-10-22: trim it, carried by the spec-update PRs.** `spec/rrw_functional_spec.md` sections that
+- ~~**F11**~~ — **Done in #3247**: (low, author) — **Ruled 2026-10-22: trim it, carried by the spec-update PRs.** `spec/rrw_functional_spec.md` sections that
   restate a narrower spec: §9.1, §9.3–9.7, §9.9–9.15, §10.3–10.10,
   §11.2–11.5, §12.2–12.4, §6.1–6.3 and §16, §4.1, §7.3 and §17. Keep §1–3,
   §5, §8, §13, §14, §18, §19. Do not cut the §6 table a doc-convention
