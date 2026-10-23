@@ -26,11 +26,15 @@ def _post(client: TestClient, session_id: int, instrument_id: int, rfs: list[dic
 
 
 def _events(db: Session, session_id: int) -> list[AuditEvent]:
+    """In write order: the tests read the last one. Without an ORDER BY
+    SQLite happens to return insertion order and Postgres need not, so
+    there the setup save's event could come last (#3241's `postgres` run)."""
     return list(
         db.execute(
             select(AuditEvent)
             .where(AuditEvent.session_id == session_id)
             .where(AuditEvent.event_type == "instrument.response_fields_saved")
+            .order_by(AuditEvent.id)
         ).scalars()
     )
 
