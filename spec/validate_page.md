@@ -41,12 +41,16 @@ Cross-references:
 
 The page is reachable in every lifecycle state. It's read-only
 (no mutating routes), so it doesn't carry a lock card; it just
-inventories the current session against the rule set. Its GET writes
-nothing an operator sees or the audit log records. The one thing it
-commits is a derived cache: the reconcile verdict its readiness run
-warmed (`persist_reconcile_warm`, `app/services/assignments/_generate.py`),
+inventories the current session against the rule set. Its readiness
+run writes nothing an operator sees or the audit log records, and
+commits one derived cache: the reconcile verdict it warmed
+(`persist_reconcile_warm`, `app/services/assignments/_generate.py`),
 so the next load reads it rather than recomputing. The Assignments
-GET commits the same cache the same way.
+GET commits the same cache the same way. **The one exception is the
+scheduled-event pass** every Operations page's GET runs first
+(`spec/lifecycle.md` §8.3, `scheduled_events.observe_scheduled_events`):
+a scheduled activation, invitation send or reminder past its time fires
+there, with its own audit event, as it would from Session Home.
 
 **Query params:**
 
@@ -428,7 +432,7 @@ hides when filtered count is 0 AND no filter is active.
 ### 5.3 Lifecycle integration
 
 The Validate page is read-only: apart from the derived reconcile
-cache (§1), it doesn't write any state. The
+cache and the scheduled-event pass (§1), it doesn't write any state. The
 two lifecycle gates that consume its output are:
 
 | Gate | Service | Behaviour |
@@ -550,6 +554,7 @@ references would otherwise dangle).
    click through.
 
 6. **Read-only surface.** The Validate page writes no operator
-   state; its only commit is the derived reconcile cache (§1). Every
+   state; it commits only the derived reconcile cache and what the
+   scheduled-event pass fires (§1). Every
    mutation lives on a Setup page reached via the Fix deep-link;
    the page itself is purely diagnostic.

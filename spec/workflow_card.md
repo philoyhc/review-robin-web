@@ -903,8 +903,8 @@ caption builder tests `is_draft` and then `is_ready`, so it treats
 `expired` and `archived` as prepared — with invitations it shows those
 states the ✓ "System will dispatch automatically" row, without them the
 `validated` row's ⚠ copy — while the trigger skips both with
-`not_prepared` (`is_prepared` in
-`app/services/scheduled_events/_invites.py`). The caption is wrong in
+`not_prepared` (an inline `is_validated` / `is_ready` test in
+`_fire_invite_entry`, `app/services/scheduled_events/_invites.py`). The caption is wrong in
 those two states, not the contract.
 
 #### Auto-send reminders signal

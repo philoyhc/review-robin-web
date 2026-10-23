@@ -281,14 +281,17 @@ Six exceptions to that list, all easy to mis-read:
   predicate (`is_editable`) and raising the same 409 with its own
   detail message. Same rule, different function — a change to one
   has to be made in the other.
-- **The email-template editor calls no lifecycle gate at all**, so
-  it does not belong on this list; §5 states the same.
+- **The email-template editor refuses only `archived`**, through
+  `email_templates.lock_for_edit` (`session_lifecycle.require_not_archived`
+  under the session lock), so its copy stays editable through `ready`
+  and `expired`; §5 states the same.
 - **The Observers roster calls `_require_not_archived` instead**, a
   genuinely *wider* predicate rather than the same one under another
-  name. **All eight of its mutating routes take it** — `create`,
+  name. **Every mutating route of its takes it** — `create`,
   `update`, `bulk-inactivate`, `bulk-reactivate`, `bulk-delete`,
-  `delete-all`, `import` and `cohort-rule` — so the roster accepts
-  through `ready` and `expired` and 409s only on `archived`. §5
+  `delete-all`, `import`, `cohort-rule` and `self-fields` — so the
+  roster accepts through `ready` and `expired` and 409s only on
+  `archived`. §5
   carries the reason, and the rule that governs a second such
   exception.
 - **Session Home's Delete Data and Delete session call
@@ -521,10 +524,9 @@ populated columns' headers and the roster index's pills.
 
 **Observers uses a WIDER predicate.** Its mutating surface reads
 `not is_archived`, so the roster stays editable through `ready` and
-`expired` and only `archived` closes it. All eight of its mutating
-routes take `_require_not_archived`, so the page and its routes agree
-and the surface is suppressed exactly where they refuse. §3.1 lists
-all eight.
+`expired` and only `archived` closes it. Every mutating route of its
+takes `_require_not_archived`, so the page and its routes agree and
+the surface is suppressed exactly where they refuse. §3.1 lists them.
 
 The reason is what an observer *is*. They never appear in assignments
 and never produce responses, and the readiness rules that read them

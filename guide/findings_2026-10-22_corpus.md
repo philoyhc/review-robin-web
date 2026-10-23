@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 53 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239); every author row ruled 2026-10-22, as
+(#3225) · **Open:** 47 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -92,19 +92,19 @@ All ruled 2026-10-22, each as its row records.
 
 **`spec/` — sessions (B)**
 
-- **B1** (medium, spec) — `spec/lifecycle.md` §3.1 and §5 say eight
+- ~~**B1**~~ — **Done in #3240**: `spec/lifecycle.md` §3.1 and §5 drop the tally. (medium, spec) — `spec/lifecycle.md` §3.1 and §5 say eight
   Observers routes take `_require_not_archived`; there are nine
   (`self-fields`). Drop the tally.
-- **B2** (low, spec) — `spec/session_home.md` lifecycle table: Release
+- ~~**B2**~~ — **Done in #3240**: `spec/session_home.md`. (low, spec) — `spec/session_home.md` lifecycle table: Release
   responses is never live in `ready`.
-- **B3** (medium, spec) — `spec/validate_page.md` §1, §5.3 and §9.6 say
+- ~~**B3**~~ — **Done in #3240**: `spec/validate_page.md` §1, §5.3 and §9.6. (medium, spec) — `spec/validate_page.md` §1, §5.3 and §9.6 say
   the GET writes nothing; it runs the scheduled-event pass
   `spec/lifecycle.md` §8.3 requires. Add the exception, no wider.
-- **B4** (low, spec) — `spec/workflow_card.md` cites a nonexistent
+- ~~**B4**~~ — **Done in #3240**: `spec/workflow_card.md`. (low, spec) — `spec/workflow_card.md` cites a nonexistent
   `is_prepared`; the check is inline in `_fire_invite_entry`.
-- **B5** (low, spec) — `spec/sessions_overview.md`: `validated` counts as
+- ~~**B5**~~ — **Done in #3240**: `spec/sessions_overview.md`. (low, spec) — `spec/sessions_overview.md`: `validated` counts as
   draft in the lobby pills.
-- **B6** (low, spec) — `spec/lifecycle.md` "six exceptions" lists five.
+- ~~**B6**~~ — **Done in #3240**: `spec/lifecycle.md` §3.1: the email-template editor is now the sixth. (low, spec) — `spec/lifecycle.md` "six exceptions" lists five.
 
 **`spec/` — data (D)**
 
