@@ -32,6 +32,8 @@ Scope:
   are listed once with a "per row" note.
 - Per-instrument buttons on the Instruments page are listed once
   (one instrument's worth) with a "per instrument card" note.
+- Controls a shared partial renders on several pages — the date-time
+  field's buttons and the row pager — are listed once, in Section 23.
 
 Canonical-style column references the taxonomy in
 [`spec/ui_elements.md`](../spec/ui_elements.md) §6 Buttons. The
@@ -45,6 +47,7 @@ shorthand:
 | **Outline-amber** | Outline amber. Serious but recoverable: archive, purge-and-archive, acknowledge-and-activate, and the recovery action inside a `.card.lock`. (See `spec/ui_elements.md` §6.) |
 | **Nav (page-internal)** | Page-internal view switcher (e.g. Email Template tabs). Reuses the chrome's `.nav-tab` styling for visual consistency: active uses `<span class="nav-tab active" aria-current="page">`, siblings use `<a class="nav-tab">`, "coming soon" uses `<span class="nav-tab disabled" aria-disabled="true">`. Wrap in `.tab-strip`. (See `spec/ui_elements.md` §6.) |
 | **Inline text-button (`.btn-reset`)** | Single-line link-styled button used to revert a single field inside an editor without cancelling and exiting. (See `spec/ui_elements.md` §6.) |
+| **Icon button (`.btn-icon`)** | Borderless single-glyph affordance; the row pager's steps. (See `spec/ui_elements.md` §6.) |
 | **Return-to (`.back-link`)** | Top-of-body inline link to "wherever you came from" (`return_to_url` round-trip). Required on chrome-detour pages (Operator Settings, About) and on the Sys Admin child pages. (See `spec/ui_elements.md` §6.) |
 | **Chrome utility link** | Top-right chrome anchors — Sign-out (`signout`), Settings / Admin / Guide / About (`chrome-link`). Defined in `spec/ui_elements.md` §1, not in `.btn` family. |
 | **Chrome nav** | The two-row session top-nav tabs (`.nav-tab`). Lives in `spec/visual_style_rrw.md` "Operator session chrome", not in the `.btn` family. |
@@ -146,7 +149,7 @@ Source: `app/web/templates/operator/session_new.html`.
 | 14 | Session details form | Create session | `<button type="submit">` | `btn` | Primary | Posts to `POST /operator/sessions` |
 | 15 | Session details form | Cancel | `<a>` | `btn secondary` | Secondary | Returns to the sessions lobby |
 | 186 | Owners card | Add owner | `<button type="button">` | `btn secondary` | Secondary | Stages a row via `_owners_stager_js`; the card has no save of its own — **Create session** (#14) submits the staged set. Ships `hidden`, un-hidden by the stager script (`spec/session_owners.md` §3) |
-| 187 | Owners card | Remove (per staged row) | `<button type="button">` | `chrome-link` | **Not `.btn`, kept deliberately** — reuses the chrome nav's `chrome-link` class for an in-card control; no canonical role above covers a per-row remove, and by the author's ruling the Owners cards' Removes (#187, #190) stay `chrome-link` rather than take one. The class has a base rule outside the chrome (`body.ui-v2 .chrome-link`: no background, border or padding, the link colour, a muted disabled state), so the button draws as a link. Removes a staged row client-side; nothing is written until **Create session**. Not present on the creator's fixed row |
+| 187 | Owners card | Remove (per staged row) | `<button type="button">` | `chrome-link` | **Not `.btn`, kept deliberately** — reuses the chrome nav's `chrome-link` class for an in-card control; no canonical role above covers a per-row remove, and the Owners cards' Removes (#187, #190) stay `chrome-link` rather than take one. The class has a base rule outside the chrome (`body.ui-v2 .chrome-link`: no background, border or padding, the link colour, a muted disabled state), so the button draws as a link. Removes a staged row client-side; nothing is written until **Create session**. Not present on the creator's fixed row |
 
 ---
 
@@ -747,7 +750,7 @@ takes the next free number.
 | 196 | Sessions table, per row (Actions) | Manage | `<button type="submit">` in a `<form>` | `btn secondary` | Secondary | POSTs `…/sessions/{id}/adopt` — self-adds the sys-admin as an owner (audited `session.owner_added`), then opens the session. **The only door**: no row may link straight into a session the sys-admin does not own. On a session the sys-admin already owns, a disabled `<button type="button">` labeled **Owned** replaces the form. |
 | 197 | Sessions table, per row (Actions) | Outbox | `<a>` | `btn secondary` | Secondary | Child page, read-only for a non-owner sys-admin. |
 | 198 | Sessions table, per row (Actions) | Audit log | `<a>` | `btn secondary` | Secondary | Child page (Section 20). The three sit on one line in a `.btn-pair.is-one-line`, however narrow the cell. |
-| 275 | Filter card | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner, with a typeahead of every name, code and owner label) and shows every row again. `Clear`, as on the lobby's filter (#194a), by the author's ask (2026-10-14); it was `Cancel` at first. The filter hides rendered rows live and never queries. In an empty workspace the card stays and Clear is inert, a `<span class="btn secondary disabled">` as on #194a. |
+| 275 | Filter card | Clear | `<button type="button">` | `btn secondary` | Secondary | Empties the Filter box (session name, code or owner, with a typeahead of every name, code and owner label) and shows every row again. `Clear`, as on the lobby's filter (#194a). The filter hides rendered rows live and never queries. In an empty workspace the card stays and Clear is inert, a `<span class="btn secondary disabled">` as on #194a. |
 | 247 | Page top | ← Back to {{ return_to_label }} | `<a>` | `back-link` | Return-to (`.back-link`) | Returns to wherever the chrome's Admin link (#225) was followed from. `/operator/sys-admin` remembers that origin for the browser session, until a later Admin link replaces it (cookie `rrw-admin-return-to`), so this tab and Accounts (#111) keep it across the tab strip and every action's redirect |
 | 248 | Sys Admin tab strip | Sessions Diagnostics | `<a>` | `nav-tab` (`.active` on this page and its Outbox and Audit log children) | Nav (page-internal) | `app/web/templates/operator/partials/sys_admin_top_nav.html`, in a `tab-strip tab-strip-page sys-admin-nav` wrapper, on all four Sys Admin pages (§§19–22). The active tab stays an `<a>`, not the `<span aria-current>` convention 4 describes |
 | 249 | Sys Admin tab strip | Accounts Management | `<a>` | `nav-tab` (`.active` on §19's page) | Nav (page-internal) | As #248 |
@@ -861,6 +864,36 @@ Sys-admin-gated and read-only; reached from §21's per-row Outbox (#197).
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
 | 251 | Page top | ← Back to Sessions Diagnostics | `<a>` | `back-link` | Return-to (`.back-link`) | |
+
+---
+
+## Section 23 — Shared partials (date-time field, row pager)
+
+Controls that one partial renders on several pages, listed once here
+rather than in each page's section.
+
+**Date-time field.** Source: `operator/partials/_datetime_field.html`
+(the `datetime_field` macro), wired by the date-time field script in
+`base.html`; the contract is `spec/ui_elements.md` §8. It renders on
+New session (§3: Start, End, Release responses from, Release responses
+until), on Session Home's Session details card in edit mode (§5b, the
+same fields, hidden with the box on a locked card) and in the lobby's
+single-session row expander (§2: Deadline).
+
+**Row pager.** Source: `operator/partials/_pager_cluster.html`, the
+`.table-pager-cluster` of `spec/ui_elements.md` §10. It renders above
+the table and again below it (`table-pager-cluster-bottom`) whenever the
+table holds more than one page and no search or status filter is active,
+on every roster Setup page (§§6, 7, 8 and 8.5), Assignments (§11.5),
+Invitations (§13), Responses (§14) and Accounts Management (§19).
+Accounts keeps its pager under a filter (`spec/ui_elements.md` §10).
+
+| # | Card | Label | Element | CSS class | Canonical | Notes |
+|---|---|---|---|---|---|---|
+| 278 | Date-time field | 📅 | `<button type="button">` | `btn secondary dt-field-btn` | Secondary | Opens the browser's own picker on the field's hidden native `datetime-local` (`showPicker()`) and writes the choice back into the text box as 24-hour `YYYY-MM-DD HH:MM`. Ships `hidden`; the script reveals it only where `showPicker` exists and copies the box's `disabled` when it wires the field. Accessible name `Choose {label} date and time`. A square as tall as the box (`dt-field-btn`), the exception to §6's one `.btn` shape |
+| 279 | Date-time field | ✕ | `<button type="button">` | `btn secondary dt-field-btn` | Secondary | Empties the text box and focuses it. Ships `hidden`, revealed by the same script, which copies the box's `disabled` when it wires the field. Accessible name `Clear {label}`. Same square as #278 |
+| 280 | Row pager | « / ‹ / › / » | `<a>`, or `<span aria-disabled="true">` at either end | `btn-icon table-pager-step` (`.is-inactive` at the ends) | **Not `.btn`** — Icon button (`.btn-icon`) | First, previous, next and last rows; accessible names `First rows` / `Previous rows` / `Next rows` / `Last rows`. Each href carries the page's `#<noun>-table-card` fragment. At either end the step stays in place, inactive, rather than going |
+| 281 | Row pager | Current range (e.g. `201–400`) | `<summary>` inside `<details>` | `table-pager-menu` | **Not `.btn`** — a disclosure, as #122 | Opens a menu of every range as an `<a class="table-pager-menu-item">`, the current one a `<span aria-current="page">`. No script navigates; the entries are plain links |
 
 ---
 

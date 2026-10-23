@@ -1,7 +1,7 @@
 # Findings — corpus sweep (2026-10-22)
 
 **Found by:** `guide/sweep_2026-10-22_corpus.md` · **Read at:** `00501f2e`
-(#3225) · **Open:** 37 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241); every author row ruled 2026-10-22, as
+(#3225) · **Open:** 30 of 59 rows (F2, D1, D2, D10, B7 and E8 done in #3239; B1–B6 in #3240; A1–A3, D3–D9 in #3241; E1–E7 in #3244); every author row ruled 2026-10-22, as
 recommended in §2.
 
 Every spec, `docs/` file and root document, and the two `cordware/spec/`
@@ -67,7 +67,7 @@ All ruled 2026-10-22, each as its row records.
   drop the tally.
 - **F11** — the functional-spec trim (below), proposed by the 5 and 16
   October assessments and not yet done.
-- **E5** — **Ruled 2026-10-22: retire the section.** `spec/visual_style_rrw.md` "Sign-in surface" describes an
+- ~~**E5**~~ — **Done in #3244**: — **Ruled 2026-10-22: retire the section.** `spec/visual_style_rrw.md` "Sign-in surface" describes an
   in-app sign-in page and magic links that do not exist: mark deferred,
   or retire the section.
 - ~~**D10**~~ — **Done in #3239**: `portable_band2_state` drops the ids on export, Duplicate and import (`tests/integration/test_session_clone.py`). — **Ruled 2026-10-22: strip the sample-group ids on export and clone.** `band2_state` carries source-session reviewee ids through the
@@ -130,20 +130,20 @@ All ruled 2026-10-22, each as its row records.
 
 **`spec/` — UI (E)**
 
-- **E1** (low–medium, spec) — `spec/operator_button_audit.md` has no row
+- ~~**E1**~~ — **Done in #3244**: (low–medium, spec) — `spec/operator_button_audit.md` has no row
   for the date-time field's 📅 and ✕ buttons (and perhaps the pager
   steps).
-- **E2** (low, spec) — `spec/visual_style_rrw.md` cites a Rule Based
+- ~~**E2**~~ — **Done in #3244**: (low, spec) — `spec/visual_style_rrw.md` cites a Rule Based
   Assignment card that does not exist.
-- **E3** (low, spec) — `spec/visual_style_rrw.md`: the Responses summary
+- ~~**E3**~~ — **Done in #3244**: (low, spec) — `spec/visual_style_rrw.md`: the Responses summary
   card's pills are wrong.
-- **E4** (low–medium, spec) — `spec/visual_style_rrw.md` "Page header"
+- ~~**E4**~~ — **Done in #3244**: (low–medium, spec) — `spec/visual_style_rrw.md` "Page header"
   (response surface) predates the shipped header; point at
   `spec/reviewer-surface.md` and mark the institution name deferred.
-- **E6** (low, trim) — provenance in `spec/ui_elements.md`,
+- ~~**E6**~~ — **Done in #3244**: (low, trim) — provenance in `spec/ui_elements.md`,
   `spec/operator_button_audit.md`, `spec/visual_style_rrw.md` and
   `spec/operator_ui_concept.md`.
-- **E7** (low, trim) — tallies in `spec/ui_elements.md` and
+- ~~**E7**~~ — **Done in #3244**: (low, trim) — tallies in `spec/ui_elements.md` and
   `spec/operator_ui_concept.md` (not `spec/color_tokens.md`'s, which a
   test parses).
 

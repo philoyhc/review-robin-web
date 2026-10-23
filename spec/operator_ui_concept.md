@@ -26,7 +26,7 @@ When this doc disagrees with one of those, the more specific doc wins for the ar
 
 ## Lifecycle vocabulary
 
-Sessions move through a small lifecycle. All five states are live. Internal enum values appear here; user-facing display labels are mapped through the helper documented in `spec/session_home.md` (notably `ready` → "Activated").
+Sessions move through a small lifecycle. Every state is live. Internal enum values appear here; user-facing display labels are mapped through the helper documented in `spec/session_home.md` (notably `ready` → "Activated").
 
 | Enum | Display label | Status |
 |---|---|---|
@@ -36,11 +36,11 @@ Sessions move through a small lifecycle. All five states are live. Internal enum
 | `expired` | Closed | live (Workflow-card "Close session": `ready → expired`) |
 | `archived` | Archived | live (Workflow "Archive" / lobby "Purge and archive"; reversible via unarchive → draft) |
 
-There is no `closed` state in the canonical enum — `expired` is the post-response-window state, and it *displays* as "Closed". `expired` and `archived` are the two post-life states.
+There is no `closed` state in the canonical enum — `expired` is the post-response-window state, and it *displays* as "Closed". `expired` and `archived` are the post-life states.
 
 ## Page taxonomy
 
-The operator's pages fall into five active groupings plus one forward-looking placeholder.
+The operator's pages fall into the groupings below.
 
 In every session-scoped URL in this document, `{id}` is the session's `public_id`, not its integer key (`spec/architecture.md`); an integer in that position answers 404, with no redirect.
 
@@ -70,7 +70,7 @@ Home's body, layout, and per-state behaviour are specified in **`spec/session_ho
 
 ### 3. Per Session Setup Pages
 
-The six surfaces where the operator does the work needed to make the session run properly (Relationships and Observers render only when enabled — see their gate below). Each one has full edit affordance while the session is `draft` / `validated`, and locks down once it is not — `ready`, `expired` or `archived` (yellow lock card pattern; see `spec/visual_style_rrw.md` "Warning surfaces — shared brown framing"). The card branches per locked state and `archived` carries no control; `spec/lifecycle.md` §5 is the contract.
+The surfaces where the operator does the work needed to make the session run properly (Relationships and Observers render only when enabled — see their gate below). Each one has full edit affordance while the session is `draft` / `validated`, and locks down once it is not — `ready`, `expired` or `archived` (yellow lock card pattern; see `spec/visual_style_rrw.md` "Warning surfaces — shared brown framing"). The card branches per locked state and `archived` carries no control; `spec/lifecycle.md` §5 is the contract.
 
 | Page | Template | URL |
 |---|---|---|
@@ -81,7 +81,7 @@ The six surfaces where the operator does the work needed to make the session run
 | Instruments | `instruments_index.html` | `/operator/sessions/{id}/instruments` |
 | Email Template | `session_setupinvite.html` | `/operator/sessions/{id}/setup-invite` |
 
-**Relationships and Observers page gate.** Each of the two tabs is
+**Relationships and Observers page gate.** Each of these tabs is
 only visible in the Setup chrome, and its routes only resolve (rather
 than 404), when its own toggle is on — `session.relationships_enabled`
 or `session.observers_enabled`. The operator sets these toggles via
@@ -92,7 +92,7 @@ The URL slug is `setup-invite`; the page's name is **Email Template**. The two d
 
 **Relationships** carries pair-level context — the `relationships` table. Reviewer × reviewee rows carry three `tag_N` slots consumed by the rule engine via the `pair_context.tag1` / `pair_context.tag2` / `pair_context.tag3` predicate field names, plus an `active` / `inactive` status. The page mirrors the other roster pages — CSV upload behind the Unlock panel, preview table with per-row authoring and its `Show columns:` chips, Danger Zone.
 
-The four roster pages share one body shape (chrome → status strip → optional lifecycle lock card → full-width guidance card → roster card, whose **Unlock panel** holds `Upload CSV` on the left and the tag-label editor over the `Danger Zone` on the right → preview table card, its two-pane toolbar carrying the `Show columns:` chips and pager on the left and the filter strip on the right, above a table with a leftmost checkbox column driving a **row expander** and a right-end Updated column → **nothing below the table**). `spec/setup_pages.md` § *The roster card and the Unlock panel* has it in full. **Nothing else heads the roster card**: a pill row naming the columns that hold data is exactly what it carries, and the chips say the rest — a chip both reports the fact and acts on it. Observers is the one that differs, and `spec/setup_pages.md` § *Body layout* counts the ways in one place: no friendly-label editor and no `Show columns:` chips (a simpler fixed schema, one tag slot), no sortable headers, a `Danger Zone` alone in the panel's right column, and a `not is_archived` gate. The other three are sort adopters — see the sort-affordance paragraph below. The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
+The roster pages share one body shape (chrome → status strip → optional lifecycle lock card → full-width guidance card → roster card, whose **Unlock panel** holds `Upload CSV` on the left and the tag-label editor over the `Danger Zone` on the right → preview table card, its two-pane toolbar carrying the `Show columns:` chips and pager on the left and the filter strip on the right, above a table with a leftmost checkbox column driving a **row expander** and a right-end Updated column → **nothing below the table**). `spec/setup_pages.md` § *The roster card and the Unlock panel* has it in full. **Nothing else heads the roster card**: a pill row naming the columns that hold data is exactly what it carries, and the chips say the rest — a chip both reports the fact and acts on it. Observers is the one that differs, and `spec/setup_pages.md` § *Body layout* counts the ways in one place: no friendly-label editor and no `Show columns:` chips (a simpler fixed schema, one tag slot), no sortable headers, a `Danger Zone` alone in the panel's right column, and a `not is_archived` gate. The others are sort adopters — see the sort-affordance paragraph below. The full UI contract for these pages — including the per-page preview-table column order, the shared visibility-toggle pattern, the shared sort affordance, the per-row Edit / Add / bulk authoring surface, and the Observers page gate — is in `spec/setup_pages.md`. Instruments has a heavier custom layout — see `spec/instruments.md` for the locked spec.
 
 The **sort affordance** is the shared rrw-sort primitive. Any operator table that wants clickable sort headers opts in via a small annotation contract on the `<table>` + `<th>`s + `<td>`s; the shared JS in `base.html` + cookie persistence layer take care of state. Adopters: the Sessions lobby and its Archived page, Reviewers / Reviewees / Relationships (Setup row), the Operations Assignments table, Invitations and Responses. Per-instrument `sort_display_fields` on the reviewer surface is a separate but compatible mechanism — the operator picks a default for reviewers from the sort badges on the column headers of the Band 2 preview on the Instruments page; reviewers override live via the `↕` header buttons. Functional spec at `spec/sort_by_reviewee.md`.
 
@@ -108,7 +108,7 @@ The grouping name stays plural because additional Preview surfaces are anticipat
 
 ### 5. Per Session Operations Pages
 
-Surfaces for running a session and intervening when needed — validating setup, generating / previewing the materialized reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage, getting the data back out. Five tabs in the chrome's Operations row, in this order:
+Surfaces for running a session and intervening when needed — validating setup, generating / previewing the materialized reviewer-facing artifacts, engaging reviewers, tracking reviewee coverage, getting the data back out. The chrome's Operations row carries these tabs, in this order:
 
 | Page | Template | URL |
 |---|---|---|
@@ -118,7 +118,7 @@ Surfaces for running a session and intervening when needed — validating setup,
 | Responses | `session_responses.html` | `/operator/sessions/{id}/responses` |
 | Extract data | `session_extract_data.html` | `/operator/sessions/{id}/extract-data` |
 
-**Assignments is an Operations page, not a Setup one**: pair-level context is configured on the Relationships Setup page above, and this page is where the reviewer × reviewee × instrument materialization is **generated**. Body shape (top-to-bottom): chrome → **Per-instrument status** card (first under chrome — sticky across draft + ready states) → the Assignments preview table card, which opens with the **two-pane toolbar** the other seven table pages carry — its three `Show reviewers:` / `Show reviewees:` / `Show relationships:` chip groups, the pager cluster and the preview-count line in the left pane, the `Status:` / `Search by:` / search filter strip in the right. **The preview card carries no `<h2>`** — a preview-table card does not take one, and this page's single `<h2>` is `Per-instrument status` on the card above (`spec/assignments.md` § *Assignments operator page*). **Nothing sits between the two cards**: the search strip is the toolbar's right pane, and `Inactivate` / `Activate` and the selected count are in the row expander, beside the rows they act on. The status card carries per-instrument columns for Type (Individual / Group), Generated, Groups, Self review, Included and an Edit link to the matching Instruments card; the instrument's name is a chip that client-side-filters the preview table, and the Self review chip flips include flags for that instrument's self-review rows in bulk. **Generation is driven from the Workflow card's stepper** — there is no standalone Generate card here, and no manual-CSV upload affordance; the manual-import route survives as a dev-diagnostic surface only.
+**Assignments is an Operations page, not a Setup one**: pair-level context is configured on the Relationships Setup page above, and this page is where the reviewer × reviewee × instrument materialization is **generated**. Body shape (top-to-bottom): chrome → **Per-instrument status** card (first under chrome — sticky across draft + ready states) → the Assignments preview table card, which opens with the **two-pane toolbar** the roster pages, Invitations, Responses and Accounts Management also carry — its `Show reviewers:` / `Show reviewees:` / `Show relationships:` chip groups, the pager cluster and the preview-count line in the left pane, the `Status:` / `Search by:` / search filter strip in the right. **The preview card carries no `<h2>`** — a preview-table card does not take one, and this page's single `<h2>` is `Per-instrument status` on the card above (`spec/assignments.md` § *Assignments operator page*). **Nothing sits between the two cards**: the search strip is the toolbar's right pane, and `Inactivate` / `Activate` and the selected count are in the row expander, beside the rows they act on. The status card carries per-instrument columns for Type (Individual / Group), Generated, Groups, Self review, Included and an Edit link to the matching Instruments card; the instrument's name is a chip that client-side-filters the preview table, and the Self review chip flips include flags for that instrument's self-review rows in bulk. **Generation is driven from the Workflow card's stepper** — there is no standalone Generate card here, and no manual-CSV upload affordance; the manual-import route survives as a dev-diagnostic surface only.
 
 When the session is `ready`, the status card remains visible (operators inspect mid-cycle), but the per-instrument Self review chip renders fixed (its box `disabled`) — review is ongoing and flipping include flags would silently change live invitation eligibility. The instrument-name filter chips and Edit stay interactive.
 
@@ -134,7 +134,7 @@ The ordering is deliberate: pre-flight (Assignments, Validate), then monitoring 
 
 The **cross-session** admin grouping, carrying the three-tier operator / admin / super-admin role model (see `spec/audience_and_identity_model.md` §4). It sits at the Operator's Overview level (above any single session, not inside one), is gated by `require_sys_admin`, and carries its own chrome distinct from the per-session two-row nav. Routes live in `app/web/routes_operator/_sys_admin.py`; the entry point `GET /operator/sys-admin` redirects to the default tab (Sessions Diagnostics).
 
-Two surfaces today:
+Its surfaces:
 
 - **Accounts Management** (`/operator/sys-admin/users`, `sys_admin_users.html`) — the workspace allowlist: admit / revoke `is_operator`, promote / demote `is_sys_admin` (a super-admin actor, or any admin while none is configured), invite, delete users, and remove users from every session. Server-side guards in `app/services/users.py`.
   Above the table, an **Invite by email** card and an **Accounts Overview** card sit side by side at equal height (`.page-grid`, stacked at 800px or narrower). A successful invite lands with the new row selected (`?selected=`), as a row action does: its chip turns on whatever chips are remembered, and the row is ticked with the expander open beneath it. **Accounts Overview** is one line of count pills over the whole workspace, each pill holding its number and its label, and nothing else: **Operators** · **Admins** · **super-admins** · **No role** · **Unused**. The kinds count as their chips do (the same query); the super-admins are accounts the config names (`account_listing.count_super_admins`). Each label follows its count, *1 Operator* but *0 Operators* (No role and Unused read the same either way), and the pills keep the pill's capitals. No pill is a link.
@@ -145,7 +145,7 @@ Two surfaces today:
   - **Paging** is 200 rows a page and stays under a role or search, since a role can match every account; the roster pages' count line therefore shows here only when one page holds every match. `?offset=` clamps onto a page.
   - **The view lives in the URL** (`spec/settings_inventory.md` § *URL state*); only the chips are also remembered, for a URL that carries none. Row actions post it back as a hidden `view` field and their redirect restores it; an unknown chip or role is dropped and an out-of-range offset clamps, neither an error. `?selected=<id>` turns that row's chip on, as if clicked, so it stays on in every link the page renders, and, while the role and search still match the row, opens the page holding it.
   - **Empty states**: "No users in this workspace yet." when the table is empty; "No accounts match the chips above." when every chip is off; otherwise "No accounts match the current filter."
-- **Sessions Diagnostics** (`/operator/sys-admin/sessions`, `sys_admin_sessions.html`) — every session in the workspace, in the lobby's columns (Session Name, Session Code, Created by, Created, Deadline, Timezone, Status, then Actions), the first six sorting with the lobby's primitive (`rrw-sortable`, its own cookie). As on the lobby (`spec/sessions_overview.md`), Name, Code and Created by sort as a click does (case aside, digit runs as numbers, with the caveats `spec/sessions_overview.md` lists) and the Created, Deadline and Timezone cells carry the route's sort value — the stored instant as UTC ISO 8601 to the microsecond (none last either way) and the zone's IANA name — so a click orders them as a reload does, except where the browser's collation and Python's differ on some zone names (hyphen against underscore, `Port-au-Prince` / `Port_of_Spain`, and legacy names such as `Etc/GMT+10`). Above the table sit the lobby's two half-width cards (`.sessions-lobby-row`, 2026-10-15): **Sessions Overview**, the lobby's count pills (sessions, draft, activated, archived) over every session in the workspace, and **Filter**, whose box and **Clear** (the lobby's word, #194a) hide rows live by session name, code or owner (any owner's name or email), offering every name, code and owner label as a typeahead. With no sessions, the cards stay and the filter is disabled. Each row exposes Outbox + Audit log (read-only for a non-owner sys-admin) and a **Manage** action that self-adds the sys-admin as an owner (`POST …/sessions/{id}/adopt`, audited `session.owner_added`) before opening the session. On a session the sys-admin already owns, a grayed-out **Owned** stands in its place. **Adopt is the only door**: there is no back-door link that opens a session the sys-admin does not own.
+- **Sessions Diagnostics** (`/operator/sys-admin/sessions`, `sys_admin_sessions.html`) — every session in the workspace, in the lobby's columns (Session Name, Session Code, Created by, Created, Deadline, Timezone, Status, then Actions), all but Status and Actions sorting with the lobby's primitive (`rrw-sortable`, its own cookie). As on the lobby (`spec/sessions_overview.md`), Name, Code and Created by sort as a click does (case aside, digit runs as numbers, with the caveats `spec/sessions_overview.md` lists) and the Created, Deadline and Timezone cells carry the route's sort value — the stored instant as UTC ISO 8601 to the microsecond (none last either way) and the zone's IANA name — so a click orders them as a reload does, except where the browser's collation and Python's differ on some zone names (hyphen against underscore, `Port-au-Prince` / `Port_of_Spain`, and legacy names such as `Etc/GMT+10`). Above the table sit the lobby's half-width cards (`.sessions-lobby-row`): **Sessions Overview**, the lobby's count pills (sessions, draft, activated, archived) over every session in the workspace, and **Filter**, whose box and **Clear** (the lobby's word, #194a) hide rows live by session name, code or owner (any owner's name or email), offering every name, code and owner label as a typeahead. With no sessions, the cards stay and the filter is disabled. Each row exposes Outbox + Audit log (read-only for a non-owner sys-admin) and a **Manage** action that self-adds the sys-admin as an owner (`POST …/sessions/{id}/adopt`, audited `session.owner_added`) before opening the session. On a session the sys-admin already owns, a grayed-out **Owned** stands in its place. **Adopt is the only door**: there is no back-door link that opens a session the sys-admin does not own.
 
 System-wide settings + multi-tenant config remain forward-looking.
 
@@ -167,7 +167,7 @@ Home is the session's **identity** and the canonical anchor for session-level co
 
 Pages remain reachable across all session lifecycle states. Affordances that don't apply to the current state render disabled. The default disabled treatment for setup-mutation surfaces is the yellow lock card pattern (`spec/visual_style_rrw.md`). **A page that renders the Workflow card carries no yellow `.card.lock`** — the card's stepper already makes lifecycle state explicit, and two explanations on one page is one too many. That exempts Home and the Operations-row pages (Assignments / Invitations / Responses included); it does not exempt the Setup row, which renders no Workflow card.
 
-The four-line shape: two principles about *where the operator can go* (P1, P2), one about *what Home is for* (P3), one about *what stays reachable* (P4). None of them overlap.
+The shape: P1 and P2 are about *where the operator can go*, P3 about *what Home is for*, P4 about *what stays reachable*. None of them overlap.
 
 ## Navigation model
 
@@ -194,7 +194,7 @@ don't use it.
 - **Same tab shape across rows.** The labels and rows do the grouping work; tabs themselves don't need to differ in shape.
 - **Active tab** uses an underline marker. The marker uses one tone per row (lighter than the row's full accent) so the marker says *"you are here"* without competing with the label.
 
-Below the chrome, a **status row** renders the at-a-glance session status, identical on every session-scoped page: lifecycle pill first, then the Setup-entity counts (Reviewers / Reviewees / Relationships / Observers / Instruments — reported `configured / total` — / Email Template; Relationships and Observers only when their tab is enabled), then two operations indicators (Invitations, Responses). Composition and visual treatment are in `visual_style_rrw.md`.
+Below the chrome, a **status row** renders the at-a-glance session status, identical on every session-scoped page: lifecycle pill first, then the Setup-entity counts (Reviewers / Reviewees / Relationships / Observers / Instruments — reported `configured / total` — / Email Template; Relationships and Observers only when their tab is enabled), then the operations indicators (Invitations, Responses). Composition and visual treatment are in `visual_style_rrw.md`.
 
 ### Behaviour
 
@@ -232,7 +232,7 @@ The app has no page of its own at the root or the bare operator prefix (paths he
 
 - **`GET /`** — a **302** redirect by role: an **operator or sys-admin** lands on `/operator/sessions` (the lobby); **everyone else** (a participant, or a signed-in user with no roles yet) lands on `/me`, which renders its own empty state. Routes on `is_operator OR is_sys_admin`. Temporary (302), never 301 — the target follows the user's role, which can change. The root serves no JSON; liveness / metadata live only at `/health`.
 - **`GET /operator`** (and `/operator/`) — 302 to `/operator/sessions`. Defined app-level and **unguarded** so the lobby's router-level `require_operator` is the single place that decides operator access.
-- **Non-operator/non-sys-admin who reaches any `/operator/*` page** — bounced to `/me?notice=organizers` by the `OperatorAllowlistDenied` handler, where one line says that page is for the people who run reviews (participant audit M11). There is no `/request-access` page; the "signed in but no access / how to get in" messaging lives on **`/about`**, which carries the signed-in identity + the operator contact.
+- **Non-operator/non-sys-admin who reaches any `/operator/*` page** — bounced to `/me?notice=organizers` by the `OperatorAllowlistDenied` handler, where one line says that page is for the people who run reviews. There is no `/request-access` page; the "signed in but no access / how to get in" messaging lives on **`/about`**, which carries the signed-in identity + the operator contact.
 
 ## Per-page contracts
 
@@ -244,13 +244,13 @@ Top-level operator lobby. A table of sessions, one row per session — its colum
 
 ### `/operator/sessions/{id}` — Session Home / Control Panel
 
-The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card**, then the in-place `#session-config` card, then a `.bottom-grid` of **Quick Setup** (left) + the **Owners** card (`spec/session_owners.md`) over **Danger Zone** (right) — five cards, and no Extract Data card (that lives on the Extract data Operations tab). The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session (and Regenerate & prepare, the confirmation Prepare asks for when regenerating would delete saved responses), Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft. Prepare creates the invitations, so there is no separate Create invites button.
+The per-session home. **Detailed spec: `spec/session_home.md`.** Full-width **Workflow card**, then the in-place `#session-config` card, then a `.bottom-grid` of **Quick Setup** (left) + the **Owners** card (`spec/session_owners.md`) over **Danger Zone** (right) — and no Extract Data card (that lives on the Extract data Operations tab). The Workflow card (specified in `spec/workflow_card.md`) carries every lifecycle-advancing action via a single-row button layout (≤ 4 visible buttons per state) — Prepare session (and Regenerate & prepare, the confirmation Prepare asks for when regenerating would delete saved responses), Send invites, Activate session, Send reminders, Close session, Release responses, Stop releasing, Archive session, plus Revert to draft. Prepare creates the invitations, so there is no separate Create invites button.
 
 ### `/operator/sessions/new` — Create new session
 
 Single-page form. No session top nav (the session doesn't exist yet); breadcrumb reads `Sessions → New session`.
 
-Fields: Name (required, max 255), Code (required, max 64; unique across the workspace — a taken code answers 422 and creates nothing, as does a Name or Code over its maximum), Timezone (required, IANA-zone `<datalist>`, pre-filled with the operator's default), Deadline (optional, a date-time field — interpreted as wall-clock in the picked Timezone), Description (optional, max 2000), Help contact (optional). The Schedule sub-grid also surfaces **Release responses from** (`responses_release_at`) and **Release responses until** (`responses_release_until`, an absolute close date-time, never a duration). All four boxes (Start / End / Release-from / Release-until) are the date-time field of `spec/ui_elements.md` §8: 24-hour `YYYY-MM-DD HH:MM` text with a picker and a clear button. A small shared partial (`operator/partials/_schedule_ordering_js.html`) checks the chain Start ≤ End ≤ Release-from < Release-until as the operator types, each adjacent pair only when both boxes hold a time: it marks the later box invalid with the server's wording, so the browser blocks the submit, and bounds the picker to the neighboring values; it sets no `min` / `max` on the text boxes. The server re-runs `scheduled_events.validate_schedule_ordering` as the load-bearing safety net (see `spec/lifecycle.md` §8.2.7). A **User interface settings** card above the Quick Setup card carries two checkboxes: **Relationships tab and page** (`relationships_enabled`) and **Observers tab and page** (`observers_enabled`); both default unchecked. Heading the right column, a **Tags (optional)** card carries one comma-separated text box that completes the tag at the end of the line from the operator's own tags as it is typed (the shared tag typeahead described in `spec/sessions_overview.md`). Below the Session details card the page is a `.bottom-grid` of two `.bottom-left` columns — User interface settings over Quick Setup on the left, Tags over Owners on the right — so each column's `gap` spaces its cards (cards inside `.bottom-grid` carry no `margin-bottom`). The Tags card's `<h3>` is the field's visible label (`aria-labelledby`), so there is no second "Tags (optional)" above the box. Like the UI toggles, it associates with the create form via `form="create-session-form"` and submits with **Create session**; there is no second button. Under Tags, an **Owners (optional)** card — its shape, staging and how it compares with Session Home's own Owners card are in `spec/session_owners.md`. Action row: **Create session** (Primary) renders enabled and a script disables it until Name and Code are both filled, so without JavaScript the form still submits (`required` on both catches an empty one, and a `pattern` one of only spaces); it submits to `POST /operator/sessions` → resolves the staged owners first (an address that is not a workspace operator is a 422 and creates nothing), then inserts the session + a `SessionOperator` row + a `session.created` audit event, then any tag writes, then a `session.owner_added` event per co-owner, all under one correlation id + 303 to `/operator/sessions/{id}` (its top) when files were staged and applied, or to `?editing=1` when none were; a refused file lands on Home with the slot's error banner shown (`spec/quick_setup_card_spec.md`, *New-session variant*). No Create landing carries a fragment. **Cancel** (Secondary) → `/operator/sessions`. (Session Home holds Tags and the optional-tab toggles as fields of its details card, not as cards; 19U Item 2.)
+Fields: Name (required, max 255), Code (required, max 64; unique across the workspace — a taken code answers 422 and creates nothing, as does a Name or Code over its maximum), Timezone (required, IANA-zone `<datalist>`, pre-filled with the operator's default), Deadline (optional, a date-time field — interpreted as wall-clock in the picked Timezone), Description (optional, max 2000), Help contact (optional). The Schedule sub-grid also surfaces **Release responses from** (`responses_release_at`) and **Release responses until** (`responses_release_until`, an absolute close date-time, never a duration). Each of the Start / End / Release-from / Release-until boxes is the date-time field of `spec/ui_elements.md` §8: 24-hour `YYYY-MM-DD HH:MM` text with a picker and a clear button. A small shared partial (`operator/partials/_schedule_ordering_js.html`) checks the chain Start ≤ End ≤ Release-from < Release-until as the operator types, each adjacent pair only when both boxes hold a time: it marks the later box invalid with the server's wording, so the browser blocks the submit, and bounds the picker to the neighboring values; it sets no `min` / `max` on the text boxes. The server re-runs `scheduled_events.validate_schedule_ordering` as the load-bearing safety net (see `spec/lifecycle.md` §8.2.7). A **User interface settings** card above the Quick Setup card carries the **Relationships tab and page** (`relationships_enabled`) and **Observers tab and page** (`observers_enabled`) checkboxes; both default unchecked. Heading the right column, a **Tags (optional)** card carries one comma-separated text box that completes the tag at the end of the line from the operator's own tags as it is typed (the shared tag typeahead described in `spec/sessions_overview.md`). Below the Session details card the page is a `.bottom-grid` of two `.bottom-left` columns — User interface settings over Quick Setup on the left, Tags over Owners on the right — so each column's `gap` spaces its cards (cards inside `.bottom-grid` carry no `margin-bottom`). The Tags card's `<h3>` is the field's visible label (`aria-labelledby`), so there is no second "Tags (optional)" above the box. Like the UI toggles, it associates with the create form via `form="create-session-form"` and submits with **Create session**; there is no second button. Under Tags, an **Owners (optional)** card — its shape, staging and how it compares with Session Home's own Owners card are in `spec/session_owners.md`. Action row: **Create session** (Primary) renders enabled and a script disables it until Name and Code are both filled, so without JavaScript the form still submits (`required` on both catches an empty one, and a `pattern` one of only spaces); it submits to `POST /operator/sessions` → resolves the staged owners first (an address that is not a workspace operator is a 422 and creates nothing), then inserts the session + a `SessionOperator` row + a `session.created` audit event, then any tag writes, then a `session.owner_added` event per co-owner, all under one correlation id + 303 to `/operator/sessions/{id}` (its top) when files were staged and applied, or to `?editing=1` when none were; a refused file lands on Home with the slot's error banner shown (`spec/quick_setup_card_spec.md`, *New-session variant*). No Create landing carries a fragment. **Cancel** (Secondary) → `/operator/sessions`. (Session Home holds Tags and the optional-tab toggles as fields of its details card, not as cards.)
 
 ### `/operator/sessions/{id}/edit` — a redirect, not a page
 
@@ -269,15 +269,15 @@ author is free to re-create the page.*
 
 ### Setup roster pages — shared shape
 
-**All four** — Reviewers, Reviewees, Relationships, Observers — carry
-one shape. `spec/setup_pages.md` § *The roster card and the
+**Every roster page** — Reviewers, Reviewees, Relationships, Observers —
+carries one shape. `spec/setup_pages.md` § *The roster card and the
 Unlock panel* is the contract; this is the chrome-level summary:
 
 1. Session top nav.
 2. Yellow lock card whenever the page's own gate says the session is
    locked. It carries `return_to=reviewers` / `reviewees` /
    `relationships` / `observers` so the operator returns *here* after
-   reverting — **all four slugs must be in the revert route's
+   reverting — **every one of those slugs must be in the revert route's
    allowlist**, or the revert silently lands on Session Home instead.
    Sits directly under the status strip, above the full-width guidance
    card. **Not Assignments** — per P4, a page rendering the Workflow
@@ -286,7 +286,7 @@ Unlock panel* is the contract; this is the chrome-level summary:
    index, and the **Unlock** control when the panel can render.
 4. The **Unlock panel**: the `Upload CSV` card — still anchored at
    `#upload-csv` — on the left; on the right the tag-label editor
-   (three pages; Observers has none) over the `Danger Zone` with its
+   (every roster page but Observers, which has none) over the `Danger Zone` with its
    **Delete all** confirm-checkbox form, and `Lock` ending that column.
 5. Browseable data-preview table of the saved rows, always visible even
    while locked. Its card opens with a two-pane toolbar carrying the
@@ -332,7 +332,7 @@ lock-driven view/edit swap — a
 read-only span when the card is locked, an inline rename
 `<input>` bound to the card's bulk-Save form when unlocked,
 committed by the consolidated `/save` (no per-title ✎/✓
-button, no immediate `/identity` POST) — two status pills
+button, no immediate `/identity` POST) — status pills
 (`Set up` / `Not set up` +
 `Locked` / `Unlocked`), and a right-edge chevron toggle. Default state on first render is
 all-collapsed; an `Expand all instruments` /
@@ -348,7 +348,7 @@ horizontal divider with `Page break` centred + an inline
 `×` delete). The break flag persists on the next
 instrument's `starts_new_page` column. Locked decisions —
 page breaks are create-+-delete only (never dragged); the
-three reorder invariants (no leading / no trailing / no
+reorder invariants (no leading / no trailing / no
 double-stack) are enforced server-side and surfaced to
 the operator via the rejection toast. Full surface
 contract in `spec/instruments.md`.
@@ -357,7 +357,7 @@ contract in `spec/instruments.md`.
 
 Per-session email-template editor for the Invitation, Reminder, and Responses-received outbound emails. Reached from the Email Template tab in the chrome's Setup row.
 
-The page renders, top-to-bottom: chrome (with `Email Template` highlighted as the current Setup tab); a `<div class="tab-strip tab-strip-page">` row of three page-internal nav tabs (`Invitation` / `Reminder` / `Responses received`) using the chrome's `.nav-tab` styling — see `spec/ui_elements.md` §6 "Nav button"; then a two-card body with the email composer on the left (form fields per template + per-field `Reset to default` `.btn-reset` button) and the Merge tags reference card on the right. Cancel + Save sit bottom-left of the composer card; Save is Secondary (routine submit) and renders disabled until any composer field is touched.
+The page renders, top-to-bottom: chrome (with `Email Template` highlighted as the current Setup tab); a `<div class="tab-strip tab-strip-page">` row of page-internal nav tabs (`Invitation` / `Reminder` / `Responses received`) using the chrome's `.nav-tab` styling — see `spec/ui_elements.md` §6 "Nav button"; then a body with the email composer card on the left (form fields per template + per-field `Reset to default` `.btn-reset` button) and the Merge tags reference card on the right. Cancel + Save sit bottom-left of the composer card; Save is Secondary (routine submit) and renders disabled until any composer field is touched.
 
 The composer's `?template=` query param keeps each tab bookmarkable. The `responses_received` tab also surfaces a "Send response confirmation" / "Don't send response confirmation" chip under its heading that gates the per-session auto-send.
 
@@ -438,11 +438,11 @@ that dependency still renders the link, and the route's redirect is what
 actually decides. Failing closed would hide the Guide from operators on any
 page that missed the stamp — a worse error, and a silent one.
 
-**Two chromes carry the link, under the same condition.** `base.html` carries
+**Both chromes carry the link, under the same condition.** `base.html` carries
 the operator chrome, which `/about`, `/guide` and `/auth/me/debug` show
 an operator or system admin; `reviewer/_top_bar.html` carries the
 participant surfaces (`/me`, the review surface, `/results`,
-`/collation`) and those three shared pages for everyone else.
+`/collation`) and those shared pages for everyone else.
 **A change to the condition has to land in both files** — a reviewer or
 observer holding roster rows can reach `/guide`, so a chrome that omits the
 link leaves them no route to it from the pages they actually land on.
@@ -476,8 +476,9 @@ link. The audience contract and the full reasoning live in
 `spec/audience_and_identity_model.md`.
 
 **Setup templates.** The "Create and set up a session"
-card offers `GET /templates/starter.zip` — four generic roster templates with
-derived headers and one mock row each, for an operator to fill in *before*
+card offers `GET /templates/starter.zip` — a generic template for each roster
+(reviewers, reviewees, relationships, observers) with derived headers and
+one mock row each, for an operator to fill in *before*
 creating the session and upload through Quick Setup. The link sits in the
 paragraph that points at each Upload card's column list, since it is that
 paragraph's worked example. What follows the link is the friendly-tag-label
@@ -493,9 +494,9 @@ actually is. Contract: `spec/csv_contracts.md` §5a.
 troubleshooting" and "For reviewers" — after the operator walkthrough, before
 the role-addressed sections, because it is the optional "see it working first"
 step rather than part of the sequence above it. It offers
-`GET /templates/demo.zip` and five numbered steps: create a disposable
-session, attach all four files in Quick Setup, set the default
-instrument's three assignment-rule pills on Instruments (the Workflow
+`GET /templates/demo.zip` and numbered steps: create a disposable
+session, attach every file in Quick Setup, set the default
+instrument's assignment-rule pills on Instruments (the Workflow
 card offers no Prepare until they are set — `spec/instruments.md`
 § *"Not set" pill safety gate*), Prepare, then look around a populated
 session. A `.muted` line notes that everyone in it is fictional on
@@ -508,8 +509,8 @@ card is **not** repeated on the lobby first-run card: that card is for someone
 about to set up for real, and the sample session is a detour needing room to
 explain. Contract: `spec/csv_contracts.md` §5a.
 
-Whether `/guide` should be viewable **without signing in** is open and belongs
-to Segment 20: `resolve_current_user` raises 401 today, so an anonymous Guide
+Whether `/guide` should be viewable **without signing in** is open:
+`resolve_current_user` raises 401 today, so an anonymous Guide
 would be this app's first unauthenticated surface, needing both a
 `docs/security_posture.md` change and Easy Auth configured on the host.
 
@@ -519,7 +520,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 
 - **Central Control and Operations Panel** — a cross-session operator surface that aggregates run-state across all of an operator's sessions. Conceivable but ROI unclear, and P1 ("one session at a time") is stronger when the whole app respects it. Not on any segment plan.
 - **Adjacent capabilities likely to land sooner:** shared operator permissions on a session, session duplication (sans response data), shared setup data between sessions (e.g. reusable reviewer rosters or instrument templates), session tagging / grouping. These compose with the Overview surface — none would force a redesign of the Setup / Control / Operations groupings.
-- **Two-row chrome → single row.** The two-row layout is unlikely to collapse; the Operations row carries five tabs (`spec/operations_pages.md`). Recorded for completeness; not on any roadmap.
+- **Two-row chrome → single row.** The two-row layout is unlikely to collapse; the Operations row carries Assignments, Validate, Invitations, Responses and Extract data (`spec/operations_pages.md`). Recorded for completeness; not on any roadmap.
 - **Cross-session System Admin** — see §6 above. Sits at Operator's Overview level (above any single session), with its own chrome distinct from the per-session two-row nav. Remaining cross-session admin (system-wide settings, multi-tenant config) is still forward-looking.
 
 ## Cross-references
@@ -529,7 +530,7 @@ Recorded for visibility; **none are committed**. Capture additional ideas here a
 - **`spec/visual_style_rrw.md`** — Review-Robin chrome instantiation, including all visual specifics elided here.
 - **`spec/architecture.md`** — domain entities and layering. Reads upstream of this file.
 - **`spec/session_home.md`** — Session Home (Control Panel) functional spec, including layout + lifecycle display-label mapping.
-- **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); ten-state cascade, single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden), Prepare-then-Activate split + warnings detour.
+- **`spec/workflow_card.md`** — Workflow card (the single persistent action card that renders on Session Home + every Operations-row page); per-state cascade, single-row button layout (≤ 4 visible buttons per state, each at 25% column width, inactive hidden), Prepare-then-Activate split + warnings detour.
 - **`spec/quick_setup_card_spec.md`** — Quick Setup card on Session Home.
 - **`spec/operations_pages.md`** — Invitations + Responses functional spec (reviewer-centric Invitations + reviewee-centric Responses; bulk-action affordances live on the Workflow card stepper).
 - **`spec/reviewer-surface.md`** — reviewer-facing surface contracts (separate audience).
