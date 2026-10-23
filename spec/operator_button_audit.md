@@ -883,9 +883,10 @@ single-session row expander (§2: Deadline).
 **Row pager.** Source: `operator/partials/_pager_cluster.html`, the
 `.table-pager-cluster` of `spec/ui_elements.md` §10. It renders above
 the table and again below it (`table-pager-cluster-bottom`) whenever the
-table holds more than one page, on every roster Setup page (§§6, 7, 8
-and 8.5), Assignments (§11.5), Invitations (§13), Responses (§14) and
-Accounts Management (§19).
+table holds more than one page and no search or status filter is active,
+on every roster Setup page (§§6, 7, 8 and 8.5), Assignments (§11.5),
+Invitations (§13), Responses (§14) and Accounts Management (§19).
+Accounts keeps its pager under a filter (`spec/ui_elements.md` §10).
 
 | # | Card | Label | Element | CSS class | Canonical | Notes |
 |---|---|---|---|---|---|---|
