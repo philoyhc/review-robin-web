@@ -11,7 +11,8 @@ RRW answers at `/reviewrobin`. These pin what the move must keep:
   request's host and the mount, never another name for the backend.
 
 Requirement 1 (a deep link through sign-in) is Easy Auth's redirect, not
-RRW's, so its check is the dev slot's. Alongside: Easy Auth's `/.auth/*`
+RRW's, so it is checked live, on the institutional deployment's first
+release (`docs/deployment_dev.md` "Production deployment"). Alongside: Easy Auth's `/.auth/*`
 stays host-level, and the bare mount redirects to its slash.
 """
 

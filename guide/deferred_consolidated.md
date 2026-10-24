@@ -1120,11 +1120,12 @@ with the simplest acceptable infrastructure choices.
   the remaining portal step.
 
 - **VNet integration / private endpoints for Postgres on the dev slot.**
-  The personal dev slot still uses public access with firewall rules.
+  *Superseded (author, 2026-10-24: one Azure host).* The personal dev
+  slot, left dormant, still uses public access with firewall rules.
   The NUS environment already has VNet integration, private endpoints
   for the Web App and Key Vault and a privately provisioned Postgres
-  (recorded privately with the deployment), so this closes when the dev slot retires
-  (`guide/post_azure_todo_checklist.md` item 2).
+  (recorded privately with the deployment), and the dormant slot is not
+  revived (`docs/deployment_dev.md` "CI/CD workflow").
 
 The NUS database URLs are Key Vault references (2026-10-24); the
 Insights connection string is tracked privately with the deployment. Email dispatch is
