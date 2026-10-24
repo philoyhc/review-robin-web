@@ -10,7 +10,7 @@
 > "Current posture" below). Wiring an Azure Blob container (or
 > S3-compatible bucket) into the app is **deferred infrastructure**:
 > the NUS storage account is provisioned and unused
-> (`docs/deployment_nus.md`), and what remains is a container, a
+> (recorded privately with the deployment), and what remains is a container, a
 > managed-identity role on the account, and the seam below. This doc
 > exists to
 > **capture the candidate uses** so that, if and when blob storage is

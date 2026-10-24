@@ -126,7 +126,7 @@ change on `main` that makes it necessary; every one of them has landed.
    sign in through Easy Auth and reach the lobby. Then run the live
    check 21D's plan owes, v0.8 §3's four behavior
    requirements under real Easy Auth
-   (`docs/cordware_repository_strategy_v0.8.md` §3):
+   (`docs/archive/cordware_repository_strategy_v0.8.md` §3):
    - **Deep links:** signed out, open a deep link such as
      `/reviewrobin/operator/sessions`; sign-in returns to it. Sign out
      (`/.auth/logout`, the host's) and sign in again from `/`, which

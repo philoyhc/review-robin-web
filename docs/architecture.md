@@ -55,14 +55,14 @@ frontend; the gateway forwards to the Web App's **private endpoint**. The
 Web App, PostgreSQL and Key Vault are private-only inside the NUS VNet,
 and a self-hosted GitHub runner VM is planned in its own subnet so that
 deploys and migrations can reach them. The verified state, addresses and
-open blockers are in [`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus_azure_status_2026-10-16_v8.md).
-**That report also records where production is heading:** one shared
-Cordware App Service, deployed from a Cordware integration repository, with
-RRW as a module inside it (its §§3 and 5). The diagram above is the
+open blockers are recorded privately with the deployment, not in this
+repository. **Production is heading to** one shared Cordware App
+Service, deployed from a private repository, with RRW as an application
+mounted inside it. The diagram above is the
 standalone RRW topology as provisioned. Segment 21 (closed 2026-10-22)
 put RRW under the Cordware host, at `/reviewrobin`; the diagram stays the
 model here until the integrated release deploys it
-([`cordware_repository_strategy_v0.8.md`](cordware_repository_strategy_v0.8.md) §5).
+([`archive/cordware_repository_strategy_v0.8.md`](archive/cordware_repository_strategy_v0.8.md) §5).
 **Easy Auth** delegates sign-in to Entra ID and hands the app
 a verified identity — the application holds no passwords and runs no login
 code. Everything the app persists lives in one PostgreSQL database inside a
@@ -86,8 +86,8 @@ Summary estimate, not a quote. It predates the NUS network design and
 does not price the Application Gateway, its public IP or the runner VM.
 Reserved-instance / savings-plan discounts
 on the always-on compute (App Service, Postgres) are not applied. The
-line-item calculator walk-through and the sizing rationale are kept in the
-retired [`archive/azure_provision.md`](archive/azure_provision.md).
+line-item calculator walk-through and the sizing rationale are kept
+privately with the deployment.
 
 ## How the pieces fit
 
@@ -144,9 +144,6 @@ Not part of RRW's shape, so not in the topology or the estimate:
 
 - [`azure_ask.md`](../azure_ask.md) — the governance ask (sponsorship,
   data policy, cost cap) for hosting on institutional Azure.
-- [`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus_azure_status_2026-10-16_v8.md) — the verified NUS
-  state and its blockers, and [`deployment_nus.md`](deployment_nus.md),
-  the runbook that deploys to it.
 - [`security_posture.md`](security_posture.md) — authorization model,
   identity trust, CSRF posture.
 - [`spec/architecture.md`](../spec/architecture.md) — the application

@@ -15,14 +15,14 @@ provisioned but not yet serving**: a P0V3 App Service and Key Vault
 behind private endpoints, a privately provisioned Postgres (no public
 access), an Application Gateway in front, and Log Analytics with Application Insights. It
 waits on a runner VM and on DNS and TLS for its production hostname
-(`docs/cordware_nus_azure_status_2026-10-16_v8.md`), and on project-side
+(recorded privately with the deployment), and on project-side
 work. RRW already runs under the Cordware host (Segment 21, closed
 2026-10-22); the integrated release that deploys it, with its
 production workflow, has not started
-(`docs/cordware_repository_strategy_v0.8.md` §5). At cutover the F1 and public-database
+(`docs/archive/cordware_repository_strategy_v0.8.md` §5). At cutover the F1 and public-database
 entries stop applying; secrets stay plain App Settings until Key Vault
 references are wired, and the app's logs reach Application Insights
-only once diagnostics are pointed at it (`docs/deployment_nus.md` §3).
+only once diagnostics are pointed at it.
 
 - **Single environment.** One Azure **dev** slot. There is no
   staging slot and no production environment; no manual-approval

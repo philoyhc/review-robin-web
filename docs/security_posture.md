@@ -536,7 +536,7 @@ privately provisioned Postgres (no public access; how it is reached
 privately is not yet recorded), VNet integration, and an Application
 Insights resource; nothing sends
 the app's logs to it yet, and its secrets are not yet in Key Vault
-(`docs/cordware_nus_azure_status_2026-10-16_v8.md`).
+(recorded privately with the deployment).
 
 | Item | Status |
 |---|---|

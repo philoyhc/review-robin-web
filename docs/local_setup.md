@@ -172,7 +172,7 @@ Open `http://127.0.0.1:8000/reviewrobin/health` — expect `{"status": "ok"}`.
 
 `cordware.main:app` is the Cordware host with RRW mounted at `/reviewrobin`,
 the only way RRW is served (segments 21A and 21D;
-`docs/cordware_repository_strategy_v0.8.md` §3). With RRW the only
+`docs/archive/cordware_repository_strategy_v0.8.md` §3). With RRW the only
 application, the host's `/` redirects to `/reviewrobin/`. `app.main` only
 defines RRW's `create_app()`. The host's `CORDWARE_APPS` setting chooses
 what it mounts. Leave it unset to mount RRW; set it empty

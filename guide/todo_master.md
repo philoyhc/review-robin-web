@@ -27,9 +27,9 @@ Two sibling registers hold the open work that is not queued here:
 ### After segment 21
 
 - **Cordware stage 3, Residential Apps** (v0.8 §5), unblocked by segment
-  21's close (2026-10-22); not yet planned. The strategy is
-  `docs/cordware_repository_strategy_v0.8.md`; the deployment's status
-  of record is `docs/cordware_nus_azure_status_2026-10-16_v8.md`. Any
+  21's close (2026-10-22); not yet planned. The strategy that set it is
+  `docs/archive/cordware_repository_strategy_v0.8.md`; the current strategy and
+  the deployment's status of record are kept privately with the deployment. Any
   NUS deploy first waits for the dev slot's live check under real Easy
   Auth (`docs/deployment_dev.md` "Resuming the dev slot").
 

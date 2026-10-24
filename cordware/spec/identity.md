@@ -2,7 +2,7 @@
 
 The contract of the trusted identity Cordware supplies to every mounted
 application. Design and rationale are in
-`docs/cordware_repository_strategy_v0.8.md` §3; the host's startup, guard and
+`docs/archive/cordware_repository_strategy_v0.8.md` §3; the host's startup, guard and
 log events are in `cordware/spec/host.md`. This file states what an
 application can rely on.
 

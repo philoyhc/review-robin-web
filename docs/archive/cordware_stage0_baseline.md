@@ -1,5 +1,7 @@
 # Cordware stage 0 — RRW baseline
 
+> **Retired 2026-10-24.** Stages 0–2 are done (segment 21 closed 2026-10-22), so this baseline is a record. Not implementation instructions.
+
 **Taken:** 2026-10-21 at `b03fd1be` (`main`, after #3193) · **For:**
 v0.8 §5 stage 0, the gate before segment 21A's A1
 (`guide/archive/segment_21A_cordware_foundations.md`) · **Scope:** RRW only.

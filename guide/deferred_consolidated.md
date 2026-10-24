@@ -1122,11 +1122,12 @@ with the simplest acceptable infrastructure choices.
   The personal dev slot still uses public access with firewall rules.
   The NUS environment already has VNet integration, private endpoints
   for the Web App and Key Vault and a privately provisioned Postgres
-  (`docs/cordware_nus_azure_status_2026-10-16_v8.md`), so this closes when the dev slot retires
+  (recorded privately with the deployment), so this closes when the dev slot retires
   (`guide/post_azure_todo_checklist.md` item 2).
 
 Wiring the NUS Key Vault references and the Insights connection string
-is tracked in `docs/deployment_nus.md`'s checklist. Email dispatch is
+is tracked in the NUS deployment runbook's checklist, kept privately
+with the deployment. Email dispatch is
 queued as Segment 14B (`guide/todo_master.md`).
 
 ### 2. Postgres platform migrations (destructive, Postgres-only)
