@@ -208,8 +208,9 @@ A small, backend-agnostic service shaped like `rehydrate_stash` so a
 
 ### P0.6 — Provisioning + docs — (A) provisioning, (B) local-setup/Azurite
 
-- `docs/archive/azure_provision.md` §7 (retired 2026-10-03; the live
-  storage sentence is `docs/architecture.md`'s "Storage") — said "RRW's application code
+- The provisioning list's §7 (retired 2026-10-03, kept privately with
+  the deployment since 2026-10-24; the live storage sentence is
+  `docs/architecture.md`'s "Storage") — said "RRW's application code
   needs **no** blob storage (verified: no `azure-storage` dependency)".
   **This becomes stale the moment P0.1 lands.** Rewrite it to: a real
   storage-account line (SKU/redundancy/region), the private-container +
@@ -330,11 +331,10 @@ Concretely:
 - **New:** this file; cross-linked from `guide/blob_storage_candidates.md` +
   `guide/deferred_consolidated.md` §1 + `guide/todo_master.md` roadmap.
 - **Update on Phase 0:** `pyproject.toml`, `requirements.txt`,
-  `app/config.py`, `.env.example`, `docs/architecture.md` "Storage" (was `docs/azure_provision.md` §7),
+  `app/config.py`, `.env.example`, `docs/architecture.md` "Storage" (was the provisioning list's §7),
   `docs/deployment_dev.md`, `docs/local_setup.md`,
   `docs/security_posture.md`, `guide/deferred_consolidated.md` §1,
   `.github/workflows/` (+`ci-azurite.yml`).
-  <!-- cites: docs/azure_provision.md -->
 - **Update per consumer:** `spec/rehydrate.md` §3.3 (C1),
   `docs/backup_restore.md` (C5), ~~the status file (each shipped slice)~~ (retired 2026-10-05),
   `guide/blob_storage_candidates.md` (flip uses from "candidate" to "shipped").

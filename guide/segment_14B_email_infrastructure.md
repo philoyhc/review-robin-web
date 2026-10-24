@@ -81,8 +81,9 @@ Azure Communication Services, or a sanctioned relay (Options B–D in
 `spec/email_infra_options.md`); institutional Microsoft 365 tenants
 typically block basic SMTP AUTH, so Option A built against personal
 Azure would be the wrong thing built twice. That identity exists only
-once the institutional Azure host is provisioned
-(`docs/deployment_nus.md`), which is expected soon. **Part A starts
+once the institutional Azure host is provisioned (its runbook is kept
+privately with the deployment, not in this repository), which is
+expected soon. **Part A starts
 when provisioning lands, not before.**
 
 **Why that is acceptable — email is optional in a clear sense.** Since
