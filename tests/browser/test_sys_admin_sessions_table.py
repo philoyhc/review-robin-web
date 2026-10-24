@@ -173,3 +173,42 @@ def test_the_load_that_expires_a_root_copy_sorts_by_the_mount_copy(
     # The next load sends only the mount copy, so the server sorts by it.
     page.reload()
     assert first_load == rows.all_inner_texts()
+
+
+def test_a_root_copy_with_no_mount_copy_loads_the_default_order(
+    page: Page, new_session: Callable[[], str]
+) -> None:
+    """Round 3's check of #3235: with no mount copy there was no order to
+    apply, so the load that expired a root copy kept the rows the server
+    had sorted by it. It now loads once more, for the operator default."""
+    from urllib.parse import quote
+
+    new_session()
+    new_session()
+    name = "rrw-sort-sys-admin-sessions"
+    page.goto(app_url(PAGE))
+    host = page.evaluate("location.hostname")
+    page.context.clear_cookies(name=name)
+    rows = page.locator("#diagnostics-sessions tbody tr td:nth-child(2) code")
+    page.reload()
+    default = rows.all_inner_texts()
+    # A root copy whose order differs from the default, or the check
+    # would pass without the reload.
+    stale = next(
+        direction
+        for direction in ("asc", "desc")
+        if sorted(default, reverse=direction == "desc") != default
+    )
+    page.context.add_cookies(
+        [
+            {
+                "name": name,
+                "value": quote(f'[{{"key":"code","dir":"{stale}"}}]', safe=""),
+                "domain": host,
+                "path": "/",
+            }
+        ]
+    )
+    page.reload()
+    expect(rows).to_have_text(default)
+    assert not [c for c in page.context.cookies() if c["name"] == name]

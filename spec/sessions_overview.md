@@ -447,6 +447,9 @@ The lobby carries all three:
   sits at the mount's root path; a copy left at `Path=/` from before
   the move under `/reviewrobin`, which the server would read in its
   place, is expired whenever the table loads or sorts (findings C2).
+  The load that expires one sorts its rows by the mount's copy, or,
+  with no mount copy to sort by, loads the page once more so the server
+  renders the default order; the root copy is gone, so it cannot loop.
   The Created, Deadline and Timezone cells carry the route's sort value
   as `data-sort-value` — the stored instant as UTC ISO 8601 to the
   microsecond (the `sort_instant` filter, `views.instant_sort_value`;

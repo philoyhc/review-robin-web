@@ -147,10 +147,16 @@
          email-composer card. The Save button submits the composer
          form via the HTML5 ``form="..."`` attribute, so the action
          row can sit visually outside the form's HTML scope while
-         still posting it. Cancel is an anchor back to Session Home. #}
+         still posting it. Cancel is an anchor back to Session Home; on an
+         archived session there is nothing to cancel, so it renders
+         disabled beside the disabled Save, as the lobby's Clear does. #}
       <div style="display: flex; justify-content: flex-start; gap: 16px; margin-top: 20px;">
-        <a class="btn secondary"
-           href="{{ url('/operator/sessions/' ~ session.public_id) }}">Cancel</a>
+        {% if locked %}
+          <span class="btn secondary disabled" aria-disabled="true">Cancel</span>
+        {% else %}
+          <a class="btn secondary"
+             href="{{ url('/operator/sessions/' ~ session.public_id) }}">Cancel</a>
+        {% endif %}
         <button class="btn secondary" type="submit" form="setupinvite-form"
                 id="setupinvite-save-button" disabled>Save</button>
       </div>

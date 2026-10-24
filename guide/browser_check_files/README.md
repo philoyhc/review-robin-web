@@ -11,4 +11,4 @@ checks.
 
 ## Current sets
 
-- `round_3/` — the 2026-10-22 bug fixes (#3235–#3238).
+None.
