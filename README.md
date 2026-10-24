@@ -6,9 +6,11 @@ response forms, send out invitations, and monitor reviewer
 progress through a deadline. Reviewers fill out the per-instrument
 forms via per-reviewer invitation links.
 
-Built as a FastAPI + Jinja + SQLAlchemy monolith, deployed to
-Azure App Service (Linux, Python 3.12) against an Azure Postgres
-Flexible Server. Local dev runs against SQLite.
+Built as a FastAPI + Jinja + SQLAlchemy monolith, for Azure App
+Service (Linux, Python 3.12) against an Azure Postgres Flexible
+Server. The dev slot has been dormant since 2026-06-03
+([`docs/deployment_dev.md`](docs/deployment_dev.md) says how to
+resume it). Local dev runs against SQLite.
 
 For the *why* — the class of problem RRW targets, the two
 projects that shaped it (an Excel/VBA predecessor and
