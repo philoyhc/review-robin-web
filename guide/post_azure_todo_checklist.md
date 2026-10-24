@@ -73,13 +73,14 @@ retired the card for the constraint.
 
 ---
 
-## 2. Re-scope the Azure deployment documents once the personal environment is retired
+## 2. Re-scope the Azure deployment documents at the institutional cutover
 
 **Status:** open. Blocked on the deployment.
 
-**What.** The NUS deployment runbook (kept privately with the deployment) retires the personal Azure
-environment as the migration's final step. At that moment several
-documents describe an environment that no longer exists, and two more
+**What.** The personal Azure environment is left dormant, not retired
+(author, 2026-10-24): it is not revived, and its resources stay. Once
+the institutional host serves, several documents describe a dormant
+environment as if it were the current one, and two more
 describe a plan that the outcome has either confirmed or replaced. Work
 through them and decide each one's fate. Line counts of the live documents taken 2026-10-08.
 
@@ -104,17 +105,19 @@ environment it is about.
 
 **Why it cannot wait long afterwards.** These four are the documents
 someone reaches for when the deployed service misbehaves. A runbook
-describing a retired environment is not merely out of date — it sends a
-person to a resource group that is gone while the service is down.
+describing the dormant environment is not merely out of date — it sends
+a person to a resource group that serves nothing while the service is
+down.
 
 **Done when.** No live document under `docs/` describes the personal
-Azure environment as current; each of the nine above has been rewritten,
+Azure environment as current; each of the seven above has been rewritten,
 re-scoped or moved to `docs/archive/`, or has left this repository; and **`docs/README.md` has been
 re-taken against the folder**, since that index is hand-maintained and an
 archived file gets a row there rather than a separate archive index (the
 convention `archive/quickstart.md` already follows). A grep for the
-retired resource-group and web-app names should return only archived
-files and this line.
+dormant slot's resource-group and web-app names should return only
+archived files, `docs/deployment_dev.md` as the dormant slot's record,
+and this line.
 
 **Where this came from.** A review of `docs/` on 2026-09-08 that set out
 to list the Azure-deployment documents and found that nothing tracked
