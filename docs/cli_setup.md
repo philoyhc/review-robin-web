@@ -8,7 +8,8 @@ describes, where Postgres is private, so `psql` against it runs on a
 self-hosted runner inside the VNet, not on a workstation. The
 institution-specific runbook, resource names and secrets are kept
 privately with the deployment, not in this repository. B.9 covers the
-developer-owned dev slot (`docs/deployment_dev.md`).
+developer-owned dev slot (`docs/deployment_dev.md`), which is dormant
+and not being revived.
 
 If you already have `az`, `gh`, `psql`, and `git` working from
 your shell of choice and can push to `philoyhc/review-robin-web`

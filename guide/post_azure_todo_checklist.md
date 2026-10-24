@@ -133,8 +133,9 @@ The one row with no recorded pass, the session-nav hover, moved to
 
 ## 4. The inline stylesheet: measure what a page costs on the wire, then decide
 
-**Status:** open. Blocked on a deploy — the **dev slot is enough**; this
-does not wait for the institutional cutover.
+**Status:** open. Blocked on a deploy. The dev slot was enough, but it
+is not being revived (author, 2026-10-24), so this now waits for the
+institutional release.
 
 **Moved here whole from `guide/archive/segment_19K_assessment_moves.md` Item 9
 on 2026-09-12**, so that Segment 19K no longer waits on a header. The

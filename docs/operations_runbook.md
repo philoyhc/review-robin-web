@@ -5,8 +5,9 @@ service. Scoped to the current single Azure **dev** slot — there
 is no production environment yet (see `docs/known_limitations.md`).
 The slot's deploys have been dormant since 2026-06-03: its workflow is
 disabled and it serves a build from then or earlier
-(`docs/deployment_dev.md`). The procedures below apply when the slot is
-live.
+(`docs/deployment_dev.md`), and it is not being revived (author,
+2026-10-24). The procedures below apply only if it ever is; the
+institutional host's are kept privately with the deployment.
 
 The NUS environment is provisioned but not yet serving. Its deploy
 path, App Settings, cutover steps and verified state are kept privately

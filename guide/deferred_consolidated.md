@@ -1110,9 +1110,10 @@ with the simplest acceptable infrastructure choices.
   manual-approval gate for staging/production deploys, a
   "long migration" detector, and a documented rollback
   playbook.
-- **Staging slot / environment.** A staging App Service slot (or
-  separate App Service) so the deploy flow is
-  `main → dev/staging → verify → manual-approve → production`.
+- **Staging slot / environment.** *Superseded (author, 2026-10-24: one
+  Azure host).* Production is released privately from a chosen `main`
+  commit, not promoted through a dev or staging slot
+  (`docs/deployment_dev.md` "Production deployment").
 - **Application Insights resource.** Segment 14A PR 1 ships
   structured logging that is App-Insights-ingestible;
   provisioning the resource and wiring its connection string is
@@ -1125,9 +1126,8 @@ with the simplest acceptable infrastructure choices.
   (recorded privately with the deployment), so this closes when the dev slot retires
   (`guide/post_azure_todo_checklist.md` item 2).
 
-Wiring the NUS Key Vault references and the Insights connection string
-is tracked in the NUS deployment runbook's checklist, kept privately
-with the deployment. Email dispatch is
+The NUS database URLs are Key Vault references (2026-10-24); the
+Insights connection string is tracked privately with the deployment. Email dispatch is
 queued as Segment 14B (`guide/todo_master.md`).
 
 ### 2. Postgres platform migrations (destructive, Postgres-only)

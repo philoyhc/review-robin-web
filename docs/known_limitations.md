@@ -9,20 +9,22 @@ bugs — they trace to the Segment 14A plan and
 
 The entries below describe the **personal Azure dev slot**, the only
 environment that has served the app. Its deploys have been dormant
-since 2026-06-03 (`docs/deployment_dev.md`), so the entries apply when
-the slot is live. The **NUS environment is
+since 2026-06-03 (`docs/deployment_dev.md`), and it is not being
+revived (author, 2026-10-24), so the entries apply only if it ever is.
+The **NUS environment is
 provisioned but not yet serving**: a P0V3 App Service and Key Vault
 behind private endpoints, a privately provisioned Postgres (no public
-access), an Application Gateway in front, and Log Analytics with Application Insights. It
-waits on a runner VM and on DNS and TLS for its production hostname
+access), an Application Gateway in front with its HTTPS listener and
+certificate, Log Analytics with Application Insights, and an in-VNet
+runner. It waits on public ingress through the institution's perimeter
 (recorded privately with the deployment), and on project-side
 work. RRW already runs under the Cordware host (Segment 21, closed
 2026-10-22); the integrated release that deploys it, with its
 production workflow, has not started
-(`docs/archive/cordware_repository_strategy_v0.8.md` §5). At cutover the F1 and public-database
-entries stop applying; secrets stay plain App Settings until Key Vault
-references are wired, and the app's logs reach Application Insights
-only once diagnostics are pointed at it.
+(`docs/archive/cordware_repository_strategy_v0.8.md` §5). There the F1 and public-database
+entries do not apply, and the database URL is already a Key Vault
+reference; the app's logs reach Application Insights only once
+diagnostics are pointed at it.
 
 - **Single environment.** One Azure **dev** slot. There is no
   staging slot and no production environment; no manual-approval

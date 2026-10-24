@@ -28,7 +28,7 @@ flowchart LR
             App["Azure App Service · P0V3<br/>FastAPI + Jinja · Python 3.12<br/>[ Easy Auth ] · private endpoint"]
             KV["Key Vault<br/>private endpoint"]
             PG[("PostgreSQL<br/>Flexible Server · B2s · 32 GiB<br/>private")]
-            RUN["Self-hosted runner VM<br/>(not yet created)"]
+            RUN["Self-hosted runner VM"]
         end
         MON["Azure Monitor<br/>Log Analytics + App Insights"]
         ST["Storage Account<br/>Block Blob · 10 GB"]
@@ -37,11 +37,11 @@ flowchart LR
     User -->|"HTTPS · public IP + NUS DNAT"| AGW
     AGW --> App
     App ---|"sign-in / identity headers"| Entra
-    App -.->|"secrets (planned)"| KV
+    App -->|"secrets (database URLs)"| KV
     App -->|"app data + audit log"| PG
     App -.->|"logs (planned)"| MON
     App -.->|"blobs (planned)"| ST
-    GH -.->|"jobs · OIDC (planned)"| RUN
+    GH -->|"migrate + deploy jobs · OIDC"| RUN
     RUN -.->|"deploy"| App
     RUN -.->|"migrate first (Alembic)"| PG
 
@@ -53,8 +53,8 @@ Runtime request path runs left to right: a browser reaches a public IP,
 which the NUS perimeter DNATs to the **Application Gateway**'s private
 frontend; the gateway forwards to the Web App's **private endpoint**. The
 Web App, PostgreSQL and Key Vault are private-only inside the NUS VNet,
-and a self-hosted GitHub runner VM is planned in its own subnet so that
-deploys and migrations can reach them. The verified state, addresses and
+and a self-hosted GitHub runner VM in its own subnet runs the deploys
+and migrations that must reach them. The verified state, addresses and
 open blockers are recorded privately with the deployment, not in this
 repository. **Production is heading to** one shared Cordware App
 Service, deployed from a private repository, with RRW as an application

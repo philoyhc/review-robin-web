@@ -86,9 +86,9 @@ The workflow declares a `concurrency` group so the whole
 close together (or a push plus a manual dispatch) queue rather
 than running overlapping `alembic upgrade head` / deploys.
 `cancel-in-progress` is false, so an in-flight run is never
-cancelled mid-migrate or mid-deploy. A future production deploy
-workflow will be a small delta on this file once the production
-environment exists.
+cancelled mid-migrate or mid-deploy. This workflow serves only the
+personal dev slot; production is not deployed from this repository
+("Production deployment" below).
 
 There is no startup-time migration hook in the app; that pattern is
 fragile under concurrent deploys.
@@ -149,24 +149,23 @@ change on `main` that makes it necessary; every one of them has landed.
 6. **Record it:** clear this section's "dormant" note above, and set the
    segment 21 plans' dev-slot lines to done.
 
-## Production deployment (planned)
+## Production deployment
 
-There is **no production environment yet** — the app runs on a
-single dev slot. The intended production flow, once the Azure
-infrastructure is provisioned, is:
+Production is the **institutional Azure host**, provisioned but not yet
+serving. It is not promoted through this slot: there is no
+`dev → approve → production` pipeline and no staging slot to swap from.
+Instead a chosen `main` commit, with CI green, is imported and released
+privately, built on an unprivileged runner and migrated and deployed
+from inside the institution's network. Its workflows, credentials,
+approval gate and runbook are kept privately with the deployment, and
+nothing in this repository can reach it. The last public statement of
+that strategy is `docs/archive/cordware_repository_strategy_v0.8.md`
+§5.
 
-```text
-main → deploy to dev → verify → manual approval → deploy/swap to production
-```
-
-Provisioning the production side (a production App Service or a
-staging slot to swap from, a production Postgres server, a GitHub
-`production` environment with required reviewers for the approval
-gate, and its own OIDC credentials / `DATABASE_URL`) needs the
-Azure portal and is tracked as deferred infrastructure — see
-`docs/security_posture.md` → "Deferred hardening" and
-`guide/deferred_consolidated.md`. The production deploy workflow is not
-in the repository yet.
+**One Azure host** (author, 2026-10-24): the dev slot is not revived for
+the institutional release. Segment 21D's live check under real Easy
+Auth runs on that release ("CI/CD workflow" above). This document stays
+the record of the dormant slot, should it ever be wanted again.
 
 ## Environment variables
 

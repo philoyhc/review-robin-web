@@ -7,8 +7,9 @@ procedures see `docs/operations_runbook.md`; for resource names
 and the deploy pipeline see `docs/deployment_dev.md`.
 
 The NUS environment (provisioned, not yet serving) is documented
-privately with the deployment; every pipeline job there runs on an
-in-VNet runner. Its Postgres is private, so the firewall fixes below do
+privately with the deployment; its build runs on an unprivileged
+runner and its migrate and deploy jobs on an in-VNet runner. The dev
+slot is not being revived (author, 2026-10-24). Its Postgres is private, so the firewall fixes below do
 not apply there.
 
 ## Deploy failed
