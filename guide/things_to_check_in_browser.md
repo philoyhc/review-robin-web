@@ -40,21 +40,3 @@ deployment, not a local run.
 - [ ] **An invited user's first sign-in binds them.** Invite a new
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
-
-## Round 3's follow-ups (#3249)
-
-Round 3 (#3235–#3238) passed in the browser on 2026-10-24 but for the
-first row below, which this PR fixes, and Validate's wording for an
-unloadable rule set ("Instrument 'Instrument_1''s"), fixed with no row
-owed; the second row is the PR's own.
-
-- [ ] **A root-path sort cookie is expired, and the lobby is in its own
-  order on that load.** With no lobby sort of your own (clear it, or
-  check `document.cookie` holds no `rrw-sort-lobby`), run in the lobby's
-  console
-  `document.cookie = "rrw-sort-lobby=" + encodeURIComponent(JSON.stringify([{key: "name", dir: "desc"}])) + "; Path=/"`
-  and reload: the page reloads itself once and lands newest first, not
-  Name descending, and `document.cookie` holds no `rrw-sort-lobby`.
-- [ ] **An archived session's Cancel is disabled.** On an archived
-  session's Email Template page, Cancel is greyed out and not a link, on
-  each of the Invitation, Reminder and Responses received tabs.
