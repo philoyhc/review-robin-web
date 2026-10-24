@@ -41,7 +41,7 @@ deployment, not a local run.
   address, then sign in as it: the log shows
   `workspace.user_principal_recorded`.
 
-## Round 3's follow-ups (#PRNUM)
+## Round 3's follow-ups (#3249)
 
 Round 3 (#3235–#3238) passed in the browser on 2026-10-24 but for the
 first row below, which this PR fixes; the second is the PR's own.
