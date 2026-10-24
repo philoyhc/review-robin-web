@@ -282,7 +282,7 @@ service writes an `audit_events` row).
 
 User-facing warnings are rendered by the operator templates that
 own each confirm checkbox; they are not exercised by the test
-suite and are verified on the dev slot.
+suite and are verified in a browser, locally or on a deployment.
 
 **Result: no gaps found.** Re-checked 2026-10-07, when the corpus sweep
 found purge-and-archive and the two Sys Admin removes missing from the
@@ -474,8 +474,7 @@ early, derived rows brought up to date, or an audit row of a download
 its author never sees.
 
 **Verification.** The `SameSite=Lax` default has been App Service's
-behaviour since 2020 (Chrome 80). Confirm on the dev slot when
-deploying by inspecting the `Set-Cookie` header on the auth response
+behaviour since 2020 (Chrome 80). Confirm on the first deployment by inspecting the `Set-Cookie` header on the auth response
 (`AppServiceAuthSession=`). If Microsoft ever changes the platform
 default, this section is the canonical place to revisit the decision.
 
@@ -530,19 +529,18 @@ is the one Easy Auth parser, and `app/auth/identity.py` re-exports it
 The following are out of scope for the Segment 14A in-app
 hardening ladder — they need the Azure portal or a later segment.
 Tracked in `guide/deferred_consolidated.md`. The infrastructure rows
-describe the dev slot (`docs/deployment_dev.md`). The NUS environment
-already has private endpoints for the Web App and Key Vault, a
-privately provisioned Postgres (no public access; how it is reached
-privately is not yet recorded), VNet integration, and an Application
-Insights resource; nothing sends
-the app's logs to it yet, and its secrets are not yet in Key Vault
-(recorded privately with the deployment).
+describe the dormant dev slot (`docs/deployment_dev.md`). The NUS
+environment already has private endpoints for the Web App and Key Vault,
+a privately provisioned Postgres (no public access), VNet integration,
+an in-VNet runner, an Application Insights resource, and its database
+URLs as Key Vault references; nothing sends the app's logs to Insights
+yet (recorded privately with the deployment).
 
 | Item | Status |
 |---|---|
 | Key Vault references for App Settings secrets | Deferred — secrets live as plain App Settings / GitHub secrets today |
 | VNet integration / private endpoints for Postgres | Deferred — public access + firewall allow-list today |
-| Staging slot + manual-approval production deploy gate | Deferred — single dev slot today (see `docs/deployment_dev.md`) |
+| Staging slot + manual-approval production deploy gate | Not a slot: production is released privately, with its own approval gate (`docs/deployment_dev.md` "Production deployment") |
 | Application Insights resource | Deferred — logs are already structured/JSON and ingestible once it exists (PR 1) |
 | Postgres-specific column types / `ENUM` / `JSONB` GIN indexes | Deferred infrastructure (`guide/deferred_consolidated.md`) |
 | CSV formula injection | Deferred — extracts write cells verbatim, participant answers included, so a spreadsheet evaluates a leading `=` / `+` / `-` / `@` (`spec/csv_contracts.md` §2) |

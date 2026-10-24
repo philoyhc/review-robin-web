@@ -303,7 +303,9 @@ run against in-memory SQLite and the app runs against a local SQLite file
 with a fake-auth fallback — so a Codespace is a first-class place to run
 the suite and click through the app. The one thing a Codespace *can't* do
 is exercise **real Entra / Easy Auth sign-in** (those headers are injected
-by the Azure platform), which still needs the Azure dev slot.
+by the Azure platform), which needs an Azure deployment: the
+institutional one, since the dev slot is dormant
+(`docs/deployment_dev.md`).
 
 | Task | In a Codespace? |
 |---|---|
@@ -312,7 +314,7 @@ by the Azure platform), which still needs the Azure dev slot.
 | Run the app + click through operator / reviewer surfaces | ✅ Yes — fake auth + forwarded port |
 | `ruff` lint | ✅ Yes |
 | Postgres-dialect parity (what `ci-postgres` catches) | ⚙️ Optional — add Docker to the container, then run Postgres (below) |
-| Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs the Azure dev slot |
+| Real Entra / Easy Auth sign-in, redirect flows, tenant allowlist | ❌ No — needs an Azure deployment |
 
 **Start.** From the repo on GitHub: **Code ▸ Codespaces ▸ Create codespace
 on `main`** (or a feature branch); `docs/setup_codespaces.md` has the
