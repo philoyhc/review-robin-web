@@ -5,7 +5,8 @@
 deployed, serving, verified — and that nothing in the repository will
 otherwise remind anyone about.
 
-**Why this file rather than `docs/deployment_nus.md`.** That runbook is
+**Why this file rather than the NUS deployment runbook.** That runbook, kept
+privately with the deployment since 2026-10-24, is
 the migration procedure and will be rewritten repeatedly as details are
 settled with IT; an item parked in a section that is about to be
 rewritten is an item about to be lost. This file is small, stable and
@@ -76,7 +77,7 @@ retired the card for the constraint.
 
 **Status:** open. Blocked on the deployment.
 
-**What.** `docs/deployment_nus.md` §11 retires the personal Azure
+**What.** The NUS deployment runbook (kept privately with the deployment) retires the personal Azure
 environment as the migration's final step. At that moment several
 documents describe an environment that no longer exists, and two more
 describe a plan that the outcome has either confirmed or replaced. Work
@@ -88,8 +89,7 @@ through them and decide each one's fate. Line counts of the live documents taken
 | `docs/operations_runbook.md` | 94 | Opens *"Scoped to the current single Azure **dev** slot"*. Re-scope. |
 | `docs/troubleshooting.md` | 76 | Opens *"for the deployed dev slot"*. Re-scope. |
 | `docs/backup_restore.md` | 107 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
-| `docs/deployment_nus.md` | 443 | **A migration runbook whose migration is over.** Does it become the operations reference, or retire to `docs/archive/` with the operational half lifted out first? Easy to forget precisely because it is the document being worked from. |
-| `docs/cli_setup.md` | 657 | Companion to the above, and **the largest of the Azure documents** (third-largest in `docs/` when measured, after the status file and the practice audit, both since archived) — workstation CLI setup attached to the plan that was never executed. Its fate follows its parent's. |
+| `docs/cli_setup.md` | 657 | Workstation CLI setup, **made generic 2026-10-24** when the NUS runbook it accompanied moved out of this repository: its personal-slot test (B.9) is what changes at cutover. |
 | `docs/architecture.md` | 144 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
 | `azure_ask.md` (root) | 258 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |
 
@@ -109,7 +109,7 @@ person to a resource group that is gone while the service is down.
 
 **Done when.** No live document under `docs/` describes the personal
 Azure environment as current; each of the nine above has been rewritten,
-re-scoped or moved to `docs/archive/`; and **`docs/README.md` has been
+re-scoped or moved to `docs/archive/`, or has left this repository; and **`docs/README.md` has been
 re-taken against the folder**, since that index is hand-maintained and an
 archived file gets a row there rather than a separate archive index (the
 convention `archive/quickstart.md` already follows). A grep for the
@@ -309,7 +309,7 @@ reminder scheduled for 09:00 goes out whenever an operator next looks.
 **Why it waits here.** The real fix is a trigger that runs on a clock,
 such as a scheduled job, a timer, or an always-on worker. Which one
 depends on what the NUS App Service plan and network allow
-(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). The page-view trigger now covers the
+(recorded privately with the deployment). The page-view trigger now covers the
 Operations pages and the lobby (findings L4), which narrows the gap but
 does not close it.
 

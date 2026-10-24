@@ -1,5 +1,7 @@
 # Cordware Repository and Deployment Strategy
 
+> **Retired 2026-10-24.** The Cordware strategy and the NUS deployment material are now maintained privately with the deployment, not in this repository. Kept as public decision history of the host this repository carries; `cordware/spec/host.md` and `cordware/spec/identity.md` cite its §3. Not implementation instructions.
+
 **Version:** 0.8, 20 October 2026; stages 1 and 2 resequenced the same day (§5); fake auth, the platform super-admin and host logging settled 21 October (§3); `APP_ENV`, the fake-auth guard and local testing switches settled the same day (§3); URL emission settled the same day (§3, §8); the prefix flip, the public host for absolute links and the one-application landing page settled 22 October (§1, §8)  
 **Status:** The adopted strategy (author, 2026-10-19). The direction is decided; smaller details may still shift, and each shift is recorded here. This is not authorization for any single production change.  
 **Source of truth:** this file, in `philoyhc/review-robin-web`. The `philoyhc/cordware` planning repo stands down later and is not updated.  

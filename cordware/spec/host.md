@@ -2,7 +2,7 @@
 
 The contract of the Cordware host: the process that serves Review Robin Web
 (RRW) and, later, other applications. Design and rationale are in
-`docs/cordware_repository_strategy_v0.8.md` §3; this file states what the
+`docs/archive/cordware_repository_strategy_v0.8.md` §3; this file states what the
 host does.
 
 RRW is mounted at `/reviewrobin`, and the host's landing page owns `/`. The

@@ -9,14 +9,16 @@
 #
 # Mirrors the personal deploy workflow (build -> migrate -> deploy) but
 # targets NUS via NUS-scoped credentials, so it coexists with the personal
-# deploy during cutover. See docs/deployment_nus.md §6.4.
+# deploy during cutover. The NUS runbook it
+# follows is kept privately with the deployment.
 #
-# DO NOT DISPATCH until Cordware stage 4 (docs/deployment_nus.md): since
+# DO NOT DISPATCH: NUS production now deploys only from the private
+# deployment repository, and this workflow is retired once that works. Since
 # segment 21A, main serves only through cordware.main:app, and the artifact
 # below does not yet carry cordware/.
 #
-# When the NUS host becomes primary, either promote this to an `on: push`
-# deploy (and retire the personal workflow) or fold it back into the primary.
+# It is not promoted to an `on: push` deploy: once the private path works,
+# this workflow and its NUS secrets are removed from this repository.
 
 name: Deploy to NUS Azure (manual test)
 
@@ -24,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       run_migrate:
-        description: "Run alembic migrations against NUS Postgres. Every job needs the in-VNet self-hosted runner on NUS (see docs/deployment_nus.md §5)."
+        description: "Run alembic migrations against NUS Postgres. Every job needs the in-VNet self-hosted runner on NUS."
         type: boolean
         default: true
 

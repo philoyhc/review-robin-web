@@ -1,15 +1,14 @@
-# CLI setup for the NUS deployment runbook
+# CLI setup for Azure deployment work
 
-Workstation companion to [`deployment_nus.md`](deployment_nus.md)
-(written first for the retired greenfield plan,
-[`archive/azure_github_setup.md`](archive/azure_github_setup.md)).
-Covers the CLIs you need on your workstation to execute the
-runbook, the one-time auth steps, and a set of tests that
-prove you can reach the RRW GitHub repo and Azure before you
-start. NUS Postgres is private
-([`cordware_nus_azure_status_2026-10-16_v8.md`](cordware_nus_azure_status_2026-10-16_v8.md)), so `psql`
-against it runs on the self-hosted runner inside the VNet, not on a
-workstation; B.9's dev slot retires at cutover.
+Workstation companion for deploying RRW to Azure: the CLIs you need,
+the one-time auth steps, and a set of tests that prove you can reach
+the RRW GitHub repo and Azure before you start. It is written for an
+institutional environment of the shape `docs/architecture.md`
+describes, where Postgres is private, so `psql` against it runs on a
+self-hosted runner inside the VNet, not on a workstation. The
+institution-specific runbook, resource names and secrets are kept
+privately with the deployment, not in this repository. B.9 covers the
+developer-owned dev slot (`docs/deployment_dev.md`).
 
 If you already have `az`, `gh`, `psql`, and `git` working from
 your shell of choice and can push to `philoyhc/review-robin-web`
@@ -27,9 +26,9 @@ they're cheap.
 
 | CLI | What it drives | Notes |
 |---|---|---|
-| **`az`** (Azure CLI) | App Service config (runbook §3, §7), RBAC and the OIDC deploy identity (§6.1), Key Vault put/get, the Application Gateway listener and probe, diagnostics settings. The workhorse. | Pin to `>= 2.60` so `az login --scope` and the current `webapp identity assign` shape work. |
-| **`gh`** (GitHub CLI) | Setting the `NUS_*` repository secrets and the `NUS_WEBAPP_NAME` variable (runbook §6.2), the optional `nus` environment with required reviewers (§9 step 9), dispatching and tailing workflow runs, filing PRs. | Alternative to clicking around the GitHub Settings UI; more auditable. |
-| **`psql`** (Postgres client) | Connecting as the server admin to create the `rrw_app` role and run the grants (runbook §3, §8), plus ad-hoc troubleshooting. For NUS it runs on the self-hosted runner; on a workstation it reaches only the dev slot (B.9). | Version 16+ to match the Flexible Server. |
+| **`az`** (Azure CLI) | App Service configuration, RBAC and the OIDC deploy identity, Key Vault put/get, the Application Gateway listener and probe, diagnostics settings. The workhorse. | Pin to `>= 2.60` so `az login --scope` and the current `webapp identity assign` shape work. |
+| **`gh`** (GitHub CLI) | Setting repository secrets and variables, dispatching and tailing workflow runs, filing PRs. | Alternative to clicking around the GitHub Settings UI; more auditable. |
+| **`psql`** (Postgres client) | Connecting as the server admin to create the `rrw_app` role and run the grants, plus ad-hoc troubleshooting. Against a private server it runs on the self-hosted runner; on a workstation it reaches only the dev slot (B.9). | Version 16+ to match the Flexible Server. |
 | **`git`** | Repo operations, branch push, tag-based release triggers if you go that route. | |
 
 ## 2. Useful adjuncts
@@ -86,7 +85,7 @@ The `az ... -o json | jq '.foo'` pattern from Azure docs doesn't
 translate. In PowerShell:
 
 ```powershell
-az webapp show --name <nus-webapp> --resource-group rg-nrrw-prd-compute-01 -o json |
+az webapp show --name <webapp> --resource-group <resource-group> -o json |
     ConvertFrom-Json |
     Select-Object -ExpandProperty defaultHostName
 ```
@@ -111,7 +110,7 @@ PowerShell, but works fine in WSL as-is. Where possible use
 
 ## 5. One-time auth setup
 
-Do these once per workstation before starting the runbook, in
+Do these once per workstation before starting, in
 this order. All examples use bash-style syntax; substitute per
 §4 if you're on PowerShell.
 
@@ -125,24 +124,22 @@ az account show --query "{tenantId:tenantId, id:id, user:user.name}" -o table
 gh auth login                                           # HTTPS + browser
 gh auth status                                          # confirm scope includes repo + workflow
 
-# Postgres (on the host that runs psql: the runner for NUS)
+# Postgres (on the host that runs psql: the in-VNet runner for a private server)
 # ~/.pgpass keeps the password out of shell history:
-#   <nus-server>.postgres.database.azure.com:5432:*:<admin>:<password>
+#   <server>.postgres.database.azure.com:5432:*:<admin>:<password>
 # chmod 0600 ~/.pgpass
 ```
 
-Two auth gotchas the runbook doesn't call out but bite in
-practice:
+Two auth gotchas that bite in practice:
 
 - **`az` tenant confusion.** If you have personal + institutional
   Microsoft accounts, `az login --tenant <institutional-tenant-id>`
   forces the right one. Otherwise a `Contributor` role assignment
   on a resource group can silently target the wrong tenant's
   copy of you.
-- **`gh` scope for the `NUS_*` secrets.** The deploy workflows
-  declare no `environment:`, so the `NUS_*` values (runbook §6.2)
-  are **repository** secrets and a repository variable — set them
-  with `gh secret set` / `gh variable set` without `--env`. If that
+- **`gh` scope for repository secrets.** A workflow that declares
+  no `environment:` reads **repository** secrets and variables —
+  set them with `gh secret set` / `gh variable set` without `--env`. If that
   fails with 403, the token is short a scope: `gh auth status`
   lists the ones it holds and `gh auth refresh -s <scope>` adds one.
 
@@ -380,8 +377,8 @@ login`), and the delete succeeds. If push fails with 403, run
 
 ### B.4 GitHub — workflow-scope credential
 
-Runbook §6.2 needs write access to repo secrets (and §9's optional
-environment).
+Setting deployment secrets needs write access to repo secrets (and to
+environments, if you use one).
 Confirm the scope up front:
 
 ```bash
@@ -421,10 +418,9 @@ you. If it shows a personal tenant, run
 
 ### B.6 Azure — role check
 
-You need `Contributor` on `rg-nrrw-prd-compute-01` to do the
-runbook's project-side Azure work yourself, plus `User Access
-Administrator` (or IT assistance) for role assignments (runbook §6.1). The
-runbook's §1 "Ownership" item asks which of these you have.
+You need `Contributor` on the target resource group to do
+project-side Azure work yourself, plus `User Access
+Administrator` (or IT assistance) for role assignments.
 
 ```bash
 az role assignment list \
@@ -436,25 +432,25 @@ az role assignment list \
 Expected: at least one row with `Contributor` (or higher) at
 subscription or the intended resource group scope. If the list
 is empty, IT hasn't granted your account access to the target
-subscription yet — surface that before starting the runbook.
+subscription yet — surface that before starting.
 
 ### B.7 Azure — can you provision?
 
 The cheapest "can you actually create things" test — provision
-an empty resource group in the runbook's naming convention,
+an empty resource group in your naming convention,
 then immediately delete it:
 
 ```bash
-az group create --name rg-nrrw-clitest --location southeastasia \
-    --tags project=nrrw env=clitest
-az group show --name rg-nrrw-clitest --query provisioningState -o tsv
-az group delete --name rg-nrrw-clitest --yes --no-wait
+az group create --name rg-clitest --location <region> \
+    --tags env=clitest
+az group show --name rg-clitest --query provisioningState -o tsv
+az group delete --name rg-clitest --yes --no-wait
 ```
 
 Expected: `az group create` succeeds, `az group show` returns
 `Succeeded`, `az group delete` returns without error. An empty
 RG costs nothing; the `--no-wait` cleanup finishes in the
-background. With a role scoped to `rg-nrrw-prd-compute-01` rather
+background. With a role scoped to one resource group rather
 than the subscription, this test fails by design and B.6 is the
 check that matters.
 
@@ -473,11 +469,11 @@ From a workstation you can only check the client:
 psql --version                                   # expect 16.x
 ```
 
-NUS Postgres is private, so the real reachability test runs on the
-self-hosted runner once it exists:
+A private Postgres server is reachable only from inside its network,
+so the real reachability test runs on the self-hosted runner:
 
 ```bash
-psql "host=<nus-server>.postgres.database.azure.com \
+psql "host=<server>.postgres.database.azure.com \
       user=<admin> dbname=postgres sslmode=require" -c "SELECT 1;"
 ```
 
@@ -647,11 +643,11 @@ the grant statements.
 - **Wrong Azure tenant (B.5).** `az login --tenant <id>` +
   `az account set --subscription "<name>"`.
 - **Insufficient Azure role (B.6, B.7).** Not a self-service
-  fix — ask IT for `Contributor` on `rg-nrrw-prd-compute-01`.
+  fix — ask IT for `Contributor` on the target resource group.
 - **`psql` too old (B.8).** `sudo apt install postgresql-client-16`;
   on non-Ubuntu distros, follow the equivalent for
   postgresql.org's official repo.
 
 Once B.1 through B.8 pass (institutional side) — plus B.9 if
-you're maintaining the personal dev slot in parallel — you're
-ready to work through [`deployment_nus.md`](deployment_nus.md).
+you're maintaining the personal dev slot in parallel — your
+workstation is ready for deployment work.

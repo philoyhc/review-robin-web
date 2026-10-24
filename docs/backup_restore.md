@@ -6,11 +6,10 @@ been dormant since 2026-06-03 (`docs/deployment_dev.md`). This is a pilot
 institutional deployment would need to align them with
 institutional policy.
 
-The **NUS environment** is provisioned but not yet serving
-(`docs/cordware_nus_azure_status_2026-10-16_v8.md`). Its PostgreSQL server is private, so
-a restored server is reachable only from inside the network (see
-`docs/deployment_nus.md` §5), and its backup settings are not recorded
-here yet.
+The **NUS environment** is provisioned but not yet serving; its
+records are kept privately with the deployment. Its PostgreSQL server
+is private, so a restored server is reachable only from inside the
+network, and its backup settings are not recorded here.
 This document is re-scoped at cutover
 (`guide/post_azure_todo_checklist.md` item 2).
 
