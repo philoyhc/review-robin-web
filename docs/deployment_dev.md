@@ -48,8 +48,11 @@ GitHub Actions workflow name:
 **Dormant since 2026-06-03.** The workflow is `disabled_manually` on
 GitHub, so it runs on neither push nor `workflow_dispatch`, and the slot
 still serves a build from that date or earlier. All testing is on
-localhost until the Azure work settles (author, 2026-10-21). Bring the
-slot back with "Resuming the dev slot" below, not by re-enabling the
+localhost until the Azure work settles (author, 2026-10-21). **It is not
+being revived** (author, 2026-10-24: one Azure host is enough): segment
+21D's live check under real Easy Auth runs on the institutional
+deployment's first release instead. Should the slot ever come back, bring
+it back with "Resuming the dev slot" below, not by re-enabling the
 workflow alone.
 
 When enabled, the workflow triggers on push to `main` (or via
@@ -92,7 +95,8 @@ fragile under concurrent deploys.
 
 ## Resuming the dev slot
 
-The slot has been dormant since 2026-06-03 (above). Meanwhile segment 21
+Not planned (above): kept in case the slot is ever wanted again. The
+slot has been dormant since 2026-06-03. Meanwhile segment 21
 moved RRW under the Cordware host, at `/reviewrobin`
 (`guide/archive/segment_21_domain_retrofit.md`, closed 2026-10-22).
 `main` has moved on since then, so do these steps in order, in the
@@ -123,7 +127,8 @@ change on `main` that makes it necessary; every one of them has landed.
    both probes answer without sign-in. `/health` is the host's;
    `/reviewrobin/health` is RRW's.
 5. **Check** `/health` and `/reviewrobin/health` unauthenticated. Then
-   sign in through Easy Auth and reach the lobby. Then run the live
+   sign in through Easy Auth and reach the lobby. Then, if the
+   institutional deployment has not already run it, run the live
    check 21D's plan owes, v0.8 §3's four behavior
    requirements under real Easy Auth
    (`docs/archive/cordware_repository_strategy_v0.8.md` §3):
