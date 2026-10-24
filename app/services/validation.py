@@ -863,7 +863,7 @@ def _check_instruments_rule_set_unloadable(
             severity=Severity.error,
             source="instruments",
             message=(
-                f"Instrument {_instrument_label(instrument)!r}'s assignment "
+                f"{_instrument_label(instrument)}'s assignment "
                 f"rule can't be loaded ({state.load_error}). Change or "
                 f"remove that rule in its Instrument assignment rule, then "
                 f"Save."

@@ -553,6 +553,10 @@ def test_an_archived_sessions_templates_are_read_only(
         tag = re.search(rf'<(?:input|textarea)[^>]*name="{name}"[^>]*>', page).group(0)
         assert re.search(r"\bdisabled\b", tag), tag
     assert "Reset subject to default" not in page
+    # Nothing to cancel either: Cancel renders disabled, not as a link
+    # (round 3's browser check).
+    assert '<span class="btn secondary disabled" aria-disabled="true">Cancel</span>' in page
+    assert re.search(r'<a [^>]*>Cancel</a>', page) is None
 
 
 def test_an_archive_committed_since_the_page_loaded_still_refuses(

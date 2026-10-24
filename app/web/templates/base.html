@@ -5581,7 +5581,14 @@
           if (!tableId) continue;
           var stale = _rrwExpireRootCopy(tableId, _rrwCookiePath(tableId));
           var state = _rrwReadCookie(tableId);
-          if (state.length === 0) continue;
+          if (state.length === 0) {
+            // The server sorted these rows by the root copy just
+            // expired, and with no mount copy there is no order to
+            // apply here: load again for the operator default. It
+            // cannot loop, as the root copy is gone (round 3's check).
+            if (stale) { window.location.reload(); return; }
+            continue;
+          }
           _rrwSortState[tableId] = state;
           _rrwRefreshSortBadges(table, state);
           if (stale) {

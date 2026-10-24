@@ -268,5 +268,8 @@ def test_the_pages_that_read_staleness_report_a_rule_set_they_cannot_load(
     ).all()
     assert sorted(issue.fix_anchor for issue in issues) == sorted(f"#instrument-{i}" for i in pinned)
     assert {issue.severity.value for issue in issues} == {"error"}
+    # The label is not quoted: a quoted one read 'Instrument_1''s (round 3).
+    assert all("''s" not in issue.message for issue in issues)
+    assert all(issue.message.startswith("Instrument_") for issue in issues)
     state = assignments_service.staleness_by_instrument(db, review_session)[group_id]
     assert state.load_error and not state.stale

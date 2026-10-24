@@ -112,7 +112,8 @@ substituted at send time", then a `<code>$tag</code> — description`
 list for the active kind (§6). It changes with the tab.
 
 **Action row** (below the composer, left-aligned): **Cancel** — a
-`.btn.secondary` anchor back to Session Home — and **Save** — a
+`.btn.secondary` anchor back to Session Home, rendered disabled on an
+`archived` session (below) — and **Save** — a
 `.btn.secondary` submit button bound to the composer via `form=`,
 rendered **disabled** until any composer input or change event fires
 (a five-line inline script). A successful save 303s back to the same
@@ -186,8 +187,10 @@ session lock so an archive committed since the page loaded refuses too, and the 
 buttons, under the line "This session is archived, so its email
 templates can no longer be edited." An edit there moved `updated_at`,
 which the Archive page reads as the date the session was archived
-(findings O2, author's ruling 2026-10-22). No lock card is used, and
-Save stays disabled, since no field can be edited.
+(findings O2, author's ruling 2026-10-22). No lock card is used. Save
+stays disabled, since no field can be edited, and Cancel renders
+disabled beside it (a `<span>` with `aria-disabled`, not a link), since
+there is nothing to cancel. This holds on all three tabs.
 
 ---
 
