@@ -44,7 +44,9 @@ deployment, not a local run.
 ## Round 3's follow-ups (#3249)
 
 Round 3 (#3235–#3238) passed in the browser on 2026-10-24 but for the
-first row below, which this PR fixes; the second is the PR's own.
+first row below, which this PR fixes, and Validate's wording for an
+unloadable rule set ("Instrument 'Instrument_1''s"), fixed with no row
+owed; the second row is the PR's own.
 
 - [ ] **A root-path sort cookie is expired, and the lobby is in its own
   order on that load.** With no lobby sort of your own (clear it, or
