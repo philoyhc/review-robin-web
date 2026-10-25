@@ -40,6 +40,14 @@ slot has been dormant since 2026-06-03 and is not being revived
 (`docs/deployment_dev.md`); the policy holds for the institutional
 release.
 
+**A prose-only PR doesn't run it at all.** CI classifies each pull
+request (`tools/ci_lanes.py`, `guide/segment_22A_ci_lanes.md`): one that
+changes only Markdown in `spec/`, `docs/`, `guide/`, `cordware/spec/`,
+Residential's `docs/` and `guide/`, or at the root runs the `prose` job
+alone, the unit tests plus the tests that read prose, and shows `test` and
+`postgres` as skipped. Anything else, and every push to `main`, runs both
+in full.
+
 **Merging ahead of it is fine** for changes that cannot reach the
 database: documentation, and dev-only tooling under `tools/`. The faster
 `CI` job (`ruff check .` plus the SQLite suite) still applies to anything

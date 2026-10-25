@@ -95,7 +95,7 @@ alembic revision --autogenerate -m "..." # after editing models — ALWAYS hand-
 uvicorn cordware.main:app --reload       # local dev server; RRW at http://127.0.0.1:8000/reviewrobin/
 ```
 
-`pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite whose schema is built directly from the ORM metadata (`Base.metadata.create_all`) per `tests/conftest.py` — the Alembic migration chain is still round-tripped on every PR by the `ci-postgres` job. `pytest-xdist` runs the suite in parallel (`pytest -n auto`).
+`pytest` collection imports `app/`, so `PYTHONPATH=.` is sometimes needed when invoking from outside the venv (e.g. `PYTHONPATH=. pytest`). Tests use an in-memory SQLite whose schema is built directly from the ORM metadata (`Base.metadata.create_all`) per `tests/conftest.py` — the Alembic migration chain is still round-tripped on every PR that changes more than prose (`tools/ci_lanes.py`) by the `ci-postgres` job. `pytest-xdist` runs the suite in parallel (`pytest -n auto`).
 
 **Migration portability matters.** Alembic migrations run against both SQLite (default; tests) and Postgres 16 (production + the `ci-postgres` job). SQLite is more permissive than Postgres in several places that have bitten us — `BOOLEAN DEFAULT 1` (use `sa.true()` / `sa.false()`), `WHERE bool_col = 1` (use `IS TRUE`), FK constraints not enforced at `DROP TABLE` time (drop FKs explicitly first, or recreate them on downgrade), and index / FK name mismatches between upgrade and downgrade (use the *original* names so downgrades further back in the chain can drop them). The `ci-postgres` job runs `alembic upgrade head` *and* the full `downgrade base + upgrade head` round-trip, so every migration must survive both directions on Postgres.
 
@@ -168,7 +168,7 @@ reject it.
 ### Database
 
 - One `database_url` in `app/config.py` (Pydantic settings). Production reads Azure Postgres via `psycopg[binary]`; local dev uses SQLite. The same `alembic env.py` works for both.
-- CI runs migrations *and* the pytest suite, less `tests/browser/`, against a real `postgres:16` service container (`ci-postgres` job in `.github/workflows/ci-postgres.yml`) on every PR, so dialect-only failures show up in CI alongside the SQLite pytest job.
+- CI runs migrations *and* the pytest suite, less `tests/browser/`, against a real `postgres:16` service container (`ci-postgres` job in `.github/workflows/ci-postgres.yml`) on every PR that changes more than prose (`tools/ci_lanes.py`) and every push to `main`, so dialect-only failures show up in CI alongside the SQLite pytest job.
 
 ## Where to look
 
@@ -209,7 +209,9 @@ reject it.
   `tests/browser/`, which need a Chromium build (preinstalled in the web
   sandbox) and skip with a reason without one; CI sets
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. Both also run in
-  CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`.
+  CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`, unless the PR is
+  prose only: then CI runs the `prose` lane alone, `tests/unit/` plus the
+  tests that read prose (`tools/ci_lanes.py`, segment 22A).
 - **The install belongs in whatever step has network**: `pip install
   -e .[dev]` before the agent phase. `requirements.txt` is the Azure
   deploy manifest and yields neither `pytest` nor `httpx`.
