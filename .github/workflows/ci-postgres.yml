@@ -7,7 +7,39 @@ on:
     branches: ["main"]
 
 jobs:
+  changes:
+    # Which lane this run needs: tools/ci_lanes.py, guide/segment_22A_ci_lanes.md.
+    # Anything it cannot decide, and every push to main, is "full".
+    runs-on: ubuntu-latest
+    outputs:
+      lane: ${{ steps.lane.outputs.lane }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          # A pull request checks out its merge commit, whose first parent is
+          # the base: HEAD^1..HEAD is exactly what the PR changes. --no-renames
+          # lists a moved file's old path too, so it is classified as well.
+          fetch-depth: 2
+
+      - name: Classify the change
+        id: lane
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            git diff --name-only --no-renames HEAD^1 HEAD > changed.txt || : > changed.txt
+          else
+            : > changed.txt
+          fi
+          result=$(python3 tools/ci_lanes.py --event "$EVENT" < changed.txt || echo "lane=full")
+          echo "$result" >> "$GITHUB_OUTPUT"
+          echo "CI - Postgres ${result} ($(wc -l < changed.txt) changed paths)" >> "$GITHUB_STEP_SUMMARY"
+
   postgres:
+    needs: changes
+    # Skipped for a prose-only pull request; a failed classifier still runs it.
+    if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' }}
     runs-on: ubuntu-latest
 
     services:

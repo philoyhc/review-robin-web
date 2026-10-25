@@ -84,18 +84,70 @@ def test_the_cli_fails_toward_full(monkeypatch, capsys):
 
     monkeypatch.setattr(ci_lanes, "lane", broken)
     monkeypatch.setattr("sys.stdin", io.StringIO("docs/database.md\n"))
-    ci_lanes.main(["--event", "pull_request"])
+    assert ci_lanes.main(["--event", "pull_request"]) == 0
     assert capsys.readouterr().out == "lane=full\n"
 
 
 def test_the_prose_lane_runs_every_test_that_reads_prose():
-    """Derived, not listed by hand: a test file outside tests/unit/ that reads
-    a prose path must be in PROSE_TESTS, or a prose-only PR would skip it."""
+    """Derived, not listed by hand: a test file outside tests/unit/ naming a
+    prose path must run in the prose lane or be ruled not to read prose."""
     readers = set(ci_lanes.prose_reading_tests())
     assert readers, "the scan found nothing; its pattern no longer matches the tree"
-    assert readers <= set(ci_lanes.PROSE_TESTS)
+    undecided = readers - set(ci_lanes.PROSE_TESTS) - set(ci_lanes.NOT_PROSE_READERS)
+    assert not undecided, f"add to PROSE_TESTS or NOT_PROSE_READERS: {sorted(undecided)}"
+
+
+def test_every_ruled_non_reader_still_matches():
+    """A stale entry would hide the next real reader in that file."""
+    readers = set(ci_lanes.prose_reading_tests())
+    assert set(ci_lanes.NOT_PROSE_READERS) <= readers
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'REPO / "docs/quickstart.md"',
+        'ROOT / "residentialapps/README.md"',
+        'Path("guide/README.md")',
+        "REPO / 'docs'",
+        'HERE.parent.parent / "spec"',
+        'open("CLAUDE.md")',
+        'Path("cordware/spec/host.md")',
+    ],
+)
+def test_the_scan_sees_each_way_of_naming_prose(source):
+    assert ci_lanes.PROSE_LITERAL.search(source)
+
+
+@pytest.mark.parametrize("source", ['Path("app/web/static/x.png")', '"operator/settings"', '"specimen"'])
+def test_the_scan_ignores_other_literals(source):
+    assert not ci_lanes.PROSE_LITERAL.search(source)
 
 
 def test_every_listed_prose_test_exists():
     for entry in ci_lanes.PROSE_TESTS:
         assert (REPO / entry).exists(), entry
+
+
+def test_a_file_moved_into_a_prose_folder_is_full(tmp_path):
+    """The workflows' diff lists both sides of a rename, so a non-prose file
+    moved under guide/ is classified by its old path too."""
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+            cwd=tmp_path, check=True, capture_output=True, text=True,
+        ).stdout
+
+    git("init", "-q")
+    (tmp_path / "tools").mkdir()
+    (tmp_path / "tools" / "notes.md").write_text("a tool's notes\n" * 20)
+    git("add", "-A")
+    git("commit", "-q", "-m", "base")
+    (tmp_path / "guide").mkdir()
+    git("mv", "tools/notes.md", "guide/notes.md")
+    git("commit", "-q", "-m", "move")
+    changed = git("diff", "--name-only", "--no-renames", "HEAD^1", "HEAD").splitlines()
+    assert sorted(changed) == ["guide/notes.md", "tools/notes.md"]
+    assert ci_lanes.lane(changed, "pull_request") == "full"
