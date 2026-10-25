@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from cordware.identity import app_env
@@ -54,7 +54,15 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
-    database_url: str = "sqlite:///./review_robin_web.db"
+    # `RRW_DATABASE_URL`, app-prefixed like Residential's
+    # `RES_OPS_DATABASE_URL` / `RES_SUPPORT_DATABASE_URL`, so one shared
+    # process reads unambiguous names. Within one source it wins over the
+    # older `DATABASE_URL`, which still works for local `.env` files and
+    # CI; the environment is read before `.env`, as for every setting.
+    database_url: str = Field(
+        default="sqlite:///./review_robin_web.db",
+        validation_alias=AliasChoices("RRW_DATABASE_URL", "DATABASE_URL"),
+    )
 
     # Symmetric Fernet key (Base64-urlsafe-encoded 32 bytes) used to
     # encrypt operator SMTP passwords at rest. ``None`` is fail-loud at
@@ -100,7 +108,9 @@ class Settings(BaseSettings):
     # deploy. See ``spec/architecture.md`` "Audit-event detail schema".
     audit_strict_mode: bool = False
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", extra="ignore", populate_by_name=True
+    )
 
 
 class ConfigurationError(RuntimeError):

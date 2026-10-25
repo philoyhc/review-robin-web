@@ -136,6 +136,8 @@ def live_server(
     env = {
         **os.environ,
         "CORDWARE_APPS": "reviewrobin",
+        # Both names: an exported RRW_DATABASE_URL would otherwise win.
+        "RRW_DATABASE_URL": database_url,
         "DATABASE_URL": database_url,
         # The host refuses fake auth outside APP_ENV=local (21C).
         "APP_ENV": "local",
