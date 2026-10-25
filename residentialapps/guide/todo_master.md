@@ -2,6 +2,21 @@
 
 **Opened 2026-10-25** (author). Residential's own to-do: what is ruled, what it depends on from the Cordware deployment strategy (v1.0, held privately with the deployment), and what is still to decide or revise. RRW's `guide/todo_master.md` covers RRW and the Cordware host only. Residential's specs are in `residentialapps/docs/`; shared UX guidance is RRW's `docs/cordware_mobile_to_desktop.md`.
 
+## First: CI by path (author, 2026-10-25)
+
+**Settled before any Residential code lands**, as its own slice ahead of the scaffold. One repository means one CI run per PR: today every PR, a Residential docs edit included, runs RRW's full suite (`test`, about 4.5 minutes) and the Postgres round-trip (`postgres`, about 7), and Residential's tests and two databases would add to both. Split the jobs by what a change touches:
+
+| A change touching | Runs |
+|---|---|
+| `residentialapps/` code or tests | Residential's tests, both its databases, and `cordware/tests` (host, import boundaries) |
+| `app/`, `alembic/`, `tests/`, `spec/`, `docs/`, `guide/`, root prose | RRW's suite and its Postgres round-trip, as now |
+| `cordware/`, `pyproject.toml`, `requirements.txt`, `.github/`, anything not listed | everything |
+| `residentialapps/docs/` or `residentialapps/guide/` only | nothing beyond what checks those folders |
+
+- **Fail toward running.** A path the filter doesn't name runs everything; a filter that skips a job a change needed is worse than none. RRW gates merges by `CONTRIBUTING.md`, not required checks, so a skipped job blocks nothing and proves nothing.
+- **One decision job** computes what changed and the others read it, so the rule lives in one place and is tested.
+- **Measure** the durations above again after the split, and record both here.
+
 ## Rulings (author, 2026-10-25)
 
 1. **One package, two applications.** One `residentialapps/` package (`core/`, `leave/`, `events/`, `supportlogs/`, `web/`), mounted as two applications: **RA Operations at `/residentialops`** and **Support Logs at `/supportlogs`**, each with its own factory, landing-page entry, health path (`/residentialops/health`, `/supportlogs/health`), database and permissions. **Nothing is mounted at `/residentialapps`**, which names only the package. The two may share code; neither imports the other's routes.
