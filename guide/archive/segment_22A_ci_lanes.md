@@ -46,6 +46,16 @@ Taken 2026-10-25 at `d3ba790`.
 | Non-`.md` files in prose folders | 7 (4 in `docs/sample_data/`, 3 in `guide/`); no test reads them | `git ls-files spec docs guide cordware/spec residentialapps \| grep -v "\.md$"` |
 | Live prose naming either workflow | 5 (`CLAUDE.md`, `AGENTS.md`, `docs/database.md`, `docs/unenforced_conventions.md`, `new_project_practices_setup.md`) | `grep -rln "ci\.yml\|ci-postgres\.yml" --include=*.md . \| grep -v archive` |
 
+## Status (closed 2026-10-25)
+
+**Done as planned, in four PRs:** `#3265` plan, `#3266` classifier, `#3267` workflows, `#3268` prose and close.
+
+- **Measured.** Prose-only `#3268`: `changes` 5 s, `prose` 58 s, `test` and `postgres` skipped, about 66 s from start to finish, against 6 min 23 s to 9 min 23 s for the same kind of PR before. Code `#3267` (full lane): `test` 4 min 38 s, `postgres` 5 min 33 s, `prose` skipped, so the lane adds about 7 s to a full run.
+- **One `diff-reviewer` read** (rung 3, cumulative from `b20cc9b`): no defect against the Decision; two gaps fixed in `#3267`. `git diff --name-only` detected renames, so a non-prose file moved into a prose folder read as prose (now `--no-renames`, with a test). The prose-reader scan matched one way of writing a path (now any string literal naming a prose path, in `tests/` and `cordware/tests`, each match ruled into `PROSE_TESTS` or `NOT_PROSE_READERS` with a reason).
+- **Scope moved:** the `tools/README.md` row landed in rung 3, not 4, so rung 4 was prose only and could measure the lane.
+- **Recorded, not changed:** if the `changes` job itself fails on a push to `main`, the full jobs still run but the run concludes `failure`, so Cordware's importer refuses that commit until it is re-run. That fails safe.
+- **`spec-writer`:** not run; `Doc impact` names no `spec/` path.
+
 ## PR ladder
 
 1. **This plan** (prose).
@@ -81,6 +91,6 @@ Taken 2026-10-25 at `d3ba790`.
 - `CLAUDE.md` — "Where work runs": CI runs by lane; a prose-only PR runs the unit tests only.
 - `AGENTS.md` — twin of `CLAUDE.md`.
 - `docs/database.md` — the Postgres job runs on every non-prose PR and every push to `main`.
-- `tools/README.md` — a row for `ci_lanes.py`.
+- `tools/README.md` — a row for `ci_lanes.py` (landed in rung 3).
 - `residentialapps/guide/todo_master.md` — "First: CI by path" points here; done at close.
 - `guide/todo_master.md` — the queue entry for 22A, deleted at close.

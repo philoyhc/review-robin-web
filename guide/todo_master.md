@@ -57,12 +57,7 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **22A — CI lanes by path** (not gated on Azure; the author's priority, ahead of any
-   Residential code). A prose-only PR runs the unit tests only; everything else,
-   and every push to `main`, runs both workflows in full.
-   **Plan:** `guide/segment_22A_ci_lanes.md`.
-
-4. **19X — Refinements from browser runs** (not gated on Azure). A
+3. **19X — Refinements from browser runs** (not gated on Azure). A
    standing segment for small follow-ups from the author's browser
    runs, one item each. Items 1–3 closed 2026-10-19, Items 4–9 on
    2026-10-20 and Items 10–13 on 2026-10-22. None open; add one per
