@@ -3,7 +3,7 @@
 Reads the changed paths, one per line, on stdin and prints ``lane=prose``
 or ``lane=full``, the line a workflow appends to ``$GITHUB_OUTPUT``.
 
-    git diff --name-only "$BASE"...HEAD | python3 tools/ci_lanes.py --event pull_request
+    git diff --name-only --no-renames HEAD^1 HEAD | python3 tools/ci_lanes.py --event pull_request
 
 A change is ``prose`` only when every path is Markdown in a prose folder
 or at the root. Anything else, an empty list, any event but
@@ -31,18 +31,24 @@ PROSE_DIRS = (
 PROSE_FILES = frozenset({"residentialapps/README.md"})
 
 # What the prose lane runs: every unit test (the doc gates live there), plus
-# each test file elsewhere that reads a prose path. test_ci_lanes.py derives
-# the second half from the tree and fails if this list misses one.
+# each test file elsewhere that reads a prose path.
 PROSE_TESTS = (
     "tests/unit",
     "tests/integration/test_guide_scaffold.py",
 )
 
-# A test reads prose when it joins a repository root to a prose folder or a
-# root Markdown file: ``REPO / "docs"``, ``ROOT / "CLAUDE.md"``.
-PROSE_READ = re.compile(
-    r'\b(?:REPO|ROOT|REPO_ROOT|parents\[\d\])\s*/\s*'
-    r'"(?:spec|docs|guide|cordware/spec|residentialapps|[A-Za-z0-9_.-]+\.md)"'
+# Test files outside the unit tests are scanned for any string literal naming
+# a prose path. Each file that matches must be in PROSE_TESTS or here, with
+# the reason it reads no prose: a new match forces a decision, never a skip.
+TEST_ROOTS = ("tests", "cordware/tests")
+NOT_PROSE_READERS = {
+    "tests/browser/test_builder_branching.py": "a docstring cites a guide plan",
+    "tests/integration/test_guide_screencaps.py": "reads app/web/static/guide, not guide/",
+    "tests/integration/test_url_crawl.py": '"guide" is the in-app /guide URL',
+}
+PROSE_LITERAL = re.compile(
+    r"""["'](?:spec|docs|guide|cordware/spec|residentialapps/(?:docs|guide)|residentialapps/README\.md)(?:/[^"'\n]*)?["']"""
+    r"""|["'][A-Za-z0-9_-]+\.md["']"""
 )
 
 
@@ -66,14 +72,15 @@ def lane(paths: list[str], event: str) -> str:
 
 
 def prose_reading_tests(repo: Path = REPO) -> list[str]:
-    """Test files outside ``tests/unit/`` that read a prose path."""
+    """Test files outside ``tests/unit/`` with a string literal naming a prose path."""
     found = []
-    for path in sorted((repo / "tests").rglob("*.py")):
-        rel = path.relative_to(repo).as_posix()
-        if rel.startswith("tests/unit/"):
-            continue
-        if PROSE_READ.search(path.read_text(encoding="utf-8")):
-            found.append(rel)
+    for root in TEST_ROOTS:
+        for path in sorted((repo / root).rglob("*.py")):
+            rel = path.relative_to(repo).as_posix()
+            if rel.startswith("tests/unit/"):
+                continue
+            if PROSE_LITERAL.search(path.read_text(encoding="utf-8")):
+                found.append(rel)
     return found
 
 
