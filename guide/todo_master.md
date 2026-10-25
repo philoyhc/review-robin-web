@@ -26,14 +26,10 @@ Two sibling registers hold the open work that is not queued here:
 
 ### After segment 21
 
-- **Cordware stage 3, Residential Apps** (v0.8 §5), unblocked by segment
-  21's close (2026-10-22); not yet planned. The strategy that set it is
-  `docs/archive/cordware_repository_strategy_v0.8.md`; the current strategy and
-  the deployment's status of record are kept privately with the deployment.
-  Segment 21D's live check under real Easy Auth runs on the institutional
-  deployment's first release, not on the dev slot, which stays dormant
-  (author, 2026-10-24: one Azure host is enough; `docs/deployment_dev.md`
-  "CI/CD workflow").
+- **Segment 21D's live check** under real Easy Auth runs on the
+  institutional deployment's first release, not on the dev slot, which stays
+  dormant (author, 2026-10-24: one Azure host is enough;
+  `docs/deployment_dev.md` "CI/CD workflow").
 
 ### Queued segments
 
