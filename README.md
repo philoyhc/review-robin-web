@@ -8,7 +8,9 @@ forms via per-reviewer invitation links.
 
 Built as a FastAPI + Jinja + SQLAlchemy monolith, for Azure App
 Service (Linux, Python 3.12) against an Azure Postgres Flexible
-Server. The dev slot has been dormant since 2026-06-03
+Server. RRW runs under the Cordware host (`cordware/`), which
+mounts it at `/reviewrobin`. The personal dev slot has been
+dormant since 2026-06-03
 ([`docs/deployment_dev.md`](docs/deployment_dev.md) says how to
 resume it). Local dev runs against SQLite.
 
@@ -222,7 +224,4 @@ from that document's §6 — decision, rationale, trade-off, and stop),
 (the procedure an agent runs to carry this practice into a *new*
 repository on the same stack: `tools/practice_kit.py` exports the
 practice's files, the document says how each is adapted and verified),
-[`azure_ask.md`](azure_ask.md) (the original institutional-Azure ask,
-answered differently and kept as a record; its retirement is queued in
-`guide/post_azure_todo_checklist.md`),
 `README.md` (this file).

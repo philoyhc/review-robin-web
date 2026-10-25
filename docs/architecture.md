@@ -142,8 +142,6 @@ Not part of RRW's shape, so not in the topology or the estimate:
 
 ## Related documents
 
-- [`azure_ask.md`](../azure_ask.md) — the governance ask (sponsorship,
-  data policy, cost cap) for hosting on institutional Azure.
 - [`security_posture.md`](security_posture.md) — authorization model,
   identity trust, CSRF posture.
 - [`spec/architecture.md`](../spec/architecture.md) — the application
