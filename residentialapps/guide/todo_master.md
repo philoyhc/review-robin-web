@@ -14,7 +14,7 @@
 8. **Fake roles** use one `RES_` prefix, over a role list reconciled across both functional specs (below), written in the first segment plan.
 9. **Alembic:** one `alembic.ini`, two histories (`residentialapps/alembic/residentialops/`, `residentialapps/alembic/supportlogs/`). The core's first migration lands in the scaffold segment.
 10. **Stale text:** the deployment strategy and RRW's `guide/todo_master.md` are corrected now; the functional specs carry a banner and are revised at their next version.
-11. **Segment shape:** first, the scaffold (package, both mounts, CI with both databases, the core with Staff-roster admin); then Support Logs as its own segment; the RA Events spec is written before RA Leave is built.
+11. **Segment shape** (sequence revised the same day): first, RA Operations' rosters: the scaffold (package, both mounts, CI with both databases) and the core's admin under `/residentialops` for the Staff and RA rosters, appointments and units; then Support Logs; then RA Leave, which adds cycles and leave on the finished core; then RA Events. The RA Events spec is written before RA Leave is built.
 
 ## What Residential takes from the deployment strategy
 
@@ -26,7 +26,7 @@
 - **Presentation:** each application its own name, entry point, navigation and accent (Support Logs teal `#0f766e`, RA Operations fuchsia `#a21caf`, RRW blue), on RRW's design system; server-rendered, no frontend framework; each surface classed by device (`docs/cordware_mobile_to_desktop.md`).
 - **Email:** RA Leave sends as the actor with delegated `Mail.Send` through an outbox in `residentialops`; Support Logs v1 sends no email. Directory lookup uses delegated `User.ReadBasic.All`. Both grants are deployment prerequisites.
 - **Audit:** business actions only, each pillar's in its own database, on RRW's envelope-and-registered-types model. In Support Logs reads of identifiable data are audited, and support content never reaches operational logs.
-- **Order:** scaffold and core with the Staff roster → Support Logs (most urgent, simplest, needs no email) → RA Leave (adds the RA roster and cycles) → RA Events.
+- **Order** (ruling 11): RA Operations' rosters, Staff and RA, with the scaffold → Support Logs (most urgent, simplest, needs no email) → RA Leave (adds cycles) → RA Events.
 
 ## Decide before Support Logs goes live
 
