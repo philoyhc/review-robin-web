@@ -4,7 +4,7 @@
 
 ## First: CI by path (author, 2026-10-25)
 
-**Settled before any Residential code lands**, as its own slice ahead of the scaffold. One repository means one CI run per PR: today every PR, a Residential docs edit included, runs RRW's full suite (`test`, about 4.5 minutes) and the Postgres round-trip (`postgres`, about 7), and Residential's tests and two databases would add to both. Split the jobs by what a change touches:
+**Settled before any Residential code lands**, as its own slice ahead of the scaffold. Planned as RRW segment 22A (`guide/segment_22A_ci_lanes.md`). One repository means one CI run per PR: today every PR, a Residential docs edit included, runs RRW's full suite (`test`, about 4.5 minutes) and the Postgres round-trip (`postgres`, about 7), and Residential's tests and two databases would add to both. Split the jobs by what a change touches:
 
 | A change touching | Runs |
 |---|---|
