@@ -92,7 +92,7 @@ through them and decide each one's fate. Line counts of the live documents taken
 | `docs/backup_restore.md` | 107 | Opens *"Scoped to the current single Azure **dev** slot"* — and backup policy is the one of these that an institutional host may dictate rather than leave to us. |
 | `docs/cli_setup.md` | 657 | Workstation CLI setup, **made generic 2026-10-24** when the NUS runbook it accompanied moved out of this repository: its personal-slot test (B.9) is what changes at cutover. |
 | `docs/architecture.md` | 144 | Infra topology and the provisioned-resource cost table. Both change at cutover. |
-| `azure_ask.md` (root) | 258 | The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose. |
+| `azure_ask.md` (root) | 258 | ~~The governance ask. Once IT has answered it, it stops being an ask and becomes a record — and it is **not indexed in `docs/README.md`** except inside another row's prose.~~ **Done 2026-10-25:** answered differently, it has left this repository for the private deployment repository's archive (strategy v1.0 §7). |
 
 **Why it cannot be done now.** Not for want of scheduling: the correct
 text depends on facts that do not exist yet. What the NUS environment is
