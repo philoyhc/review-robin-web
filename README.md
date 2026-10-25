@@ -9,9 +9,8 @@ forms via per-reviewer invitation links.
 Built as a FastAPI + Jinja + SQLAlchemy monolith, for Azure App
 Service (Linux, Python 3.12) against an Azure Postgres Flexible
 Server. RRW runs under the Cordware host (`cordware/`), which
-mounts it at `/reviewrobin`. Production is deployed from a
-separate private repository, never from this one. The personal dev
-slot has been dormant since 2026-06-03
+mounts it at `/reviewrobin`. The personal dev slot has been
+dormant since 2026-06-03
 ([`docs/deployment_dev.md`](docs/deployment_dev.md) says how to
 resume it). Local dev runs against SQLite.
 
