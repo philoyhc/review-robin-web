@@ -35,7 +35,7 @@ That creates `review_robin_web.db` in the project root with the full schema.
 ### Pointing at a different database
 
 `database_url` is read by `app.config.settings` from either `.env` or the
-`DATABASE_URL` environment variable:
+environment, as `RRW_DATABASE_URL` or, when that is unset, `DATABASE_URL`:
 
 ```bash
 DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/rrw" alembic upgrade head
