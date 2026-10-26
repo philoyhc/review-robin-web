@@ -49,9 +49,12 @@ PROSE_TESTS = (
 
 # What the residential lane runs beside the prose lane's tests: Residential's
 # own tests and the host's, which hold the import boundaries and mount it.
-# RRW's suite and the Postgres round-trip are skipped: no Residential path
-# reaches RRW, which the boundary test enforces, and every push to `main`
-# still runs everything.
+# RRW's suite and the Postgres round-trip are skipped. RRW never imports
+# Residential (the boundary test), but its tests that import `cordware.main`
+# build every registered factory; Residential's tests build them the same
+# way, so a factory that fails to import or build fails here too. A side
+# effect beyond that, such as a database hook once Residential has one
+# (segment 1B), shows first on `main`, where every push runs everything.
 RESIDENTIAL = "residentialapps/"
 RESIDENTIAL_TESTS = ("residentialapps/tests", "cordware/tests")
 

@@ -78,7 +78,9 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ## Open questions
 
-None open. Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec/` (author, 2026-10-26).
+- **The `residential` lane once Residential has databases** (1A's cold read, 2026-10-26): it skips RRW's suite and the Postgres job, but RRW's tests build every registered factory through `cordware.main`, so a Residential side effect on shared state (an engine hook, a setting read at build) would first fail on `main`. Item 2 decides whether the lane runs those RRW tests or Residential's factories stay side-effect free.
+
+Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec/` (author, 2026-10-26).
 
 ## Out of scope
 

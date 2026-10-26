@@ -43,16 +43,20 @@ release.
 **A prose-only PR doesn't run it at all.** CI classifies each pull
 request (`tools/ci_lanes.py`, `guide/archive/segment_22A_ci_lanes.md`): one that
 changes only Markdown in `spec/`, `docs/`, `guide/`, `cordware/spec/`,
-Residential's `docs/` and `guide/`, or at the root, or a `README.md`
+Residential's `docs/`, `guide/` and `spec/`, or at the root, or a `README.md`
 outside what ships (`app/`, `alembic/`, `cordware/`, `residentialapps/`), runs the `prose` job
 alone, the unit tests plus the tests that read prose, and shows `test` and
-`postgres` as skipped. Anything else, and every push to `main`, runs both
-in full.
+`postgres` as skipped. One that changes only prose and `residentialapps/`
+runs the `residential` job instead (`ruff check .`, Residential's tests,
+`cordware/tests` and the prose lane's), with `test` and `postgres` skipped
+too: Residential has no database yet and RRW never imports it. Anything
+else, and every push to `main`, runs both in full.
 
 **Merging ahead of it is fine** for changes that cannot reach the
 database: documentation, and dev-only tooling under `tools/`. The faster
-`CI` job (`ruff check .` plus the SQLite suite) still applies to anything
-containing executable code, and it takes about three minutes (2026-10-03).
+`CI` job (`ruff check .` plus the SQLite suite, or the `residential`
+job for a Residential-only change) still applies to anything containing
+executable code, and it takes about three minutes (2026-10-03).
 
 This policy is deliberate rather than a gap: see
 `docs/archive/practice-audit-2026-09-04.md` §1 and §3, which measured it in
