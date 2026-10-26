@@ -4,9 +4,13 @@
 
 ## Status
 
-**Restructured twice on 2026-10-26, before any build** (author). It was first planned as four items with each item's screens inside it (`#3274`), then as a skeleton plus every screen scaffolded (`#3275`). It is now the package and mounts alone, kept small. The screens and their wiring are segment 1B.
+**Closed 2026-10-26, as planned after two restructures before any build** (author): first four items with screens inside each (`#3274`), then a skeleton plus every screen (`#3275`), then the package and mounts alone, with the screens and their wiring moved to 1B. Specs were drafted first for inspection (`#3277`) and ruled the same day: specs in `residentialapps/spec/`, an `ops/` package, Residential's logs and tests kept in `residentialapps/`. Built in `#3279` (rung 1) and `#3281` (rung 2); `#3280`, the landing page's sign-in details, merged between them on the author's request.
 
-**Specs drafted first, for inspection** (author, 2026-10-26): `residentialapps/spec/applications.md` and `residentialapps/spec/architecture.md` state what rung 1 and rung 2 will build. The author ruled on them the same day: Residential's specs live in `residentialapps/spec/` (1B's open question), RA Operations gets an `ops/` package beside ruling 1's list, and Residential's logs and tests stay within `residentialapps/`: shared code stamps its own records, and the mounted tests live in `residentialapps/tests/`. Rung 1 builds to them.
+Decisions confirmed at build: route names carry the application's prefix (Codex, `#3277`: a shared name resolves to the first mount); `residentialapps/tests/` builds the host and is exempt from the `cordware.main` check only; the host harness passes the registry's names for "unset", so a developer's `CORDWARE_APPS` cannot fail it.
+
+Reads: one `diff-reviewer` read of `b99583d..b6ed40d` at rung 2, nothing blocking; it found the harness's `.env` dependence, a stale `CONTRIBUTING.md`, an overclaiming lane comment, and the dormant dev slot's artefact missing `residentialapps/`, all fixed in `#3281`, and raised 1B's open question on the lane once Residential has databases. Codex found one issue, the route-name collision, on the draft specs.
+
+The close was checked by hand against `tools/close_check.py`'s checks C1 to C7 (all pass), since the tool reads only RRW's `guide/` (open question, below).
 
 ## Opportunity
 
@@ -60,7 +64,7 @@ Taken 2026-10-26 at `b63604f`.
 
 ## Open questions
 
-- **`close_check.py` reads only RRW's `guide/`.** Either it learns `residentialapps/guide/`, or this plan's close is checked by hand. The author decides by 1A's close.
+- **`close_check.py` reads only RRW's `guide/`:** 1A's close was checked by hand (2026-10-26); teaching the tool Residential's plans is a stub in `residentialapps/guide/todo_master.md`, due before 1B closes.
 
 ## Out of scope
 

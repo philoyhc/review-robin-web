@@ -1,6 +1,6 @@
 # Segment 1B — RA Operations: rosters and organization
 
-**Opened:** 2026-10-26 · **Theme:** the shared core's admin screens, settled on placeholders first, then wired to its databases, identity, organization tree and rosters · **Related:** `residentialapps/guide/segment_1A_package_and_mounts.md` (the package and mounts this builds on), `residentialapps/guide/todo_master.md`, `residentialapps/docs/residentialapps_identity.md`, `residentialapps/docs/residentialapps_roster_structure.md`, `residentialapps/docs/residentialapps_roles.md`
+**Opened:** 2026-10-26 · **Theme:** the shared core's admin screens, settled on placeholders first, then wired to its databases, identity, organization tree and rosters · **Related:** `residentialapps/guide/archive/segment_1A_package_and_mounts.md` (the package and mounts this builds on; closed 2026-10-26), `residentialapps/guide/todo_master.md`, `residentialapps/docs/residentialapps_identity.md`, `residentialapps/docs/residentialapps_roster_structure.md`, `residentialapps/docs/residentialapps_roles.md`
 
 ## Opportunity
 
