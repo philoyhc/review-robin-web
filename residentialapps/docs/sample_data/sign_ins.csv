@@ -1,8 +1,8 @@
-Scenario,FAKE_AUTH_EMAIL,FAKE_AUTH_NAME,Expected
-Linked staff (sys admin),rachel.yeo@example.edu,Rachel Yeo,Signs in as Rachel Yeo; sys admin; reaches Rosters and Sys admin
-Linked staff (super-admin),sam.lee@example.edu,Sam Lee,Set SUPER_ADMIN_EMAILS=sam.lee@example.edu; Sys admin shows Grant and Revoke
-Linked RF,daniel.koh@example.edu,Daniel Koh,Linked; no sys admin; Rosters and Sys admin refused
-First sign-in links,grace.ho@example.edu,Grace Ho,Unlinked on the roster; first sign-in links on exact roster email
-Different sign-in email,e0229874@u.example.edu,Nur Aisyah Binte Ismail,No roster match; not-registered page
-Fixed roster email,e0229874@u.example.edu,Nur Aisyah Binte Ismail,After a sys admin corrects RA9's roster email to e0229874@u.example.edu; links on the next sign-in
-Not on any roster,alex.tan@example.edu,Alex Tan,Not-registered page; nothing about anyone else shown
+Scenario,FAKE_AUTH_EMAIL,FAKE_AUTH_NAME,FAKE_AUTH_SUPER_ADMIN,Expected
+Linked staff (sys admin),rachel.yeo@example.edu,Rachel Yeo,false,Signs in as Rachel Yeo; sys admin; reaches Rosters and Sys admin; Sys admin is read-only for grants
+Super-admin,sam.lee@example.edu,Sam Lee,true,Super-admin; Sys admin shows Grant and Revoke
+Linked RF,daniel.koh@example.edu,Daniel Koh,false,Linked; no sys admin; Rosters and Sys admin refused
+First sign-in links,grace.ho@example.edu,Grace Ho,false,Unlinked on the roster; first sign-in links on exact roster email
+Different sign-in email,e0229874@u.example.edu,Nur Aisyah Binte Ismail,false,No roster match; not-registered page
+Fixed roster email,e0229874@u.example.edu,Nur Aisyah Binte Ismail,false,After a sys admin corrects RA9's roster email to e0229874@u.example.edu; links on the next sign-in
+Not on any roster,alex.tan@example.edu,Alex Tan,false,Not-registered page; nothing about anyone else shown

@@ -46,9 +46,14 @@ Two cases that sit outside the files, for the browser:
 
 ## Fake sign-ins
 
-`sign_ins.csv` lists, for each scenario, the `FAKE_AUTH_EMAIL` and
-`FAKE_AUTH_NAME` to set in `.env` (with `ALLOW_FAKE_AUTH=true` and
-`APP_ENV=local`) and what should happen. Restart the server between
+`sign_ins.csv` lists, for each scenario, the `FAKE_AUTH_EMAIL`,
+`FAKE_AUTH_NAME` and `FAKE_AUTH_SUPER_ADMIN` to set in `.env` (with
+`ALLOW_FAKE_AUTH=true` and `APP_ENV=local`) and what should happen.
+**Set `FAKE_AUTH_SUPER_ADMIN=false` for every scenario but the
+super-admin's:** it defaults to `true` (`cordware/settings.py`), which makes
+the fake user a platform super-admin with every sys admin right, so an RF
+or an unregistered person would not be refused. Leave
+`SUPER_ADMIN_EMAILS` empty, or set it to Sam Lee's address only. Restart the server between
 scenarios, since fake auth is read at startup. The not-registered cases
 follow `residentialapps/docs/residentialapps_identity.md` §6:
 
