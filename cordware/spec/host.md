@@ -81,8 +81,17 @@ nothing there and the application owns `/`.
 | Exactly one application | A 302 redirect to that application's path with its trailing slash (`/reviewrobin/` for RRW), prefixed by the request's `root_path`. |
 | None, or two or more | A page listing each mounted application, in mount order, as a link to its path with its title (registry name if the title is empty), and a host-level `Sign out` link to `/.auth/logout`. With none mounted it says no applications are running. |
 
-The page does no identity check and has no roles: it lists what is mounted,
-not what a viewer may use, and each application gates its own routes. Its
+The page requires no sign-in and has no roles: it lists what is mounted,
+not what a viewer may use, and each application gates its own routes.
+
+For diagnosis (author, 2026-10-26) the listing page also shows **Sign-in
+details**, from `current_identity` (`cordware/spec/identity.md`): name,
+email, object ID, provider, whether the identity came from Easy Auth headers
+or fake auth, and whether it is the super-admin. Under Easy Auth a collapsed
+list shows every claim the principal header carries; the fake identity has
+none. Signed out, it says so, without counting a refusal. The details are
+the viewer's own, so the response is `Cache-Control: no-store`. The
+one-application redirect shows nothing. Its
 template carries its own inline style and extends nothing of RRW's.
 
 ## `CORDWARE_APPS`

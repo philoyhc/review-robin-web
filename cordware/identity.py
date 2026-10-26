@@ -14,6 +14,8 @@ users and permissions; nothing here decides what anyone may do.
   from the request: a settings parameter would become a request body.
 - `resolve_identity(request, settings)`: the same resolution with the
   settings passed in, for tests. Never a dependency.
+- `current_identity(request, settings=None)`: the same resolution, None
+  instead of a 401, for a page that shows who is signed in.
 - `fake_auth()`, `app_env()`, `is_local()`, `is_super_admin_email()`,
   `super_admin_configured()`, `super_admin_emails()`: host-level reads,
   valid outside a request.
@@ -286,6 +288,20 @@ def resolve_identity(request: Request, settings: IdentitySettings | None = None)
 
 def get_identity(request: Request) -> Identity:
     return resolve_identity(request)
+
+
+def current_identity(request: Request, settings: IdentitySettings | None = None) -> Identity | None:
+    """The identity `resolve_identity` would return, or None where it would
+    refuse, for a page that shows who is signed in without requiring it
+    (the host's landing page). A refusal here is not one: it neither
+    raises, counts, nor logs `identity.headers_missing`."""
+    cfg = _settings(settings)
+    identity = _identity_from_easy_auth_headers(request)
+    if identity is None and cfg.allow_fake_auth:
+        identity = _fake_identity(cfg)
+    if identity is None or settings is None:
+        return identity
+    return replace(identity, resolved_with=settings)
 
 
 def decode_client_principal(request: Request) -> dict[str, Any] | None:

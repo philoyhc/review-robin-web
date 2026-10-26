@@ -49,6 +49,10 @@ would.
 - **`resolve_identity(request, settings=None)`** is the same resolution with
   an `IdentitySettings` passed in, for tests. **Never a dependency.** With
   `settings` given, the identity returned carries them as `resolved_with`.
+- **`current_identity(request, settings=None)`** is the same resolution
+  returning `None` where step 3 below would refuse: no 401, no count, no
+  `identity.headers_missing`. For a page that shows who is signed in
+  without requiring it (the host's landing page, `cordware/spec/host.md`).
 
 Resolution order:
 

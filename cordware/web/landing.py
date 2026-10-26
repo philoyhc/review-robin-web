@@ -1,7 +1,10 @@
 """The host's landing page at `/` (segment 21D; v0.8 §1).
 
 It lists the mounted applications, not the ones a viewer may use: each
-application gates its own routes, so the page checks no identity. With
+application gates its own routes, so the page requires no identity. For
+diagnosis it shows who the request is signed in as, if anyone, and the
+claims Easy Auth passed (author, 2026-10-26); that is the viewer's own
+sign-in, so the page is never cached. With
 exactly one application mounted there is nothing to choose between, and
 `/` redirects to it (author, 2026-10-21). An application mounted at `/`
 owns `/`, and the host adds nothing there.
@@ -16,6 +19,8 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+
+from cordware.identity import current_identity, extract_claims
 
 _templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -45,8 +50,15 @@ def add_landing_page(host: FastAPI, links: Sequence[LandingLink]) -> None:
         root = request.scope.get("root_path", "")
         if len(links) == 1:
             return RedirectResponse(f"{root}{links[0].href}", status_code=302)
-        return _templates.TemplateResponse(
+        identity = current_identity(request)
+        response = _templates.TemplateResponse(
             request,
             "landing.html",
-            {"links": [(link.title, f"{root}{link.href}") for link in links]},
+            {
+                "links": [(link.title, f"{root}{link.href}") for link in links],
+                "identity": identity,
+                "claims": extract_claims(request) if identity and not identity.is_fake else [],
+            },
         )
+        response.headers["Cache-Control"] = "no-store"
+        return response
