@@ -211,7 +211,9 @@ reject it.
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. Both also run in
   CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`, unless the PR is
   prose only: then CI runs the `prose` lane alone, `tests/unit/` plus the
-  tests that read prose (`tools/ci_lanes.py`, segment 22A).
+  tests that read prose (`tools/ci_lanes.py`, segment 22A). A PR touching
+  only prose and `residentialapps/` runs the `residential` lane instead:
+  Residential's tests, `cordware/tests` and the prose lane's, with lint.
 - **The install belongs in whatever step has network**: `pip install
   -e .[dev]` before the agent phase. `requirements.txt` is the Azure
   deploy manifest and yields neither `pytest` nor `httpx`.

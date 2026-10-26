@@ -23,6 +23,7 @@ _spec.loader.exec_module(ci_lanes)
         "cordware/spec/host.md",
         "residentialapps/docs/residentialapps_roles.md",
         "residentialapps/guide/todo_master.md",
+        "residentialapps/spec/applications.md",
         "residentialapps/README.md",
         "tools/README.md",
         "cordware/spec/README.md",
@@ -71,9 +72,44 @@ def test_one_non_prose_path_makes_it_full():
     assert ci_lanes.lane(["spec/lifecycle.md", "app/main.py"], "pull_request") == "full"
 
 
+@pytest.mark.parametrize(
+    "paths",
+    [
+        ["residentialapps/ops/main.py"],
+        ["residentialapps/tests/test_mounts.py", "residentialapps/spec/applications.md"],
+        ["residentialapps/supportlogs/routes_health.py", "guide/todo_master.md"],
+        ["residentialapps/core/README.md"],  # shipped, so not prose
+    ],
+)
+def test_only_prose_and_residential_is_the_residential_lane(paths):
+    assert ci_lanes.lane(paths, "pull_request") == "residential"
+
+
+@pytest.mark.parametrize(
+    "outside",
+    ["cordware/main.py", "pyproject.toml", "app/main.py", ".github/workflows/ci.yml", "tools/ci_lanes.py"],
+)
+def test_residential_with_anything_shared_is_full(outside):
+    assert ci_lanes.lane(["residentialapps/ops/main.py", outside], "pull_request") == "full"
+
+
+def test_a_path_merely_named_like_residential_is_not():
+    assert ci_lanes.lane(["residentialapps_notes.py"], "pull_request") == "full"
+
+
 @pytest.mark.parametrize("event", ["push", "workflow_dispatch", "merge_group", ""])
 def test_any_event_but_a_pull_request_is_full(event):
     assert ci_lanes.lane(["spec/lifecycle.md"], event) == "full"
+    assert ci_lanes.lane(["residentialapps/ops/main.py"], event) == "full"
+
+
+def test_the_residential_lane_runs_residential_host_and_prose_tests(capsys):
+    assert ci_lanes.main(["--residential-tests"]) == 0
+    targets = capsys.readouterr().out.split()
+    assert targets[:2] == ["residentialapps/tests", "cordware/tests"]
+    assert set(ci_lanes.PROSE_TESTS) <= set(targets)
+    for entry in targets:
+        assert (REPO / entry).exists(), entry
 
 
 @pytest.mark.parametrize("paths", [[], [""], ["   "]])
@@ -122,6 +158,7 @@ def test_every_ruled_non_reader_still_matches():
         'HERE.parent.parent / "spec"',
         'open("CLAUDE.md")',
         'Path("cordware/spec/host.md")',
+        'ROOT / "residentialapps/spec/architecture.md"',
         'REPO / "tools/README.md"',
     ],
 )

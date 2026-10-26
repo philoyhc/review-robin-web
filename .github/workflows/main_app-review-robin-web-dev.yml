@@ -56,6 +56,7 @@ jobs:
           path: |
             app/
             cordware/
+            residentialapps/
             alembic/
             alembic.ini
             requirements.txt
