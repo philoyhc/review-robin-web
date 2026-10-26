@@ -58,6 +58,17 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   4. **Appointment type → level is configured per Unit**; Unit 1's are RSLM → level 1, RF → level 2, RA → level 3, with Master and the administrators covering the whole Unit.
   5. **Reporting is derived**: an RA reports to the RF holding the parent node. Only the dated backup and temporary arrangements are stored explicitly.
   6. **CSV headers carry the labels** as RRW's do (`Level1.Wing`); headcount norms (3 RFs + 1 RSLM per Wing, 3–4 RAs per RF) are per-Unit warnings, never constraints.
+- **Organization-structure CSV, ruled 2026-10-26** (author): a Unit's whole tree uploads as one file, **one row per bottom-level node**, naming positions, never people (people attach through appointments):
+
+  | `Level1.Wing` | `Level2.Precinct` | `Level3.Neighborhood` | `Floors` |
+  |---|---|---|---|
+  | Cypress | RF1 | RA1 | Cypress A 04-05-06 |
+  | Cypress | RF1 | RA2 | Cypress A 07-08-09 |
+  | Cypress | RF1 | RA3 | Cypress A 10-11-12 |
+
+  1. **Every level is its own column**, headed with the Unit's label (which the import sets and the export writes back); higher nodes exist because a row names them.
+  2. **Floors are a building and its floors joined by hyphens**; several buildings in one cell are separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
+  3. **The file is the Unit's complete structure.** The preview lists new, changed and to-retire nodes, unknown or duplicate codes, and floor gaps and overlaps (warnings); on confirm a missing node is end-dated, never deleted, and a node with a current appointment blocks the import until the appointment is ended or moved.
 
 - **Role names:** administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
