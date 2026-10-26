@@ -33,10 +33,16 @@ states only what Residential adds.
 ## Health
 
 - `GET /health` inside each mount returns `200` with `{"status": "ok"}`,
-  route name `health`, as RRW's does. The host's own probe stays
-  `cordware_health`, so `url_for("health")` inside a mount resolves to
-  that application's route.
-- It needs no identity and no database. A deployment excludes both paths
+  as RRW's does. Its route name is `residentialops_health` or
+  `supportlogs_health` (below).
+- **Every route name carries its application's prefix**, `residentialops_`
+  or `supportlogs_`. Inside a mount, `url_for` resolves a name through the
+  host's router first, and the host's mounts carry no name, so the first
+  mount with a matching route wins: an unprefixed `health` in either
+  application would resolve to `/reviewrobin/health`. The mounted tests
+  resolve each application's health name from inside its own mount and
+  check it lands there.
+- Health needs no identity and no database. A deployment excludes both paths
   from sign-in, as it does RRW's.
 - Neither application serves `/docs`, `/redoc` or `/openapi.json`
   (`docs_url`, `redoc_url` and `openapi_url` are `None`). Neither is an
