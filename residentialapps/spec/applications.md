@@ -95,10 +95,11 @@ Events has no spec yet, so its rows are provisional.
   - **On the left, the switcher**: the Unit's name (Example College in the
     mockups) above the current area's name. Its menu lists the areas the
     viewer reaches (Home, RA Leave, RA Events; Rosters and setup and Sys
-    admin for sys admins), then the other applications Cordware mounts
-    (Support Logs, Review Robin). Those are links only: Residential
-    Operations cannot read the others' permissions, so each answers for
-    itself when opened.
+    admin for sys admins), then one link, **All applications**, to the
+    host's landing page, which lists what Cordware mounts (author,
+    2026-10-26). An application cannot see the host's mounts without
+    importing `cordware.main`, which it may not, nor read another
+    application's permissions; the landing page knows both.
   - **On the right, the Light/Dark toggle and the account**: the toggle at
     every width, as in RRW; initials, with the viewer's name and role beside
     them at desktop width. Dark takes RRW's dark neutrals and the accent's
