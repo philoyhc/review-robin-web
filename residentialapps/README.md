@@ -10,6 +10,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **RA 
 | `docs/residentialapps_roles.md` | Roles in both applications, read across from RRW's super-admin, admin and operator (ruled) |
 | `docs/residentialapps_roster_structure.md` | Rosters, appointments and residential geography: Unit, Wing, Tower, RF Zone, RA Neighborhood, coverage and reporting (working design; §10 open) |
 | `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system |
+| `guide/segment_1A_rosters_and_organization.md` | Segment 1A plan: scaffold, identity, organization setup, rosters (step 1 of the sequence) |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |
 
 Shared UX guidance for every Cordware application is RRW's `docs/cordware_mobile_to_desktop.md`.
