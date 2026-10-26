@@ -2,7 +2,7 @@
 
 > **Built so far:** segment 1A built the `ops/`, `supportlogs/` and
 > `tests/` packages, the boundary rules marked below, packaging and the
-> `residential` lane. Every package and rule marked for a later segment
+> `residential` lane; segment 1B item 1 built `web/`. Every package and rule marked for a later segment
 > is the contract for it, not yet built.
 
 How `residentialapps/` is laid out, what each part may import, and how
@@ -17,7 +17,7 @@ its tests run. The two applications' contract with the host is
 | `residentialapps/ops/` | Residential Operations: its factory (`main.py`), its routes and pages | 1A (factory and health) |
 | `residentialapps/supportlogs/` | Support Logs: its factory, routes, pages, models and services | 1A (factory and health) |
 | `residentialapps/core/` | The shared core: people, identity binding, organization, rosters | 1B |
-| `residentialapps/web/` | What both applications' pages share: base template, styles, URL helper | 1B |
+| `residentialapps/web/` | What both applications' pages share: base template, styles, URL helper | 1B (built in item 1) |
 | `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | Steps 3 and 4 |
 | `residentialapps/tests/` | Residential's tests, a package with its own `__init__.py` | 1A |
 
@@ -57,7 +57,8 @@ depth and including literal dynamic imports.
   they hold (ruling 7).
 - Enforced today: `residentialapps` not importing `app`, the
   `cordware.main` check, `app` and `cordware` not importing `residentialapps`,
-  and each of `ops` and `supportlogs` not importing the other. The other
+  each of `ops` and `supportlogs` not importing the other, and `web` not
+  importing either application or pillar. The other
   rows, and `supportlogs` not importing `leave` or `events`, join with their
   packages (1B and later), each with a planted-import test as the existing
   rules have.

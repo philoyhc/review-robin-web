@@ -1,0 +1,106 @@
+{% extends "residential/base.html" %}
+{% block title %}Organization{% endblock %}
+{% block content %}
+  <div class="ptitle">
+    <h1>Organization</h1>
+    <span class="chip chip-warn">Sample data</span>
+  </div>
+  <div class="summary">
+    {% for level in (1, 2, 3) %}
+      <span>{{ level_name[level] }}s:</span> <span class="chip chip-info">{{ counts[level] }}</span>
+      <span aria-hidden="true">·</span>
+    {% endfor %}
+    <span>Staff:</span> <span class="chip chip-info">{{ sample.STAFF_COUNT[0] }} · {{ sample.STAFF_COUNT[1] }} linked</span>
+    <span aria-hidden="true">·</span>
+    <span>RAs:</span> <span class="chip chip-info">{{ sample.RA_COUNT[0] }} · {{ sample.RA_COUNT[1] }} linked</span>
+    <span aria-hidden="true">·</span>
+    <span>Floor gaps:</span> <span class="chip chip-warn">{{ sample.FLOOR_GAPS | length }}</span>
+  </div>
+
+  {% if sample.FLOOR_GAPS %}
+    <div class="notice" role="status">
+      <strong>{{ sample.FLOOR_GAPS | length }} floor gap{{ "s" if sample.FLOOR_GAPS | length != 1 }}:</strong>
+      {{ sample.FLOOR_GAPS | join(", ") }} {{ "is" if sample.FLOOR_GAPS | length == 1 else "are" }} in no {{ level_name[3] }}.
+      Gaps and overlaps warn; they never block a save.
+    </div>
+  {% endif %}
+
+  <div class="split">
+    <section class="card main" aria-labelledby="tree-h">
+      <div class="card-pad" style="padding-bottom: 12px">
+        <h2 id="tree-h">Organization tree</h2>
+        <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only.</p>
+        <div class="btnrow">
+          <button type="button" class="btn btn-secondary" disabled>Expand all</button>
+          <button type="button" class="btn btn-primary" disabled>Add node</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Node</th><th scope="col">Level</th><th scope="col">Floors</th><th scope="col">Appointed</th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+          </thead>
+          <tbody>
+            {% for node in sample.TREE %}
+              <tr{% if node.level < 2 %} style="background: var(--surface-muted)"{% endif %}>
+                <td style="padding-left: {{ 12 + node.level * 16 }}px; font-weight: {{ 700 if node.level < 2 else (600 if node.level == 2 else 400) }}">{{ node.name }}</td>
+                <td style="color: var(--text-subtle)">{{ level_name[node.level] }}</td>
+                <td>{{ node.floors }}</td>
+                <td>{{ node.appointed or "—" }}</td>
+                <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
+              </tr>
+            {% endfor %}
+            {% for gap in sample.FLOOR_GAPS %}
+              <tr style="background: var(--chip-warn-bg); color: var(--chip-warn-fg)">
+                <td style="padding-left: 60px; font-weight: 600">Not covered</td>
+                <td>—</td>
+                <td>{{ gap }}</td>
+                <td>—</td>
+                <td><span class="chip chip-warn">Gap</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="side">
+      <section class="card card-pad" aria-labelledby="labels-h">
+        <h2 id="labels-h">Level labels</h2>
+        <p class="sub">{{ sample.UNIT_NAME }}'s names for its three levels. Code keeps the slots; renaming is a label edit.</p>
+        {% for label in sample.LEVEL_LABELS %}
+          <div class="field">
+            <label for="level-{{ loop.index }}">Level {{ loop.index }}{% if loop.last %} (floors){% endif %}</label>
+            <input id="level-{{ loop.index }}" class="input" type="text" value="{{ label }}" disabled>
+          </div>
+        {% endfor %}
+        <button type="button" class="btn btn-primary" disabled>Save labels</button>
+      </section>
+
+      <section class="card card-pad" aria-labelledby="levels-h">
+        <h2 id="levels-h">Appointments by level</h2>
+        <p class="sub">Which level each appointment holds. Reporting follows the tree.</p>
+        <table>
+          <tbody>
+            {% for appointment, level in sample.APPOINTMENT_LEVELS %}
+              <tr>
+                <td>{{ appointment }}</td>
+                <td>{% if level %}Level {{ level }} · {{ level_name[level] }}{% else %}{{ sample.UNIT_NAME }} (whole Unit){% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card card-pad muted" aria-labelledby="csv-h">
+        <h2 id="csv-h">Structure CSV</h2>
+        <p class="sub">One row per {{ level_name[3] }}, positions not people. The file is {{ sample.UNIT_NAME }}'s whole tree: a node it leaves out is end-dated after preview.</p>
+        <pre class="sample">{{ sample.STRUCTURE_CSV }}</pre>
+        <div class="btnrow">
+          <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
+          <button type="button" class="btn btn-secondary" disabled>Export</button>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}
