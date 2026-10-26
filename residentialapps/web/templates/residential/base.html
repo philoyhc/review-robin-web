@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en" data-app="{{ app_key }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ area }}{% endblock %} · {{ app_name }}</title>
+    {# The theme is RRW's: the same storage key, so one choice holds across
+       the host's applications. Applied before the stylesheet, so a saved
+       Dark choice never flashes Light. #}
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("rrw-theme") === "dark") {
+            document.documentElement.setAttribute("data-theme", "dark");
+          }
+        } catch (e) { /* storage blocked: stay on Light */ }
+      })();
+    </script>
+    <style>
+      /* Tokens, after RRW's (spec/visual_style_general.md); Dark takes RRW's
+         dark neutrals and the accent's dark-surface tone
+         (residentialapps/docs/support_logs_ui_spec_v0.1.md §6). */
+      :root {
+        --surface-page: #ffffff;
+        --surface-card: #ffffff;
+        --surface-muted: #f5f5f7;
+        --text-body: #111827;
+        --text-subtle: #616874;
+        --text-strong-subtle: #3a465c;
+        --text-link: #2563eb;
+        --border-subtle: #e5e7eb;
+        --border-default: #6f7b8e;
+        --on-accent: #ffffff;
+        --danger: #b91c1c;
+        --chip-info-bg: #dbeafe; --chip-info-fg: #1e40af;
+        --chip-warn-bg: #fef3c7; --chip-warn-fg: #92400e;
+        --chip-ok-bg: #dcfce7; --chip-ok-fg: #166534;
+        --chip-mute-bg: #f3f4f6; --chip-mute-fg: #3a465c;
+        --warn-border: #d97706;
+      }
+      :root[data-app="residentialops"] {
+        --accent: #a21caf;
+        --accent-tint: #fdf4ff;
+        --accent-tint-strong: #fae8ff;
+        --accent-chip-fg: #86198f;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --surface-page: #0f141b;
+        --surface-card: #1a212e;
+        --surface-muted: #232c3b;
+        --text-body: #e6eaf2;
+        --text-subtle: #a9b4c6;
+        --text-strong-subtle: #a9b4c6;
+        --text-link: #60a5fa;
+        --border-subtle: #2b3547;
+        --border-default: #6f7b8e;
+        --on-accent: #111827;
+        --danger: #fca5a5;
+        --chip-info-bg: #172554; --chip-info-fg: #93c5fd;
+        --chip-warn-bg: #451a03; --chip-warn-fg: #fcd34d;
+        --chip-ok-bg: #052e16; --chip-ok-fg: #86efac;
+        --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
+        --warn-border: #b45309;
+      }
+      :root[data-theme="dark"][data-app="residentialops"] {
+        --accent: #e879f9;
+        --accent-tint: #4a044e;
+        --accent-tint-strong: #4a044e;
+        --accent-chip-fg: #f0abfc;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--surface-page);
+        color: var(--text-body);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        -webkit-text-size-adjust: 100%;
+      }
+      a { color: var(--text-link); }
+      .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+      /* The chrome: one slim top bar at every width, scrolling away with the
+         page (residentialapps/spec/applications.md, "One chrome, phone first"). */
+      .topbar { position: relative; border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); }
+      .tb-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1232px; margin: 0 auto; padding: 8px 16px; }
+      .switch { position: relative; }
+      .switch > summary {
+        display: flex; align-items: center; gap: 10px; min-height: 44px;
+        padding: 4px 10px 4px 6px; margin-left: -6px; border-radius: 8px;
+        cursor: pointer; list-style: none;
+      }
+      .switch > summary::-webkit-details-marker { display: none; }
+      .switch > summary:hover, .switch[open] > summary { background: var(--accent-tint); }
+      .sq { flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
+      .sw-t { display: flex; flex-direction: column; line-height: 1.2; }
+      .sw-unit { font-size: 12px; color: var(--text-subtle); }
+      .sw-app { font-size: 16px; font-weight: 700; }
+      .caret { font-size: 12px; color: var(--text-subtle); margin-left: 2px; }
+      .menu {
+        position: absolute; z-index: 5; top: calc(100% + 4px); left: -6px; width: 270px;
+        background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(17, 24, 39, 0.14); padding: 6px 0;
+      }
+      .mg + .mg { border-top: 1px solid var(--border-subtle); margin-top: 6px; padding-top: 6px; }
+      .mg-h { padding: 6px 14px 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-subtle); }
+      .menu a, .menu span.later {
+        display: flex; justify-content: space-between; align-items: center; min-height: 44px;
+        padding: 0 14px; font-size: 15px; color: var(--text-body); text-decoration: none;
+      }
+      .menu a[aria-current] { background: var(--accent-tint); font-weight: 700; color: var(--accent); }
+      .menu span.later { color: var(--text-subtle); }
+      .menu small { font-size: 12px; color: var(--text-subtle); }
+      .right { display: flex; align-items: center; gap: 12px; }
+      .theme-toggle { display: inline-flex; border: 1px solid var(--border-default); border-radius: 9999px; overflow: hidden; }
+      .theme-toggle button {
+        font: inherit; font-size: 12px; line-height: 1.6; min-height: 28px; padding: 2px 12px;
+        border: 0; background: transparent; color: var(--text-subtle); cursor: pointer;
+      }
+      .theme-toggle button + button { border-left: 1px solid var(--border-default); }
+      .theme-toggle button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+      .acct { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-strong-subtle); }
+      .acct-name { display: none; }
+      .avatar {
+        display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+        border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700;
+      }
+      .tabs { border-bottom: 1px solid var(--border-subtle); background: var(--surface-page); }
+      .tabs-in { display: flex; gap: 4px; max-width: 1232px; margin: 0 auto; padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+      .tabs a, .tabs span {
+        flex: none; display: flex; align-items: center; min-height: 44px; padding: 0 10px;
+        font-size: 14px; font-weight: 600; color: var(--text-strong-subtle); text-decoration: none; white-space: nowrap;
+      }
+      .tabs a[aria-current] { color: var(--text-body); box-shadow: inset 0 -3px 0 var(--accent); }
+      .tabs span { color: var(--text-subtle); font-weight: 400; }
+
+      .page { max-width: 1232px; margin: 0 auto; padding: 20px 16px 48px; }
+      .ptitle { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+      .ptitle h1 { margin: 0; font-size: 22px; }
+      .summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 14px; color: var(--text-strong-subtle); }
+
+      /* Components */
+      .card { border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); min-width: 0; }
+      .card.muted { background: var(--surface-muted); }
+      .card-pad { padding: 16px; }
+      .card h2 { margin: 0 0 4px; font-size: 18px; }
+      .card .sub { margin: 0 0 12px; font-size: 14px; color: var(--text-subtle); }
+      .chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+      .chip-info { background: var(--chip-info-bg); color: var(--chip-info-fg); }
+      .chip-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
+      .chip-ok { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
+      .chip-mute { background: var(--chip-mute-bg); color: var(--chip-mute-fg); }
+      .chip-accent { background: var(--accent-tint-strong); color: var(--accent-chip-fg); }
+      .notice {
+        display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 16px; padding: 10px 14px;
+        border-radius: 8px; border: 1px solid var(--warn-border); background: var(--chip-warn-bg); color: var(--chip-warn-fg); font-size: 14px;
+      }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 14px;
+        border-radius: 6px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+      }
+      .btn-primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
+      .btn-secondary { background: transparent; color: var(--text-body); border: 1px solid var(--border-default); }
+      .btn:disabled { cursor: not-allowed; opacity: 0.75; }
+      .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; }
+      .table-wrap > table { min-width: 640px; }
+      th { text-align: left; font-size: 12px; font-weight: 600; color: var(--text-subtle); padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+      td { font-size: 14px; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+      .field { display: grid; grid-template-columns: 1fr minmax(0, 140px); align-items: center; gap: 12px; margin-bottom: 10px; font-size: 14px; }
+      .field label { color: var(--text-subtle); }
+      .input {
+        font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
+        border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body);
+      }
+      pre.sample {
+        margin: 0 0 12px; padding: 10px; overflow-x: auto; white-space: pre;
+        background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px;
+      }
+      .split { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+      .split > .main { flex: 999 1 560px; min-width: 0; }
+      .split > .side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 24px; }
+
+      @media (min-width: 960px) {
+        .tb-in { padding: 10px 24px; }
+        .tabs-in { padding: 0 16px; }
+        .acct-name { display: inline; }
+        .page { padding: 20px 24px 48px; }
+        .ptitle h1 { font-size: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="tb-in">
+        <details class="switch">
+          <summary aria-label="Switch area: {{ area }}">
+            <span aria-hidden="true" class="sq"></span>
+            <span class="sw-t"><span class="sw-unit">{{ unit_name }}</span><span class="sw-app">{{ area }} <span aria-hidden="true" class="caret">▾</span></span></span>
+          </summary>
+          <nav class="menu" aria-label="Switch area">
+            <div class="mg">
+              <div class="mg-h">{{ app_name }}</div>
+              {% for item in areas %}
+                {% if item.path %}
+                  <a href="{{ url(item.path) }}"{% if item.label == area %} aria-current="page"{% endif %}>{{ item.label }}{% if item.label == area %} <span aria-hidden="true">✓</span>{% endif %}</a>
+                {% else %}
+                  <span class="later">{{ item.label }} <small>not built yet</small></span>
+                {% endif %}
+              {% endfor %}
+            </div>
+            <div class="mg">
+              <div class="mg-h">Cordware</div>
+              <a href="{{ host_url('/') }}">All applications</a>
+            </div>
+          </nav>
+        </details>
+        <div class="right">
+          <div class="theme-toggle" role="group" aria-label="Display mode">
+            <button type="button" data-theme-choice="light" aria-pressed="true">Light</button>
+            <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+          </div>
+          {% if viewer %}
+            <span class="acct"><span class="acct-name">{{ viewer.display_label }}</span><span class="avatar" aria-hidden="true">{{ initials }}</span></span>
+          {% else %}
+            <span class="acct"><span class="acct-name">Not signed in</span><span class="avatar" aria-hidden="true">?</span></span>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+    {% if tabs %}
+      <nav class="tabs" aria-label="{{ area }}">
+        <div class="tabs-in">
+          {% for tab in tabs %}
+            {% if tab.path %}
+              <a href="{{ url(tab.path) }}"{% if is_here(tab.path) %} aria-current="page"{% endif %}>{{ tab.label }}</a>
+            {% else %}
+              <span title="Not built yet">{{ tab.label }}</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </nav>
+    {% endif %}
+    <main class="page">
+      {% block content %}{% endblock %}
+    </main>
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var opts = document.querySelectorAll(".theme-toggle button");
+        function mode() { return root.getAttribute("data-theme") === "dark" ? "dark" : "light"; }
+        function sync() {
+          Array.prototype.forEach.call(opts, function (b) {
+            b.setAttribute("aria-pressed", b.getAttribute("data-theme-choice") === mode() ? "true" : "false");
+          });
+        }
+        Array.prototype.forEach.call(opts, function (b) {
+          b.addEventListener("click", function () {
+            var choice = b.getAttribute("data-theme-choice");
+            if (choice === "dark") root.setAttribute("data-theme", "dark");
+            else root.removeAttribute("data-theme");
+            try { localStorage.setItem("rrw-theme", choice); } catch (e) { /* ignore */ }
+            sync();
+          });
+        });
+        sync();
+      })();
+    </script>
+  </body>
+</html>

@@ -2,9 +2,11 @@
 
 > **Built so far:** segment 1A built "Two applications, one package",
 > "Health", "Running alone" and the per-application half of "Logging and
-> lifespan". "Pages", the shared-code log stamps (Residential's own
-> `get_logger`) and "URLs" are the contract for 1B and later: nothing
-> builds them yet.
+> lifespan". Segment 1B item 1 is building the screens as placeholders
+> with sample data: so far the chrome and the Organization page
+> (`/rosters/`), and "URLs". The rest of "Pages" and the shared-code log
+> stamps (Residential's own `get_logger`) are the contract for 1B and
+> later.
 
 The contract of the two Residential applications as the Cordware host
 sees them: how each is built, where it mounts, what it answers before it
@@ -195,8 +197,15 @@ fails to start on the missing package (`host.app_startup_failed`).
 
 ## URLs
 
-Not built. The JSON health body emits no URL. From the first page (1B), each
-application emits its paths under its mount the way RRW does
-(`spec/architecture.md` "URL emission"), through its own helper, with a
-leak test and a GET crawl (`residentialapps/guide/todo_master.md`, "What
-Residential takes from the deployment strategy").
+Each application emits its paths under its mount the way RRW does
+(`spec/architecture.md` "URL emission"), through Residential's own helper,
+`residentialapps/web/urls.py`, since Residential may not import RRW's:
+
+- a template writes `url('/…')` for a path inside the application and
+  `host_url('/')` for the host's landing page;
+- comparisons read `is_here()`.
+
+`residentialapps/tests/test_pages.py` holds both checks: the leak rule
+fails on a template link written out without a helper, and the GET crawl
+fails on a page that emits a path outside its mount (other than `/`, a
+fragment or Easy Auth's `/.auth/`). The JSON health body emits no URL.
