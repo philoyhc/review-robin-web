@@ -25,7 +25,7 @@
         <tbody>
           {% for person in sample.STAFF %}
             <tr>
-              <td style="font-weight: 600">{{ person.name }}</td>
+              <td style="font-weight: 600"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
               <td style="color: var(--text-subtle)">{{ person.email }}</td>
               <td>{{ person.appointment }}</td>
               <td>{{ person.node }}</td>

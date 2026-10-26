@@ -23,7 +23,7 @@ AREAS: tuple[dict[str, str | None], ...] = (
     {"label": "RA Leave", "path": None},
     {"label": "RA Events", "path": None},
     {"label": "Rosters", "path": "/rosters/"},
-    {"label": "Sys admin", "path": None},
+    {"label": "Sys admin", "path": "/sys-admin/"},
 )
 
 ROSTER_TABS: tuple[dict[str, str | None], ...] = (
@@ -44,6 +44,7 @@ def render(
     *,
     area: str,
     tabs: tuple[dict[str, str | None], ...] = (),
+    areas: tuple[dict[str, str | None], ...] = AREAS,
     **context: Any,
 ) -> Response:
     viewer = current_identity(request)
@@ -55,7 +56,7 @@ def render(
             "app_name": APP_NAME,
             "unit_name": sample_data.UNIT_NAME,
             "area": area,
-            "areas": AREAS,
+            "areas": areas,
             "tabs": tabs,
             "viewer": viewer,
             "initials": _initials(viewer.display_label) if viewer else "?",

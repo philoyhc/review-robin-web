@@ -31,7 +31,7 @@
         <tbody>
           {% for ra in sample.RAS %}
             <tr>
-              <td style="font-weight: 600">{{ ra.name }}</td>
+              <td style="font-weight: 600"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(ra.email)) }}">{{ ra.name }}</a></td>
               <td style="color: var(--text-subtle)">{{ ra.email }}</td>
               <td>{{ ra.neighborhood }} <span style="color: var(--text-subtle)">· {{ ra.precinct }}</span></td>
               <td>{{ ra.floors }}</td>

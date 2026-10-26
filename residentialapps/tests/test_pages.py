@@ -11,11 +11,13 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
+from residentialapps.ops import sample_data
 from residentialapps.ops.main import create_app as ops_app
 from residentialapps.tests._host import host_with
 
 PACKAGE = Path(__file__).resolve().parents[1]
 MOUNT = "/residentialops"
+CHLOE = sample_data.person_id_of("chloe.lim@example.edu")
 LINK = re.compile(r'\b(?:href|action|formaction|src)\s*=\s*"([^"]*)"')
 
 
@@ -49,12 +51,12 @@ def test_the_organization_page_is_a_labelled_placeholder() -> None:
     assert page.text.count('<td style="color: var(--text-subtle)">Neighborhood</td>') == 10
 
 
-def test_every_page_is_labelled_sample_data(host_client: TestClient) -> None:
+def test_every_page_is_labelled_a_placeholder(host_client: TestClient) -> None:
     assert page_routes(), "no pages found"
     for path in page_routes():
         page = host_client.get(MOUNT + path)
         assert page.status_code == 200, path
-        assert "Sample data" in page.text, path
+        assert "Sample data" in page.text or "Placeholder:" in page.text, path
 
 
 def test_the_chrome_carries_the_switcher_tabs_and_theme(host_client: TestClient) -> None:
@@ -70,7 +72,7 @@ def test_the_chrome_carries_the_switcher_tabs_and_theme(host_client: TestClient)
 def test_no_page_emits_a_path_outside_its_mount(host_client: TestClient) -> None:
     """The GET crawl: every link, form and source on every page is under
     the mount, a fragment, Easy Auth's, or the host's landing page."""
-    for path in page_routes():
+    for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
         for link in LINK.findall(host_client.get(MOUNT + path).text):
             assert link == "/" or link.startswith((f"{MOUNT}/", "#", "/.auth/")), (path, link)
 
@@ -120,3 +122,39 @@ def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
     for path in ("/rosters/", "/rosters/staff"):
         assert f'href="{MOUNT}{path}"' in page
     assert f'href="{MOUNT}/rosters/ras" aria-current="page"' in page
+
+
+def test_person_detail_shows_identity_status_and_history() -> None:
+    client = TestClient(ops_app())
+    linked = client.get(f"/rosters/people/{CHLOE}").text
+    assert 'chip-ok">Linked</span>' in linked
+    assert "e0234567@u.example.edu" in linked
+    assert "Linked on first sign-in" in linked
+    unlinked = client.get(f"/rosters/people/{sample_data.person_id_of('nur.aisyah@example.edu')}").text
+    assert 'chip-mute">Unlinked</span>' in unlinked
+    assert "After first sign-in" in unlinked
+
+
+def test_an_unknown_person_is_not_found() -> None:
+    assert TestClient(ops_app()).get("/rosters/people/nobody").status_code == 404
+
+
+def test_roster_names_link_to_person_detail(host_client: TestClient) -> None:
+    page = host_client.get(f"{MOUNT}/rosters/ras").text
+    assert f'href="{MOUNT}/rosters/people/{CHLOE}"' in page
+
+
+def test_sys_admin_lists_grants_and_the_audit_log() -> None:
+    page = TestClient(ops_app()).get("/sys-admin/").text
+    assert "<h1>Sys admin</h1>" in page
+    assert page.count(">Revoke</button>") == len(sample_data.SYS_ADMINS)
+    assert page.count("<tr>") - 2 == len(sample_data.SYS_ADMINS) + len(sample_data.AUDIT_EVENTS)
+    assert "You see this read-only." in page  # no sign-in: not the super-admin
+
+
+def test_not_registered_shows_the_message_and_nobody_else() -> None:
+    page = TestClient(ops_app()).get("/not-registered").text
+    assert "You are not registered in Residential Apps." in page
+    assert 'aria-label="Switch area"' not in page
+    assert 'class="tabs"' not in page
+    assert "example.edu" not in page
