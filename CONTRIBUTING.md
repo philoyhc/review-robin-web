@@ -30,7 +30,9 @@ more permissive of the two in several ways that have bitten this project
 `DROP TABLE`, index/FK name mismatches between upgrade and downgrade —
 see the migration-portability notes in `AGENTS.md`). That job is the only
 check covering the gap: it round-trips the whole Alembic chain in both
-directions and runs the full suite against a real `postgres:16`. It
+directions and runs the full suite against a real `postgres:16`, across
+xdist workers with a database each: about four minutes since segment 22B,
+nine serially before it (2026-10-26). It
 matters because a deployment migrates Postgres from a `main` commit:
 the dev slot's workflow did so on every push without depending on
 either CI workflow, and the institutional release migrates whichever

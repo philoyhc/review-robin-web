@@ -56,6 +56,7 @@ def _test_database_url() -> str:
 _WORKER = re.compile(r"gw\d+")
 _DATABASE_NAME = re.compile(r"[A-Za-z0-9_]+")
 _MAX_IDENTIFIER = 63  # Postgres's NAMEDATALEN - 1
+_INSUFFICIENT_PRIVILEGE = "42501"
 
 
 def _worker_database_url(url: str, worker: str | None) -> str:
@@ -70,6 +71,8 @@ def _worker_database_url(url: str, worker: str | None) -> str:
     if not _WORKER.fullmatch(worker):
         raise RuntimeError(f"unexpected xdist worker id {worker!r}")
     parsed = make_url(url)
+    if not parsed.database:
+        raise RuntimeError("TEST_DATABASE_URL names no database to derive worker databases from")
     name = f"{parsed.database}_{worker}"
     if not _DATABASE_NAME.fullmatch(name):
         raise RuntimeError(f"cannot derive a worker database from {parsed.database!r}")
@@ -94,6 +97,10 @@ def _ensure_database(connection, name: str) -> None:
     try:
         connection.execute(text(f'CREATE DATABASE "{name}"'))
     except ProgrammingError as error:
+        # 42501 insufficient_privilege; anything else (a concurrent run
+        # creating the same name, say) propagates as itself.
+        if getattr(error.orig, "sqlstate", None) != _INSUFFICIENT_PRIVILEGE:
+            raise
         raise RuntimeError(
             f"cannot create the worker database {name!r}: the role in "
             "TEST_DATABASE_URL needs CREATEDB to run the suite under xdist "
