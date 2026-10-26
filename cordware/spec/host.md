@@ -214,7 +214,7 @@ top-level packages it may not import; a second check adds one module:
 | Package | May not import |
 |---|---|
 | `app` | `residentialapps`; and the module `cordware.main` |
-| `residentialapps` | `app` |
+| `residentialapps` | `app`; and the module `cordware.main` |
 | `cordware` | `app`, `residentialapps` |
 
 - `cordware/tests/` is exempt: the host's tests drive real applications.
@@ -222,8 +222,8 @@ top-level packages it may not import; a second check adds one module:
   `cordware.main`, which builds the host when imported. A separate check in
   the same file reads every module an application imports, `from cordware
   import main` and dynamic imports included.
-- `residentialapps/tests/` is exempt from the `cordware.main` check only:
-  Residential's mounted tests build the host there.
+- `residentialapps/tests/` is exempt from the `cordware.main` check only
+  (never from `app`): Residential's mounted tests build the host there.
 - Inside `residentialapps`, neither application package imports the other
   (`residentialapps.ops`, `residentialapps.supportlogs`), relative imports
   resolved; `residentialapps/spec/architecture.md` has the full table.
@@ -233,8 +233,8 @@ top-level packages it may not import; a second check adds one module:
 The host's tests live in `cordware/tests/`, a package (it has its own
 `__init__.py`, so a basename shared with root `tests/` does not break
 collection). `pyproject.toml` lists it in `testpaths`, so both CI jobs collect
-it. They need no database; RRW's `tests/conftest.py` fixtures do not reach
-them. RRW's own suite builds the application through `tests/_rrw_app.py`.
+it, as they do `residentialapps/tests`. They need no database; RRW's
+`tests/conftest.py` fixtures do not reach them. RRW's own suite builds the application through `tests/_rrw_app.py`.
 
 ### The `/reviewrobin` harness
 

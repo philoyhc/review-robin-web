@@ -1,9 +1,9 @@
 # Residential architecture
 
-> **Partly built.** Segment 1A built the `ops/`, `supportlogs/` and
-> `tests/` packages, the first two boundary rows and the `cordware.main`
-> check, packaging, and the `residential` lane. Later segments fill the
-> rest, each section saying which.
+> **Built so far:** segment 1A built the `ops/`, `supportlogs/` and
+> `tests/` packages, the boundary rules marked below, packaging and the
+> `residential` lane. Every package and rule marked for a later segment
+> is the contract for it, not yet built.
 
 How `residentialapps/` is laid out, what each part may import, and how
 its tests run. The two applications' contract with the host is
@@ -54,10 +54,13 @@ depth and including literal dynamic imports.
   there, as RRW's do from its root `tests/`. Cordware's own tests stay the
   host's and identity's; the boundary file is the one Residential rule
   they hold (ruling 7).
-- 1A adds the rows the skeleton can break, the first two and the
-  `cordware.main` check; the rest join with their packages, each with a
-  planted-import test as the existing rules have.
-- Only `residentialapps.supportlogs` opens a `supportlogs` database session
+- Enforced today: `residentialapps` not importing `app`, the
+  `cordware.main` check, `app` and `cordware` not importing `residentialapps`,
+  and each of `ops` and `supportlogs` not importing the other. The other
+  rows, and `supportlogs` not importing `leave` or `events`, join with their
+  packages (1B and later), each with a planted-import test as the existing
+  rules have.
+- Contract for 1B: only `residentialapps.supportlogs` opens a `supportlogs` database session
   (ruling 7). That check needs the database code, so it lands in 1B.
 
 ## Packaging
@@ -74,12 +77,12 @@ depth and including literal dynamic imports.
   `residentialapps/spec/applications.md` "Running alone", with both
   health paths, the landing page, the route-name resolution and the log
   stamps.
-- **The `residential` lane** (`tools/ci_lanes.py`, the `residential` job
+- **The `residential` lane** (built; `tools/ci_lanes.py`, the `residential` job
   in `ci.yml`): a pull request whose every path is prose or under
   `residentialapps/` runs
   `residentialapps/tests`, `cordware/tests` (for the boundary file and
   the host it mounts on) and the prose lane's tests,
   and skips RRW's suite and its Postgres round-trip. A path anywhere else,
   `pyproject.toml` included, runs everything; every push to `main` runs
-  everything. From 1B the lane also round-trips Residential's two
-  histories on Postgres.
+  everything. From 1B (contract, not built) the lane also round-trips
+  Residential's two histories on Postgres.

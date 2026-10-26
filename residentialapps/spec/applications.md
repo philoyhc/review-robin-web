@@ -1,10 +1,10 @@
 # Residential applications
 
-> **Partly built.** Segment 1A rung 1 built "Two applications, one
-> package", "Health", "Running alone" and the per-application half of
-> "Logging and lifespan" (`residentialapps/guide/segment_1A_package_and_mounts.md`).
-> "Pages", the shared-code log stamps and "URLs" are the contract for 1B
-> and later; each section says what shipped when it does.
+> **Built so far:** segment 1A built "Two applications, one package",
+> "Health", "Running alone" and the per-application half of "Logging and
+> lifespan". "Pages", the shared-code log stamps (Residential's own
+> `get_logger`) and "URLs" are the contract for 1B and later: nothing
+> builds them yet.
 
 The contract of the two Residential applications as the Cordware host
 sees them: how each is built, where it mounts, what it answers before it
@@ -33,7 +33,7 @@ states only what Residential adds.
 
 ## Pages
 
-Ruled by the author, 2026-10-26. Each page shows what the viewer's role
+Not built; the contract for 1B and later. Ruled by the author, 2026-10-26. Each page shows what the viewer's role
 allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
@@ -116,7 +116,7 @@ fails to start on the missing package (`host.app_startup_failed`).
   root logger, and is stamped `residentialops` or `supportlogs` by the
   host's `ApplicationFilter`. The prefixes do not nest, so a record is
   never stamped with the wrong one (ruling 6).
-- **Residential stamps its own shared code.** Code both applications use
+- **Residential stamps its own shared code** (not built; 1B and later). Code both applications use
   (`residentialapps.core` and `residentialapps.web`, from 1B) logs under
   `residentialapps.core…` or `residentialapps.web…`, which no registry
   prefix covers, so the host alone would stamp it `cordware`. Instead it
@@ -132,7 +132,7 @@ fails to start on the missing package (`host.app_startup_failed`).
 
 ## URLs
 
-The JSON health body emits no URL. From the first page (1B), each
+Not built. The JSON health body emits no URL. From the first page (1B), each
 application emits its paths under its mount the way RRW does
 (`spec/architecture.md` "URL emission"), through its own helper, with a
 leak test and a GET crawl (`residentialapps/guide/todo_master.md`, "What
