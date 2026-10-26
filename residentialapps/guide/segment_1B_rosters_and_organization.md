@@ -78,7 +78,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ## Open questions
 
-- **Where Residential's specs live:** `residentialapps/spec/`, or the `residentialapps/docs/` specs revised in place. The author decides before item 3's first spec edit.
+- **Where Residential's specs live:** `residentialapps/spec/`, or the `residentialapps/docs/` specs revised in place. The author decides before item 3's first spec edit. 1A's drafts propose `residentialapps/spec/`.
 
 ## Out of scope
 

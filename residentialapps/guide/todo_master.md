@@ -1,6 +1,6 @@
 # Residential Apps — open work
 
-**Opened 2026-10-25** (author). Residential's own to-do: what is ruled, what it depends on from the Cordware deployment strategy (v1.0, held privately with the deployment), and what is still to decide or revise. RRW's `guide/todo_master.md` covers RRW and the Cordware host only. Residential's specs are in `residentialapps/docs/`; shared UX guidance is RRW's `docs/cordware_mobile_to_desktop.md`.
+**Opened 2026-10-25** (author). Residential's own to-do: what is ruled, what it depends on from the Cordware deployment strategy (v1.0, held privately with the deployment), and what is still to decide or revise. RRW's `guide/todo_master.md` covers RRW and the Cordware host only. Residential's functional specs and working designs are in `residentialapps/docs/`, and its drafted contracts in `residentialapps/spec/` (proposed 2026-10-26, segment 1A); shared UX guidance is RRW's `docs/cordware_mobile_to_desktop.md`.
 
 ## CI by path (done 2026-10-25)
 
