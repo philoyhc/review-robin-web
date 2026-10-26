@@ -6,7 +6,7 @@ or ``lane=full``, the line a workflow appends to ``$GITHUB_OUTPUT``.
     git diff --name-only --no-renames HEAD^1 HEAD | python3 tools/ci_lanes.py --event pull_request
 
 A change is ``prose`` only when every path is Markdown in a prose folder
-or at the root. Anything else, an empty list, any event but
+or at the root, or a README outside ``app/`` and ``alembic/``. Anything else, an empty list, any event but
 ``pull_request``, or any error is ``full``: the classifier fails toward
 running everything. ``--prose-tests`` prints what the prose lane runs.
 """
@@ -28,7 +28,9 @@ PROSE_DIRS = (
     "residentialapps/docs/",
     "residentialapps/guide/",
 )
-PROSE_FILES = frozenset({"residentialapps/README.md"})
+# A README anywhere is prose, except where it would ship with the app.
+README = "README.md"
+SHIPPED_DIRS = ("app/", "alembic/")
 
 # What the prose lane runs: every unit test (the doc gates live there), plus
 # each test file elsewhere that reads a prose path.
@@ -49,12 +51,14 @@ NOT_PROSE_READERS = {
 PROSE_LITERAL = re.compile(
     r"""["'](?:spec|docs|guide|cordware/spec|residentialapps/(?:docs|guide)|residentialapps/README\.md)(?:/[^"'\n]*)?["']"""
     r"""|["'][A-Za-z0-9_-]+\.md["']"""
+    r"""|["'](?:[A-Za-z0-9_.-]+/)+README\.md["']"""
 )
 
 
 def is_prose(path: str) -> bool:
-    """Whether a changed path is prose: Markdown in a prose folder or at the root."""
-    if path in PROSE_FILES:
+    """Whether a changed path is prose: Markdown in a prose folder or at the
+    root, or a README outside what ships with the app."""
+    if path.rsplit("/", 1)[-1] == README and not path.startswith(SHIPPED_DIRS):
         return True
     if not path.endswith(".md"):
         return False

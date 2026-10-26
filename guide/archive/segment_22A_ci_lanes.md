@@ -54,6 +54,7 @@ Taken 2026-10-25 at `d3ba790`.
 - **One `diff-reviewer` read** (rung 3, cumulative from `b20cc9b`): no defect against the Decision; two gaps fixed in `#3267`. `git diff --name-only` detected renames, so a non-prose file moved into a prose folder read as prose (now `--no-renames`, with a test). The prose-reader scan matched one way of writing a path (now any string literal naming a prose path, in `tests/` and `cordware/tests`, each match ruled into `PROSE_TESTS` or `NOT_PROSE_READERS` with a reason).
 - **Scope moved:** the `tools/README.md` row landed in rung 3, not 4, so rung 4 was prose only and could measure the lane.
 - **Recorded, not changed:** if the `changes` job itself fails on a push to `main`, the full jobs still run but the run concludes `failure`, so Cordware's importer refuses that commit until it is re-run. That fails safe.
+- **Amended 2026-10-26** (author): a `README.md` anywhere outside `app/` and `alembic/` is prose too; the scan also catches a literal naming one by path.
 - **`spec-writer`:** not run; `Doc impact` names no `spec/` path.
 
 ## PR ladder
