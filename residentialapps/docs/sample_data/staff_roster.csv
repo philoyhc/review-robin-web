@@ -1,0 +1,9 @@
+Name,Email,Appointment,Node,From,To,Enterprise name
+Sam Lee,sam.lee@example.edu,Master,Example College,2026-08-01,,"LEE KAH WAI, SAMUEL"
+Rachel Yeo,rachel.yeo@example.edu,admin,Example College,2026-08-01,,"YEO SHU MIN, RACHEL"
+Priya Raman,priya.raman@example.edu,RSLM,Cypress,2026-08-01,,PRIYA D/O RAMAN
+Daniel Koh,daniel.koh@example.edu,RF,RF1,2026-08-01,,"KOH JUN HAO, DANIEL"
+Mei Ling Tan,meiling.tan@example.edu,RF,RF2,2026-08-01,,TAN MEI LING
+Arjun Nair,arjun.nair@example.edu,RF,RF3,2026-08-01,,ARJUN NAIR
+Tom Lim,tom.lim@example.edu,Other Staff,,2026-09-15,,"LIM TECK MENG, THOMAS"
+Grace Ho,grace.ho@example.edu,RF,RF2,2026-10-01,2026-12-31,"HO WEN QI, GRACE"

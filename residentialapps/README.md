@@ -12,6 +12,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `docs/residentialapps_identity.md` | Identity and roster linking: permanent `person_id`, Entra binding at first matching sign-in, the not-registered response (adopted 2026-10-26) |
 | `docs/residentialapps_roles.md` | Roles in both applications, read across from RRW's super-admin, admin and operator (ruled) |
 | `docs/residentialapps_roster_structure.md` | Rosters, appointments and residential geography: Unit, Wing, Tower, RF Zone, RA Neighborhood, coverage and reporting (working design; §10 open) |
+| `docs/sample_data/README.md` | Mock rosters for browser tests: Example College's structure, Staff and RA CSVs (clean, re-import and error cases) and fake sign-in scenarios, each with its expected outcome |
 | `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system |
 | `spec/applications.md` | The two applications as the host sees them: registry entries, factories, health, running alone, logging and lifespan |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and the `residential` CI lane |
