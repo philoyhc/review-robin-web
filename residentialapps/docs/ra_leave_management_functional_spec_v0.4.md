@@ -2,7 +2,7 @@
 
 > **Moved 2026-10-25 from the private deployment repository** (author), where it was `docs/ra_leave_management_functional_spec_v0.4.md` (at `ad94c1c`). Deployment status (which grants are in place, configuration dates, what IT has delivered) was made generic on the way; it is tracked privately with the deployment. "Strategy v1.0" below is the Cordware deployment strategy, also held privately; what Residential depends on from it is in `residentialapps/guide/todo_master.md`.
 >
-> **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, RA Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
+> **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, Residential Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
 
 ## Functional Specification — Azure Web App
 
@@ -31,7 +31,7 @@ The system should allow:
 
 The system replaces the existing Power Apps + Power Automate + SharePoint implementation while preserving useful established rules and simplifying the architecture.
 
-The Leave module is one domain of **Residential Apps**, a single application under Cordware with two pillars: **RA Operations** (Leave and RA Events Proposal/Approval) and **Support Logs** (staff only). A shared core holds people, rosters, RA cycles, residential appointments and teams, used by both pillars; each pillar keeps its own permissions with its own data (strategy v1.0 §4). Leave-specific business data stays within the Leave domain, and Support Logs lives in a separate database (§2.2).
+The Leave module is one domain of **Residential Apps**, a single application under Cordware with two pillars: **Residential Operations** (Leave and RA Events Proposal/Approval) and **Support Logs** (staff only). A shared core holds people, rosters, RA cycles, residential appointments and teams, used by both pillars; each pillar keeps its own permissions with its own data (strategy v1.0 §4). Leave-specific business data stays within the Leave domain, and Support Logs lives in a separate database (§2.2).
 
 Cordware supplies institutional identity and hosting; it holds no Residential data. Residential Apps follows RRW as its model: it runs fully on localhost with local databases and fake roles, and has its own tests, CI and development practice (strategy v1.0 §3).
 

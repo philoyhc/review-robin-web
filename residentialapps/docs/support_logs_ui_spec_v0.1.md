@@ -2,7 +2,7 @@
 
 > **Moved 2026-10-25 from the private deployment repository** (author), where it was `docs/support_logs_ui_spec_v0.1.md` (at `ad94c1c`). Deployment status (which grants are in place, configuration dates, what IT has delivered) was made generic on the way; it is tracked privately with the deployment. "Strategy v1.0" below is the Cordware deployment strategy, also held privately; what Residential depends on from it is in `residentialapps/guide/todo_master.md`.
 >
-> **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, RA Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
+> **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, Residential Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
 
 **Version:** 0.1, 23 October 2026 — draft for discussion
 **Scope:** the RF / RSLM surface of Support Logs, phone first, plus the safety-flag list every *safety-flag recipient* needs, frontline or not (screen 9). Master, opportunity-review, audit and administration surfaces come later.
@@ -19,7 +19,7 @@
 3. **The routine path stays short.** Student → duration → type → save, on one screen, in about 10–20 seconds (functional spec §5.1, §16). Everything else is optional and one tap away.
 4. **Safety is visually separate and never accidental.** The safety flow has its own control, colour and screen, away from the routine controls.
 5. **Data minimisation shows in the UI.** Notes are short and say so; the student view says that opening it is recorded; nothing invites clinical detail.
-6. **Support Logs presents as its own application** (author, 2026-10-23), set apart from RA Operations: its own name, entry point, navigation and accent, given how different its users, data and purpose are. Underneath it stays one Residential application with RA Operations (strategy v1.0 §4).
+6. **Support Logs presents as its own application** (author, 2026-10-23), set apart from Residential Operations: its own name, entry point, navigation and accent, given how different its users, data and purpose are. Underneath it stays one Residential application with Residential Operations (strategy v1.0 §4).
 
 ## 2. Surfaces in this draft
 
@@ -162,14 +162,14 @@ Every colour is a semantic token. Proposed mappings, light theme (dark follows e
 |---|---|---|---|---|---|---|
 | RRW | a wide range of operators and participants | blue `#2563eb` (unchanged) | `#3b82f6` | `#4b8bf5` | `#60a5fa` | `#dbeafe` / `#16324f` |
 | **Support Logs** | residential staff | **teal `#0f766e`** | `#115e59` | `#2dd4bf` | `#5eead4` | `#ccfbf1` / `#134e4a` |
-| RA Operations | residential assistants (students) | **fuchsia `#a21caf`** | `#86198f` | `#e879f9` | `#f0abfc` | `#fae8ff` / `#4a044e` |
+| Residential Operations | residential assistants (students) | **fuchsia `#a21caf`** | `#86198f` | `#e879f9` | `#f0abfc` | `#fae8ff` / `#4a044e` |
 
 - **What the accent covers:** `--btn-primary-*`, `--selected-*`, `--chip-selected-bg`, `--focus-ring` and `--focus-ring-halo`, `--text-link` and `--text-link-strong`, and the current navigation item. Each application maps these to its own primitives through the customizer.
 - **What stays shared:** text, surfaces, borders and every status token. A warning, an error, a success or an info state means the same thing in every application, so the accent never takes a status hue (amber, red, green). Info stays blue in all three.
 - **Contrast, as measured:** labels on the accent clear AA in both themes — teal 5.47 light and 9.53 dark (dark label `--ink`), fuchsia 6.32 and 7.21 — and each fill clears 3:1 against its page. Residential's hover **darkens** in light, unlike RRW's lightening blue, so the hover label stays above 4.5 (teal 7.58, fuchsia 8.24) rather than dipping to RRW's accepted 3.68.
 - **One closeness to watch:** teal sits near RRW's success green (about 1.3:1 between `#0f766e` and `#166534`), so success pills always carry their words.
-- **The accent follows the application, not the user** (author, 2026-10-23). Everyone in an application sees its accent whatever their role: in RA Operations the RA applying and the RF approving both see fuchsia; in Support Logs every staff member sees teal. Who someone is and what they may do shows in the screens and actions they get, never in colour, so there is one mapping and one contrast audit per application.
-- **Shared screens are neutral.** Residential screens that belong to neither pillar — the sign-in landing and the page that switches between Support Logs and RA Operations — take the shared neutrals and no accent.
+- **The accent follows the application, not the user** (author, 2026-10-23). Everyone in an application sees its accent whatever their role: in Residential Operations the RA applying and the RF approving both see fuchsia; in Support Logs every staff member sees teal. Who someone is and what they may do shows in the screens and actions they get, never in colour, so there is one mapping and one contrast audit per application.
+- **Shared screens are neutral.** Residential screens that belong to neither pillar — the sign-in landing and the page that switches between Support Logs and Residential Operations — take the shared neutrals and no accent.
 - The accent candidates and their figures are on the design canvas, row C.
 
 **Typography and scales:** RRW's system font stack (no web fonts), `--fs-*` type scale, `--space-*` spacing and `--radius-*` radii, unchanged.
@@ -213,4 +213,4 @@ The next mockup round applies this table; the layouts of §3 carry over unchange
 
 ## 10. History
 
-- **0.1** (2026-10-23): first draft from the six RF mockups, against RRW's design system at `a06e7ee`. One accent per application settled the same day: blue RRW, teal Support Logs, fuchsia RA Operations (§6).
+- **0.1** (2026-10-23): first draft from the six RF mockups, against RRW's design system at `a06e7ee`. One accent per application settled the same day: blue RRW, teal Support Logs, fuchsia Residential Operations (§6).

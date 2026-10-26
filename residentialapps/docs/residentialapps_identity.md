@@ -3,7 +3,7 @@
 **Status:** Adopted design decisions for the Residential Apps shared core  
 **Date:** 26 October 2026  
 **Proposed repository location:** `residentialapps/docs/residentialapps_identity.md` in `philoyhc/review-robin-web`  
-**Implementation location:** Shared core administered through RA Operations (`/residentialops`)
+**Implementation location:** Shared core administered through Residential Operations (`/residentialops`)
 
 ## 1. Purpose and scope
 
@@ -22,7 +22,7 @@ This design covers the shared person/identity model and initial account linking.
 ## 2. Architectural placement
 
 - The canonical implementation and specification live in the **public RRW repository**, under `residentialapps/`.
-- The common person and roster data live in the **`residentialops`** database, managed through **RA Operations** at `/residentialops`.
+- The common person and roster data live in the **`residentialops`** database, managed through **Residential Operations** at `/residentialops`.
 - **Support Logs** at `/supportlogs` reads eligible Staff and appointments from that shared core but keeps its own authorizations and substantive student records in the separate `supportlogs` database.
 - **Cordware** supplies the authenticated institutional identity through Microsoft Entra / Azure Easy Auth. Residential Apps does not operate its own username/password system.
 - The shared core must work locally using RRW/Cordware's existing fake-auth conventions.
@@ -171,7 +171,7 @@ If the Person is **already** linked to a different Entra account, a roster-email
 ## 7. Role and access consequences
 
 - A successfully linked institutional identity does not, by itself, grant arbitrary roles.
-- **RA Operations:** active RA appointments and the configured appointment/approval-routing rules establish relevant RA and approver privileges; explicit administrative grants remain under its established roles.
+- **Residential Operations:** active RA appointments and the configured appointment/approval-routing rules establish relevant RA and approver privileges; explicit administrative grants remain under its established roles.
 - **Support Logs:** an active eligible Staff-roster entry is necessary but **not sufficient**. A separate active Support Logs authorization in the `supportlogs` database is required for every protected function.
 - The Cordware platform super-admin and the two application Administrators retain the existing separated rights documented in `residentialapps/docs/residentialapps_roles.md`.
 - Do not use the presence of a `student_id`, Teams membership, Forms application, or self-described role to grant access.

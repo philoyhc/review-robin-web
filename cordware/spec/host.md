@@ -38,7 +38,7 @@ point.
   | Name | `path` | `factory` | `logger` | `title` |
   |---|---|---|---|---|
   | `reviewrobin` | `/reviewrobin` | `app.main:create_app` | `app` | `Review Robin` |
-  | `residentialops` | `/residentialops` | `residentialapps.ops.main:create_app` | `residentialapps.ops` | `RA Operations` |
+  | `residentialops` | `/residentialops` | `residentialapps.ops.main:create_app` | `residentialapps.ops` | `Residential Operations` |
   | `supportlogs` | `/supportlogs` | `residentialapps.supportlogs.main:create_app` | `residentialapps.supportlogs` | `Support Logs` |
 
   The two Residential applications' own contract is

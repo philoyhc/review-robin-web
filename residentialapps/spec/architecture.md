@@ -14,19 +14,19 @@ its tests run. The two applications' contract with the host is
 | Package | Holds | Arrives |
 |---|---|---|
 | `residentialapps/` | The package root. It has no code of its own. | 1A |
-| `residentialapps/ops/` | RA Operations: its factory (`main.py`), its routes and pages | 1A (factory and health) |
+| `residentialapps/ops/` | Residential Operations: its factory (`main.py`), its routes and pages | 1A (factory and health) |
 | `residentialapps/supportlogs/` | Support Logs: its factory, routes, pages, models and services | 1A (factory and health) |
 | `residentialapps/core/` | The shared core: people, identity binding, organization, rosters | 1B |
 | `residentialapps/web/` | What both applications' pages share: base template, styles, URL helper | 1B |
-| `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by RA Operations | Steps 3 and 4 |
+| `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | Steps 3 and 4 |
 | `residentialapps/tests/` | Residential's tests, a package with its own `__init__.py` | 1A |
 
 **`ops/` beside ruling 1's list** (author, 2026-10-26). Ruling 1 names `core/`,
-`leave/`, `events/`, `supportlogs/` and `web/`, and gives RA Operations no
+`leave/`, `events/`, `supportlogs/` and `web/`, and gives Residential Operations no
 package of its own. The logger prefix `residentialapps.ops` (ruling 6)
 reads most simply as a package, and a package per application keeps each
 one's routes in one place to fence off. Support Logs' application and
-pillar share `supportlogs/`; RA Operations' application is `ops/`, and its
+pillar share `supportlogs/`; Residential Operations' application is `ops/`, and its
 pillars are `core/`, `leave/` and `events/`.
 
 Inside each application the layering is RRW's (`spec/architecture.md`

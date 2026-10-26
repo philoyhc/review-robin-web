@@ -62,7 +62,7 @@ REGISTRY: Mapping[str, AppEntry] = {
         path="/residentialops",
         factory="residentialapps.ops.main:create_app",
         logger="residentialapps.ops",
-        title="RA Operations",
+        title="Residential Operations",
     ),
     "supportlogs": AppEntry(
         path="/supportlogs",
