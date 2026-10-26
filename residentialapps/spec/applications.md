@@ -93,8 +93,10 @@ Events has no spec yet, so its rows are provisional.
     (Support Logs, Review Robin). Those are links only: Residential
     Operations cannot read the others' permissions, so each answers for
     itself when opened.
-  - **On the right, the account**: initials, with the viewer's name and role
-    beside them at desktop width.
+  - **On the right, the Light/Dark toggle and the account**: the toggle at
+    every width, as in RRW; initials, with the viewer's name and role beside
+    them at desktop width. Dark takes RRW's dark neutrals and the accent's
+    dark-surface tone.
   - **Under the bar, the area's page tabs**, with short labels, scrolling
     sideways on a phone. RA Leave's are an RA's Home, Apply, Extra leave,
     My cover, History, and an approver's Awaiting my decision, Team leave,
