@@ -38,8 +38,9 @@ jobs:
 
   postgres:
     needs: changes
-    # Skipped for a prose-only pull request; a failed classifier still runs it.
-    if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' }}
+    # Skipped for a pull request touching only prose or residentialapps/
+    # (Residential has no database yet); a failed classifier still runs it.
+    if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' && needs.changes.outputs.lane != 'residential' }}
     runs-on: ubuntu-latest
 
     services:

@@ -1,9 +1,9 @@
 # Residential architecture
 
-> **Partly built.** Segment 1A rung 1 built the `ops/`, `supportlogs/`
-> and `tests/` packages, the first two boundary rows and the
-> `cordware.main` check, and packaging. The `residential` lane is rung 2;
-> later segments fill the rest, each section saying which.
+> **Partly built.** Segment 1A built the `ops/`, `supportlogs/` and
+> `tests/` packages, the first two boundary rows and the `cordware.main`
+> check, packaging, and the `residential` lane. Later segments fill the
+> rest, each section saying which.
 
 How `residentialapps/` is laid out, what each part may import, and how
 its tests run. The two applications' contract with the host is
@@ -74,8 +74,9 @@ depth and including literal dynamic imports.
   `residentialapps/spec/applications.md` "Running alone", with both
   health paths, the landing page, the route-name resolution and the log
   stamps.
-- **The `residential` lane** (1A rung 2, `tools/ci_lanes.py`): a pull
-  request whose every path is prose or under `residentialapps/` runs
+- **The `residential` lane** (`tools/ci_lanes.py`, the `residential` job
+  in `ci.yml`): a pull request whose every path is prose or under
+  `residentialapps/` runs
   `residentialapps/tests`, `cordware/tests` (for the boundary file and
   the host it mounts on) and the prose lane's tests,
   and skips RRW's suite and its Postgres round-trip. A path anywhere else,

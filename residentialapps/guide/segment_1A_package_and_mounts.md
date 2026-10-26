@@ -46,7 +46,7 @@ Taken 2026-10-26 at `b63604f`.
 ## PR ladder
 
 1. **Package and mounts.** Package and both factories with `health`; registry entries; `packages.find`; boundary tests extended; Residential's first tests. Base SHA `b99583d` (`main` before rung 1).
-2. **The `residential` lane** in `tools/ci_lanes.py` and both workflows. `residentialapps/spec/` joins `PROSE_DIRS` here too: until then a PR touching it runs the full lane. This is the last build rung, so `diff-reviewer` reads the cumulative diff here.
+2. **The `residential` lane** in `tools/ci_lanes.py` and both workflows; `residentialapps/spec/` joins `PROSE_DIRS`. This is the last build rung, so `diff-reviewer` reads the cumulative diff from `b99583d` here.
 
 ## Definition of done
 

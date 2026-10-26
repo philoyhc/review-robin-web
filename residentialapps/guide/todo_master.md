@@ -4,7 +4,7 @@
 
 ## CI by path (done 2026-10-25)
 
-Settled ahead of any Residential code as RRW segment 22A (`guide/archive/segment_22A_ci_lanes.md`): a prose-only PR runs the `prose` lane alone, about a minute; anything else and every push to `main` runs RRW's suite and the Postgres round-trip in full. **The scaffold segment adds the `residential` lane** (Residential's tests, both its databases, `cordware/tests`) by extending `tools/ci_lanes.py`, and records its timings.
+Settled ahead of any Residential code as RRW segment 22A (`guide/archive/segment_22A_ci_lanes.md`): a prose-only PR runs the `prose` lane alone, about a minute; anything else and every push to `main` runs RRW's suite and the Postgres round-trip in full. **Segment 1A added the `residential` lane** (2026-10-26): a PR touching only prose and `residentialapps/` runs Residential's tests, `cordware/tests` and the prose lane's, with lint, and skips RRW's suite and the Postgres round-trip. Residential's two databases join it in 1B; its timings are taken on the first Residential-only PR.
 
 ## Rulings (author, 2026-10-25)
 

@@ -38,8 +38,9 @@ jobs:
 
   test:
     needs: changes
-    # Runs unless the change is prose only; a failed classifier still runs it.
-    if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' }}
+    # Runs unless the change is prose or Residential only; a failed
+    # classifier still runs it.
+    if: ${{ !cancelled() && needs.changes.outputs.lane != 'prose' && needs.changes.outputs.lane != 'residential' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -93,4 +94,34 @@ jobs:
       - name: Run the prose lane's tests
         run: |
           read -r -a targets <<< "$(python3 tools/ci_lanes.py --prose-tests)"
+          pytest -n auto "${targets[@]}"
+
+  residential:
+    # A pull request touching only prose and residentialapps/: Residential's
+    # tests, the host's (import boundaries, mounting) and the prose lane's,
+    # with lint. No Chromium: the browser tests serve RRW alone.
+    needs: changes
+    if: ${{ needs.changes.outputs.lane == 'residential' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Run the residential lane's tests
+        run: |
+          read -r -a targets <<< "$(python3 tools/ci_lanes.py --residential-tests)"
           pytest -n auto "${targets[@]}"
