@@ -24,6 +24,8 @@ _spec.loader.exec_module(ci_lanes)
         "residentialapps/docs/residentialapps_roles.md",
         "residentialapps/guide/todo_master.md",
         "residentialapps/README.md",
+        "tools/README.md",
+        "cordware/spec/README.md",
         "CLAUDE.md",
         "README.md",
     ],
@@ -45,7 +47,14 @@ def test_prose_paths(path):
         "docs/sample_data/basic_cohort/mock_observers.csv",  # not Markdown
         "guide/theme_preview.html",
         "cordware/main.py",
-        "cordware/README.md",  # Markdown, but not in a prose folder
+        "cordware/NOTES.md",  # Markdown, but not in a prose folder or a README
+        "app/README.md",  # ships with the app
+        "app/web/static/guide/README.md",
+        "alembic/README.md",
+        "cordware/README.md",  # cordware/ ships
+        "cordware/web/README.md",
+        "residentialapps/core/README.md",  # Residential's code ships
+        "tools/README.md.bak",
         "residentialapps/core/models.py",
         "app/web/static/guide/notes.md",
     ],
@@ -113,6 +122,7 @@ def test_every_ruled_non_reader_still_matches():
         'HERE.parent.parent / "spec"',
         'open("CLAUDE.md")',
         'Path("cordware/spec/host.md")',
+        'REPO / "tools/README.md"',
     ],
 )
 def test_the_scan_sees_each_way_of_naming_prose(source):

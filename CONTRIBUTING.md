@@ -43,7 +43,8 @@ release.
 **A prose-only PR doesn't run it at all.** CI classifies each pull
 request (`tools/ci_lanes.py`, `guide/archive/segment_22A_ci_lanes.md`): one that
 changes only Markdown in `spec/`, `docs/`, `guide/`, `cordware/spec/`,
-Residential's `docs/` and `guide/`, or at the root runs the `prose` job
+Residential's `docs/` and `guide/`, or at the root, or a `README.md`
+outside what ships (`app/`, `alembic/`, `cordware/`, `residentialapps/`), runs the `prose` job
 alone, the unit tests plus the tests that read prose, and shows `test` and
 `postgres` as skipped. Anything else, and every push to `main`, runs both
 in full.
