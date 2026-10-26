@@ -362,7 +362,7 @@ FK-drop-order / index-name traps in `CLAUDE.md`):
 ```bash
 docker run -d --name rrw-pg -e POSTGRES_PASSWORD=pw -p 5432:5432 postgres:16
 export TEST_DATABASE_URL="postgresql+psycopg://postgres:pw@localhost:5432/postgres"
-pytest -n auto        # each xdist worker runs on its own database, postgres_gw0 and on
+pytest -n auto        # each xdist worker gets its own database: postgres_gw0, postgres_gw1, …
 ```
 
 **The suite drops the schema it is pointed at.** On Postgres the engine
@@ -370,8 +370,8 @@ fixture runs `DROP SCHEMA public CASCADE` before migrating, so point
 `TEST_DATABASE_URL` only at a scratch database like the container above.
 Under `-n` each worker runs on its own database, the named one plus its
 worker id, which needs the role to hold `CREATEDB` (the container's
-`postgres` does); without it, run serially. Unset it to return to SQLite. The fixture reads that variable
-alone, so an exported `DATABASE_URL` never selects the test database.
+`postgres` does); without it, run serially. Unset it to return to SQLite.
+The fixture reads that variable alone, so an exported `DATABASE_URL` never selects the test database.
 
 ---
 

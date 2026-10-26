@@ -42,14 +42,15 @@ Taken 2026-10-26 at `ff0f30c`.
 
 ## Status
 
-**Built 2026-10-26 as planned** (`#3283`, `#3284`). `postgres` job times on GitHub's hosted runner:
+**Closed 2026-10-26, as planned** (`#3282` plan, `#3283` rung 1, `#3284` rung 2). `postgres` job on GitHub's hosted runner:
 
 | Run | `pytest` | Job |
 |---|---|---|
 | `#3283` (rung 1, serial) | `-q` | 9 min 12 s |
-| `#3284` first push | `-n auto` | 3 min 54 s |
+| `#3284`, first push | `-n auto` | 3 min 54 s |
+| `#3284`, second push | `-n auto` | 4 min 04 s |
 
-`-n auto` takes the runner's four cores; the worker migrations did not eat the gain, so `-n 2` was not tried (open question below). `diff-reviewer` read `6e853e9..11c1a25` at rung 2: nothing blocking; it found `docs/local_setup.md` still telling readers to run Postgres without `-n` (not in this plan's `Doc impact`, now added), a `CREATEDB` message given for any `CREATE DATABASE` failure (now only for 42501), and a URL with no database name deriving `None_gw0` (now refused).
+Decisions confirmed at build: `-n auto` (four workers) rather than `-n 2`; a derived name past Postgres's 63-byte limit is refused (Codex, rung 1), as is a URL with no database name; `CREATEDB` is named only for 42501. Reads: one `diff-reviewer` read at rung 2 (`6e853e9..11c1a25`), nothing blocking, four findings fixed in `#3284`, among them `docs/local_setup.md`'s stale serial advice. The close's `spec-writer` pass found `README.md` stale the same way; both were added to `Doc impact`.
 
 ## PR ladder
 
@@ -81,4 +82,5 @@ Taken 2026-10-26 at `ff0f30c`.
 - `docs/database.md` — the test suite's per-worker Postgres databases and the `CREATEDB` need (rung 1).
 - `CONTRIBUTING.md` — the Postgres job's duration in "When to wait for CI" (rung 2).
 - `docs/local_setup.md` — the Postgres parity recipe runs `-n auto` and names `CREATEDB` (rung 2; added at the cold read).
+- `README.md` — the Postgres job's line in the testing section (at close; found by `spec-writer`).
 - `guide/todo_master.md` — the queue entry, deleted at close.
