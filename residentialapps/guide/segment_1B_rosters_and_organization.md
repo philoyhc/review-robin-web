@@ -39,7 +39,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - Databases come before identity: the Person table needs a database.
 - The structure CSV comes before the roster CSVs: a roster row resolves its node by code.
 - The appointment-to-level map lives on the Unit and is edited on the organization page.
-- Item 1 takes one `diff-reviewer` read, on its first placeholder rung's template conventions. Iteration rungs, which change only templates and sample data, take none.
+- Item 1 takes its `diff-reviewer` read on the item's cumulative diff at rung 3, its last build rung. An iteration rung after that read reopens `app/`-style code (templates, sample data), so each takes its own read, as `CLAUDE.md` "Where work runs" requires.
 
 ## Blast radius (measured)
 
@@ -53,7 +53,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ## PR ladder
 
-**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, read-only access chips, the roster-CSV card. 3. Identity and access pages: not-registered, person detail, Administrator grants. 4+. Iteration until approved.
+**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, read-only access chips, the roster-CSV card. 3. Identity and access pages: not-registered, person detail, Administrator grants. Last build rung. 4+. Iteration until approved, each with its own read.
 
 **Item 2 — Databases.** 1. Settings, engines, both histories. 2. CI round-trip of both on Postgres. Last build rung.
 
