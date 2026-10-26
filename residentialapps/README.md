@@ -1,13 +1,13 @@
 # residentialapps/
 
-Residential Apps: one package, mounted under Cordware as two applications, **RA Operations** at `/residentialops` and **Support Logs** at `/supportlogs` (author, 2026-10-25). Both mount and answer `/health`, and nothing else is built yet; open work, rulings and what Residential depends on are in `guide/todo_master.md`.
+Residential Apps: one package, mounted under Cordware as two applications, **Residential Operations** at `/residentialops` and **Support Logs** at `/supportlogs` (author, 2026-10-25). Both mount and answer `/health`, and nothing else is built yet; open work, rulings and what Residential depends on are in `guide/todo_master.md`.
 
 | Path | Holds |
 |---|---|
-| `ops/` | RA Operations: its factory (`main.py`, `create_app`) and routes |
+| `ops/` | Residential Operations: its factory (`main.py`, `create_app`) and routes |
 | `supportlogs/` | Support Logs: its factory and routes |
 | `tests/` | Residential's tests, including the mounted ones through its own host harness (`tests/_host.py`) |
-| `docs/ra_leave_management_functional_spec_v0.4.md` | RA Leave functional spec (RA Operations) |
+| `docs/ra_leave_management_functional_spec_v0.4.md` | RA Leave functional spec (Residential Operations) |
 | `docs/resident_support_log_functional_spec_v0.3.md` | Support Logs functional spec |
 | `docs/residentialapps_identity.md` | Identity and roster linking: permanent `person_id`, Entra binding at first matching sign-in, the not-registered response (adopted 2026-10-26) |
 | `docs/residentialapps_roles.md` | Roles in both applications, read across from RRW's super-admin, admin and operator (ruled) |

@@ -1,6 +1,6 @@
 # Residential Apps: roles
 
-**Ruled 2026-10-25** (author). Who can do what in RA Operations (`/residentialops`) and Support Logs (`/supportlogs`), read across from RRW's three system roles. The functional specs in this folder carry each pillar's role detail; where they differ from this file, this file holds until their next versions.
+**Ruled 2026-10-25** (author). Who can do what in Residential Operations (`/residentialops`) and Support Logs (`/supportlogs`), read across from RRW's three system roles. The functional specs in this folder carry each pillar's role detail; where they differ from this file, this file holds until their next versions.
 
 **Terms (author, 2026-10-26).** In Residential, **sys admin** is the system role (granted in the application, below); **admin** is the real-life appointment, the Master's admin delegate. The two are never interchangeable: an admin appointment opens no setup page, and a sys admin need hold no appointment.
 

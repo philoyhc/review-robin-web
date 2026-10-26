@@ -2,7 +2,7 @@
 
 > **Moved 2026-10-25 from the private deployment repository** (author), where it was `docs/resident_support_log_functional_spec_v0.3.md` (at `ad94c1c`). Deployment status (which grants are in place, configuration dates, what IT has delivered) was made generic on the way; it is tracked privately with the deployment. "Strategy v1.0" below is the Cordware deployment strategy, also held privately; what Residential depends on from it is in `residentialapps/guide/todo_master.md`.
 >
-> **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, RA Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
+> **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, Residential Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
 
 **Version:** 0.3, 22 October 2026 (v0.2 refined around actual user groups, peer viewing, student-centred retrieval, opportunity review and explainable review signals; roster-versus-permission rule settled the same day; changes in §18)  
 **Status:** Draft for discussion  
@@ -29,7 +29,7 @@ The system is **not** intended to replace fuller case notes, counselling records
 
 ### 1.1 Place in the platform
 
-Support Logs is one of Residential Apps' two pillars; the other, RA Operations, holds RA Leave and RA Events (`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). The pillars share one application and a core in `residentialops` for people, the canonical staff roster, residential appointments and residential units. Support-specific student identities, encounters, follow-ups, formal support assignments, safety records, review results, Support Logs authorization and support-activity audit remain in `supportlogs`, which RA Operations' credentials cannot reach (strategy v1.0 §4). Nothing in the shared core reveals that a student is known to Support Logs.
+Support Logs is one of Residential Apps' two pillars; the other, Residential Operations, holds RA Leave and RA Events (`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). The pillars share one application and a core in `residentialops` for people, the canonical staff roster, residential appointments and residential units. Support-specific student identities, encounters, follow-ups, formal support assignments, safety records, review results, Support Logs authorization and support-activity audit remain in `supportlogs`, which Residential Operations' credentials cannot reach (strategy v1.0 §4). Nothing in the shared core reveals that a student is known to Support Logs.
 
 Like every Cordware application, it follows RRW as its model: it runs fully on localhost with local databases, a fake directory and fake roles, and has its own tests and CI (strategy v1.0 §3).
 
@@ -142,14 +142,14 @@ The Cordware platform super-admin holds **administrator rights only** in Support
 
 ### 3.5 Who the roles apply to
 
-The **canonical staff roster and residential appointments are shared Residential data and live in `residentialops`**, because the same staff population may act across Support Logs and RA Operations. This answers **who the staff member is** and **what residential appointment they hold** (for example RF, RSLM or Master).
+The **canonical staff roster and residential appointments are shared Residential data and live in `residentialops`**, because the same staff population may act across Support Logs and Residential Operations. This answers **who the staff member is** and **what residential appointment they hold** (for example RF, RSLM or Master).
 
 Support Logs authorization is a separate security concern and lives in **`supportlogs`**. It answers **what this staff member may do with support data**: frontline access, senior identifiable access, opportunity-review access, administration, and any later Support Logs-specific permission. Those authorization records reference the stable staff person ID from `residentialops`; they do not duplicate the roster.
 
 The staff roster should be the first implementation of an **extensible Residential roster framework**, not a one-off staff table designed only for Support Logs. The framework must be able to accommodate later roster types with different attributes and lifecycle rules. The presently anticipated roster types are:
 
 1. **Staff roster** — required before Support Logs;
-2. **RA roster** — required later by RA Operations;
+2. **RA roster** — required later by Residential Operations;
 3. **Student roster** — to be decided; Residential may instead continue to resolve students directly from Entra / Microsoft 365 without maintaining a complete local roster.
 
 **Appointments are not permissions** (author, 2026-10-22). `residentialops` records who the RFs, RSLMs, Master and other staff are; `supportlogs` decides what each of them may do in Support Logs. A person can read or write Support Logs only when **both** hold:
@@ -635,7 +635,7 @@ A sharp increase in contacts may be more informative than a high but stable base
 
 ### 10.5 Cluster View
 
-The list of clusters can be shared with RA Operations as Residential's core residential units. **Which cluster a student belongs to** is Support Logs data, held in `supportlogs` and entered or imported there by authorised senior staff, not administrators, for the reason in §4.4; each change is audited.
+The list of clusters can be shared with Residential Operations as Residential's core residential units. **Which cluster a student belongs to** is Support Logs data, held in `supportlogs` and entered or imported there by authorised senior staff, not administrators, for the reason in §4.4; each change is audited.
 
 Where cluster information is available, the system should support views such as:
 
@@ -767,7 +767,7 @@ Minimum principles:
 
 - authentication through institutional Microsoft Entra ID, at Easy Auth in front of Cordware; the application contains no sign-in code;
 - role-based application authorisation, with canonical staff identity and residential appointments sourced from `residentialops` but Support Logs-specific authorization stored and audited in `supportlogs`, including a narrow opportunity-review permission distinct from full support-record access;
-- a separate database, `supportlogs`, with its own login role, `CONNECT` and `TEMPORARY` revoked from `PUBLIC`, and `CONNECT` granted only to that role; RA Operations' role cannot connect to it (strategy v1.0 §4);
+- a separate database, `supportlogs`, with its own login role, `CONNECT` and `TEMPORARY` revoked from `PUBLIC`, and `CONNECT` granted only to that role; Residential Operations' role cannot connect to it (strategy v1.0 §4);
 - only the Support Logs module opens a `supportlogs` session, enforced by a test;
 - encrypted transport;
 - encrypted storage using Azure-managed capabilities;
@@ -803,7 +803,7 @@ Not a Support Logs table.
 The framework should support later roster types without forcing them into one undifferentiated schema:
 
 - **Staff roster** — implemented first and required by Support Logs;
-- **RA roster** — added later for RA Operations;
+- **RA roster** — added later for Residential Operations;
 - **Student roster** — optional/TBC; students may instead continue to be resolved directly from Entra / Microsoft 365.
 
 Support Logs refers to a staff member by the stable `residentialops` core person ID. It does not copy the staff roster into `supportlogs`. Core staff identities are retired rather than deleted so historical support references continue to resolve.
@@ -944,7 +944,7 @@ The underlying roster design should nevertheless be **extensible from the outset
 
 This is not a requirement to build RA Leave, RA Events, the RA roster, or a student roster before Support Logs. The intended dependency is:
 
-> **Residential shared core + generic roster framework + Staff roster/appointment admin → Support Logs authorization + Support Logs → RA roster / broader RA Operations → possible Student roster if later required**
+> **Residential shared core + generic roster framework + Staff roster/appointment admin → Support Logs authorization + Support Logs → RA roster / broader Residential Operations → possible Student roster if later required**
 
 Support Logs should not introduce a temporary parallel staff roster merely to avoid this dependency.
 

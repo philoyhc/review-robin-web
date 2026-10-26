@@ -13,13 +13,13 @@ states only what Residential adds.
 
 ## Two applications, one package
 
-| | RA Operations | Support Logs |
+| | Residential Operations | Support Logs |
 |---|---|---|
 | Registry name | `residentialops` | `supportlogs` |
 | Mount path | `/residentialops` | `/supportlogs` |
 | Factory | `residentialapps.ops.main:create_app` | `residentialapps.supportlogs.main:create_app` |
 | Logger prefix | `residentialapps.ops` | `residentialapps.supportlogs` |
-| Landing-page title | `RA Operations` | `Support Logs` |
+| Landing-page title | `Residential Operations` | `Support Logs` |
 | Health | `GET /residentialops/health` | `GET /supportlogs/health` |
 
 - Nothing mounts at `/residentialapps`; it names the package only
@@ -38,7 +38,8 @@ allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
 
-**RA Operations** (`/residentialops`). Its four areas and who reaches them:
+**Residential Operations** (`/residentialops`; named RA Operations until
+2026-10-26). Its four areas and who reaches them:
 
 | Area | Path | Reached by |
 |---|---|---|
@@ -47,8 +48,8 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 | Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters, appointments, the organization tree and its levels |
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
 
-**RA Operations page map** (author, 2026-10-26). Each page, what staff and
-RAs do on it, and its device class (`docs/cordware_mobile_to_desktop.md` §3:
+**Residential Operations page map** (author, 2026-10-26). Each page, what
+staff and RAs do on it, and its device class (`docs/cordware_mobile_to_desktop.md` §3:
 *mobile-critical*, *responsive*, *desktop-oriented*); `—` is a page that side
 never reaches. Section numbers are the RA Leave spec's
 (`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). RA
@@ -65,6 +66,7 @@ Events has no spec yet, so its rows are provisional.
 | My history | `/ra-leave/history` | — | Own applications and leave (§19) · responsive |
 | Awaiting my decision | `/ra-leave/decide` | First approval (RF, RSLM), final approval (the admin), appeals (the Master), oldest first (§16, §24) · **mobile-critical** | — |
 | Decide | `/ra-leave/decide/{id}` | Entitlement, cover status, team context; Approve or Reject with remarks in a few taps (§13–§15) · **mobile-critical** | — |
+| Decided | `/ra-leave/decided` | The approver's own past decisions (§24) · responsive | — |
 | Team leave | `/ra-leave/team` | Who is away, cover, clashes; calendar and list (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
 | Leave admin: cycles and entitlements | `/ra-leave/admin/cycles` | Cycle setup, entitlement import and preview, adjustments (§21.1, §21.3) · desktop-oriented | — |
 | Leave admin: applications | `/ra-leave/admin/applications` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
@@ -78,13 +80,32 @@ Events has no spec yet, so its rows are provisional.
 - **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my
   decision and Decide must work one-handed on a phone. This raises the RA
   Leave spec's §2.5, which classed approver actions as responsive.
-- **One shell, phone first.** The shared Residential base template is built
-  mobile-first: on a phone a bottom bar shows the viewer's destinations
-  (an RA's Home, Apply, Cover, History; an approver's Decide, Team, Home), and
-  at desktop width it becomes the header and nav card of the roster mockups.
-  Routes and permissions are the same at every width
-  (`docs/cordware_mobile_to_desktop.md` §7.5, §9), as the Support Logs UI
-  spec does for its RF surface.
+- **One chrome, phone first** (author, 2026-10-26, from the RA Leave
+  mockups). Residential Operations is served to a browser, never as an
+  installed app, so its chrome is one slim top bar at every width and no
+  bottom bar, which would compete with a phone browser's own toolbar.
+  This is Residential Operations' chrome; Support Logs' is settled at its
+  UI spec's next version. The bar scrolls away with the page:
+  - **On the left, the switcher**: the Unit's name (Example College in the
+    mockups) above the current area's name. Its menu lists the areas the
+    viewer reaches (Home, RA Leave, RA Events; Rosters and setup and Sys
+    admin for sys admins), then the other applications Cordware mounts
+    (Support Logs, Review Robin). Those are links only: Residential
+    Operations cannot read the others' permissions, so each answers for
+    itself when opened.
+  - **On the right, the Light/Dark toggle and the account**: the toggle at
+    every width, as in RRW; initials, with the viewer's name and role beside
+    them at desktop width. Dark takes RRW's dark neutrals and the accent's
+    dark-surface tone.
+  - **Under the bar, the area's page tabs**, with short labels, scrolling
+    sideways on a phone. RA Leave's are an RA's Home, Apply, Extra leave,
+    My cover, History, and an approver's Awaiting my decision, Team leave,
+    Decided; staff with Leave admin add its pages. A detail page adds a
+    back link instead of a breadcrumb.
+  - **The body is cards in up to three columns** where three fit (about
+    960 px in the mockups), stacked in column order below that. Routes and
+    permissions are the same at every width
+    (`docs/cordware_mobile_to_desktop.md` §7.5, §9).
 - **Desktop-oriented pages stay usable on a phone**: no layout breaks, wide
   tables scroll in their box; they are not designed for one.
 
@@ -100,7 +121,7 @@ appointment, and RAs never reach it:
 
 Each application also has:
 
-- **a home** at its bare mount. RA Operations' is the viewer's own
+- **a home** at its bare mount. Residential Operations' is the viewer's own
   dashboard (page map above); Support Logs' lists the pages the viewer
   reaches, or redirects when there is exactly one;
 - **the not-registered page** (`residentialapps/docs/residentialapps_identity.md`),
@@ -139,7 +160,7 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 
 | `CORDWARE_APPS` | Mounts |
 |---|---|
-| `residentialops` | RA Operations alone; `/` redirects to `/residentialops/` |
+| `residentialops` | Residential Operations alone; `/` redirects to `/residentialops/` |
 | `supportlogs` | Support Logs alone; `/` redirects to `/supportlogs/` |
 | `residentialops,supportlogs` | Both; `/` lists both |
 | unset | RRW and both; `/` lists all three |

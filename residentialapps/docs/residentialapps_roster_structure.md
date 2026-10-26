@@ -3,7 +3,7 @@
 **Status:** Working functional design; proposed terminology and data relationships for implementation  
 **Date:** 26 October 2026  
 **Proposed repository location:** `residentialapps/docs/residentialapps_roster_structure.md` in `philoyhc/review-robin-web`  
-**Owner:** Residential shared core, administered through RA Operations (`/residentialops`)
+**Owner:** Residential shared core, administered through Residential Operations (`/residentialops`)
 
 ## 1. Purpose and relationship to existing specifications
 
@@ -15,7 +15,7 @@ Read together with:
 - `residentialapps/docs/residentialapps_roles.md` — **authoritative** application authorization model; this document does not override it.
 - `residentialapps/guide/todo_master.md` — architectural boundaries and the sequence for implementing the shared core.
 
-**Core distinction:** A **Person** is an individual; an **Appointment** records an institutional responsibility for a period; a **Coverage / Reporting Assignment** records where and under whom the person serves; **System Authorization** determines what the person may do in RA Operations or Support Logs. These must not be collapsed into a single `role` column.
+**Core distinction:** A **Person** is an individual; an **Appointment** records an institutional responsibility for a period; a **Coverage / Reporting Assignment** records where and under whom the person serves; **System Authorization** determines what the person may do in Residential Operations or Support Logs. These must not be collapsed into a single `role` column.
 
 ## 2. Terminology recommendation
 
@@ -167,11 +167,11 @@ Refer to the **RF appointment**, not only `person_id`, so succession, a change o
 
 The Staff and RA roster screens should show **real-world Appointment** and **Effective System Access** separately. Do not store one manually editable `system_role` column as a substitute for authorization.
 
-- In **RA Operations (`/residentialops`)**, the explicit Administrator grant (made/revoked only by the platform super-admin) and Team Viewer grant remain governed by `residentialapps_roles.md`. RA, first approver, final approver, Master appeal decider and covering RA rights are determined by active appointments and named workflow/routing relationships where applicable.
+- In **Residential Operations (`/residentialops`)**, the explicit Administrator grant (made/revoked only by the platform super-admin) and Team Viewer grant remain governed by `residentialapps_roles.md`. RA, first approver, final approver, Master appeal decider and covering RA rights are determined by active appointments and named workflow/routing relationships where applicable.
 - In **Support Logs (`/supportlogs`)**, a valid Staff appointment is **eligibility only**. Frontline, senior identifiable, safety-flag recipient and opportunity-review permissions remain separate explicit grants in the `supportlogs` database. A Residential Administrator or RSLM appointment does not automatically grant Support Logs access.
 - **Platform super-admin** is a protected deployment role. The two application Administrator grants are distinct and retain the document's no-self-action, audit and last-Administrator protections.
 
-The roster may provide read-only per-application status chips such as `RA Operations: Administrator` or `Support Logs: Frontline`. Authorization settings belong to their respective administration screens, not a general-purpose CSV column.
+The roster may provide read-only per-application status chips such as `Residential Operations: Administrator` or `Support Logs: Frontline`. Authorization settings belong to their respective administration screens, not a general-purpose CSV column.
 
 **Multiple-Unit consideration:** Unit-scoped rosters and app data are required now. The exact future scope of Administrator / Team Viewer / Support Logs permission grants across multiple Residential Units must be reconciled with `residentialapps_roles.md` before multi-unit rollout; do not silently change its presently authoritative rules.
 

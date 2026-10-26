@@ -21,7 +21,7 @@ def test_registry_entries() -> None:
         path="/residentialops",
         factory="residentialapps.ops.main:create_app",
         logger="residentialapps.ops",
-        title="RA Operations",
+        title="Residential Operations",
     )
     assert REGISTRY["supportlogs"] == AppEntry(
         path="/supportlogs",
@@ -55,8 +55,8 @@ def test_both_together_list_on_the_landing_page() -> None:
     for path in HEALTH.values():
         assert client.get(path).json() == {"status": "ok"}
     page = client.get("/").text
-    assert "RA Operations" in page and "Support Logs" in page
-    assert page.index("RA Operations") < page.index("Support Logs")
+    assert "Residential Operations" in page and "Support Logs" in page
+    assert page.index("Residential Operations") < page.index("Support Logs")
 
 
 def test_unset_mounts_rrw_and_both() -> None:
@@ -66,7 +66,8 @@ def test_unset_mounts_rrw_and_both() -> None:
     for path in HEALTH.values():
         assert client.get(path).json() == {"status": "ok"}
     page = client.get("/").text
-    assert page.index("Review Robin") < page.index("RA Operations") < page.index("Support Logs")
+    order = [page.index(name) for name in ("Review Robin", "Residential Operations", "Support Logs")]
+    assert order == sorted(order)
 
 
 @pytest.mark.parametrize("name", ["residentialops", "supportlogs"])
