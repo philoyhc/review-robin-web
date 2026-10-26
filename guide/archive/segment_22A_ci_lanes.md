@@ -18,7 +18,7 @@ Every PR runs both workflows in full, whatever it touches. Measured on the prose
 | `full` | anything else, every push to `main`, and any run the classifier cannot decide | today's `test` and `postgres` jobs, unchanged |
 | `residential` | added by the scaffold segment, when `residentialapps/` has code | Residential's tests and databases, plus `cordware/tests` |
 
-**Prose** is a `.md` file under `spec/`, `docs/`, `guide/`, `cordware/spec/`, `residentialapps/docs/` or `residentialapps/guide/`, or at the repository root, or `residentialapps/README.md`. Any other file in those folders (CSV samples, HTML previews) is not prose.
+**Prose** is a `.md` file under `spec/`, `docs/`, `guide/`, `cordware/spec/`, `residentialapps/docs/` or `residentialapps/guide/`, or at the repository root, or `residentialapps/README.md`. Any other file in those folders (CSV samples, HTML previews) is not prose. *(Amended 2026-10-26: also a `README.md` outside the shipped folders; `Status`.)*
 
 **Rejected: workflow-level `paths-ignore`.** A skipped workflow reports nothing, so a prose PR would show no check at all and the rule would be split across two YAML files. **Rejected: a third-party filter action** (`dorny/paths-filter`): a pinned dependency for a twenty-line rule this repository can test itself.
 
@@ -54,7 +54,7 @@ Taken 2026-10-25 at `d3ba790`.
 - **One `diff-reviewer` read** (rung 3, cumulative from `b20cc9b`): no defect against the Decision; two gaps fixed in `#3267`. `git diff --name-only` detected renames, so a non-prose file moved into a prose folder read as prose (now `--no-renames`, with a test). The prose-reader scan matched one way of writing a path (now any string literal naming a prose path, in `tests/` and `cordware/tests`, each match ruled into `PROSE_TESTS` or `NOT_PROSE_READERS` with a reason).
 - **Scope moved:** the `tools/README.md` row landed in rung 3, not 4, so rung 4 was prose only and could measure the lane.
 - **Recorded, not changed:** if the `changes` job itself fails on a push to `main`, the full jobs still run but the run concludes `failure`, so Cordware's importer refuses that commit until it is re-run. That fails safe.
-- **Amended 2026-10-26** (author): a `README.md` anywhere outside `app/` and `alembic/` is prose too; the scan also catches a literal naming one by path.
+- **Amended 2026-10-26** (author): a `README.md` outside the shipped folders (`app/`, `alembic/`, `cordware/`, `residentialapps/`) is prose too, so `tools/README.md` is; the scan also catches a literal naming one by path.
 - **`spec-writer`:** not run; `Doc impact` names no `spec/` path.
 
 ## PR ladder

@@ -25,8 +25,7 @@ _spec.loader.exec_module(ci_lanes)
         "residentialapps/guide/todo_master.md",
         "residentialapps/README.md",
         "tools/README.md",
-        "cordware/README.md",
-        "residentialapps/core/README.md",
+        "cordware/spec/README.md",
         "CLAUDE.md",
         "README.md",
     ],
@@ -52,6 +51,9 @@ def test_prose_paths(path):
         "app/README.md",  # ships with the app
         "app/web/static/guide/README.md",
         "alembic/README.md",
+        "cordware/README.md",  # cordware/ ships
+        "cordware/web/README.md",
+        "residentialapps/core/README.md",  # Residential's code ships
         "tools/README.md.bak",
         "residentialapps/core/models.py",
         "app/web/static/guide/notes.md",
