@@ -21,13 +21,14 @@ its tests run. The two applications' contract with the host is
 | `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | Steps 3 and 4 |
 | `residentialapps/tests/` | Residential's tests, a package with its own `__init__.py` | 1A |
 
-**`ops/` beside ruling 1's list** (author, 2026-10-26). Ruling 1 names `core/`,
-`leave/`, `events/`, `supportlogs/` and `web/`, and gives Residential Operations no
-package of its own. The logger prefix `residentialapps.ops` (ruling 6)
-reads most simply as a package, and a package per application keeps each
-one's routes in one place to fence off. Support Logs' application and
-pillar share `supportlogs/`; Residential Operations' application is `ops/`, and its
-pillars are `core/`, `leave/` and `events/`.
+**`ops/` beside ruling 1's list** (author, 2026-10-26). Ruling 1 names
+`core/`, `leave/`, `events/`, `supportlogs/` and `web/`, and gives
+Residential Operations no package of its own. The logger prefix
+`residentialapps.ops` (ruling 6) reads most simply as a package, and a
+package per application keeps each one's routes in one place to fence off.
+Support Logs' application and pillar share `supportlogs/`; Residential
+Operations' application is `ops/`, and its pillars are `core/`, `leave/`
+and `events/`.
 
 Inside each application the layering is RRW's (`spec/architecture.md`
 "Three-layer split"): thin routes, services hold the rules, SQLAlchemy 2.x

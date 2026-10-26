@@ -19,6 +19,7 @@
 9. **Alembic:** one `alembic.ini`, two histories (`residentialapps/alembic/residentialops/`, `residentialapps/alembic/supportlogs/`). The core's first migration lands in the scaffold segment.
 10. **Stale text:** the deployment strategy and RRW's `guide/todo_master.md` are corrected now; the functional specs carry a banner and are revised at their next version.
 11. **Segment shape** (sequence revised the same day): first, Residential Operations' rosters: the scaffold (package, both mounts, CI with both databases) and the core's admin under `/residentialops` for the Staff and RA rosters, appointments and units; then Support Logs; then RA Leave, which adds cycles and leave on the finished core; then RA Events. The RA Events spec is written before RA Leave is built. Step 1 is planned as segments 1A, the package and mounts (closed 2026-10-26, `residentialapps/guide/archive/segment_1A_package_and_mounts.md`), and 1B, the admin screens and their wiring (`residentialapps/guide/segment_1B_rosters_and_organization.md`).
+12. **Rename** (author, 2026-10-26): the application at `/residentialops` is **Residential Operations**, formerly RA Operations. The name was replaced wherever it appeared, these rulings included; mount, package, database and route names are unchanged.
 
 ## Roles
 
@@ -79,4 +80,4 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 
 - `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`: §2.5 classes approver actions mobile-critical, not responsive (page map, `residentialapps/spec/applications.md`, author 2026-10-26); the header and introduction ("a single application", `/residentialapps`), the implementation and Platform sections (`/residentialapps`), the open-items list, scenario Q ("Cordware + Residential Apps"); the strategy version its header cites (v0.9).
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md`: header and §1.1 (`/residentialapps`, "share one application"), §14 hosting, the v0.9 reference in §12. §3.5 gains the Other Staff view authorization (roles doc rule 8), and "Administrator" becomes *sys admin* (roles doc, "Terms").
-- `residentialapps/docs/support_logs_ui_spec_v0.1.md`: §1 item 6 ("stays one Residential application"), and the neutral shared Residential screens in the colour sections (ruling 3).
+- `residentialapps/docs/support_logs_ui_spec_v0.1.md`: whether Support Logs keeps its bottom bar (its §2 and §5) or takes Residential Operations' slim top bar (`residentialapps/spec/applications.md`, "One chrome, phone first"); §1 item 6 ("stays one Residential application"), and the neutral shared Residential screens in the colour sections (ruling 3).

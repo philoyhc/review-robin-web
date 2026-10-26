@@ -66,7 +66,8 @@ def test_unset_mounts_rrw_and_both() -> None:
     for path in HEALTH.values():
         assert client.get(path).json() == {"status": "ok"}
     page = client.get("/").text
-    assert page.index("Review Robin") < page.index("Residential Operations") < page.index("Support Logs")
+    order = [page.index(name) for name in ("Review Robin", "Residential Operations", "Support Logs")]
+    assert order == sorted(order)
 
 
 @pytest.mark.parametrize("name", ["residentialops", "supportlogs"])

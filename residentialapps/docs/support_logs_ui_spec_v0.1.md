@@ -213,4 +213,4 @@ The next mockup round applies this table; the layouts of §3 carry over unchange
 
 ## 10. History
 
-- **0.1** (2026-10-23): first draft from the six RF mockups, against RRW's design system at `a06e7ee`. One accent per application settled the same day: blue RRW, teal Support Logs, fuchsia Residential Operations (§6).
+- **0.1** (2026-10-23): first draft from the six RF mockups, against RRW's design system at `a06e7ee`. One accent per application settled the same day: blue RRW, teal Support Logs, fuchsia RA Operations, renamed Residential Operations 2026-10-26 (§6).

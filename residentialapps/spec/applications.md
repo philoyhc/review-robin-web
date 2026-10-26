@@ -38,7 +38,8 @@ allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
 
-**Residential Operations** (`/residentialops`). Its four areas and who reaches them:
+**Residential Operations** (`/residentialops`; named RA Operations until
+2026-10-26). Its four areas and who reaches them:
 
 | Area | Path | Reached by |
 |---|---|---|
@@ -47,8 +48,8 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 | Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters, appointments, the organization tree and its levels |
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
 
-**Residential Operations page map** (author, 2026-10-26). Each page, what staff and
-RAs do on it, and its device class (`docs/cordware_mobile_to_desktop.md` §3:
+**Residential Operations page map** (author, 2026-10-26). Each page, what
+staff and RAs do on it, and its device class (`docs/cordware_mobile_to_desktop.md` §3:
 *mobile-critical*, *responsive*, *desktop-oriented*); `—` is a page that side
 never reaches. Section numbers are the RA Leave spec's
 (`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). RA
@@ -82,21 +83,27 @@ Events has no spec yet, so its rows are provisional.
 - **One chrome, phone first** (author, 2026-10-26, from the RA Leave
   mockups). Residential Operations is served to a browser, never as an
   installed app, so its chrome is one slim top bar at every width and no
-  bottom bar, which would compete with a phone browser's own toolbar. The
-  bar scrolls away with the page:
-  - **On the left, the app switcher**: the Unit's name (Example College in
-    the mockups) above the current app's name. It opens a menu of
-    Residential Operations' Home, RA Leave and RA Events, then the other
-    Cordware apps the viewer reaches (Support Logs, Review Robin).
+  bottom bar, which would compete with a phone browser's own toolbar.
+  This is Residential Operations' chrome; Support Logs' is settled at its
+  UI spec's next version. The bar scrolls away with the page:
+  - **On the left, the switcher**: the Unit's name (Example College in the
+    mockups) above the current area's name. Its menu lists the areas the
+    viewer reaches (Home, RA Leave, RA Events; Rosters and setup and Sys
+    admin for sys admins), then the other applications Cordware mounts
+    (Support Logs, Review Robin). Those are links only: Residential
+    Operations cannot read the others' permissions, so each answers for
+    itself when opened.
   - **On the right, the account**: initials, with the viewer's name and role
     beside them at desktop width.
-  - **Under the bar, the app's page tabs**, scrolling sideways on a phone: an
-    RA's Home, Apply, Extra leave, My cover, History; an approver's Awaiting
-    my decision, Team leave, Decided. A detail page adds a back link
-    instead of a breadcrumb.
-  - **The body is cards in up to three columns** at 960 px and wider,
-    stacked in column order below that. Routes and permissions are the
-    same at every width (`docs/cordware_mobile_to_desktop.md` §7.5, §9).
+  - **Under the bar, the area's page tabs**, with short labels, scrolling
+    sideways on a phone. RA Leave's are an RA's Home, Apply, Extra leave,
+    My cover, History, and an approver's Awaiting my decision, Team leave,
+    Decided; staff with Leave admin add its pages. A detail page adds a
+    back link instead of a breadcrumb.
+  - **The body is cards in up to three columns** where three fit (about
+    960 px in the mockups), stacked in column order below that. Routes and
+    permissions are the same at every width
+    (`docs/cordware_mobile_to_desktop.md` §7.5, §9).
 - **Desktop-oriented pages stay usable on a phone**: no layout breaks, wide
   tables scroll in their box; they are not designed for one.
 
