@@ -3,8 +3,8 @@
 > **Built so far:** segment 1A built "Two applications, one package",
 > "Health", "Running alone" and the per-application half of "Logging and
 > lifespan". Segment 1B item 1 is building the screens as placeholders
-> with sample data: so far the chrome and the Organization page
-> (`/rosters/`), and "URLs". The rest of "Pages" and the shared-code log
+> with sample data: so far the chrome, the Organization page and both
+> rosters (`/rosters/`, `/rosters/staff`, `/rosters/ras`), and "URLs". The rest of "Pages" and the shared-code log
 > stamps (Residential's own `get_logger`) are the contract for 1B and
 > later.
 

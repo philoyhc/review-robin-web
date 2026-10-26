@@ -10,9 +10,9 @@
       <span>{{ level_name[level] }}s:</span> <span class="chip chip-info">{{ counts[level] }}</span>
       <span aria-hidden="true">·</span>
     {% endfor %}
-    <span>Staff:</span> <span class="chip chip-info">{{ sample.STAFF_COUNT[0] }} · {{ sample.STAFF_COUNT[1] }} linked</span>
+    <span>Staff:</span> <span class="chip chip-info">{{ staff_count[0] }} · {{ staff_count[1] }} linked</span>
     <span aria-hidden="true">·</span>
-    <span>RAs:</span> <span class="chip chip-info">{{ sample.RA_COUNT[0] }} · {{ sample.RA_COUNT[1] }} linked</span>
+    <span>RAs:</span> <span class="chip chip-info">{{ ra_count[0] }} · {{ ra_count[1] }} linked</span>
     <span aria-hidden="true">·</span>
     <span>Floor gaps:</span> <span class="chip chip-warn">{{ sample.FLOOR_GAPS | length }}</span>
   </div>
