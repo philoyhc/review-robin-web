@@ -86,13 +86,18 @@ not what a viewer may use, and each application gates its own routes.
 
 For diagnosis (author, 2026-10-26) the listing page also shows **Sign-in
 details**, from `current_identity` (`cordware/spec/identity.md`): name,
-email, object ID, provider, whether the identity came from Easy Auth headers
-or fake auth, and whether it is the super-admin. Under Easy Auth a collapsed
-list shows every claim the principal header carries; the fake identity has
-none. Signed out, it says so, without counting a refusal. The details are
-the viewer's own, so the response is `Cache-Control: no-store`. The
-one-application redirect shows nothing. Its
-template carries its own inline style and extends nothing of RRW's.
+email, object ID (`principal_id`: the Entra object ID under Easy Auth,
+`FAKE_AUTH_PRINCIPAL_ID` under fake auth), provider, whether the identity
+came from Easy Auth headers or fake auth, and whether it is the super-admin.
+Under Easy Auth a collapsed list shows the principal header's claims, as
+`extract_claims` reads them; the fake identity has none. Signed out, it
+says so, without counting a refusal. The details are the viewer's own, so
+the response is `Cache-Control: no-store`. The one-application redirect
+shows nothing, so a deployment that mounts one application never shows
+them.
+
+The landing template carries its own inline style and extends nothing of
+RRW's.
 
 ## `CORDWARE_APPS`
 

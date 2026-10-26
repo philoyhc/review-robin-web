@@ -176,7 +176,7 @@ restart the app after a change.
 | Variable | Default | Purpose |
 |---|---|---|
 | `APP_ENV` | `local` | Environment name. Any value other than `local` activates the fail-fast startup checks (`validate_critical_settings`). |
-| `CORDWARE_APPS` | unset | The applications the Cordware host mounts, comma-separated (`cordware/main.py`). Unset mounts every registered application (today only `reviewrobin`); an empty value runs the host alone, with its landing page and `/health`. |
+| `CORDWARE_APPS` | unset | The applications the Cordware host mounts, comma-separated (`cordware/main.py`). Unset mounts every registered application (`reviewrobin`, `residentialops`, `supportlogs`), so a slot that serves RRW alone sets `reviewrobin`; an empty value runs the host alone, with its landing page and `/health`. |
 | `RRW_DATABASE_URL` | unset | RRW's database connection string, app-prefixed like Residential's; wins over `DATABASE_URL` set in the same source (the environment is read before `.env`). The name the institutional host uses. |
 | `DATABASE_URL` | local SQLite | The older name, read when `RRW_DATABASE_URL` is unset; what this slot and CI use. Postgres in deployed environments — see "Database configuration" below. |
 | `LOG_LEVEL` | `INFO` | Root log level for the structured-logging setup, which the Cordware host owns (`cordware/logging.py`, segment 21A). |

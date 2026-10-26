@@ -273,12 +273,9 @@ def _note_missing_headers() -> None:
 def resolve_identity(request: Request, settings: IdentitySettings | None = None) -> Identity:
     """Easy Auth headers when present, else the fake identity when fake
     auth is on, else a 401. Never a dependency: see the module docstring."""
-    cfg = _settings(settings)
-    identity = _identity_from_easy_auth_headers(request)
-    if identity is None and cfg.allow_fake_auth:
-        identity = _fake_identity(cfg)
+    identity = current_identity(request, settings)
     if identity is not None:
-        return identity if settings is None else replace(identity, resolved_with=settings)
+        return identity
     _note_missing_headers()
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -291,10 +288,11 @@ def get_identity(request: Request) -> Identity:
 
 
 def current_identity(request: Request, settings: IdentitySettings | None = None) -> Identity | None:
-    """The identity `resolve_identity` would return, or None where it would
-    refuse, for a page that shows who is signed in without requiring it
-    (the host's landing page). A refusal here is not one: it neither
-    raises, counts, nor logs `identity.headers_missing`."""
+    """The resolution `resolve_identity` runs, returning None where that
+    refuses, for a page that shows who is signed in without requiring it
+    (the host's landing page). None raises nothing, counts nothing and
+    logs no `identity.headers_missing`; a malformed principal header is
+    still logged, as on every request."""
     cfg = _settings(settings)
     identity = _identity_from_easy_auth_headers(request)
     if identity is None and cfg.allow_fake_auth:

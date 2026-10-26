@@ -11,9 +11,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cordware.identity import missing_header_count
+from cordware.identity import current_identity, missing_header_count
 from cordware.main import AppEntry, create_app
-from cordware.settings import identity_settings
+from cordware.settings import IdentitySettings, identity_settings
 
 
 def stub_factory() -> FastAPI:
@@ -139,3 +139,34 @@ def test_signed_out_is_shown_and_not_counted_as_a_refusal(monkeypatch: pytest.Mo
     assert response.status_code == 200
     assert "Not signed in" in response.text
     assert missing_header_count() == before
+
+
+def test_easy_auth_wins_over_fake_auth_and_the_super_admin_shows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", True)
+    monkeypatch.setattr(identity_settings, "super_admin_emails", ["boss@example.edu"])
+    claims = [{"typ": "preferred_username", "val": "boss@example.edu"}]
+    page = _two_apps().get("/", headers={"X-MS-CLIENT-PRINCIPAL": _principal(claims)}).text
+    assert "Easy Auth headers" in page and "Fake local identity" not in page
+    assert "<dt>Super-admin</dt><dd>Yes</dd>" in page
+    assert "Claims from Easy Auth (1)" in page
+
+
+def test_a_malformed_principal_header_shows_empty_details(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(identity_settings, "allow_fake_auth", False)
+    page = _two_apps().get("/", headers={"X-MS-CLIENT-PRINCIPAL": "not base64!"}).text
+    assert "Easy Auth headers" in page
+    assert "<dt>Email</dt><dd>—</dd>" in page
+    assert "Claims from Easy Auth" not in page
+
+
+def test_current_identity_carries_the_settings_it_resolved_under() -> None:
+    from starlette.requests import Request
+
+    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+    settings = IdentitySettings(allow_fake_auth=True)
+    identity = current_identity(request, settings)
+    assert identity is not None and identity.is_fake
+    assert identity.resolved_with is settings
+    assert current_identity(request, IdentitySettings(allow_fake_auth=False)) is None
