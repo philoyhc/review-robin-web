@@ -30,6 +30,44 @@ states only what Residential adds.
   unset `CORDWARE_APPS` mounts all three in that order and the landing
   page lists them so.
 
+## Pages
+
+Ruled by the author, 2026-10-26. Each page shows what the viewer's role
+allows; the table says only who reaches it. *Sys admin* is the system
+role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
+"Terms"). Paths are under each mount, hyphenated as RRW's are.
+
+**RA Operations** (`/residentialops`):
+
+| Page | Path | Reached by |
+|---|---|---|
+| RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; Team Viewers, read-only; sys admins |
+| RA Events Proposals | `/ra-events/` | As RA Leave |
+| Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters, appointments, the organization tree and its levels |
+| Sys admin grants | `/sys-admin/` | The super-admin only |
+
+**Support Logs** (`/supportlogs`). Access is by authorization, never by
+appointment, and RAs never reach it:
+
+| Page | Path | Reached by |
+|---|---|---|
+| Encounter log | `/encounters/` | Frontline authorization (RFs and RSLMs, by default) |
+| Plans | `/plans/` | Frontline; senior identifiable (the Master and the admin, by default); Other Staff with identifiable view, read-only |
+| Dashboard | `/dashboard/` | Frontline (personal); senior identifiable (oversight); Other Staff with view, aggregate or identifiable as granted |
+| Sys admin | `/sys-admin/` | Support Logs sys admins (authorizations, configuration, categories, the cluster list; no support content); the super-admin, to grant Support Logs sys admin |
+
+Each application also has:
+
+- **a home** at its bare mount, listing the pages the viewer reaches, or
+  redirecting when there is exactly one;
+- **the not-registered page** (`residentialapps/docs/residentialapps_identity.md`),
+  for a signed-in person Residential cannot link.
+
+A linked viewer who reaches none of an application's pages gets a `403`
+page saying so, never an empty home. **Open:** whether *Plans* is the spec's
+formal assignments (§7) together with the RF's self-set check-in
+schedules (§10.1).
+
 ## Health
 
 - `GET /health` inside each mount returns `200` with `{"status": "ok"}`,
@@ -59,8 +97,8 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 | `residentialops,supportlogs` | Both; `/` lists both |
 | unset | RRW and both; `/` lists all three |
 
-A bare mount path (`/residentialops/`) answers `404` in 1A: neither
-application has a page yet.
+A bare mount path (`/residentialops/`) answers `404` in 1A: the homes
+and pages above arrive in 1B and later segments.
 
 A host whose deployment does not carry `residentialapps/` must name its
 applications in `CORDWARE_APPS`: unset, the host loads every factory and

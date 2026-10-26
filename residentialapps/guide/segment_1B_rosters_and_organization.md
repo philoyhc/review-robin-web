@@ -4,7 +4,7 @@
 
 ## Opportunity
 
-After 1A both applications mount and answer `health`, and nothing else exists. Step 1 of the sequence (ruling 11) needs the shared core's admin screens: organization, Staff and RA rosters, identity status and Administrator grants. Those screens share filters, labels and layout, so they are cheapest to settle together before any service exists to constrain them.
+After 1A both applications mount and answer `health`, and nothing else exists. Step 1 of the sequence (ruling 11) needs the shared core's admin screens: organization, Staff and RA rosters, identity status and sys admin grants. Those screens share filters, labels and layout, so they are cheapest to settle together before any service exists to constrain them.
 
 ## Decision
 
@@ -14,7 +14,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 |---|---|---|
 | 1. Screens | Placeholders on RRW's templates and design system, filled with Unit 1's example data (one Wing, three Precincts, ten Neighborhoods), controls inert; iterated until the author approves | — |
 | 2. Databases | Both databases' settings and engines; one `alembic.ini` with two histories; empty first migrations; the Postgres round-trip of both in CI | — |
-| 3. Identity | Cordware's identity gains tenant ID and UPN; Person with `person_id`; first-sign-in binding; Administrator granted by the super-admin; `RES_` fake roles | Not-registered page, person detail, Administrator grants |
+| 3. Identity | Cordware's identity gains tenant ID and UPN; Person with `person_id`; first-sign-in binding; sys admin granted by the super-admin; `RES_` fake roles | Not-registered page, person detail, sys admin grants |
 | 4. Organization | Unit, level labels, nodes, floor segments, appointment-to-level map; the structure CSV | Organization page |
 | 5. Rosters | Appointments, dated backup reporting, derived reporting; Staff and RA roster CSVs | Roster pages |
 
@@ -32,7 +32,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Databases per app:** `/residentialops` needs one URL, `/supportlogs` both (ruling 4). Runtime roles hold DML only.
 - **Structure import:** the file is the Unit's complete tree. A missing node is end-dated, and a node with a current appointment blocks the import. Floor gaps and overlaps warn.
 - **Reporting** is derived from the tree; only dated backups are stored.
-- **Administrator** is granted and revoked by the super-admin only, with no-self-action and last-Administrator floors (`residentialapps_roles.md`).
+- **Sys admin** is granted and revoked by the super-admin only, with no-self-action and last-sys-admin floors (`residentialapps_roles.md`).
 
 ## Judgment calls — decided
 
@@ -53,11 +53,11 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ## PR ladder
 
-**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, read-only access chips, the roster-CSV card. 3. Identity and access pages: not-registered, person detail, Administrator grants. Last build rung. 4+. Iteration until approved, each with its own read.
+**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, read-only access chips, the roster-CSV card. 3. Identity and access pages: not-registered, person detail, sys admin grants. Last build rung. 4+. Iteration until approved, each with its own read.
 
 **Item 2 — Databases.** 1. Settings, engines, both histories. 2. CI round-trip of both on Postgres. Last build rung.
 
-**Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. Administrator grant and revoke; wire its page. Last build rung.
+**Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
 
 **Item 4 — Organization.** 1. Models and migration. 2. Structure CSV: parse, preview, commit, export. 3. Wire the organization page. Last build rung.
 
