@@ -131,6 +131,7 @@ RESIDENTIAL_FORBIDDEN = {
     "residentialapps.ops": ("residentialapps.supportlogs",),
     "residentialapps.supportlogs": ("residentialapps.ops",),
     "residentialapps.web": (
+        "residentialapps.core",
         "residentialapps.ops",
         "residentialapps.supportlogs",
         "residentialapps.leave",

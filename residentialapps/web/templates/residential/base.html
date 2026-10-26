@@ -93,6 +93,7 @@
         padding: 4px 10px 4px 6px; margin-left: -6px; border-radius: 8px;
         cursor: pointer; list-style: none;
       }
+      .switch.static { display: flex; align-items: center; gap: 10px; min-height: 44px; }
       .switch > summary::-webkit-details-marker { display: none; }
       .switch > summary:hover, .switch[open] > summary { background: var(--accent-tint); }
       .sq { flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--accent); }
@@ -123,7 +124,7 @@
       .theme-toggle button + button { border-left: 1px solid var(--border-default); }
       .theme-toggle button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
       .acct { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-strong-subtle); }
-      .acct-name { display: none; }
+      .acct-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
       .avatar {
         display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
         border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 700;
@@ -160,6 +161,41 @@
       .filter-fields { display: flex; flex-wrap: wrap; gap: 12px; }
       .filter { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
       .filter label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
+      .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+      .back { display: inline-block; margin-bottom: 8px; font-size: 15px; }
+      .kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
+      .kv dt { color: var(--text-subtle); }
+      .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+      code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+      ul.plain { margin: 0; padding-left: 18px; font-size: 14px; }
+      ol.history { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+      ol.history li { padding: 8px 0; border-top: 1px solid var(--border-subtle); }
+      ol.history li:first-child { border-top: 0; padding-top: 0; }
+      ol.history .when { display: block; font-size: 12px; color: var(--text-subtle); }
+      .grant { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; background: var(--surface-muted); border-top: 1px solid var(--border-subtle); }
+      .card-head { padding: 16px 16px 12px; }
+      .split-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+      .subtle { color: var(--text-subtle); }
+      .strong { font-weight: 600; }
+      .nowrap { white-space: nowrap; }
+      .end { text-align: right; }
+      .flush { margin: 0; }
+      .stack { display: flex; flex-direction: column; gap: 24px; }
+      .gap-above { margin-top: 24px; }
+      .gap-above-sm { margin-top: 12px; }
+      .gap-below { margin-bottom: 24px; }
+      .grow { flex: 1 1 320px; }
+      .narrow { max-width: 560px; margin: 24px auto 0; }
+      .denial { margin: 0 0 12px; font-size: 22px; }
+      .chip-wrap { white-space: normal; }
+      .filters.inset { margin: 0; padding: 12px 16px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: var(--surface-muted); }
+      tr.level-0, tr.level-1 { background: var(--surface-muted); }
+      tr.level-0 .node, tr.level-1 .node { font-weight: 700; }
+      tr.level-1 .node { padding-left: 28px; }
+      tr.level-2 .node { padding-left: 44px; font-weight: 600; }
+      tr.level-3 .node { padding-left: 60px; }
+      tr.gap-row { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
+      tr.gap-row .node { padding-left: 60px; font-weight: 600; }
       .chip-accent { background: var(--accent-tint-strong); color: var(--accent-chip-fg); }
       .notice {
         display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 16px; padding: 10px 14px;
@@ -196,7 +232,7 @@
       @media (min-width: 960px) {
         .tb-in { padding: 10px 24px; }
         .tabs-in { padding: 0 16px; }
-        .acct-name { display: inline; }
+        .acct-name { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
         .page { padding: 20px 24px 48px; }
         .ptitle h1 { font-size: 24px; }
       }
@@ -205,6 +241,12 @@
   <body>
     <header class="topbar">
       <div class="tb-in">
+        {% if not areas %}
+          <div class="switch static">
+            <span aria-hidden="true" class="sq"></span>
+            <span class="sw-t"><span class="sw-app">{{ area }}</span></span>
+          </div>
+        {% else %}
         <details class="switch">
           <summary aria-label="Switch area: {{ area }}">
             <span aria-hidden="true" class="sq"></span>
@@ -227,6 +269,7 @@
             </div>
           </nav>
         </details>
+        {% endif %}
         <div class="right">
           <div class="theme-toggle" role="group" aria-label="Display mode">
             <button type="button" data-theme-choice="light" aria-pressed="true">Light</button>

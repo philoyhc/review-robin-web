@@ -1,0 +1,66 @@
+{% extends "residential/base.html" %}
+{% block title %}{{ person.name }}{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url(back.path) }}">‹ {{ back.label }}</a>
+  <div class="ptitle">
+    <h1>{{ person.name }}</h1>
+    <span class="chip chip-warn">Sample data</span>
+  </div>
+  <div class="summary">
+    <span>Identity:</span>
+    {% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Unlinked</span>{% endif %}
+    <span aria-hidden="true">·</span>
+    <span>person_id <code>{{ person.person_id }}</code></span>
+  </div>
+
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="identity-h">
+        <h2 id="identity-h">Identity</h2>
+        <p class="sub">Names and emails describe a person; the Entra account, once linked, is what identifies them.</p>
+        <dl class="kv">
+          <dt>Roster email</dt><dd>{{ person.roster_email }}</dd>
+          <dt>Enterprise name</dt><dd>{{ person.enterprise_name or "—" }}</dd>
+          <dt>Student ID</dt><dd>{{ person.student_id or "—" }}</dd>
+          <dt>Entra display name</dt><dd>{{ person.entra_display_name or ("—" if person.linked else "After first sign-in") }}</dd>
+          <dt>Entra email</dt><dd>{{ person.entra_email or ("—" if person.linked else "After first sign-in") }}</dd>
+          <dt>Entra UPN</dt><dd>{{ person.entra_upn or ("—" if person.linked else "After first sign-in") }}</dd>
+          <dt>Entra object ID</dt><dd>{% if person.entra_object_id %}<code>{{ person.entra_object_id }}</code>{% else %}{{ "—" if person.linked else "After first sign-in" }}{% endif %}</dd>
+        </dl>
+      </section>
+      <section class="card card-pad" aria-labelledby="appt-h">
+        <h2 id="appt-h">Appointments</h2>
+        <p class="sub">What the person holds, and from when. Access is granted separately.</p>
+        <ul class="plain">
+          {% for appointment in person.appointments %}<li>{{ appointment }}</li>{% endfor %}
+        </ul>
+        <div class="btnrow gap-above-sm">
+          <button type="button" class="btn btn-secondary" disabled>Add appointment</button>
+          <button type="button" class="btn btn-secondary" disabled>End appointment</button>
+        </div>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="email-h">
+        <h2 id="email-h">Correct the roster email</h2>
+        <p class="sub">{% if person.linked %}Already linked: editing the roster email does not move the link to another account.{% else %}If the person's sign-in uses another address, set it here; their next sign-in links them.{% endif %}</p>
+        <div class="field">
+          <label for="roster-email">Roster email</label>
+          <input id="roster-email" class="input" type="email" value="{{ person.roster_email }}" disabled>
+        </div>
+        <button type="button" class="btn btn-primary" disabled>Save email</button>
+      </section>
+      <section class="card card-pad" aria-labelledby="history-h">
+        <h2 id="history-h">History</h2>
+        <p class="sub">Identity linkage and administrative changes, newest last.</p>
+        {% if person.history %}
+          <ol class="history">
+            {% for when, what in person.history %}<li><span class="when">{{ when }}</span>{{ what }}</li>{% endfor %}
+          </ol>
+        {% else %}
+          <p class="sub flush">{{ person.added }}</p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

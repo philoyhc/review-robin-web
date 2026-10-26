@@ -3,14 +3,14 @@ segment 1B item 1. Wired by items 4 and 5."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.ops import sample_data
-from residentialapps.ops.pages import ROSTER_TABS, render
+from residentialapps.ops.pages import ROSTER_TABS, placeholders_local_only, render
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 LEVEL_NAME = dict(enumerate(("Unit", *sample_data.LEVEL_LABELS)))
 

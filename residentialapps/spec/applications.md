@@ -3,8 +3,9 @@
 > **Built so far:** segment 1A built "Two applications, one package",
 > "Health", "Running alone" and the per-application half of "Logging and
 > lifespan". Segment 1B item 1 is building the screens as placeholders
-> with sample data: so far the chrome, the Organization page and both
-> rosters (`/rosters/`, `/rosters/staff`, `/rosters/ras`), and "URLs". The rest of "Pages" and the shared-code log
+> with sample data: the chrome, Rosters and setup (`/rosters/`, both
+> rosters and person detail), Sys admin (`/sys-admin/`) and a preview of
+> the not-registered page (`/not-registered`), and "URLs". The rest of "Pages" and the shared-code log
 > stamps (Residential's own `get_logger`) are the contract for 1B and
 > later.
 
@@ -35,8 +36,11 @@ states only what Residential adds.
 
 ## Pages
 
-Not built; the contract for 1B and later. Ruled by the author, 2026-10-26. Each page shows what the viewer's role
-allows; the table says only who reaches it. *Sys admin* is the system
+Ruled by the author, 2026-10-26. Rosters and setup, Sys admin and the
+not-registered page stand as placeholders on sample data (1B item 1),
+answering only on a local run (`APP_ENV=local`) until items 3–5 wire
+them; the rest is the contract for 1B and later. Each page shows what the
+viewer's role allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
 
