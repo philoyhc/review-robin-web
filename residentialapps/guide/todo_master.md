@@ -51,6 +51,13 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   3. **Neighborhoods warn, not block:** gaps and overlaps against their Precinct are flagged for administrator review; real-world exceptions still save.
   4. **Cordware's identity gains the tenant ID and UPN** (`tid` and the UPN claim), so Residential binds on (tenant, object ID) as the identity spec says; a small Cordware change in the scaffold segment, tested in `cordware/tests`.
   - Still open: multi-Unit authorization (§10's last item), before more than one Residential Unit is exposed.
+- **Organization levels, ruled 2026-10-26** (author; supersedes the roster doc's fixed Wing / Tower / RF Zone / Neighborhood, and turns rulings 1 and 2 above into configuration). After RRW's renamable roster tags (`spec/csv_contracts.md` §1a):
+  1. **Three fixed level slots per Unit** (`level_1`, `level_2`, `level_3`), each with the Unit's own friendly label; Unit 1's are Wing, Precinct, Neighborhood. Code and data use the slots, never the labels, so renaming a level is a label edit. A fourth slot, if ever needed, is a migration.
+  2. **One tree of organization nodes** (unit, level, parent one level up, code, name, dated), not a table per term.
+  3. **Floors only on the bottom level**: a node carries one or more floor-range segments (building + floors), which is how a node spans towers; Tower is part of a segment, not a level. Higher levels cover the union of their children; gaps and overlaps warn (ruling 3 above).
+  4. **Appointment type → level is configured per Unit**; Unit 1's are RSLM → level 1, RF → level 2, RA → level 3, with Master and the administrators covering the whole Unit.
+  5. **Reporting is derived**: an RA reports to the RF holding the parent node. Only the dated backup and temporary arrangements are stored explicitly.
+  6. **CSV headers carry the labels** as RRW's do (`Level1.Wing`); headcount norms (3 RFs + 1 RSLM per Wing, 3–4 RAs per RF) are per-Unit warnings, never constraints.
 
 - **Role names:** administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
