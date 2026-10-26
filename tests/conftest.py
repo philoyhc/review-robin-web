@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 # Flip ``settings.audit_strict_mode`` on for the test session before
 # anything imports ``app.config`` (Pydantic-settings reads env vars
@@ -31,7 +32,8 @@ from pathlib import Path  # noqa: E402
 import pytest  # noqa: E402
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
-from sqlalchemy import Engine, create_engine, text  # noqa: E402
+from sqlalchemy import Engine, create_engine, make_url, text  # noqa: E402
+from sqlalchemy.exc import ProgrammingError  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from _sqlite_schema import build_sqlite_schema  # noqa: E402
@@ -51,6 +53,54 @@ def _test_database_url() -> str:
     return os.environ.get("TEST_DATABASE_URL") or DEFAULT_TEST_DATABASE_URL
 
 
+_WORKER = re.compile(r"gw\d+")
+_DATABASE_NAME = re.compile(r"[A-Za-z0-9_]+")
+_MAX_IDENTIFIER = 63  # Postgres's NAMEDATALEN - 1
+
+
+def _worker_database_url(url: str, worker: str | None) -> str:
+    """The database this xdist worker runs on (segment 22B).
+
+    Serial runs and SQLite keep ``url``. Under xdist on Postgres each
+    worker takes the named database plus its id (``rrw`` -> ``rrw_gw0``),
+    so the schema drop below never touches another worker's tables, and a
+    rerun reuses the same databases rather than adding more."""
+    if not worker or url.startswith("sqlite"):
+        return url
+    if not _WORKER.fullmatch(worker):
+        raise RuntimeError(f"unexpected xdist worker id {worker!r}")
+    parsed = make_url(url)
+    name = f"{parsed.database}_{worker}"
+    if not _DATABASE_NAME.fullmatch(name):
+        raise RuntimeError(f"cannot derive a worker database from {parsed.database!r}")
+    if len(name) > _MAX_IDENTIFIER:
+        # Postgres would truncate it on CREATE and then not find it by
+        # the full name on connect.
+        raise RuntimeError(
+            f"the worker database {name!r} is longer than Postgres's "
+            f"{_MAX_IDENTIFIER}-byte identifier limit; shorten the test database's name"
+        )
+    return parsed.set(database=name).render_as_string(hide_password=False)
+
+
+def _ensure_database(connection, name: str) -> None:
+    """Create ``name`` on an autocommit connection unless it exists. Only
+    a derived worker database reaches here, never a named one."""
+    exists = connection.execute(
+        text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": name}
+    ).scalar()
+    if exists:
+        return
+    try:
+        connection.execute(text(f'CREATE DATABASE "{name}"'))
+    except ProgrammingError as error:
+        raise RuntimeError(
+            f"cannot create the worker database {name!r}: the role in "
+            "TEST_DATABASE_URL needs CREATEDB to run the suite under xdist "
+            "on Postgres (run it serially, without -n, otherwise)"
+        ) from error
+
+
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
     """Engine for the test session.
@@ -64,10 +114,20 @@ def engine() -> Iterator[Engine]:
     When ``TEST_DATABASE_URL`` points at Postgres,
     runs the suite against that DB with the full Alembic migration
     applied so CI exercises both dialect divergence and the migration
-    round-trip the SQLite path now skips.
+    round-trip the SQLite path now skips. Under xdist each worker runs on
+    its own database derived from it, created if missing
+    (``_worker_database_url``, segment 22B).
     """
-    url = _test_database_url()
+    named = _test_database_url()
+    url = _worker_database_url(named, os.environ.get("PYTEST_XDIST_WORKER"))
     is_sqlite = url.startswith("sqlite")
+    if url != named:
+        admin = create_engine(named, isolation_level="AUTOCOMMIT", future=True)
+        try:
+            with admin.connect() as connection:
+                _ensure_database(connection, make_url(url).database)
+        finally:
+            admin.dispose()
 
     connect_args: dict[str, object] = {}
     if is_sqlite:
