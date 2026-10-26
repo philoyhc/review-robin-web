@@ -47,3 +47,75 @@ def test_ci_postgres_names_the_test_url() -> None:
         Path(__file__).resolve().parents[2] / ".github/workflows/ci-postgres.yml"
     ).read_text()
     assert "TEST_DATABASE_URL: ${{ env.DATABASE_URL }}" in workflow
+
+
+def _conftest():
+    for module in list(sys.modules.values()):
+        if getattr(module, "__file__", None) == str(ROOT_CONFTEST):
+            return module
+    raise AssertionError("tests/conftest.py is not loaded")
+
+
+PG = "postgresql+psycopg://rrw_app:rrw_app@localhost:5432/rrw"
+
+
+def test_each_xdist_worker_gets_its_own_database() -> None:
+    derive = _conftest()._worker_database_url
+    assert derive(PG, "gw0") == "postgresql+psycopg://rrw_app:rrw_app@localhost:5432/rrw_gw0"
+    assert derive(PG, "gw11").endswith("/rrw_gw11")
+
+
+@pytest.mark.parametrize(
+    ("url", "worker"),
+    [(PG, None), (PG, ""), ("sqlite+pysqlite:///:memory:", "gw0")],
+)
+def test_a_serial_run_or_sqlite_keeps_the_named_database(url, worker) -> None:
+    assert _conftest()._worker_database_url(url, worker) == url
+
+
+@pytest.mark.parametrize("worker", ["master", "gw0; DROP", "../gw0"])
+def test_an_unexpected_worker_id_is_refused(worker) -> None:
+    with pytest.raises(RuntimeError, match="worker id"):
+        _conftest()._worker_database_url(PG, worker)
+
+
+def test_a_database_name_that_cannot_be_quoted_safely_is_refused() -> None:
+    with pytest.raises(RuntimeError, match="cannot derive"):
+        _conftest()._worker_database_url(
+            'postgresql+psycopg://u:p@localhost/rrw"x', "gw0"
+        )
+
+
+class _Connection:
+    def __init__(self, exists: bool, error: Exception | None = None) -> None:
+        self.exists, self.error, self.statements = exists, error, []
+
+    def execute(self, statement, params=None):
+        sql = str(statement)
+        self.statements.append(sql)
+        if sql.startswith("CREATE DATABASE") and self.error is not None:
+            raise self.error
+
+        class _Result:
+            def scalar(_self):
+                return 1 if self.exists else None
+
+        return _Result()
+
+
+def test_a_missing_worker_database_is_created_once() -> None:
+    ensure = _conftest()._ensure_database
+    missing = _Connection(exists=False)
+    ensure(missing, "rrw_gw0")
+    assert missing.statements[-1] == 'CREATE DATABASE "rrw_gw0"'
+    present = _Connection(exists=True)
+    ensure(present, "rrw_gw0")
+    assert not any(s.startswith("CREATE") for s in present.statements)
+
+
+def test_without_createdb_the_run_fails_naming_it() -> None:
+    from sqlalchemy.exc import ProgrammingError
+
+    denied = _Connection(exists=False, error=ProgrammingError("CREATE DATABASE", {}, Exception()))
+    with pytest.raises(RuntimeError, match="CREATEDB"):
+        _conftest()._ensure_database(denied, "rrw_gw0")

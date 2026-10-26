@@ -102,6 +102,13 @@ in CI. The same fixture honours `TEST_DATABASE_URL` — and only that, never
 schema** — so the suite can be pointed at a scratch Postgres locally (see
 `docs/local_setup.md` §9 "Postgres parity").
 
+Under xdist (`pytest -n …`) on Postgres each worker runs on its own
+database, the named one plus its worker id (`rrw` becomes `rrw_gw0`,
+`rrw_gw1`, …), created on first use and reused after, so no worker drops
+another's schema (segment 22B). Creating them needs the role in
+`TEST_DATABASE_URL` to hold `CREATEDB`; without it, run the suite on
+Postgres serially. A serial run uses the named database alone, as before.
+
 Each test gets a per-test transactional session that rolls back on
 teardown, so tests do not pollute each other.
 
