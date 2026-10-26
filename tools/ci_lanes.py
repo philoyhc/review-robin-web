@@ -1,4 +1,4 @@
-"""Which CI lanes a change needs (guide/segment_22A_ci_lanes.md).
+"""Which CI lanes a change needs (guide/archive/segment_22A_ci_lanes.md).
 
 Reads the changed paths, one per line, on stdin and prints ``lane=prose``
 or ``lane=full``, the line a workflow appends to ``$GITHUB_OUTPUT``.

@@ -44,6 +44,8 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 
 ## Reconcile in the first segment plan
 
+- **Identity and roster structure** (2026-10-26): `residentialapps/docs/residentialapps_identity.md` §12 lists what it changes in this file, the RA Leave spec and the roles doc; `residentialapps/docs/residentialapps_roster_structure.md` §10 lists the decisions still to confirm.
+
 - **Role names:** administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
 - **Unit vocabulary:** unit, team, house and cluster (`cluster_id` is a core unit).
