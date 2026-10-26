@@ -45,6 +45,12 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 ## Reconcile in the first segment plan
 
 - **Identity and roster structure** (2026-10-26): `residentialapps/docs/residentialapps_identity.md` §12 lists what it changes in this file, the RA Leave spec and the roles doc; `residentialapps/docs/residentialapps_roster_structure.md` §10 lists the decisions still to confirm.
+- **Roster structure, ruled 2026-10-26** (author, on `residentialapps/docs/residentialapps_roster_structure.md` §10):
+  1. The area an RF oversees is a **Precinct** (tentative; the doc's working name was "RF Zone"). RA **Neighborhood** stays.
+  2. **Both exceptions from the start:** a Precinct may span more than one Tower (so it is a set of floor-range segments, not one range), and an RA may report to another RF for a dated period (a backup reporting assignment beside the primary one).
+  3. **Neighborhoods warn, not block:** gaps and overlaps against their Precinct are flagged for administrator review; real-world exceptions still save.
+  4. **Cordware's identity gains the tenant ID and UPN** (`tid` and the UPN claim), so Residential binds on (tenant, object ID) as the identity spec says; a small Cordware change in the scaffold segment, tested in `cordware/tests`.
+  - Still open: multi-Unit authorization (§10's last item), before more than one Residential Unit is exposed.
 
 - **Role names:** administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
