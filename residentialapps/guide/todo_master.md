@@ -70,7 +70,7 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   2. **Floors are a building and its floors joined by hyphens**; several buildings in one cell are separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
   3. **The file is the Unit's complete structure.** The preview lists new, changed and to-retire nodes, unknown or duplicate codes, and floor gaps and overlaps (warnings); on confirm a missing node is end-dated, never deleted, and a node with a current appointment blocks the import until the appointment is ended or moved.
 
-- **Role names:** administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
+- **Role names** (terms ruled 2026-10-26: *sys admin* the system role, *admin* the appointment, `residentialapps/docs/residentialapps_roles.md`): administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
 - **Unit vocabulary:** unit, team, house and cluster (`cluster_id` is a core unit).
 - **RA Events** has no functional spec yet.
@@ -78,5 +78,5 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 ## Revise at each spec's next version
 
 - `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`: the header and introduction ("a single application", `/residentialapps`), the implementation and Platform sections (`/residentialapps`), the open-items list, scenario Q ("Cordware + Residential Apps"); the strategy version its header cites (v0.9).
-- `residentialapps/docs/resident_support_log_functional_spec_v0.3.md`: header and §1.1 (`/residentialapps`, "share one application"), §14 hosting, the v0.9 reference in §12.
+- `residentialapps/docs/resident_support_log_functional_spec_v0.3.md`: header and §1.1 (`/residentialapps`, "share one application"), §14 hosting, the v0.9 reference in §12. §3.5 gains the Other Staff view authorization (roles doc rule 8), and "Administrator" becomes *sys admin* (roles doc, "Terms").
 - `residentialapps/docs/support_logs_ui_spec_v0.1.md`: §1 item 6 ("stays one Residential application"), and the neutral shared Residential screens in the colour sections (ruling 3).
