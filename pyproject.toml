@@ -33,10 +33,10 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["app*", "cordware*"]
+include = ["app*", "cordware*", "residentialapps*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "cordware/tests"]
+testpaths = ["tests", "cordware/tests", "residentialapps/tests"]
 
 [tool.ruff]
 line-length = 100

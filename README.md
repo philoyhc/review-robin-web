@@ -125,8 +125,11 @@ Open `http://127.0.0.1:8000/reviewrobin/health` and expect:
 {"status":"ok"}
 ```
 
-RRW is served under `/reviewrobin/`; `http://127.0.0.1:8000/` redirects
-there, and `/health` is the Cordware host's own probe.
+RRW is served under `/reviewrobin/`, beside the two Residential
+applications at `/residentialops/` and `/supportlogs/` (each only a
+`/health` so far); `http://127.0.0.1:8000/` lists all three, or redirects
+to RRW with `CORDWARE_APPS=reviewrobin`. `/health` is the Cordware host's
+own probe.
 
 To sign in locally, set `ALLOW_FAKE_AUTH=true` plus
 `FAKE_AUTH_EMAIL` / `FAKE_AUTH_NAME` in your `.env` (see

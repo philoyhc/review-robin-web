@@ -48,14 +48,27 @@ class AppEntry:
     title: str = ""
 
 
-# RRW mounts at `/reviewrobin` (segment 21D; v0.8 §3). A constant, not a
-# setting, so no configuration can move it by accident.
+# RRW mounts at `/reviewrobin` (segment 21D; v0.8 §3), the two Residential
+# applications at `/residentialops` and `/supportlogs` (Residential segment
+# 1A). Constants, not settings, so no configuration can move one by accident.
 REGISTRY: Mapping[str, AppEntry] = {
     "reviewrobin": AppEntry(
         path="/reviewrobin",
         factory="app.main:create_app",
         logger="app",
         title="Review Robin",
+    ),
+    "residentialops": AppEntry(
+        path="/residentialops",
+        factory="residentialapps.ops.main:create_app",
+        logger="residentialapps.ops",
+        title="RA Operations",
+    ),
+    "supportlogs": AppEntry(
+        path="/supportlogs",
+        factory="residentialapps.supportlogs.main:create_app",
+        logger="residentialapps.supportlogs",
+        title="Support Logs",
     ),
 }
 
