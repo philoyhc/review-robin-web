@@ -77,6 +77,6 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 
 ## Revise at each spec's next version
 
-- `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`: the header and introduction ("a single application", `/residentialapps`), the implementation and Platform sections (`/residentialapps`), the open-items list, scenario Q ("Cordware + Residential Apps"); the strategy version its header cites (v0.9).
+- `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`: §2.5 classes approver actions mobile-critical, not responsive (page map, `residentialapps/spec/applications.md`, author 2026-10-26); the header and introduction ("a single application", `/residentialapps`), the implementation and Platform sections (`/residentialapps`), the open-items list, scenario Q ("Cordware + Residential Apps"); the strategy version its header cites (v0.9).
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md`: header and §1.1 (`/residentialapps`, "share one application"), §14 hosting, the v0.9 reference in §12. §3.5 gains the Other Staff view authorization (roles doc rule 8), and "Administrator" becomes *sys admin* (roles doc, "Terms").
 - `residentialapps/docs/support_logs_ui_spec_v0.1.md`: §1 item 6 ("stays one Residential application"), and the neutral shared Residential screens in the colour sections (ruling 3).

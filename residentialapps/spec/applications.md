@@ -38,14 +38,55 @@ allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
 
-**RA Operations** (`/residentialops`):
+**RA Operations** (`/residentialops`). Its four areas and who reaches them:
 
-| Page | Path | Reached by |
+| Area | Path | Reached by |
 |---|---|---|
 | RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; Team Viewers, read-only; sys admins |
 | RA Events Proposals | `/ra-events/` | As RA Leave |
 | Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters, appointments, the organization tree and its levels |
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
+
+**RA Operations page map** (author, 2026-10-26). Each page, what staff and
+RAs do on it, and its device class (`docs/cordware_mobile_to_desktop.md` §3:
+*mobile-critical*, *responsive*, *desktop-oriented*); `—` is a page that side
+never reaches. Section numbers are the RA Leave spec's
+(`residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`). RA
+Events has no spec yet, so its rows are provisional.
+
+| Page | Path | Staff | RA |
+|---|---|---|---|
+| Home | `/` | Approvers land on what awaits them · mobile-critical | Balance, current applications, Apply (§8) · mobile-critical |
+| Not registered | any path | First sign-in not yet linked · mobile-critical | The same · mobile-critical |
+| Apply for leave | `/ra-leave/apply` | — | Leave type, dates, covering RA (§9) · mobile-critical |
+| Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15) · mobile-critical |
+| Application detail | `/ra-leave/applications/{id}` | Read from the queue or team view · responsive | Status timeline, withdraw · mobile-critical |
+| My cover | `/ra-leave/cover` | — | Confirm or decline being named as cover; notification links land here (§12, §23) · mobile-critical |
+| My history | `/ra-leave/history` | — | Own applications and leave (§19) · responsive |
+| Awaiting my decision | `/ra-leave/decide` | First approval (RF, RSLM), final approval (the admin), appeals (the Master), oldest first (§16, §24) · **mobile-critical** | — |
+| Decide | `/ra-leave/decide/{id}` | Entitlement, cover status, team context; Approve or Reject with remarks in a few taps (§13–§15) · **mobile-critical** | — |
+| Team leave | `/ra-leave/team` | Who is away, cover, clashes; calendar and list (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
+| Leave admin: cycles and entitlements | `/ra-leave/admin/cycles` | Cycle setup, entitlement import and preview, adjustments (§21.1, §21.3) · desktop-oriented | — |
+| Leave admin: applications | `/ra-leave/admin/applications` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
+| Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
+| My proposals | `/ra-events/mine` | — | Provisional · responsive |
+| Review proposals | `/ra-events/review` | Provisional · responsive | — |
+| Events calendar | `/ra-events/` | Provisional · responsive | Provisional · responsive |
+| Organization, Staff roster, RA roster | `/rosters/`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
+| Sys admin | `/sys-admin/` | Audit log; sys admin grants (super-admin) · desktop-oriented | — |
+
+- **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my
+  decision and Decide must work one-handed on a phone. This raises the RA
+  Leave spec's §2.5, which classed approver actions as responsive.
+- **One shell, phone first.** The shared Residential base template is built
+  mobile-first: on a phone a bottom bar shows the viewer's destinations
+  (an RA's Home, Apply, Cover, History; an approver's Decide, Team, Home), and
+  at desktop width it becomes the header and nav card of the roster mockups.
+  Routes and permissions are the same at every width
+  (`docs/cordware_mobile_to_desktop.md` §7.5, §9), as the Support Logs UI
+  spec does for its RF surface.
+- **Desktop-oriented pages stay usable on a phone**: no layout breaks, wide
+  tables scroll in their box; they are not designed for one.
 
 **Support Logs** (`/supportlogs`). Access is by authorization, never by
 appointment, and RAs never reach it:
@@ -59,8 +100,9 @@ appointment, and RAs never reach it:
 
 Each application also has:
 
-- **a home** at its bare mount, listing the pages the viewer reaches, or
-  redirecting when there is exactly one;
+- **a home** at its bare mount. RA Operations' is the viewer's own
+  dashboard (page map above); Support Logs' lists the pages the viewer
+  reaches, or redirects when there is exactly one;
 - **the not-registered page** (`residentialapps/docs/residentialapps_identity.md`),
   for a signed-in person Residential cannot link.
 
