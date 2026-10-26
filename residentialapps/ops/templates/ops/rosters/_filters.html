@@ -1,0 +1,26 @@
+{# The roster pages' filter bar: search, then the page's own selects, then
+   its actions. Controls are inert until segment 1B item 5 wires them. #}
+{% macro filter_bar(selects, add_label) %}
+  <section class="card card-pad muted filters" aria-label="Filters and actions">
+    <div class="filter-fields">
+      <div class="filter">
+        <label for="q">Search</label>
+        <input id="q" class="input" type="search" placeholder="Name or email" disabled>
+      </div>
+      {% for select in selects %}
+        <div class="filter">
+          <label for="{{ select.id }}">{{ select.label }}</label>
+          <select id="{{ select.id }}" class="input" disabled>
+            <option>All</option>
+            {% for option in select.options %}<option>{{ option }}</option>{% endfor %}
+          </select>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="btnrow">
+      <button type="button" class="btn btn-primary" disabled>{{ add_label }}</button>
+      <button type="button" class="btn btn-secondary" disabled>Upload roster CSV</button>
+      <button type="button" class="btn btn-secondary" disabled>Export</button>
+    </div>
+  </section>
+{% endmacro %}

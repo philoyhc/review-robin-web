@@ -96,3 +96,27 @@ def test_unmounted_links_carry_no_prefix() -> None:
     page = TestClient(ops_app()).get("/rosters/").text
     assert 'href="/rosters/"' in page
     assert MOUNT not in page
+
+
+def test_the_staff_roster_shows_access_read_only() -> None:
+    page = TestClient(ops_app()).get("/rosters/staff")
+    assert page.status_code == 200
+    assert "<h1>Staff roster</h1>" in page.text
+    assert "· 8 people, 7 linked" in page.text
+    assert "Not yet signed in</span>" in page.text
+    assert "Support Logs · frontline" in page.text
+
+
+def test_the_ra_roster_derives_reporting_and_flags_a_vacancy() -> None:
+    page = TestClient(ops_app()).get("/rosters/ras")
+    assert page.status_code == 200
+    assert "· 9 RAs, 8 linked" in page.text
+    assert "RA10 has no RA." in page.text
+    assert "Backup: Grace Ho to 31 Dec" in page.text
+
+
+def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
+    page = host_client.get(f"{MOUNT}/rosters/ras").text
+    for path in ("/rosters/", "/rosters/staff"):
+        assert f'href="{MOUNT}{path}"' in page
+    assert f'href="{MOUNT}/rosters/ras" aria-current="page"' in page

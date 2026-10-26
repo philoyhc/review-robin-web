@@ -37,6 +37,7 @@
         --chip-ok-bg: #dcfce7; --chip-ok-fg: #166534;
         --chip-mute-bg: #f3f4f6; --chip-mute-fg: #3a465c;
         --warn-border: #d97706;
+        --chip-support-bg: #ccfbf1; --chip-support-fg: #115e59;
       }
       :root[data-app="residentialops"] {
         --accent: #a21caf;
@@ -62,6 +63,7 @@
         --chip-ok-bg: #052e16; --chip-ok-fg: #86efac;
         --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
         --warn-border: #b45309;
+        --chip-support-bg: #134e4a; --chip-support-fg: #99f6e4;
       }
       :root[data-theme="dark"][data-app="residentialops"] {
         --accent: #e879f9;
@@ -151,6 +153,13 @@
       .chip-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
       .chip-ok { background: var(--chip-ok-bg); color: var(--chip-ok-fg); }
       .chip-mute { background: var(--chip-mute-bg); color: var(--chip-mute-fg); }
+      .chip-support { background: var(--chip-support-bg); color: var(--chip-support-fg); }
+      .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+      .card h2 .count { font-size: 14px; font-weight: 400; color: var(--text-subtle); }
+      .filters { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+      .filter-fields { display: flex; flex-wrap: wrap; gap: 12px; }
+      .filter { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+      .filter label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
       .chip-accent { background: var(--accent-tint-strong); color: var(--accent-chip-fg); }
       .notice {
         display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 16px; padding: 10px 14px;

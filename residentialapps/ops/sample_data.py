@@ -56,5 +56,83 @@ Cypress,RF1,RA1,Cypress A 04-05-06
 Cypress,RF1,RA2,Cypress A 07-08-09
 Cypress,RF3,RA9,Cypress B 13-14"""
 
-STAFF_COUNT = (8, 7)  # on the roster, linked to a sign-in
-RA_COUNT = (9, 8)
+
+@dataclass(frozen=True)
+class StaffMember:
+    name: str
+    email: str
+    appointment: str
+    node: str
+    dates: str
+    linked: bool
+    access: tuple[str, ...]  # read-only chips: what each person is granted
+
+
+STAFF: tuple[StaffMember, ...] = (
+    StaffMember("Sam Lee", "sam.lee@example.edu", "Master", UNIT_NAME, "2026-08-01 –", True,
+                ("Sys admin", "Support Logs · senior")),
+    StaffMember("Rachel Yeo", "rachel.yeo@example.edu", "admin", UNIT_NAME, "2026-08-01 –", True,
+                ("Sys admin", "Support Logs · senior")),
+    StaffMember("Priya Raman", "priya.raman@example.edu", "RSLM", "Cypress", "2026-08-01 –", True,
+                ("Support Logs · frontline",)),
+    StaffMember("Daniel Koh", "daniel.koh@example.edu", "RF", "RF1", "2026-08-01 –", True,
+                ("Support Logs · frontline",)),
+    StaffMember("Mei Ling Tan", "meiling.tan@example.edu", "RF", "RF2", "2026-08-01 –", True,
+                ("Support Logs · frontline",)),
+    StaffMember("Arjun Nair", "arjun.nair@example.edu", "RF", "RF3", "2026-08-01 –", True,
+                ("Support Logs · frontline",)),
+    StaffMember("Tom Lim", "tom.lim@example.edu", "Other Staff", "—", "2026-09-15 –", True,
+                ("Support Logs · view (aggregate)",)),
+    StaffMember("Grace Ho", "grace.ho@example.edu", "RF", "RF2 (backup)", "2026-10-01 – 2026-12-31", False,
+                ("Team Viewer",)),
+)
+
+STAFF_APPOINTMENTS = ("Master", "admin", "RSLM", "RF", "Other Staff")
+
+
+@dataclass(frozen=True)
+class RosterRA:
+    name: str
+    email: str
+    neighborhood: str
+    precinct: str
+    floors: str
+    reports_to: str
+    linked: bool
+    backup: str | None = None  # a dated backup reporting line, when one is set
+
+
+RAS: tuple[RosterRA, ...] = (
+    RosterRA("Chloe Lim", "chloe.lim@example.edu", "RA1", "RF1", "Cypress A 04-05-06", "Daniel Koh", True),
+    RosterRA("Ethan Wong", "ethan.wong@example.edu", "RA2", "RF1", "Cypress A 07-08-09", "Daniel Koh", True),
+    RosterRA("Hana Ito", "hana.ito@example.edu", "RA3", "RF1", "Cypress A 10-11-12", "Daniel Koh", True),
+    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA4", "RF2", "Cypress A 13-14-15", "Mei Ling Tan", True),
+    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA5", "RF2", "Cypress B 01-02-03", "Mei Ling Tan", True,
+             "Grace Ho to 31 Dec"),
+    RosterRA("Kai Ng", "kai.ng@example.edu", "RA6", "RF2", "Cypress B 04-05-06", "Mei Ling Tan", True),
+    RosterRA("Lucas Teo", "lucas.teo@example.edu", "RA7", "RF3", "Cypress B 07-08-09", "Arjun Nair", True),
+    RosterRA("Maya Seah", "maya.seah@example.edu", "RA8", "RF3", "Cypress B 10-11-12", "Arjun Nair", True),
+    RosterRA("Nur Aisyah", "nur.aisyah@example.edu", "RA9", "RF3", "Cypress B 13-14", "Arjun Nair", False),
+)
+
+RA_DATES = "2026-08-01 –"
+
+VACANT_NEIGHBORHOODS = (("RA10", "Cypress B 15-16", "RF3"),)
+
+PRECINCTS = ("RF1", "RF2", "RF3")
+BUILDINGS = ("Cypress A", "Cypress B")
+
+STAFF_CSV = """\
+Name,Email,Appointment,Node,From,To
+Daniel Koh,daniel.koh@example.edu,RF,RF1,2026-08-01,
+Priya Raman,priya.raman@example.edu,RSLM,Cypress,2026-08-01,"""
+
+RA_CSV = """\
+Name,Email,Level3.Neighborhood,From,To
+Chloe Lim,chloe.lim@example.edu,RA1,2026-08-01,
+Ethan Wong,ethan.wong@example.edu,RA2,2026-08-01,"""
+
+
+def linked_count(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tuple[int, int]:
+    """On the roster, and linked to a sign-in."""
+    return len(people), sum(1 for p in people if p.linked)
