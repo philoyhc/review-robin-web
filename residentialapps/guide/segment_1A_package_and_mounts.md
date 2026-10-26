@@ -6,6 +6,8 @@
 
 **Restructured twice on 2026-10-26, before any build** (author). It was first planned as four items with each item's screens inside it (`#3274`), then as a skeleton plus every screen scaffolded (`#3275`). It is now the package and mounts alone, kept small. The screens and their wiring are segment 1B.
 
+**Specs drafted first, for inspection** (author, 2026-10-26): `residentialapps/spec/applications.md` and `residentialapps/spec/architecture.md` state what rung 1 and rung 2 will build. The author ruled on them the same day: Residential's specs live in `residentialapps/spec/` (1B's open question), RA Operations gets an `ops/` package beside ruling 1's list, and Residential's logs and tests stay within `residentialapps/`: shared code stamps its own records, and the mounted tests live in `residentialapps/tests/`. Rung 1 builds to them.
+
 ## Opportunity
 
 `residentialapps/` holds only prose. Nothing can render a Residential page, pass the import boundaries or run in CI until the package exists, both applications are mounted, and CI knows to test them.
@@ -44,7 +46,7 @@ Taken 2026-10-26 at `b63604f`.
 ## PR ladder
 
 1. **Package and mounts.** Package and both factories with `health`; registry entries; `packages.find`; boundary tests extended; Residential's first tests. Base SHA recorded here.
-2. **The `residential` lane** in `tools/ci_lanes.py` and both workflows. This is the last build rung, so `diff-reviewer` reads the cumulative diff here.
+2. **The `residential` lane** in `tools/ci_lanes.py` and both workflows. `residentialapps/spec/` joins `PROSE_DIRS` here too: until then a PR touching it runs the full lane. This is the last build rung, so `diff-reviewer` reads the cumulative diff here.
 
 ## Definition of done
 
@@ -67,6 +69,7 @@ Taken 2026-10-26 at `b63604f`.
 
 ## Doc impact
 
+- `residentialapps/spec/applications.md`, `residentialapps/spec/architecture.md` — drafted before rung 1; the banners go and each section says what shipped (rungs 1 and 2).
 - `cordware/spec/host.md` — the two registry entries and their health paths (rung 1).
 - `residentialapps/README.md` — the package layout (rung 1).
 - `tools/README.md` — the `residential` lane in the `ci_lanes.py` row (rung 2).
