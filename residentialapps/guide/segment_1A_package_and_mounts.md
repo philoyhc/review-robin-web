@@ -6,7 +6,7 @@
 
 **Restructured twice on 2026-10-26, before any build** (author). It was first planned as four items with each item's screens inside it (`#3274`), then as a skeleton plus every screen scaffolded (`#3275`). It is now the package and mounts alone, kept small. The screens and their wiring are segment 1B.
 
-**Specs drafted first, for inspection** (author, 2026-10-26): `residentialapps/spec/applications.md` and `residentialapps/spec/architecture.md` state what rung 1 and rung 2 will build. They propose `residentialapps/spec/` as where Residential's specs live (1B's open question) and an `ops/` package beside ruling 1's list. Rung 1 starts once the author has read them.
+**Specs drafted first, for inspection** (author, 2026-10-26): `residentialapps/spec/applications.md` and `residentialapps/spec/architecture.md` state what rung 1 and rung 2 will build. They propose `residentialapps/spec/` as where Residential's specs live (1B's open question) and an `ops/` package beside ruling 1's list. The author ruled the same day that Residential's logs and tests stay within `residentialapps/`: shared code stamps its own records, and the mounted tests live in `residentialapps/tests/`. Rung 1 starts once the author has read them.
 
 ## Opportunity
 

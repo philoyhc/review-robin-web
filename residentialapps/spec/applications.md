@@ -73,10 +73,16 @@ fails to start on the missing package (`host.app_startup_failed`).
   root logger, and is stamped `residentialops` or `supportlogs` by the
   host's `ApplicationFilter`. The prefixes do not nest, so a record is
   never stamped with the wrong one (ruling 6).
-- The shared code (`residentialapps.core`, from 1B) logs under
-  `residentialapps.core`, which the host stamps `cordware`. **Open:** stamp
-  it per calling application instead, which the filter cannot do from
-  the logger name alone.
+- **Residential stamps its own shared code.** Code both applications use
+  (`residentialapps.core` and `residentialapps.web`, from 1B) logs under
+  `residentialapps.core…` or `residentialapps.web…`, which no registry
+  prefix covers, so the host alone would stamp it `cordware`. Instead it
+  logs through Residential's own `get_logger`, which stamps `application`
+  on each record with the application serving the request
+  (`residentialops` or `supportlogs`, set per request by each
+  application), or `residentialapps` outside a request. The host's filter
+  keeps a stamp a record already carries (`cordware/spec/host.md`
+  "Logging"), so this needs no change to the host.
 - Neither application has a lifespan in 1A. When one does, every state key
   it yields starts `residentialops_` or `supportlogs_`, so the host's
   duplicate-key check can never trip between them (ruling 6).

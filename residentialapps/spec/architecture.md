@@ -48,8 +48,11 @@ depth and including literal dynamic imports.
 | `app`, `cordware` | `residentialapps` (already enforced) |
 
 - `cordware.main` is forbidden for the same reason as in RRW: importing it
-  builds the host. Mounted tests therefore live in `cordware/tests/`,
-  which is exempt, not in `residentialapps/tests/`.
+  builds the host. `residentialapps/tests/` is exempt from that one rule,
+  never from `app`, because Residential's mounted tests build the host
+  there, as RRW's do from its root `tests/`. Cordware's own tests stay the
+  host's and identity's; the boundary file is the one Residential rule
+  they hold (ruling 7).
 - 1A adds the rows the skeleton can break, the first two and the
   `cordware.main` check; the rest join with their packages, each with a
   planted-import test as the existing rules have.
@@ -63,14 +66,17 @@ depth and including literal dynamic imports.
 
 ## Tests and CI
 
-- `residentialapps/tests/` builds each application from its factory,
-  unmounted, and needs no database in 1A.
-- `cordware/tests/` builds the host with each combination in
-  `residentialapps/spec/applications.md` "Running alone" and checks both
-  health paths, the landing page and the logger stamps.
+- `residentialapps/tests/` holds every Residential test, needing no
+  database in 1A: each application built from its factory, unmounted;
+  and, through a host harness of Residential's own (after RRW's
+  `tests/_mounted.py`), each combination in
+  `residentialapps/spec/applications.md` "Running alone", with both
+  health paths, the landing page, the route-name resolution and the log
+  stamps.
 - **The `residential` lane** (1A rung 2, `tools/ci_lanes.py`): a pull
   request whose every path is prose or under `residentialapps/` runs
-  `residentialapps/tests`, `cordware/tests` and the prose lane's tests,
+  `residentialapps/tests`, `cordware/tests` (for the boundary file and
+  the host it mounts on) and the prose lane's tests,
   and skips RRW's suite and its Postgres round-trip. A path anywhere else,
   `pyproject.toml` included, runs everything; every push to `main` runs
   everything. From 1B the lane also round-trips Residential's two
