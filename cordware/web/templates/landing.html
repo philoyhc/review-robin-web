@@ -17,6 +17,15 @@
     li a { display: block; padding: 0.75rem 0; color: var(--link); text-decoration: none; font-weight: 600; }
     li a:hover, li a:focus { text-decoration: underline; }
     .empty { color: var(--muted); }
+    .who { margin-top: 2rem; font-size: 0.9rem; }
+    .who h2 { font-size: 1rem; margin: 0 0 0.5rem; }
+    .who dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
+    .who dt { color: var(--muted); }
+    .who dd { margin: 0; overflow-wrap: anywhere; }
+    .who details { margin-top: 0.75rem; }
+    .who table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+    .who td { border-top: 1px solid var(--line); padding: 0.25rem 0.5rem 0.25rem 0; vertical-align: top; overflow-wrap: anywhere; }
+    .who td:first-child { color: var(--muted); }
     footer { margin-top: 2rem; }
     footer a { color: var(--muted); }
   </style>
@@ -33,6 +42,31 @@
     {% else %}
       <p class="empty">No applications are running here.</p>
     {% endif %}
+    <section class="who" aria-labelledby="who-heading">
+      <h2 id="who-heading">Sign-in details</h2>
+      {% if identity %}
+        <dl>
+          <dt>Name</dt><dd>{{ identity.name or "—" }}</dd>
+          <dt>Email</dt><dd>{{ identity.email or "—" }}</dd>
+          <dt>Object ID</dt><dd>{{ identity.principal_id or "—" }}</dd>
+          <dt>Provider</dt><dd>{{ identity.provider or "—" }}</dd>
+          <dt>Source</dt><dd>{{ "Fake local identity (ALLOW_FAKE_AUTH)" if identity.is_fake else "Easy Auth headers" }}</dd>
+          <dt>Super-admin</dt><dd>{{ "Yes" if identity.is_super_admin else "No" }}</dd>
+        </dl>
+        {% if claims %}
+          <details>
+            <summary>Claims from Easy Auth ({{ claims | length }})</summary>
+            <table>
+              {% for claim in claims %}
+                <tr><td>{{ claim.typ }}</td><td>{{ claim.val }}</td></tr>
+              {% endfor %}
+            </table>
+          </details>
+        {% endif %}
+      {% else %}
+        <p class="empty">Not signed in: this request carries no Easy Auth headers, and fake auth is off.</p>
+      {% endif %}
+    </section>
     <footer><a href="/.auth/logout">Sign out</a></footer>
   </main>
 </body>
