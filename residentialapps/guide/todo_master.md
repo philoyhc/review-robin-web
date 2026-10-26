@@ -18,7 +18,7 @@ Settled ahead of any Residential code as RRW segment 22A (`guide/archive/segment
 8. **Fake roles** use one `RES_` prefix, over a role list reconciled across both functional specs (below), written in the first segment plan.
 9. **Alembic:** one `alembic.ini`, two histories (`residentialapps/alembic/residentialops/`, `residentialapps/alembic/supportlogs/`). The core's first migration lands in the scaffold segment.
 10. **Stale text:** the deployment strategy and RRW's `guide/todo_master.md` are corrected now; the functional specs carry a banner and are revised at their next version.
-11. **Segment shape** (sequence revised the same day): first, RA Operations' rosters: the scaffold (package, both mounts, CI with both databases) and the core's admin under `/residentialops` for the Staff and RA rosters, appointments and units; then Support Logs; then RA Leave, which adds cycles and leave on the finished core; then RA Events. The RA Events spec is written before RA Leave is built. Step 1 is planned as segment 1A (`residentialapps/guide/segment_1A_rosters_and_organization.md`).
+11. **Segment shape** (sequence revised the same day): first, RA Operations' rosters: the scaffold (package, both mounts, CI with both databases) and the core's admin under `/residentialops` for the Staff and RA rosters, appointments and units; then Support Logs; then RA Leave, which adds cycles and leave on the finished core; then RA Events. The RA Events spec is written before RA Leave is built. Step 1 is planned as segments 1A, the skeleton and every screen scaffolded (`residentialapps/guide/segment_1A_rosters_and_organization.md`), and 1B, the innards wiring them (`residentialapps/guide/segment_1B_rosters_and_organization_wiring.md`).
 
 ## Roles
 
