@@ -178,9 +178,9 @@ just the exit code.
 
 CI runs the same `pytest` against a `postgres:16` service
 container too (`ci-postgres` job) — the suite covers both
-dialects on every PR. That job stays single-process: its
-workers would otherwise share one Postgres database. It applies
-the full Alembic migration chain, and leaves out `tests/browser/`.
+dialects on every PR. It runs across xdist workers, each on its
+own Postgres database (`docs/database.md`), applies the full
+Alembic migration chain, and leaves out `tests/browser/`.
 
 ## Project documents
 

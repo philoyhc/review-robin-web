@@ -89,7 +89,7 @@ jobs:
         # The suite reads only TEST_DATABASE_URL, never DATABASE_URL, because
         # it drops the schema it is pointed at. Under -n each xdist worker
         # runs on its own database derived from it, rrw_gw0 and on
-        # (tests/conftest.py, guide/segment_22B_postgres_parallel.md).
+        # (tests/conftest.py, guide/archive/segment_22B_postgres_parallel.md).
         env:
           TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
         run: pytest -n auto -q --ignore=tests/browser

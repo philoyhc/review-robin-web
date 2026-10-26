@@ -64,12 +64,6 @@ concluding** (decision 2026-09-05) and independent of each other.
    finding.
    **Plan:** `guide/segment_19X_refinements.md`.
 
-4. **22B — The Postgres job in parallel** (not gated on Azure). One
-   database per xdist worker, derived from `TEST_DATABASE_URL`, so
-   `CI - Postgres` runs `pytest -n auto` rather than about 7,300 tests
-   one at a time (5 min 56 s to 9 min 16 s on 2026-10-26). Two rungs.
-   **Plan:** `guide/segment_22B_postgres_parallel.md`.
-
 ### Stubs
 
 Small items with no plan doc; each fits one PR and its reasoning fits
