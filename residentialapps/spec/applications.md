@@ -44,7 +44,7 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 | RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; Team Viewers, read-only; sys admins |
 | RA Events Proposals | `/ra-events/` | As RA Leave |
 | Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters, appointments, the organization tree and its levels |
-| Sys admin grants | `/sys-admin/` | The super-admin only |
+| Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
 
 **Support Logs** (`/supportlogs`). Access is by authorization, never by
 appointment, and RAs never reach it:
@@ -54,7 +54,7 @@ appointment, and RAs never reach it:
 | Encounter log | `/encounters/` | Frontline authorization (RFs and RSLMs, by default) |
 | Plans | `/plans/` | Frontline; senior identifiable (the Master and the admin, by default); Other Staff with identifiable view, read-only |
 | Dashboard | `/dashboard/` | Frontline (personal); senior identifiable (oversight); Other Staff with view, aggregate or identifiable as granted |
-| Sys admin | `/sys-admin/` | Support Logs sys admins (authorizations, configuration, categories, the cluster list; no support content); the super-admin, to grant Support Logs sys admin |
+| Sys admin | `/sys-admin/` | Support Logs sys admins: authorizations, configuration, categories, the cluster list and the administrative audit log, with no support content or support-activity audit; the super-admin, for the same and to grant Support Logs sys admin |
 
 Each application also has:
 
@@ -64,9 +64,13 @@ Each application also has:
   for a signed-in person Residential cannot link.
 
 A linked viewer who reaches none of an application's pages gets a `403`
-page saying so, never an empty home. **Open:** whether *Plans* is the spec's
-formal assignments (§7) together with the RF's self-set check-in
-schedules (§10.1).
+page saying so, never an empty home.
+
+**Plans** (author, 2026-10-26) are check-in plans for a student under
+support: assigned, often offline by counselling and recorded as a formal
+assignment (spec §7, source *Counselling*), or set up by the staff member
+themselves (§10.1). A plan may be for a student who already has
+encounter-log entries.
 
 ## Health
 
