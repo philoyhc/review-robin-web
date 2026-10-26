@@ -1,9 +1,10 @@
 # Residential applications
 
-> **Draft for inspection, 2026-10-26.** Nothing here is built. It states
-> what segment 1A (`residentialapps/guide/segment_1A_package_and_mounts.md`)
-> will build, so the author can correct it before any code exists. When 1A
-> lands, the draft banner goes and each section says what shipped.
+> **Partly built.** Segment 1A rung 1 built "Two applications, one
+> package", "Health", "Running alone" and the per-application half of
+> "Logging and lifespan" (`residentialapps/guide/segment_1A_package_and_mounts.md`).
+> "Pages", the shared-code log stamps and "URLs" are the contract for 1B
+> and later; each section says what shipped when it does.
 
 The contract of the two Residential applications as the Cordware host
 sees them: how each is built, where it mounts, what it answers before it

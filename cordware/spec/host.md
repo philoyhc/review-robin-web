@@ -33,8 +33,19 @@ point.
 | `logger` | Logger-name prefix the application logs under (see Logging). |
 | `title` | How the landing page names the application. Defaults to empty, and the page then shows the registry name. |
 
-- One entry: `reviewrobin` -> `path="/reviewrobin"`,
-  `factory="app.main:create_app"`, `logger="app"`, `title="Review Robin"`.
+- Three entries, in this order:
+
+  | Name | `path` | `factory` | `logger` | `title` |
+  |---|---|---|---|---|
+  | `reviewrobin` | `/reviewrobin` | `app.main:create_app` | `app` | `Review Robin` |
+  | `residentialops` | `/residentialops` | `residentialapps.ops.main:create_app` | `residentialapps.ops` | `RA Operations` |
+  | `supportlogs` | `/supportlogs` | `residentialapps.supportlogs.main:create_app` | `residentialapps.supportlogs` | `Support Logs` |
+
+  The two Residential applications' own contract is
+  `residentialapps/spec/applications.md`.
+- An unset `CORDWARE_APPS` mounts all three, so a deployment that does not
+  carry `residentialapps/` names its applications: the host fails to start
+  on a factory it cannot import.
 - The mount path is a constant here, not a setting, so no configuration can
   move an application off its path.
 - The host imports an application only by loading its `factory` string at
@@ -95,7 +106,8 @@ items are ignored. An unknown name, or a name written twice, raises
 - The host's own route: `GET /health` returns `{"status": "ok"}`, route name
   `cordware_health`. It is registered before any mount, so it answers ahead of
   an application mounted at `/`. Easy Auth excludes this path from sign-in.
-  RRW's own probe is `/reviewrobin/health`, inside the mount.
+  RRW's own probe is `/reviewrobin/health`, inside the mount; Residential's
+  are `/residentialops/health` and `/supportlogs/health`.
 - The name differs from RRW's own `health` route on purpose: inside a mounted
   application `url_for` resolves through the host's router first, and
   `url_for("health")` must not resolve to the host's route.
@@ -196,7 +208,11 @@ top-level packages it may not import; a second check adds one module:
   `cordware.main`, which builds the host when imported. A separate check in
   the same file reads every module an application imports, `from cordware
   import main` and dynamic imports included.
-- `residentialapps` joins the test when the directory exists.
+- `residentialapps/tests/` is exempt from the `cordware.main` check only:
+  Residential's mounted tests build the host there.
+- Inside `residentialapps`, neither application package imports the other
+  (`residentialapps.ops`, `residentialapps.supportlogs`), relative imports
+  resolved; `residentialapps/spec/architecture.md` has the full table.
 
 ## Tests
 

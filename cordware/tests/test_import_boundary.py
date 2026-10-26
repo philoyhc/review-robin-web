@@ -60,7 +60,6 @@ def violations(package: str, root: Path = ROOT) -> list[str]:
     return found
 
 
-# `residentialapps/` joins once stage 3 imports it.
 @pytest.mark.parametrize("package", [p for p in sorted(FORBIDDEN) if (ROOT / p).is_dir()])
 def test_no_package_crosses_the_boundary(package: str) -> None:
     assert violations(package) == []
@@ -110,15 +109,77 @@ def imported_modules(source: str) -> set[str]:
 
 def test_no_application_imports_the_host_entry_point() -> None:
     """`cordware.main` builds the host when imported (segment 21C):
-    applications import `cordware.identity`, never the entry point."""
+    applications import `cordware.identity`, never the entry point.
+    Residential's tests build the host on purpose, as RRW's root `tests/`
+    do (`residentialapps/spec/architecture.md`)."""
+    tests = ROOT / "residentialapps" / "tests"
     found = [
         str(path.relative_to(ROOT))
         for package in ("app", "residentialapps")
         if (ROOT / package).is_dir()
         for path in sorted((ROOT / package).rglob("*.py"))
-        if "cordware.main" in imported_modules(path.read_text())
+        if not path.is_relative_to(tests)
+        and "cordware.main" in imported_modules(path.read_text())
     ]
     assert found == []
+
+
+# Residential application package -> the Residential modules it must never
+# import (`residentialapps/spec/architecture.md` "Import boundaries"; the
+# rest join with their packages).
+RESIDENTIAL_FORBIDDEN = {
+    "residentialapps.ops": ("residentialapps.supportlogs",),
+    "residentialapps.supportlogs": ("residentialapps.ops",),
+}
+
+
+def residential_modules(path: Path, root: Path = ROOT) -> set[str]:
+    """Every module a Residential source imports, its relative imports
+    resolved against the package the file sits in."""
+    package = list(path.relative_to(root).parent.parts)
+    modules = imported_modules(path.read_text())
+    for node in ast.walk(ast.parse(path.read_text())):
+        if isinstance(node, ast.ImportFrom) and node.level:
+            base = package[: len(package) - node.level + 1]
+            stem = ".".join(base + ([node.module] if node.module else []))
+            modules.add(stem)
+            modules.update(f"{stem}.{alias.name}" for alias in node.names)
+    return modules
+
+
+def residential_violations(root: Path = ROOT) -> list[str]:
+    found = []
+    for package, forbidden in RESIDENTIAL_FORBIDDEN.items():
+        directory = root / package.replace(".", "/")
+        for path in sorted(directory.rglob("*.py")) if directory.is_dir() else []:
+            bad = {
+                module
+                for module in residential_modules(path, root)
+                if any(module == f or module.startswith(f + ".") for f in forbidden)
+            }
+            found += [f"{path.relative_to(root)} imports {name}" for name in sorted(bad)]
+    return found
+
+
+def test_neither_residential_application_imports_the_other() -> None:
+    assert (ROOT / "residentialapps" / "ops").is_dir()
+    assert residential_violations() == []
+
+
+def test_a_planted_cross_application_import_is_caught(tmp_path: Path) -> None:
+    ops = tmp_path / "residentialapps" / "ops"
+    logs = tmp_path / "residentialapps" / "supportlogs"
+    ops.mkdir(parents=True)
+    logs.mkdir()
+    (ops / "leak.py").write_text("from residentialapps.supportlogs import main\n")
+    (logs / "leak.py").write_text("from ..ops import main\n")
+    (logs / "fine.py").write_text("from . import main\nimport residentialapps.core\n")
+    assert residential_violations(tmp_path) == [
+        "residentialapps/ops/leak.py imports residentialapps.supportlogs",
+        "residentialapps/ops/leak.py imports residentialapps.supportlogs.main",
+        "residentialapps/supportlogs/leak.py imports residentialapps.ops",
+        "residentialapps/supportlogs/leak.py imports residentialapps.ops.main",
+    ]
 
 
 def test_the_entry_point_check_reads_both_import_forms() -> None:

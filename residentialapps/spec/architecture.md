@@ -1,8 +1,9 @@
 # Residential architecture
 
-> **Draft for inspection, 2026-10-26.** Nothing here is built. Segment 1A
-> builds the skeleton described here; later segments fill the packages it
-> names. Each section says which segment brings it.
+> **Partly built.** Segment 1A rung 1 built the `ops/`, `supportlogs/`
+> and `tests/` packages, the first two boundary rows and the
+> `cordware.main` check, and packaging. The `residential` lane is rung 2;
+> later segments fill the rest, each section saying which.
 
 How `residentialapps/` is laid out, what each part may import, and how
 its tests run. The two applications' contract with the host is
