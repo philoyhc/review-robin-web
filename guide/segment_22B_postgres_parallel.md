@@ -40,6 +40,17 @@ Taken 2026-10-26 at `ff0f30c`.
 | Test files creating their own engine outside `tests/browser/` | 17, all `sqlite://` except the shared fixture | `grep -rln "create_engine(" tests/integration tests/db tests/unit \| wc -l` |
 | Live prose naming the Postgres job's command | `docs/database.md`, `docs/local_setup.md`, `CONTRIBUTING.md` | `grep -rln "TEST_DATABASE_URL\|ci-postgres" docs CONTRIBUTING.md` |
 
+## Status
+
+**Built 2026-10-26 as planned** (`#3283`, `#3284`). `postgres` job times on GitHub's hosted runner:
+
+| Run | `pytest` | Job |
+|---|---|---|
+| `#3283` (rung 1, serial) | `-q` | 9 min 12 s |
+| `#3284` first push | `-n auto` | 3 min 54 s |
+
+`-n auto` takes the runner's four cores; the worker migrations did not eat the gain, so `-n 2` was not tried (open question below). `diff-reviewer` read `6e853e9..11c1a25` at rung 2: nothing blocking; it found `docs/local_setup.md` still telling readers to run Postgres without `-n` (not in this plan's `Doc impact`, now added), a `CREATEDB` message given for any `CREATE DATABASE` failure (now only for 42501), and a URL with no database name deriving `None_gw0` (now refused).
+
 ## PR ladder
 
 1. **The per-worker database** in `tests/conftest.py`: derive, create if missing, migrate. Unit tests for the name derivation and the refusal without `CREATEDB` (no Postgres needed for either). `ci-postgres.yml` is untouched, so CI still runs serially and the rung proves nothing breaks without xdist.
@@ -58,7 +69,7 @@ Taken 2026-10-26 at `ff0f30c`.
 
 ## Open questions
 
-- **How many workers on a hosted runner:** `-n auto` takes the runner's four cores, so four databases each migrated at session start. If the migration cost eats the gain, rung 2 tries `-n 2` and records both. Decided by rung 2's measurement.
+- **How many workers on a hosted runner:** `-n auto`, decided by rung 2's measurement (`Status`).
 
 ## Out of scope
 
@@ -69,4 +80,5 @@ Taken 2026-10-26 at `ff0f30c`.
 
 - `docs/database.md` — the test suite's per-worker Postgres databases and the `CREATEDB` need (rung 1).
 - `CONTRIBUTING.md` — the Postgres job's duration in "When to wait for CI" (rung 2).
+- `docs/local_setup.md` — the Postgres parity recipe runs `-n auto` and names `CREATEDB` (rung 2; added at the cold read).
 - `guide/todo_master.md` — the queue entry, deleted at close.

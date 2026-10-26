@@ -120,9 +120,29 @@ def test_a_missing_worker_database_is_created_once() -> None:
     assert not any(s.startswith("CREATE") for s in present.statements)
 
 
+class _PgError(Exception):
+    def __init__(self, sqlstate: str) -> None:
+        super().__init__(sqlstate)
+        self.sqlstate = sqlstate
+
+
 def test_without_createdb_the_run_fails_naming_it() -> None:
     from sqlalchemy.exc import ProgrammingError
 
-    denied = _Connection(exists=False, error=ProgrammingError("CREATE DATABASE", {}, Exception()))
+    error = ProgrammingError("CREATE DATABASE", {}, _PgError("42501"))
     with pytest.raises(RuntimeError, match="CREATEDB"):
-        _conftest()._ensure_database(denied, "rrw_gw0")
+        _conftest()._ensure_database(_Connection(exists=False, error=error), "rrw_gw0")
+
+
+def test_any_other_create_failure_is_not_blamed_on_createdb() -> None:
+    """42P04 duplicate_database, e.g. a concurrent run creating the same name."""
+    from sqlalchemy.exc import ProgrammingError
+
+    error = ProgrammingError("CREATE DATABASE", {}, _PgError("42P04"))
+    with pytest.raises(ProgrammingError):
+        _conftest()._ensure_database(_Connection(exists=False, error=error), "rrw_gw0")
+
+
+def test_a_url_naming_no_database_is_refused() -> None:
+    with pytest.raises(RuntimeError, match="names no database"):
+        _conftest()._worker_database_url("postgresql+psycopg://u:p@localhost", "gw0")
