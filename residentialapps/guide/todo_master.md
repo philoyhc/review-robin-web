@@ -2,9 +2,9 @@
 
 **Opened 2026-10-25** (author). Residential's own to-do: what is ruled, what it depends on from the Cordware deployment strategy (v1.0, held privately with the deployment), and what is still to decide or revise. RRW's `guide/todo_master.md` covers RRW and the Cordware host only. Residential's functional specs and working designs are in `residentialapps/docs/`, and its contracts in `residentialapps/spec/` (ruled 2026-10-26, segment 1A); shared UX guidance is RRW's `docs/cordware_mobile_to_desktop.md`.
 
-## CI by path (done 2026-10-25)
+## Stubs
 
-Settled ahead of any Residential code as RRW segment 22A (`guide/archive/segment_22A_ci_lanes.md`): a prose-only PR runs the `prose` lane alone, about a minute; anything else and every push to `main` runs RRW's suite and the Postgres round-trip in full. **Segment 1A added the `residential` lane** (2026-10-26): a PR touching only prose and `residentialapps/` runs Residential's tests, `cordware/tests` and the prose lane's, with lint, and skips RRW's suite and the Postgres round-trip. Residential's two databases join it in 1B; its timings are taken on the first Residential-only PR.
+- **`tools/close_check.py` learns Residential's plans** *(filed 2026-10-26, at 1A's close)*: it finds a plan only in RRW's `guide/` and `guide/archive/`, so 1A's close was checked by hand. Searching `residentialapps/guide/` and its `archive/` too lets 1B close with the tool. One `tools/` PR with tests, before 1B closes.
 
 ## Rulings (author, 2026-10-25)
 
@@ -18,7 +18,7 @@ Settled ahead of any Residential code as RRW segment 22A (`guide/archive/segment
 8. **Fake roles** use one `RES_` prefix, over a role list reconciled across both functional specs (below), written in the first segment plan.
 9. **Alembic:** one `alembic.ini`, two histories (`residentialapps/alembic/residentialops/`, `residentialapps/alembic/supportlogs/`). The core's first migration lands in the scaffold segment.
 10. **Stale text:** the deployment strategy and RRW's `guide/todo_master.md` are corrected now; the functional specs carry a banner and are revised at their next version.
-11. **Segment shape** (sequence revised the same day): first, RA Operations' rosters: the scaffold (package, both mounts, CI with both databases) and the core's admin under `/residentialops` for the Staff and RA rosters, appointments and units; then Support Logs; then RA Leave, which adds cycles and leave on the finished core; then RA Events. The RA Events spec is written before RA Leave is built. Step 1 is planned as segments 1A, the package and mounts (`residentialapps/guide/segment_1A_package_and_mounts.md`), and 1B, the admin screens and their wiring (`residentialapps/guide/segment_1B_rosters_and_organization.md`).
+11. **Segment shape** (sequence revised the same day): first, RA Operations' rosters: the scaffold (package, both mounts, CI with both databases) and the core's admin under `/residentialops` for the Staff and RA rosters, appointments and units; then Support Logs; then RA Leave, which adds cycles and leave on the finished core; then RA Events. The RA Events spec is written before RA Leave is built. Step 1 is planned as segments 1A, the package and mounts (closed 2026-10-26, `residentialapps/guide/archive/segment_1A_package_and_mounts.md`), and 1B, the admin screens and their wiring (`residentialapps/guide/segment_1B_rosters_and_organization.md`).
 
 ## Roles
 
