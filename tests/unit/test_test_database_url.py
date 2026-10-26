@@ -86,6 +86,13 @@ def test_a_database_name_that_cannot_be_quoted_safely_is_refused() -> None:
         )
 
 
+def test_a_worker_database_past_postgres_identifier_limit_is_refused() -> None:
+    derive = _conftest()._worker_database_url
+    assert derive(f"postgresql+psycopg://u:p@localhost/{'d' * 59}", "gw0").endswith("_gw0")
+    with pytest.raises(RuntimeError, match="identifier limit"):
+        derive(f"postgresql+psycopg://u:p@localhost/{'d' * 60}", "gw0")
+
+
 class _Connection:
     def __init__(self, exists: bool, error: Exception | None = None) -> None:
         self.exists, self.error, self.statements = exists, error, []

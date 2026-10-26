@@ -55,6 +55,7 @@ def _test_database_url() -> str:
 
 _WORKER = re.compile(r"gw\d+")
 _DATABASE_NAME = re.compile(r"[A-Za-z0-9_]+")
+_MAX_IDENTIFIER = 63  # Postgres's NAMEDATALEN - 1
 
 
 def _worker_database_url(url: str, worker: str | None) -> str:
@@ -72,6 +73,13 @@ def _worker_database_url(url: str, worker: str | None) -> str:
     name = f"{parsed.database}_{worker}"
     if not _DATABASE_NAME.fullmatch(name):
         raise RuntimeError(f"cannot derive a worker database from {parsed.database!r}")
+    if len(name) > _MAX_IDENTIFIER:
+        # Postgres would truncate it on CREATE and then not find it by
+        # the full name on connect.
+        raise RuntimeError(
+            f"the worker database {name!r} is longer than Postgres's "
+            f"{_MAX_IDENTIFIER}-byte identifier limit; shorten the test database's name"
+        )
     return parsed.set(database=name).render_as_string(hide_password=False)
 
 
