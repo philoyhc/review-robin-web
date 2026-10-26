@@ -19,7 +19,7 @@
   {% endfor %}
 
   <section class="card" aria-labelledby="ra-h">
-    <div class="card-pad" style="padding-bottom: 12px">
+    <div class="card-head">
       <h2 id="ra-h">RA roster <span class="count">· {{ count[0] }} RAs, {{ count[1] }} linked</span></h2>
       <p class="sub">Reports to is derived from the tree; only dated backups are stored.</p>
     </div>
@@ -31,12 +31,12 @@
         <tbody>
           {% for ra in sample.RAS %}
             <tr>
-              <td style="font-weight: 600"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(ra.email)) }}">{{ ra.name }}</a></td>
-              <td style="color: var(--text-subtle)">{{ ra.email }}</td>
-              <td>{{ ra.neighborhood }} <span style="color: var(--text-subtle)">· {{ ra.precinct }}</span></td>
+              <td class="strong"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(ra.email)) }}">{{ ra.name }}</a></td>
+              <td class="subtle">{{ ra.email }}</td>
+              <td>{{ ra.neighborhood }} <span class="subtle">· {{ ra.precinct }}</span></td>
               <td>{{ ra.floors }}</td>
               <td>{{ ra.reports_to }}{% if ra.backup %}<div><span class="chip chip-warn">Backup: {{ ra.backup }}</span></div>{% endif %}</td>
-              <td style="white-space: nowrap">{{ sample.RA_DATES }}</td>
+              <td class="nowrap">{{ sample.RA_DATES }}</td>
               <td>{% if ra.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
           {% endfor %}
@@ -45,7 +45,7 @@
     </div>
   </section>
 
-  <section class="card card-pad muted" aria-labelledby="csv-h" style="margin-top: 24px">
+  <section class="card card-pad muted gap-above" aria-labelledby="csv-h">
     <h2 id="csv-h">RA roster CSV</h2>
     <p class="sub">A row appoints one RA to one {{ level_name[3] }} by its code. A {{ level_name[3] }} the organization tree does not have is refused in the preview.</p>
     <pre class="sample">{{ sample.RA_CSV }}</pre>

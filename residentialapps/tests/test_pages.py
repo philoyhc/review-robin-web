@@ -11,7 +11,7 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from residentialapps.ops import sample_data
+from residentialapps.ops import pages, sample_data
 from residentialapps.ops.main import create_app as ops_app
 from residentialapps.tests._host import host_with
 
@@ -43,15 +43,15 @@ def host_client() -> TestClient:
     return TestClient(host)
 
 
-def test_the_organization_page_is_a_labelled_placeholder() -> None:
+def test_the_organization_page_is_a_labeled_placeholder() -> None:
     page = TestClient(ops_app()).get("/rosters/")
     assert page.status_code == 200
     assert "Sample data" in page.text
     assert "<h1>Organization</h1>" in page.text
-    assert page.text.count('<td style="color: var(--text-subtle)">Neighborhood</td>') == 10
+    assert page.text.count('<td class="subtle">Neighborhood</td>') == 10
 
 
-def test_every_page_is_labelled_a_placeholder(host_client: TestClient) -> None:
+def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
     assert page_routes(), "no pages found"
     for path in page_routes():
         page = host_client.get(MOUNT + path)
@@ -127,6 +127,8 @@ def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
 def test_person_detail_shows_identity_status_and_history() -> None:
     client = TestClient(ops_app())
     linked = client.get(f"/rosters/people/{CHLOE}").text
+    assert "Sample data" in linked
+    assert "chloe.lim@u.example.edu" in linked  # Entra email, apart from the UPN
     assert 'chip-ok">Linked</span>' in linked
     assert "e0234567@u.example.edu" in linked
     assert "Linked on first sign-in" in linked
@@ -158,3 +160,14 @@ def test_not_registered_shows_the_message_and_nobody_else() -> None:
     assert 'aria-label="Switch area"' not in page
     assert 'class="tabs"' not in page
     assert "example.edu" not in page
+    assert "Example College" not in page
+    assert "signed in as" not in page
+
+
+def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sample data, no gates yet: deployed, every placeholder is 404."""
+    monkeypatch.setattr(pages, "is_local", lambda: False)
+    client = TestClient(ops_app())
+    for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
+        assert client.get(path).status_code == 404, path
+    assert client.get("/health").status_code == 200

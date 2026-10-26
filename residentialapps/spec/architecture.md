@@ -58,7 +58,7 @@ depth and including literal dynamic imports.
 - Enforced today: `residentialapps` not importing `app`, the
   `cordware.main` check, `app` and `cordware` not importing `residentialapps`,
   each of `ops` and `supportlogs` not importing the other, and `web` not
-  importing either application or pillar. The other
+  importing either application or any pillar (`core` included). The other
   rows, and `supportlogs` not importing `leave` or `events`, join with their
   packages (1B and later), each with a planted-import test as the existing
   rules have.

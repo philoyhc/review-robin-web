@@ -6,8 +6,8 @@
     <span class="chip chip-warn">Sample data</span>
   </div>
 
-  <section class="card" aria-labelledby="grants-h" style="margin-bottom: 24px">
-    <div class="card-pad" style="padding-bottom: 12px">
+  <section class="card gap-below" aria-labelledby="grants-h">
+    <div class="card-head">
       <h2 id="grants-h">Sys admins</h2>
       <p class="sub">Only the super-admin grants and revokes. Sys admins run Rosters and read the audit log. The last sys admin cannot be revoked, and nobody acts on their own grant.{% if not (viewer and viewer.is_super_admin) %} You see this read-only.{% endif %}</p>
     </div>
@@ -17,18 +17,18 @@
         <tbody>
           {% for name, email, appointment, granted in sample.SYS_ADMINS %}
             <tr>
-              <td style="font-weight: 600">{{ name }}</td>
-              <td style="color: var(--text-subtle)">{{ email }}</td>
+              <td class="strong">{{ name }}</td>
+              <td class="subtle">{{ email }}</td>
               <td>{{ appointment }}</td>
               <td>{{ granted }}</td>
-              <td style="text-align: right"><button type="button" class="btn btn-danger" disabled>Revoke</button></td>
+              <td class="end"><button type="button" class="btn btn-danger" disabled>Revoke</button></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     <div class="card-pad grant">
-      <div class="filter" style="flex: 1 1 320px">
+      <div class="filter grow">
         <label for="grantee">Grant sys admin to someone on the Staff roster</label>
         <select id="grantee" class="input" disabled>
           <option>Choose a person…</option>
@@ -40,14 +40,14 @@
   </section>
 
   <section class="card" aria-labelledby="audit-h">
-    <div class="card-pad" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-bottom: 12px">
+    <div class="card-head split-head">
       <div>
         <h2 id="audit-h">Audit log</h2>
-        <p class="sub" style="margin: 0">Every business action in Residential Operations, newest first. Read-only.</p>
+        <p class="sub flush">Every business action in Residential Operations, newest first. Read-only.</p>
       </div>
       <div><button type="button" class="btn btn-secondary" disabled>Export CSV</button></div>
     </div>
-    <div class="filters" style="margin: 0; padding: 12px 16px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: var(--surface-muted)">
+    <div class="filters inset">
       <div class="filter-fields">
         <div class="filter">
           <label for="event">Event</label>
@@ -59,11 +59,11 @@
         </div>
         <div class="filter">
           <label for="from">From</label>
-          <input id="from" class="input" type="date" value="2026-10-01" disabled>
+          <input id="from" class="input" type="date" value="{{ sample.AUDIT_RANGE[0] }}" disabled>
         </div>
         <div class="filter">
           <label for="to">To</label>
-          <input id="to" class="input" type="date" value="2026-10-26" disabled>
+          <input id="to" class="input" type="date" value="{{ sample.AUDIT_RANGE[1] }}" disabled>
         </div>
       </div>
       <button type="button" class="btn btn-secondary" disabled>Apply</button>
@@ -74,7 +74,7 @@
         <tbody>
           {% for when, event, kind, actor, detail in sample.AUDIT_EVENTS %}
             <tr>
-              <td style="white-space: nowrap; color: var(--text-subtle)">{{ when }}</td>
+              <td class="nowrap subtle">{{ when }}</td>
               <td><span class="chip {{ {'Rosters': 'chip-accent', 'Organization': 'chip-info', 'Access grants': 'chip-warn'}.get(kind, 'chip-mute') }}">{{ event }}</span></td>
               <td>{{ actor }}</td>
               <td>{{ detail }}</td>

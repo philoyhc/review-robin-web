@@ -1,7 +1,7 @@
 {% extends "residential/base.html" %}
 {% block title %}{{ person.name }}{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url(back) }}">‹ {{ "RA roster" if back.endswith("ras") else "Staff roster" }}</a>
+  <a class="back" href="{{ url(back.path) }}">‹ {{ back.label }}</a>
   <div class="ptitle">
     <h1>{{ person.name }}</h1>
     <span class="chip chip-warn">Sample data</span>
@@ -14,7 +14,7 @@
   </div>
 
   <div class="split">
-    <div class="main" style="display: flex; flex-direction: column; gap: 24px">
+    <div class="main stack">
       <section class="card card-pad" aria-labelledby="identity-h">
         <h2 id="identity-h">Identity</h2>
         <p class="sub">Names and emails describe a person; the Entra account, once linked, is what identifies them.</p>
@@ -23,6 +23,7 @@
           <dt>Enterprise name</dt><dd>{{ person.enterprise_name or "—" }}</dd>
           <dt>Student ID</dt><dd>{{ person.student_id or "—" }}</dd>
           <dt>Entra display name</dt><dd>{{ person.entra_display_name or ("—" if person.linked else "After first sign-in") }}</dd>
+          <dt>Entra email</dt><dd>{{ person.entra_email or ("—" if person.linked else "After first sign-in") }}</dd>
           <dt>Entra UPN</dt><dd>{{ person.entra_upn or ("—" if person.linked else "After first sign-in") }}</dd>
           <dt>Entra object ID</dt><dd>{% if person.entra_object_id %}<code>{{ person.entra_object_id }}</code>{% else %}{{ "—" if person.linked else "After first sign-in" }}{% endif %}</dd>
         </dl>
@@ -33,7 +34,7 @@
         <ul class="plain">
           {% for appointment in person.appointments %}<li>{{ appointment }}</li>{% endfor %}
         </ul>
-        <div class="btnrow" style="margin-top: 12px">
+        <div class="btnrow gap-above-sm">
           <button type="button" class="btn btn-secondary" disabled>Add appointment</button>
           <button type="button" class="btn btn-secondary" disabled>End appointment</button>
         </div>
@@ -57,7 +58,7 @@
             {% for when, what in person.history %}<li><span class="when">{{ when }}</span>{{ what }}</li>{% endfor %}
           </ol>
         {% else %}
-          <p class="sub" style="margin: 0">Added by roster import, 2026-08-01.</p>
+          <p class="sub flush">{{ person.added }}</p>
         {% endif %}
       </section>
     </div>

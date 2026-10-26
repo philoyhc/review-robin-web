@@ -36,8 +36,11 @@ states only what Residential adds.
 
 ## Pages
 
-Not built; the contract for 1B and later. Ruled by the author, 2026-10-26. Each page shows what the viewer's role
-allows; the table says only who reaches it. *Sys admin* is the system
+Ruled by the author, 2026-10-26. Rosters and setup, Sys admin and the
+not-registered page stand as placeholders on sample data (1B item 1),
+answering only on a local run (`APP_ENV=local`) until items 3–5 wire
+them; the rest is the contract for 1B and later. Each page shows what the
+viewer's role allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
 

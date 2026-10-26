@@ -6,10 +6,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
-from cordware.identity import current_identity
+from cordware.identity import current_identity, is_local
 from residentialapps.ops import sample_data
 from residentialapps.web.urls import templates
 
@@ -31,6 +32,15 @@ ROSTER_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Staff roster", "path": "/rosters/staff"},
     {"label": "RA roster", "path": "/rosters/ras"},
 )
+
+
+def placeholders_local_only() -> None:
+    """Segment 1B item 1's screens show sample data and enforce no
+    access rules yet, so they answer only on a local run (`APP_ENV=local`).
+    Deployed, they are 404 until items 3–5 wire them to real data and
+    gates; a router depends on this until then."""
+    if not is_local():
+        raise HTTPException(status_code=404)
 
 
 def _initials(label: str) -> str:

@@ -4,14 +4,19 @@ segment 1B item 1; wired by item 3."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.ops import sample_data
-from residentialapps.ops.pages import ROSTER_TABS, render
+from residentialapps.ops.pages import ROSTER_TABS, placeholders_local_only, render
 
-router = APIRouter()
+ROSTER_BACK = {
+    "staff": {"label": "Staff roster", "path": "/rosters/staff"},
+    "ra": {"label": "RA roster", "path": "/rosters/ras"},
+}
+
+router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 
 @router.get("/rosters/people/{person_id}", name="residentialops_person")
@@ -19,14 +24,13 @@ def person(request: Request, person_id: str) -> Response:
     found = sample_data.PEOPLE.get(person_id)
     if found is None:
         raise HTTPException(status_code=404)
-    back = "/rosters/ras" if any(a.startswith("RA ·") for a in found.appointments) else "/rosters/staff"
     return render(
         request,
         "ops/access/person.html",
         area="Rosters",
         tabs=ROSTER_TABS,
         person=found,
-        back=back,
+        back=ROSTER_BACK[found.roster],
     )
 
 

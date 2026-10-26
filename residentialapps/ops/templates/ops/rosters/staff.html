@@ -13,7 +13,7 @@
      ], "Add person") }}
 
   <section class="card" aria-labelledby="staff-h">
-    <div class="card-pad" style="padding-bottom: 12px">
+    <div class="card-head">
       <h2 id="staff-h">Staff roster <span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span></h2>
       <p class="sub">Appointments make staff eligible; access is granted separately and shown read-only here.</p>
     </div>
@@ -25,11 +25,11 @@
         <tbody>
           {% for person in sample.STAFF %}
             <tr>
-              <td style="font-weight: 600"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
-              <td style="color: var(--text-subtle)">{{ person.email }}</td>
+              <td class="strong"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
+              <td class="subtle">{{ person.email }}</td>
               <td>{{ person.appointment }}</td>
               <td>{{ person.node }}</td>
-              <td style="white-space: nowrap">{{ person.dates }}</td>
+              <td class="nowrap">{{ person.dates }}</td>
               <td>{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
               <td><div class="chips">{% for grant in person.access %}<span class="chip {{ 'chip-support' if grant.startswith('Support Logs') else ('chip-accent' if grant == 'Sys admin' else 'chip-info') }}">{{ grant }}</span>{% endfor %}</div></td>
             </tr>
@@ -39,7 +39,7 @@
     </div>
   </section>
 
-  <section class="card card-pad muted" aria-labelledby="csv-h" style="margin-top: 24px">
+  <section class="card card-pad muted gap-above" aria-labelledby="csv-h">
     <h2 id="csv-h">Staff roster CSV</h2>
     <p class="sub">A row names a person and one appointment; the node is a code from the organization tree. Preview lists new, changed and ended rows before anything saves.</p>
     <pre class="sample">{{ sample.STAFF_CSV }}</pre>

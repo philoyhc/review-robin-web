@@ -27,7 +27,7 @@
 
   <div class="split">
     <section class="card main" aria-labelledby="tree-h">
-      <div class="card-pad" style="padding-bottom: 12px">
+      <div class="card-head">
         <h2 id="tree-h">Organization tree</h2>
         <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only.</p>
         <div class="btnrow">
@@ -42,17 +42,17 @@
           </thead>
           <tbody>
             {% for node in sample.TREE %}
-              <tr{% if node.level < 2 %} style="background: var(--surface-muted)"{% endif %}>
-                <td style="padding-left: {{ 12 + node.level * 16 }}px; font-weight: {{ 700 if node.level < 2 else (600 if node.level == 2 else 400) }}">{{ node.name }}</td>
-                <td style="color: var(--text-subtle)">{{ level_name[node.level] }}</td>
+              <tr class="level-{{ node.level }}">
+                <td class="node">{{ node.name }}</td>
+                <td class="subtle">{{ level_name[node.level] }}</td>
                 <td>{{ node.floors }}</td>
                 <td>{{ node.appointed or "—" }}</td>
                 <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
               </tr>
             {% endfor %}
             {% for gap in sample.FLOOR_GAPS %}
-              <tr style="background: var(--chip-warn-bg); color: var(--chip-warn-fg)">
-                <td style="padding-left: 60px; font-weight: 600">Not covered</td>
+              <tr class="gap-row">
+                <td class="node">Not covered</td>
                 <td>—</td>
                 <td>{{ gap }}</td>
                 <td>—</td>
