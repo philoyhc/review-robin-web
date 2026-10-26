@@ -14,7 +14,8 @@ sufficient for unit tests and local development.
 §3.5). The repo no longer ships a `docker-compose.yml` for Postgres, and
 `docs/local_setup.md` does not require Docker. Postgres-vs-SQLite parity
 is enforced by the CI job at `.github/workflows/ci-postgres.yml` (every
-PR — runs Alembic round-trip *and* the full pytest suite against Postgres)
+PR that changes more than prose, and every push to `main` — runs Alembic
+round-trip *and* the full pytest suite against Postgres)
 and, when the dev slot is live, by the migration-on-deploy step in
 `.github/workflows/main_app-review-robin-web-dev.yml` (every deploy).
 
@@ -93,7 +94,8 @@ in-memory SQLite database and builds the schema **directly from the ORM
 metadata** (`Base.metadata.create_all`) — the deliberate fast path, so a
 default `pytest` run does not replay the migration chain. The Alembic
 migration chain (`alembic upgrade head` **and** the full `downgrade base +
-upgrade head` round-trip) is instead exercised on every PR by the
+upgrade head` round-trip) is instead exercised on every PR that changes
+more than prose by the
 `ci-postgres` job against `postgres:16`, so model/migration drift surfaces
 in CI. The same fixture honours `TEST_DATABASE_URL` — and only that, never
 `DATABASE_URL`, because on Postgres it **drops and rebuilds the `public`
@@ -115,7 +117,8 @@ teardown, so tests do not pollute each other.
   has been disabled since 2026-06-03 (`docs/deployment_dev.md`).
 - **Postgres-against-Docker CI** — `ci-postgres.yml` applies and
   round-trips migrations *and* runs the full pytest suite against a
-  `postgres:16` service container on every PR. The `engine` fixture
+  `postgres:16` service container on every PR that changes more than
+  prose (`tools/ci_lanes.py`). The `engine` fixture
   in `tests/conftest.py` honours `TEST_DATABASE_URL` (the job sets it
   from its `DATABASE_URL`) so the same test bodies cover both dialects.
 
