@@ -13,6 +13,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Iteration rung 4, 2026-10-27** (author's browser check): the tree is approved; Level labels gain a *Used* flag per level, and the Appointments card becomes five editable slots of title, type and level (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Iteration rung 5, 2026-10-27** (author's browser check): levels and appointments become rows with **+** and **X** (no fixed count, no *Used* flag), after RRW's response-field rows; Appointments gains an *Abbrev* column; Admin is *Residential Admin*, and *Other Staff* joins the defaults; up to five levels and ten appointments (the same ruling, amended).
 - **Iteration rung 6, 2026-10-27** (author's browser check): both row builders take RRW's Band 3 measures — 16px text in 30px boxes, 32px glyph buttons, 4px cells, a rule under each row.
+- **Iteration rung 7, 2026-10-27** (author's browser check): boxes, selects and buttons in the row builders all 30px tall; the tree's Floors column becomes *Area*, and Level and Area indent with Node; the tree says its appointees come from the two rosters.
 
 ## Decision
 

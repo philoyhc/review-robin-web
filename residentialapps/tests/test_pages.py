@@ -52,7 +52,9 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert page.status_code == 200
     assert "Sample data" in page.text
     assert "<h1>Organization</h1>" in page.text
-    assert page.text.count('<td class="subtle">Neighborhood</td>') == 10
+    assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
+    assert '<th scope="col">Area</th>' in page.text and ">Floors</th>" not in page.text
+    assert 'href="/rosters/staff">Staff roster</a> and the <a href="/rosters/ras">RA roster</a>' in page.text
 
 
 def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
