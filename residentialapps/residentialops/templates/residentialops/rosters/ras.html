@@ -10,7 +10,7 @@
        {"id": "precinct", "label": level_name[2], "options": sample.PRECINCTS},
        {"id": "building", "label": "Building", "options": sample.BUILDINGS},
        {"id": "signin", "label": "Sign-in", "options": ("Linked", "Not yet signed in")},
-     ], "Add RA", "Name, email or post") }}
+     ], "Add RA", "Name, email or post (RA-01)") }}
 
   {% for code, floors, precinct in sample.VACANT_NEIGHBORHOODS %}
     <div class="notice" role="status">
@@ -26,7 +26,7 @@
     <div class="table-wrap">
       <table class="roster">
         <thead>
-          <tr>{{ select_all() }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">{{ level_name[3] }}</th><th scope="col">Floors</th><th scope="col">Reports to</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
+          <tr>{{ select_all('RAs') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">{{ level_name[3] }}</th><th scope="col">Floors</th><th scope="col">Reports to</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
         </thead>
         <tbody>
           {% for ra in sample.RAS %}
@@ -52,5 +52,5 @@
     <pre class="sample">{{ sample.RA_CSV }}</pre>
     {{ csv_actions() }}
   </section>
-  {{ selection_script("RAs", count[0]) }}
+  {{ selection_script() }}
 {% endblock %}

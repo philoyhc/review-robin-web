@@ -115,7 +115,7 @@ The Staff and RA rosters take RRW's roster pages and Sessions Lobby as their
 model (author, 2026-10-27):
 
 - **A filter card above the table**: one filter box over name, email and
-  post, after the lobby's, beside the page's filter selects, then Clear and
+  post code, after the lobby's, beside the page's filter selects, then Clear and
   the page's add action (Primary).
 - **A tick box leads each row**, with a select-all in the header. Ticked
   rows take accent rails at both ends.

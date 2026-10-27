@@ -237,13 +237,15 @@ def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch
     assert client.get("/health").status_code == 200
 
 
-@pytest.mark.parametrize(("path", "name"), [("/rosters/staff", "Sam Lee"), ("/rosters/ras", "Chloe Lim")])
-def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str, name: str) -> None:
+@pytest.mark.parametrize(
+    ("path", "noun", "name"), [("/rosters/staff", "staff", "Sam Lee"), ("/rosters/ras", "RAs", "Chloe Lim")]
+)
+def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str, noun: str, name: str) -> None:
     page = TestClient(ops_app()).get(path).text
-    assert '<input type="checkbox" class="select-all" aria-label="Select all rows">' in page
+    assert f'<input type="checkbox" class="select-all" aria-label="Select all {noun}">' in page
     assert f'class="row-select" aria-label="Select {name}"' in page
     assert '<label for="q">Filter</label>' in page
-    assert 'placeholder="Name, email or post"' in page
+    assert 'placeholder="Name, email or post' in page
     assert "Upload roster CSV" not in page
     csv_card = page[page.index('id="csv-h"'):]
     assert "Upload and preview</button>" in csv_card and "Export</button>" in csv_card

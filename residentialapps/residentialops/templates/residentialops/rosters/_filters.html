@@ -5,7 +5,7 @@
 {# The filter card: a filter box over the rows, the page's selects, then
    Clear and the page's add action. #}
 {% macro filter_bar(selects, add_label, placeholder) %}
-  <section class="card card-pad muted filters" aria-label="Filter">
+  <section class="card card-pad muted filters" aria-label="Filter and actions">
     <div class="filter-fields">
       <div class="filter filter-box">
         <label for="q">Filter</label>
@@ -29,8 +29,8 @@
 {% endmacro %}
 
 {# The header cell that ticks every row. #}
-{% macro select_all() %}
-  <th scope="col" class="sel"><input type="checkbox" class="select-all" aria-label="Select all rows"></th>
+{% macro select_all(noun) %}
+  <th scope="col" class="sel"><input type="checkbox" class="select-all" aria-label="Select all {{ noun }}"></th>
 {% endmacro %}
 
 {# A row's leading tick box, named by its person. #}
@@ -49,8 +49,8 @@
 {# Ticking a row opens an expander under the last row ticked: the count,
    then the row actions. Edit takes one row; End appointment end-dates and
    keeps the history; Delete, for a row made in error, waits on its confirm.
-   The actions are disabled until item 5. `noun` names the rows. #}
-{% macro selection_script(noun, total) %}
+   The actions are disabled until item 5. #}
+{% macro selection_script() %}
   <script>
     (function () {
       var table = document.querySelector("table.roster");
@@ -61,15 +61,15 @@
       var order = [];
       var panel = null;
       function boxes() { return body.querySelectorAll(".row-select"); }
-      function build(n) {
+      function build(n, total) {
         var tr = document.createElement("tr");
         tr.className = "expander";
         var td = document.createElement("td");
         td.colSpan = cols;
         td.innerHTML =
           '<div class="expander-body">' +
-          '<span><strong>' + n + '</strong> of {{ total }} selected</span>' +
-          '<label class="confirm"><input type="checkbox" disabled> Yes, delete these {{ noun }}</label>' +
+          '<span><strong>' + n + '</strong> of ' + total + ' selected</span>' +
+          '<label class="confirm"><input type="checkbox" disabled> Yes, delete the selected rows</label>' +
           '<span class="btnrow">' +
           '<button type="button" class="btn btn-secondary" disabled' + (n === 1 ? '' : ' title="Edit takes one row"') + '>Edit</button>' +
           '<button type="button" class="btn btn-secondary" disabled>End appointment</button>' +
@@ -91,7 +91,7 @@
         selectAll.indeterminate = ticked.length > 0 && ticked.length < all.length;
         if (!ticked.length) return;
         var anchor = order.length ? order[order.length - 1] : ticked[ticked.length - 1];
-        panel = build(ticked.length);
+        panel = build(ticked.length, all.length);
         anchor.insertAdjacentElement("afterend", panel);
       }
       body.addEventListener("change", function (event) {
@@ -110,6 +110,7 @@
         }
         render();
       });
+      render();  // a browser may restore ticks on reload or back
     })();
   </script>
 {% endmacro %}
