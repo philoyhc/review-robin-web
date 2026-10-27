@@ -55,7 +55,7 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split("<tbody>")[0])
     assert headers[:4] == ["Level", "Dorms", "Node", "Appointed "]
-    assert '<td class="node ind nowrap">RSLM-01</td>' in page.text
+    assert '<td class="node nowrap">RSLM-01</td>' in page.text
     assert 'href="/rosters/staff">Staff roster</a> and the <a href="/rosters/ras">RA roster</a>' in page.text
 
 
