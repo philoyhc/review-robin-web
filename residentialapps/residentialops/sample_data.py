@@ -25,7 +25,7 @@ class Node:
 
 
 TREE: tuple[Node, ...] = (
-    Node(UNIT_NAME, 0, "Cypress A, Cypress B", "Sam Lee (Master) · Rachel Yeo (Residential Admin)"),
+    Node("Master, Admin-01", 0, "Cypress A, Cypress B", "Sam Lee (Master), Rachel Yeo (Admin-01)"),
     Node("RSLM-01", 1, "Cypress A, Cypress B", "Priya Raman (RSLM)"),
     Node("RF-01", 2, "Cypress A 04–12", "Daniel Koh"),
     Node("RA-01", 3, "Cypress A 04-05-06", "Chloe Lim"),
@@ -55,9 +55,9 @@ APPOINTMENT_TYPES = ("Staff", "Student")
 # the whole Unit; rows are added and removed, not a fixed number. Five
 # come prefilled for every Unit; the last is Example College's own.
 APPOINTMENTS = (
-    ("Master", "", "Staff", 0),
+    ("Master", "Master", "Staff", 0),
     ("Residential Fellow", "RF", "Staff", 2),
-    ("Residential Admin", "", "Staff", 0),
+    ("Residential Admin", "Admin", "Staff", 0),
     ("Residential Assistant", "RA", "Student", 3),
     ("Other Staff", "", "Staff", 0),
     ("Residential Student Life Manager", "RSLM", "Staff", 1),
@@ -75,16 +75,16 @@ class StaffMember:
     name: str
     email: str
     appointment: str
-    node: str
+    node: str  # the post: an appointment type's abbreviation and number
     dates: str
     linked: bool
     access: tuple[str, ...]  # read-only chips: what each person is granted
 
 
 STAFF: tuple[StaffMember, ...] = (
-    StaffMember("Sam Lee", "sam.lee@example.edu", "Master", UNIT_NAME, "2026-08-01 –", True,
+    StaffMember("Sam Lee", "sam.lee@example.edu", "Master", "Master", "2026-08-01 –", True,
                 ("Sys admin", "Support Logs · senior")),
-    StaffMember("Rachel Yeo", "rachel.yeo@example.edu", "Residential Admin", UNIT_NAME, "2026-08-01 –", True,
+    StaffMember("Rachel Yeo", "rachel.yeo@example.edu", "Residential Admin", "Admin-01", "2026-08-01 –", True,
                 ("Sys admin", "Support Logs · senior")),
     StaffMember("Priya Raman", "priya.raman@example.edu", "RSLM", "RSLM-01", "2026-08-01 –", True,
                 ("Support Logs · frontline",)),
@@ -136,7 +136,7 @@ PRECINCTS = ("RF-01", "RF-02", "RF-03")
 BUILDINGS = ("Cypress A", "Cypress B")
 
 STAFF_CSV = """\
-Name,Email,Appointment,Node,From,To
+Name,Email,Appointment,Post,From,To
 Daniel Koh,daniel.koh@example.edu,RF,RF-01,2026-08-01,
 Priya Raman,priya.raman@example.edu,RSLM,RSLM-01,2026-08-01,"""
 
@@ -212,7 +212,7 @@ _WORKED = {
 def _people() -> dict[str, Person]:
     people = [
         Person(_IDS[s.email], s.name, "staff", s.email, s.linked,
-               (f"{s.appointment} · {s.node} · {s.dates}",), **_WORKED.get(s.email, {}))
+               (" · ".join(dict.fromkeys((s.appointment, s.node, s.dates))),), **_WORKED.get(s.email, {}))
         for s in STAFF
     ] + [
         Person(_IDS[r.email], r.name, "ra", r.email, r.linked,

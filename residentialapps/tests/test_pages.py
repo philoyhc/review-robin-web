@@ -54,7 +54,9 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert "<h1>Organization</h1>" in page.text
     assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split("<tbody>")[0])
-    assert headers[:4] == ["Level", "Dorms", "Node", "Appointed "]
+    assert headers[:4] == ["Level", "Dorms", "Post", "Appointed "]
+    assert '<td class="node nowrap">Master, Admin-01</td>' in page.text
+    assert '<h2 id="appts-h">Appointment types</h2>' in page.text
     assert '<td class="node nowrap">RSLM-01</td>' in page.text
     assert 'href="/rosters/staff">Staff roster</a> and the <a href="/rosters/ras">RA roster</a>' in page.text
 
@@ -79,7 +81,7 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
     assert 'value="Residential Admin"' in page and 'value="Other Staff"' in page
     assert page.count("<option selected>Whole Unit</option>") == 3
     assert "<option selected>Level 1 · Wing</option>" in page
-    assert "up to 5;" in page and "Up to 10 appointments" in page
+    assert "up to 5;" in page and "Up to 10 appointment types" in page
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:

@@ -20,7 +20,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Node</th><th scope="col">From – to</th><th scope="col">Sign-in</th><th scope="col">Access</th></tr>
+          <tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Post</th><th scope="col">From – to</th><th scope="col">Sign-in</th><th scope="col">Access</th></tr>
         </thead>
         <tbody>
           {% for person in sample.STAFF %}
@@ -41,7 +41,7 @@
 
   <section class="card card-pad muted gap-above" aria-labelledby="csv-h">
     <h2 id="csv-h">Staff roster CSV</h2>
-    <p class="sub">A row names a person and one appointment; the node is a code from the organization tree. Preview lists new, changed and ended rows before anything saves.</p>
+    <p class="sub">A row names a person, one appointment and its post, a code from the organization tree. Preview lists new, changed and ended rows before anything saves.</p>
     <pre class="sample">{{ sample.STAFF_CSV }}</pre>
   </section>
 {% endblock %}
