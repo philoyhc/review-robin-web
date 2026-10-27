@@ -117,6 +117,14 @@ def test_quick_setup_holds_every_other_file() -> None:
     """Read back, the Quick setup file gives the rosters, the types they
     hold and the Organization file with every cell."""
     quick = rows("quick_setup.csv")
+    slot_of: dict[str, dict[str, str]] = {}
+    for row in quick:  # a slot is given once; later rows carry its name alone
+        name = row["Level3.Neighborhood"]
+        if name in slot_of:
+            assert not any(row[k] for k in ("Level1.Wing", "Level2.Precinct", "Notes")), name
+            row.update(slot_of[name])
+        elif name:
+            slot_of[name] = {k: row[k] for k in UNITS}
     first: dict[str, dict[str, str]] = {}
     for row in quick:  # details are given once, on a person's first row
         if row["Email"] in first:
