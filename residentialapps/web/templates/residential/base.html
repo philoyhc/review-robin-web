@@ -254,7 +254,10 @@
         margin: 0; padding: 4px 0; border-bottom: 1px solid var(--border-default);
       }
       .rows + .btn { margin-top: 12px; }
-      .types-wrap { max-width: 720px; }
+      /* A page's setup cards under its main table: two thirds and a third
+         from 960 px, stacked below it. */
+      .bottom-row { display: grid; gap: 24px; margin-top: 24px; align-items: start; }
+      @media (min-width: 960px) { .bottom-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
       table.types { table-layout: fixed; }
       .table-wrap:has(> table.types) { margin-bottom: 12px; }
       table.types th:nth-child(2) { width: 22%; }
