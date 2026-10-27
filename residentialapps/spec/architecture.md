@@ -18,7 +18,7 @@ its tests run. The two applications' contract with the host is
 | `residentialapps/supportlogs/` | Support Logs: its factory, routes, pages, models and services | 1A (factory and health) |
 | `residentialapps/core/` | The shared core: people, identity binding, organization, rosters | 1B |
 | `residentialapps/web/` | What both applications' pages share: base template, styles, URL helper | 1B (built in item 1) |
-| `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | Steps 3 and 4 |
+| `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | RA Leave next; RA Events last (ruling 13) |
 | `residentialapps/tests/` | Residential's tests, a package with its own `__init__.py` | 1A |
 
 **`ops/` beside ruling 1's list** (author, 2026-10-26). Ruling 1 names
