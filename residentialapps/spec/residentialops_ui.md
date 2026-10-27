@@ -55,8 +55,8 @@ with the page.
   the host; initials, with the viewer's name beside them from 960 px, and their role
   once identity is wired (1B item 3).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
-  sideways on a phone. Rosters and setup's are Organization, Staff roster
-  and RA roster; RA Leave's, when built, are an RA's Home, Apply, Extra leave,
+  sideways on a phone. Rosters and setup's are Home, Organization, Staff
+  roster and RA roster (§7); RA Leave's, when built, are an RA's Home, Apply, Extra leave,
   My cover, History, and an approver's Awaiting my decision, Team leave,
   Decided; staff with Leave admin add its pages. A detail page adds a
   back link instead of a breadcrumb.
@@ -136,14 +136,34 @@ model (author, 2026-10-27):
   Retire in place of End appointment; a floor-gap row, which is no node,
   takes no tick box (author, 2026-10-27).
 
-## 7. Cards and notices
+## 7. Setup order
+
+Rosters and setup runs in order, after RRW's Setup tabs (author,
+2026-10-27): **Home**, **Organization**, **Staff roster**, **RA roster**.
+
+- **Home** (`/rosters/`) summarizes four numbered steps, each with its
+  state, counts and a link: 1 appointment types and levels, 2 the
+  organization tree (both on Organization), 3 the Staff roster, 4 the RA
+  roster, and a Checks card listing the warnings across the steps.
+  Until setup is done it opens on how to do it, after RRW's first-run
+  lobby card (`spec/sessions_overview.md`).
+- **Organization** holds three things in order: the appointment types,
+  with the levels to their right, then the organization tree and its
+  structure CSV. The tree opens once the types and levels are saved,
+  with every level holding a type that has posts.
+- **Both rosters** open once the tree has a node at every level.
+- **A step not yet open is shown, not hidden**: its content renders
+  inactive (`.gated`, `inert`) under a note naming what to finish, with a
+  link there.
+
+## 8. Cards and notices
 
 - **Cards**: 8 px corners, a subtle border, 16 px padding; a card's `h2`
   is 18 px with its explanation beneath in subtle text.
 - **A notice** above the cards carries a page-level warning, such as a
   floor gap; warnings that never block a save say so.
 
-## 8. Placeholders and sample data
+## 9. Placeholders and sample data
 
 Until a screen is wired:
 
@@ -151,9 +171,11 @@ Until a screen is wired:
   in one module, deleted in one place by the item that wires it;
 - its controls are present and `disabled`, except a roster's tick boxes,
   which open the expander so its shape can be checked (§6);
-- it answers only on a local run (`APP_ENV=local`), 404 elsewhere.
+- it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
+- Rosters and setup previews each setup state with `?stage=start`,
+  `?stage=tree` or the default, `done` (§7), switched from the title row.
 
-## 9. Accessibility
+## 10. Accessibility
 
 RRW's floor applies: text at 4.5:1 and control boundaries at 3:1 in both
 themes. Beyond it:

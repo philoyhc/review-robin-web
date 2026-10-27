@@ -50,12 +50,13 @@ def host_client() -> TestClient:
 
 
 def test_the_organization_page_is_a_labeled_placeholder() -> None:
-    page = TestClient(ops_app()).get("/rosters/")
+    page = TestClient(ops_app()).get("/rosters/organization")
     assert page.status_code == 200
     assert "Sample data" in page.text
     assert "<h1>Organization</h1>" in page.text
     assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
-    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split("<tbody>")[0])
+    tree = page.text[page.text.index('id="tree-h"'):]
+    headers = re.findall(r'<th scope="col">([^<]*)', tree.split("<tbody>")[0])
     assert headers[:4] == ["Level", "Dorms", "Post", "Appointed"]
     assert '<td class="node nowrap">Master, Admin-01</td>' in page.text
     assert '<h2 id="appts-h">Appointment types</h2>' in page.text
@@ -66,8 +67,8 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
 def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
     """Levels and appointments are rows added with + and removed with X,
     after RRW's response-field rows; no fixed count, no Used flag."""
-    page = TestClient(ops_app()).get("/rosters/").text
-    builders = page[page.index('aria-labelledby="appts-h"'):page.index('aria-labelledby="csv-h"')]
+    page = TestClient(ops_app()).get("/rosters/organization").text
+    builders = page[page.index('aria-labelledby="appts-h"'):page.index('aria-labelledby="tree-h"')]
     assert 'type="checkbox"' not in builders and "> Used<" not in page
     for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
         assert f'aria-label="Add a level below Level {n}"' in page
@@ -88,7 +89,7 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
 
 
 def test_the_organization_page_shows_both_setup_csvs() -> None:
-    page = TestClient(ops_app()).get("/rosters/").text
+    page = TestClient(ops_app()).get("/rosters/organization").text
     assert "<h3>Appointment types CSV</h3>" in page
     assert "Title,Abbrev,Type,Level" in page
     assert "Level,Dorms,Post" in page
@@ -268,17 +269,17 @@ def test_the_roster_scripts_parse(path: str, tmp_path: Path) -> None:
 
 
 def test_the_organization_tree_ticks_nodes_into_the_same_expander() -> None:
-    page = TestClient(ops_app()).get("/rosters/").text
+    page = TestClient(ops_app()).get("/rosters/organization").text
     assert "Expand all" not in page
     assert 'aria-label="Select all nodes"' in page
     assert 'class="row-select" aria-label="Select Wing RSLM-01"' in page
     assert ">Retire</button>" in page and "End appointment" not in page
-    assert '<tr class="gap-row">\n                  <td class="sel"></td>' in page
+    assert re.search(r'<tr class="gap-row">\s*<td class="sel"></td>', page)
 
 
 def test_a_value_is_plain_where_it_is_set_and_a_pill_where_it_is_derived() -> None:
     client = TestClient(ops_app())
-    tree = client.get("/rosters/").text
+    tree = client.get("/rosters/organization").text
     assert '<td class="node nowrap">RA-01</td>' in tree  # the tree sets the post
     assert '<span class="pill-derived">Chloe Lim</span>' in tree  # the RA roster appoints her
     ras = client.get("/rosters/ras").text
@@ -287,3 +288,30 @@ def test_a_value_is_plain_where_it_is_set_and_a_pill_where_it_is_derived() -> No
     staff = client.get("/rosters/staff").text
     assert '<span class="pill-derived">RF</span>' in staff  # RF-01's type comes from the tree
     assert "<td>Other Staff</td>" in staff  # a type with no posts is set on the roster
+
+
+def test_rosters_home_explains_setup_until_it_is_done() -> None:
+    client = TestClient(ops_app())
+    start = client.get("/rosters/?stage=start").text
+    assert "<h1>Rosters and setup</h1>" in start
+    assert "is not set up yet" in start
+    steps = ("1. Appointment types and levels", "2. Organization tree", "3. Staff roster", "4. RA roster")
+    assert [start.index(step) for step in steps] == sorted(start.index(step) for step in steps)
+    done = client.get("/rosters/").text
+    assert "is not set up yet" not in done
+    assert '<h2 id="checks-h">Checks</h2>' in done
+    assert "Cypress A 16 is in no Neighborhood." in done
+
+
+def test_each_setup_step_is_inactive_until_its_prerequisite_exists() -> None:
+    client = TestClient(ops_app())
+    start = client.get("/rosters/organization?stage=start").text
+    types = start.index('id="appts-h"')
+    assert "Not open yet" not in start[:types]  # appointment types and levels open first
+    assert start.index("Not open yet") < start.index('id="tree-h"')
+    assert '<div class="gated" inert>' in start
+    tree = client.get("/rosters/organization?stage=tree").text
+    assert "Not open yet" not in tree and "No nodes yet." in tree
+    for path in ("/rosters/staff", "/rosters/ras"):
+        assert "Not open yet" in client.get(f"{path}?stage=tree").text
+        assert "Not open yet" not in client.get(path).text

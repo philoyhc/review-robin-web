@@ -21,6 +21,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Iteration rung 12, 2026-10-27** (author): the roster tables after RRW's roster pages — a tick box per row opening an expander of row actions, a lobby-style filter box beside the filter selects, the CSV actions in the CSV card (`residentialapps/spec/residentialops_ui.md` §6). Edit fades when more than one row is ticked, after RRW.
 - **Iteration rung 13, 2026-10-27** (author): the Organization tree takes the roster tables' tick boxes and expander, with Retire for End appointment; Expand all goes, the tree having nothing to fold.
 - **Iteration rung 14, 2026-10-27** (author): a value repeated across the three tables is a pill where it is derived and plain text where it is set (`residentialapps/spec/residentialops_ui.md` §6); the RA roster splits its post from its Precinct.
+- **Iteration rung 15, 2026-10-27** (author): setup runs in order. Rosters gains a Home (`/rosters/`: each step's state, Checks, and first-run help after RRW's lobby), and Organization moves to `/rosters/organization` with the appointment types first, the levels to their right and the tree below; the tree opens once types and levels are saved, the rosters once the tree has a node at every level (`residentialapps/spec/residentialops_ui.md` §7). Placeholders preview each state with `?stage=`.
 
 ## Decision
 
