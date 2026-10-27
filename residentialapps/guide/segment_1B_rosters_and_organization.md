@@ -19,6 +19,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Iteration rung 10, 2026-10-27** (author): Node becomes *Post* on the tree and the Staff roster; the Unit's posts read Master, Admin-01; Appointments becomes *Appointment types*, with Master and Admin as abbreviations. Posts ruled in `residentialapps/guide/todo_master.md` (organization levels, amended). A backup is a dated second post (Grace Ho on RF-04 beside RF-02), so RA-04–RA-06 report to both. The appointment-types CSV is next.
 - **Iteration rung 11, 2026-10-27** (author): the setup CSVs — appointment types first (`Title,Abbrev,Type,Level`, which sets the level labels), then structure, one row per post (`Level,Dorms,Post`), the tree derived from Dorms; ruled in `residentialapps/guide/todo_master.md` (organization setup CSVs), superseding the 2026-10-26 structure CSV. The RA roster appoints to posts too. Mock files reworked; `residentialapps/tests/test_sample_data.py` keeps them coherent.
 - **Iteration rung 12, 2026-10-27** (author): the roster tables after RRW's roster pages — a tick box per row opening an expander of row actions, a lobby-style filter box beside the filter selects, the CSV actions in the CSV card (`residentialapps/spec/residentialops_ui.md` §6). Edit fades when more than one row is ticked, after RRW.
+- **Iteration rung 13, 2026-10-27** (author): the Organization tree takes the roster tables' tick boxes and expander, with Retire for End appointment; Expand all goes, the tree having nothing to fold.
 
 ## Decision
 

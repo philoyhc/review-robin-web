@@ -1,4 +1,5 @@
 {% extends "residential/base.html" %}
+{% from "residentialops/rosters/_filters.html" import select_all, select_row, selection_script %}
 {% block title %}Organization{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -32,18 +33,18 @@
           <h2 id="tree-h">Organization tree</h2>
           <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only. Who is appointed comes from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a>.</p>
           <div class="btnrow">
-            <button type="button" class="btn btn-secondary" disabled>Expand all</button>
             <button type="button" class="btn btn-primary" disabled>Add node</button>
           </div>
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="roster">
             <thead>
-              <tr><th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Post</th><th scope="col">Appointed <span class="subtle">(from the rosters)</span></th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+              <tr>{{ select_all("nodes") }}<th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Post</th><th scope="col">Appointed <span class="subtle">(from the rosters)</span></th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
             </thead>
             <tbody>
               {% for node in sample.TREE %}
                 <tr class="level-{{ node.level }}">
+                  {{ select_row(level_name[node.level] ~ " " ~ node.name) }}
                   <td class="subtle ind">{{ level_name[node.level] }}</td>
                   <td class="nowrap">{{ node.floors }}</td>
                   <td class="node nowrap">{{ node.name }}</td>
@@ -53,6 +54,7 @@
               {% endfor %}
               {% for gap in sample.FLOOR_GAPS %}
                 <tr class="gap-row">
+                  <td class="sel"></td>
                   <td class="ind">—</td>
                   <td class="nowrap">{{ gap }}</td>
                   <td class="node nowrap">Not covered</td>
@@ -147,4 +149,5 @@
       </section>
     </div>
   </div>
+  {{ selection_script("Retire") }}
 {% endblock %}

@@ -47,10 +47,11 @@
 {% endmacro %}
 
 {# Ticking a row opens an expander under the last row ticked: the count,
-   then the row actions. Edit takes one row, and fades when more are ticked; End appointment end-dates and
-   keeps the history; Delete, for a row made in error, waits on its confirm.
-   The actions are disabled until item 5. #}
-{% macro selection_script() %}
+   then the row actions. Edit takes one row, and fades when more are ticked;
+   `end_label` (End appointment on a roster, Retire on the tree) end-dates
+   and keeps the history; Delete, for a row made in error, waits on its
+   confirm. The actions are disabled until items 4 and 5. #}
+{% macro selection_script(end_label="End appointment") %}
   <script>
     (function () {
       var table = document.querySelector("table.roster");
@@ -74,7 +75,7 @@
           (n === 1
             ? '<button type="button" class="btn btn-secondary" disabled>Edit</button>'
             : '<button type="button" class="btn btn-secondary btn-unavailable" disabled aria-disabled="true" title="Edit takes one row">Edit</button>') +
-          '<button type="button" class="btn btn-secondary" disabled>End appointment</button>' +
+          '<button type="button" class="btn btn-secondary" disabled>{{ end_label }}</button>' +
           '<button type="button" class="btn btn-danger" disabled>Delete</button>' +
           '</span></div>';
         tr.appendChild(td);
