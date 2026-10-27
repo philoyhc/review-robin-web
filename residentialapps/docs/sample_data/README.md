@@ -16,30 +16,30 @@ or 5 rules a different layout, change these files with it.
 
 ## The Unit
 
-One Wing (Cypress), three Precincts (RF1–RF3) and ten Neighborhoods
-(RA1–RA10) across two towers.
+One Wing (RSLM-01), three Precincts (RF-01–RF-03) and ten Neighborhoods
+(RA-01–RA-10) across two towers.
 
 - Cypress A holds floors 04–16. Floor 16 is in no Neighborhood: it is the
   floor gap the Organization page warns about.
 - Cypress B holds floors 01–16.
-- RA10 has no RA.
+- RA-10 has no RA.
 
 ## Files and what each should do
 
 | File | Import it… | Expect |
 |---|---|---|
 | `structure.csv` | First, on an empty Unit | 10 Neighborhoods, 3 Precincts, 1 Wing created; one warning: Cypress A 16 is in no Neighborhood |
-| `structure_reimport_retire.csv` | After `structure.csv` | Preview: RA10 to be retired (end-dated, not deleted); RA4 changed (gains Cypress A 16) and RA9 changed (gains Cypress B 15-16); the floor-gap warning clears |
-| `structure_reimport_blocked.csv` | After the RA roster | Blocked: RA1 is left out but has a current appointment (Chloe Lim). RA2 is also changed, gaining RA1's floors |
-| `structure_errors.csv` | Any time | Refused in preview: duplicate code RA1; overlap on Cypress A 09 (RA1/RA3 rows); a non-contiguous floor list (`13-15`); unknown building Cypress Q; a row with no floors; a row with no Precinct |
-| `staff_roster.csv` | After `structure.csv` | 8 staff: Master and Residential Admin at the Unit, the RSLM at Cypress, three RFs at RF1–RF3, one Other Staff with no node, and Grace Ho as a dated second RF at RF2 (2026-10-01 to 2026-12-31) |
-| `staff_roster_errors.csv` | After `staff_roster.csv` | Flagged in preview: duplicate roster email (Daniel Koh); unknown node RF9; unknown appointment Warden; an RSLM on a Precinct rather than a Wing; a row with no email; an end date before the start |
-| `ra_roster.csv` | After `structure.csv` | 9 RAs on RA1–RA9, with reporting derived from the tree (RA1–RA3 to Daniel Koh, RA4–RA6 to Mei Ling Tan, RA7–RA9 to Arjun Nair); RA10 stays vacant |
-| `ra_roster_errors.csv` | After `ra_roster.csv` | Flagged in preview: duplicate roster email (Chloe Lim); unknown Neighborhood RA11; a Precinct code (RF2) where a Neighborhood belongs; a student ID that is not nine characters; a second RA on an occupied Neighborhood (RA4); an end date before the start |
+| `structure_reimport_retire.csv` | After `structure.csv` | Preview: RA-10 to be retired (end-dated, not deleted); RA-04 changed (gains Cypress A 16) and RA-09 changed (gains Cypress B 15-16); the floor-gap warning clears |
+| `structure_reimport_blocked.csv` | After the RA roster | Blocked: RA-01 is left out but has a current appointment (Chloe Lim). RA-02 is also changed, gaining RA-01's floors |
+| `structure_errors.csv` | Any time | Refused in preview: duplicate code RA-01; overlap on Cypress A 09 (RA-01/RA-03 rows); a non-contiguous floor list (`13-15`); unknown building Cypress Q; a row with no floors; a row with no Precinct |
+| `staff_roster.csv` | After `structure.csv` | 8 staff: Master and Residential Admin at the Unit, the RSLM at RSLM-01, three RFs at RF-01–RF-03, one Other Staff with no node, and Grace Ho as a dated second RF at RF-02 (2026-10-01 to 2026-12-31) |
+| `staff_roster_errors.csv` | After `staff_roster.csv` | Flagged in preview: duplicate roster email (Daniel Koh); unknown node RF-09; unknown appointment Warden; an RSLM on a Precinct rather than a Wing; a row with no email; an end date before the start |
+| `ra_roster.csv` | After `structure.csv` | 9 RAs on RA-01–RA-09, with reporting derived from the tree (RA-01–RA-03 to Daniel Koh, RA-04–RA-06 to Mei Ling Tan, RA-07–RA-09 to Arjun Nair); RA-10 stays vacant |
+| `ra_roster_errors.csv` | After `ra_roster.csv` | Flagged in preview: duplicate roster email (Chloe Lim); unknown Neighborhood RA-11; a Precinct code (RF-02) where a Neighborhood belongs; a student ID that is not nine characters; a second RA on an occupied Neighborhood (RA-04); an end date before the start |
 
 Two cases that sit outside the files, for the browser:
 
-- **Dated backup reporting.** Set by hand on the RA roster: RA5 (Jia Hui
+- **Dated backup reporting.** Set by hand on the RA roster: RA-05 (Jia Hui
   Ong) reports to Grace Ho until 2026-12-31. The roster shows the backup
   beside the derived RF, Mei Ling Tan.
 - **Sys admin.** Granted by hand by the super-admin: Sam Lee and Rachel Yeo.
