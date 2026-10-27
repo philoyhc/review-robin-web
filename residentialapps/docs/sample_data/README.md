@@ -10,7 +10,7 @@ Every person and address is fictional; no file here is imported into production.
 The layouts follow the ruling in `residentialapps/guide/todo_master.md` (organization by units, 2026-10-27):
 
 - **The rosters hold people and their appointments only.** The Staff and RA files add the optional columns that `residentialapps/docs/residentialapps_identity.md` §5.1 allows: the enterprise-system name, and the student ID for RAs.
-- **The Organization file holds the area slots, one row per Neighborhood.** Its grouping columns come top level first, then Notes. After those come the slot's **Staff** and **RA** cells. They name people by roster email, several separated by `;`.
+- **The Organization file holds the area slots, one row per Neighborhood.** Its grouping columns come top level first, headed `Level1.Wing`, `Level2.Precinct` and `Level3.Neighborhood`, up to `Level5`. Each header sets that level's name, and the last level is the slot. Notes come after them. After those come the slot's **Staff** and **RA** cells. They name people by roster email, several separated by `;`.
 
 ## The Unit
 

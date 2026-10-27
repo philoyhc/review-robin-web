@@ -11,7 +11,8 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parents[1] / "docs" / "sample_data"
 
 ROSTER = ["Name", "Email", "Appointment", "From", "To", "Enterprise name"]
-UNITS = ["Wing", "Precinct", "Neighborhood", "Notes"]
+LEVELS = ["Level1.Wing", "Level2.Precinct", "Level3.Neighborhood"]
+UNITS = [*LEVELS, "Notes"]
 HEADERS = {
     "staff_appointment_types": ["Title", "Abbrev"],
     "student_appointment_types": ["Title", "Abbrev"],
@@ -69,6 +70,6 @@ def test_every_person_cell_names_someone_on_its_roster() -> None:
 
 def test_the_units_are_the_author_s_breakdown() -> None:
     units = rows("organization.csv")
-    assert [len({row[level] for row in units}) for level in ("Wing", "Precinct", "Neighborhood")] == [3, 9, 30]
+    assert [len({row[level] for row in units}) for level in LEVELS] == [3, 9, 30]
     assert [{k: row[k] for k in UNITS} for row in units] == rows("organization_units.csv")
     assert all(row["Notes"] for row in units)
