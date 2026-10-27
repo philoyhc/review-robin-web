@@ -141,8 +141,10 @@ model (author, 2026-10-27):
 Rosters and setup runs in order, after RRW's Setup tabs (author,
 2026-10-27): **Home**, **Organization**, **Staff roster**, **RA roster**.
 
-- **Home** (`/rosters/`) summarizes each step's state and counts, with a
-  link to it, and a Checks card listing the warnings across the steps.
+- **Home** (`/rosters/`) summarizes four numbered steps, each with its
+  state, counts and a link: 1 appointment types and levels, 2 the
+  organization tree (both on Organization), 3 the Staff roster, 4 the RA
+  roster, and a Checks card listing the warnings across the steps.
   Until setup is done it opens on how to do it, after RRW's first-run
   lobby card (`spec/sessions_overview.md`).
 - **Organization** holds three things in order: the appointment types,

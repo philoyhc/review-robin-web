@@ -12,40 +12,44 @@
   {% if stage != "done" %}
     <section class="card card-pad gap-below" aria-labelledby="start-h">
       <h2 id="start-h">{{ sample.UNIT_NAME }} is not set up yet</h2>
-      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the three steps below, in order: each opens once the one before it is done. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
+      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the four steps below, in order: each opens once the one before it is done. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
     </section>
   {% endif %}
 
   <section class="card card-pad" aria-labelledby="setup-h">
     <h2 id="setup-h">Setup</h2>
+    {# Four steps in order (author, 2026-10-27); the first two share the
+       Organization page. The next step open is the one the Primary
+       button points at. #}
     <ol class="steps">
-      <li>
-        <h3>1. Organization
-          {% if stage == "start" %}<span class="chip chip-accent">Next</span>
-          {% elif stage == "tree" %}<span class="chip chip-warn">Tree next</span>
-          {% else %}<span class="chip chip-ok">Set up</span>{% endif %}
-        </h3>
-        <p>Add the appointment types and name the levels, then build the organization tree: each node's level, dorms and posts. The setup CSVs load appointment types first, then the structure.</p>
-        <dl class="kv">
-          <dt>Appointment types</dt><dd>{{ sample.APPOINTMENTS | length }}</dd>
-          <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
-          <dt>Tree</dt><dd>{% if stage == "done" %}{{ sample.TREE | length }} nodes, {{ post_count }} posts{% else %}—{% endif %}</dd>
-        </dl>
-        <a class="btn {{ 'btn-primary' if stage != 'done' else 'btn-secondary' }}" href="{{ url('/rosters/organization') }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}">Go to Organization</a>
-      </li>
-      {% for title, path, people, noun, what in (
-           ("2. Staff roster", "/rosters/staff", staff_count, "people", "Appoint staff to their posts. A type with no posts, such as Other Staff, is appointed without one."),
-           ("3. RA roster", "/rosters/ras", ra_count, "RAs", "Appoint RAs to their posts; who each reports to follows from the tree."),
+      {% set next = {"start": 1, "tree": 2, "done": 0}[stage] %}
+      {% for n, title, path, what in (
+           (1, "Appointment types and levels", "/rosters/organization#appts-h", "Add the appointment types, each with its abbreviation, type and level, and name the levels of the organization."),
+           (2, "Organization tree", "/rosters/organization#tree-h", "Flesh out the tree: each node's level and dorms, and the posts it holds. Opens once step 1 is saved."),
+           (3, "Staff roster", "/rosters/staff", "Appoint staff to their posts; a type with no posts, such as Other Staff, is appointed without one. Opens once the tree has a node at every level."),
+           (4, "RA roster", "/rosters/ras", "Appoint RAs to their posts; who each reports to follows from the tree. Opens once the tree has a node at every level."),
          ) %}
+        {% set done = next == 0 or n < next %}
         <li>
-          <h3>{{ title }}
-            {% if stage == "done" %}<span class="chip chip-ok">Set up</span>{% else %}<span class="chip chip-mute">Not open yet</span>{% endif %}
+          <h3>{{ n }}. {{ title }}
+            {% if done %}<span class="chip chip-ok">Set up</span>
+            {% elif n == next %}<span class="chip chip-accent">Next</span>
+            {% else %}<span class="chip chip-mute">Not open yet</span>{% endif %}
           </h3>
-          <p>{{ what }}{% if stage != "done" %} Opens once the organization tree has a node at every level.{% endif %}</p>
+          <p>{{ what }}</p>
           <dl class="kv">
-            <dt>People</dt><dd>{% if stage == "done" %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
+            {% if n == 1 %}
+              <dt>Types</dt><dd>{{ sample.APPOINTMENTS | length }}</dd>
+              <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
+            {% elif n == 2 %}
+              <dt>Tree</dt><dd>{% if done %}{{ sample.TREE | length }} nodes, {{ post_count }} posts{% else %}—{% endif %}</dd>
+            {% else %}
+              {% set people, noun = (staff_count, "people") if n == 3 else (ra_count, "RAs") %}
+              <dt>People</dt><dd>{% if done %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
+            {% endif %}
           </dl>
-          <a class="btn btn-secondary" href="{{ url(path) }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}">Go to {{ title[3:] }}</a>
+          {% set base, _, anchor = path.partition("#") %}
+          <a class="btn {{ 'btn-primary' if n == next else 'btn-secondary' }}" href="{{ url(base) }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}{% if anchor %}#{{ anchor }}{% endif %}" aria-label="Go to step {{ n }}, {{ title }}">Go to step {{ n }}</a>
         </li>
       {% endfor %}
     </ol>
@@ -54,7 +58,7 @@
   {% if stage == "done" %}
     <section class="card card-pad gap-above" aria-labelledby="checks-h">
       <h2 id="checks-h">Checks</h2>
-      <p class="sub">Warnings across the three steps. None blocks a save.</p>
+      <p class="sub">Warnings across the four steps. None blocks a save.</p>
       <ul class="plain">
         {% for gap in sample.FLOOR_GAPS %}
           <li>{{ gap }} is in no {{ level_name[3] }}. <a href="{{ url('/rosters/organization') }}">Organization</a></li>

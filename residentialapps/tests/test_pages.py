@@ -295,7 +295,8 @@ def test_rosters_home_explains_setup_until_it_is_done() -> None:
     start = client.get("/rosters/?stage=start").text
     assert "<h1>Rosters and setup</h1>" in start
     assert "is not set up yet" in start
-    assert start.index("1. Organization") < start.index("2. Staff roster") < start.index("3. RA roster")
+    steps = ("1. Appointment types and levels", "2. Organization tree", "3. Staff roster", "4. RA roster")
+    assert [start.index(step) for step in steps] == sorted(start.index(step) for step in steps)
     done = client.get("/rosters/").text
     assert "is not set up yet" not in done
     assert '<h2 id="checks-h">Checks</h2>' in done

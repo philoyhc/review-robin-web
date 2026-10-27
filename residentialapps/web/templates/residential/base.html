@@ -278,7 +278,8 @@
       .gated { opacity: 0.5; }
       .stage-switch { font-size: 12px; color: var(--text-subtle); }
       .steps { display: grid; gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
-      @media (min-width: 960px) { .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      @media (min-width: 640px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      @media (min-width: 1100px) { .steps { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
       .steps > li { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 14px; background: var(--surface-card); }
       .steps h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15px; }
       .steps p { margin: 0 0 8px; font-size: 14px; color: var(--text-body); }
