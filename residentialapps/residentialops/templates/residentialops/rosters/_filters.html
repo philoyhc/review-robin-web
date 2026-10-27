@@ -28,6 +28,12 @@
   </section>
 {% endmacro %}
 
+{# Values another table owns, shown here read-only as pills; a table's own
+   values are plain text, edited where they live. #}
+{% macro pills(values) %}
+  {%- if values %}<span class="pills">{% for value in values %}<span class="pill-derived">{{ value }}</span>{% endfor %}</span>{% else %}<span class="subtle">—</span>{% endif -%}
+{% endmacro %}
+
 {# The header cell that ticks every row. #}
 {% macro select_all(noun) %}
   <th scope="col" class="sel"><input type="checkbox" class="select-all" aria-label="Select all {{ noun }}"></th>

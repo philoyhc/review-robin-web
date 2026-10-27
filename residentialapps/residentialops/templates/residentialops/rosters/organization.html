@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import select_all, select_row, selection_script %}
+{% from "residentialops/rosters/_filters.html" import pills, select_all, select_row, selection_script %}
 {% block title %}Organization{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -31,7 +31,7 @@
       <section class="card" aria-labelledby="tree-h">
         <div class="card-head">
           <h2 id="tree-h">Organization tree</h2>
-          <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only. Who is appointed comes from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a>.</p>
+          <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only. Who is appointed comes from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a>, shown as pills: edit it there.</p>
           <div class="btnrow">
             <button type="button" class="btn btn-primary" disabled>Add node</button>
           </div>
@@ -39,7 +39,7 @@
         <div class="table-wrap">
           <table class="roster">
             <thead>
-              <tr>{{ select_all("nodes") }}<th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Post</th><th scope="col">Appointed <span class="subtle">(from the rosters)</span></th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+              <tr>{{ select_all("nodes") }}<th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Post</th><th scope="col">Appointed</th></tr>
             </thead>
             <tbody>
               {% for node in sample.TREE %}
@@ -48,8 +48,7 @@
                   <td class="subtle ind">{{ level_name[node.level] }}</td>
                   <td class="nowrap">{{ node.floors }}</td>
                   <td class="node nowrap">{{ node.name }}</td>
-                  <td>{{ node.appointed or "—" }}</td>
-                  <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
+                  <td>{% if node.appointed %}{{ pills(node.appointed) }}{% else %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
                 </tr>
               {% endfor %}
               {% for gap in sample.FLOOR_GAPS %}
@@ -58,7 +57,6 @@
                   <td class="ind">—</td>
                   <td class="nowrap">{{ gap }}</td>
                   <td class="node nowrap">Not covered</td>
-                  <td>—</td>
                   <td><span class="chip chip-warn">Gap</span></td>
                 </tr>
               {% endfor %}
