@@ -51,7 +51,7 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 |---|---|---|
 | RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; Team Viewers, read-only; sys admins |
 | RA Events Proposals | `/ra-events/` | As RA Leave |
-| Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters, appointments, the organization tree and its levels |
+| Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters with their appointment types, and the organization: its levels and slots |
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
 
 **Residential Operations page map** (author, 2026-10-26). Each page, what
@@ -91,7 +91,7 @@ Events has no spec yet, so its rows are provisional.
   row builders, roster tables, placeholders — is `residentialapps/spec/residentialops_ui.md`.
 - **Policy lives with its application** (author, 2026-10-27): leave policy
   on Leave admin, event policy on Events admin. Rosters and setup stays the
-  organization tree and the two rosters, the data every application shares.
+  organization's slots and the two rosters, the data every application shares.
 
 **Support Logs** (`/supportlogs`). Access is by authorization, never by
 appointment, and RAs never reach it:

@@ -2,7 +2,7 @@
 
 > **Built so far:** segment 1B item 1 built the chrome, the placeholder
 > screens of Rosters and setup and Sys admin, the row builders on the
-> Organization page and the roster tables, on sample data. Segment 1C item 1 adds RA Leave's
+> Organization page, the roster tables and the slots, on sample data. Segment 1C item 1 adds RA Leave's
 > screens and extends this file from them.
 
 The conventions every Residential Operations screen follows. Where this
@@ -92,15 +92,15 @@ perform is `disabled`, not hidden.
 
 ## 5. Row builders
 
-A list the viewer edits row by row — the Level labels and Appointments
-on the Organization page — takes RRW's Band 3 response-field rows as its
+A list the viewer edits row by row — the levels on Organization and each
+roster's appointment types — takes RRW's Band 3 response-field rows as its
 model (author, 2026-10-27):
 
 - **Each row ends in + and X**: a Secondary + adds a row below, a
   Destructive X removes the row. There is no fixed number of rows.
 - **Each list has a limit**, and its + says so once the list is full:
-  up to 5 levels and up to 10 appointment types
-  (`residentialapps/guide/todo_master.md`, organization levels, amended).
+  up to 5 levels and up to 10 appointment types per roster
+  (`residentialapps/guide/todo_master.md`, organization by units).
 - **Measures, after RRW's rows** (measured in Chromium, 2026-10-27):
   16 px text in boxes padded 4 px 8 px, glyph buttons 32 px wide at
   weight 500, 4 px cells and a rule under each row (`.rows`). Boxes, selects and
@@ -109,13 +109,13 @@ model (author, 2026-10-27):
 - On a phone the list's table scrolls in its box rather than squeezing
   its fields.
 
-## 6. Roster tables and the tree
+## 6. Roster tables and the slots
 
 The Staff and RA rosters take RRW's roster pages and Sessions Lobby as their
 model (author, 2026-10-27):
 
-- **A filter card above the table**: one filter box over name, email and
-  post code, after the lobby's, beside the page's filter selects, then Clear and
+- **A filter card above the table**: one filter box over name and email,
+  after the lobby's, beside the page's filter selects, then Clear and
   the page's add action (Primary).
 - **A tick box leads each row**, with a select-all in the header. Ticked
   rows take accent rails at both ends.
@@ -127,14 +127,17 @@ model (author, 2026-10-27):
 - **The CSV card below the table** carries the sample, then Upload and
   preview (Primary) and Export.
 - **A value has one home.** Where it is set, it is plain text and edited
-  there; where another table repeats it, it is a pill (`.pill-derived`),
-  read-only (author, 2026-10-27). The tree's Appointed comes from the
-  rosters; a Staff roster post's appointment type, and an RA's
-  Precinct, floors and reporting, come from the tree. Sign-in and access
-  stay status chips (§3).
-- **The Organization tree** takes the same tick boxes and expander, with
-  Retire in place of End appointment; a floor-gap row, which is no node,
-  takes no tick box (author, 2026-10-27).
+  there; where another page repeats it, it is a pill (`.pill-derived`),
+  read-only (author, 2026-10-27): a person's slots, on their detail page,
+  come from Organization's cells. Sign-in and access stay status chips (§3).
+- **Each roster page opens on its appointment types** (Staff appointment
+  types, Student appointment types), a row builder (§5) with its CSV in
+  the same card, above the filter card.
+- **Organization's slots table** takes the same tick boxes and expander,
+  with Retire in place of End appointment. One row per slot, under its
+  higher levels, whose names show on a group's first row only; a new top
+  level opens under a heavier rule. Notes are small subtle text; the Staff
+  and RA cells are typeahead boxes (organization by units, 2026-10-27).
 
 ## 7. Setup order
 
@@ -142,16 +145,14 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 2026-10-27): **Home**, **Organization**, **Staff roster**, **RA roster**.
 
 - **Home** (`/rosters/`) summarizes four numbered steps, each with its
-  state, counts and a link: 1 appointment types and levels, 2 the
-  organization tree (both on Organization), 3 the Staff roster, 4 the RA
-  roster, and a Checks card listing the warnings across the steps.
-  Until setup is done it opens on how to do it, after RRW's first-run
-  lobby card (`spec/sessions_overview.md`).
-- **Organization** holds three things in order: the appointment types,
-  with the levels to their right, then the organization tree and its
-  structure CSV. The tree opens once the types and levels are saved,
-  with every level holding a type that has posts.
-- **Both rosters** open once the tree has a node at every level.
+  state, counts and a link: 1 the slots (Organization's levels and slots),
+  2 the Staff roster, 3 the RA roster (each its types, then people), 4 the
+  slots' Staff and RA cells, and a Checks card listing the warnings across
+  the steps. Until setup is done it opens on how to do it, after RRW's
+  first-run lobby card (`spec/sessions_overview.md`).
+- **Organization** holds the levels, then the slots table and its CSV.
+- **Both rosters** open once the slots exist; the slots' Staff and RA
+  cells once both rosters have people.
 - **A step not yet open is shown, not hidden**: its content renders
   inactive (`.gated`, `inert`) under a note naming what to finish, with a
   link there.
@@ -160,8 +161,8 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 
 - **Cards**: 8 px corners, a subtle border, 16 px padding; a card's `h2`
   is 18 px with its explanation beneath in subtle text.
-- **A notice** above the cards carries a page-level warning, such as a
-  floor gap; warnings that never block a save say so.
+- **A notice** above the cards carries a page-level warning, such as an
+  overlap; warnings that never block a save say so.
 
 ## 9. Placeholders and sample data
 
@@ -173,7 +174,7 @@ Until a screen is wired:
   which open the expander so its shape can be checked (§6);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - Rosters and setup previews each setup state with `?stage=start`,
-  `?stage=tree` or the default, `done` (§7), switched from the title row.
+  `?stage=slots` or the default, `done` (§7), switched from the title row.
 
 ## 10. Accessibility
 
@@ -181,7 +182,7 @@ RRW's floor applies: text at 4.5:1 and control boundaries at 3:1 in both
 themes. Beyond it:
 
 - **Every control has an accessible name.** A control repeated per row
-  names its row: "Appointment type 2: type", "Remove Level 3".
+  names its row: "Staff appointment type 2: title", "Remove Level 3".
 - **A column of buttons has a header**, visually hidden when the buttons
   speak for themselves.
 - **Color is never the only signal** (§3).

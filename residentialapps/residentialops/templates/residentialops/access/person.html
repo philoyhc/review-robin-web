@@ -1,4 +1,5 @@
 {% extends "residential/base.html" %}
+{% from "residentialops/rosters/_filters.html" import pills with context %}
 {% block title %}{{ person.name }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url(back.path) }}">‹ {{ back.label }}</a>
@@ -34,6 +35,11 @@
         <ul class="plain">
           {% for appointment in person.appointments %}<li>{{ appointment }}</li>{% endfor %}
         </ul>
+        {% if person.slots %}
+          <h3 class="gap-above-sm">Slots</h3>
+          <p class="sub">Where Organization names them, in a Staff or RA cell.</p>
+          {{ pills(person.slots) }}
+        {% endif %}
         <div class="btnrow gap-above-sm">
           <button type="button" class="btn btn-secondary" disabled>Add appointment</button>
           <button type="button" class="btn btn-secondary" disabled>End appointment</button>
