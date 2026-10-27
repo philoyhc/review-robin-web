@@ -81,7 +81,7 @@ Events has no spec yet, so its rows are provisional.
 | Review proposals | `/ra-events/review` | Provisional · responsive | — |
 | Events calendar | `/ra-events/` | Provisional · responsive | Provisional · responsive |
 | Events admin | `/ra-events/admin/` | Provisional: event policy · desktop-oriented | — |
-| Organization, Staff roster, RA roster | `/rosters/`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
+| Home, Organization, Staff roster, RA roster | `/rosters/`, `/rosters/organization`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
 | Sys admin | `/sys-admin/` | Audit log; sys admin grants (super-admin) · desktop-oriented | — |
 
 - **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my

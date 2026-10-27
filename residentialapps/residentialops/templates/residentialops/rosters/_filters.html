@@ -123,3 +123,22 @@
     })();
   </script>
 {% endmacro %}
+
+{# Setup runs in order: a step whose prerequisite is not met renders
+   inactive under a note naming what to finish, and where. #}
+{% macro gate(open, why, path, label) %}
+  {%- if open %}{{ caller() }}{% else %}
+  <div class="gate-note" role="note"><strong>Not open yet.</strong> {{ why }} <a href="{{ url(path) }}">{{ label }}</a></div>
+  <div class="gated" inert>{{ caller() }}</div>
+  {%- endif %}
+{% endmacro %}
+
+{# Placeholder only: preview each setup state. The wiring items derive
+   the state from the data and drop this. #}
+{% macro stage_switch(path, stage) %}
+  <span class="stage-switch">Preview:
+    {% for name, label in (("start", "Not started"), ("tree", "Types and levels saved"), ("done", "Set up")) %}
+      {% if name == stage %}<strong aria-current="true">{{ label }}</strong>{% else %}<a href="{{ url(path) }}?stage={{ name }}">{{ label }}</a>{% endif %}{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </span>
+{% endmacro %}

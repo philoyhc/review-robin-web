@@ -1,0 +1,69 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/rosters/_filters.html" import stage_switch with context %}
+{% block title %}Rosters and setup{% endblock %}
+{% block content %}
+  <div class="ptitle">
+    <h1>Rosters and setup</h1>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/", stage) }}</span>
+  </div>
+
+  {# Until setup is done, Home opens on how to do it, after RRW's first-run
+     lobby card: what this area is, then the steps in order. #}
+  {% if stage != "done" %}
+    <section class="card card-pad gap-below" aria-labelledby="start-h">
+      <h2 id="start-h">{{ sample.UNIT_NAME }} is not set up yet</h2>
+      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the three steps below, in order: each opens once the one before it is done. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
+    </section>
+  {% endif %}
+
+  <section class="card card-pad" aria-labelledby="setup-h">
+    <h2 id="setup-h">Setup</h2>
+    <ol class="steps">
+      <li>
+        <h3>1. Organization
+          {% if stage == "start" %}<span class="chip chip-accent">Next</span>
+          {% elif stage == "tree" %}<span class="chip chip-warn">Tree next</span>
+          {% else %}<span class="chip chip-ok">Set up</span>{% endif %}
+        </h3>
+        <p>Add the appointment types and name the levels, then build the organization tree: each node's level, dorms and posts. The setup CSVs load appointment types first, then the structure.</p>
+        <dl class="kv">
+          <dt>Appointment types</dt><dd>{{ sample.APPOINTMENTS | length }}</dd>
+          <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
+          <dt>Tree</dt><dd>{% if stage == "done" %}{{ sample.TREE | length }} nodes, {{ post_count }} posts{% else %}—{% endif %}</dd>
+        </dl>
+        <a class="btn {{ 'btn-primary' if stage != 'done' else 'btn-secondary' }}" href="{{ url('/rosters/organization') }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}">Go to Organization</a>
+      </li>
+      {% for title, path, people, noun, what in (
+           ("2. Staff roster", "/rosters/staff", staff_count, "people", "Appoint staff to their posts. A type with no posts, such as Other Staff, is appointed without one."),
+           ("3. RA roster", "/rosters/ras", ra_count, "RAs", "Appoint RAs to their posts; who each reports to follows from the tree."),
+         ) %}
+        <li>
+          <h3>{{ title }}
+            {% if stage == "done" %}<span class="chip chip-ok">Set up</span>{% else %}<span class="chip chip-mute">Not open yet</span>{% endif %}
+          </h3>
+          <p>{{ what }}{% if stage != "done" %} Opens once the organization tree has a node at every level.{% endif %}</p>
+          <dl class="kv">
+            <dt>People</dt><dd>{% if stage == "done" %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
+          </dl>
+          <a class="btn btn-secondary" href="{{ url(path) }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}">Go to {{ title[3:] }}</a>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  {% if stage == "done" %}
+    <section class="card card-pad gap-above" aria-labelledby="checks-h">
+      <h2 id="checks-h">Checks</h2>
+      <p class="sub">Warnings across the three steps. None blocks a save.</p>
+      <ul class="plain">
+        {% for gap in sample.FLOOR_GAPS %}
+          <li>{{ gap }} is in no {{ level_name[3] }}. <a href="{{ url('/rosters/organization') }}">Organization</a></li>
+        {% endfor %}
+        {% for code, floors, precinct in sample.VACANT_NEIGHBORHOODS %}
+          <li>{{ code }} has no RA; its floors ({{ floors }}) report to {{ precinct }}. <a href="{{ url('/rosters/ras') }}">RA roster</a></li>
+        {% endfor %}
+        <li>{{ staff_count[0] - staff_count[1] }} staff and {{ ra_count[0] - ra_count[1] }} RA have not signed in yet. <a href="{{ url('/rosters/staff') }}">Staff roster</a></li>
+      </ul>
+    </section>
+  {% endif %}
+{% endblock %}

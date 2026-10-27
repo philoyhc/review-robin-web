@@ -1,11 +1,12 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import filter_bar, pills, select_all, select_row, csv_actions, selection_script %}
+{% from "residentialops/rosters/_filters.html" import filter_bar, gate, pills, select_all, select_row, csv_actions, selection_script, stage_switch with context %}
 {% block title %}Staff roster{% endblock %}
 {% block content %}
   <div class="ptitle">
     <h1>Staff roster</h1>
-    <span class="chip chip-warn">Sample data</span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/staff", stage) }}</span>
   </div>
+  {% call gate(rosters_open, "The rosters open once the organization tree has a node at every level.", "/rosters/organization", "Go to Organization") %}
   {{ filter_bar([
        {"id": "appointment", "label": "Appointment", "options": sample.STAFF_APPOINTMENTS},
        {"id": "precinct", "label": level_name[2], "options": sample.PRECINCTS},
@@ -14,7 +15,7 @@
 
   <section class="card" aria-labelledby="staff-h">
     <div class="card-head">
-      <h2 id="staff-h">Staff roster <span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span></h2>
+      <h2 id="staff-h">Staff roster {% if rosters_open %}<span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span>{% endif %}</h2>
       <p class="sub">Appointments make staff eligible. A post's appointment type comes from the organization tree, shown as a pill; only a type with no posts (Other Staff) is set here. Access is granted separately and shown read-only.</p>
     </div>
     <div class="table-wrap">
@@ -23,7 +24,8 @@
           <tr>{{ select_all('staff') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Post</th><th scope="col">From – to</th><th scope="col">Sign-in</th><th scope="col">Access</th></tr>
         </thead>
         <tbody>
-          {% for person in sample.STAFF %}
+          {% if not rosters_open %}<tr><td colspan="8" class="subtle">No staff yet.</td></tr>{% endif %}
+          {% for person in (sample.STAFF if rosters_open else ()) %}
             <tr>
               {{ select_row(person.name) }}
               <td class="strong nowrap"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
@@ -46,5 +48,6 @@
     <pre class="sample">{{ sample.STAFF_CSV }}</pre>
     {{ csv_actions() }}
   </section>
+  {% endcall %}
   {{ selection_script() }}
 {% endblock %}

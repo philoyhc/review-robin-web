@@ -273,6 +273,16 @@
         font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
         border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body);
       }
+      /* Setup order: an inactive step under its note; Home's steps. */
+      .gate-note { margin: 0 0 12px; padding: 10px 14px; border-radius: 8px; border: 1px dashed var(--border-default); background: var(--surface-muted); font-size: 14px; }
+      .gated { opacity: 0.5; }
+      .stage-switch { font-size: 12px; color: var(--text-subtle); }
+      .steps { display: grid; gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
+      @media (min-width: 960px) { .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+      .steps > li { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 14px; background: var(--surface-card); }
+      .steps h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15px; }
+      .steps p { margin: 0 0 8px; font-size: 14px; color: var(--text-body); }
+      .steps .kv { margin-bottom: 8px; }
       .csv-block { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
       .csv-block h3 { margin: 0 0 4px; font-size: 15px; }
       pre.sample {
