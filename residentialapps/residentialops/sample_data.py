@@ -90,6 +90,7 @@ class StaffMember:
     dates: str
     linked: bool
     access: tuple[str, ...]  # read-only chips: what each person is granted
+    enterprise_name: str
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,8 @@ class RosterRA:
     appointment: str
     dates: str
     linked: bool
+    enterprise_name: str
+    student_id: str
 
 
 DATES = "2026-08-01 –"
@@ -111,24 +114,33 @@ def _email(name: str) -> str:
     return f"{''.join(given)}.{family}@example.edu"
 
 
+def _enterprise(name: str) -> str:
+    *given, family = name.upper().split()
+    return f"{family} {' '.join(given)}"
+
+
+def _student_id(n: int) -> str:
+    return f"A0{230000 + 4127 * n:06d}{'XBMHKLRTUWY'[n % 11]}"
+
+
+def _staff(name: str, appointment: str, access: tuple[str, ...], linked: bool = True) -> StaffMember:
+    return StaffMember(name, _email(name), appointment, DATES, linked, access, _enterprise(name))
+
+
 STAFF: tuple[StaffMember, ...] = (
-    StaffMember("Sam Lee", _email("Sam Lee"), "Master", DATES, True, SENIOR),
-    StaffMember("Rachel Yeo", _email("Rachel Yeo"), "Residential Admin", DATES, True, SENIOR),
+    _staff("Sam Lee", "Master", SENIOR),
+    _staff("Rachel Yeo", "Residential Admin", SENIOR),
+    *(_staff(name, "Residential Student Life Manager", FRONTLINE) for name in ("Priya Raman", "Marcus Tan", "Nadia Hassan")),
     *(
-        StaffMember(name, _email(name), "Residential Student Life Manager", DATES, True, FRONTLINE)
-        for name in ("Priya Raman", "Marcus Tan", "Nadia Hassan")
-    ),
-    *(
-        StaffMember(name, _email(name), "Residential Fellow", DATES, name != "Grace Ho",
-                    ("Team Viewer",) if name == "Grace Ho" else FRONTLINE)
+        _staff(name, "Residential Fellow", ("Team Viewer",) if name == "Grace Ho" else FRONTLINE, name != "Grace Ho")
         for name in ("Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
                      "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong")
     ),
 )
 
 RAS: tuple[RosterRA, ...] = tuple(
-    RosterRA(slot.ras[0], _email(slot.ras[0]), "Residential Assistant", DATES, slot.ras[0] != "Nur Aisyah")
-    for slot in SLOTS
+    RosterRA(name, _email(name), "Residential Assistant", DATES, name != "Nur Aisyah", _enterprise(name), _student_id(n))
+    for n, name in enumerate(slot.ras[0] for slot in SLOTS)
 )
 
 # Excerpts of the mock files, shown on the pages' CSV cards.
@@ -203,8 +215,6 @@ PERSON_IDS = dict(_IDS)
 
 _WORKED = {
     "chloe.lim@example.edu": {
-        "enterprise_name": "LIM WEI LING, CHLOE",
-        "student_id": "A0234567X",
         "entra_display_name": "Chloe Lim Wei Ling",
         "entra_email": "chloe.lim@u.example.edu",
         "entra_upn": "e0234567@u.example.edu",
@@ -215,7 +225,6 @@ _WORKED = {
         ),
     },
     "nur.aisyah@example.edu": {
-        "enterprise_name": "NUR AISYAH BINTE ISMAIL",
         "history": (
             ("2026-08-01 08:05", "Added by roster import (Rachel Yeo)"),
             ("2026-09-02 10:41", "Sign-in not matched: roster email differs from the account's"),
@@ -227,11 +236,12 @@ _WORKED = {
 def _people() -> dict[str, Person]:
     people = [
         Person(_IDS[s.email], s.name, "staff", s.email, s.linked, (f"{s.appointment} · {s.dates}",),
-               slots_of(s.name), **_WORKED.get(s.email, {}))
+               slots_of(s.name), enterprise_name=s.enterprise_name, **_WORKED.get(s.email, {}))
         for s in STAFF
     ] + [
         Person(_IDS[r.email], r.name, "ra", r.email, r.linked, (f"{r.appointment} · {r.dates}",),
-               slots_of(r.name), **({"enterprise_name": r.name.upper()} | _WORKED.get(r.email, {})))
+               slots_of(r.name), enterprise_name=r.enterprise_name, student_id=r.student_id,
+               **_WORKED.get(r.email, {}))
         for r in RAS
     ]
     return {p.person_id: p for p in people}
@@ -255,8 +265,7 @@ AUDIT_RANGE = ("2026-10-01", "2026-10-26")
 # (when, event, kind, actor, detail)
 AUDIT_EVENTS = (
     ("2026-10-26 09:42", "Cell changed", "Organization", "Rachel Yeo",
-     "Cypress A 13-14-15 · Staff: + Grace Ho"),
-    ("2026-10-26 09:40", "Person added", "Rosters", "Rachel Yeo", "Grace Ho · Residential Fellow, from 2026-08-01"),
+     "Maple 03-04 · Staff: + Grace Ho"),
     ("2026-10-25 16:05", "Appointment ended", "Rosters", "Sam Lee", "A previous RA, ended 2026-10-24"),
     ("2026-10-24 11:18", "Organization imported", "Organization", "Rachel Yeo",
      "30 slots: 0 new, 2 changed, 0 retired"),

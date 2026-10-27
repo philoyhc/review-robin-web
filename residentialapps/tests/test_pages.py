@@ -81,9 +81,10 @@ def test_levels_and_appointment_types_are_rows() -> None:
         roster = client.get(path).text
         assert f'<h2 id="{"staff" if "Staff" in heading else "student"}-types-h">{heading}</h2>' in roster
         for n, (title, abbrev) in enumerate(types, start=1):
-            assert f'aria-label="{heading} {n}: title" value="{title}"' in roster
-            assert f'aria-label="{heading} {n}: abbreviation" value="{abbrev}"' in roster
-        assert "Up to 10" in roster and "Level" not in roster.split('id="csv-h"')[0].split("types-h")[1]
+            assert f'aria-label="{heading[:-1]} {n}: title" value="{title}"' in roster
+            assert f'aria-label="{heading[:-1]} {n}: abbreviation" value="{abbrev}"' in roster
+        assert 'title="Add a type below this one"' in roster
+        assert "<select" not in roster.split("types-h")[1].split("</section>")[0]  # no level, no type
 
 
 def test_each_page_shows_its_csv() -> None:
@@ -308,3 +309,18 @@ def test_each_setup_step_is_inactive_until_its_prerequisite_exists() -> None:
     assert "The Staff and RA cells open once both rosters have people." in slots
     assert 'aria-label="Cypress A 04-05-06: Staff" value=""' in slots
     assert "Not open yet" not in client.get("/rosters/organization").text
+
+
+def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
+    client = TestClient(ops_app())
+    chloe = client.get(f"/rosters/people/{CHLOE}").text
+    assert chloe.count('<span class="pill-derived">') == 1 and "Cypress A 04-05-06</span>" in chloe
+    assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
+    sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
+    assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in sam
+
+
+def test_home_gives_one_primary_step_at_a_time() -> None:
+    page = TestClient(ops_app()).get("/rosters/?stage=slots").text
+    steps = page[page.index('class="steps"'):]
+    assert steps.count("btn btn-primary") == 1

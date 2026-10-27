@@ -91,7 +91,7 @@ Events has no spec yet, so its rows are provisional.
   row builders, roster tables, placeholders — is `residentialapps/spec/residentialops_ui.md`.
 - **Policy lives with its application** (author, 2026-10-27): leave policy
   on Leave admin, event policy on Events admin. Rosters and setup stays the
-  organization tree and the two rosters, the data every application shares.
+  organization's slots and the two rosters, the data every application shares.
 
 **Support Logs** (`/supportlogs`). Access is by authorization, never by
 appointment, and RAs never reach it:

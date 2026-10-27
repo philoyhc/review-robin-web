@@ -10,7 +10,7 @@
      units, author, 2026-10-27): which slot each serves is set on Organization. #}
   {% call gate(rosters_open, "The rosters open once Organization's slots are saved.", "/rosters/organization", "Go to Organization") %}
   <div class="types-wrap gap-below">
-    {{ types_card("student-types", "Student appointment types", "student", sample.STUDENT_TYPES, sample.MAX_TYPES, sample.STUDENT_TYPES_CSV) }}
+    {{ types_card("student-types", "Student appointment types", "Student appointment type", "student", sample.STUDENT_TYPES, sample.MAX_TYPES, sample.STUDENT_TYPES_CSV) }}
   </div>
 
   {{ filter_bar([

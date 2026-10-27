@@ -182,7 +182,7 @@ RRW's floor applies: text at 4.5:1 and control boundaries at 3:1 in both
 themes. Beyond it:
 
 - **Every control has an accessible name.** A control repeated per row
-  names its row: "Appointment type 2: type", "Remove Level 3".
+  names its row: "Staff appointment type 2: title", "Remove Level 3".
 - **A column of buttons has a header**, visually hidden when the buttons
   speak for themselves.
 - **Color is never the only signal** (§3).

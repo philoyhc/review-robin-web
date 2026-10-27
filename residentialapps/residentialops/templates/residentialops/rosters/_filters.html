@@ -54,7 +54,7 @@
 
 {# Ticking a row opens an expander under the last row ticked: the count,
    then the row actions. Edit takes one row, and fades when more are ticked;
-   `end_label` (End appointment on a roster, Retire on the tree) end-dates
+   `end_label` (End appointment on a roster, Retire on the slots) end-dates
    and keeps the history; Delete, for a row made in error, waits on its
    confirm. The actions are disabled until items 4 and 5. #}
 {% macro selection_script(end_label="End appointment") %}
@@ -146,7 +146,7 @@
 {# A roster's appointment types, after the row builders (§5): a title and
    an abbreviation each, no level; + adds a row below, X removes one. Its
    CSV sits in the same card, as the roster's own sits below the roster. #}
-{% macro types_card(id, heading, noun, types, max_types, sample_csv) %}
+{% macro types_card(id, heading, row, noun, types, max_types, sample_csv) %}
   <section class="card card-pad" aria-labelledby="{{ id }}-h">
     <h2 id="{{ id }}-h">{{ heading }}</h2>
     <p class="sub">Up to {{ max_types }} {{ noun }} appointment types, each a title and an abbreviation. Every person on this roster holds one. Where they serve is set on Organization.</p>
@@ -159,11 +159,11 @@
           {% for title, abbrev in types %}
             {% set n = loop.index %}
             <tr>
-              <td><input class="input" type="text" aria-label="{{ heading }} {{ n }}: title" value="{{ title }}" disabled></td>
-              <td><input class="input" type="text" aria-label="{{ heading }} {{ n }}: abbreviation" value="{{ abbrev }}" disabled></td>
+              <td><input class="input" type="text" aria-label="{{ row }} {{ n }}: title" value="{{ title }}" disabled></td>
+              <td><input class="input" type="text" aria-label="{{ row }} {{ n }}: abbreviation" value="{{ abbrev }}" disabled></td>
               <td><span class="row-actions">
-                <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a type below {{ heading | lower }} {{ n }}" title="{% if types | length >= max_types %}Up to {{ max_types }} types{% else %}Add a type below this one{% endif %}" disabled>+</button>
-                <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ heading | lower }} {{ n }}" title="Remove this type" disabled>X</button>
+                <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a type below {{ row | lower }} {{ n }}" title="{% if types | length >= max_types %}Up to {{ max_types }} types{% else %}Add a type below this one{% endif %}" disabled>+</button>
+                <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ row | lower }} {{ n }}" title="Remove this type" disabled>X</button>
               </span></td>
             </tr>
           {% endfor %}

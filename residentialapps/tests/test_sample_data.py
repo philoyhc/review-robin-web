@@ -81,10 +81,15 @@ def test_the_placeholders_show_the_mock_data() -> None:
     from residentialapps.residentialops import sample_data
 
     staff, ras = rows("staff_roster.csv"), rows("ra_roster.csv")
-    assert [(p.name, p.email, p.appointment) for p in sample_data.STAFF] == [
-        (p["Name"], p["Email"], p["Appointment"]) for p in staff
+    def dates(p: dict[str, str]) -> str:
+        return f"{p['From']} – {p['To']}".rstrip()
+
+    assert [(p.name, p.email, p.appointment, p.dates, p.enterprise_name) for p in sample_data.STAFF] == [
+        (p["Name"], p["Email"], p["Appointment"], dates(p), p["Enterprise name"]) for p in staff
     ]
-    assert [(p.name, p.email) for p in sample_data.RAS] == [(p["Name"], p["Email"]) for p in ras]
+    assert [(p.name, p.email, p.appointment, p.dates, p.enterprise_name, p.student_id) for p in sample_data.RAS] == [
+        (p["Name"], p["Email"], p["Appointment"], dates(p), p["Enterprise name"], p["Student ID"]) for p in ras
+    ]
     name = {p["Email"]: p["Name"] for p in (*staff, *ras)}
     assert [
         (s.wing, s.precinct, s.neighborhood, s.notes, s.staff, s.ras) for s in sample_data.SLOTS
@@ -92,7 +97,9 @@ def test_the_placeholders_show_the_mock_data() -> None:
         (*(row[k] for k in UNITS), tuple(name[e] for e in row["Staff"].split("; ")), (name[row["RA"]],))
         for row in rows("organization.csv")
     ]
-    assert [t for t, _ in sample_data.STAFF_TYPES] == [t["Title"] for t in rows("staff_appointment_types.csv")]
+    for types, file in ((sample_data.STAFF_TYPES, "staff_appointment_types.csv"),
+                        (sample_data.STUDENT_TYPES, "student_appointment_types.csv")):
+        assert list(types) == [(t["Title"], t["Abbrev"]) for t in rows(file)]
     for sample, file in (
         (sample_data.STAFF_TYPES_CSV, "staff_appointment_types.csv"),
         (sample_data.STUDENT_TYPES_CSV, "student_appointment_types.csv"),

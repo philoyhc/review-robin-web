@@ -58,8 +58,8 @@
             {% set new_precinct = new_wing or slot.precinct != seen.precinct %}
             <tr{% if new_wing %} class="wing-start"{% endif %}>
               {{ select_row(slot.neighborhood) }}
-              <td class="group">{{ slot.wing if new_wing }}</td>
-              <td class="group">{{ slot.precinct if new_precinct }}</td>
+              <td class="group">{% if new_wing %}{{ slot.wing }}{% else %}<span class="visually-hidden">{{ slot.wing }}</span>{% endif %}</td>
+              <td class="group">{% if new_precinct %}{{ slot.precinct }}{% else %}<span class="visually-hidden">{{ slot.precinct }}</span>{% endif %}</td>
               <td class="nowrap">{{ slot.neighborhood }}</td>
               <td class="notes">{{ slot.notes }}</td>
               <td class="cell"><input class="input" type="text" aria-label="{{ slot.neighborhood }}: Staff" value="{{ slot.staff | join(', ') if cells_open }}" disabled></td>
