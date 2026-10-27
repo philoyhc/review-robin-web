@@ -15,6 +15,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Iteration rung 6, 2026-10-27** (author's browser check): both row builders take RRW's Band 3 measures — 16px text in 30px boxes, 32px glyph buttons, 4px cells, a rule under each row.
 - **Iteration rung 7, 2026-10-27** (author's browser check): boxes, selects and buttons in the row builders all 30px tall; the tree's Floors column becomes *Area*, and Level and Area indent with Node; the tree says its appointees come from the two rosters.
 - **Iteration rung 8, 2026-10-27** (author): the tree's columns are Level, Dorms (was Area), Node, Appointed; node codes become abbreviation-hyphen-number (`RSLM-01`, `RF-01`, `RA-01`) in the sample data and the mock CSVs.
+- **Iteration rung 9, 2026-10-27** (author): only Level indents with the hierarchy; Dorms and Node sit flush, and no cell in the tree is bold.
 
 ## Decision
 

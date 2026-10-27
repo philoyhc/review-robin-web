@@ -200,15 +200,12 @@
       .chip-wrap { white-space: normal; }
       .filters.inset { margin: 0; padding: 12px 16px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: var(--surface-muted); }
       tr.level-0, tr.level-1 { background: var(--surface-muted); }
-      tr.level-0 .node, tr.level-1 .node { font-weight: 700; }
-      /* Level, Dorms and Node indent with the hierarchy. */
+      /* Level indents with the hierarchy; Dorms and Node do not. */
       tr.level-1 .ind { padding-left: 28px; }
       tr.level-2 .ind { padding-left: 44px; }
-      tr.level-2 .node { font-weight: 600; }
       tr.level-3 .ind { padding-left: 60px; }
       tr.gap-row { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
       tr.gap-row .ind { padding-left: 60px; }
-      tr.gap-row .node { font-weight: 600; }
       .chip-accent { background: var(--accent-tint-strong); color: var(--accent-chip-fg); }
       .notice {
         display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 16px; padding: 10px 14px;

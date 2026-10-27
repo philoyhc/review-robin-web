@@ -45,8 +45,8 @@
               {% for node in sample.TREE %}
                 <tr class="level-{{ node.level }}">
                   <td class="subtle ind">{{ level_name[node.level] }}</td>
-                  <td class="ind nowrap">{{ node.floors }}</td>
-                  <td class="node ind nowrap">{{ node.name }}</td>
+                  <td class="nowrap">{{ node.floors }}</td>
+                  <td class="node nowrap">{{ node.name }}</td>
                   <td>{{ node.appointed or "—" }}</td>
                   <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
                 </tr>
@@ -54,8 +54,8 @@
               {% for gap in sample.FLOOR_GAPS %}
                 <tr class="gap-row">
                   <td class="ind">—</td>
-                  <td class="ind nowrap">{{ gap }}</td>
-                  <td class="node ind nowrap">Not covered</td>
+                  <td class="nowrap">{{ gap }}</td>
+                  <td class="node nowrap">Not covered</td>
                   <td>—</td>
                   <td><span class="chip chip-warn">Gap</span></td>
                 </tr>
