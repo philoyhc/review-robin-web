@@ -12,44 +12,47 @@
   {% if stage != "done" %}
     <section class="card card-pad gap-below" aria-labelledby="start-h">
       <h2 id="start-h">{{ sample.UNIT_NAME }} is not set up yet</h2>
-      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the four steps below, in order: each opens once the one before it is done. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
+      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the four steps below, in order: the rosters open once the slots exist, and the slots' Staff and RA cells once the rosters have people. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
     </section>
   {% endif %}
 
   <section class="card card-pad" aria-labelledby="setup-h">
     <h2 id="setup-h">Setup</h2>
-    {# Four steps in order (author, 2026-10-27); the first two share the
-       Organization page. The next step open is the one the Primary
-       button points at. #}
+    {# Four steps in order (organization by units, author, 2026-10-27): the
+       slots, each roster with its types, then the slots' Staff and RA
+       cells. The next step open is the one the Primary button points at. #}
     <ol class="steps">
-      {% set next = {"start": 1, "tree": 2, "done": 0}[stage] %}
+      {% set state = {
+           "start": {1: "next", 2: "closed", 3: "closed", 4: "closed"},
+           "slots": {1: "done", 2: "next", 3: "next", 4: "closed"},
+           "done": {1: "done", 2: "done", 3: "done", 4: "done"},
+         }[stage] %}
       {% for n, title, path, what in (
-           (1, "Appointment types and levels", "/rosters/organization#appts-h", "Add the appointment types, each with its abbreviation, type and level, and name the levels of the organization."),
-           (2, "Organization tree", "/rosters/organization#tree-h", "Flesh out the tree: each node's level and dorms, and the posts it holds. Opens once step 1 is saved."),
-           (3, "Staff roster", "/rosters/staff", "Appoint staff to their posts; a type with no posts, such as Other Staff, is appointed without one. Opens once the tree has a node at every level."),
-           (4, "RA roster", "/rosters/ras", "Appoint RAs to their posts; who each reports to follows from the tree. Opens once the tree has a node at every level."),
+           (1, "Slots", "/rosters/organization", "Name the levels and list the area slots: each " ~ level_name[3] ~ " under its " ~ level_name[2] ~ " and " ~ level_name[1] ~ ", with its notes."),
+           (2, "Staff roster", "/rosters/staff", "Add the staff appointment types, then the staff, each with one appointment and its dates."),
+           (3, "RA roster", "/rosters/ras", "Add the student appointment types, then the RAs."),
+           (4, "Staff and RA cells", "/rosters/organization", "Fill each slot's Staff and RA cells from the rosters. Opens once both rosters have people."),
          ) %}
-        {% set done = next == 0 or n < next %}
         <li>
           <h3>{{ n }}. {{ title }}
-            {% if done %}<span class="chip chip-ok">Set up</span>
-            {% elif n == next %}<span class="chip chip-accent">Next</span>
+            {% if state[n] == "done" %}<span class="chip chip-ok">Set up</span>
+            {% elif state[n] == "next" %}<span class="chip chip-accent">Next</span>
             {% else %}<span class="chip chip-mute">Not open yet</span>{% endif %}
           </h3>
           <p>{{ what }}</p>
           <dl class="kv">
             {% if n == 1 %}
-              <dt>Types</dt><dd>{{ sample.APPOINTMENTS | length }}</dd>
               <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
-            {% elif n == 2 %}
-              <dt>Tree</dt><dd>{% if done %}{{ sample.TREE | length }} nodes, {{ post_count }} posts{% else %}—{% endif %}</dd>
+              <dt>Slots</dt><dd>{% if state[1] == "done" %}{{ counts[3] }}{% else %}—{% endif %}</dd>
+            {% elif n == 4 %}
+              <dt>Filled</dt><dd>{% if state[4] == "done" %}{{ counts[3] }} of {{ counts[3] }} slots{% else %}—{% endif %}</dd>
             {% else %}
-              {% set people, noun = (staff_count, "people") if n == 3 else (ra_count, "RAs") %}
-              <dt>People</dt><dd>{% if done %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
+              {% set types, people, noun = (sample.STAFF_TYPES, staff_count, "people") if n == 2 else (sample.STUDENT_TYPES, ra_count, "RAs") %}
+              <dt>Types</dt><dd>{% if state[n] != "closed" %}{{ types | length }}{% else %}—{% endif %}</dd>
+              <dt>People</dt><dd>{% if state[n] == "done" %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
             {% endif %}
           </dl>
-          {% set base, _, anchor = path.partition("#") %}
-          <a class="btn {{ 'btn-primary' if n == next else 'btn-secondary' }}" href="{{ url(base) }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}{% if anchor %}#{{ anchor }}{% endif %}" aria-label="Go to step {{ n }}, {{ title }}">Go to step {{ n }}</a>
+          <a class="btn {{ 'btn-primary' if state[n] == 'next' else 'btn-secondary' }}" href="{{ url(path) }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}" aria-label="Go to step {{ n }}, {{ title }}">Go to step {{ n }}</a>
         </li>
       {% endfor %}
     </ol>
@@ -60,12 +63,7 @@
       <h2 id="checks-h">Checks</h2>
       <p class="sub">Warnings across the four steps. None blocks a save.</p>
       <ul class="plain">
-        {% for gap in sample.FLOOR_GAPS %}
-          <li>{{ gap }} is in no {{ level_name[3] }}. <a href="{{ url('/rosters/organization') }}">Organization</a></li>
-        {% endfor %}
-        {% for code, floors, precinct in sample.VACANT_NEIGHBORHOODS %}
-          <li>{{ code }} has no RA; its floors ({{ floors }}) report to {{ precinct }}. <a href="{{ url('/rosters/ras') }}">RA roster</a></li>
-        {% endfor %}
+        <li>Every slot has Staff and an RA.</li>
         <li>{{ staff_count[0] - staff_count[1] }} staff and {{ ra_count[0] - ra_count[1] }} RA have not signed in yet. <a href="{{ url('/rosters/staff') }}">Staff roster</a></li>
       </ul>
     </section>

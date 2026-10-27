@@ -73,3 +73,32 @@ def test_the_units_are_the_author_s_breakdown() -> None:
     assert [len({row[level] for row in units}) for level in LEVELS] == [3, 9, 30]
     assert [{k: row[k] for k in UNITS} for row in units] == rows("organization_units.csv")
     assert all(row["Notes"] for row in units)
+
+
+def test_the_placeholders_show_the_mock_data() -> None:
+    """The pages' sample module is these files: the same people, slots and
+    cells, and its CSV excerpts are rows of them."""
+    from residentialapps.residentialops import sample_data
+
+    staff, ras = rows("staff_roster.csv"), rows("ra_roster.csv")
+    assert [(p.name, p.email, p.appointment) for p in sample_data.STAFF] == [
+        (p["Name"], p["Email"], p["Appointment"]) for p in staff
+    ]
+    assert [(p.name, p.email) for p in sample_data.RAS] == [(p["Name"], p["Email"]) for p in ras]
+    name = {p["Email"]: p["Name"] for p in (*staff, *ras)}
+    assert [
+        (s.wing, s.precinct, s.neighborhood, s.notes, s.staff, s.ras) for s in sample_data.SLOTS
+    ] == [
+        (*(row[k] for k in UNITS), tuple(name[e] for e in row["Staff"].split("; ")), (name[row["RA"]],))
+        for row in rows("organization.csv")
+    ]
+    assert [t for t, _ in sample_data.STAFF_TYPES] == [t["Title"] for t in rows("staff_appointment_types.csv")]
+    for sample, file in (
+        (sample_data.STAFF_TYPES_CSV, "staff_appointment_types.csv"),
+        (sample_data.STUDENT_TYPES_CSV, "student_appointment_types.csv"),
+        (sample_data.STAFF_CSV, "staff_roster.csv"),
+        (sample_data.RA_CSV, "ra_roster.csv"),
+        (sample_data.ORGANIZATION_CSV, "organization.csv"),
+    ):
+        lines = (DATA / file).read_text().splitlines()
+        assert all(line in lines for line in sample.splitlines()), file

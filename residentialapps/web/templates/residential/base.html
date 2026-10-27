@@ -246,7 +246,7 @@
       td { font-size: 14px; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
       .field { display: grid; grid-template-columns: 1fr minmax(0, 140px); align-items: center; gap: 12px; margin-bottom: 10px; font-size: 14px; }
       .field label { color: var(--text-subtle); }
-      /* Row builders (Level labels, Appointments): boxes, buttons and
+      /* Row builders (levels, appointment types): boxes, buttons and
          spacing after RRW's Band 3 response-field rows — 16px text in
          30px boxes padded 4px 8px, glyph buttons 32px wide at weight 500, 4px
          cells and a rule under each row — with boxes, selects and buttons
@@ -261,14 +261,19 @@
         margin: 0; padding: 4px 0; border-bottom: 1px solid var(--border-default);
       }
       .rows + .btn { margin-top: 12px; }
-      table.appts { table-layout: fixed; }
-      .table-wrap:has(> table.appts) { margin-bottom: 12px; }
-      table.appts th:nth-child(2) { width: 10%; }
-      table.appts th:nth-child(3) { width: 15%; }
-      table.appts th:nth-child(4) { width: 29%; }
-      table.appts th:nth-child(5) { width: 80px; }
-      table.appts td { padding: 4px; border-bottom: 1px solid var(--border-default); }
-      table.appts th { padding: 4px; }
+      .types-wrap { max-width: 720px; }
+      table.types { table-layout: fixed; }
+      .table-wrap:has(> table.types) { margin-bottom: 12px; }
+      table.types th:nth-child(2) { width: 22%; }
+      table.types th:nth-child(3) { width: 80px; }
+      table.types td { padding: 4px; border-bottom: 1px solid var(--border-default); }
+      table.types th { padding: 4px; }
+      /* Organization's slots: a group's Wing and Precinct show on its first
+         row only, and a new Wing opens under a heavier rule. */
+      table.slots td.group { font-weight: 600; white-space: nowrap; }
+      table.slots tr.wing-start > td { border-top: 2px solid var(--border-default); }
+      table.slots td.notes { font-size: 12px; color: var(--text-subtle); min-width: 160px; }
+      table.slots td.cell .input { min-height: 30px; font-size: 14px; min-width: 180px; }
       .input {
         font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
         border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body);

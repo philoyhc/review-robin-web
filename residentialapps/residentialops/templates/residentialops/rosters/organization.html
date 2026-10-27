@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import gate, pills, select_all, select_row, selection_script, stage_switch with context %}
+{% from "residentialops/rosters/_filters.html" import select_all, select_row, selection_script, stage_switch with context %}
 {% block title %}Organization{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -7,141 +7,80 @@
     <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/organization", stage) }}</span>
   </div>
 
-  {% if stage == "done" and sample.FLOOR_GAPS %}
-    <div class="notice" role="status">
-      <strong>{{ sample.FLOOR_GAPS | length }} floor gap{{ "s" if sample.FLOOR_GAPS | length != 1 }}:</strong>
-      {{ sample.FLOOR_GAPS | join(", ") }} {{ "is" if sample.FLOOR_GAPS | length == 1 else "are" }} in no {{ level_name[3] }}.
-      Gaps and overlaps warn; they never block a save.
-    </div>
-  {% endif %}
-
-  {# In order (author, 2026-10-27): the appointment types, with the levels
-     beside them, come first; the tree opens once both are saved. #}
-  <div class="split">
-    <div class="main">
-      <section class="card card-pad" aria-labelledby="appts-h">
-        <h2 id="appts-h">Appointment types</h2>
-        <p class="sub">Up to {{ sample.MAX_APPOINTMENTS }} appointment types for {{ sample.UNIT_NAME }}, each with its abbreviation, its type and the level it holds. A post is one person's slot: the abbreviation and a number (RF-01), the Master's alone unnumbered. + adds a row below; X removes one. Reporting follows the tree.</p>
-        <div class="table-wrap">
-          <table class="appts rows">
-            <thead>
-              <tr><th scope="col">Title</th><th scope="col">Abbrev</th><th scope="col">Type</th><th scope="col">Level</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr>
-            </thead>
-            <tbody>
-              {% for title, abbrev, kind, level in sample.APPOINTMENTS %}
-                {% set n = loop.index %}
-                <tr>
-                  <td><input class="input" type="text" aria-label="Appointment type {{ n }}: title" value="{{ title }}" disabled></td>
-                  <td><input class="input" type="text" aria-label="Appointment type {{ n }}: abbreviation" value="{{ abbrev }}" disabled></td>
-                  <td>
-                    <select class="input" aria-label="Appointment type {{ n }}: type" disabled>
-                      <option value=""{% if not kind %} selected{% endif %}>—</option>
-                      {% for option in sample.APPOINTMENT_TYPES %}
-                        <option{% if option == kind %} selected{% endif %}>{{ option }}</option>
-                      {% endfor %}
-                    </select>
-                  </td>
-                  <td>
-                    <select class="input" aria-label="Appointment type {{ n }}: level" disabled>
-                      <option{% if level == 0 %} selected{% endif %}>Whole Unit</option>
-                      {% for label in sample.LEVEL_LABELS %}
-                        <option{% if level == loop.index %} selected{% endif %}>Level {{ loop.index }} · {{ label }}</option>
-                      {% endfor %}
-                    </select>
-                  </td>
-                  <td><span class="row-actions">
-                    <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add an appointment type below appointment type {{ n }}" title="{% if sample.APPOINTMENTS | length >= sample.MAX_APPOINTMENTS %}Up to {{ sample.MAX_APPOINTMENTS }} appointment types{% else %}Add an appointment type below this one{% endif %}" disabled>+</button>
-                    <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove appointment type {{ n }}" title="Remove this appointment type" disabled>X</button>
-                  </span></td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  {# Organization by units (author, 2026-10-27): the Unit's area slots,
+     grouped by level, each with a Staff cell and an RA cell filled from the
+     rosters. Nothing about people carries a level. #}
+  <div class="types-wrap gap-below">
+    <section class="card card-pad" aria-labelledby="labels-h">
+      <h2 id="labels-h">Levels</h2>
+      <p class="sub">{{ sample.UNIT_NAME }}'s names for its levels, top first, up to {{ sample.MAX_LEVELS }}; the last is the slot. The Organization CSV's headers set them too (<code>Level1.Wing</code>).</p>
+      <div class="rows">
+      {% for label in sample.LEVEL_LABELS %}
+        <div class="field level-field">
+          <label for="level-{{ loop.index }}">Level {{ loop.index }}</label>
+          <input id="level-{{ loop.index }}" class="input" type="text" value="{{ label }}" disabled>
+          <span class="row-actions">
+            <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a level below Level {{ loop.index }}" title="{% if sample.LEVEL_LABELS | length >= sample.MAX_LEVELS %}Up to {{ sample.MAX_LEVELS }} levels{% else %}Add a level below this one{% endif %}" disabled>+</button>
+            <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove Level {{ loop.index }}" title="Remove this level" disabled>X</button>
+          </span>
         </div>
-        <button type="button" class="btn btn-primary" disabled>Save appointment types</button>
-        <div class="csv-block">
-          <h3>Appointment types CSV</h3>
-          <p class="sub">One row per type. Its level is <code>Unit</code> or a level and its label (<code>Level2.Precinct</code>), which sets the level labels. Upload it before the structure CSV.</p>
-          <pre class="sample">{{ sample.APPOINTMENT_TYPES_CSV }}</pre>
-          <div class="btnrow">
-            <button type="button" class="btn btn-secondary" disabled>Upload and preview</button>
-            <button type="button" class="btn btn-secondary" disabled>Export</button>
-          </div>
-        </div>
-      </section>
-    </div>
-    <div class="side">
-      <section class="card card-pad" aria-labelledby="labels-h">
-        <h2 id="labels-h">Levels</h2>
-        <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit, up to {{ sample.MAX_LEVELS }}; floors sit on the lowest level. Code keeps the slots; renaming is a label edit.</p>
-        <div class="rows">
-        {% for label in sample.LEVEL_LABELS %}
-          <div class="field level-field">
-            <label for="level-{{ loop.index }}">Level {{ loop.index }}</label>
-            <input id="level-{{ loop.index }}" class="input" type="text" value="{{ label }}" disabled>
-            <span class="row-actions">
-              <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a level below Level {{ loop.index }}" title="{% if sample.LEVEL_LABELS | length >= sample.MAX_LEVELS %}Up to {{ sample.MAX_LEVELS }} levels{% else %}Add a level below this one{% endif %}" disabled>+</button>
-              <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove Level {{ loop.index }}" title="Remove this level" disabled>X</button>
-            </span>
-          </div>
-        {% endfor %}
-        </div>
-        <button type="button" class="btn btn-primary" disabled>Save labels</button>
-      </section>
-    </div>
+      {% endfor %}
+      </div>
+      <button type="button" class="btn btn-primary" disabled>Save levels</button>
+    </section>
   </div>
 
-  <div class="gap-above">
-  {% call gate(tree_open, "The tree opens once the appointment types and levels are saved, with every level holding a type that has posts.", "#appts-h", "Go to Appointment types") %}
-  <section class="card" aria-labelledby="tree-h">
+  <section class="card" aria-labelledby="slots-h">
     <div class="card-head">
-      <h2 id="tree-h">Organization tree</h2>
-      <p class="sub">{% if stage == "done" %}{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. {% endif %}Floors sit on {{ level_name[3] }}s only. Who is appointed comes from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a>, shown as pills: edit it there.</p>
+      <h2 id="slots-h">Slots {% if slots_open %}<span class="count">· {{ counts[3] }} {{ level_name[3] }}s in {{ counts[2] }} {{ level_name[2] }}s and {{ counts[1] }} {{ level_name[1] }}s</span>{% endif %}</h2>
+      <p class="sub">One row per {{ level_name[3] }}, one RA's charge, under its {{ level_name[2] }} and {{ level_name[1] }}. Its Staff and RA cells offer current people from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a> as you type; a cell takes several, comma separated, and a slot's RAs report to its Staff.</p>
       <div class="btnrow">
-        <button type="button" class="btn btn-primary" disabled>Add node</button>
+        <button type="button" class="btn btn-primary" disabled>Add slot</button>
       </div>
     </div>
+    {% if slots_open and not cells_open %}
+      <div class="card-pad">
+        <div class="gate-note flush" role="note"><strong>Not open yet.</strong> The Staff and RA cells open once both rosters have people. <a href="{{ url('/rosters/staff') }}?stage={{ stage }}">Go to Staff roster</a></div>
+      </div>
+    {% endif %}
     <div class="table-wrap">
-      <table class="roster">
+      <table class="roster slots">
         <thead>
-          <tr>{{ select_all("nodes") }}<th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Post</th><th scope="col">Appointed</th></tr>
+          <tr>{{ select_all("slots") }}<th scope="col">{{ level_name[1] }}</th><th scope="col">{{ level_name[2] }}</th><th scope="col">{{ level_name[3] }}</th><th scope="col">Notes</th><th scope="col">Staff</th><th scope="col">RA</th></tr>
         </thead>
         <tbody>
-          {% if stage != "done" %}
-            <tr><td colspan="5" class="subtle">No nodes yet. Add a node, or upload the structure CSV below.</td></tr>
+          {% if not slots_open %}
+            <tr><td colspan="7" class="subtle">No slots yet. Name the levels, then add a slot or upload the Organization CSV below.</td></tr>
           {% endif %}
-          {% for node in (sample.TREE if stage == "done" else ()) %}
-            <tr class="level-{{ node.level }}">
-              {{ select_row(level_name[node.level] ~ " " ~ node.name) }}
-              <td class="subtle ind">{{ level_name[node.level] }}</td>
-              <td class="nowrap">{{ node.floors }}</td>
-              <td class="node nowrap">{{ node.name }}</td>
-              <td>{% if node.appointed %}{{ pills(node.appointed) }}{% else %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
+          {% set seen = namespace(wing="", precinct="") %}
+          {% for slot in (sample.SLOTS if slots_open else ()) %}
+            {% set new_wing = slot.wing != seen.wing %}
+            {% set new_precinct = new_wing or slot.precinct != seen.precinct %}
+            <tr{% if new_wing %} class="wing-start"{% endif %}>
+              {{ select_row(slot.neighborhood) }}
+              <td class="group">{{ slot.wing if new_wing }}</td>
+              <td class="group">{{ slot.precinct if new_precinct }}</td>
+              <td class="nowrap">{{ slot.neighborhood }}</td>
+              <td class="notes">{{ slot.notes }}</td>
+              <td class="cell"><input class="input" type="text" aria-label="{{ slot.neighborhood }}: Staff" value="{{ slot.staff | join(', ') if cells_open }}" disabled></td>
+              <td class="cell"><input class="input" type="text" aria-label="{{ slot.neighborhood }}: RA" value="{{ slot.ras | join(', ') if cells_open }}" disabled></td>
             </tr>
-          {% endfor %}
-          {% for gap in (sample.FLOOR_GAPS if stage == "done" else ()) %}
-            <tr class="gap-row">
-              <td class="sel"></td>
-              <td class="ind">—</td>
-              <td class="nowrap">{{ gap }}</td>
-              <td class="node nowrap">Not covered</td>
-              <td><span class="chip chip-warn">Gap</span></td>
-            </tr>
+            {% set seen.wing = slot.wing %}
+            {% set seen.precinct = slot.precinct %}
           {% endfor %}
         </tbody>
       </table>
     </div>
   </section>
+
   <section class="card card-pad muted gap-above" aria-labelledby="csv-h">
-    <h2 id="csv-h">Structure CSV</h2>
-    <p class="sub">One row per post: its level, its dorms and its code, positions not people. Rows with the same level and dorms are one node's posts; a node's parent is the node a level up whose dorms hold its own. Upload the appointment types first. The file is {{ sample.UNIT_NAME }}'s whole tree: a node it leaves out is end-dated after preview.</p>
-    <pre class="sample">{{ sample.STRUCTURE_CSV }}</pre>
+    <h2 id="csv-h">Organization CSV</h2>
+    <p class="sub">One row per slot: its levels, top first (<code>Level1.Wing,Level2.Precinct,Level3.Neighborhood</code>, up to <code>Level5</code>), its Notes, then its Staff and RA by roster email, several separated by <code>;</code>. Leave out Staff and RA to set up the slots alone. The file is {{ sample.UNIT_NAME }}'s whole organization: preview lists new, changed and retired slots before anything saves.</p>
+    <pre class="sample">{{ sample.ORGANIZATION_CSV }}</pre>
     <div class="btnrow">
       <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
       <button type="button" class="btn btn-secondary" disabled>Export</button>
     </div>
   </section>
-  {% endcall %}
-  </div>
   {{ selection_script("Retire") }}
 {% endblock %}

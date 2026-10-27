@@ -49,50 +49,50 @@ def host_client() -> TestClient:
     return TestClient(host)
 
 
-def test_the_organization_page_is_a_labeled_placeholder() -> None:
+def test_the_organization_page_lists_the_slots_with_staff_and_ra_cells() -> None:
     page = TestClient(ops_app()).get("/rosters/organization")
     assert page.status_code == 200
     assert "Sample data" in page.text
     assert "<h1>Organization</h1>" in page.text
-    assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
-    tree = page.text[page.text.index('id="tree-h"'):]
-    headers = re.findall(r'<th scope="col">([^<]*)', tree.split("<tbody>")[0])
-    assert headers[:4] == ["Level", "Dorms", "Post", "Appointed"]
-    assert '<td class="node nowrap">Master, Admin-01</td>' in page.text
-    assert '<h2 id="appts-h">Appointment types</h2>' in page.text
-    assert '<td class="node nowrap">RSLM-01</td>' in page.text
-    assert 'href="/rosters/staff">Staff roster</a> and the <a href="/rosters/ras">RA roster</a>' in page.text
+    slots = page.text[page.text.index('id="slots-h"'):]
+    headers = re.findall(r'<th scope="col">([^<]*)', slots.split("<tbody>")[0])
+    assert headers == ["Wing", "Precinct", "Neighborhood", "Notes", "Staff", "RA"]
+    assert "· 30 Neighborhoods in 9 Precincts and 3 Wings" in page.text
+    assert 'aria-label="Cypress A 04-05-06: Staff" value="Daniel Koh, Priya Raman"' in page.text
+    assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page.text
+    assert page.text.count('<tr class="wing-start">') == 3  # a Wing's name shows on its first row only
+    assert "RC1A L4: 101, 102-105" in page.text  # the notes, kept as text
+    assert "Appointment types" not in page.text  # they moved to the rosters
 
 
-def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
-    """Levels and appointments are rows added with + and removed with X,
-    after RRW's response-field rows; no fixed count, no Used flag."""
-    page = TestClient(ops_app()).get("/rosters/organization").text
-    builders = page[page.index('aria-labelledby="appts-h"'):page.index('aria-labelledby="tree-h"')]
-    assert 'type="checkbox"' not in builders and "> Used<" not in page
+def test_levels_and_appointment_types_are_rows() -> None:
+    """Levels and appointment types are rows added with + and removed with X,
+    after RRW's response-field rows; no fixed count."""
+    client = TestClient(ops_app())
+    page = client.get("/rosters/organization").text
     for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
         assert f'aria-label="Add a level below Level {n}"' in page
         assert f'aria-label="Remove Level {n}"' in page
-    assert '<th scope="col">Title</th><th scope="col">Abbrev</th>' in page
-    for n, (title, abbrev, _, _) in enumerate(sample_data.APPOINTMENTS, start=1):
-        assert f'aria-label="Appointment type {n}: title" value="{title}"' in page
-        assert f'aria-label="Appointment type {n}: abbreviation" value="{abbrev}"' in page
-        assert f'aria-label="Add an appointment type below appointment type {n}"' in page
-        assert f'aria-label="Remove appointment type {n}"' in page
-    for kind in sample_data.APPOINTMENT_TYPES:
-        expected = sum(1 for _, _, k, _ in sample_data.APPOINTMENTS if k == kind)
-        assert page.count(f"<option selected>{kind}</option>") == expected, kind
-    assert 'value="Residential Admin"' in page and 'value="Other Staff"' in page
-    assert page.count("<option selected>Whole Unit</option>") == 3
-    assert "<option selected>Level 1 · Wing</option>" in page
-    assert "up to 5;" in page and "Up to 10 appointment types" in page
+    assert "up to 5;" in page
+    for path, heading, types in (
+        ("/rosters/staff", "Staff appointment types", sample_data.STAFF_TYPES),
+        ("/rosters/ras", "Student appointment types", sample_data.STUDENT_TYPES),
+    ):
+        roster = client.get(path).text
+        assert f'<h2 id="{"staff" if "Staff" in heading else "student"}-types-h">{heading}</h2>' in roster
+        for n, (title, abbrev) in enumerate(types, start=1):
+            assert f'aria-label="{heading} {n}: title" value="{title}"' in roster
+            assert f'aria-label="{heading} {n}: abbreviation" value="{abbrev}"' in roster
+        assert "Up to 10" in roster and "Level" not in roster.split('id="csv-h"')[0].split("types-h")[1]
 
 
-def test_the_organization_page_shows_both_setup_csvs() -> None:
-    page = TestClient(ops_app()).get("/rosters/organization").text
-    assert "<h3>Appointment types CSV</h3>" in page
-    assert "Title,Abbrev,Type,Level" in page
-    assert "Level,Dorms,Post" in page
+def test_each_page_shows_its_csv() -> None:
+    client = TestClient(ops_app())
+    assert "Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA" in client.get("/rosters/organization").text
+    staff = client.get("/rosters/staff").text
+    assert "<h3>Staff appointment types CSV</h3>" in staff
+    assert "Name,Email,Appointment,From,To,Enterprise name" in staff
+    assert "Name,Email,Appointment,From,To,Enterprise name,Student ID" in client.get("/rosters/ras").text
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
@@ -170,18 +170,19 @@ def test_the_staff_roster_shows_access_read_only() -> None:
     page = TestClient(ops_app()).get("/rosters/staff")
     assert page.status_code == 200
     assert "<h1>Staff roster</h1>" in page.text
-    assert "· 8 people, 7 linked" in page.text
+    assert "· 14 people, 13 linked" in page.text
+    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
+    assert headers == ["Name", "Email", "Appointment", "From – to", "Sign-in", "Access"]
     assert "Not yet signed in</span>" in page.text
     assert "Support Logs · frontline" in page.text
 
 
-def test_the_ra_roster_derives_reporting_and_flags_a_vacancy() -> None:
+def test_the_ra_roster_holds_people_and_appointments_only() -> None:
     page = TestClient(ops_app()).get("/rosters/ras")
     assert page.status_code == 200
-    assert "· 9 RAs, 8 linked" in page.text
-    assert "RA-10 has no RA." in page.text
-    # every RF on the Precinct, derived, so pills
-    assert '<span class="pill-derived">Mei Ling Tan</span><span class="pill-derived">Grace Ho to 31 Dec</span>' in page.text
+    assert "· 30 RAs, 29 linked" in page.text
+    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
+    assert headers == ["Name", "Email", "Appointment", "From – to", "Sign-in"]
 
 
 def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
@@ -248,7 +249,7 @@ def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str
     assert f'<input type="checkbox" class="select-all" aria-label="Select all {noun}">' in page
     assert f'class="row-select" aria-label="Select {name}"' in page
     assert '<label for="q">Filter</label>' in page
-    assert 'placeholder="Name, email or post' in page
+    assert 'placeholder="Name or email"' in page
     assert "Upload roster CSV" not in page
     csv_card = page[page.index('id="csv-h"'):]
     assert "Upload and preview</button>" in csv_card and "Export</button>" in csv_card
@@ -268,26 +269,18 @@ def test_the_roster_scripts_parse(path: str, tmp_path: Path) -> None:
         subprocess.run(["node", "--check", str(source)], check=True)
 
 
-def test_the_organization_tree_ticks_nodes_into_the_same_expander() -> None:
+def test_the_slots_tick_into_the_same_expander() -> None:
     page = TestClient(ops_app()).get("/rosters/organization").text
-    assert "Expand all" not in page
-    assert 'aria-label="Select all nodes"' in page
-    assert 'class="row-select" aria-label="Select Wing RSLM-01"' in page
+    assert 'aria-label="Select all slots"' in page
+    assert 'class="row-select" aria-label="Select Cypress A 04-05-06"' in page
     assert ">Retire</button>" in page and "End appointment" not in page
-    assert re.search(r'<tr class="gap-row">\s*<td class="sel"></td>', page)
 
 
-def test_a_value_is_plain_where_it_is_set_and_a_pill_where_it_is_derived() -> None:
+def test_a_person_s_slots_are_derived_from_organization() -> None:
     client = TestClient(ops_app())
-    tree = client.get("/rosters/organization").text
-    assert '<td class="node nowrap">RA-01</td>' in tree  # the tree sets the post
-    assert '<span class="pill-derived">Chloe Lim</span>' in tree  # the RA roster appoints her
-    ras = client.get("/rosters/ras").text
-    assert '<td class="nowrap">RA-01</td>' in ras  # the roster sets her post
-    assert '<span class="pill-derived">Cypress A 04-05-06</span>' in ras  # the tree sets its floors
-    staff = client.get("/rosters/staff").text
-    assert '<span class="pill-derived">RF</span>' in staff  # RF-01's type comes from the tree
-    assert "<td>Other Staff</td>" in staff  # a type with no posts is set on the roster
+    page = client.get(f"/rosters/people/{sample_data.person_id_of('priya.raman@example.edu')}").text
+    assert page.count('<span class="pill-derived">Cypress') == 10  # every slot in her Wing
+    assert '<span class="pill-derived">Maple' not in page
 
 
 def test_rosters_home_explains_setup_until_it_is_done() -> None:
@@ -295,23 +288,23 @@ def test_rosters_home_explains_setup_until_it_is_done() -> None:
     start = client.get("/rosters/?stage=start").text
     assert "<h1>Rosters and setup</h1>" in start
     assert "is not set up yet" in start
-    steps = ("1. Appointment types and levels", "2. Organization tree", "3. Staff roster", "4. RA roster")
+    steps = ("1. Slots", "2. Staff roster", "3. RA roster", "4. Staff and RA cells")
     assert [start.index(step) for step in steps] == sorted(start.index(step) for step in steps)
     done = client.get("/rosters/").text
     assert "is not set up yet" not in done
     assert '<h2 id="checks-h">Checks</h2>' in done
-    assert "Cypress A 16 is in no Neighborhood." in done
+    assert "1 staff and 1 RA have not signed in yet." in done
 
 
 def test_each_setup_step_is_inactive_until_its_prerequisite_exists() -> None:
     client = TestClient(ops_app())
     start = client.get("/rosters/organization?stage=start").text
-    types = start.index('id="appts-h"')
-    assert "Not open yet" not in start[:types]  # appointment types and levels open first
-    assert start.index("Not open yet") < start.index('id="tree-h"')
-    assert '<div class="gated" inert>' in start
-    tree = client.get("/rosters/organization?stage=tree").text
-    assert "Not open yet" not in tree and "No nodes yet." in tree
+    assert "Not open yet" not in start and "No slots yet." in start
     for path in ("/rosters/staff", "/rosters/ras"):
-        assert "Not open yet" in client.get(f"{path}?stage=tree").text
-        assert "Not open yet" not in client.get(path).text
+        assert '<div class="gated" inert>' in client.get(f"{path}?stage=start").text
+        opened = client.get(f"{path}?stage=slots").text
+        assert "Not open yet" not in opened and "yet. Add" in opened
+    slots = client.get("/rosters/organization?stage=slots").text
+    assert "The Staff and RA cells open once both rosters have people." in slots
+    assert 'aria-label="Cypress A 04-05-06: Staff" value=""' in slots
+    assert "Not open yet" not in client.get("/rosters/organization").text

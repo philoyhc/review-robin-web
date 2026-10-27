@@ -16,10 +16,11 @@ router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 LEVEL_NAME = dict(enumerate(("Unit", *sample_data.LEVEL_LABELS)))
 
-# Setup runs in order (author, 2026-10-27): appointment types and levels,
-# then the organization tree, then the rosters. A placeholder previews
-# each state with `?stage=`; the wiring items derive it from the data.
-STAGES = ("start", "tree", "done")
+# Setup runs in order (organization by units, author, 2026-10-27):
+# Organization's slots, the Staff roster, the RA roster, then each slot's
+# Staff and RA cells. A placeholder previews each state with `?stage=`;
+# the wiring items derive it from the data.
+STAGES = ("start", "slots", "done")
 
 
 def _context(request: Request) -> dict[str, Any]:
@@ -33,12 +34,16 @@ def _context(request: Request) -> dict[str, Any]:
         "level_name": LEVEL_NAME,
         "stage": stage,
         "stages": STAGES,
-        "tree_open": stage != "start",
-        "rosters_open": stage == "done",
-        "counts": {level: sum(1 for n in sample_data.TREE if n.level == level) for level in (1, 2, 3)},
+        "slots_open": stage != "start",
+        "rosters_open": stage != "start",
+        "cells_open": stage == "done",
+        "rosters_filled": stage == "done",
+        "counts": {
+            level: len({getattr(s, attr) for s in sample_data.SLOTS})
+            for level, attr in ((1, "wing"), (2, "precinct"), (3, "neighborhood"))
+        },
         "staff_count": sample_data.linked_count(sample_data.STAFF),
         "ra_count": sample_data.linked_count(sample_data.RAS),
-        "post_count": sum(len(node.name.split(", ")) for node in sample_data.TREE),
     }
 
 
