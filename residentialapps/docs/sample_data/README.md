@@ -1,44 +1,40 @@
 # Mock rosters for browser tests
 
-These are mock files for Example College, the Unit drawn on segment 1B's
-placeholder screens (`residentialapps/residentialops/sample_data.py`). They are for
-trying the import screens by hand once segment 1B wires them (the
-appointment-types and structure CSVs, item 4; Staff and RA roster CSVs,
-item 5), and for setting fake
-sign-ins locally (item 3). Every person and address is fictional; no file
-here is imported into production.
+These are mock files for Example College. They are for trying the import screens by hand once segment 1B wires them, and for setting fake sign-ins locally (item 3):
 
-The column layouts follow the formats ruled in
-`residentialapps/guide/todo_master.md` (the organization setup CSVs) and
-the CSV cards on the roster pages. A roster row appoints a person to a **post**; Other Staff hold none. The Staff and RA files add the optional
-columns that `residentialapps/docs/residentialapps_identity.md` §5.1
-allows: the enterprise-system name, and the student ID for RAs. If item 4
-or 5 rules a different layout, change these files with it.
+- the Organization CSV, item 4;
+- the appointment-type and roster CSVs, item 5.
+
+Every person and address is fictional; no file here is imported into production. The units are the author's hostel breakdown (2026-10-27): 3 Wings, 9 Precincts and 30 Neighborhoods across Cypress, Maple and Willow. The Notes are each Neighborhood's room unit numbers, kept as text.
+
+The layouts follow the ruling in `residentialapps/guide/todo_master.md` (organization by units, 2026-10-27):
+
+- **The rosters hold people and their appointments only.** The Staff and RA files add the optional columns that `residentialapps/docs/residentialapps_identity.md` §5.1 allows: the enterprise-system name, and the student ID for RAs.
+- **The Organization file holds the area slots, one row per Neighborhood.** Its grouping columns come top level first, headed `Level1.Wing`, `Level2.Precinct` and `Level3.Neighborhood`, up to `Level5`. Each header sets that level's name, and the last level is the slot. Notes come after them. After those come the slot's **Staff** and **RA** cells. They name people by roster email, several separated by `;`.
 
 ## The Unit
 
-One Wing (RSLM-01), three Precincts (RF-01–RF-03, with RF-04 beside RF-02) and ten Neighborhoods
-(RA-01–RA-10) across two towers.
-
-- Cypress A holds floors 04–16. Floor 16 is in no Neighborhood: it is the
-  floor gap the Organization page warns about.
-- Cypress B holds floors 01–16.
-- RA-10 has no RA.
+| Who | How many | Where |
+|---|---|---|
+| Master | 1 (Sam Lee) | the whole Unit |
+| Residential Admin | 1 (Rachel Yeo) | the whole Unit |
+| RSLM | 3 | one per Wing: Priya Raman (Cypress), Marcus Tan (Maple), Nadia Hassan (Willow), in the Staff cell of every slot in their Wing |
+| RF | 9 | one per Precinct, in the Staff cell of every slot in their Precinct |
+| RA | 30 | one per Neighborhood, in its slot's RA cell |
 
 ## Files and what each should do
 
 | File | Import it… | Expect |
 |---|---|---|
-| `appointment_types.csv` | First, on an empty Unit | 6 types and the level labels Wing, Precinct, Neighborhood; Other Staff has no abbreviation, so no posts |
-| `appointment_types_errors.csv` | Any time | Refused in preview: duplicate abbreviation RF; unknown type Faculty; a sixth level (`Level6.Floor`, past the five); a row with no title; two labels for one level (`Level3.Neighborhood`, `Level3.House`) |
-| `structure.csv` | After `appointment_types.csv` | 1 Wing, 3 Precincts and 10 Neighborhoods, 17 posts; Precinct RF-02 holds two posts, RF-02 and RF-04; one warning: Cypress A 16 is in no Neighborhood |
-| `structure_reimport_retire.csv` | After `structure.csv` | Preview: RA-10's node and post to be retired (end-dated, not deleted); RA-04 and its Precinct changed (gain Cypress A 16) and RA-09 changed (gains Cypress B 15-16); the floor-gap warning clears |
-| `structure_reimport_blocked.csv` | After the RA roster | Blocked: post RA-01 is left out but has a current appointment (Chloe Lim). RA-02 is also changed, gaining RA-01's floors |
-| `structure_errors.csv` | After `appointment_types.csv` | Refused in preview: duplicate post RA-01; overlap on Cypress A 07–09 (RA-02 against RA-01's second row and RA-03); a non-contiguous floor list (`13-15`); unknown building Cypress Q; a row with no Dorms; RA-07, which fits no Precinct; RSLM-02 on a Precinct (Cypress B 13-14), where RSLM is not a type; an unknown level (`Level6.Room`). RA-05, RA-06 and RA-11 are refused for their own fields, not also as unparented |
-| `staff_roster.csv` | After `structure.csv` | 8 staff, each on a post: the Master and Admin-01 at the Unit, RSLM-01, three RFs on RF-01–RF-03, one Other Staff with no post, and Grace Ho on RF-04, a dated second RF post beside RF-02 (2026-10-01 to 2026-12-31), so RA-04–RA-06 report to both |
-| `staff_roster_errors.csv` | After `staff_roster.csv` | Flagged in preview: duplicate roster email (Daniel Koh); unknown post RF-09; unknown appointment Warden; an RSLM on a Precinct rather than a Wing; a row with no email; an end date before the start |
-| `ra_roster.csv` | After `structure.csv` | 9 RAs on posts RA-01–RA-09, with reporting derived from the tree: every RF on the Precinct (RA-01–RA-03 to Daniel Koh, RA-04–RA-06 to Mei Ling Tan and Grace Ho, RA-07–RA-09 to Arjun Nair); RA-10 stays vacant |
-| `ra_roster_errors.csv` | After `ra_roster.csv` | Flagged in preview: duplicate roster email (Chloe Lim); unknown post RA-11; an RF post (RF-02) on the RA roster; a student ID that is not nine characters; a second RA on a filled post (RA-04); an end date before the start |
+| `staff_appointment_types.csv` | First, on the Staff roster | 5 types; Other Staff has no abbreviation |
+| `student_appointment_types.csv` | First, on the RA roster | 1 type, Residential Assistant (RA) |
+| `staff_roster.csv` | After its types | 14 staff: the Master, the Admin, 3 RSLMs, 9 RFs |
+| `staff_roster_errors.csv` | After `staff_roster.csv` | Refused in preview: a duplicate email (Daniel Koh); an unknown appointment (Warden); a student appointment on the Staff roster (Ravi Kumar, Residential Assistant); a row with no email; an end date before the start |
+| `ra_roster.csv` | After its types | 30 RAs |
+| `ra_roster_errors.csv` | After `ra_roster.csv` | Refused in preview: a duplicate email (Chloe Lim); a staff appointment on the RA roster (Owen Pang, Residential Fellow); a student ID that is not nine characters; a row with no email; an end date before the start |
+| `organization_units.csv` | Any time | The 30 slots under their Precincts and Wings, with Notes and no Staff or RA columns |
+| `organization.csv` | After both rosters | The same slots with each Staff cell naming its RF and RSLM and each RA cell its RA. Each RA reports to the slot's Staff |
+| `organization_errors.csv` | After both rosters | Refused in preview, row by row: Cypress A 04-05-06 twice; Cypress A 06-07 overlapping it; a floor list with a floor missing (`Maple 03-05`); an RA (Lucas Teo) in a Staff cell; an RF (Benjamin Chua) in an RA cell; an email on no roster (zara.khoo@example.edu); a row with no Wing. One warning: Willow B 04-05-06 has no Staff |
 
 One case sits outside the files, for the browser:
 
@@ -46,20 +42,16 @@ One case sits outside the files, for the browser:
 
 ## Fake sign-ins
 
-`sign_ins.csv` lists, for each scenario, the `FAKE_AUTH_EMAIL`,
-`FAKE_AUTH_NAME` and `FAKE_AUTH_SUPER_ADMIN` to set in `.env` (with
-`ALLOW_FAKE_AUTH=true` and `APP_ENV=local`) and what should happen.
-**Set `FAKE_AUTH_SUPER_ADMIN=false` for every scenario but the
-super-admin's:** it defaults to `true` (`cordware/settings.py`), which makes
-the fake user a platform super-admin with every sys admin right, so an RF
-or an unregistered person would not be refused. Leave
-`SUPER_ADMIN_EMAILS` empty, or set it to Sam Lee's address only. Restart the server between
-scenarios, since fake auth is read at startup. The not-registered cases
-follow `residentialapps/docs/residentialapps_identity.md` §6:
+`sign_ins.csv` lists, for each scenario, the `FAKE_AUTH_EMAIL`, `FAKE_AUTH_NAME` and `FAKE_AUTH_SUPER_ADMIN` to set in `.env`, and what should happen. Set `ALLOW_FAKE_AUTH=true` and `APP_ENV=local` as well.
+
+**Set `FAKE_AUTH_SUPER_ADMIN=false` for every scenario but the super-admin's.** It defaults to `true` (`cordware/settings.py`), which makes the fake user a platform super-admin with every sys admin right. With it left on, an RF or an unregistered person would not be refused.
+
+Leave `SUPER_ADMIN_EMAILS` empty, or set it to Sam Lee's address only. Restart the server between scenarios, since fake auth is read at startup.
+
+The not-registered cases follow `residentialapps/docs/residentialapps_identity.md` §6:
 
 - A roster email that differs from the sign-in address does not match.
 - A sys admin fixes this by correcting the roster email.
 - The person's next sign-in then links them.
 
-Until items 3–5 land, the screens show the built-in sample data whatever
-is imported or signed in; these files are ready for when they do.
+Until items 3–5 land, the screens show the built-in sample data whatever is imported or signed in; these files are ready for when they do.

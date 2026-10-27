@@ -1,8 +1,7 @@
-Name,Email,Post,From,To,Enterprise name,Student ID
-Chloe Lim,chloe.lim@example.edu,RA-01,2026-08-01,,"LIM WEI LING, CHLOE",A0234567X
-Chloe Lim (duplicate),chloe.lim@example.edu,RA-02,2026-08-01,,,
-Zara Khoo,zara.khoo@example.edu,RA-11,2026-08-01,,,
-Owen Pang,owen.pang@example.edu,RF-02,2026-08-01,,,
-Ivy Toh,ivy.toh@example.edu,RA-10,2026-08-01,,,A02345
-Rui Chen,rui.chen@example.edu,RA-04,2026-08-01,,,
-Yusuf Ali,yusuf.ali@example.edu,RA-10,2027-01-15,2026-12-31,,
+Name,Email,Appointment,From,To,Enterprise name,Student ID
+Chloe Lim,chloe.lim@example.edu,Residential Assistant,2026-08-01,,,A0230000X
+Chloe Lim (duplicate),chloe.lim@example.edu,Residential Assistant,2026-08-01,,,
+Owen Pang,owen.pang@example.edu,Residential Fellow,2026-08-01,,,
+Ivy Toh,ivy.toh@example.edu,Residential Assistant,2026-08-01,,,A02345
+Zara Khoo,,Residential Assistant,2026-08-01,,,
+Yusuf Ali,yusuf.ali@example.edu,Residential Assistant,2027-01-15,2026-12-31,,

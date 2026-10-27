@@ -1,9 +1,0 @@
-Title,Abbrev,Type,Level
-Master,Master,Staff,Unit
-Residential Fellow,RF,Staff,Level2.Precinct
-Resident Tutor,RF,Staff,Level2.Precinct
-Warden,WD,Faculty,Unit
-Floor Captain,FC,Student,Level6.Floor
-,XX,Staff,Unit
-Residential Assistant,RA,Student,Level3.Neighborhood
-Floor Lead,FL,Student,Level3.House
