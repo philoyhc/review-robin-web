@@ -88,7 +88,7 @@ Events has no spec yet, so its rows are provisional.
   decision and Decide must work one-handed on a phone. This raises the RA
   Leave spec's §2.5, which classed approver actions as responsive.
 - **How the pages look** — device widths, the chrome, color, buttons,
-  row builders, placeholders — is `residentialapps/spec/residentialops_ui.md`.
+  row builders, roster tables, placeholders — is `residentialapps/spec/residentialops_ui.md`.
 - **Policy lives with its application** (author, 2026-10-27): leave policy
   on Leave admin, event policy on Events admin. Rosters and setup stays the
   organization tree and the two rosters, the data every application shares.
