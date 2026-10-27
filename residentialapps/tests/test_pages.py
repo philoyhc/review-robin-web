@@ -84,6 +84,13 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
     assert "up to 5;" in page and "Up to 10 appointment types" in page
 
 
+def test_the_organization_page_shows_both_setup_csvs() -> None:
+    page = TestClient(ops_app()).get("/rosters/").text
+    assert "<h3>Appointment types CSV</h3>" in page
+    assert "Title,Abbrev,Type,Level" in page
+    assert "Level,Dorms,Post" in page
+
+
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
     assert page_routes(), "no pages found"
     for path in page_routes():

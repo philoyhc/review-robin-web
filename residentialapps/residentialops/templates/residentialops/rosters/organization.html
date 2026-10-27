@@ -105,6 +105,15 @@
           </table>
         </div>
         <button type="button" class="btn btn-primary" disabled>Save appointment types</button>
+        <div class="csv-block">
+          <h3>Appointment types CSV</h3>
+          <p class="sub">One row per type. Its level is <code>Unit</code> or a level and its label (<code>Level2.Precinct</code>), which sets the level labels. Upload it before the structure CSV.</p>
+          <pre class="sample">{{ sample.APPOINTMENT_TYPES_CSV }}</pre>
+          <div class="btnrow">
+            <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
+            <button type="button" class="btn btn-secondary" disabled>Export</button>
+          </div>
+        </div>
       </section>
     </div>
 
@@ -129,7 +138,7 @@
 
       <section class="card card-pad muted" aria-labelledby="csv-h">
         <h2 id="csv-h">Structure CSV</h2>
-        <p class="sub">One row per {{ level_name[3] }}, positions not people. The file is {{ sample.UNIT_NAME }}'s whole tree: a node it leaves out is end-dated after preview.</p>
+        <p class="sub">One row per post: its level, its dorms and its code, positions not people. Rows with the same level and dorms are one node's posts; a node's parent is the node a level up whose dorms hold its own. Upload the appointment types first. The file is {{ sample.UNIT_NAME }}'s whole tree: a node it leaves out is end-dated after preview.</p>
         <pre class="sample">{{ sample.STRUCTURE_CSV }}</pre>
         <div class="btnrow">
           <button type="button" class="btn btn-primary" disabled>Upload and preview</button>

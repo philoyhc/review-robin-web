@@ -1,11 +1,18 @@
-Level1.Wing,Level2.Precinct,Level3.Neighborhood,Floors
-RSLM-01,RF-01,RA-01,Cypress A 04-05-06
-RSLM-01,RF-01,RA-02,Cypress A 07-08-09
-RSLM-01,RF-01,RA-03,Cypress A 10-11-12
-RSLM-01,RF-02,RA-04,Cypress A 13-14-15
-RSLM-01,RF-02,RA-05,Cypress B 01-02-03
-RSLM-01,RF-02,RA-06,Cypress B 04-05-06
-RSLM-01,RF-03,RA-07,Cypress B 07-08-09
-RSLM-01,RF-03,RA-08,Cypress B 10-11-12
-RSLM-01,RF-03,RA-09,Cypress B 13-14
-RSLM-01,RF-03,RA-10,Cypress B 15-16
+Level,Dorms,Post
+Unit,Cypress A; Cypress B,Master
+Unit,Cypress A; Cypress B,Admin-01
+Level1.Wing,Cypress A; Cypress B,RSLM-01
+Level2.Precinct,Cypress A 04-05-06-07-08-09-10-11-12,RF-01
+Level3.Neighborhood,Cypress A 04-05-06,RA-01
+Level3.Neighborhood,Cypress A 07-08-09,RA-02
+Level3.Neighborhood,Cypress A 10-11-12,RA-03
+Level2.Precinct,Cypress A 13-14-15; Cypress B 01-02-03-04-05-06,RF-02
+Level2.Precinct,Cypress A 13-14-15; Cypress B 01-02-03-04-05-06,RF-04
+Level3.Neighborhood,Cypress A 13-14-15,RA-04
+Level3.Neighborhood,Cypress B 01-02-03,RA-05
+Level3.Neighborhood,Cypress B 04-05-06,RA-06
+Level2.Precinct,Cypress B 07-08-09-10-11-12-13-14-15-16,RF-03
+Level3.Neighborhood,Cypress B 07-08-09,RA-07
+Level3.Neighborhood,Cypress B 10-11-12,RA-08
+Level3.Neighborhood,Cypress B 13-14,RA-09
+Level3.Neighborhood,Cypress B 15-16,RA-10

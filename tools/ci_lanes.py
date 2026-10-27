@@ -45,6 +45,9 @@ SHIPPED_DIRS = ("app/", "alembic/", "cordware/", "residentialapps/")
 PROSE_TESTS = (
     "tests/unit",
     "tests/integration/test_guide_scaffold.py",
+    # The mock setup CSVs live in residentialapps/docs/, so a PR touching
+    # only them is prose; their consistency check runs with it.
+    "residentialapps/tests/test_sample_data.py",
 )
 
 # What the residential lane runs beside the prose lane's tests: Residential's

@@ -63,11 +63,19 @@ APPOINTMENTS = (
     ("Residential Student Life Manager", "RSLM", "Staff", 1),
 )
 
+# The setup CSVs' first rows (residentialapps/guide/todo_master.md,
+# organization setup CSVs; the full files are in docs/sample_data/).
+APPOINTMENT_TYPES_CSV = """\
+Title,Abbrev,Type,Level
+Master,Master,Staff,Unit
+Residential Admin,Admin,Staff,Unit
+Residential Fellow,RF,Staff,Level2.Precinct"""
+
 STRUCTURE_CSV = """\
-Level1.Wing,Level2.Precinct,Level3.Neighborhood,Floors
-RSLM-01,RF-01,RA-01,Cypress A 04-05-06
-RSLM-01,RF-01,RA-02,Cypress A 07-08-09
-RSLM-01,RF-03,RA-09,Cypress B 13-14"""
+Level,Dorms,Post
+Unit,Cypress A; Cypress B,Master
+Level2.Precinct,Cypress A 13-14-15; Cypress B 01-02-03-04-05-06,RF-02
+Level2.Precinct,Cypress A 13-14-15; Cypress B 01-02-03-04-05-06,RF-04"""
 
 
 @dataclass(frozen=True)
@@ -142,7 +150,7 @@ Daniel Koh,daniel.koh@example.edu,RF,RF-01,2026-08-01,
 Priya Raman,priya.raman@example.edu,RSLM,RSLM-01,2026-08-01,"""
 
 RA_CSV = """\
-Name,Email,Level3.Neighborhood,From,To
+Name,Email,Post,From,To
 Chloe Lim,chloe.lim@example.edu,RA-01,2026-08-01,
 Ethan Wong,ethan.wong@example.edu,RA-02,2026-08-01,"""
 
