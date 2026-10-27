@@ -226,12 +226,17 @@
       td { font-size: 14px; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
       .field { display: grid; grid-template-columns: 1fr minmax(0, 140px); align-items: center; gap: 12px; margin-bottom: 10px; font-size: 14px; }
       .field label { color: var(--text-subtle); }
-      .level-field { grid-template-columns: 1.5em 4.5em minmax(0, 1fr); }
-      .check { display: inline-flex; align-items: center; gap: 6px; }
-      table.appts { margin-bottom: 12px; table-layout: fixed; }
-      table.appts th:nth-child(2) { width: 12%; }
-      table.appts th:nth-child(3) { width: 20%; }
-      table.appts th:nth-child(4) { width: 28%; }
+      .level-field { grid-template-columns: 4em minmax(0, 1fr) auto; gap: 6px; }
+      /* Add (+) and remove (X) at a row's end, square, after RRW's
+         response-field rows (spec/ui_elements.md, Band 3). */
+      .row-actions { display: inline-flex; gap: 4px; white-space: nowrap; }
+      .btn-glyph { width: 36px; padding: 0; }
+      table.appts { table-layout: fixed; }
+      .table-wrap:has(> table.appts) { margin-bottom: 12px; }
+      table.appts th:nth-child(2) { width: 11%; }
+      table.appts th:nth-child(3) { width: 17%; }
+      table.appts th:nth-child(4) { width: 25%; }
+      table.appts th:nth-child(5) { width: 88px; }
       table.appts td { padding: 4px; border-bottom: 0; }
       table.appts th { padding: 4px; }
       table.appts .input { font-size: 14px; padding: 0 6px; }
