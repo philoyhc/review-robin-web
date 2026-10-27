@@ -61,6 +61,8 @@ def test_the_organization_page_sets_levels_in_use_and_appointments() -> None:
     for level, used in enumerate(sample_data.LEVELS_USED, start=1):
         assert re.search(rf'aria-label="Level {level} used"{" checked" if used else ""} disabled>', page), level
     assert '<h2 id="appts-h">Appointments</h2>' in page
+    assert '<th scope="col">Title</th><th scope="col">Abbrev</th>' in page
+    assert "> Used<" not in page
     for n, (title, abbrev, _, _) in enumerate(sample_data.APPOINTMENTS, start=1):
         assert f'aria-label="Appointment {n}: title" value="{title}"' in page
         assert f'aria-label="Appointment {n}: abbreviation" value="{abbrev}"' in page

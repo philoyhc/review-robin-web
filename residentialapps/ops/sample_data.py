@@ -50,10 +50,10 @@ LEVELS_USED = (True, True, True)
 
 APPOINTMENT_TYPES = ("Staff", "Student")
 
-# The Unit's appointments: five slots of (title, abbreviation, type, level),
-# level 0 the
-# whole Unit. Four come prefilled for every Unit; the fifth is for a Unit's
-# own, here Example College's Residential Student Life Manager.
+# The Unit's appointments: five slots of (title, abbreviation, type,
+# level), level 0 the whole Unit. Four come prefilled for every Unit; the
+# fifth is for a Unit's own, here Example College's Residential Student
+# Life Manager.
 APPOINTMENTS = (
     ("Master", "", "Staff", 0),
     ("Residential Fellow", "RF", "Staff", 2),

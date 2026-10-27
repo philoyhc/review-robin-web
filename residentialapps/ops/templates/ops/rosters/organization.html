@@ -108,7 +108,7 @@
     <div class="side">
       <section class="card card-pad" aria-labelledby="labels-h">
         <h2 id="labels-h">Level labels</h2>
-        <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit. Tick the levels in use: a Unit may use two rather than three, and floors sit on the lowest level in use. Code keeps the slots; renaming is a label edit.</p>
+        <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit. Check the levels in use: a Unit may use two rather than three, and floors sit on the lowest level in use. Code keeps the slots; renaming is a label edit.</p>
         {% for label in sample.LEVEL_LABELS %}
           <div class="field level-field">
             <span class="check"><input type="checkbox" id="level-{{ loop.index }}-used" aria-label="Level {{ loop.index }} used"{% if sample.LEVELS_USED[loop.index0] %} checked{% endif %} disabled></span>
