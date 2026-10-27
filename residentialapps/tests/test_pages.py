@@ -54,7 +54,9 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert "<h1>Organization</h1>" in page.text
     assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split("<tbody>")[0])
-    assert headers[:4] == ["Level", "Dorms", "Node", "Appointed "]
+    assert headers[:4] == ["Level", "Dorms", "Post", "Appointed "]
+    assert '<td class="node nowrap">Master, Admin-01</td>' in page.text
+    assert '<h2 id="appts-h">Appointment types</h2>' in page.text
     assert '<td class="node nowrap">RSLM-01</td>' in page.text
     assert 'href="/rosters/staff">Staff roster</a> and the <a href="/rosters/ras">RA roster</a>' in page.text
 
@@ -69,17 +71,17 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
         assert f'aria-label="Remove Level {n}"' in page
     assert '<th scope="col">Title</th><th scope="col">Abbrev</th>' in page
     for n, (title, abbrev, _, _) in enumerate(sample_data.APPOINTMENTS, start=1):
-        assert f'aria-label="Appointment {n}: title" value="{title}"' in page
-        assert f'aria-label="Appointment {n}: abbreviation" value="{abbrev}"' in page
-        assert f'aria-label="Add an appointment below appointment {n}"' in page
-        assert f'aria-label="Remove appointment {n}"' in page
+        assert f'aria-label="Appointment type {n}: title" value="{title}"' in page
+        assert f'aria-label="Appointment type {n}: abbreviation" value="{abbrev}"' in page
+        assert f'aria-label="Add an appointment type below appointment type {n}"' in page
+        assert f'aria-label="Remove appointment type {n}"' in page
     for kind in sample_data.APPOINTMENT_TYPES:
         expected = sum(1 for _, _, k, _ in sample_data.APPOINTMENTS if k == kind)
         assert page.count(f"<option selected>{kind}</option>") == expected, kind
     assert 'value="Residential Admin"' in page and 'value="Other Staff"' in page
     assert page.count("<option selected>Whole Unit</option>") == 3
     assert "<option selected>Level 1 · Wing</option>" in page
-    assert "up to 5;" in page and "Up to 10 appointments" in page
+    assert "up to 5;" in page and "Up to 10 appointment types" in page
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
@@ -167,7 +169,7 @@ def test_the_ra_roster_derives_reporting_and_flags_a_vacancy() -> None:
     assert page.status_code == 200
     assert "· 9 RAs, 8 linked" in page.text
     assert "RA-10 has no RA." in page.text
-    assert "Backup: Grace Ho to 31 Dec" in page.text
+    assert "Mei Ling Tan, Grace Ho (to 31 Dec)" in page.text  # every RF on the Precinct
 
 
 def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:

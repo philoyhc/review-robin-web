@@ -39,7 +39,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Node</th><th scope="col">Appointed <span class="subtle">(from the rosters)</span></th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+              <tr><th scope="col">Level</th><th scope="col">Dorms</th><th scope="col">Post</th><th scope="col">Appointed <span class="subtle">(from the rosters)</span></th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
             </thead>
             <tbody>
               {% for node in sample.TREE %}
@@ -66,8 +66,8 @@
       </section>
 
       <section class="card card-pad" aria-labelledby="appts-h">
-        <h2 id="appts-h">Appointments</h2>
-        <p class="sub">Up to {{ sample.MAX_APPOINTMENTS }} appointments for {{ sample.UNIT_NAME }}, each with its abbreviation, its type and the level it holds. + adds a row below; X removes one. Reporting follows the tree.</p>
+        <h2 id="appts-h">Appointment types</h2>
+        <p class="sub">Up to {{ sample.MAX_APPOINTMENTS }} appointment types for {{ sample.UNIT_NAME }}, each with its abbreviation, its type and the level it holds. A post is one person's slot: the abbreviation and a number (RF-01), the Master's alone unnumbered. + adds a row below; X removes one. Reporting follows the tree.</p>
         <div class="table-wrap">
           <table class="appts rows">
             <thead>
@@ -77,10 +77,10 @@
               {% for title, abbrev, kind, level in sample.APPOINTMENTS %}
                 {% set n = loop.index %}
                 <tr>
-                  <td><input class="input" type="text" aria-label="Appointment {{ n }}: title" value="{{ title }}" disabled></td>
-                  <td><input class="input" type="text" aria-label="Appointment {{ n }}: abbreviation" value="{{ abbrev }}" disabled></td>
+                  <td><input class="input" type="text" aria-label="Appointment type {{ n }}: title" value="{{ title }}" disabled></td>
+                  <td><input class="input" type="text" aria-label="Appointment type {{ n }}: abbreviation" value="{{ abbrev }}" disabled></td>
                   <td>
-                    <select class="input" aria-label="Appointment {{ n }}: type" disabled>
+                    <select class="input" aria-label="Appointment type {{ n }}: type" disabled>
                       <option value=""{% if not kind %} selected{% endif %}>—</option>
                       {% for option in sample.APPOINTMENT_TYPES %}
                         <option{% if option == kind %} selected{% endif %}>{{ option }}</option>
@@ -88,7 +88,7 @@
                     </select>
                   </td>
                   <td>
-                    <select class="input" aria-label="Appointment {{ n }}: level" disabled>
+                    <select class="input" aria-label="Appointment type {{ n }}: level" disabled>
                       <option{% if level == 0 %} selected{% endif %}>Whole Unit</option>
                       {% for label in sample.LEVEL_LABELS %}
                         <option{% if level == loop.index %} selected{% endif %}>Level {{ loop.index }} · {{ label }}</option>
@@ -96,15 +96,15 @@
                     </select>
                   </td>
                   <td><span class="row-actions">
-                    <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add an appointment below appointment {{ n }}" title="{% if sample.APPOINTMENTS | length >= sample.MAX_APPOINTMENTS %}Up to {{ sample.MAX_APPOINTMENTS }} appointments{% else %}Add an appointment below this one{% endif %}" disabled>+</button>
-                    <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove appointment {{ n }}" title="Remove this appointment" disabled>X</button>
+                    <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add an appointment type below appointment type {{ n }}" title="{% if sample.APPOINTMENTS | length >= sample.MAX_APPOINTMENTS %}Up to {{ sample.MAX_APPOINTMENTS }} appointment types{% else %}Add an appointment type below this one{% endif %}" disabled>+</button>
+                    <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove appointment type {{ n }}" title="Remove this appointment type" disabled>X</button>
                   </span></td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-        <button type="button" class="btn btn-primary" disabled>Save appointments</button>
+        <button type="button" class="btn btn-primary" disabled>Save appointment types</button>
       </section>
     </div>
 
