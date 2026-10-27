@@ -75,6 +75,7 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
     assert 'value="Residential Admin"' in page and 'value="Other Staff"' in page
     assert page.count("<option selected>Whole Unit</option>") == 3
     assert "<option selected>Level 1 · Wing</option>" in page
+    assert "up to 5;" in page and "Up to 10 appointments" in page
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
