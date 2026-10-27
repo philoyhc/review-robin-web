@@ -1,9 +1,15 @@
-Name,Email,Appointment,Post,From,To,Enterprise name
-Sam Lee,sam.lee@example.edu,Master,Master,2026-08-01,,"LEE KAH WAI, SAMUEL"
-Rachel Yeo,rachel.yeo@example.edu,Residential Admin,Admin-01,2026-08-01,,"YEO SHU MIN, RACHEL"
-Priya Raman,priya.raman@example.edu,RSLM,RSLM-01,2026-08-01,,PRIYA D/O RAMAN
-Daniel Koh,daniel.koh@example.edu,RF,RF-01,2026-08-01,,"KOH JUN HAO, DANIEL"
-Mei Ling Tan,meiling.tan@example.edu,RF,RF-02,2026-08-01,,TAN MEI LING
-Arjun Nair,arjun.nair@example.edu,RF,RF-03,2026-08-01,,ARJUN NAIR
-Tom Lim,tom.lim@example.edu,Other Staff,,2026-09-15,,"LIM TECK MENG, THOMAS"
-Grace Ho,grace.ho@example.edu,RF,RF-04,2026-10-01,2026-12-31,"HO WEN QI, GRACE"
+Name,Email,Appointment,From,To,Enterprise name
+Sam Lee,sam.lee@example.edu,Master,2026-08-01,,LEE SAM
+Rachel Yeo,rachel.yeo@example.edu,Residential Admin,2026-08-01,,YEO RACHEL
+Priya Raman,priya.raman@example.edu,Residential Student Life Manager,2026-08-01,,RAMAN PRIYA
+Marcus Tan,marcus.tan@example.edu,Residential Student Life Manager,2026-08-01,,TAN MARCUS
+Nadia Hassan,nadia.hassan@example.edu,Residential Student Life Manager,2026-08-01,,HASSAN NADIA
+Daniel Koh,daniel.koh@example.edu,Residential Fellow,2026-08-01,,KOH DANIEL
+Mei Ling Tan,meiling.tan@example.edu,Residential Fellow,2026-08-01,,TAN MEI LING
+Arjun Nair,arjun.nair@example.edu,Residential Fellow,2026-08-01,,NAIR ARJUN
+Grace Ho,grace.ho@example.edu,Residential Fellow,2026-08-01,,HO GRACE
+Benjamin Chua,benjamin.chua@example.edu,Residential Fellow,2026-08-01,,CHUA BENJAMIN
+Farah Aziz,farah.aziz@example.edu,Residential Fellow,2026-08-01,,AZIZ FARAH
+Kenneth Lau,kenneth.lau@example.edu,Residential Fellow,2026-08-01,,LAU KENNETH
+Siti Rahman,siti.rahman@example.edu,Residential Fellow,2026-08-01,,RAHMAN SITI
+Wei Jie Ong,weijie.ong@example.edu,Residential Fellow,2026-08-01,,ONG WEI JIE

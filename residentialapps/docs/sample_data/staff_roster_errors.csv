@@ -1,8 +1,7 @@
-Name,Email,Appointment,Post,From,To,Enterprise name
-Daniel Koh,daniel.koh@example.edu,RF,RF-01,2026-08-01,,"KOH JUN HAO, DANIEL"
-Daniel Koh (again),daniel.koh@example.edu,RF,RF-02,2026-08-01,,
-Wei Jie Chua,weijie.chua@example.edu,RF,RF-09,2026-08-01,,
-Farah Aziz,farah.aziz@example.edu,Warden,RSLM-01,2026-08-01,,
-Ben Ong,ben.ong@example.edu,RSLM,RF-01,2026-08-01,,
-Siti Rahman,,RF,RF-03,2026-08-01,,
-Kevin Lau,kevin.lau@example.edu,RF,RF-03,2026-12-01,2026-08-01,
+Name,Email,Appointment,From,To,Enterprise name
+Daniel Koh,daniel.koh@example.edu,Residential Fellow,2026-08-01,,
+Daniel Koh (again),daniel.koh@example.edu,Residential Fellow,2026-08-01,,
+Wei Ling Ang,weiling.ang@example.edu,Warden,2026-08-01,,
+Ravi Kumar,ravi.kumar@example.edu,Residential Assistant,2026-08-01,,
+Siti Rahman,,Residential Fellow,2026-08-01,,
+Kevin Tay,kevin.tay@example.edu,Residential Fellow,2026-12-01,2026-08-01,

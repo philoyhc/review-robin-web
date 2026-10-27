@@ -1,0 +1,31 @@
+Wing,Precinct,Neighborhood,Notes,Wing.RSLM,Precinct.RF,Neighborhood.RA
+Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",priya.raman@example.edu,daniel.koh@example.edu,chloe.lim@example.edu
+Cypress,Cypress A 04-12,Cypress A 07-08-09,"RC1A L7: 101, 102-105; Else: 101, 102",priya.raman@example.edu,daniel.koh@example.edu,ethan.wong@example.edu
+Cypress,Cypress A 04-12,Cypress A 10-11-12,"RC1A L10: 101, 102-105; Else: 101, 102",priya.raman@example.edu,daniel.koh@example.edu,hana.ito@example.edu
+Cypress,Cypress A 13-20,Cypress A 13-14-15,"RC1A 101, 102",priya.raman@example.edu,meiling.tan@example.edu,isaac.goh@example.edu
+Cypress,Cypress A 13-20,Cypress A 16-17-18,"RC1A 101, 102",priya.raman@example.edu,meiling.tan@example.edu,jiahui.ong@example.edu
+Cypress,Cypress A 13-20,Cypress A 19-20,"RC1A 101, 102",priya.raman@example.edu,meiling.tan@example.edu,kai.ng@example.edu
+Cypress,Cypress B 03-14,Cypress B 03-04-05,"RC1B 108, 107",priya.raman@example.edu,arjun.nair@example.edu,lucas.teo@example.edu
+Cypress,Cypress B 03-14,Cypress B 06-07-08,"RC1B 108, 107",priya.raman@example.edu,arjun.nair@example.edu,maya.seah@example.edu
+Cypress,Cypress B 03-14,Cypress B 09-10-11,"RC1B 108, 107",priya.raman@example.edu,arjun.nair@example.edu,nur.aisyah@example.edu
+Cypress,Cypress B 03-14,Cypress B 12-13-14,"RC1B 108, 107",priya.raman@example.edu,arjun.nair@example.edu,aaron.sim@example.edu
+Maple,Maple 03-08,Maple 03-04,"RC2 L3: 203-206, 202, 201; Else: 203, 202, 201",marcus.tan@example.edu,grace.ho@example.edu,bella.koh@example.edu
+Maple,Maple 03-08,Maple 05-06,"RC2 L5: 203-206, 202, 201; Else: 203, 202, 201",marcus.tan@example.edu,grace.ho@example.edu,chenghao.lin@example.edu
+Maple,Maple 03-08,Maple 07-08,"RC2 L7: 203-206, 202, 201; Else: 203, 202, 201",marcus.tan@example.edu,grace.ho@example.edu,dhruv.menon@example.edu
+Maple,Maple 09-14,Maple 09-10,"RC2 203, 202, 201",marcus.tan@example.edu,benjamin.chua@example.edu,elise.tan@example.edu
+Maple,Maple 09-14,Maple 11-12,"RC2 203, 202, 201",marcus.tan@example.edu,benjamin.chua@example.edu,faris.iskandar@example.edu
+Maple,Maple 09-14,Maple 13-14,"RC2 203, 202, 201",marcus.tan@example.edu,benjamin.chua@example.edu,gwen.ho@example.edu
+Maple,Maple 15-22,Maple 15-16,"RC2 203, 202, 201",marcus.tan@example.edu,farah.aziz@example.edu,haikal.rahim@example.edu
+Maple,Maple 15-22,Maple 17-18,"RC2 203, 202, 201",marcus.tan@example.edu,farah.aziz@example.edu,ivy.toh@example.edu
+Maple,Maple 15-22,Maple 19-20,"RC2 203, 202, 201",marcus.tan@example.edu,farah.aziz@example.edu,jasper.lee@example.edu
+Maple,Maple 15-22,Maple 21-22,"RC2 203, 202, 201",marcus.tan@example.edu,farah.aziz@example.edu,kavya.pillai@example.edu
+Willow,Willow A 04-12,Willow A 04-05-06,"RC3A 501, 502",nadia.hassan@example.edu,kenneth.lau@example.edu,leon.chia@example.edu
+Willow,Willow A 04-12,Willow A 07-08-09,"RC3A 501, 502",nadia.hassan@example.edu,kenneth.lau@example.edu,mira.sato@example.edu
+Willow,Willow A 04-12,Willow A 10-11-12,"RC3A 501, 502",nadia.hassan@example.edu,kenneth.lau@example.edu,nathan.yeo@example.edu
+Willow,Willow A 13-25,Willow A 13-14-15,"RC3A 501, 502",nadia.hassan@example.edu,siti.rahman@example.edu,olivia.ng@example.edu
+Willow,Willow A 13-25,Willow A 16-17-18,"RC3A 501, 502",nadia.hassan@example.edu,siti.rahman@example.edu,pranav.iyer@example.edu
+Willow,Willow A 13-25,Willow A 19-20-21,"RC3A 501, 502",nadia.hassan@example.edu,siti.rahman@example.edu,qixuan.lim@example.edu
+Willow,Willow A 13-25,Willow A 22-23-24-25,"RC3A 501, 502",nadia.hassan@example.edu,siti.rahman@example.edu,rui.chen@example.edu
+Willow,Willow B 04-12,Willow B 04-05-06,"RC3B L4: 506-509, 505; Else: 506, 505",nadia.hassan@example.edu,weijie.ong@example.edu,sofia.wee@example.edu
+Willow,Willow B 04-12,Willow B 07-08-09,"RC3B L7: 506-509, 505; Else: 506, 505",nadia.hassan@example.edu,weijie.ong@example.edu,timothy.low@example.edu
+Willow,Willow B 04-12,Willow B 10-11-12,"RC3B L10: 506-509, 505; Else: 506, 505",nadia.hassan@example.edu,weijie.ong@example.edu,umairah.salleh@example.edu

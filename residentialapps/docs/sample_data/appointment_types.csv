@@ -1,7 +1,0 @@
-Title,Abbrev,Type,Level
-Master,Master,Staff,Unit
-Residential Admin,Admin,Staff,Unit
-Residential Student Life Manager,RSLM,Staff,Level1.Wing
-Residential Fellow,RF,Staff,Level2.Precinct
-Residential Assistant,RA,Student,Level3.Neighborhood
-Other Staff,,Staff,Unit

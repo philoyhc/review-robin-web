@@ -49,7 +49,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Databases per app:** `/residentialops` needs one URL, `/supportlogs` both (ruling 4). Runtime roles hold DML only.
 - **Structure import:** the file is the Unit's complete tree. A missing node is end-dated, and a node with a current appointment blocks the import. Floor gaps and overlaps warn.
 - **Reporting** is derived from the tree; only dated backups are stored.
-- **Across the tables** the setup order and the twelve inter-table rules are ruled in `residentialapps/guide/todo_master.md` (setup order and inter-table rules, 2026-10-27); items 4 and 5 implement them.
+- **Across the tables**: organization by units, ruled in `residentialapps/guide/todo_master.md` (2026-10-27), superseding posts and the inter-table rules; items 4 and 5 implement it, and the placeholders follow it next.
 - **Sys admin** is granted and revoked by the super-admin only, with no-self-action and last-sys-admin floors (`residentialapps_roles.md`).
 
 ## Judgment calls — decided
