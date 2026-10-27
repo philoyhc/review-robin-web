@@ -18,6 +18,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and the `residential` CI lane |
 | `guide/archive/segment_1A_package_and_mounts.md` | Segment 1A, closed 2026-10-26 (`#3274`→`#3281`): the package, both mounts with health paths, and the `residential` CI lane. **Read `Status`** for the restructures and what the reads caught |
 | `guide/segment_1B_rosters_and_organization.md` | Segment 1B plan: the shared core's admin screens scaffolded, then databases, identity, organization and rosters wired to them (paused after item 1 for RA Leave's screens, ruling 13) |
+| `guide/segment_1C_ra_leave.md` | Segment 1C plan: RA Leave's screens, phone first, settling Residential's UX conventions (item 1, next); then wired on 1B's core (items 2–5) |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |
 
 Shared UX guidance for every Cordware application is RRW's `docs/cordware_mobile_to_desktop.md`.
