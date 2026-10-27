@@ -124,15 +124,19 @@ model (author, 2026-10-27):
   more than one ticked fades it (author, 2026-10-27; RRW's rule,
   `spec/setup_pages.md`); End appointment end-dates and keeps the history; Delete, for a row made in
   error, waits on its confirm tick box. Unticking every row closes it.
-- **The CSV card below the table** carries the sample, then Upload and
-  preview (Primary) and Export.
+- **The setup cards sit below the table, on one row** (author,
+  2026-10-27): on a roster, its appointment types (two thirds) beside its
+  CSV card (a third); on Organization, its CSV card (two thirds) beside the
+  levels (a third). From 960 px they share the row (`.bottom-row`), and
+  below it they stack. A CSV card carries the sample, then Upload and
+  preview and Export.
 - **A value has one home.** Where it is set, it is plain text and edited
   there; where another page repeats it, it is a pill (`.pill-derived`),
   read-only (author, 2026-10-27): a person's slots, on their detail page,
   come from Organization's cells. Sign-in and access stay status chips (§3).
-- **Each roster page opens on its appointment types** (Staff appointment
-  types, Student appointment types), a row builder (§5) with its CSV in
-  the same card, above the filter card.
+- **Each roster page's appointment types** (Staff appointment types,
+  Student appointment types) are a row builder (§5) with their own CSV in
+  the same card.
 - **Organization's slots table** takes the same tick boxes and expander,
   with Retire in place of End appointment. One row per slot, under its
   higher levels, whose names show on a group's first row only; a new top
@@ -150,7 +154,7 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   slots' Staff and RA cells, and a Checks card listing the warnings across
   the steps. Until setup is done it opens on how to do it, after RRW's
   first-run lobby card (`spec/sessions_overview.md`).
-- **Organization** holds the levels, then the slots table and its CSV.
+- **Organization** holds the slots table, then its CSV beside the levels.
 - **Both rosters** open once the slots exist; the slots' Staff and RA
   cells once both rosters have people.
 - **A step not yet open is shown, not hidden**: its content renders
