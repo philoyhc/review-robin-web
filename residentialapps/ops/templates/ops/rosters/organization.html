@@ -110,7 +110,7 @@
         <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit. A Unit may use two levels rather than three; floors sit on the lowest level in use. Code keeps the slots; renaming is a label edit.</p>
         {% for label in sample.LEVEL_LABELS %}
           <div class="field level-field">
-            <label class="check"><input type="checkbox" id="level-{{ loop.index }}-used"{% if sample.LEVELS_USED[loop.index0] %} checked{% endif %} disabled> Used</label>
+            <label class="check"><input type="checkbox" id="level-{{ loop.index }}-used" aria-label="Level {{ loop.index }} used"{% if sample.LEVELS_USED[loop.index0] %} checked{% endif %} disabled> Used</label>
             <label for="level-{{ loop.index }}">Level {{ loop.index }}</label>
             <input id="level-{{ loop.index }}" class="input" type="text" value="{{ label }}" disabled>
           </div>
