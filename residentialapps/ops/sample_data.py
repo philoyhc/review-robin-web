@@ -44,11 +44,21 @@ TREE: tuple[Node, ...] = (
 
 FLOOR_GAPS = ("Cypress A 16",)
 
-APPOINTMENT_LEVELS = (
-    ("RSLM", 1),
-    ("RF", 2),
-    ("RA", 3),
-    ("Master, admin", 0),
+# Which level slots the Unit uses: a Unit may use two levels below the
+# whole Unit rather than three. Example College uses all three.
+LEVELS_USED = (True, True, True)
+
+APPOINTMENT_TYPES = ("Staff", "Student")
+
+# The Unit's appointments: five slots of (title, type, level), level 0 the
+# whole Unit. Four come prefilled for every Unit; the fifth is for a Unit's
+# own, here Example College's Residential Student Life Manager.
+APPOINTMENTS = (
+    ("Master", "Staff", 0),
+    ("Residential Fellow", "Staff", 2),
+    ("Admin", "Staff", 0),
+    ("Residential Assistant", "Student", 3),
+    ("Residential Student Life Manager", "Staff", 1),
 )
 
 STRUCTURE_CSV = """\

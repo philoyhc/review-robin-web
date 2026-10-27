@@ -26,70 +26,96 @@
   {% endif %}
 
   <div class="split">
-    <section class="card main" aria-labelledby="tree-h">
-      <div class="card-head">
-        <h2 id="tree-h">Organization tree</h2>
-        <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only.</p>
-        <div class="btnrow">
-          <button type="button" class="btn btn-secondary" disabled>Expand all</button>
-          <button type="button" class="btn btn-primary" disabled>Add node</button>
+    <div class="main stack">
+      <section class="card" aria-labelledby="tree-h">
+        <div class="card-head">
+          <h2 id="tree-h">Organization tree</h2>
+          <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only.</p>
+          <div class="btnrow">
+            <button type="button" class="btn btn-secondary" disabled>Expand all</button>
+            <button type="button" class="btn btn-primary" disabled>Add node</button>
+          </div>
         </div>
-      </div>
-      <div class="table-wrap">
-        <table>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Node</th><th scope="col">Level</th><th scope="col">Floors</th><th scope="col">Appointed</th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+            </thead>
+            <tbody>
+              {% for node in sample.TREE %}
+                <tr class="level-{{ node.level }}">
+                  <td class="node">{{ node.name }}</td>
+                  <td class="subtle">{{ level_name[node.level] }}</td>
+                  <td>{{ node.floors }}</td>
+                  <td>{{ node.appointed or "—" }}</td>
+                  <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
+                </tr>
+              {% endfor %}
+              {% for gap in sample.FLOOR_GAPS %}
+                <tr class="gap-row">
+                  <td class="node">Not covered</td>
+                  <td>—</td>
+                  <td>{{ gap }}</td>
+                  <td>—</td>
+                  <td><span class="chip chip-warn">Gap</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card card-pad" aria-labelledby="appts-h">
+        <h2 id="appts-h">Appointments</h2>
+        <p class="sub">Up to five for {{ sample.UNIT_NAME }}, each with its type and the level it holds; the level list follows the levels in use. Reporting follows the tree.</p>
+        <table class="appts">
           <thead>
-            <tr><th scope="col">Node</th><th scope="col">Level</th><th scope="col">Floors</th><th scope="col">Appointed</th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+            <tr><th scope="col">Title</th><th scope="col">Type</th><th scope="col">Level</th></tr>
           </thead>
           <tbody>
-            {% for node in sample.TREE %}
-              <tr class="level-{{ node.level }}">
-                <td class="node">{{ node.name }}</td>
-                <td class="subtle">{{ level_name[node.level] }}</td>
-                <td>{{ node.floors }}</td>
-                <td>{{ node.appointed or "—" }}</td>
-                <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
-              </tr>
-            {% endfor %}
-            {% for gap in sample.FLOOR_GAPS %}
-              <tr class="gap-row">
-                <td class="node">Not covered</td>
-                <td>—</td>
-                <td>{{ gap }}</td>
-                <td>—</td>
-                <td><span class="chip chip-warn">Gap</span></td>
+            {% for title, kind, level in sample.APPOINTMENTS %}
+              {% set n = loop.index %}
+              <tr>
+                <td><input class="input" type="text" aria-label="Appointment {{ n }}: title" value="{{ title }}"{% if not title %} placeholder="e.g. Residential Student Life Manager"{% endif %} disabled></td>
+                <td>
+                  <select class="input" aria-label="Appointment {{ n }}: type" disabled>
+                    <option value=""{% if not kind %} selected{% endif %}>—</option>
+                    {% for option in sample.APPOINTMENT_TYPES %}
+                      <option{% if option == kind %} selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select class="input" aria-label="Appointment {{ n }}: level" disabled>
+                    <option value=""{% if level is none %} selected{% endif %}>—</option>
+                    <option{% if level == 0 %} selected{% endif %}>Whole Unit</option>
+                    {% for label in sample.LEVEL_LABELS %}
+                      {% if sample.LEVELS_USED[loop.index0] %}
+                        <option{% if level == loop.index %} selected{% endif %}>Level {{ loop.index }} · {{ label }}</option>
+                      {% endif %}
+                    {% endfor %}
+                  </select>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
-      </div>
-    </section>
+        <button type="button" class="btn btn-primary" disabled>Save appointments</button>
+      </section>
+    </div>
 
     <div class="side">
       <section class="card card-pad" aria-labelledby="labels-h">
         <h2 id="labels-h">Level labels</h2>
-        <p class="sub">{{ sample.UNIT_NAME }}'s names for its three levels. Code keeps the slots; renaming is a label edit.</p>
+        <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit. A Unit may use two levels rather than three; floors sit on the lowest level in use. Code keeps the slots; renaming is a label edit.</p>
         {% for label in sample.LEVEL_LABELS %}
-          <div class="field">
-            <label for="level-{{ loop.index }}">Level {{ loop.index }}{% if loop.last %} (floors){% endif %}</label>
+          <div class="field level-field">
+            <label class="check"><input type="checkbox" id="level-{{ loop.index }}-used" aria-label="Level {{ loop.index }} used"{% if sample.LEVELS_USED[loop.index0] %} checked{% endif %} disabled> Used</label>
+            <label for="level-{{ loop.index }}">Level {{ loop.index }}</label>
             <input id="level-{{ loop.index }}" class="input" type="text" value="{{ label }}" disabled>
           </div>
         {% endfor %}
         <button type="button" class="btn btn-primary" disabled>Save labels</button>
-      </section>
-
-      <section class="card card-pad" aria-labelledby="levels-h">
-        <h2 id="levels-h">Appointments by level</h2>
-        <p class="sub">Which level each appointment holds. Reporting follows the tree.</p>
-        <table>
-          <tbody>
-            {% for appointment, level in sample.APPOINTMENT_LEVELS %}
-              <tr>
-                <td>{{ appointment }}</td>
-                <td>{% if level %}Level {{ level }} · {{ level_name[level] }}{% else %}{{ sample.UNIT_NAME }} (whole Unit){% endif %}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
       </section>
 
       <section class="card card-pad muted" aria-labelledby="csv-h">
