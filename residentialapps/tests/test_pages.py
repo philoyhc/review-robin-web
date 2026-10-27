@@ -10,14 +10,18 @@ from pathlib import Path
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from residentialapps.ops import pages, sample_data
 from residentialapps.ops.main import create_app as ops_app
 from residentialapps.tests._host import host_with
+from residentialapps.web.urls import templates
 
 PACKAGE = Path(__file__).resolve().parents[1]
 MOUNT = "/residentialops"
 CHLOE = sample_data.person_id_of("chloe.lim@example.edu")
+SVG_DATA = "data:image/svg+xml;"
+FAVICON = re.compile(r'<link rel="icon"[^>]*>')
 LINK = re.compile(r'\b(?:href|action|formaction|src)\s*=\s*"([^"]*)"')
 
 
@@ -71,19 +75,41 @@ def test_the_chrome_carries_the_switcher_tabs_and_theme(host_client: TestClient)
 
 def test_no_page_emits_a_path_outside_its_mount(host_client: TestClient) -> None:
     """The GET crawl: every link, form and source on every page is under
-    the mount, a fragment, Easy Auth's, or the host's landing page."""
+    the mount, a fragment, Easy Auth's, or the host's landing page; the
+    inline favicon is not a path."""
     for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
-        for link in LINK.findall(host_client.get(MOUNT + path).text):
+        for link in LINK.findall(FAVICON.sub("", host_client.get(MOUNT + path).text)):
             assert link == "/" or link.startswith((f"{MOUNT}/", "#", "/.auth/")), (path, link)
+
+
+def favicon(app_key: str) -> str:
+    """The favicon link the shared chrome emits for an application."""
+    request = Request({"type": "http", "path": "/", "root_path": "", "headers": [], "query_string": b""})
+    env = templates([]).env
+    page = env.get_template("residential/base.html").render(request=request, app_key=app_key, areas=(), tabs=())
+    links = re.findall(r'<link rel="icon"[^>]*href="([^"]*)"', page)
+    assert len(links) <= 1, app_key
+    return links[0] if links else ""
+
+
+def test_each_application_has_its_own_favicon(host_client: TestClient) -> None:
+    """A house in fuchsia for Residential Operations, a lined notepad in
+    teal for Support Logs; nothing for an application not yet given one."""
+    house, notepad = favicon("residentialops"), favicon("supportlogs")
+    assert house.startswith(SVG_DATA) and "fill='%23a21caf'" in house and "M7 16l9-8 9 8" in house
+    assert notepad.startswith(SVG_DATA) and "fill='%230f766e'" in notepad and "M12.5 12h7" in notepad
+    assert favicon("other") == ""
+    assert f'href="{house}"' in host_client.get(f"{MOUNT}/rosters/").text
 
 
 def test_every_template_link_goes_through_a_helper() -> None:
     """The leak rule: a link in a template is built by `url()` (inside
-    the application) or `host_url()` (the host's), never written out."""
+    the application) or `host_url()` (the host's), never written out; the
+    inline favicon is not a path."""
     templates = sorted(PACKAGE.rglob("templates/**/*.html"))
     assert templates
     for template in templates:
-        for link in LINK.findall(template.read_text()):
+        for link in LINK.findall(FAVICON.sub("", template.read_text())):
             assert link.startswith(("{{ url(", "{{ host_url(", "#")), (template.name, link)
 
 
