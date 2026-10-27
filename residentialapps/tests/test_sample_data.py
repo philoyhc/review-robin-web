@@ -20,6 +20,8 @@ HEADERS = {
     "ra_roster": [*ROSTER, "Student ID"],
     "organization_units": UNITS,
     "organization": [*UNITS, "Staff", "RA"],
+    "quick_setup": [*UNITS, "Roster", "Name", "Email", "Appointment", "Abbrev", "From", "To", "Enterprise name",
+                    "Student ID"],
 }
 
 
@@ -109,3 +111,25 @@ def test_the_placeholders_show_the_mock_data() -> None:
     ):
         lines = (DATA / file).read_text().splitlines()
         assert all(line in lines for line in sample.splitlines()), file
+
+
+def test_quick_setup_holds_every_other_file() -> None:
+    """Read back, the Quick setup file gives the rosters, the types they
+    hold and the Organization file with every cell."""
+    quick = rows("quick_setup.csv")
+    person = ["Name", "Email", "Appointment", "From", "To", "Enterprise name"]
+    for roster, file in (("Staff", "staff_roster.csv"), ("RA", "ra_roster.csv")):
+        extra = ["Student ID"] if roster == "RA" else []
+        people = {r["Email"]: {k: r[k] for k in person + extra} for r in quick if r["Roster"] == roster}
+        by_email = {p["Email"]: p for p in rows(file)}
+        assert people == by_email, file  # the same people; the file's order is its own
+    held = {(r["Appointment"], r["Abbrev"]) for r in quick}
+    types = {(t["Title"], t["Abbrev"]) for f in ("staff_appointment_types.csv", "student_appointment_types.csv")
+             for t in rows(f) if t["Abbrev"]}
+    assert held == types
+    slots: dict[str, dict[str, str]] = {}
+    for r in quick:
+        if r["Level3.Neighborhood"]:
+            slot = slots.setdefault(r["Level3.Neighborhood"], {k: r[k] for k in UNITS} | {"Staff": [], "RA": []})
+            slot[r["Roster"]].append(r["Email"])
+    assert [s | {"Staff": "; ".join(s["Staff"]), "RA": "; ".join(s["RA"])} for s in slots.values()] == rows("organization.csv")
