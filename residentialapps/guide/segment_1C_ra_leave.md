@@ -48,7 +48,7 @@ Taken 2026-10-27 at `2cba1322`.
 |---|---|---|
 | RA Leave pages in the page map | 12 | `grep -c "/ra-leave/" residentialapps/spec/applications.md` |
 | Existing `leave/` package | none | `ls residentialapps/leave` |
-| Templates in Residential Operations today | 7 | `find residentialapps/residentialops/templates -name "*.html" \| wc -l` |
+| Templates in Residential Operations today | 7 | `find residentialapps/ops/templates -name "*.html" \| wc -l` (the package is `residentialops/` since 2026-10-27) |
 | RA Leave spec sections | 36 | `grep -c "^# [0-9]" residentialapps/docs/ra_leave_management_functional_spec_v0.4.md` |
 
 The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Request extra leave, application detail, My cover, Awaiting my decision, Decide and not registered; Decided, My history, Team leave and both Leave admin pages are drawn first in item 1.

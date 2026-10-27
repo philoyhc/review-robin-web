@@ -1,7 +1,7 @@
 # Residential architecture
 
-> **Built so far:** segment 1A built the `residentialops/` (named `ops/` until 2026-10-27), `supportlogs/` and
-> `tests/` packages, the boundary rules marked below, packaging and the
+> **Built so far:** segment 1A built the `residentialops/` (`ops/` until
+> 2026-10-27), `supportlogs/` and `tests/` packages, the boundary rules marked below, packaging and the
 > `residential` lane; segment 1B item 1 built `web/`. Every package and rule marked for a later segment
 > is the contract for it, not yet built.
 
@@ -21,12 +21,12 @@ its tests run. The two applications' contract with the host is
 | `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | RA Leave next; RA Events last (ruling 13) |
 | `residentialapps/tests/` | Residential's tests, a package with its own `__init__.py` | 1A |
 
-**`residentialops/` beside ruling 1's list** (author, 2026-10-26; renamed
-from `ops/` on 2026-10-27 to match `supportlogs/` and the mount). Ruling 1
-names `core/`, `leave/`, `events/`, `supportlogs/` and `web/`, and gives
-Residential Operations no package of its own. A package per application
-keeps each one's routes in one place to fence off, and its logger prefix
-(ruling 6) is the package. Support Logs' application and pillar share
+**`residentialops/` beside ruling 1's list** (author, 2026-10-26; the
+author renamed it from `ops/` on 2026-10-27 to match `supportlogs/` and the
+mount). Ruling 1 names `core/`, `leave/`, `events/`, `supportlogs/` and
+`web/`, and gives Residential Operations no package of its own. The logger
+prefix (ruling 6) reads most simply as a package, and a package per
+application keeps each one's routes in one place to fence off. Support Logs' application and pillar share
 `supportlogs/`; Residential Operations' application is `residentialops/`,
 and its pillars are `core/`, `leave/` and `events/`.
 
