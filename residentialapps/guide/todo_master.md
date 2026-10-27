@@ -58,20 +58,30 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   2. **One tree of organization nodes** (unit, level, parent one level up, code, name, dated), not a table per term.
   3. **Floors only on the bottom level**: a node carries one or more floor-range segments (building + floors), which is how a node spans towers; Tower is part of a segment, not a level. Higher levels cover the union of their children; gaps and overlaps warn (ruling 3 above).
   4. **Appointment type → level is configured per Unit**; Unit 1's are RSLM → level 1, RF → level 2, RA → level 3, with Master and the administrators covering the whole Unit.
-  - **Amended 2026-10-27** (author, on 1B item 1's screens): a Unit has **up to five levels** below the whole Unit (slots `level_1`–`level_5`, superseding point 1's three) and **up to ten appointments**; floors sit on the lowest level. Appointments are **rows of title, abbreviation, type (Staff or Student) and level** (the whole Unit or a level), each row ending in **+** (add a row below) and **X** (remove it), after RRW's response-field rows; levels take the same rows. Every Unit starts with Master, Residential Fellow (RF), Residential Admin (the *admin* appointment, renamed on screen), Residential Assistant (RA, Student) and Other Staff; RSLM is one Unit's own, added as a row. *Type* now means Staff or Student; what point 4 calls the appointment type is the appointment's *title*. **Post codes** are the appointment type's abbreviation, a hyphen and a two-digit number (`RSLM-01`, `RF-01`, `RA-01`); the floor list a node covers is its *Dorms*. **Posts, ruled the same day:** a node is identified by its Dorms and holds one or more **posts**, each one person's appointment slot coded as the appointment type's abbreviation, a hyphen and the next free two-digit number (`Admin-01`, `RF-11`), or a numbering a setup CSV gives; the Master's single post is unnumbered. The rosters appoint people to posts, so the Unit's posts read `Master, Admin-01, Admin-02` and a Precinct may hold two RFs. An RA reports to **every** RF on its Precinct. **A backup is a second, dated post** on the same node (`RF-04` beside `RF-02` to 31 Dec), not a reporting line (author, option A); the structure CSV's naming of nodes by code is revisited with the appointment-types CSV.
+  - **Amended 2026-10-27** (author, on 1B item 1's screens): a Unit has **up to five levels** below the whole Unit (slots `level_1`–`level_5`, superseding point 1's three) and **up to ten appointments**; floors sit on the lowest level. Appointments are **rows of title, abbreviation, type (Staff or Student) and level** (the whole Unit or a level), each row ending in **+** (add a row below) and **X** (remove it), after RRW's response-field rows; levels take the same rows. Every Unit starts with Master, Residential Fellow (RF), Residential Admin (the *admin* appointment, renamed on screen), Residential Assistant (RA, Student) and Other Staff; RSLM is one Unit's own, added as a row. *Type* now means Staff or Student; what point 4 calls the appointment type is the appointment's *title*. **Post codes** are the appointment type's abbreviation, a hyphen and a two-digit number (`RSLM-01`, `RF-01`, `RA-01`); the floor list a node covers is its *Dorms*. **Posts, ruled the same day:** a node is identified by its Dorms and holds one or more **posts**, each one person's appointment slot coded as the appointment type's abbreviation, a hyphen and the next free two-digit number (`Admin-01`, `RF-11`), or a numbering a setup CSV gives; the Master's single post is unnumbered. The rosters appoint people to posts, so the Unit's posts read `Master, Admin-01, Admin-02` and a Precinct may hold two RFs. An RA reports to **every** RF on its Precinct. **A backup is a second, dated post** on the same node (`RF-04` beside `RF-02` to 31 Dec), not a reporting line (author, option A); the setup CSVs below carry posts.
   5. **Reporting is derived**: an RA reports to the RF holding the parent node (to every RF on it, from 2026-10-27). Only the dated backup and temporary arrangements are stored explicitly.
-  6. **CSV headers carry the labels** as RRW's do (`Level1.Wing`); headcount norms (3 RFs + 1 RSLM per Wing, 3–4 RAs per RF) are per-Unit warnings, never constraints.
-- **Organization-structure CSV, ruled 2026-10-26** (author): a Unit's whole tree uploads as one file, **one row per bottom-level node**, naming positions, never people (people attach through appointments):
+  6. **CSVs carry the labels** as RRW's do (`Level1.Wing`; in the `Level` values from 2026-10-27, setup CSVs below); headcount norms (3 RFs + 1 RSLM per Wing, 3–4 RAs per RF) are per-Unit warnings, never constraints.
+- **Organization setup CSVs, ruled 2026-10-27** (author; supersedes the 2026-10-26 structure CSV of one row per bottom-level node). A Unit's whole setup, rosters aside, uploads as two files, appointment types first:
 
-  | `Level1.Wing` | `Level2.Precinct` | `Level3.Neighborhood` | `Floors` |
-  |---|---|---|---|
-  | RSLM-01 | RF-01 | RA-01 | Cypress A 04-05-06 |
-  | RSLM-01 | RF-01 | RA-02 | Cypress A 07-08-09 |
-  | RSLM-01 | RF-01 | RA-03 | Cypress A 10-11-12 |
+  | File | Columns | One row per |
+  |---|---|---|
+  | Appointment types | `Title`, `Abbrev`, `Type` (`Staff` or `Student`), `Level` | appointment type (up to 10) |
+  | Structure | `Level`, `Dorms`, `Post` | post |
 
-  1. **Every level is its own column**, headed with the Unit's label (which the import sets and the export writes back); higher nodes exist because a row names them.
-  2. **Floors are a building and its floors joined by hyphens**; several buildings in one cell are separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
-  3. **The file is the Unit's complete structure.** The preview lists new, changed and to-retire nodes, unknown or duplicate codes, and floor gaps and overlaps (warnings); on confirm a missing node is end-dated, never deleted, and a node with a current appointment blocks the import until the appointment is ended or moved.
+  ```
+  Level,Dorms,Post
+  Unit,Cypress A; Cypress B,Master
+  Unit,Cypress A; Cypress B,Admin-01
+  Level1.Wing,Cypress A; Cypress B,RSLM-01
+  Level2.Precinct,Cypress A 13-14-15; Cypress B 01-02-03-04-05-06,RF-02
+  Level2.Precinct,Cypress A 13-14-15; Cypress B 01-02-03-04-05-06,RF-04
+  ```
+
+  1. **`Level` is `Unit` or a slot and its label**, `Level1.Wing` to `Level5.<label>`, as RRW's friendly labels are (`spec/csv_contracts.md` §1a): the appointment-types file sets the labels, the structure file must agree, and the export writes them back. An appointment type with no abbreviation (Other Staff) has no posts.
+  2. **A node is its Level and Dorms**: rows with the same pair are one node's posts. Its parent is the one node a level up whose Dorms contain its own, so every level's Dorms are written out; a node that fits no parent, or more than one, is refused in the preview.
+  3. **Dorms are a building and its floors joined by hyphens**, a building alone covering all its floors, several separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
+  4. **A post's abbreviation names an appointment type at that row's level**, and its number is the CSV's own or the next free one. A duplicate post is refused.
+  5. **The structure file is the Unit's complete structure**, matched to what exists by post. The preview lists new, changed and to-retire nodes and posts, and floor gaps and overlaps (warnings); on confirm a missing node is end-dated, never deleted, and a post with a current appointment blocks the import until the appointment is ended or moved.
 
 - **Role names** (terms ruled 2026-10-26: *sys admin* the system role, *admin* the appointment, `residentialapps/docs/residentialapps_roles.md`): administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.

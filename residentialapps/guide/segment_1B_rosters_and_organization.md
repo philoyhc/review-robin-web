@@ -17,6 +17,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Iteration rung 8, 2026-10-27** (author): the tree's columns are Level, Dorms (was Area), Node, Appointed; node codes become abbreviation-hyphen-number (`RSLM-01`, `RF-01`, `RA-01`) in the sample data and the mock CSVs.
 - **Iteration rung 9, 2026-10-27** (author): only Level indents with the hierarchy; Dorms and Node sit flush, and no cell in the tree is bold.
 - **Iteration rung 10, 2026-10-27** (author): Node becomes *Post* on the tree and the Staff roster; the Unit's posts read Master, Admin-01; Appointments becomes *Appointment types*, with Master and Admin as abbreviations. Posts ruled in `residentialapps/guide/todo_master.md` (organization levels, amended). A backup is a dated second post (Grace Ho on RF-04 beside RF-02), so RA-04–RA-06 report to both. The appointment-types CSV is next.
+- **Iteration rung 11, 2026-10-27** (author): the setup CSVs — appointment types first (`Title,Abbrev,Type,Level`, which sets the level labels), then structure, one row per post (`Level,Dorms,Post`), the tree derived from Dorms; ruled in `residentialapps/guide/todo_master.md` (organization setup CSVs), superseding the 2026-10-26 structure CSV. The RA roster appoints to posts too. Mock files reworked; `residentialapps/tests/test_sample_data.py` keeps them coherent.
 
 ## Decision
 
@@ -49,7 +50,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 ## Judgment calls — decided
 
 - Databases come before identity: the Person table needs a database.
-- The structure CSV comes before the roster CSVs: a roster row resolves its node by code.
+- The setup CSVs come before the roster CSVs: a roster row appoints a person to a post the tree holds.
 - The appointment-to-level map lives on the Unit and is edited on the organization page.
 - Item 1 takes its `diff-reviewer` read on the item's cumulative diff at rung 3, its last build rung. An iteration rung after that read reopens `app/`-style code (templates, sample data), so each takes its own read, as `CLAUDE.md` "Where work runs" requires.
 
@@ -71,7 +72,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 **Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
 
-**Item 4 — Organization.** 1. Models and migration. 2. Structure CSV: parse, preview, commit, export. 3. Wire the organization page. Last build rung.
+**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page. Last build rung.
 
 **Item 5 — Rosters.** 1. Appointments and reporting. 2. Roster CSVs. 3. Wire the roster pages. Last build rung.
 
