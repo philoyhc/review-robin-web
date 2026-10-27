@@ -55,6 +55,20 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert page.text.count('<td class="subtle">Neighborhood</td>') == 10
 
 
+def test_the_organization_page_sets_levels_in_use_and_appointments() -> None:
+    page = TestClient(ops_app()).get("/rosters/").text
+    assert page.count('type="checkbox"') == 3
+    assert page.count(" checked disabled> Used</label>") == sum(sample_data.LEVELS_USED)
+    assert '<h2 id="appts-h">Appointments</h2>' in page
+    for title, kind, _ in sample_data.APPOINTMENTS[:4]:
+        assert f'value="{title}"' in page
+        assert f"<option selected>{kind}</option>" in page
+    assert page.count('aria-label="Appointment') == 3 * 5
+    assert 'placeholder="e.g. Residential Student Life Manager"' in page
+    assert page.count("<option selected>Whole Unit</option>") == 2
+    assert "<option selected>Level 2 · Precinct</option>" in page
+
+
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
     assert page_routes(), "no pages found"
     for path in page_routes():

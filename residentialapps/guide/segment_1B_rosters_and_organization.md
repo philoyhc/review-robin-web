@@ -10,6 +10,8 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 
 **Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3) and awaits the author's approval. RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
 
+- **Iteration rung 4, 2026-10-27** (author's browser check): the tree is approved; Level labels gain a *Used* flag per level, and the Appointments card becomes five editable slots of title, type and level (`residentialapps/guide/todo_master.md`, organization levels, amended).
+
 ## Decision
 
 **One segment, five items, in order.** Item 1 scaffolds every screen. Items 2–5 wire them, each replacing a page's example data with real data. The segment closes as a whole.

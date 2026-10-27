@@ -226,6 +226,14 @@
       td { font-size: 14px; padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
       .field { display: grid; grid-template-columns: 1fr minmax(0, 140px); align-items: center; gap: 12px; margin-bottom: 10px; font-size: 14px; }
       .field label { color: var(--text-subtle); }
+      .level-field { grid-template-columns: auto auto minmax(0, 1fr); }
+      .check { display: inline-flex; align-items: center; gap: 6px; }
+      table.appts { margin-bottom: 12px; table-layout: fixed; }
+      table.appts th:nth-child(2) { width: 25%; }
+      table.appts th:nth-child(3) { width: 30%; }
+      table.appts td { padding: 4px; border-bottom: 0; }
+      table.appts th { padding: 4px; }
+      table.appts .input { font-size: 14px; padding: 0 6px; }
       .input {
         font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
         border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body);
