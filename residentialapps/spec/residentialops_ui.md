@@ -109,7 +109,7 @@ model (author, 2026-10-27):
 - On a phone the list's table scrolls in its box rather than squeezing
   its fields.
 
-## 6. Roster tables
+## 6. Roster tables and the tree
 
 The Staff and RA rosters take RRW's roster pages and Sessions Lobby as their
 model (author, 2026-10-27):
@@ -126,6 +126,9 @@ model (author, 2026-10-27):
   error, waits on its confirm tick box. Unticking every row closes it.
 - **The CSV card below the table** carries the sample, then Upload and
   preview (Primary) and Export.
+- **The Organization tree** takes the same tick boxes and expander, with
+  Retire in place of End appointment; a floor-gap row, which is no node,
+  takes no tick box (author, 2026-10-27).
 
 ## 7. Cards and notices
 

@@ -67,7 +67,8 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
     """Levels and appointments are rows added with + and removed with X,
     after RRW's response-field rows; no fixed count, no Used flag."""
     page = TestClient(ops_app()).get("/rosters/").text
-    assert 'type="checkbox"' not in page and "> Used<" not in page
+    builders = page[page.index('aria-labelledby="appts-h"'):page.index('aria-labelledby="csv-h"')]
+    assert 'type="checkbox"' not in builders and "> Used<" not in page
     for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
         assert f'aria-label="Add a level below Level {n}"' in page
         assert f'aria-label="Remove Level {n}"' in page
@@ -263,3 +264,12 @@ def test_the_roster_scripts_parse(path: str, tmp_path: Path) -> None:
         source = tmp_path / f"s{n}.js"
         source.write_text(body)
         subprocess.run(["node", "--check", str(source)], check=True)
+
+
+def test_the_organization_tree_ticks_nodes_into_the_same_expander() -> None:
+    page = TestClient(ops_app()).get("/rosters/").text
+    assert "Expand all" not in page
+    assert 'aria-label="Select all nodes"' in page
+    assert 'class="row-select" aria-label="Select Wing RSLM-01"' in page
+    assert ">Retire</button>" in page and "End appointment" not in page
+    assert '<tr class="gap-row">\n                  <td class="sel"></td>' in page
