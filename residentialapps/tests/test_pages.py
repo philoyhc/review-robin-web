@@ -61,13 +61,13 @@ def test_the_organization_page_sets_levels_in_use_and_appointments() -> None:
     for level, used in enumerate(sample_data.LEVELS_USED, start=1):
         assert re.search(rf'aria-label="Level {level} used"{" checked" if used else ""} disabled>', page), level
     assert '<h2 id="appts-h">Appointments</h2>' in page
-    for title, _, _ in sample_data.APPOINTMENTS[:4]:
+    for title, _, _ in sample_data.APPOINTMENTS:
         assert f'value="{title}"' in page
     for kind in sample_data.APPOINTMENT_TYPES:
         expected = sum(1 for _, k, _ in sample_data.APPOINTMENTS if k == kind)
         assert page.count(f"<option selected>{kind}</option>") == expected, kind
     assert page.count('aria-label="Appointment') == 3 * 5
-    assert 'placeholder="e.g. Residential Student Life Manager"' in page
+    assert "<option selected>Level 1 · Wing</option>" in page
     assert page.count("<option selected>Whole Unit</option>") == 2
     assert "<option selected>Level 2 · Precinct</option>" in page
 
