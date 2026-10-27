@@ -52,3 +52,15 @@ def test_a_node_can_hold_two_posts() -> None:
         nodes.setdefault((row["Level"], row["Dorms"]), []).append(row["Post"])
     assert ["RF-02", "RF-04"] in nodes.values()
     assert ["Master", "Admin-01"] in nodes.values()
+
+
+def test_the_page_samples_are_rows_of_the_mock_files() -> None:
+    from residentialapps.residentialops import sample_data
+
+    for sample, name in (
+        (sample_data.APPOINTMENT_TYPES_CSV, "appointment_types.csv"),
+        (sample_data.STRUCTURE_CSV, "structure.csv"),
+    ):
+        lines = (DATA / name).read_text().splitlines()
+        for line in sample.splitlines():
+            assert line in lines, (name, line)

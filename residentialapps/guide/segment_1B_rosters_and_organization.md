@@ -50,7 +50,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 ## Judgment calls — decided
 
 - Databases come before identity: the Person table needs a database.
-- The structure CSV comes before the roster CSVs: a roster row resolves its node by code.
+- The setup CSVs come before the roster CSVs: a roster row appoints a person to a post the tree holds.
 - The appointment-to-level map lives on the Unit and is edited on the organization page.
 - Item 1 takes its `diff-reviewer` read on the item's cumulative diff at rung 3, its last build rung. An iteration rung after that read reopens `app/`-style code (templates, sample data), so each takes its own read, as `CLAUDE.md` "Where work runs" requires.
 
@@ -72,7 +72,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 **Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
 
-**Item 4 — Organization.** 1. Models and migration. 2. Structure CSV: parse, preview, commit, export. 3. Wire the organization page. Last build rung.
+**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page. Last build rung.
 
 **Item 5 — Rosters.** 1. Appointments and reporting. 2. Roster CSVs. 3. Wire the roster pages. Last build rung.
 

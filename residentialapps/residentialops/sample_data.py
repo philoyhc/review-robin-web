@@ -63,7 +63,7 @@ APPOINTMENTS = (
     ("Residential Student Life Manager", "RSLM", "Staff", 1),
 )
 
-# The setup CSVs' first rows (residentialapps/guide/todo_master.md,
+# Excerpts of the setup CSVs (residentialapps/guide/todo_master.md,
 # organization setup CSVs; the full files are in docs/sample_data/).
 APPOINTMENT_TYPES_CSV = """\
 Title,Abbrev,Type,Level
