@@ -26,20 +26,20 @@ class Node:
 
 TREE: tuple[Node, ...] = (
     Node(UNIT_NAME, 0, "Cypress A, Cypress B", "Sam Lee (Master) · Rachel Yeo (Residential Admin)"),
-    Node("Cypress", 1, "Cypress A, Cypress B", "Priya Raman (RSLM)"),
-    Node("RF1", 2, "Cypress A 04–12", "Daniel Koh"),
-    Node("RA1", 3, "Cypress A 04-05-06", "Chloe Lim"),
-    Node("RA2", 3, "Cypress A 07-08-09", "Ethan Wong"),
-    Node("RA3", 3, "Cypress A 10-11-12", "Hana Ito"),
-    Node("RF2", 2, "Cypress A 13–15; Cypress B 01–06", "Mei Ling Tan"),
-    Node("RA4", 3, "Cypress A 13-14-15", "Isaac Goh"),
-    Node("RA5", 3, "Cypress B 01-02-03", "Jia Hui Ong"),
-    Node("RA6", 3, "Cypress B 04-05-06", "Kai Ng"),
-    Node("RF3", 2, "Cypress B 07–16", "Arjun Nair"),
-    Node("RA7", 3, "Cypress B 07-08-09", "Lucas Teo"),
-    Node("RA8", 3, "Cypress B 10-11-12", "Maya Seah"),
-    Node("RA9", 3, "Cypress B 13-14", "Nur Aisyah"),
-    Node("RA10", 3, "Cypress B 15-16", None),
+    Node("RSLM-01", 1, "Cypress A, Cypress B", "Priya Raman (RSLM)"),
+    Node("RF-01", 2, "Cypress A 04–12", "Daniel Koh"),
+    Node("RA-01", 3, "Cypress A 04-05-06", "Chloe Lim"),
+    Node("RA-02", 3, "Cypress A 07-08-09", "Ethan Wong"),
+    Node("RA-03", 3, "Cypress A 10-11-12", "Hana Ito"),
+    Node("RF-02", 2, "Cypress A 13–15; Cypress B 01–06", "Mei Ling Tan"),
+    Node("RA-04", 3, "Cypress A 13-14-15", "Isaac Goh"),
+    Node("RA-05", 3, "Cypress B 01-02-03", "Jia Hui Ong"),
+    Node("RA-06", 3, "Cypress B 04-05-06", "Kai Ng"),
+    Node("RF-03", 2, "Cypress B 07–16", "Arjun Nair"),
+    Node("RA-07", 3, "Cypress B 07-08-09", "Lucas Teo"),
+    Node("RA-08", 3, "Cypress B 10-11-12", "Maya Seah"),
+    Node("RA-09", 3, "Cypress B 13-14", "Nur Aisyah"),
+    Node("RA-10", 3, "Cypress B 15-16", None),
 )
 
 FLOOR_GAPS = ("Cypress A 16",)
@@ -65,9 +65,9 @@ APPOINTMENTS = (
 
 STRUCTURE_CSV = """\
 Level1.Wing,Level2.Precinct,Level3.Neighborhood,Floors
-Cypress,RF1,RA1,Cypress A 04-05-06
-Cypress,RF1,RA2,Cypress A 07-08-09
-Cypress,RF3,RA9,Cypress B 13-14"""
+RSLM-01,RF-01,RA-01,Cypress A 04-05-06
+RSLM-01,RF-01,RA-02,Cypress A 07-08-09
+RSLM-01,RF-03,RA-09,Cypress B 13-14"""
 
 
 @dataclass(frozen=True)
@@ -86,17 +86,17 @@ STAFF: tuple[StaffMember, ...] = (
                 ("Sys admin", "Support Logs · senior")),
     StaffMember("Rachel Yeo", "rachel.yeo@example.edu", "Residential Admin", UNIT_NAME, "2026-08-01 –", True,
                 ("Sys admin", "Support Logs · senior")),
-    StaffMember("Priya Raman", "priya.raman@example.edu", "RSLM", "Cypress", "2026-08-01 –", True,
+    StaffMember("Priya Raman", "priya.raman@example.edu", "RSLM", "RSLM-01", "2026-08-01 –", True,
                 ("Support Logs · frontline",)),
-    StaffMember("Daniel Koh", "daniel.koh@example.edu", "RF", "RF1", "2026-08-01 –", True,
+    StaffMember("Daniel Koh", "daniel.koh@example.edu", "RF", "RF-01", "2026-08-01 –", True,
                 ("Support Logs · frontline",)),
-    StaffMember("Mei Ling Tan", "meiling.tan@example.edu", "RF", "RF2", "2026-08-01 –", True,
+    StaffMember("Mei Ling Tan", "meiling.tan@example.edu", "RF", "RF-02", "2026-08-01 –", True,
                 ("Support Logs · frontline",)),
-    StaffMember("Arjun Nair", "arjun.nair@example.edu", "RF", "RF3", "2026-08-01 –", True,
+    StaffMember("Arjun Nair", "arjun.nair@example.edu", "RF", "RF-03", "2026-08-01 –", True,
                 ("Support Logs · frontline",)),
     StaffMember("Tom Lim", "tom.lim@example.edu", "Other Staff", "—", "2026-09-15 –", True,
                 ("Support Logs · view (aggregate)",)),
-    StaffMember("Grace Ho", "grace.ho@example.edu", "RF", "RF2 (backup)", "2026-10-01 – 2026-12-31", False,
+    StaffMember("Grace Ho", "grace.ho@example.edu", "RF", "RF-02 (backup)", "2026-10-01 – 2026-12-31", False,
                 ("Team Viewer",)),
 )
 
@@ -116,34 +116,34 @@ class RosterRA:
 
 
 RAS: tuple[RosterRA, ...] = (
-    RosterRA("Chloe Lim", "chloe.lim@example.edu", "RA1", "RF1", "Cypress A 04-05-06", "Daniel Koh", True),
-    RosterRA("Ethan Wong", "ethan.wong@example.edu", "RA2", "RF1", "Cypress A 07-08-09", "Daniel Koh", True),
-    RosterRA("Hana Ito", "hana.ito@example.edu", "RA3", "RF1", "Cypress A 10-11-12", "Daniel Koh", True),
-    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA4", "RF2", "Cypress A 13-14-15", "Mei Ling Tan", True),
-    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA5", "RF2", "Cypress B 01-02-03", "Mei Ling Tan", True,
+    RosterRA("Chloe Lim", "chloe.lim@example.edu", "RA-01", "RF-01", "Cypress A 04-05-06", "Daniel Koh", True),
+    RosterRA("Ethan Wong", "ethan.wong@example.edu", "RA-02", "RF-01", "Cypress A 07-08-09", "Daniel Koh", True),
+    RosterRA("Hana Ito", "hana.ito@example.edu", "RA-03", "RF-01", "Cypress A 10-11-12", "Daniel Koh", True),
+    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA-04", "RF-02", "Cypress A 13-14-15", "Mei Ling Tan", True),
+    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA-05", "RF-02", "Cypress B 01-02-03", "Mei Ling Tan", True,
              "Grace Ho to 31 Dec"),
-    RosterRA("Kai Ng", "kai.ng@example.edu", "RA6", "RF2", "Cypress B 04-05-06", "Mei Ling Tan", True),
-    RosterRA("Lucas Teo", "lucas.teo@example.edu", "RA7", "RF3", "Cypress B 07-08-09", "Arjun Nair", True),
-    RosterRA("Maya Seah", "maya.seah@example.edu", "RA8", "RF3", "Cypress B 10-11-12", "Arjun Nair", True),
-    RosterRA("Nur Aisyah", "nur.aisyah@example.edu", "RA9", "RF3", "Cypress B 13-14", "Arjun Nair", False),
+    RosterRA("Kai Ng", "kai.ng@example.edu", "RA-06", "RF-02", "Cypress B 04-05-06", "Mei Ling Tan", True),
+    RosterRA("Lucas Teo", "lucas.teo@example.edu", "RA-07", "RF-03", "Cypress B 07-08-09", "Arjun Nair", True),
+    RosterRA("Maya Seah", "maya.seah@example.edu", "RA-08", "RF-03", "Cypress B 10-11-12", "Arjun Nair", True),
+    RosterRA("Nur Aisyah", "nur.aisyah@example.edu", "RA-09", "RF-03", "Cypress B 13-14", "Arjun Nair", False),
 )
 
 RA_DATES = "2026-08-01 –"
 
-VACANT_NEIGHBORHOODS = (("RA10", "Cypress B 15-16", "RF3"),)
+VACANT_NEIGHBORHOODS = (("RA-10", "Cypress B 15-16", "RF-03"),)
 
-PRECINCTS = ("RF1", "RF2", "RF3")
+PRECINCTS = ("RF-01", "RF-02", "RF-03")
 BUILDINGS = ("Cypress A", "Cypress B")
 
 STAFF_CSV = """\
 Name,Email,Appointment,Node,From,To
-Daniel Koh,daniel.koh@example.edu,RF,RF1,2026-08-01,
-Priya Raman,priya.raman@example.edu,RSLM,Cypress,2026-08-01,"""
+Daniel Koh,daniel.koh@example.edu,RF,RF-01,2026-08-01,
+Priya Raman,priya.raman@example.edu,RSLM,RSLM-01,2026-08-01,"""
 
 RA_CSV = """\
 Name,Email,Level3.Neighborhood,From,To
-Chloe Lim,chloe.lim@example.edu,RA1,2026-08-01,
-Ethan Wong,ethan.wong@example.edu,RA2,2026-08-01,"""
+Chloe Lim,chloe.lim@example.edu,RA-01,2026-08-01,
+Ethan Wong,ethan.wong@example.edu,RA-02,2026-08-01,"""
 
 
 def linked_count(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tuple[int, int]:
@@ -241,9 +241,9 @@ AUDIT_RANGE = ("2026-10-01", "2026-10-26")
 # (when, event, kind, actor, detail)
 AUDIT_EVENTS = (
     ("2026-10-26 09:42", "Backup reporting set", "Rosters", "Rachel Yeo",
-     "RA5 (Jia Hui Ong) reports to Grace Ho until 2026-12-31"),
-    ("2026-10-26 09:40", "Person added", "Rosters", "Rachel Yeo", "Grace Ho · RF, backup for RF2, from 2026-10-01"),
-    ("2026-10-25 16:05", "Appointment ended", "Rosters", "Sam Lee", "RA10 · previous RA, ended 2026-10-24"),
+     "RA-05 (Jia Hui Ong) reports to Grace Ho until 2026-12-31"),
+    ("2026-10-26 09:40", "Person added", "Rosters", "Rachel Yeo", "Grace Ho · RF, backup for RF-02, from 2026-10-01"),
+    ("2026-10-25 16:05", "Appointment ended", "Rosters", "Sam Lee", "RA-10 · previous RA, ended 2026-10-24"),
     ("2026-10-24 11:18", "Structure imported", "Organization", "Rachel Yeo",
      "14 nodes: 0 new, 2 changed, 0 retired; 1 floor gap (Cypress A 16)"),
     ("2026-10-24 11:02", "Level labels changed", "Organization", "Rachel Yeo", "Level 2: “Zone” → “Precinct”"),

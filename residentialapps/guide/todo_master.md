@@ -58,16 +58,16 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   2. **One tree of organization nodes** (unit, level, parent one level up, code, name, dated), not a table per term.
   3. **Floors only on the bottom level**: a node carries one or more floor-range segments (building + floors), which is how a node spans towers; Tower is part of a segment, not a level. Higher levels cover the union of their children; gaps and overlaps warn (ruling 3 above).
   4. **Appointment type → level is configured per Unit**; Unit 1's are RSLM → level 1, RF → level 2, RA → level 3, with Master and the administrators covering the whole Unit.
-  - **Amended 2026-10-27** (author, on 1B item 1's screens): a Unit has **up to five levels** below the whole Unit (slots `level_1`–`level_5`, superseding point 1's three) and **up to ten appointments**; floors sit on the lowest level. Appointments are **rows of title, abbreviation, type (Staff or Student) and level** (the whole Unit or a level), each row ending in **+** (add a row below) and **X** (remove it), after RRW's response-field rows; levels take the same rows. Every Unit starts with Master, Residential Fellow (RF), Residential Admin (the *admin* appointment, renamed on screen), Residential Assistant (RA, Student) and Other Staff; RSLM is one Unit's own, added as a row. *Type* now means Staff or Student; what point 4 calls the appointment type is the appointment's *title*.
+  - **Amended 2026-10-27** (author, on 1B item 1's screens): a Unit has **up to five levels** below the whole Unit (slots `level_1`–`level_5`, superseding point 1's three) and **up to ten appointments**; floors sit on the lowest level. Appointments are **rows of title, abbreviation, type (Staff or Student) and level** (the whole Unit or a level), each row ending in **+** (add a row below) and **X** (remove it), after RRW's response-field rows; levels take the same rows. Every Unit starts with Master, Residential Fellow (RF), Residential Admin (the *admin* appointment, renamed on screen), Residential Assistant (RA, Student) and Other Staff; RSLM is one Unit's own, added as a row. *Type* now means Staff or Student; what point 4 calls the appointment type is the appointment's *title*. **Node codes** are the level's appointment abbreviation, a hyphen and a two-digit number (`RSLM-01`, `RF-01`, `RA-01`); the floor list a node covers is its *Dorms*.
   5. **Reporting is derived**: an RA reports to the RF holding the parent node. Only the dated backup and temporary arrangements are stored explicitly.
   6. **CSV headers carry the labels** as RRW's do (`Level1.Wing`); headcount norms (3 RFs + 1 RSLM per Wing, 3–4 RAs per RF) are per-Unit warnings, never constraints.
 - **Organization-structure CSV, ruled 2026-10-26** (author): a Unit's whole tree uploads as one file, **one row per bottom-level node**, naming positions, never people (people attach through appointments):
 
   | `Level1.Wing` | `Level2.Precinct` | `Level3.Neighborhood` | `Floors` |
   |---|---|---|---|
-  | Cypress | RF1 | RA1 | Cypress A 04-05-06 |
-  | Cypress | RF1 | RA2 | Cypress A 07-08-09 |
-  | Cypress | RF1 | RA3 | Cypress A 10-11-12 |
+  | RSLM-01 | RF-01 | RA-01 | Cypress A 04-05-06 |
+  | RSLM-01 | RF-01 | RA-02 | Cypress A 07-08-09 |
+  | RSLM-01 | RF-01 | RA-03 | Cypress A 10-11-12 |
 
   1. **Every level is its own column**, headed with the Unit's label (which the import sets and the export writes back); higher nodes exist because a row names them.
   2. **Floors are a building and its floors joined by hyphens**; several buildings in one cell are separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
