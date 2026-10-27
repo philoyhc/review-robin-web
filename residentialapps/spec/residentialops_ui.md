@@ -10,7 +10,8 @@ file is silent, RRW's design system applies: `spec/ui_elements.md` for
 components and `spec/visual_style_general.md` for type, color and spacing.
 Support Logs' screens follow their own UI spec,
 `residentialapps/docs/support_logs_ui_spec_v0.1.md`, which shares the
-tokens and accent rules cited in §3. The page map, with each page's device
+tokens and accent rules cited in §3; its chrome is settled at that spec's
+next version. The page map, with each page's device
 class, is `residentialapps/spec/applications.md` ("Pages"); the styles are
 in `residentialapps/web/templates/residential/base.html`.
 
@@ -51,9 +52,11 @@ with the page.
   page with no areas (not registered) shows the switcher static.
 - **On the right, the Light/Dark toggle and the account**: the toggle at
   every width, sharing RRW's `rrw-theme` choice so one choice holds across
-  the host; initials, with the viewer's name and role beside them at desktop width.
+  the host; initials, with the viewer's name beside them from 960 px, and their role
+  once identity is wired (1B item 3).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
-  sideways on a phone. RA Leave's are an RA's Home, Apply, Extra leave,
+  sideways on a phone. Rosters and setup's are Organization, Staff roster
+  and RA roster; RA Leave's, when built, are an RA's Home, Apply, Extra leave,
   My cover, History, and an approver's Awaiting my decision, Team leave,
   Decided; staff with Leave admin add its pages. A detail page adds a
   back link instead of a breadcrumb.
@@ -98,7 +101,7 @@ model (author, 2026-10-27):
 - **Each list has a limit**, and its + says so once the list is full:
   up to 5 levels and up to 10 appointments
   (`residentialapps/guide/todo_master.md`, organization levels, amended).
-- **Measures, as RRW's rows render**: 16 px text in 30 px boxes padded
+- **Measures, as RRW's rows render** (measured in Chromium, 2026-10-27): 16 px text in 30 px boxes padded
   4 px 8 px (selects 32 px), 32 px glyph buttons at weight 500, 4 px
   cells and a rule under each row (`.rows`).
 - On a phone the list's table scrolls in its box rather than squeezing
