@@ -47,7 +47,7 @@
 {% endmacro %}
 
 {# Ticking a row opens an expander under the last row ticked: the count,
-   then the row actions. Edit takes one row; End appointment end-dates and
+   then the row actions. Edit takes one row, and fades when more are ticked; End appointment end-dates and
    keeps the history; Delete, for a row made in error, waits on its confirm.
    The actions are disabled until item 5. #}
 {% macro selection_script() %}
@@ -71,7 +71,9 @@
           '<span><strong>' + n + '</strong> of ' + total + ' selected</span>' +
           '<label class="confirm"><input type="checkbox" disabled> Yes, delete the selected rows</label>' +
           '<span class="btnrow">' +
-          '<button type="button" class="btn btn-secondary" disabled' + (n === 1 ? '' : ' title="Edit takes one row"') + '>Edit</button>' +
+          (n === 1
+            ? '<button type="button" class="btn btn-secondary" disabled>Edit</button>'
+            : '<button type="button" class="btn btn-secondary btn-unavailable" disabled aria-disabled="true" title="Edit takes one row">Edit</button>') +
           '<button type="button" class="btn btn-secondary" disabled>End appointment</button>' +
           '<button type="button" class="btn btn-danger" disabled>Delete</button>' +
           '</span></div>';

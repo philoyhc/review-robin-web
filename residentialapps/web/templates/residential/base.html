@@ -230,6 +230,8 @@
       .btn-primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
       .btn-secondary { background: transparent; color: var(--text-body); border: 1px solid var(--border-default); }
       .btn:disabled { cursor: not-allowed; opacity: 0.75; }
+      /* An action the selection rules out, apart from a placeholder's inert ones. */
+      .btn.btn-unavailable { opacity: 0.4; }
       .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
       .table-wrap { overflow-x: auto; }
       table { width: 100%; border-collapse: collapse; }

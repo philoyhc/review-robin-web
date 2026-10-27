@@ -120,8 +120,9 @@ model (author, 2026-10-27):
 - **A tick box leads each row**, with a select-all in the header. Ticked
   rows take accent rails at both ends.
 - **Ticking opens an expander** under the last row ticked, closing the
-  rails: the count selected, then the row actions. Edit takes one row; End
-  appointment end-dates and keeps the history; Delete, for a row made in
+  rails: the count selected, then the row actions. Edit takes one row, and
+  more than one ticked fades it (author, 2026-10-27; RRW's rule,
+  `spec/setup_pages.md`); End appointment end-dates and keeps the history; Delete, for a row made in
   error, waits on its confirm tick box. Unticking every row closes it.
 - **The CSV card below the table** carries the sample, then Upload and
   preview (Primary) and Export.
