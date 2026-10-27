@@ -117,6 +117,10 @@ Events has no spec yet, so its rows are provisional.
 - **Policy lives with its application** (author, 2026-10-27): leave policy
   on Leave admin, event policy on Events admin. Rosters and setup stays the
   organization tree and the two rosters, the data every application shares.
+- **Favicons** (author, 2026-10-27, from the design canvas): each
+  application's accent behind a white glyph, as inline SVG — a house for
+  Residential Operations, a lined notepad for Support Logs. The shared
+  chrome picks it by application; one icon serves both themes.
 - **Desktop-oriented pages stay usable on a phone**: no layout breaks, wide
   tables scroll in their box; they are not designed for one.
 
