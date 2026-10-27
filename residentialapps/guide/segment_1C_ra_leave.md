@@ -1,6 +1,6 @@
 # Segment 1C — Residential Operations: RA Leave
 
-**Opened:** 2026-10-27 · **Theme:** RA Leave's screens, phone first, settled on placeholders to firm up Residential's UX conventions; then wired on the shared core · **Related:** `residentialapps/guide/todo_master.md` (ruling 13), `residentialapps/guide/segment_1B_rosters_and_organization.md` (the core RA Leave is wired on; paused after item 1), `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`, `residentialapps/spec/applications.md` (page map, "One chrome, phone first")
+**Opened:** 2026-10-27 · **Theme:** RA Leave's screens, phone first, settled on placeholders to firm up Residential's UX conventions; then wired on the shared core · **Related:** `residentialapps/guide/todo_master.md` (ruling 13), `residentialapps/guide/segment_1B_rosters_and_organization.md` (the core RA Leave is wired on; paused after item 1), `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md`, `residentialapps/spec/applications.md` (page map), `residentialapps/spec/residentialops_ui.md` (the conventions)
 
 ## Opportunity
 
@@ -36,7 +36,7 @@ Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prereq
 ## Judgment calls — decided
 
 - Routes and templates for RA Leave live in `residentialapps/ops/` (the application); its models and services arrive in `residentialapps/leave/` (the pillar) from item 2, as `residentialapps/spec/architecture.md` lays out.
-- The conventions item 1 settles are written to a new `residentialapps/spec/ui.md`, not into `applications.md`: they bind every Residential screen, Support Logs' included, and the page map should stay a map.
+- The conventions item 1 settles are written to `residentialapps/spec/residentialops_ui.md`, not into `applications.md`: the page map should stay a map. That file was started early, on 2026-10-27, from 1B item 1's screens (author); item 1 extends it. Support Logs keeps its own UI spec.
 - A convention item 1 changes in `residentialapps/web/` is applied to 1B's screens in the same rung, so the two never diverge; it does not reopen 1B.
 - Item 1 takes its `diff-reviewer` read on the item's cumulative diff at rung 4, its last build rung; each iteration rung after it takes its own (`CLAUDE.md` "Where work runs").
 
@@ -60,7 +60,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 1. **Home and the phone shell.** The Residential Operations home at `/` for an RA (balance, cover asked of you, my applications) and for an approver (what awaits them); the card columns that stack on a phone, the RA Leave tabs, the sample viewer switch; Home and RA Leave live in the switcher.
 2. **RA pages.** Apply, Request extra leave, application detail (status timeline, withdraw), My cover, My history.
 3. **Approver pages.** Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, Team leave with its this-week summary.
-4. **Leave admin and conventions.** Cycles and entitlements, applications; `residentialapps/spec/ui.md` written from rungs 1–4. Last build rung: cumulative read.
+4. **Leave admin and conventions.** Cycles and entitlements, applications; `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
 5+. Iteration until approved, each with its own read.
 
 **Items 2–5** get their rungs when 1B closes, from what the core turned out to be.
@@ -68,7 +68,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 ## Definition of done
 
 - The author approved item 1's screens; no RA Leave page shows sample data at close.
-- `residentialapps/spec/ui.md` states the conventions the screens use, and 1B's screens follow them.
+- `residentialapps/spec/residentialops_ui.md` states the conventions the screens use, and 1B's screens follow them.
 - An RA applies, a covering RA confirms, the first and final approvers decide, and the balance moves, end to end in tests (items 3–4).
 - An extra-leave appeal reaches the Master and is decided, with leave charged to normal entitlement and extra leave kept apart (§7.5).
 - Every RA Leave action writes an audit event and, where §12 or §17 says, an outbox row.
@@ -92,7 +92,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 ## Doc impact
 
 - `residentialapps/spec/applications.md` — the RA Leave pages move from contract to built, with any path or name the screens settle (Item 1).
-- `residentialapps/spec/ui.md` — new: Residential's UX conventions (Item 1).
+- `residentialapps/spec/residentialops_ui.md` — extended with the conventions RA Leave's screens settle (Item 1).
 - `residentialapps/spec/architecture.md` — `residentialapps/leave/` arrives, with its import boundary and its share of the `residentialops` database (Item 2).
 - `residentialapps/docs/ra_leave_management_functional_spec_v0.4.md` — revised to what shipped, including §2.5's mobile-critical approvers, already queued (at close).
 - `residentialapps/guide/todo_master.md` — the entries this segment finishes, deleted at close.

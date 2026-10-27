@@ -16,6 +16,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `docs/support_logs_ui_spec_v0.1.md` | Support Logs UI spec (draft): RF / RSLM phone screens on RRW's design system |
 | `spec/applications.md` | The two applications as the host sees them: registry entries, factories, health, running alone, logging and lifespan |
 | `spec/architecture.md` | Package layout, import boundaries, packaging, tests and the `residential` CI lane |
+| `spec/residentialops_ui.md` | Residential Operations' UI conventions: widths, chrome, color, buttons, row builders, placeholders, accessibility |
 | `guide/archive/segment_1A_package_and_mounts.md` | Segment 1A, closed 2026-10-26 (`#3274`→`#3281`): the package, both mounts with health paths, and the `residential` CI lane. **Read `Status`** for the restructures and what the reads caught |
 | `guide/segment_1B_rosters_and_organization.md` | Segment 1B plan: the shared core's admin screens scaffolded, then databases, identity, organization and rosters wired to them (paused after item 1 for RA Leave's screens, ruling 13) |
 | `guide/segment_1C_ra_leave.md` | Segment 1C plan: RA Leave's screens, phone first, settling Residential's UX conventions (item 1, next); then wired on 1B's core (items 2–5) |

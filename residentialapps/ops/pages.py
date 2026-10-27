@@ -1,5 +1,5 @@
 """Residential Operations' page rendering: its templates and the chrome's
-context (`residentialapps/spec/applications.md`, "One chrome, phone first")."""
+context (`residentialapps/spec/residentialops_ui.md` §2)."""
 
 from __future__ import annotations
 

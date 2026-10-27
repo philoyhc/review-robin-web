@@ -87,42 +87,11 @@ Events has no spec yet, so its rows are provisional.
 - **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my
   decision and Decide must work one-handed on a phone. This raises the RA
   Leave spec's §2.5, which classed approver actions as responsive.
-- **One chrome, phone first** (author, 2026-10-26, from the RA Leave
-  mockups). Residential Operations is served to a browser, never as an
-  installed app, so its chrome is one slim top bar at every width and no
-  bottom bar, which would compete with a phone browser's own toolbar.
-  This is Residential Operations' chrome; Support Logs' is settled at its
-  UI spec's next version. The bar scrolls away with the page:
-  - **On the left, the switcher**: the Unit's name (Example College in the
-    mockups) above the current area's name. Its menu lists the areas the
-    viewer reaches (Home, RA Leave, RA Events; Rosters and setup and Sys
-    admin for sys admins), then one link, **All applications**, to the
-    host's landing page, which lists what Cordware mounts (author,
-    2026-10-26). An application cannot see the host's mounts without
-    importing `cordware.main`, which it may not, nor read another
-    application's permissions; the landing page knows both.
-  - **On the right, the Light/Dark toggle and the account**: the toggle at
-    every width, as in RRW; initials, with the viewer's name and role beside
-    them at desktop width. Dark takes RRW's dark neutrals and the accent's
-    dark-surface tone.
-  - **Under the bar, the area's page tabs**, with short labels, scrolling
-    sideways on a phone. RA Leave's are an RA's Home, Apply, Extra leave,
-    My cover, History, and an approver's Awaiting my decision, Team leave,
-    Decided; staff with Leave admin add its pages. A detail page adds a
-    back link instead of a breadcrumb.
-  - **The body is cards in up to three columns** where three fit (about
-    960 px in the mockups), stacked in column order below that. Routes and
-    permissions are the same at every width
-    (`docs/cordware_mobile_to_desktop.md` §7.5, §9).
+- **How the pages look** — device widths, the chrome, color, buttons,
+  row builders, placeholders — is `residentialapps/spec/residentialops_ui.md`.
 - **Policy lives with its application** (author, 2026-10-27): leave policy
   on Leave admin, event policy on Events admin. Rosters and setup stays the
   organization tree and the two rosters, the data every application shares.
-- **Favicons** (author, 2026-10-27, from the design canvas): each
-  application's accent behind a white glyph, as inline SVG — a house for
-  Residential Operations, a lined notepad for Support Logs. The shared
-  chrome picks it by application; one icon serves both themes.
-- **Desktop-oriented pages stay usable on a phone**: no layout breaks, wide
-  tables scroll in their box; they are not designed for one.
 
 **Support Logs** (`/supportlogs`). Access is by authorization, never by
 appointment, and RAs never reach it:
