@@ -74,12 +74,13 @@ Events has no spec yet, so its rows are provisional.
 | Decide | `/ra-leave/decide/{id}` | Entitlement, cover status, team context; Approve or Reject with remarks in a few taps (§13–§15) · **mobile-critical** | — |
 | Decided | `/ra-leave/decided` | The approver's own past decisions (§24) · responsive | — |
 | Team leave | `/ra-leave/team` | Who is away, cover, clashes; calendar and list (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
-| Leave admin: cycles and entitlements | `/ra-leave/admin/cycles` | Cycle setup, entitlement import and preview, adjustments (§21.1, §21.3) · desktop-oriented | — |
+| Leave admin: cycles and entitlements | `/ra-leave/admin/cycles` | Leave policy (leave types, balances, the approval route), cycle setup, entitlement import and preview, adjustments (§6, §21.1–§21.3) · desktop-oriented | — |
 | Leave admin: applications | `/ra-leave/admin/applications` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
 | Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
 | My proposals | `/ra-events/mine` | — | Provisional · responsive |
 | Review proposals | `/ra-events/review` | Provisional · responsive | — |
 | Events calendar | `/ra-events/` | Provisional · responsive | Provisional · responsive |
+| Events admin | `/ra-events/admin/` | Provisional: event policy · desktop-oriented | — |
 | Organization, Staff roster, RA roster | `/rosters/`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
 | Sys admin | `/sys-admin/` | Audit log; sys admin grants (super-admin) · desktop-oriented | — |
 
@@ -113,6 +114,9 @@ Events has no spec yet, so its rows are provisional.
     960 px in the mockups), stacked in column order below that. Routes and
     permissions are the same at every width
     (`docs/cordware_mobile_to_desktop.md` §7.5, §9).
+- **Policy lives with its application** (author, 2026-10-27): leave policy
+  on Leave admin, event policy on Events admin. Rosters and setup stays the
+  organization tree and the two rosters, the data every application shares.
 - **Desktop-oriented pages stay usable on a phone**: no layout breaks, wide
   tables scroll in their box; they are not designed for one.
 
