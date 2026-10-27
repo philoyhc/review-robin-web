@@ -10,7 +10,7 @@ Every person and address is fictional; no file here is imported into production.
 The layouts follow the ruling in `residentialapps/guide/todo_master.md` (organization by units, 2026-10-27):
 
 - **The rosters hold people and their appointments only.** The Staff and RA files add the optional columns that `residentialapps/docs/residentialapps_identity.md` §5.1 allows: the enterprise-system name, and the student ID for RAs.
-- **The Organization file holds the units, one row per Neighborhood, top level first.** A person column is headed by the level its cell sits on and the appointment it takes (`Precinct.RF`), and names people by roster email.
+- **The Organization file holds the area slots, one row per Neighborhood.** Its grouping columns come top level first, then Notes. After those come the slot's **Staff** and **RA** cells. They name people by roster email, several separated by `;`.
 
 ## The Unit
 
@@ -18,9 +18,9 @@ The layouts follow the ruling in `residentialapps/guide/todo_master.md` (organiz
 |---|---|---|
 | Master | 1 (Sam Lee) | the whole Unit |
 | Residential Admin | 1 (Rachel Yeo) | the whole Unit |
-| RSLM | 3 | one per Wing: Priya Raman (Cypress), Marcus Tan (Maple), Nadia Hassan (Willow) |
-| RF | 9 | one per Precinct |
-| RA | 30 | one per Neighborhood |
+| RSLM | 3 | one per Wing: Priya Raman (Cypress), Marcus Tan (Maple), Nadia Hassan (Willow), in the Staff cell of every slot in their Wing |
+| RF | 9 | one per Precinct, in the Staff cell of every slot in their Precinct |
+| RA | 30 | one per Neighborhood, in its slot's RA cell |
 
 ## Files and what each should do
 
@@ -32,9 +32,9 @@ The layouts follow the ruling in `residentialapps/guide/todo_master.md` (organiz
 | `staff_roster_errors.csv` | After `staff_roster.csv` | Refused in preview: a duplicate email (Daniel Koh); an unknown appointment (Warden); a student appointment on the Staff roster (Ravi Kumar, Residential Assistant); a row with no email; an end date before the start |
 | `ra_roster.csv` | After its types | 30 RAs |
 | `ra_roster_errors.csv` | After `ra_roster.csv` | Refused in preview: a duplicate email (Chloe Lim); a staff appointment on the RA roster (Owen Pang, Residential Fellow); a student ID that is not nine characters; a row with no email; an end date before the start |
-| `organization_units.csv` | Any time | The 30 Neighborhoods under their Precincts and Wings, with Notes and every person cell empty |
-| `organization.csv` | After both rosters | The same units with every cell filled: an RSLM per Wing, an RF per Precinct, an RA per Neighborhood. Each RA reports to their Precinct's RF |
-| `organization_errors.csv` | After both rosters | Refused in preview, row by row: Cypress A 04-05-06 twice; Cypress A 06-07 overlapping it; two different RFs for Cypress A 13-20; a floor list with a floor missing (`Maple 03-05`); an RA (Lucas Teo) in an RF cell; an email on no roster (zara.khoo@example.edu); a row with no Wing. One warning: Willow B 04-12 has no RF, so its RA reports to the Willow RSLM |
+| `organization_units.csv` | Any time | The 30 slots under their Precincts and Wings, with Notes and no Staff or RA columns |
+| `organization.csv` | After both rosters | The same slots with each Staff cell naming its RF and RSLM and each RA cell its RA. Each RA reports to the slot's Staff |
+| `organization_errors.csv` | After both rosters | Refused in preview, row by row: Cypress A 04-05-06 twice; Cypress A 06-07 overlapping it; a floor list with a floor missing (`Maple 03-05`); an RA (Lucas Teo) in a Staff cell; an RF (Benjamin Chua) in an RA cell; an email on no roster (zara.khoo@example.edu); a row with no Wing. One warning: Willow B 04-05-06 has no Staff |
 
 One case sits outside the files, for the browser:
 

@@ -18,7 +18,7 @@ HEADERS = {
     "staff_roster": ROSTER,
     "ra_roster": [*ROSTER, "Student ID"],
     "organization_units": UNITS,
-    "organization": [*UNITS, "Wing.RSLM", "Precinct.RF", "Neighborhood.RA"],
+    "organization": [*UNITS, "Staff", "RA"],
 }
 
 
@@ -56,22 +56,15 @@ def test_the_rosters_hold_the_unit_s_people() -> None:
     assert len(emails) == len(set(emails))
 
 
-def test_every_person_cell_names_someone_eligible() -> None:
-    """A cell's email is on the right roster with that cell's appointment,
-    and a unit's cell agrees down its rows."""
-    by_abbrev = {
-        t["Abbrev"]: t["Title"]
-        for name in ("staff_appointment_types.csv", "student_appointment_types.csv")
-        for t in rows(name)
-    }
-    appointment = {p["Email"]: p["Appointment"] for name in ("staff_roster.csv", "ra_roster.csv") for p in rows(name)}
-    units = rows("organization.csv")
-    for column in ("Wing.RSLM", "Precinct.RF", "Neighborhood.RA"):
-        level, abbrev = column.split(".")
-        held: dict[str, str] = {}
-        for row in units:
-            assert appointment[row[column]] == by_abbrev[abbrev], (column, row[column])
-            assert held.setdefault(row[level], row[column]) == row[column], (column, row[level])
+def test_every_person_cell_names_someone_on_its_roster() -> None:
+    """A slot's Staff are its RF and its Wing's RSLM, from the Staff roster;
+    its RA is one person from the RA roster."""
+    staff = {p["Email"]: p["Appointment"] for p in rows("staff_roster.csv")}
+    ras = {p["Email"] for p in rows("ra_roster.csv")}
+    for slot in rows("organization.csv"):
+        people = slot["Staff"].split("; ")
+        assert sorted(staff[e] for e in people) == ["Residential Fellow", "Residential Student Life Manager"], slot
+        assert slot["RA"] in ras
 
 
 def test_the_units_are_the_author_s_breakdown() -> None:
