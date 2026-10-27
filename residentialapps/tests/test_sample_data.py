@@ -117,6 +117,13 @@ def test_quick_setup_holds_every_other_file() -> None:
     """Read back, the Quick setup file gives the rosters, the types they
     hold and the Organization file with every cell."""
     quick = rows("quick_setup.csv")
+    first: dict[str, dict[str, str]] = {}
+    for row in quick:  # details are given once, on a person's first row
+        if row["Email"] in first:
+            assert not any(row[k] for k in ("Roster", "Name", "Appointment", "From")), row["Email"]
+            row.update({k: v for k, v in first[row["Email"]].items() if k not in UNITS})
+        else:
+            first[row["Email"]] = dict(row)
     person = ["Name", "Email", "Appointment", "From", "To", "Enterprise name"]
     for roster, file in (("Staff", "staff_roster.csv"), ("RA", "ra_roster.csv")):
         extra = ["Student ID"] if roster == "RA" else []
