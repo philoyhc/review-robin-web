@@ -4,7 +4,11 @@
 
 ## Opportunity
 
-After 1A both applications mount and answer `health`, and nothing else exists. Step 1 of the sequence (ruling 11) needs the shared core's admin screens: organization, Staff and RA rosters, identity status and sys admin grants. Those screens share filters, labels and layout, so they are cheapest to settle together before any service exists to constrain them.
+After 1A both applications mount and answer `health`, and nothing else exists. Step 1 of the sequence (ruling 11; revised by ruling 13) needs the shared core's admin screens: organization, Staff and RA rosters, identity status and sys admin grants. Those screens share filters, labels and layout, so they are cheapest to settle together before any service exists to constrain them.
+
+## Status
+
+**Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3) and awaits the author's approval. RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
 
 ## Decision
 
@@ -84,8 +88,8 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 
 ## Out of scope
 
-- Support Logs authorizations and content: step 2 of the sequence.
-- Leave cycles, entitlements and RA Events: steps 3 and 4.
+- Leave cycles, entitlements and applications: RA Leave, next (ruling 13).
+- Support Logs authorizations and content, then RA Events: after RA Leave.
 - Multi-Unit authorization: open in `todo_master.md`, needed before a second Unit is exposed.
 
 ## Doc impact
