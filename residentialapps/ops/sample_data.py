@@ -25,7 +25,7 @@ class Node:
 
 
 TREE: tuple[Node, ...] = (
-    Node(UNIT_NAME, 0, "Cypress A, Cypress B", "Sam Lee (Master) · Rachel Yeo (admin)"),
+    Node(UNIT_NAME, 0, "Cypress A, Cypress B", "Sam Lee (Master) · Rachel Yeo (Residential Admin)"),
     Node("Cypress", 1, "Cypress A, Cypress B", "Priya Raman (RSLM)"),
     Node("RF1", 2, "Cypress A 04–12", "Daniel Koh"),
     Node("RA1", 3, "Cypress A 04-05-06", "Chloe Lim"),
@@ -44,21 +44,23 @@ TREE: tuple[Node, ...] = (
 
 FLOOR_GAPS = ("Cypress A 16",)
 
-# Which level slots the Unit uses: a Unit may use two levels below the
-# whole Unit rather than three. Example College uses all three.
-LEVELS_USED = (True, True, True)
+# A Unit has up to five levels below the whole Unit and up to ten
+# appointments (author, 2026-10-27); floors sit on the lowest level.
+MAX_LEVELS = 5
+MAX_APPOINTMENTS = 10
 
 APPOINTMENT_TYPES = ("Staff", "Student")
 
-# The Unit's appointments: five slots of (title, type, level), level 0 the
-# whole Unit. Four come prefilled for every Unit; the fifth is for a Unit's
-# own, here Example College's Residential Student Life Manager.
+# The Unit's appointments as (title, abbreviation, type, level), level 0
+# the whole Unit; rows are added and removed, not a fixed number. Five
+# come prefilled for every Unit; the last is Example College's own.
 APPOINTMENTS = (
-    ("Master", "Staff", 0),
-    ("Residential Fellow", "Staff", 2),
-    ("Admin", "Staff", 0),
-    ("Residential Assistant", "Student", 3),
-    ("Residential Student Life Manager", "Staff", 1),
+    ("Master", "", "Staff", 0),
+    ("Residential Fellow", "RF", "Staff", 2),
+    ("Residential Admin", "", "Staff", 0),
+    ("Residential Assistant", "RA", "Student", 3),
+    ("Other Staff", "", "Staff", 0),
+    ("Residential Student Life Manager", "RSLM", "Staff", 1),
 )
 
 STRUCTURE_CSV = """\
@@ -82,7 +84,7 @@ class StaffMember:
 STAFF: tuple[StaffMember, ...] = (
     StaffMember("Sam Lee", "sam.lee@example.edu", "Master", UNIT_NAME, "2026-08-01 –", True,
                 ("Sys admin", "Support Logs · senior")),
-    StaffMember("Rachel Yeo", "rachel.yeo@example.edu", "admin", UNIT_NAME, "2026-08-01 –", True,
+    StaffMember("Rachel Yeo", "rachel.yeo@example.edu", "Residential Admin", UNIT_NAME, "2026-08-01 –", True,
                 ("Sys admin", "Support Logs · senior")),
     StaffMember("Priya Raman", "priya.raman@example.edu", "RSLM", "Cypress", "2026-08-01 –", True,
                 ("Support Logs · frontline",)),
@@ -98,7 +100,7 @@ STAFF: tuple[StaffMember, ...] = (
                 ("Team Viewer",)),
 )
 
-STAFF_APPOINTMENTS = ("Master", "admin", "RSLM", "RF", "Other Staff")
+STAFF_APPOINTMENTS = ("Master", "Residential Admin", "RSLM", "RF", "Other Staff")
 
 
 @dataclass(frozen=True)
@@ -227,7 +229,7 @@ SUPER_ADMIN = "[Super-admin name]"
 
 SYS_ADMINS = (
     ("Sam Lee", "sam.lee@example.edu", "Master", f"2026-08-01 by {SUPER_ADMIN}"),
-    ("Rachel Yeo", "rachel.yeo@example.edu", "admin", f"2026-08-01 by {SUPER_ADMIN}"),
+    ("Rachel Yeo", "rachel.yeo@example.edu", "Residential Admin", f"2026-08-01 by {SUPER_ADMIN}"),
 )
 
 GRANT_CANDIDATES = ("Priya Raman · RSLM", "Daniel Koh · RF", "Tom Lim · Other Staff")

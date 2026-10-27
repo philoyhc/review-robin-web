@@ -55,21 +55,27 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert page.text.count('<td class="subtle">Neighborhood</td>') == 10
 
 
-def test_the_organization_page_sets_levels_in_use_and_appointments() -> None:
+def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
+    """Levels and appointments are rows added with + and removed with X,
+    after RRW's response-field rows; no fixed count, no Used flag."""
     page = TestClient(ops_app()).get("/rosters/").text
-    assert page.count('type="checkbox"') == 3
-    for level, used in enumerate(sample_data.LEVELS_USED, start=1):
-        assert re.search(rf'aria-label="Level {level} used"{" checked" if used else ""} disabled>', page), level
-    assert '<h2 id="appts-h">Appointments</h2>' in page
-    for title, _, _ in sample_data.APPOINTMENTS:
-        assert f'value="{title}"' in page
+    assert 'type="checkbox"' not in page and "> Used<" not in page
+    for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
+        assert f'aria-label="Add a level below Level {n}"' in page
+        assert f'aria-label="Remove Level {n}"' in page
+    assert '<th scope="col">Title</th><th scope="col">Abbrev</th>' in page
+    for n, (title, abbrev, _, _) in enumerate(sample_data.APPOINTMENTS, start=1):
+        assert f'aria-label="Appointment {n}: title" value="{title}"' in page
+        assert f'aria-label="Appointment {n}: abbreviation" value="{abbrev}"' in page
+        assert f'aria-label="Add an appointment below appointment {n}"' in page
+        assert f'aria-label="Remove appointment {n}"' in page
     for kind in sample_data.APPOINTMENT_TYPES:
-        expected = sum(1 for _, k, _ in sample_data.APPOINTMENTS if k == kind)
+        expected = sum(1 for _, _, k, _ in sample_data.APPOINTMENTS if k == kind)
         assert page.count(f"<option selected>{kind}</option>") == expected, kind
-    assert page.count('aria-label="Appointment') == 3 * 5
+    assert 'value="Residential Admin"' in page and 'value="Other Staff"' in page
+    assert page.count("<option selected>Whole Unit</option>") == 3
     assert "<option selected>Level 1 · Wing</option>" in page
-    assert page.count("<option selected>Whole Unit</option>") == 2
-    assert "<option selected>Level 2 · Precinct</option>" in page
+    assert "up to 5;" in page and "Up to 10 appointments" in page
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
