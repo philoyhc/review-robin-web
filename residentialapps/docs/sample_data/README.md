@@ -35,6 +35,7 @@ The layouts follow the ruling in `residentialapps/guide/todo_master.md` (organiz
 | `organization_units.csv` | Any time | The 30 slots under their Precincts and Wings, with Notes and no Staff or RA columns |
 | `organization.csv` | After both rosters | The same slots with each Staff cell naming its RF and RSLM and each RA cell its RA. Each RA reports to the slot's Staff |
 | `organization_errors.csv` | After both rosters | Refused in preview, row by row: Cypress A 04-05-06 twice; Cypress A 06-07 overlapping it; a floor list with a floor missing (`Maple 03-05`); an RA (Lucas Teo) in a Staff cell; an RF (Benjamin Chua) in an RA cell; an email on no roster (zara.khoo@example.edu); a row with no Wing. One warning: Willow B 04-05-06 has no Staff |
+| `quick_setup.csv` | First, on an empty Unit, in place of all the above | Every table at once: the 3 levels, the 30 slots, 14 staff and 30 RAs, the 5 appointment types they hold (Other Staff, held by nobody, is not created) with their abbreviations, and every cell. One row per person per slot; the Master and the Admin, in no slot, leave the level columns empty |
 
 One case sits outside the files, for the browser:
 
