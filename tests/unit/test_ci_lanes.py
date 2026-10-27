@@ -75,7 +75,7 @@ def test_one_non_prose_path_makes_it_full():
 @pytest.mark.parametrize(
     "paths",
     [
-        ["residentialapps/ops/main.py"],
+        ["residentialapps/residentialops/main.py"],
         ["residentialapps/tests/test_mounts.py", "residentialapps/spec/applications.md"],
         ["residentialapps/supportlogs/routes_health.py", "guide/todo_master.md"],
         ["residentialapps/core/README.md"],  # shipped, so not prose
@@ -90,7 +90,7 @@ def test_only_prose_and_residential_is_the_residential_lane(paths):
     ["cordware/main.py", "pyproject.toml", "app/main.py", ".github/workflows/ci.yml", "tools/ci_lanes.py"],
 )
 def test_residential_with_anything_shared_is_full(outside):
-    assert ci_lanes.lane(["residentialapps/ops/main.py", outside], "pull_request") == "full"
+    assert ci_lanes.lane(["residentialapps/residentialops/main.py", outside], "pull_request") == "full"
 
 
 def test_a_path_merely_named_like_residential_is_not():
@@ -100,7 +100,7 @@ def test_a_path_merely_named_like_residential_is_not():
 @pytest.mark.parametrize("event", ["push", "workflow_dispatch", "merge_group", ""])
 def test_any_event_but_a_pull_request_is_full(event):
     assert ci_lanes.lane(["spec/lifecycle.md"], event) == "full"
-    assert ci_lanes.lane(["residentialapps/ops/main.py"], event) == "full"
+    assert ci_lanes.lane(["residentialapps/residentialops/main.py"], event) == "full"
 
 
 def test_the_residential_lane_runs_residential_host_and_prose_tests(capsys):

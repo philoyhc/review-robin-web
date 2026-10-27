@@ -38,7 +38,7 @@ point.
   | Name | `path` | `factory` | `logger` | `title` |
   |---|---|---|---|---|
   | `reviewrobin` | `/reviewrobin` | `app.main:create_app` | `app` | `Review Robin` |
-  | `residentialops` | `/residentialops` | `residentialapps.ops.main:create_app` | `residentialapps.ops` | `Residential Operations` |
+  | `residentialops` | `/residentialops` | `residentialapps.residentialops.main:create_app` | `residentialapps.residentialops` | `Residential Operations` |
   | `supportlogs` | `/supportlogs` | `residentialapps.supportlogs.main:create_app` | `residentialapps.supportlogs` | `Support Logs` |
 
   The two Residential applications' own contract is
@@ -225,7 +225,7 @@ top-level packages it may not import; a second check adds one module:
 - `residentialapps/tests/` is exempt from the `cordware.main` check only
   (never from `app`): Residential's mounted tests build the host there.
 - Inside `residentialapps`, neither application package imports the other
-  (`residentialapps.ops`, `residentialapps.supportlogs`), relative imports
+  (`residentialapps.residentialops`, `residentialapps.supportlogs`), relative imports
   resolved; `residentialapps/spec/architecture.md` has the full table.
 
 ## Tests

@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends
 from starlette.requests import Request
 from starlette.responses import Response
 
-from residentialapps.ops import sample_data
-from residentialapps.ops.pages import ROSTER_TABS, placeholders_local_only, render
+from residentialapps.residentialops import sample_data
+from residentialapps.residentialops.pages import ROSTER_TABS, placeholders_local_only, render
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
@@ -20,7 +20,7 @@ def organization(request: Request) -> Response:
     tree = sample_data.TREE
     return render(
         request,
-        "ops/rosters/organization.html",
+        "residentialops/rosters/organization.html",
         area="Rosters",
         tabs=ROSTER_TABS,
         sample=sample_data,
@@ -35,7 +35,7 @@ def organization(request: Request) -> Response:
 def staff(request: Request) -> Response:
     return render(
         request,
-        "ops/rosters/staff.html",
+        "residentialops/rosters/staff.html",
         area="Rosters",
         tabs=ROSTER_TABS,
         sample=sample_data,
@@ -48,7 +48,7 @@ def staff(request: Request) -> Response:
 def ras(request: Request) -> Response:
     return render(
         request,
-        "ops/rosters/ras.html",
+        "residentialops/rosters/ras.html",
         area="Rosters",
         tabs=ROSTER_TABS,
         sample=sample_data,

@@ -11,7 +11,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from cordware.identity import current_identity, is_local
-from residentialapps.ops import sample_data
+from residentialapps.residentialops import sample_data
 from residentialapps.web.urls import templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])

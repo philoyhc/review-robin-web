@@ -4,7 +4,7 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 
 | Path | Holds |
 |---|---|
-| `ops/` | Residential Operations: its factory (`main.py`, `create_app`) and routes |
+| `residentialops/` | Residential Operations: its factory (`main.py`, `create_app`) and routes |
 | `supportlogs/` | Support Logs: its factory and routes |
 | `tests/` | Residential's tests, including the mounted ones through its own host harness (`tests/_host.py`) |
 | `docs/ra_leave_management_functional_spec_v0.4.md` | RA Leave functional spec (Residential Operations) |

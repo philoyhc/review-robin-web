@@ -12,8 +12,8 @@ from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 
-from residentialapps.ops import pages, sample_data
-from residentialapps.ops.main import create_app as ops_app
+from residentialapps.residentialops import pages, sample_data
+from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.tests._host import host_with
 from residentialapps.web.urls import templates
 

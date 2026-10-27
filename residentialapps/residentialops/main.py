@@ -1,13 +1,13 @@
-"""The Residential Operations factory, `residentialapps.ops.main:create_app`, named by
+"""The Residential Operations factory, `residentialapps.residentialops.main:create_app`, named by
 Cordware's registry entry `residentialops`."""
 
 from __future__ import annotations
 
 from fastapi import FastAPI
 
-from residentialapps.ops.routes_access import router as access_router
-from residentialapps.ops.routes_health import router as health_router
-from residentialapps.ops.routes_rosters import router as rosters_router
+from residentialapps.residentialops.routes_access import router as access_router
+from residentialapps.residentialops.routes_health import router as health_router
+from residentialapps.residentialops.routes_rosters import router as rosters_router
 
 
 def create_app() -> FastAPI:

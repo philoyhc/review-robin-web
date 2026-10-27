@@ -1,7 +1,7 @@
 # Residential architecture
 
-> **Built so far:** segment 1A built the `ops/`, `supportlogs/` and
-> `tests/` packages, the boundary rules marked below, packaging and the
+> **Built so far:** segment 1A built the `residentialops/` (`ops/` until
+> 2026-10-27), `supportlogs/` and `tests/` packages, the boundary rules marked below, packaging and the
 > `residential` lane; segment 1B item 1 built `web/`. Every package and rule marked for a later segment
 > is the contract for it, not yet built.
 
@@ -14,21 +14,21 @@ its tests run. The two applications' contract with the host is
 | Package | Holds | Arrives |
 |---|---|---|
 | `residentialapps/` | The package root. It has no code of its own. | 1A |
-| `residentialapps/ops/` | Residential Operations: its factory (`main.py`), its routes and pages | 1A (factory and health) |
+| `residentialapps/residentialops/` | Residential Operations: its factory (`main.py`), its routes and pages | 1A (factory and health) |
 | `residentialapps/supportlogs/` | Support Logs: its factory, routes, pages, models and services | 1A (factory and health) |
 | `residentialapps/core/` | The shared core: people, identity binding, organization, rosters | 1B |
 | `residentialapps/web/` | What both applications' pages share: base template, styles, URL helper | 1B (built in item 1) |
 | `residentialapps/leave/`, `residentialapps/events/` | RA Leave and RA Events, served by Residential Operations | RA Leave next; RA Events last (ruling 13) |
 | `residentialapps/tests/` | Residential's tests, a package with its own `__init__.py` | 1A |
 
-**`ops/` beside ruling 1's list** (author, 2026-10-26). Ruling 1 names
-`core/`, `leave/`, `events/`, `supportlogs/` and `web/`, and gives
-Residential Operations no package of its own. The logger prefix
-`residentialapps.ops` (ruling 6) reads most simply as a package, and a
-package per application keeps each one's routes in one place to fence off.
-Support Logs' application and pillar share `supportlogs/`; Residential
-Operations' application is `ops/`, and its pillars are `core/`, `leave/`
-and `events/`.
+**`residentialops/` beside ruling 1's list** (author, 2026-10-26; the
+author renamed it from `ops/` on 2026-10-27 to match `supportlogs/` and the
+mount). Ruling 1 names `core/`, `leave/`, `events/`, `supportlogs/` and
+`web/`, and gives Residential Operations no package of its own. The logger
+prefix (ruling 6) reads most simply as a package, and a package per
+application keeps each one's routes in one place to fence off. Support Logs' application and pillar share
+`supportlogs/`; Residential Operations' application is `residentialops/`,
+and its pillars are `core/`, `leave/` and `events/`.
 
 Inside each application the layering is RRW's (`spec/architecture.md`
 "Three-layer split"): thin routes, services hold the rules, SQLAlchemy 2.x
@@ -42,8 +42,8 @@ depth and including literal dynamic imports.
 | Package | May not import |
 |---|---|
 | `residentialapps` (all of it) | `app`; and the module `cordware.main` |
-| `residentialapps.ops` | `residentialapps.supportlogs` |
-| `residentialapps.supportlogs` | `residentialapps.ops`, `residentialapps.leave`, `residentialapps.events` |
+| `residentialapps.residentialops` | `residentialapps.supportlogs` |
+| `residentialapps.supportlogs` | `residentialapps.residentialops`, `residentialapps.leave`, `residentialapps.events` |
 | `residentialapps.leave` | `residentialapps.events`, either application |
 | `residentialapps.events` | `residentialapps.leave`, either application |
 | `residentialapps.core`, `residentialapps.web` | Any application or pillar |
@@ -57,7 +57,7 @@ depth and including literal dynamic imports.
   they hold (ruling 7).
 - Enforced today: `residentialapps` not importing `app`, the
   `cordware.main` check, `app` and `cordware` not importing `residentialapps`,
-  each of `ops` and `supportlogs` not importing the other, and `web` not
+  each of `residentialops` and `supportlogs` not importing the other, and `web` not
   importing either application or any pillar (`core` included). The other
   rows, and `supportlogs` not importing `leave` or `events`, join with their
   packages (1B and later), each with a planted-import test as the existing
