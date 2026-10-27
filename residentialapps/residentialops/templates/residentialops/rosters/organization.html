@@ -30,7 +30,7 @@
       <section class="card" aria-labelledby="tree-h">
         <div class="card-head">
           <h2 id="tree-h">Organization tree</h2>
-          <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only.</p>
+          <p class="sub">{{ sample.UNIT_NAME }}: {{ counts[1] }} {{ level_name[1] }} · {{ counts[2] }} {{ level_name[2] }}s · {{ counts[3] }} {{ level_name[3] }}s. Floors sit on {{ level_name[3] }}s only. Who is appointed comes from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a>.</p>
           <div class="btnrow">
             <button type="button" class="btn btn-secondary" disabled>Expand all</button>
             <button type="button" class="btn btn-primary" disabled>Add node</button>
@@ -39,23 +39,23 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th scope="col">Node</th><th scope="col">Level</th><th scope="col">Floors</th><th scope="col">Appointed</th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
+              <tr><th scope="col">Node</th><th scope="col">Level</th><th scope="col">Area</th><th scope="col">Appointed <span class="subtle">(from the rosters)</span></th><th scope="col"><span class="visually-hidden">Status</span></th></tr>
             </thead>
             <tbody>
               {% for node in sample.TREE %}
                 <tr class="level-{{ node.level }}">
-                  <td class="node">{{ node.name }}</td>
-                  <td class="subtle">{{ level_name[node.level] }}</td>
-                  <td>{{ node.floors }}</td>
+                  <td class="node ind nowrap">{{ node.name }}</td>
+                  <td class="subtle ind">{{ level_name[node.level] }}</td>
+                  <td class="ind nowrap">{{ node.floors }}</td>
                   <td>{{ node.appointed or "—" }}</td>
                   <td>{% if node.level == 3 and not node.appointed %}<span class="chip chip-mute">Vacant</span>{% endif %}</td>
                 </tr>
               {% endfor %}
               {% for gap in sample.FLOOR_GAPS %}
                 <tr class="gap-row">
-                  <td class="node">Not covered</td>
-                  <td>—</td>
-                  <td>{{ gap }}</td>
+                  <td class="node ind">Not covered</td>
+                  <td class="ind">—</td>
+                  <td class="ind nowrap">{{ gap }}</td>
                   <td>—</td>
                   <td><span class="chip chip-warn">Gap</span></td>
                 </tr>

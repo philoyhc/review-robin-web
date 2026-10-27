@@ -101,9 +101,11 @@ model (author, 2026-10-27):
 - **Each list has a limit**, and its + says so once the list is full:
   up to 5 levels and up to 10 appointments
   (`residentialapps/guide/todo_master.md`, organization levels, amended).
-- **Measures, as RRW's rows render** (measured in Chromium, 2026-10-27): 16 px text in 30 px boxes padded
-  4 px 8 px (selects 32 px), 32 px glyph buttons at weight 500, 4 px
-  cells and a rule under each row (`.rows`).
+- **Measures, after RRW's rows** (measured in Chromium, 2026-10-27):
+  16 px text in boxes padded 4 px 8 px, glyph buttons 32 px wide at
+  weight 500, 4 px cells and a rule under each row (`.rows`). Boxes, selects and
+  buttons are all 30 px tall (author, 2026-10-27; RRW's selects are
+  32 px).
 - On a phone the list's table scrolls in its box rather than squeezing
   its fields.
 
