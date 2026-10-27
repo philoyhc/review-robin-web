@@ -171,6 +171,19 @@
       .filter-fields { display: flex; flex-wrap: wrap; gap: 12px; }
       .filter { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
       .filter label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
+      .filter-fields { flex: 1 1 480px; }
+      .filter-box { flex: 1 1 260px; }
+      /* Roster tables, after RRW's roster pages: a tick box leads each
+         row; ticked rows take accent rails, and the expander under the
+         last one ticked closes the bracket. */
+      th.sel, td.sel { width: 1%; padding-right: 0; }
+      td.sel input, th.sel input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+      tr.selected > td:first-child, tr.expander > td { box-shadow: inset 4px 0 0 var(--accent); }
+      tr.selected > td:last-child { box-shadow: inset -4px 0 0 var(--accent); }
+      tr.expander > td { box-shadow: inset 4px 0 0 var(--accent), inset -4px 0 0 var(--accent); background: var(--accent-tint); padding: 10px 16px; }
+      .expander-body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+      .expander-body .btnrow { margin-left: auto; }
+      .confirm { display: inline-flex; align-items: center; gap: 6px; }
       .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
       .back { display: inline-block; margin-bottom: 8px; font-size: 15px; }
       .kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }

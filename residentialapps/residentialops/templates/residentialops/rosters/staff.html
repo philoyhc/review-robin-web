@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import filter_bar %}
+{% from "residentialops/rosters/_filters.html" import filter_bar, select_all, select_row, csv_actions, selection_script %}
 {% block title %}Staff roster{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -10,7 +10,7 @@
        {"id": "appointment", "label": "Appointment", "options": sample.STAFF_APPOINTMENTS},
        {"id": "precinct", "label": level_name[2], "options": sample.PRECINCTS},
        {"id": "signin", "label": "Sign-in", "options": ("Linked", "Not yet signed in")},
-     ], "Add person") }}
+     ], "Add person", "Name, email or post") }}
 
   <section class="card" aria-labelledby="staff-h">
     <div class="card-head">
@@ -18,13 +18,14 @@
       <p class="sub">Appointments make staff eligible; access is granted separately and shown read-only here.</p>
     </div>
     <div class="table-wrap">
-      <table>
+      <table class="roster">
         <thead>
-          <tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Post</th><th scope="col">From – to</th><th scope="col">Sign-in</th><th scope="col">Access</th></tr>
+          <tr>{{ select_all() }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Post</th><th scope="col">From – to</th><th scope="col">Sign-in</th><th scope="col">Access</th></tr>
         </thead>
         <tbody>
           {% for person in sample.STAFF %}
             <tr>
+              {{ select_row(person.name) }}
               <td class="strong"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
               <td class="subtle">{{ person.email }}</td>
               <td>{{ person.appointment }}</td>
@@ -43,5 +44,7 @@
     <h2 id="csv-h">Staff roster CSV</h2>
     <p class="sub">A row names a person, one appointment and its post, a code from the organization tree. Preview lists new, changed and ended rows before anything saves.</p>
     <pre class="sample">{{ sample.STAFF_CSV }}</pre>
+    {{ csv_actions() }}
   </section>
+  {{ selection_script("people", count[0]) }}
 {% endblock %}

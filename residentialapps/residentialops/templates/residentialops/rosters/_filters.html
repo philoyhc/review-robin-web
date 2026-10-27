@@ -1,11 +1,15 @@
-{# The roster pages' filter bar: search, then the page's own selects, then
-   its actions. Controls are inert until segment 1B item 5 wires them. #}
-{% macro filter_bar(selects, add_label) %}
-  <section class="card card-pad muted filters" aria-label="Filters and actions">
+{# The roster pages' shared pieces, after RRW's roster pages and Sessions
+   Lobby. Filters and actions are inert until segment 1B item 5 wires them;
+   ticking rows is live so the expander's shape can be checked. #}
+
+{# The filter card: a filter box over the rows, the page's selects, then
+   Clear and the page's add action. #}
+{% macro filter_bar(selects, add_label, placeholder) %}
+  <section class="card card-pad muted filters" aria-label="Filter">
     <div class="filter-fields">
-      <div class="filter">
-        <label for="q">Search</label>
-        <input id="q" class="input" type="search" placeholder="Name or email" disabled>
+      <div class="filter filter-box">
+        <label for="q">Filter</label>
+        <input id="q" class="input" type="text" placeholder="{{ placeholder }}" disabled>
       </div>
       {% for select in selects %}
         <div class="filter">
@@ -18,9 +22,94 @@
       {% endfor %}
     </div>
     <div class="btnrow">
+      <button type="button" class="btn btn-secondary" disabled>Clear</button>
       <button type="button" class="btn btn-primary" disabled>{{ add_label }}</button>
-      <button type="button" class="btn btn-secondary" disabled>Upload roster CSV</button>
-      <button type="button" class="btn btn-secondary" disabled>Export</button>
     </div>
   </section>
+{% endmacro %}
+
+{# The header cell that ticks every row. #}
+{% macro select_all() %}
+  <th scope="col" class="sel"><input type="checkbox" class="select-all" aria-label="Select all rows"></th>
+{% endmacro %}
+
+{# A row's leading tick box, named by its person. #}
+{% macro select_row(name) %}
+  <td class="sel"><input type="checkbox" class="row-select" aria-label="Select {{ name }}"></td>
+{% endmacro %}
+
+{# The CSV card's actions, under its sample. #}
+{% macro csv_actions() %}
+  <div class="btnrow">
+    <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
+    <button type="button" class="btn btn-secondary" disabled>Export</button>
+  </div>
+{% endmacro %}
+
+{# Ticking a row opens an expander under the last row ticked: the count,
+   then the row actions. Edit takes one row; End appointment end-dates and
+   keeps the history; Delete, for a row made in error, waits on its confirm.
+   The actions are disabled until item 5. `noun` names the rows. #}
+{% macro selection_script(noun, total) %}
+  <script>
+    (function () {
+      var table = document.querySelector("table.roster");
+      if (!table) return;
+      var body = table.tBodies[0];
+      var selectAll = table.querySelector(".select-all");
+      var cols = table.tHead.rows[0].cells.length;
+      var order = [];
+      var panel = null;
+      function boxes() { return body.querySelectorAll(".row-select"); }
+      function build(n) {
+        var tr = document.createElement("tr");
+        tr.className = "expander";
+        var td = document.createElement("td");
+        td.colSpan = cols;
+        td.innerHTML =
+          '<div class="expander-body">' +
+          '<span><strong>' + n + '</strong> of {{ total }} selected</span>' +
+          '<label class="confirm"><input type="checkbox" disabled> Yes, delete these {{ noun }}</label>' +
+          '<span class="btnrow">' +
+          '<button type="button" class="btn btn-secondary" disabled' + (n === 1 ? '' : ' title="Edit takes one row"') + '>Edit</button>' +
+          '<button type="button" class="btn btn-secondary" disabled>End appointment</button>' +
+          '<button type="button" class="btn btn-danger" disabled>Delete</button>' +
+          '</span></div>';
+        tr.appendChild(td);
+        return tr;
+      }
+      function render() {
+        if (panel) { panel.remove(); panel = null; }
+        var all = boxes();
+        var ticked = [];
+        for (var i = 0; i < all.length; i++) {
+          var row = all[i].closest("tr");
+          row.classList.toggle("selected", all[i].checked);
+          if (all[i].checked) ticked.push(row);
+        }
+        selectAll.checked = ticked.length > 0 && ticked.length === all.length;
+        selectAll.indeterminate = ticked.length > 0 && ticked.length < all.length;
+        if (!ticked.length) return;
+        var anchor = order.length ? order[order.length - 1] : ticked[ticked.length - 1];
+        panel = build(ticked.length);
+        anchor.insertAdjacentElement("afterend", panel);
+      }
+      body.addEventListener("change", function (event) {
+        if (!event.target.classList.contains("row-select")) return;
+        var row = event.target.closest("tr");
+        order = order.filter(function (r) { return r !== row; });
+        if (event.target.checked) order.push(row);
+        render();
+      });
+      selectAll.addEventListener("change", function () {
+        var all = boxes();
+        order = [];
+        for (var i = 0; i < all.length; i++) {
+          all[i].checked = selectAll.checked;
+          if (selectAll.checked) order.push(all[i].closest("tr"));
+        }
+        render();
+      });
+    })();
+  </script>
 {% endmacro %}

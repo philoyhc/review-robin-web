@@ -1,8 +1,8 @@
 # Residential Operations UI
 
 > **Built so far:** segment 1B item 1 built the chrome, the placeholder
-> screens of Rosters and setup and Sys admin, and the row builders on the
-> Organization page, on sample data. Segment 1C item 1 adds RA Leave's
+> screens of Rosters and setup and Sys admin, the row builders on the
+> Organization page and the roster tables, on sample data. Segment 1C item 1 adds RA Leave's
 > screens and extends this file from them.
 
 The conventions every Residential Operations screen follows. Where this
@@ -109,23 +109,41 @@ model (author, 2026-10-27):
 - On a phone the list's table scrolls in its box rather than squeezing
   its fields.
 
-## 6. Cards and notices
+## 6. Roster tables
+
+The Staff and RA rosters take RRW's roster pages and Sessions Lobby as their
+model (author, 2026-10-27):
+
+- **A filter card above the table**: one filter box over name, email and
+  post, after the lobby's, beside the page's filter selects, then Clear and
+  the page's add action (Primary).
+- **A tick box leads each row**, with a select-all in the header. Ticked
+  rows take accent rails at both ends.
+- **Ticking opens an expander** under the last row ticked, closing the
+  rails: the count selected, then the row actions. Edit takes one row; End
+  appointment end-dates and keeps the history; Delete, for a row made in
+  error, waits on its confirm tick box. Unticking every row closes it.
+- **The CSV card below the table** carries the sample, then Upload and
+  preview (Primary) and Export.
+
+## 7. Cards and notices
 
 - **Cards**: 8 px corners, a subtle border, 16 px padding; a card's `h2`
   is 18 px with its explanation beneath in subtle text.
 - **A notice** above the cards carries a page-level warning, such as a
   floor gap; warnings that never block a save say so.
 
-## 7. Placeholders and sample data
+## 8. Placeholders and sample data
 
 Until a screen is wired:
 
 - it shows a **Sample data** chip by its title, and its sample data lives
   in one module, deleted in one place by the item that wires it;
-- its controls are present and `disabled`;
+- its controls are present and `disabled`, except a roster's tick boxes,
+  which open the expander so its shape can be checked (§6);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere.
 
-## 8. Accessibility
+## 9. Accessibility
 
 RRW's floor applies: text at 4.5:1 and control boundaries at 3:1 in both
 themes. Beyond it:

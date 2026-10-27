@@ -5,6 +5,8 @@ segment 1B item 1, and the URL rules every page keeps
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -233,3 +235,28 @@ def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch
     for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
         assert client.get(path).status_code == 404, path
     assert client.get("/health").status_code == 200
+
+
+@pytest.mark.parametrize(("path", "name"), [("/rosters/staff", "Sam Lee"), ("/rosters/ras", "Chloe Lim")])
+def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str, name: str) -> None:
+    page = TestClient(ops_app()).get(path).text
+    assert '<input type="checkbox" class="select-all" aria-label="Select all rows">' in page
+    assert f'class="row-select" aria-label="Select {name}"' in page
+    assert '<label for="q">Filter</label>' in page
+    assert 'placeholder="Name, email or post"' in page
+    assert "Upload roster CSV" not in page
+    csv_card = page[page.index('id="csv-h"'):]
+    assert "Upload and preview</button>" in csv_card and "Export</button>" in csv_card
+    assert "End appointment" in page
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+@pytest.mark.parametrize("path", ["/rosters/staff", "/rosters/ras"])
+def test_the_roster_scripts_parse(path: str, tmp_path: Path) -> None:
+    page = TestClient(ops_app()).get(path).text
+    scripts = re.findall(r"<script>(.*?)</script>", page, re.S)
+    assert len(scripts) >= 2  # the theme toggle's and the expander's
+    for n, body in enumerate(scripts):
+        source = tmp_path / f"s{n}.js"
+        source.write_text(body)
+        subprocess.run(["node", "--check", str(source)], check=True)
