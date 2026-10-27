@@ -65,9 +65,9 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 
   | `Level1.Wing` | `Level2.Precinct` | `Level3.Neighborhood` | `Floors` |
   |---|---|---|---|
-  | Cypress | RF1 | RA1 | Cypress A 04-05-06 |
-  | Cypress | RF1 | RA2 | Cypress A 07-08-09 |
-  | Cypress | RF1 | RA3 | Cypress A 10-11-12 |
+  | RSLM-01 | RF-01 | RA-01 | Cypress A 04-05-06 |
+  | RSLM-01 | RF-01 | RA-02 | Cypress A 07-08-09 |
+  | RSLM-01 | RF-01 | RA-03 | Cypress A 10-11-12 |
 
   1. **Every level is its own column**, headed with the Unit's label (which the import sets and the export writes back); higher nodes exist because a row names them.
   2. **Floors are a building and its floors joined by hyphens**; several buildings in one cell are separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
