@@ -111,5 +111,6 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 
 - `cordware/spec/identity.md` — tenant ID and UPN on the identity (Item 3).
 - `residentialapps/docs/residentialapps_identity.md` — revised to what shipped (Item 3).
-- `residentialapps/docs/residentialapps_roster_structure.md` — revised to the per-Unit levels, node tree and structure CSV (Item 4).
+- `residentialapps/docs/residentialapps_roster_structure.md` — revised to organization by units: levels, slots and their Staff and RA cells (Item 4).
+- `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the levels, slots, rosters, appointment types and cells, their inter-table rules and CSV precedence, Quick setup included, written as items 4 and 5 ship (author, 2026-10-27).
 - `residentialapps/guide/todo_master.md` — the entries this segment finishes, deleted at close.
