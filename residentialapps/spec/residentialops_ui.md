@@ -126,6 +126,12 @@ model (author, 2026-10-27):
   error, waits on its confirm tick box. Unticking every row closes it.
 - **The CSV card below the table** carries the sample, then Upload and
   preview (Primary) and Export.
+- **A value has one home.** Where it is set, it is plain text and edited
+  there; where another table repeats it, it is a pill (`.pill-derived`),
+  read-only (author, 2026-10-27). The tree's Appointed comes from the
+  rosters; a Staff roster post's appointment type, and an RA's
+  Precinct, floors and reporting, come from the tree. Sign-in and access
+  stay status chips (§3).
 - **The Organization tree** takes the same tick boxes and expander, with
   Retire in place of End appointment; a floor-gap row, which is no node,
   takes no tick box (author, 2026-10-27).

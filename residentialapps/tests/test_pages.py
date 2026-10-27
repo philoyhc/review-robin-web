@@ -56,7 +56,7 @@ def test_the_organization_page_is_a_labeled_placeholder() -> None:
     assert "<h1>Organization</h1>" in page.text
     assert page.text.count('<td class="subtle ind">Neighborhood</td>') == 10
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split("<tbody>")[0])
-    assert headers[:4] == ["Level", "Dorms", "Post", "Appointed "]
+    assert headers[:4] == ["Level", "Dorms", "Post", "Appointed"]
     assert '<td class="node nowrap">Master, Admin-01</td>' in page.text
     assert '<h2 id="appts-h">Appointment types</h2>' in page.text
     assert '<td class="node nowrap">RSLM-01</td>' in page.text
@@ -179,7 +179,8 @@ def test_the_ra_roster_derives_reporting_and_flags_a_vacancy() -> None:
     assert page.status_code == 200
     assert "· 9 RAs, 8 linked" in page.text
     assert "RA-10 has no RA." in page.text
-    assert "Mei Ling Tan, Grace Ho (to 31 Dec)" in page.text  # every RF on the Precinct
+    # every RF on the Precinct, derived, so pills
+    assert '<span class="pill-derived">Mei Ling Tan</span><span class="pill-derived">Grace Ho to 31 Dec</span>' in page.text
 
 
 def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
@@ -273,3 +274,16 @@ def test_the_organization_tree_ticks_nodes_into_the_same_expander() -> None:
     assert 'class="row-select" aria-label="Select Wing RSLM-01"' in page
     assert ">Retire</button>" in page and "End appointment" not in page
     assert '<tr class="gap-row">\n                  <td class="sel"></td>' in page
+
+
+def test_a_value_is_plain_where_it_is_set_and_a_pill_where_it_is_derived() -> None:
+    client = TestClient(ops_app())
+    tree = client.get("/rosters/").text
+    assert '<td class="node nowrap">RA-01</td>' in tree  # the tree sets the post
+    assert '<span class="pill-derived">Chloe Lim</span>' in tree  # the RA roster appoints her
+    ras = client.get("/rosters/ras").text
+    assert '<td class="nowrap">RA-01</td>' in ras  # the roster sets her post
+    assert '<span class="pill-derived">Cypress A 04-05-06</span>' in ras  # the tree sets its floors
+    staff = client.get("/rosters/staff").text
+    assert '<span class="pill-derived">RF</span>' in staff  # RF-01's type comes from the tree
+    assert "<td>Other Staff</td>" in staff  # a type with no posts is set on the roster

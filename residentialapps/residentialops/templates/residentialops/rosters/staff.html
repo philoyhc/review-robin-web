@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import filter_bar, select_all, select_row, csv_actions, selection_script %}
+{% from "residentialops/rosters/_filters.html" import filter_bar, pills, select_all, select_row, csv_actions, selection_script %}
 {% block title %}Staff roster{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -15,7 +15,7 @@
   <section class="card" aria-labelledby="staff-h">
     <div class="card-head">
       <h2 id="staff-h">Staff roster <span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span></h2>
-      <p class="sub">Appointments make staff eligible; access is granted separately and shown read-only here.</p>
+      <p class="sub">Appointments make staff eligible. A post's appointment type comes from the organization tree, shown as a pill; only a type with no posts (Other Staff) is set here. Access is granted separately and shown read-only.</p>
     </div>
     <div class="table-wrap">
       <table class="roster">
@@ -26,9 +26,9 @@
           {% for person in sample.STAFF %}
             <tr>
               {{ select_row(person.name) }}
-              <td class="strong"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
+              <td class="strong nowrap"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
               <td class="subtle">{{ person.email }}</td>
-              <td>{{ person.appointment }}</td>
+              <td>{% if person.node != "—" %}{{ pills([person.appointment]) }}{% else %}{{ person.appointment }}{% endif %}</td>
               <td>{{ person.node }}</td>
               <td class="nowrap">{{ person.dates }}</td>
               <td>{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>

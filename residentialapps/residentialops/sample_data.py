@@ -21,25 +21,25 @@ class Node:
     name: str
     level: int  # 0 the Unit, then 1–3 for the Unit's three levels
     floors: str
-    appointed: str | None
+    appointed: tuple[str, ...]  # derived from the rosters: who holds each post
 
 
 TREE: tuple[Node, ...] = (
-    Node("Master, Admin-01", 0, "Cypress A, Cypress B", "Sam Lee (Master), Rachel Yeo (Admin-01)"),
-    Node("RSLM-01", 1, "Cypress A, Cypress B", "Priya Raman"),
-    Node("RF-01", 2, "Cypress A 04–12", "Daniel Koh"),
-    Node("RA-01", 3, "Cypress A 04-05-06", "Chloe Lim"),
-    Node("RA-02", 3, "Cypress A 07-08-09", "Ethan Wong"),
-    Node("RA-03", 3, "Cypress A 10-11-12", "Hana Ito"),
-    Node("RF-02, RF-04", 2, "Cypress A 13–15; Cypress B 01–06", "Mei Ling Tan (RF-02), Grace Ho (RF-04, to 31 Dec)"),
-    Node("RA-04", 3, "Cypress A 13-14-15", "Isaac Goh"),
-    Node("RA-05", 3, "Cypress B 01-02-03", "Jia Hui Ong"),
-    Node("RA-06", 3, "Cypress B 04-05-06", "Kai Ng"),
-    Node("RF-03", 2, "Cypress B 07–16", "Arjun Nair"),
-    Node("RA-07", 3, "Cypress B 07-08-09", "Lucas Teo"),
-    Node("RA-08", 3, "Cypress B 10-11-12", "Maya Seah"),
-    Node("RA-09", 3, "Cypress B 13-14", "Nur Aisyah"),
-    Node("RA-10", 3, "Cypress B 15-16", None),
+    Node("Master, Admin-01", 0, "Cypress A, Cypress B", ("Sam Lee · Master", "Rachel Yeo · Admin-01")),
+    Node("RSLM-01", 1, "Cypress A, Cypress B", ("Priya Raman",)),
+    Node("RF-01", 2, "Cypress A 04–12", ("Daniel Koh",)),
+    Node("RA-01", 3, "Cypress A 04-05-06", ("Chloe Lim",)),
+    Node("RA-02", 3, "Cypress A 07-08-09", ("Ethan Wong",)),
+    Node("RA-03", 3, "Cypress A 10-11-12", ("Hana Ito",)),
+    Node("RF-02, RF-04", 2, "Cypress A 13–15; Cypress B 01–06", ("Mei Ling Tan · RF-02", "Grace Ho · RF-04 to 31 Dec")),
+    Node("RA-04", 3, "Cypress A 13-14-15", ("Isaac Goh",)),
+    Node("RA-05", 3, "Cypress B 01-02-03", ("Jia Hui Ong",)),
+    Node("RA-06", 3, "Cypress B 04-05-06", ("Kai Ng",)),
+    Node("RF-03", 2, "Cypress B 07–16", ("Arjun Nair",)),
+    Node("RA-07", 3, "Cypress B 07-08-09", ("Lucas Teo",)),
+    Node("RA-08", 3, "Cypress B 10-11-12", ("Maya Seah",)),
+    Node("RA-09", 3, "Cypress B 13-14", ("Nur Aisyah",)),
+    Node("RA-10", 3, "Cypress B 15-16", ()),
 )
 
 FLOOR_GAPS = ("Cypress A 16",)
@@ -116,25 +116,26 @@ class RosterRA:
     name: str
     email: str
     neighborhood: str
-    precinct: str
-    floors: str
-    reports_to: str  # every RF on the RA's Precinct
+    precinct: tuple[str, ...]  # derived from the tree: the Precinct's posts
+    floors: str  # derived from the tree: the post's node's Dorms
+    reports_to: tuple[str, ...]  # derived: every RF on the RA's Precinct
     linked: bool
 
 
 # Precinct RF-02 holds a second, dated post: a backup is its own post.
-TWO_RFS = "Mei Ling Tan, Grace Ho (to 31 Dec)"
+TWO_RFS = ("Mei Ling Tan", "Grace Ho to 31 Dec")
+RF_02 = ("RF-02", "RF-04")
 
 RAS: tuple[RosterRA, ...] = (
-    RosterRA("Chloe Lim", "chloe.lim@example.edu", "RA-01", "RF-01", "Cypress A 04-05-06", "Daniel Koh", True),
-    RosterRA("Ethan Wong", "ethan.wong@example.edu", "RA-02", "RF-01", "Cypress A 07-08-09", "Daniel Koh", True),
-    RosterRA("Hana Ito", "hana.ito@example.edu", "RA-03", "RF-01", "Cypress A 10-11-12", "Daniel Koh", True),
-    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA-04", "RF-02", "Cypress A 13-14-15", TWO_RFS, True),
-    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA-05", "RF-02", "Cypress B 01-02-03", TWO_RFS, True),
-    RosterRA("Kai Ng", "kai.ng@example.edu", "RA-06", "RF-02", "Cypress B 04-05-06", TWO_RFS, True),
-    RosterRA("Lucas Teo", "lucas.teo@example.edu", "RA-07", "RF-03", "Cypress B 07-08-09", "Arjun Nair", True),
-    RosterRA("Maya Seah", "maya.seah@example.edu", "RA-08", "RF-03", "Cypress B 10-11-12", "Arjun Nair", True),
-    RosterRA("Nur Aisyah", "nur.aisyah@example.edu", "RA-09", "RF-03", "Cypress B 13-14", "Arjun Nair", False),
+    RosterRA("Chloe Lim", "chloe.lim@example.edu", "RA-01", ("RF-01",), "Cypress A 04-05-06", ("Daniel Koh",), True),
+    RosterRA("Ethan Wong", "ethan.wong@example.edu", "RA-02", ("RF-01",), "Cypress A 07-08-09", ("Daniel Koh",), True),
+    RosterRA("Hana Ito", "hana.ito@example.edu", "RA-03", ("RF-01",), "Cypress A 10-11-12", ("Daniel Koh",), True),
+    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA-04", RF_02, "Cypress A 13-14-15", TWO_RFS, True),
+    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA-05", RF_02, "Cypress B 01-02-03", TWO_RFS, True),
+    RosterRA("Kai Ng", "kai.ng@example.edu", "RA-06", RF_02, "Cypress B 04-05-06", TWO_RFS, True),
+    RosterRA("Lucas Teo", "lucas.teo@example.edu", "RA-07", ("RF-03",), "Cypress B 07-08-09", ("Arjun Nair",), True),
+    RosterRA("Maya Seah", "maya.seah@example.edu", "RA-08", ("RF-03",), "Cypress B 10-11-12", ("Arjun Nair",), True),
+    RosterRA("Nur Aisyah", "nur.aisyah@example.edu", "RA-09", ("RF-03",), "Cypress B 13-14", ("Arjun Nair",), False),
 )
 
 RA_DATES = "2026-08-01 –"
