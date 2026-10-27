@@ -69,7 +69,7 @@
         <h2 id="appts-h">Appointments</h2>
         <p class="sub">Up to {{ sample.MAX_APPOINTMENTS }} appointments for {{ sample.UNIT_NAME }}, each with its abbreviation, its type and the level it holds. + adds a row below; X removes one. Reporting follows the tree.</p>
         <div class="table-wrap">
-          <table class="appts">
+          <table class="appts rows">
             <thead>
               <tr><th scope="col">Title</th><th scope="col">Abbrev</th><th scope="col">Type</th><th scope="col">Level</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr>
             </thead>
@@ -112,6 +112,7 @@
       <section class="card card-pad" aria-labelledby="labels-h">
         <h2 id="labels-h">Level labels</h2>
         <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit, up to {{ sample.MAX_LEVELS }}; floors sit on the lowest level. Code keeps the slots; renaming is a label edit.</p>
+        <div class="rows">
         {% for label in sample.LEVEL_LABELS %}
           <div class="field level-field">
             <label for="level-{{ loop.index }}">Level {{ loop.index }}</label>
@@ -122,6 +123,7 @@
             </span>
           </div>
         {% endfor %}
+        </div>
         <button type="button" class="btn btn-primary" disabled>Save labels</button>
       </section>
 
