@@ -19,8 +19,8 @@ def test_registry_entries() -> None:
     assert list(REGISTRY) == ["reviewrobin", "residentialops", "supportlogs"]
     assert REGISTRY["residentialops"] == AppEntry(
         path="/residentialops",
-        factory="residentialapps.ops.main:create_app",
-        logger="residentialapps.ops",
+        factory="residentialapps.residentialops.main:create_app",
+        logger="residentialapps.residentialops",
         title="Residential Operations",
     )
     assert REGISTRY["supportlogs"] == AppEntry(
@@ -87,8 +87,8 @@ def test_health_names_resolve_into_their_own_mount() -> None:
 @pytest.mark.parametrize(
     ("logger", "application"),
     [
-        ("residentialapps.ops", "residentialops"),
-        ("residentialapps.ops.main", "residentialops"),
+        ("residentialapps.residentialops", "residentialops"),
+        ("residentialapps.residentialops.main", "residentialops"),
         ("residentialapps.supportlogs.main", "supportlogs"),
         ("app.services", "reviewrobin"),
     ],

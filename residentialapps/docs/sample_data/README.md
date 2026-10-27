@@ -1,7 +1,7 @@
 # Mock rosters for browser tests
 
 These are mock files for Example College, the Unit drawn on segment 1B's
-placeholder screens (`residentialapps/ops/sample_data.py`). They are for
+placeholder screens (`residentialapps/residentialops/sample_data.py`). They are for
 trying the import screens by hand once segment 1B wires them (structure
 CSV, item 4; Staff and RA roster CSVs, item 5), and for setting fake
 sign-ins locally (item 3). Every person and address is fictional; no file

@@ -20,8 +20,8 @@ states only what Residential adds.
 |---|---|---|
 | Registry name | `residentialops` | `supportlogs` |
 | Mount path | `/residentialops` | `/supportlogs` |
-| Factory | `residentialapps.ops.main:create_app` | `residentialapps.supportlogs.main:create_app` |
-| Logger prefix | `residentialapps.ops` | `residentialapps.supportlogs` |
+| Factory | `residentialapps.residentialops.main:create_app` | `residentialapps.supportlogs.main:create_app` |
+| Logger prefix | `residentialapps.residentialops` | `residentialapps.supportlogs` |
 | Landing-page title | `Residential Operations` | `Support Logs` |
 | Health | `GET /residentialops/health` | `GET /supportlogs/health` |
 
@@ -159,7 +159,7 @@ fails to start on the missing package (`host.app_startup_failed`).
 ## Logging and lifespan
 
 - Each application logs under named loggers below its prefix
-  (`logging.getLogger("residentialapps.ops.…")`), never configures the
+  (`logging.getLogger("residentialapps.residentialops.…")`), never configures the
   root logger, and is stamped `residentialops` or `supportlogs` by the
   host's `ApplicationFilter`. The prefixes do not nest, so a record is
   never stamped with the wrong one (ruling 6).

@@ -27,7 +27,7 @@ Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prereq
 ## Semantics
 
 - **Item 1's gate:** no wiring item starts until the author approves the screens. Each later item may change a page only as far as real data requires; anything further goes back to the author.
-- **Sample data is labeled** on every placeholder and lives in one module, `residentialapps/ops/sample_leave.py`, deleted in one place by items 2–5.
+- **Sample data is labeled** on every placeholder and lives in one module, `residentialapps/residentialops/sample_leave.py`, deleted in one place by items 2–5.
 - **Placeholders answer only on a local run**, behind 1B's `placeholders_local_only`, until wired.
 - **Viewing as.** Placeholders cannot know the viewer's role before identity (1B item 3), so each page renders for one sample viewer named on it (an RA, Chloe Lim; a first approver, Daniel Koh; the admin, Rachel Yeo; the Master, Sam Lee). A labeled switch on the sample banner changes viewer; it is sample-only and goes with the sample module.
 - **Phone first:** a mobile-critical page is designed at 390 px and widened; a desktop-oriented one is designed at 1280 px and kept usable on a phone (`residentialapps/spec/applications.md`).
@@ -35,7 +35,7 @@ Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prereq
 
 ## Judgment calls — decided
 
-- Routes and templates for RA Leave live in `residentialapps/ops/` (the application); its models and services arrive in `residentialapps/leave/` (the pillar) from item 2, as `residentialapps/spec/architecture.md` lays out.
+- Routes and templates for RA Leave live in `residentialapps/residentialops/` (the application); its models and services arrive in `residentialapps/leave/` (the pillar) from item 2, as `residentialapps/spec/architecture.md` lays out.
 - The conventions item 1 settles are written to `residentialapps/spec/residentialops_ui.md`, not into `applications.md`: the page map should stay a map. That file was started early, on 2026-10-27, from 1B item 1's screens (author); item 1 extends it. Support Logs keeps its own UI spec.
 - A convention item 1 changes in `residentialapps/web/` is applied to 1B's screens in the same rung, so the two never diverge; it does not reopen 1B.
 - Item 1 takes its `diff-reviewer` read on the item's cumulative diff at rung 4, its last build rung; each iteration rung after it takes its own (`CLAUDE.md` "Where work runs").
@@ -48,7 +48,7 @@ Taken 2026-10-27 at `2cba1322`.
 |---|---|---|
 | RA Leave pages in the page map | 12 | `grep -c "/ra-leave/" residentialapps/spec/applications.md` |
 | Existing `leave/` package | none | `ls residentialapps/leave` |
-| Templates in Residential Operations today | 7 | `find residentialapps/ops/templates -name "*.html" \| wc -l` |
+| Templates in Residential Operations today | 7 | `find residentialapps/residentialops/templates -name "*.html" \| wc -l` |
 | RA Leave spec sections | 36 | `grep -c "^# [0-9]" residentialapps/docs/ra_leave_management_functional_spec_v0.4.md` |
 
 The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Request extra leave, application detail, My cover, Awaiting my decision, Decide and not registered; Decided, My history, Team leave and both Leave admin pages are drawn first in item 1.

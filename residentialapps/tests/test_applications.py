@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from residentialapps.ops.main import create_app as ops_app
+from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.supportlogs.main import create_app as supportlogs_app
 
 APPS = [("residentialops", ops_app), ("supportlogs", supportlogs_app)]

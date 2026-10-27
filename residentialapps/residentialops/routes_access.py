@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
-from residentialapps.ops import sample_data
-from residentialapps.ops.pages import ROSTER_TABS, placeholders_local_only, render
+from residentialapps.residentialops import sample_data
+from residentialapps.residentialops.pages import ROSTER_TABS, placeholders_local_only, render
 
 ROSTER_BACK = {
     "staff": {"label": "Staff roster", "path": "/rosters/staff"},
@@ -26,7 +26,7 @@ def person(request: Request, person_id: str) -> Response:
         raise HTTPException(status_code=404)
     return render(
         request,
-        "ops/access/person.html",
+        "residentialops/access/person.html",
         area="Rosters",
         tabs=ROSTER_TABS,
         person=found,
@@ -38,7 +38,7 @@ def person(request: Request, person_id: str) -> Response:
 def sys_admin(request: Request) -> Response:
     return render(
         request,
-        "ops/access/sys_admin.html",
+        "residentialops/access/sys_admin.html",
         area="Sys admin",
         sample=sample_data,
     )
@@ -49,4 +49,4 @@ def not_registered(request: Request) -> Response:
     # The preview of what a signed-in person Residential cannot link sees at
     # any path (`residentialapps/docs/residentialapps_identity.md` §6, step 4):
     # no switcher, no tabs, nothing about anyone else.
-    return render(request, "ops/access/not_registered.html", area="Residential Operations", areas=())
+    return render(request, "residentialops/access/not_registered.html", area="Residential Operations", areas=())

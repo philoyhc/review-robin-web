@@ -60,8 +60,8 @@ REGISTRY: Mapping[str, AppEntry] = {
     ),
     "residentialops": AppEntry(
         path="/residentialops",
-        factory="residentialapps.ops.main:create_app",
-        logger="residentialapps.ops",
+        factory="residentialapps.residentialops.main:create_app",
+        logger="residentialapps.residentialops",
         title="Residential Operations",
     ),
     "supportlogs": AppEntry(

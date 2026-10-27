@@ -128,11 +128,11 @@ def test_no_application_imports_the_host_entry_point() -> None:
 # import (`residentialapps/spec/architecture.md` "Import boundaries"; the
 # rest join with their packages).
 RESIDENTIAL_FORBIDDEN = {
-    "residentialapps.ops": ("residentialapps.supportlogs",),
-    "residentialapps.supportlogs": ("residentialapps.ops",),
+    "residentialapps.residentialops": ("residentialapps.supportlogs",),
+    "residentialapps.supportlogs": ("residentialapps.residentialops",),
     "residentialapps.web": (
         "residentialapps.core",
-        "residentialapps.ops",
+        "residentialapps.residentialops",
         "residentialapps.supportlogs",
         "residentialapps.leave",
         "residentialapps.events",
@@ -169,34 +169,34 @@ def residential_violations(root: Path = ROOT) -> list[str]:
 
 
 def test_neither_residential_application_imports_the_other() -> None:
-    assert (ROOT / "residentialapps" / "ops").is_dir()
+    assert (ROOT / "residentialapps" / "residentialops").is_dir()
     assert residential_violations() == []
 
 
 def test_a_planted_cross_application_import_is_caught(tmp_path: Path) -> None:
-    ops = tmp_path / "residentialapps" / "ops"
+    ops = tmp_path / "residentialapps" / "residentialops"
     logs = tmp_path / "residentialapps" / "supportlogs"
     ops.mkdir(parents=True)
     logs.mkdir()
     (ops / "leak.py").write_text("from residentialapps.supportlogs import main\n")
-    (logs / "leak.py").write_text("from ..ops import main\n")
+    (logs / "leak.py").write_text("from ..residentialops import main\n")
     (logs / "fine.py").write_text("from . import main\nimport residentialapps.core\n")
     assert residential_violations(tmp_path) == [
-        "residentialapps/ops/leak.py imports residentialapps.supportlogs",
-        "residentialapps/ops/leak.py imports residentialapps.supportlogs.main",
-        "residentialapps/supportlogs/leak.py imports residentialapps.ops",
-        "residentialapps/supportlogs/leak.py imports residentialapps.ops.main",
+        "residentialapps/residentialops/leak.py imports residentialapps.supportlogs",
+        "residentialapps/residentialops/leak.py imports residentialapps.supportlogs.main",
+        "residentialapps/supportlogs/leak.py imports residentialapps.residentialops",
+        "residentialapps/supportlogs/leak.py imports residentialapps.residentialops.main",
     ]
 
 
 def test_a_planted_import_from_shared_web_code_is_caught(tmp_path: Path) -> None:
     web = tmp_path / "residentialapps" / "web"
     web.mkdir(parents=True)
-    (web / "leak.py").write_text("from residentialapps.ops import pages\n")
+    (web / "leak.py").write_text("from residentialapps.residentialops import pages\n")
     (web / "fine.py").write_text("from residentialapps.web import urls\n")
     assert residential_violations(tmp_path) == [
-        "residentialapps/web/leak.py imports residentialapps.ops",
-        "residentialapps/web/leak.py imports residentialapps.ops.pages",
+        "residentialapps/web/leak.py imports residentialapps.residentialops",
+        "residentialapps/web/leak.py imports residentialapps.residentialops.pages",
     ]
 
 

@@ -13,7 +13,7 @@
 3. **No neutral Residential screens.** Cordware's landing page lists both applications; the neutral sign-in landing and switcher in `residentialapps/docs/support_logs_ui_spec_v0.1.md` are dropped.
 4. **Database URLs per mount.** `/residentialops` needs `RES_OPS_DATABASE_URL` only. `/supportlogs` needs both: it reads `residentialops` through the shared core as `residentialops_app`, and it is the only code that opens a `supportlogs` session.
 5. **Each application runs with Cordware alone.** `CORDWARE_APPS=supportlogs` and `CORDWARE_APPS=residentialops` each start and work, locally and in CI.
-6. **Registry entries** `residentialops` and `supportlogs`; logger prefixes `residentialapps.ops` and `residentialapps.supportlogs`, neither nested in the other; lifespan state keys prefixed per application.
+6. **Registry entries** `residentialops` and `supportlogs`; logger prefixes `residentialapps.residentialops` (`residentialapps.ops` until the package rename of 2026-10-27, author) and `residentialapps.supportlogs`, neither nested in the other; lifespan state keys prefixed per application.
 7. **Import boundaries** in RRW's existing `cordware/tests/test_import_boundary.py`, extended: neither application imports the other's routes; Leave and Events stay apart; only Support Logs opens `supportlogs`.
 8. **Fake roles** use one `RES_` prefix, over a role list reconciled across both functional specs (below), written in the first segment plan.
 9. **Alembic:** one `alembic.ini`, two histories (`residentialapps/alembic/residentialops/`, `residentialapps/alembic/supportlogs/`). The core's first migration lands in the scaffold segment.
