@@ -99,7 +99,7 @@ model (author, 2026-10-27):
 - **Each row ends in + and X**: a Secondary + adds a row below, a
   Destructive X removes the row. There is no fixed number of rows.
 - **Each list has a limit**, and its + says so once the list is full:
-  up to 5 levels and up to 10 appointments
+  up to 5 levels and up to 10 appointment types
   (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Measures, after RRW's rows** (measured in Chromium, 2026-10-27):
   16 px text in boxes padded 4 px 8 px, glyph buttons 32 px wide at
@@ -131,7 +131,7 @@ RRW's floor applies: text at 4.5:1 and control boundaries at 3:1 in both
 themes. Beyond it:
 
 - **Every control has an accessible name.** A control repeated per row
-  names its row: "Appointment 2: type", "Remove Level 3".
+  names its row: "Appointment type 2: type", "Remove Level 3".
 - **A column of buttons has a header**, visually hidden when the buttons
   speak for themselves.
 - **Color is never the only signal** (§3).

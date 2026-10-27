@@ -16,7 +16,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Iteration rung 7, 2026-10-27** (author's browser check): boxes, selects and buttons in the row builders all 30px tall; the tree's Floors column becomes *Area*, and Level and Area indent with Node; the tree says its appointees come from the two rosters.
 - **Iteration rung 8, 2026-10-27** (author): the tree's columns are Level, Dorms (was Area), Node, Appointed; node codes become abbreviation-hyphen-number (`RSLM-01`, `RF-01`, `RA-01`) in the sample data and the mock CSVs.
 - **Iteration rung 9, 2026-10-27** (author): only Level indents with the hierarchy; Dorms and Node sit flush, and no cell in the tree is bold.
-- **Iteration rung 10, 2026-10-27** (author): Node becomes *Post* on the tree and the Staff roster; the Unit's posts read Master, Admin-01; Appointments becomes *Appointment types*, with Master and Admin as abbreviations. Posts ruled in `residentialapps/guide/todo_master.md` (organization levels, amended). The appointment-types CSV is next.
+- **Iteration rung 10, 2026-10-27** (author): Node becomes *Post* on the tree and the Staff roster; the Unit's posts read Master, Admin-01; Appointments becomes *Appointment types*, with Master and Admin as abbreviations. Posts ruled in `residentialapps/guide/todo_master.md` (organization levels, amended). A backup is a dated second post (Grace Ho on RF-04 beside RF-02), so RA-04–RA-06 report to both. The appointment-types CSV is next.
 
 ## Decision
 

@@ -21,7 +21,7 @@
   <section class="card" aria-labelledby="ra-h">
     <div class="card-head">
       <h2 id="ra-h">RA roster <span class="count">· {{ count[0] }} RAs, {{ count[1] }} linked</span></h2>
-      <p class="sub">Reports to is derived from the tree; only dated backups are stored.</p>
+      <p class="sub">Reports to is derived from the tree: every RF on the RA's Precinct.</p>
     </div>
     <div class="table-wrap">
       <table>
@@ -35,7 +35,7 @@
               <td class="subtle">{{ ra.email }}</td>
               <td>{{ ra.neighborhood }} <span class="subtle">· {{ ra.precinct }}</span></td>
               <td>{{ ra.floors }}</td>
-              <td>{{ ra.reports_to }}{% if ra.backup %}<div><span class="chip chip-warn">Backup: {{ ra.backup }}</span></div>{% endif %}</td>
+              <td>{{ ra.reports_to }}</td>
               <td class="nowrap">{{ sample.RA_DATES }}</td>
               <td>{% if ra.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>

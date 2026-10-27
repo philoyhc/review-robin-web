@@ -26,12 +26,12 @@ class Node:
 
 TREE: tuple[Node, ...] = (
     Node("Master, Admin-01", 0, "Cypress A, Cypress B", "Sam Lee (Master), Rachel Yeo (Admin-01)"),
-    Node("RSLM-01", 1, "Cypress A, Cypress B", "Priya Raman (RSLM)"),
+    Node("RSLM-01", 1, "Cypress A, Cypress B", "Priya Raman"),
     Node("RF-01", 2, "Cypress A 04–12", "Daniel Koh"),
     Node("RA-01", 3, "Cypress A 04-05-06", "Chloe Lim"),
     Node("RA-02", 3, "Cypress A 07-08-09", "Ethan Wong"),
     Node("RA-03", 3, "Cypress A 10-11-12", "Hana Ito"),
-    Node("RF-02", 2, "Cypress A 13–15; Cypress B 01–06", "Mei Ling Tan"),
+    Node("RF-02, RF-04", 2, "Cypress A 13–15; Cypress B 01–06", "Mei Ling Tan (RF-02), Grace Ho (RF-04, to 31 Dec)"),
     Node("RA-04", 3, "Cypress A 13-14-15", "Isaac Goh"),
     Node("RA-05", 3, "Cypress B 01-02-03", "Jia Hui Ong"),
     Node("RA-06", 3, "Cypress B 04-05-06", "Kai Ng"),
@@ -96,7 +96,7 @@ STAFF: tuple[StaffMember, ...] = (
                 ("Support Logs · frontline",)),
     StaffMember("Tom Lim", "tom.lim@example.edu", "Other Staff", "—", "2026-09-15 –", True,
                 ("Support Logs · view (aggregate)",)),
-    StaffMember("Grace Ho", "grace.ho@example.edu", "RF", "RF-02 (backup)", "2026-10-01 – 2026-12-31", False,
+    StaffMember("Grace Ho", "grace.ho@example.edu", "RF", "RF-04", "2026-10-01 – 2026-12-31", False,
                 ("Team Viewer",)),
 )
 
@@ -110,19 +110,20 @@ class RosterRA:
     neighborhood: str
     precinct: str
     floors: str
-    reports_to: str
+    reports_to: str  # every RF on the RA's Precinct
     linked: bool
-    backup: str | None = None  # a dated backup reporting line, when one is set
 
+
+# Precinct RF-02 holds a second, dated post: a backup is its own post.
+TWO_RFS = "Mei Ling Tan, Grace Ho (to 31 Dec)"
 
 RAS: tuple[RosterRA, ...] = (
     RosterRA("Chloe Lim", "chloe.lim@example.edu", "RA-01", "RF-01", "Cypress A 04-05-06", "Daniel Koh", True),
     RosterRA("Ethan Wong", "ethan.wong@example.edu", "RA-02", "RF-01", "Cypress A 07-08-09", "Daniel Koh", True),
     RosterRA("Hana Ito", "hana.ito@example.edu", "RA-03", "RF-01", "Cypress A 10-11-12", "Daniel Koh", True),
-    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA-04", "RF-02", "Cypress A 13-14-15", "Mei Ling Tan", True),
-    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA-05", "RF-02", "Cypress B 01-02-03", "Mei Ling Tan", True,
-             "Grace Ho to 31 Dec"),
-    RosterRA("Kai Ng", "kai.ng@example.edu", "RA-06", "RF-02", "Cypress B 04-05-06", "Mei Ling Tan", True),
+    RosterRA("Isaac Goh", "isaac.goh@example.edu", "RA-04", "RF-02", "Cypress A 13-14-15", TWO_RFS, True),
+    RosterRA("Jia Hui Ong", "jiahui.ong@example.edu", "RA-05", "RF-02", "Cypress B 01-02-03", TWO_RFS, True),
+    RosterRA("Kai Ng", "kai.ng@example.edu", "RA-06", "RF-02", "Cypress B 04-05-06", TWO_RFS, True),
     RosterRA("Lucas Teo", "lucas.teo@example.edu", "RA-07", "RF-03", "Cypress B 07-08-09", "Arjun Nair", True),
     RosterRA("Maya Seah", "maya.seah@example.edu", "RA-08", "RF-03", "Cypress B 10-11-12", "Arjun Nair", True),
     RosterRA("Nur Aisyah", "nur.aisyah@example.edu", "RA-09", "RF-03", "Cypress B 13-14", "Arjun Nair", False),
@@ -240,9 +241,9 @@ AUDIT_RANGE = ("2026-10-01", "2026-10-26")
 
 # (when, event, kind, actor, detail)
 AUDIT_EVENTS = (
-    ("2026-10-26 09:42", "Backup reporting set", "Rosters", "Rachel Yeo",
-     "RA-05 (Jia Hui Ong) reports to Grace Ho until 2026-12-31"),
-    ("2026-10-26 09:40", "Person added", "Rosters", "Rachel Yeo", "Grace Ho · RF, backup for RF-02, from 2026-10-01"),
+    ("2026-10-26 09:42", "Post added", "Organization", "Rachel Yeo",
+     "RF-04 beside RF-02, 2026-10-01 to 2026-12-31"),
+    ("2026-10-26 09:40", "Person added", "Rosters", "Rachel Yeo", "Grace Ho · RF on RF-04, from 2026-10-01"),
     ("2026-10-25 16:05", "Appointment ended", "Rosters", "Sam Lee", "RA-10 · previous RA, ended 2026-10-24"),
     ("2026-10-24 11:18", "Structure imported", "Organization", "Rachel Yeo",
      "14 nodes: 0 new, 2 changed, 0 retired; 1 floor gap (Cypress A 16)"),

@@ -71,10 +71,10 @@ def test_the_organization_page_lists_levels_and_appointments_as_rows() -> None:
         assert f'aria-label="Remove Level {n}"' in page
     assert '<th scope="col">Title</th><th scope="col">Abbrev</th>' in page
     for n, (title, abbrev, _, _) in enumerate(sample_data.APPOINTMENTS, start=1):
-        assert f'aria-label="Appointment {n}: title" value="{title}"' in page
-        assert f'aria-label="Appointment {n}: abbreviation" value="{abbrev}"' in page
-        assert f'aria-label="Add an appointment below appointment {n}"' in page
-        assert f'aria-label="Remove appointment {n}"' in page
+        assert f'aria-label="Appointment type {n}: title" value="{title}"' in page
+        assert f'aria-label="Appointment type {n}: abbreviation" value="{abbrev}"' in page
+        assert f'aria-label="Add an appointment type below appointment type {n}"' in page
+        assert f'aria-label="Remove appointment type {n}"' in page
     for kind in sample_data.APPOINTMENT_TYPES:
         expected = sum(1 for _, _, k, _ in sample_data.APPOINTMENTS if k == kind)
         assert page.count(f"<option selected>{kind}</option>") == expected, kind
@@ -169,7 +169,7 @@ def test_the_ra_roster_derives_reporting_and_flags_a_vacancy() -> None:
     assert page.status_code == 200
     assert "· 9 RAs, 8 linked" in page.text
     assert "RA-10 has no RA." in page.text
-    assert "Backup: Grace Ho to 31 Dec" in page.text
+    assert "Mei Ling Tan, Grace Ho (to 31 Dec)" in page.text  # every RF on the Precinct
 
 
 def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
