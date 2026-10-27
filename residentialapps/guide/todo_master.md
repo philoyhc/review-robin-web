@@ -82,6 +82,19 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   3. **Dorms are a building and its floors joined by hyphens**, a building alone covering all its floors, several separated by `;` (`Cypress A 10-11-12; Cypress B 01-02`). Every floor is listed, so no gap hides in a range.
   4. **A post's abbreviation names an appointment type at that row's level**, and its number is the CSV's own or the next free one. A duplicate post is refused.
   5. **The structure file is the Unit's complete structure**, matched to what exists by post. The preview lists new, changed and to-retire nodes and posts, and floor gaps and overlaps (warnings); on confirm a missing node is end-dated, never deleted, and a post with a current appointment blocks the import until the appointment is ended or moved.
+- **Setup order and inter-table rules, ruled 2026-10-27** (author; screens in `residentialapps/spec/residentialops_ui.md` §7). Setup runs in four steps, each open once the one before it is done: appointment types and levels, the organization tree, the Staff roster, the RA roster. A value has one home; elsewhere it is a read-only pill (§6). Across the tables:
+  1. **An appointment type with posts** may be retitled freely; a new abbreviation or level is previewed with the posts it recodes, then confirmed; removing it is blocked while it has posts.
+  2. **A level with nodes** cannot be removed.
+  3. **A post or node someone holds** cannot be retired; the refusal names the holder and links to their roster.
+  4. **A node with children** cannot be retired until they are.
+  5. **Delete** is only for a row never appointed; anything with history is retired.
+  6. **A post holds one person at a time**: overlapping appointments to it are refused, and a backup is a second post.
+  7. **One person may hold several posts**, one Staff roster row each.
+  8. **A post's roster follows its type**: Staff types on the Staff roster, Student types on the RA roster.
+  9. **A Staff roster row names a Post**, or an Appointment only for a type with no posts (Other Staff); a row whose two disagree is refused.
+  10. **Moving someone to another post** ends the old appointment and starts the new one on the same date, so the history keeps both.
+  11. **A roster CSV is the complete roster**: a person it leaves out is end-dated, never deleted.
+  12. **An RA whose Precinct has no RF in post** reports to the RSLM, and Home's Checks flags it.
 
 - **Role names** (terms ruled 2026-10-26: *sys admin* the system role, *admin* the appointment, `residentialapps/docs/residentialapps_roles.md`): administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
