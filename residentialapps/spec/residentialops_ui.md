@@ -102,8 +102,8 @@ model (author, 2026-10-27):
   up to 5 levels and up to 10 appointments
   (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Measures, after RRW's rows** (measured in Chromium, 2026-10-27):
-  16 px text in boxes padded 4 px 8 px, 32 px glyph buttons at weight
-  500, 4 px cells and a rule under each row (`.rows`). Boxes, selects and
+  16 px text in boxes padded 4 px 8 px, glyph buttons 32 px wide at
+  weight 500, 4 px cells and a rule under each row (`.rows`). Boxes, selects and
   buttons are all 30 px tall (author, 2026-10-27; RRW's selects are
   32 px).
 - On a phone the list's table scrolls in its box rather than squeezing
