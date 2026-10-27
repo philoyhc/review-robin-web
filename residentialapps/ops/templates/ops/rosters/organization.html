@@ -67,16 +67,17 @@
 
       <section class="card card-pad" aria-labelledby="appts-h">
         <h2 id="appts-h">Appointments</h2>
-        <p class="sub">Up to five for {{ sample.UNIT_NAME }}, each with its type and the level it holds; the level list follows the levels in use. Reporting follows the tree.</p>
+        <p class="sub">Up to five for {{ sample.UNIT_NAME }}, each with its abbreviation, its type and the level it holds; the level list follows the levels in use. Reporting follows the tree.</p>
         <table class="appts">
           <thead>
-            <tr><th scope="col">Title</th><th scope="col">Type</th><th scope="col">Level</th></tr>
+            <tr><th scope="col">Title</th><th scope="col">Abbrev</th><th scope="col">Type</th><th scope="col">Level</th></tr>
           </thead>
           <tbody>
-            {% for title, kind, level in sample.APPOINTMENTS %}
+            {% for title, abbrev, kind, level in sample.APPOINTMENTS %}
               {% set n = loop.index %}
               <tr>
                 <td><input class="input" type="text" aria-label="Appointment {{ n }}: title" value="{{ title }}"{% if not title %} placeholder="e.g. Residential Student Life Manager"{% endif %} disabled></td>
+                <td><input class="input" type="text" aria-label="Appointment {{ n }}: abbreviation" value="{{ abbrev }}" disabled></td>
                 <td>
                   <select class="input" aria-label="Appointment {{ n }}: type" disabled>
                     <option value=""{% if not kind %} selected{% endif %}>—</option>
@@ -107,10 +108,10 @@
     <div class="side">
       <section class="card card-pad" aria-labelledby="labels-h">
         <h2 id="labels-h">Level labels</h2>
-        <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit. A Unit may use two levels rather than three; floors sit on the lowest level in use. Code keeps the slots; renaming is a label edit.</p>
+        <p class="sub">{{ sample.UNIT_NAME }}'s names for the levels below the whole Unit. Tick the levels in use: a Unit may use two rather than three, and floors sit on the lowest level in use. Code keeps the slots; renaming is a label edit.</p>
         {% for label in sample.LEVEL_LABELS %}
           <div class="field level-field">
-            <label class="check"><input type="checkbox" id="level-{{ loop.index }}-used" aria-label="Level {{ loop.index }} used"{% if sample.LEVELS_USED[loop.index0] %} checked{% endif %} disabled> Used</label>
+            <span class="check"><input type="checkbox" id="level-{{ loop.index }}-used" aria-label="Level {{ loop.index }} used"{% if sample.LEVELS_USED[loop.index0] %} checked{% endif %} disabled></span>
             <label for="level-{{ loop.index }}">Level {{ loop.index }}</label>
             <input id="level-{{ loop.index }}" class="input" type="text" value="{{ label }}" disabled>
           </div>
