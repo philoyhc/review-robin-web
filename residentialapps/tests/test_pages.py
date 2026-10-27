@@ -250,6 +250,7 @@ def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str
     csv_card = page[page.index('id="csv-h"'):]
     assert "Upload and preview</button>" in csv_card and "Export</button>" in csv_card
     assert "End appointment" in page
+    assert 'btn-unavailable" disabled aria-disabled="true" title="Edit takes one row"' in page
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
