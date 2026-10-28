@@ -147,11 +147,11 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 2026-10-27): **Home**, **Assignments** (Organization until 2026-10-28),
 **Staff roster**, **RA roster**.
 
-- **Home** (`/rosters/`) summarizes five numbered steps (author,
-  2026-10-28), each with its state, counts and a link: 1 the terms, 2 the
-  slots (Assignments' levels and slots), 3 the Staff roster, 4 the RA
-  roster (people and their appointments), 5 the assignments for a term,
-  and a Checks card listing the warnings across the steps. Until setup is done it opens on how to do it, after RRW's
+- **Home** (`/rosters/`) summarizes four numbered steps (author,
+  2026-10-28), each with its state, counts and a link: 1 Setup (the
+  levels, the slots and the terms; its link opens Terms until done, then
+  Assignments), 2 the Staff roster, 3 the RA roster (people and their
+  appointments), 4 the assignments for a term, and a Checks card listing the warnings across the steps. Until setup is done it opens on how to do it, after RRW's
   first-run lobby card (`spec/sessions_overview.md`).
 - **Assignments** (`/rosters/assignments`) shows one term at a time,
   chosen in a term card above the slots table (`?term=AY2026-2027.1`),
@@ -161,9 +161,9 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   before the slots stand lists none; a term without assignments says so
   and offers the copy. A partial-overlap warning, one notice per
   assignee, names the gap in days. Below the table, the Assignments CSV
-  card (its upload mode chosen in a select: New slots, Refresh a term, Add
-  a term, each described, and an Export of the term shown) beside the
-  levels.
+  card (its upload mode chosen by radio buttons, none chosen at first:
+  New slots, Refresh a term, Add a term, each with what it does; and an
+  Export of the term shown) beside the levels.
 - **Terms** (`/rosters/assignments/terms`) is a detour, after RRW's
   `/guide`: a "← Back to" link returns to the roster page named in
   `?return_to=`, else to Assignments. It lists each year's terms (up to 5,

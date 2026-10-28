@@ -305,7 +305,7 @@ def test_rosters_home_explains_setup_until_it_is_done() -> None:
     start = client.get("/rosters/?stage=start").text
     assert "<h1>Rosters and setup</h1>" in start
     assert "is not set up yet" in start
-    steps = ("1. Terms", "2. Slots", "3. Staff roster", "4. RA roster", "5. Assignments")
+    steps = ("1. Setup", "2. Staff roster", "3. RA roster", "4. Assignments")
     assert [start.index(step) for step in steps] == sorted(start.index(step) for step in steps)
     done = client.get("/rosters/").text
     assert "is not set up yet" not in done
@@ -374,7 +374,7 @@ def test_assignments_show_one_term_at_a_time() -> None:
     assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in page
     term_select = page.split('<select id="term"')[1].split(">")[0]
     assert "disabled" not in term_select  # live: navigation
-    assert '<select id="copy-from" class="input" disabled>' in page and '<select id="mode" class="input" disabled>' in page
+    assert '<select id="copy-from" class="input" disabled>' in page
     assert "No earlier term has assignments" in page
     upcoming = client.get("/rosters/assignments?term=AY2026-2027.2").text
     assert "No assignments yet for AY2026-2027, Term 2." in upcoming
@@ -394,10 +394,14 @@ def test_assignments_show_one_term_at_a_time() -> None:
 
 def test_an_assignments_upload_says_what_it_does() -> None:
     page = TestClient(ops_app()).get("/rosters/assignments").text
-    modes = page.split('id="mode"')[1].split("</select>")[0]
-    assert re.findall(r"<option>([^<]*)", modes) == [mode for mode, _ in sample_data.UPLOAD_MODES]
-    for mode, what in sample_data.UPLOAD_MODES:
-        assert f"<dt>{mode}</dt><dd>{escape(what)}</dd>" in page
+    assert "<legend>What the upload does</legend>" in page
+    radios = re.findall(r'<input type="radio"[^>]*>', page)
+    assert [re.search(r'value="([^"]*)"', r).group(1) for r in radios] == [m for m, _ in sample_data.UPLOAD_MODES]
+    assert all("disabled" in r and "checked" not in r for r in radios)  # none chosen until the operator picks one
+    for n, (mode, what) in enumerate(sample_data.UPLOAD_MODES, start=1):
+        assert f'aria-describedby="mode-{n}-what"' in radios[n - 1]  # a short name, the description apart
+        assert f'<label for="mode-{n}"><strong>{mode}</strong></label>' in page
+        assert f'<span id="mode-{n}-what" class="subtle">{escape(what)}</span>' in page
     assert "a past one is refused" in page
     assert ">Export AY2026-2027, Term 1</button>" in page
 
@@ -412,10 +416,14 @@ def test_home_names_the_current_term() -> None:
     assert "<dt>Current</dt><dd>AY2026-2027, Term 1 (Sem 1 + Winter break)</dd>" in home
     assert "<dt>Years</dt><dd>AY2025-2026, AY2026-2027</dd>" in home
     start = TestClient(ops_app()).get("/rosters/?stage=start").text
-    assert 'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start"' in start
+    assert 'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start" aria-label="Go to step 1, Setup"' in start
+    assert "Name the levels and list the area slots; set out each year&#39;s terms. Assignments are made for a term." in start
+    assert 'href="/rosters/assignments" aria-label="Go to step 1, Setup"' in home  # done: Setup opens on Assignments
 
 
 def test_home_gives_one_primary_step_at_a_time() -> None:
     page = TestClient(ops_app()).get("/rosters/?stage=slots").text
     steps = page[page.index('class="steps"'):]
     assert steps.count("btn btn-primary") == 1
+    assert 'btn btn-primary" href="/rosters/staff?stage=slots" aria-label="Go to step 2, Staff roster"' in steps
+    assert 'href="/rosters/assignments?stage=slots" aria-label="Go to step 1, Setup"' in steps  # done: no return_to

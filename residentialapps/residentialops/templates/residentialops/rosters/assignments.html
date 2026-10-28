@@ -107,15 +107,13 @@
       <h2 id="csv-h">Assignments CSV</h2>
       <p class="sub">One row per slot per term: its <code>Term</code> as the Terms page names it, its levels, top first (<code>Level1.Wing,Level2.Precinct,Level3.Neighborhood</code>, up to <code>Level5</code>), its Notes, then its Staff and RA by roster email, several separated by <code>;</code>. A file may cover several terms, each checked on its own; every term must be set up, and a past one is refused.</p>
       <pre class="sample">{{ sample.ASSIGNMENTS_CSV }}</pre>
-      <div class="field">
-        <label for="mode">What the upload does</label>
-        <select id="mode" class="input" disabled>
-          {% for mode, _ in sample.UPLOAD_MODES %}<option>{{ mode }}</option>{% endfor %}
-        </select>
-      </div>
-      <dl class="kv modes">
-        {% for mode, what in sample.UPLOAD_MODES %}<dt>{{ mode }}</dt><dd>{{ what }}</dd>{% endfor %}
-      </dl>
+      <fieldset class="modes">
+        <legend>What the upload does</legend>
+        {% for mode, what in sample.UPLOAD_MODES %}
+          {% set id = "mode-" ~ loop.index %}
+          <div class="mode"><input type="radio" id="{{ id }}" name="mode" value="{{ mode }}" aria-describedby="{{ id }}-what" disabled> <span><label for="{{ id }}"><strong>{{ mode }}</strong></label> <span id="{{ id }}-what" class="subtle">{{ what }}</span></span></div>
+        {% endfor %}
+      </fieldset>
       <div class="btnrow">
         <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
         <button type="button" class="btn btn-secondary" disabled>Export {{ term.label }}</button>

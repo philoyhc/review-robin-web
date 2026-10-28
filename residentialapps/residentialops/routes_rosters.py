@@ -16,8 +16,9 @@ router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 LEVEL_NAME = dict(enumerate(("Unit", *sample_data.LEVEL_LABELS)))
 
-# Setup runs in order (author, 2026-10-28): the terms, the slots, the
-# Staff roster, the RA roster, then the assignments for a term. A
+# Setup runs in order (author, 2026-10-28): Setup (the levels, the slots
+# and the terms), the Staff roster, the RA roster, then the assignments
+# for a term. A
 # placeholder previews three states with `?stage=` (`start`: nothing;
 # `slots`: terms and slots saved; `done`); the wiring items derive it.
 STAGES = ("start", "slots", "done")
