@@ -153,8 +153,17 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   roster (people and their appointments), 5 the assignments for a term,
   and a Checks card listing the warnings across the steps. Until setup is done it opens on how to do it, after RRW's
   first-run lobby card (`spec/sessions_overview.md`).
-- **Assignments** (`/rosters/assignments`) holds the slots table, then its
-  CSV beside the levels, and a Set up terms button.
+- **Assignments** (`/rosters/assignments`) shows one term at a time,
+  chosen in a term card above the slots table (`?term=AY2026-2027.1`),
+  opening on the term today falls in, else the next. The card also holds
+  Copy from (an earlier term's assignments, to edit) and Set up terms. A
+  past term is read-only, under a notice and with no Copy from; a term
+  before the slots stand lists none; a term without assignments says so
+  and offers the copy. A partial-overlap warning, one notice per
+  assignee, names the gap in days. Below the table, the Assignments CSV
+  card (its upload mode chosen in a select: New slots, Refresh a term, Add
+  a term, each described, and an Export of the term shown) beside the
+  levels.
 - **Terms** (`/rosters/assignments/terms`) is a detour, after RRW's
   `/guide`: a "← Back to" link returns to the roster page named in
   `?return_to=`, else to Assignments. It lists each year's terms (up to 5,
@@ -181,7 +190,9 @@ Until a screen is wired:
 - it shows a **Sample data** chip by its title, and its sample data lives
   in one module, deleted in one place by the item that wires it;
 - its controls are present and `disabled`, except a roster's tick boxes,
-  which open the expander so its shape can be checked (§6);
+  which open the expander so its shape can be checked (§6), and
+  Assignments' term selector and its Show term button, which are
+  navigation (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.

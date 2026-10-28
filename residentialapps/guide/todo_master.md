@@ -123,7 +123,7 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
   6. **Guard**: an assignee holds an appointment on the right roster. One covering the whole term qualifies; one wholly outside it does not; one covering part of it qualifies with a warning naming the gap in days ("starts 9 days into Term 1").
   7. **Assignments uploads take a mode, chosen on the upload card** and checked in the preview; every Term in the file must be defined, a wholly past one is refused, and each term in the file is checked on its own:
      - **New slots**: the file defines the slots from its first term on (earlier terms keep theirs); that term and every later one are wiped, with a warning naming them;
-     - **Refresh a term**: the slots must match those on file exactly; the current or a future term's assignments are replaced, with a warning;
+     - **Refresh a term**: the slots must match those on file exactly; the current term's assignments, or a future term's that already has some, are replaced, with a warning;
      - **Add a term**: the slots must match exactly; the term has no assignments yet.
   8. **Home's steps**: Terms, Slots, Staff roster, RA roster, Assignments for a term.
 - **Role names** (terms ruled 2026-10-26: *sys admin* the system role, *admin* the appointment, `residentialapps/docs/residentialapps_roles.md`): administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.

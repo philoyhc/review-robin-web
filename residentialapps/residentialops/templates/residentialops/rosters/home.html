@@ -75,6 +75,9 @@
           {% if not slot.staff or not slot.ras %}<li>{{ slot.neighborhood }} has no {{ "Staff" if not slot.staff else "RA" }}. <a href="{{ url('/rosters/assignments') }}">Assignments</a></li>{% endif %}
         {% endfor %}
         {% if sample.SLOTS | rejectattr("staff") | list | length == 0 and sample.SLOTS | rejectattr("ras") | list | length == 0 %}<li>Every slot has Staff and an RA.</li>{% endif %}
+        {% for name, slot, days in sample.late_starts(sample.CURRENT_TERM) %}
+          <li>{{ name }}'s appointment covers all but {{ days }} days of {{ sample.CURRENT_TERM.label }}; their assignment to {{ slot }} stands. <a href="{{ url('/rosters/assignments') }}">Assignments</a></li>
+        {% endfor %}
         <li>{{ staff_count[0] - staff_count[1] }} staff and {{ ra_count[0] - ra_count[1] }} RA have not signed in yet. <a href="{{ url('/rosters/staff') }}">Staff roster</a></li>
       </ul>
     </section>
