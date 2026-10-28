@@ -259,3 +259,24 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
     assert ">Appeals</th>" not in routing and "final approval is the same for the whole Unit" in routing
+
+
+def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -> None:
+    """A delegate stands in on every slot their person approves for, under
+    whichever approver the policy names, and only on the delegation's days;
+    the dashboard lists who stands in today."""
+    D = sample_leave.Delegate
+    in_dec = sample_leave.date(2026, 12, 10)
+    cypress = next(r for r in sample_leave.routes(in_dec) if r.rf == "Daniel Koh")
+    assert cypress.first == "Mei Ling Tan" and cypress.note == "Daniel Koh is on leave"
+    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Priya Raman", None, None, "is on leave"),))
+    monkeypatch.setitem(sample_leave.POLICY, "first_approver", "RSLM")
+    maple = [r for r in sample_leave.routes() if r.wing == "Maple"]
+    assert len(maple) == 3 and all(r.first == "Priya Raman" and r.delegate for r in maple)  # every slot Marcus approves
+    assert all(not r.delegate for r in sample_leave.routes() if r.wing != "Maple")
+    monkeypatch.setitem(sample_leave.POLICY, "first_approver", "Either")
+    assert next(
+        r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Priya Raman"
+    page = client().get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
+    assert "A delegate stands in for 3 Precincts today." in page
+    assert page.count("Marcus Tan is on leave; ") == 3

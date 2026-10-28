@@ -20,7 +20,7 @@
               <td>{{ route.ras }}</td>
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
-              <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.gap }}">Delegate</span><div class="subtle">{{ route.gap }}</div>{% endif %}</td>
+              <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
               <td class="nowrap">{{ leave.FINAL_APPROVER }}</td>
               {% if leave.POLICY.appeals %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
             </tr>
@@ -44,11 +44,11 @@
               <td><select class="input" aria-label="Delegate {{ n }}: delegate" disabled>{% for p in staff %}<option{% if p == d.delegate %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: from" value="{{ d.start.isoformat() if d.start }}" disabled></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: to" value="{{ d.end.isoformat() if d.end }}" disabled></td>
-              <td><input class="input" type="text" aria-label="Delegate {{ n }}: why" value="{{ d.reason }}" disabled></td>
+              <td><input class="input" type="text" aria-label="Delegate {{ n }}: why {{ d.acting_for }} cannot approve" value="{{ d.reason }}" disabled></td>
               <td class="nowrap">{% if d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
               <td><span class="row-actions">
-                <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a delegate below the one for {{ d.acting_for }}" title="Add a delegate below this one" disabled>+</button>
-                <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove the delegate for {{ d.acting_for }}" title="Remove this delegate" disabled>X</button>
+                <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a delegate below the one for {{ d.acting_for }}, {{ d.dates }}" title="Add a delegate below this one" disabled>+</button>
+                <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove the delegate for {{ d.acting_for }}, {{ d.dates }}" title="Remove this delegate" disabled>X</button>
               </span></td>
             </tr>
           {% endfor %}

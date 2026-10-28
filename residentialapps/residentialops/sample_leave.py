@@ -310,7 +310,7 @@ class Route:
     rslm: str
     first: str  # the first approver, by the policy, or a delegate
     delegate: bool
-    gap: str  # why routing is incomplete, or ""
+    note: str  # why a delegate stands in on this day, or ""
 
 
 @dataclass(frozen=True)
@@ -345,14 +345,15 @@ DELEGATES = (
 )
 
 
-def acting(person: str, day: date = TODAY) -> Delegate | None:
+def acting(person: str, day: date | None = None) -> Delegate | None:
+    day = day or TODAY
     return next((d for d in DELEGATES if d.acting_for == person and d.active(day)), None)
 
 
-def routes() -> tuple[Route, ...]:
+def routes(day: date | None = None) -> tuple[Route, ...]:
     """The approval chain per Precinct, derived from the current term's
     assignments and the policy's first approver, a delegate standing in for
-    an approver whose delegation is active today."""
+    an approver whose delegation is active on the day (default TODAY)."""
     staff = {p.name: p for p in sample_data.STAFF}
     found: dict[str, Route] = {}
     for slot in sample_data.SLOTS:
@@ -362,11 +363,11 @@ def routes() -> tuple[Route, ...]:
         rf = next(n for n in slot.staff if staff[n].abbrev == "RF")
         rslm = next(n for n in slot.staff if staff[n].abbrev == "RSLM")
         named = {"RF": [rf], "RSLM": [rslm], "Either": [rf, rslm]}[POLICY["first_approver"]]
-        standing_in = [d for d in map(acting, named) if d]
-        first = " or ".join(d.delegate if (d := acting(n)) else n for n in named)
-        gap = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
+        standing_in = [d for n in named if (d := acting(n, day))]
+        first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named)
+        note = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
         found[slot.precinct] = Route(
-            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), gap
+            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note
         )
     return tuple(found.values())
 
