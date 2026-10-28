@@ -43,7 +43,9 @@ def entitlements(request: Request) -> Response:
 
 @router.get("/ra-leave/admin/routing", name="residentialops_leave_admin_routing")
 def routing(request: Request) -> Response:
-    return _page(request, "routing.html", routes=sample_leave.routes())
+    staff = [p.name for p in sample_data.STAFF]
+    approvers = [p.name for p in sample_data.STAFF if p.abbrev in ("RF", "RSLM")]
+    return _page(request, "routing.html", routes=sample_leave.routes(), staff=staff, approvers=approvers)
 
 
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")

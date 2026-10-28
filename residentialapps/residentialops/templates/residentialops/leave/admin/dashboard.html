@@ -89,10 +89,10 @@
       </section>
       <section class="card card-pad" aria-labelledby="gaps-h">
         <h2 id="gaps-h">Approval chain</h2>
-        {% set gaps = leave.routes() | selectattr("gap") | list %}
-        <p class="sub">{% if gaps %}{{ gaps | length }} Precinct{{ "s" if gaps | length != 1 }} need{{ "s" if gaps | length == 1 }} a look.{% else %}Every Precinct has its approvers.{% endif %}</p>
+        {% set standing = leave.routes() | selectattr("delegate") | list %}
+        <p class="sub">{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% else %}Every Precinct approves through its own approvers today.{% endif %}</p>
         <ul class="plain">
-          {% for route in gaps %}<li><strong>{{ route.precinct }}</strong>: {{ route.gap }}; {{ route.first }} approves first meanwhile.</li>{% endfor %}
+          {% for route in standing %}<li><strong>{{ route.precinct }}</strong>: {{ route.note }}; {{ route.first }} approves first meanwhile.</li>{% endfor %}
         </ul>
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/routing') }}">Go to Approval chain</a>
       </section>
