@@ -158,8 +158,9 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 - **Terms** (`/rosters/assignments/terms`) is a detour, after RRW's
   `/guide`: a "← Back to" link returns to the roster page named in
   `?return_to=`, else to Assignments. It lists each year's terms (up to 5,
-  each a name and dates, never overlapping) with their status; a past
-  term is read-only. Its CSV card sits below.
+  each a name and dates, never overlapping) with their length in days and
+  their status, under an Add year Primary; each row but a past term's has
+  an Edit button, since a past term is read-only. Its CSV card sits below.
 - **The slots** open once terms exist; **both rosters** once the slots
   exist; the slots' Staff and RA cells once both rosters have people.
 - **A step not yet open is shown, not hidden**: its content renders

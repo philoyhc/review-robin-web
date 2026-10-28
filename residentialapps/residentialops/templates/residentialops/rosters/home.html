@@ -47,7 +47,7 @@
           <dl class="kv">
             {% if n == 1 %}
               <dt>Years</dt><dd>{% if state[1] == "done" %}{{ sample.TERMS | map(attribute="year") | unique | join(", ") }}{% else %}—{% endif %}</dd>
-              <dt>Current</dt><dd>{% if state[1] == "done" %}{{ term.label }} ({{ term.name }}){% else %}—{% endif %}</dd>
+              <dt>{{ "Current" if term.status == "Current" else "Next" }}</dt><dd>{% if state[1] == "done" %}{{ term.label }} ({{ term.name }}){% else %}—{% endif %}</dd>
             {% elif n == 2 %}
               <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
               <dt>Slots</dt><dd>{% if state[2] == "done" %}{{ counts[3] }}{% else %}—{% endif %}</dd>

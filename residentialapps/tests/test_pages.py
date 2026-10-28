@@ -348,8 +348,11 @@ def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:
     assert 'aria-label="Edit AY2025-2026, Term 1"' not in page  # past: no edit
     assert 'aria-label="Edit AY2026-2027, Term 1"' in page
     assert "Year,Term,Name,Start,End" in page
-    home = client.get("/rosters/assignments/terms?return_to=/rosters/").text
-    assert '<a class="back-link" href="/rosters/">&larr; Back to Home</a>' in home
+    for back, label in (("/rosters/", "Home"), ("/rosters/staff", "Staff roster"), ("/rosters/ras", "RA roster")):
+        page = client.get("/rosters/assignments/terms", params={"return_to": back}).text
+        assert f'<a class="back-link" href="{back}">&larr; Back to {label}</a>' in page
+    preview = client.get("/rosters/assignments/terms?return_to=/rosters/&stage=start").text
+    assert '<a class="back-link" href="/rosters/?stage=start">' in preview  # the preview carries through
     for elsewhere in ("https://example.com/", "//evil", "/rosters/people/x"):
         assert 'href="/rosters/assignments">&larr; Back to Assignments' in client.get(
             "/rosters/assignments/terms", params={"return_to": elsewhere}

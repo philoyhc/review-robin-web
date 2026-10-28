@@ -4,7 +4,7 @@
 {% block content %}
   {# A detour from Assignments, after RRW's `/guide?return_to=` (author,
      2026-10-28): the back link returns to the page it was opened from. #}
-  <a class="back-link" href="{{ url(back_path) }}">&larr; Back to {{ back_label }}</a>
+  <a class="back-link" href="{{ url(back_path) }}{% if stage != 'done' %}?stage={{ stage }}{% endif %}">&larr; Back to {{ back_label }}</a>
   <div class="ptitle">
     <h1>Terms</h1>
     <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/assignments/terms", stage) }}</span>

@@ -98,7 +98,8 @@ def test_the_terms_never_overlap_and_match_the_pages() -> None:
     assert max(years.values()) <= sample_data.MAX_TERMS
     for year in years:
         assert [t["Term"] for t in terms if t["Year"] == year] == [str(n) for n in range(1, years[year] + 1)]
-    assert sample_data.TERMS_CSV.splitlines()[1] in (DATA / "terms.csv").read_text().splitlines()
+    lines = (DATA / "terms.csv").read_text().splitlines()
+    assert all(line in lines for line in sample_data.TERMS_CSV.splitlines())
 
 
 def test_every_person_cell_names_someone_on_its_roster() -> None:
