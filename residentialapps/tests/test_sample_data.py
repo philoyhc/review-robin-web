@@ -19,6 +19,7 @@ HEADERS = {
     "ra_roster": [*ROSTER, "Student ID"],
     "organization_units": UNITS,
     "organization": [*UNITS, "Staff", "RA"],
+    "terms": ["Year", "Term", "Name", "Start", "End"],
     "quick_setup": [*UNITS, "Roster", "Name", "Email", "Appointment", "Abbrev", "From", "To", "Enterprise name",
                     "Student ID"],
 }
@@ -80,6 +81,24 @@ def test_the_roster_error_files_warn_on_one_identity_change_each() -> None:
         on_file = {p["Email"]: p for p in rows(roster)}
         row = next(r for r in rows(file) if r["Email"] == email)
         assert {k for k in row if row[k] != on_file[email][k]} == changed, file
+
+
+def test_the_terms_never_overlap_and_match_the_pages() -> None:
+    """Up to five a year, numbered in order, each ending before the next
+    starts (author, 2026-10-28)."""
+    from residentialapps.residentialops import sample_data
+
+    terms = rows("terms.csv")
+    assert [(t.year, str(t.number), t.name, str(t.start), str(t.end)) for t in sample_data.TERMS] == [
+        tuple(t.values()) for t in terms
+    ]
+    for earlier, later in zip(sample_data.TERMS, sample_data.TERMS[1:]):
+        assert earlier.end < later.start
+    years = Counter(t["Year"] for t in terms)
+    assert max(years.values()) <= sample_data.MAX_TERMS
+    for year in years:
+        assert [t["Term"] for t in terms if t["Year"] == year] == [str(n) for n in range(1, years[year] + 1)]
+    assert sample_data.TERMS_CSV.splitlines()[1] in (DATA / "terms.csv").read_text().splitlines()
 
 
 def test_every_person_cell_names_someone_on_its_roster() -> None:

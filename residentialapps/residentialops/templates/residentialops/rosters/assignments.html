@@ -1,20 +1,23 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import select_all, select_row, selection_script, stage_switch with context %}
-{% block title %}Organization{% endblock %}
+{% from "residentialops/rosters/_filters.html" import gate, select_all, select_row, selection_script, stage_switch with context %}
+{% block title %}Assignments{% endblock %}
 {% block content %}
   <div class="ptitle">
-    <h1>Organization</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/organization", stage) }}</span>
+    <h1>Assignments</h1>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/assignments", stage) }}</span>
   </div>
 
-  {# Organization by units (author, 2026-10-27): the Unit's area slots,
-     grouped by level, each with a Staff cell and an RA cell filled from the
-     rosters. Nothing about people carries a level. #}
+  {# Assignments, formerly Organization (author, 2026-10-28): the Unit's
+     area slots, grouped by level, and who is assigned to each, from the
+     rosters, for a term. Nothing about people carries a level. The term
+     selector and the upload modes come in the next slice. #}
+  {% call gate(terms_set, "Slots start from a term: set up the terms first.", "/rosters/assignments/terms?return_to=/rosters/assignments", "Set up terms") %}
   <section class="card" aria-labelledby="slots-h">
     <div class="card-head">
       <h2 id="slots-h">Slots {% if slots_open %}<span class="count">· {{ counts[3] }} {{ level_name[3] }}s in {{ counts[2] }} {{ level_name[2] }}s and {{ counts[1] }} {{ level_name[1] }}s</span>{% endif %}</h2>
       <p class="sub">One row per {{ level_name[3] }}, one RA's charge, under its {{ level_name[2] }} and {{ level_name[1] }}. Its Staff and RA cells offer current people from the <a href="{{ url('/rosters/staff') }}">Staff roster</a> and the <a href="{{ url('/rosters/ras') }}">RA roster</a> as you type; a cell takes several, comma separated, and a slot's RAs report to its Staff.</p>
       <div class="btnrow">
+        <a class="btn btn-secondary" href="{{ url('/rosters/assignments/terms') }}?return_to=/rosters/assignments{% if stage != 'done' %}&amp;stage={{ stage }}{% endif %}">Set up terms</a>
         <button type="button" class="btn btn-primary" disabled>Add slot</button>
       </div>
     </div>
@@ -30,7 +33,7 @@
         </thead>
         <tbody>
           {% if not slots_open %}
-            <tr><td colspan="7" class="subtle">No slots yet. Name the levels, then add a slot or upload the Organization CSV below.</td></tr>
+            <tr><td colspan="7" class="subtle">No slots yet. Name the levels, then add a slot or upload the Assignments CSV below.</td></tr>
           {% endif %}
           {% set seen = namespace(wing="", precinct="") %}
           {% for slot in (sample.SLOTS if slots_open else ()) %}
@@ -57,7 +60,7 @@
      author, 2026-10-27. #}
   <div class="bottom-row">
     <section class="card card-pad muted" aria-labelledby="csv-h">
-      <h2 id="csv-h">Organization CSV</h2>
+      <h2 id="csv-h">Assignments CSV</h2>
       <p class="sub">One row per slot: its levels, top first (<code>Level1.Wing,Level2.Precinct,Level3.Neighborhood</code>, up to <code>Level5</code>), its Notes, then its Staff and RA by roster email, several separated by <code>;</code>. Leave out Staff and RA to set up the slots alone. The file is {{ sample.UNIT_NAME }}'s whole organization: preview lists new, changed and retired slots before anything saves.</p>
       <pre class="sample">{{ sample.ORGANIZATION_CSV }}</pre>
       <div class="btnrow">
@@ -67,7 +70,7 @@
     </section>
     <section class="card card-pad" aria-labelledby="labels-h">
       <h2 id="labels-h">Levels</h2>
-      <p class="sub">{{ sample.UNIT_NAME }}'s names for its levels, top first, up to {{ sample.MAX_LEVELS }}; the last is the slot. The Organization CSV's headers set them too (<code>Level1.Wing</code>).</p>
+      <p class="sub">{{ sample.UNIT_NAME }}'s names for its levels, top first, up to {{ sample.MAX_LEVELS }}; the last is the slot. The Assignments CSV's headers set them too (<code>Level1.Wing</code>).</p>
       <div class="rows">
       {% for label in sample.LEVEL_LABELS %}
         <div class="field level-field">
@@ -83,5 +86,6 @@
       <button type="button" class="btn btn-primary" disabled>Save levels</button>
     </section>
   </div>
+  {% endcall %}
   {{ selection_script("Retire") }}
 {% endblock %}

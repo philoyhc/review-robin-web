@@ -16,10 +16,10 @@ router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 LEVEL_NAME = dict(enumerate(("Unit", *sample_data.LEVEL_LABELS)))
 
-# Setup runs in order (organization by units, author, 2026-10-27):
-# Organization's slots, the Staff roster, the RA roster, then each slot's
-# Staff and RA cells. A placeholder previews each state with `?stage=`;
-# the wiring items derive it from the data.
+# Setup runs in order (author, 2026-10-28): the terms, the slots, the
+# Staff roster, the RA roster, then the assignments for a term. A
+# placeholder previews three states with `?stage=` (`start`: nothing;
+# `slots`: terms and slots saved; `done`); the wiring items derive it.
 STAGES = ("start", "slots", "done")
 
 
@@ -34,6 +34,7 @@ def _context(request: Request) -> dict[str, Any]:
         "level_name": LEVEL_NAME,
         "stage": stage,
         "stages": STAGES,
+        "terms_set": stage != "start",
         "slots_open": stage != "start",
         "rosters_open": stage != "start",
         "cells_open": stage == "done",
@@ -52,9 +53,24 @@ def home(request: Request) -> Response:
     return render(request, "residentialops/rosters/home.html", **_context(request))
 
 
-@router.get("/rosters/organization", name="residentialops_rosters_organization")
-def organization(request: Request) -> Response:
-    return render(request, "residentialops/rosters/organization.html", **_context(request))
+@router.get("/rosters/assignments", name="residentialops_rosters_assignments")
+def assignments(request: Request) -> Response:
+    return render(request, "residentialops/rosters/assignments.html", **_context(request))
+
+
+# The Terms page is a detour, after RRW's `/guide?return_to=`: its back
+# link returns to the roster page it was opened from, else Assignments.
+RETURN_TO = {tab["path"]: tab["label"] for tab in ROSTER_TABS}
+
+
+@router.get("/rosters/assignments/terms", name="residentialops_rosters_terms")
+def terms(request: Request) -> Response:
+    back = request.query_params.get("return_to", "")
+    if back not in RETURN_TO:
+        back = "/rosters/assignments"
+    return render(
+        request, "residentialops/rosters/terms.html", back_path=back, back_label=RETURN_TO[back], **_context(request)
+    )
 
 
 @router.get("/rosters/staff", name="residentialops_rosters_staff")

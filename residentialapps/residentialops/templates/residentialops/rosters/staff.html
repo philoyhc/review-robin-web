@@ -7,8 +7,8 @@
     <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_switch("/rosters/staff", stage) }}</span>
   </div>
   {# Who the staff are and what they hold, nothing more (organization by
-     units, author, 2026-10-27): where each serves is set on Organization. #}
-  {% call gate(rosters_open, "The rosters open once Organization's slots are saved.", "/rosters/organization", "Go to Organization") %}
+     units, author, 2026-10-27): where each serves is set on Assignments. #}
+  {% call gate(rosters_open, "The rosters open once the slots are saved, on Assignments.", "/rosters/assignments", "Go to Assignments") %}
   {{ filter_bar([
        {"id": "appointment", "label": "Appointment", "options": sample.STAFF_APPOINTMENTS | map("first")},
        {"id": "signin", "label": "Sign-in", "options": ("Linked", "Not yet signed in")},
