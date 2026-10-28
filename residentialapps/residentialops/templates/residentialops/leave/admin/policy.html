@@ -110,9 +110,28 @@
     {# 6. Approvals. #}
     <section class="card card-pad" aria-labelledby="approvals-h">
       <h2 id="approvals-h">Approvals</h2>
-      <p class="sub">Every application takes a first and a final approval, by different people. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
-      {{ choice("first", "First approval by the slot's", leave.FIRST_APPROVERS, leave.POLICY.first_approver, {"RF": "The Residential Fellow in the slot's Staff cell", "RSLM": "The Residential Student Life Manager", "Either": "Whichever of the two decides first"}) }}
-      {{ choice("final", "Final approval by", leave.FINAL_APPROVERS, leave.POLICY.final_approver, {"Admin": "The Residential Admin (" ~ leave.FINAL_APPROVER ~ ")", "Master": "The Master (" ~ leave.APPEAL_DECIDER ~ ")", "RSLM": "The slot's Residential Student Life Manager, when the RF approves first"}) }}
+      <p class="sub">An application takes a first approval, unless none is needed, then a final one, by different people. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
+      {% macro checks(name, label, appointments, ticked) %}
+        <div class="checks" role="group" aria-label="{{ label }}">
+          {% for appointment, abbrev in appointments %}
+            <label class="check"><input type="checkbox" name="{{ name }}" value="{{ abbrev }}"{% if abbrev in ticked %} checked{% endif %} disabled> {{ appointment }}{% if abbrev != appointment %} ({{ abbrev }}){% endif %}</label>
+          {% endfor %}
+        </div>
+      {% endmacro %}
+      <fieldset class="modes">
+        <legend>First approval</legend>
+        <div class="mode"><input type="radio" id="first-slot" name="first" value="slot"{% if leave.POLICY.first == "slot" %} checked{% endif %} aria-describedby="first-slot-what" disabled> <div><label for="first-slot"><strong>By the RA's slot's</strong></label> <span id="first-slot-what" class="subtle">Tick one or more of the appointments on the RAs' slots; with more than one, whichever approves first</span>
+          {{ checks("first-types", "Appointments that may give first approval", leave.slot_appointments(), leave.POLICY.first_types) }}</div></div>
+        <div class="mode"><input type="radio" id="first-none" name="first" value="none"{% if leave.POLICY.first == "none" %} checked{% endif %} aria-describedby="first-none-what" disabled> <span><label for="first-none"><strong>No first approver needed</strong></label> <span id="first-none-what" class="subtle">Applications go straight to final approval</span></span></div>
+      </fieldset>
+      <fieldset class="modes">
+        <legend>Final approval</legend>
+        <div class="mode"><input type="radio" id="final-unit" name="final" value="unit"{% if leave.POLICY.final == "unit" %} checked{% endif %} aria-describedby="final-unit-what" disabled> <div><label for="final-unit"><strong>By the Unit's</strong></label> <span id="final-unit-what" class="subtle">Tick one or more Unit-level appointments; with more than one, whichever approves first</span>
+          {{ checks("final-types", "Appointments that may give final approval", leave.unit_appointments(), leave.POLICY.final_types) }}</div></div>
+        <div class="mode"><input type="radio" id="final-named" name="final" value="named"{% if leave.POLICY.final == "named" %} checked{% endif %} aria-describedby="final-named-what" disabled> <div><label for="final-named"><strong>By named staff</strong></label> <span id="final-named-what" class="subtle">One or more from the Staff roster, comma separated; whichever approves first</span>
+          <input class="input names" type="text" list="staff-names" aria-label="Staff who may give final approval" placeholder="Start typing a name" value="{{ leave.POLICY.final_names | join(', ') }}" disabled>
+          <datalist id="staff-names">{% for p in sample.STAFF %}<option value="{{ p.name }}">{{ p.appointment }}</option>{% endfor %}</datalist></div></div>
+      </fieldset>
       <dl class="kv">
         <dt>Appeals</dt><dd>{% if leave.POLICY.appeals %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
       </dl>

@@ -83,14 +83,14 @@
           <dt>Blackouts</dt><dd>{{ leave.BLACKOUTS | length }} this year</dd>
           <dt>Appeals</dt><dd>{{ "On, to the Master" if leave.POLICY.appeals else "Off" }}</dd>
           <dt>Cover</dt><dd>{% if leave.POLICY.cover_required %}{{ leave.POLICY.cover_mode }}; {{ leave.POLICY.cover_pool }}{% else %}Not required{% endif %}</dd>
-          <dt>Approvers</dt><dd>The slot's {{ leave.POLICY.first_approver }}, then the {{ leave.POLICY.final_approver }}</dd>
+          <dt>Approvers</dt><dd>{% if leave.POLICY.first == 'slot' %}The slot's {{ leave.first_label() }}{% else %}No first approval{% endif %}, then {{ 'the ' if leave.POLICY.final == 'unit' }}{{ leave.final_label() }}</dd>
         </dl>
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/policy') }}">Go to Policy</a>
       </section>
       <section class="card card-pad" aria-labelledby="gaps-h">
         <h2 id="gaps-h">Approval chain</h2>
         {% set standing = leave.routes() | selectattr("delegate") | list %}
-        <p class="sub">{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% else %}Every Precinct approves through its own approvers today.{% endif %}</p>
+        <p class="sub">{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% elif leave.POLICY.first == "none" %}No first approval is needed, so no delegate stands in.{% else %}Every Precinct approves through its own approvers today.{% endif %}</p>
         <ul class="plain">
           {% for route in standing %}<li><strong>{{ route.precinct }}</strong>: {{ route.note }}; {{ route.first }} approves first meanwhile.</li>{% endfor %}
         </ul>
