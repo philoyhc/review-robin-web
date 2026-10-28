@@ -366,3 +366,17 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))  # held on no slot
     card = c.get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
     assert "9 Precincts without a first approver." in card and card.count(">Gap</span>") == 9
+
+
+def test_stage_names_and_titles_follow_the_policy(monkeypatch) -> None:
+    c = client()
+    assert "<title>Leave dashboard" in c.get(ADMIN).text and "<h1>Leave dashboard</h1>" in c.get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    assert "Pending first approval" not in sample_leave.stages()
+    assert sample_leave.delegable()[:2] == ["Priya Raman", "Marcus Tan"]  # a kept delegation still reads
+    card = c.get(ADMIN + "routing").text.split('id="delegates-h"')[1]
+    assert card.split('aria-label="Delegate 1: acting for"')[1].split("</select>")[0].count("<option selected>Grace Ho</option>") == 1
+    monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))
+    steps = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0103"))]
+    assert "First approval by the first approver" in steps and not any("No one" in s for s in steps)

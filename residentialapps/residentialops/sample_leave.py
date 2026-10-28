@@ -399,9 +399,12 @@ DELEGATES = (
 
 
 def delegable() -> list[str]:
-    """Who a delegate may stand in for: the holders of an appointment the
-    policy ticks for first approval."""
-    return [p.name for p in sample_data.STAFF if POLICY["first"] == "slot" and p.abbrev in POLICY["first_types"]]
+    """Who a delegate may stand in for: the people on the slots holding an
+    appointment the policy ticks for first approval; with no first approval,
+    every slot approver, so a kept delegation still reads."""
+    on_slots = {n for s in sample_data.SLOTS for n in s.staff}
+    ticked = POLICY["first_types"] if POLICY["first"] == "slot" else {a for _, a in slot_appointments()}
+    return [p.name for p in sample_data.STAFF if p.name in on_slots and p.abbrev in ticked]
 
 
 def acting(person: str, day: date | None = None) -> Delegate | None:
