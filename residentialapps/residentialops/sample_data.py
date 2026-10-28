@@ -365,18 +365,19 @@ SYS_ADMINS = (
 
 GRANT_CANDIDATES = ("Priya Raman · RSLM", "Marcus Tan · RSLM", "Daniel Koh · RF")
 
-AUDIT_KINDS = ("Rosters", "Organization", "Access grants", "RA Leave", "RA Events")
+AUDIT_KINDS = ("Rosters", "Terms", "Assignments", "Access grants", "RA Leave", "RA Events")
 
-AUDIT_RANGE = ("2026-10-01", "2026-10-26")
+AUDIT_RANGE = ("2026-08-01", "2026-10-28")
 
 # (when, event, kind, actor, detail)
 AUDIT_EVENTS = (
-    ("2026-10-26 09:42", "Cell changed", "Organization", "Rachel Yeo",
-     "Maple 03-04 · Staff: + Grace Ho"),
+    ("2026-10-26 09:42", "Assignment changed", "Assignments", "Rachel Yeo",
+     "AY2026-2027, Term 1 · Maple 03-04 · Staff: + Grace Ho"),
     ("2026-10-25 16:05", "Appointment ended", "Rosters", "Sam Lee", "A previous RA, ended 2026-10-24"),
-    ("2026-10-24 11:18", "Organization imported", "Organization", "Rachel Yeo",
-     "30 slots: 0 new, 2 changed, 0 retired"),
-    ("2026-10-24 11:02", "Level labels changed", "Organization", "Rachel Yeo", "Level 2: “Zone” → “Precinct”"),
+    ("2026-10-24 11:18", "Assignments imported", "Assignments", "Rachel Yeo",
+     "Refresh a term · AY2026-2027, Term 1: 30 slots, 2 changed"),
+    ("2026-10-24 11:02", "Level labels changed", "Assignments", "Rachel Yeo", "Level 2: “Zone” → “Precinct”"),
     ("2026-08-01 08:05", "Roster imported", "Rosters", "Rachel Yeo", "Staff roster: 14 added; RA roster: 30 added"),
+    ("2026-08-01 08:02", "Terms imported", "Terms", "Rachel Yeo", "AY2025-2026 and AY2026-2027: 6 terms"),
     ("2026-08-01 08:00", "Sys admin granted", "Access grants", SUPER_ADMIN, "Sam Lee, Rachel Yeo"),
 )

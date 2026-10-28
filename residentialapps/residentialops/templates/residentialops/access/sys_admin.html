@@ -75,7 +75,7 @@
           {% for when, event, kind, actor, detail in sample.AUDIT_EVENTS %}
             <tr>
               <td class="nowrap subtle">{{ when }}</td>
-              <td><span class="chip {{ {'Rosters': 'chip-accent', 'Organization': 'chip-info', 'Access grants': 'chip-warn'}.get(kind, 'chip-mute') }}">{{ event }}</span></td>
+              <td><span class="chip {{ {'Rosters': 'chip-accent', 'Terms': 'chip-info', 'Assignments': 'chip-info', 'Access grants': 'chip-warn'}.get(kind, 'chip-mute') }}">{{ event }}</span></td>
               <td>{{ actor }}</td>
               <td>{{ detail }}</td>
             </tr>

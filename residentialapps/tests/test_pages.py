@@ -244,6 +244,8 @@ def test_sys_admin_lists_grants_and_the_audit_log() -> None:
     assert "<h1>Sys admin</h1>" in page
     assert page.count(">Revoke</button>") == len(sample_data.SYS_ADMINS)
     assert page.count("<tr>") - 2 == len(sample_data.SYS_ADMINS) + len(sample_data.AUDIT_EVENTS)
+    assert "Organization" not in page  # Assignments since 2026-10-28
+    assert ">Terms imported</span>" in page and ">Assignments imported</span>" in page
     assert "You see this read-only." in page  # no sign-in: not the super-admin
 
 
@@ -339,6 +341,7 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     client = TestClient(ops_app())
     chloe = client.get(f"/rosters/people/{CHLOE}").text
     assert chloe.count('<span class="pill-derived">') == 1 and "Cypress A 04-05-06</span>" in chloe
+    assert "in a Staff or RA cell, for AY2026-2027, Term 1." in chloe  # the term the pills are for
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
     assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in sam
