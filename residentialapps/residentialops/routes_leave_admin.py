@@ -44,9 +44,7 @@ def entitlements(request: Request) -> Response:
 @router.get("/ra-leave/admin/routing", name="residentialops_leave_admin_routing")
 def routing(request: Request) -> Response:
     staff = [p.name for p in sample_data.STAFF]
-    on_slots = {abbrev for _, abbrev in sample_leave.slot_appointments()}
-    approvers = [p.name for p in sample_data.STAFF if p.abbrev in on_slots]
-    return _page(request, "routing.html", routes=sample_leave.routes(), staff=staff, approvers=approvers)
+    return _page(request, "routing.html", routes=sample_leave.routes(), staff=staff, delegable=sample_leave.delegable())
 
 
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")

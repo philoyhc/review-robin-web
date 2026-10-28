@@ -9,9 +9,9 @@
 {%- endmacro %}
 
 {# The sample banner's period line, on every admin page. #}
-{% macro title(heading, leave) -%}
+{% macro title(heading, leave, extra="") -%}
   <div class="ptitle">
     <h1>{{ heading }}</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-mute">{{ leave.PERIOD_LABEL }}</span></span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-mute">{{ leave.PERIOD_LABEL }}</span>{{ extra }}</span>
   </div>
 {%- endmacro %}

@@ -51,7 +51,7 @@ Taken 2026-10-27 at `2cba1322`.
 | Templates in Residential Operations today | 7 | `find residentialapps/ops/templates -name "*.html" \| wc -l` (the package is `residentialops/` since 2026-10-27) |
 | RA Leave spec sections | 36 | `grep -c "^# [0-9]" residentialapps/docs/ra_leave_management_functional_spec_v0.4.md` |
 
-The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Request extra leave, application detail, My cover, Awaiting my decision, Decide and not registered; Decided, My history, Team leave and both Leave admin pages are drawn first in item 1.
+The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Request extra leave, application detail, My cover, Awaiting my decision, Decide and not registered; Decided, My history, Precinct leave and the five Leave admin pages are drawn first in item 1.
 
 ## Status
 
@@ -85,7 +85,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 
 ## Open questions
 
-- **Leave types and the day count** (§6, §9.1): which types the first cycle has, and whether weekends and public holidays count. The author decides before item 2; item 1 draws annual leave, counted in calendar days, as a placeholder.
+- **Leave types and the day count** (§6, §9.1): the leave types are ruled (Leave policy, 2026-10-28; item 1 draws personal and official leave); whether weekends and public holidays count is open. The author decides before item 2; item 1 counts calendar days as a placeholder.
 - **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B or 1C closes, whichever is first.
 
 ## Out of scope

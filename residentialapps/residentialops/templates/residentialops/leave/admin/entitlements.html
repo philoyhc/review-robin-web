@@ -4,7 +4,7 @@
 {% block title %}Entitlements{% endblock %}
 {% block content %}
   {{ title("Entitlements", leave) }}
-  <p class="sub">Each RA's entitlement by leave type for {{ leave.TERM.label }}, worked out from <a href="{{ url('/ra-leave/admin/policy') }}">Leave policy</a>: so far, for leave earned per month served. A term's days are available only within it and do not carry over. Available is entitlement plus adjustment, less approved and pending ordinary leave (spec §6). Extra leave the Master grants on appeal is kept apart and never charged here (§7.5).</p>
+  <p class="sub">Each RA's entitlement by leave type for {{ leave.TERM.label }}, worked out from <a href="{{ url('/ra-leave/admin/policy') }}">Leave policy</a>: so far, for leave earned per month served. A term's days are available only within it and do not carry over. Available is entitlement plus adjustment, less approved and pending ordinary leave (spec §6). {% if leave.POLICY.appeals %}Extra leave the Master grants on appeal is kept apart and never charged here (§7.5).{% endif %}</p>
 
   <section class="card card-pad muted filters" aria-label="Filter">
     <div class="filter-fields">
