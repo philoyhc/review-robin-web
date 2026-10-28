@@ -53,6 +53,10 @@ Taken 2026-10-27 at `2cba1322`.
 
 The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Request extra leave, application detail, My cover, Awaiting my decision, Decide and not registered; Decided, My history, Team leave and both Leave admin pages are drawn first in item 1.
 
+## Status
+
+- **Ladder reordered, 2026-10-28** (author): the admin pages (rung 4) are built first, the rest of RA Leave being downstream of their configuration; rungs 1–3 follow in order. Rung 4 lands first; the cumulative read moves to the item's last build rung.
+
 ## PR ladder
 
 **Item 1 — Screens and conventions.** Record the base SHA in rung 1's PR body.

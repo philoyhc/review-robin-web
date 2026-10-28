@@ -1,0 +1,17 @@
+{# RA Leave's shared pieces: a stage or cover status as a chip, never
+   color alone (`residentialapps/spec/residentialops_ui.md` §3). #}
+{% macro stage_chip(stage) -%}
+  <span class="chip {{ {'Approved': 'chip-ok', 'Rejected': 'chip-mute', 'Withdrawn': 'chip-mute', 'Appeal to the Master': 'chip-accent', 'Awaiting cover': 'chip-warn'}.get(stage, 'chip-info') }}">{{ stage }}</span>
+{%- endmacro %}
+
+{% macro cover_chip(status) -%}
+  <span class="chip {{ {'Confirmed': 'chip-ok', 'Declined': 'chip-warn'}.get(status, 'chip-mute') }}">{{ status }}</span>
+{%- endmacro %}
+
+{# The sample banner's period line, on every admin page. #}
+{% macro title(heading, leave) -%}
+  <div class="ptitle">
+    <h1>{{ heading }}</h1>
+    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-mute">{{ leave.PERIOD_LABEL }}</span></span>
+  </div>
+{%- endmacro %}
