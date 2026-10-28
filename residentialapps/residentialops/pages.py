@@ -29,7 +29,7 @@ AREAS: tuple[dict[str, str | None], ...] = (
 
 ROSTER_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": "/rosters/"},
-    {"label": "Organization", "path": "/rosters/organization"},
+    {"label": "Assignments", "path": "/rosters/assignments"},
     {"label": "Staff roster", "path": "/rosters/staff"},
     {"label": "RA roster", "path": "/rosters/ras"},
 )

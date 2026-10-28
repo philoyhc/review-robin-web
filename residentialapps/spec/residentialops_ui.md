@@ -2,7 +2,7 @@
 
 > **Built so far:** segment 1B item 1 built the chrome, the placeholder
 > screens of Rosters and setup and Sys admin, the row builders on the
-> Organization page, the roster tables and the slots, on sample data. Segment 1C item 1 adds RA Leave's
+> Assignments page, the roster tables, the slots and the Terms page, on sample data. Segment 1C item 1 adds RA Leave's
 > screens and extends this file from them.
 
 The conventions every Residential Operations screen follows. Where this
@@ -55,7 +55,7 @@ with the page.
   the host; initials, with the viewer's name beside them from 960 px, and their role
   once identity is wired (1B item 3).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
-  sideways on a phone. Rosters and setup's are Home, Organization, Staff
+  sideways on a phone. Rosters and setup's are Home, Assignments, Staff
   roster and RA roster (§7); RA Leave's, when built, are an RA's Home, Apply, Extra leave,
   My cover, History, and an approver's Awaiting my decision, Team leave,
   Decided; staff with Leave admin add its pages. A detail page adds a
@@ -92,7 +92,7 @@ perform is `disabled`, not hidden.
 
 ## 5. Row builders
 
-A list the viewer edits row by row — the levels on Organization — takes
+A list the viewer edits row by row — the levels on Assignments — takes
 RRW's Band 3 response-field rows as its model (author, 2026-10-27):
 
 - **Each row ends in + and X**: a Secondary + adds a row below, a
@@ -125,17 +125,17 @@ model (author, 2026-10-27):
   error, waits on its confirm tick box. Unticking every row closes it.
 - **The setup cards sit below the table, on one row** (`.bottom-row`,
   author, 2026-10-27): its CSV card takes two thirds from 960 px, beside
-  the levels (a third) on Organization and alone on a roster (author,
+  the levels (a third) on Assignments and alone on a roster (author,
   2026-10-28); below 960 px the cards stack at full width. A CSV card carries the sample, then Upload and
   preview and Export.
 - **A value has one home.** Where it is set, it is plain text and edited
   there; where another page repeats it, it is a pill (`.pill-derived`),
   read-only (author, 2026-10-27): a person's slots, on their detail page,
-  come from Organization's cells. Sign-in and access stay status chips (§3).
+  come from the Assignments page's cells. Sign-in and access stay status chips (§3).
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).
-- **Organization's slots table** takes the same tick boxes and expander,
+- **Assignments' slots table** takes the same tick boxes and expander,
   with Retire in place of End appointment. One row per slot, under its
   higher levels, whose names show on a group's first row only; a new top
   level opens under a heavier rule. Notes are small subtle text; the Staff
@@ -144,17 +144,25 @@ model (author, 2026-10-27):
 ## 7. Setup order
 
 Rosters and setup runs in order, after RRW's Setup tabs (author,
-2026-10-27): **Home**, **Organization**, **Staff roster**, **RA roster**.
+2026-10-27): **Home**, **Assignments** (Organization until 2026-10-28),
+**Staff roster**, **RA roster**.
 
-- **Home** (`/rosters/`) summarizes four numbered steps, each with its
-  state, counts and a link: 1 the slots (Organization's levels and slots),
-  2 the Staff roster, 3 the RA roster (people and their appointments), 4 the
-  slots' Staff and RA cells, and a Checks card listing the warnings across
-  the steps. Until setup is done it opens on how to do it, after RRW's
+- **Home** (`/rosters/`) summarizes five numbered steps (author,
+  2026-10-28), each with its state, counts and a link: 1 the terms, 2 the
+  slots (Assignments' levels and slots), 3 the Staff roster, 4 the RA
+  roster (people and their appointments), 5 the assignments for a term,
+  and a Checks card listing the warnings across the steps. Until setup is done it opens on how to do it, after RRW's
   first-run lobby card (`spec/sessions_overview.md`).
-- **Organization** holds the slots table, then its CSV beside the levels.
-- **Both rosters** open once the slots exist; the slots' Staff and RA
-  cells once both rosters have people.
+- **Assignments** (`/rosters/assignments`) holds the slots table, then its
+  CSV beside the levels, and a Set up terms button.
+- **Terms** (`/rosters/assignments/terms`) is a detour, after RRW's
+  `/guide`: a "← Back to" link returns to the roster page named in
+  `?return_to=`, else to Assignments. It lists each year's terms (up to 5,
+  each a name and dates, never overlapping) with their length in days and
+  their status, under an Add year Primary; each row but a past term's has
+  an Edit button, since a past term is read-only. Its CSV card sits below.
+- **The slots** open once terms exist; **both rosters** once the slots
+  exist; the slots' Staff and RA cells once both rosters have people.
 - **A step not yet open is shown, not hidden**: its content renders
   inactive (`.gated`, `inert`) under a note naming what to finish, with a
   link there.

@@ -51,7 +51,7 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 |---|---|---|
 | RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; Team Viewers, read-only; sys admins |
 | RA Events Proposals | `/ra-events/` | As RA Leave |
-| Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters with their appointments, and the organization: its levels and slots |
+| Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters with their appointments, and the assignments: the terms, levels and slots, and who is assigned to each slot for a term |
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |
 
 **Residential Operations page map** (author, 2026-10-26). Each page, what
@@ -81,7 +81,7 @@ Events has no spec yet, so its rows are provisional.
 | Review proposals | `/ra-events/review` | Provisional · responsive | — |
 | Events calendar | `/ra-events/` | Provisional · responsive | Provisional · responsive |
 | Events admin | `/ra-events/admin/` | Provisional: event policy · desktop-oriented | — |
-| Home, Organization, Staff roster, RA roster | `/rosters/`, `/rosters/organization`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
+| Home, Assignments, Terms, Staff roster, RA roster | `/rosters/`, `/rosters/assignments`, `/rosters/assignments/terms`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
 | Sys admin | `/sys-admin/` | Audit log; sys admin grants (super-admin) · desktop-oriented | — |
 
 - **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my

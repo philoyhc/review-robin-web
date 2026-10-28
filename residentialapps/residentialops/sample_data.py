@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import date
 
 UNIT_NAME = "Example College"
 
@@ -22,6 +23,49 @@ LEVEL_LABELS = ("Wing", "Precinct", "Neighborhood")
 
 # Up to five levels (author, 2026-10-27).
 MAX_LEVELS = 5
+
+# Terms, up to five a year, never overlapping; an assignment is made for a
+# term (author, 2026-10-28). The placeholders read "today" as this date.
+MAX_TERMS = 5
+TODAY = date(2026, 10, 28)
+
+
+@dataclass(frozen=True)
+class Term:
+    year: str
+    number: int
+    name: str
+    start: date
+    end: date
+
+    @property
+    def label(self) -> str:
+        return f"{self.year}, Term {self.number}"
+
+    @property
+    def days(self) -> int:
+        return (self.end - self.start).days + 1
+
+    @property
+    def status(self) -> str:
+        """Past (read-only), Current or Upcoming, against `TODAY`."""
+        if self.end < TODAY:
+            return "Past"
+        return "Current" if self.start <= TODAY else "Upcoming"
+
+
+TERMS: tuple[Term, ...] = tuple(
+    Term(year, n, name, date.fromisoformat(start), date.fromisoformat(end))
+    for year, n, name, start, end in (
+        ("AY2025-2026", 1, "Sem 1 + Winter break", "2025-08-04", "2026-01-11"),
+        ("AY2025-2026", 2, "Sem 2", "2026-01-12", "2026-05-10"),
+        ("AY2025-2026", 3, "Summer break", "2026-05-11", "2026-08-02"),
+        ("AY2026-2027", 1, "Sem 1 + Winter break", "2026-08-03", "2027-01-10"),
+        ("AY2026-2027", 2, "Sem 2", "2027-01-11", "2027-05-09"),
+        ("AY2026-2027", 3, "Summer break", "2027-05-10", "2027-08-01"),
+    )
+)
+CURRENT_TERM = next(t for t in TERMS if t.status != "Past")  # the page opens on it
 
 # A roster row names its appointment and its abbreviation; there are no
 # appointment types tables (author, 2026-10-28).
@@ -158,6 +202,11 @@ STAFF_CSV = """\
 Name,Email,Appointment,Abbrev,From,To,Enterprise name
 Sam Lee,sam.lee@example.edu,Master,Master,2026-08-01,,LEE SAM
 Priya Raman,priya.raman@example.edu,Residential Student Life Manager,RSLM,2026-08-01,,RAMAN PRIYA"""
+
+TERMS_CSV = """\
+Year,Term,Name,Start,End
+AY2026-2027,1,Sem 1 + Winter break,2026-08-03,2027-01-10
+AY2026-2027,2,Sem 2,2027-01-11,2027-05-09"""
 
 RA_CSV = """\
 Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID

@@ -49,11 +49,11 @@ def host_client() -> TestClient:
     return TestClient(host)
 
 
-def test_the_organization_page_lists_the_slots_with_staff_and_ra_cells() -> None:
-    page = TestClient(ops_app()).get("/rosters/organization")
+def test_the_assignments_page_lists_the_slots_with_staff_and_ra_cells() -> None:
+    page = TestClient(ops_app()).get("/rosters/assignments")
     assert page.status_code == 200
     assert "Sample data" in page.text
-    assert "<h1>Organization</h1>" in page.text
+    assert "<h1>Assignments</h1>" in page.text
     slots = page.text[page.text.index('id="slots-h"'):]
     headers = re.findall(r'<th scope="col">([^<]*)', slots.split("<tbody>")[0])
     assert headers == ["Wing", "Precinct", "Neighborhood", "Notes", "Staff", "RA"]
@@ -68,7 +68,7 @@ def test_the_organization_page_lists_the_slots_with_staff_and_ra_cells() -> None
 def test_levels_are_rows() -> None:
     """Levels are rows added with + and removed with X, after RRW's
     response-field rows; no fixed count."""
-    page = TestClient(ops_app()).get("/rosters/organization").text
+    page = TestClient(ops_app()).get("/rosters/assignments").text
     for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
         assert f'aria-label="Add a level below Level {n}"' in page
         assert f'aria-label="Remove Level {n}"' in page
@@ -106,7 +106,7 @@ def test_home_lists_each_roster_s_appointments() -> None:
 
 def test_each_page_shows_its_csv() -> None:
     client = TestClient(ops_app())
-    assert "Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA" in client.get("/rosters/organization").text
+    assert "Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA" in client.get("/rosters/assignments").text
     assert "Name,Email,Appointment,Abbrev,From,To,Enterprise name\n" in client.get("/rosters/staff").text
     assert "Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID" in client.get("/rosters/ras").text
 
@@ -286,13 +286,13 @@ def test_the_roster_scripts_parse(path: str, tmp_path: Path) -> None:
 
 
 def test_the_slots_tick_into_the_same_expander() -> None:
-    page = TestClient(ops_app()).get("/rosters/organization").text
+    page = TestClient(ops_app()).get("/rosters/assignments").text
     assert 'aria-label="Select all slots"' in page
     assert 'class="row-select" aria-label="Select Cypress A 04-05-06"' in page
     assert ">Retire</button>" in page and "End appointment" not in page
 
 
-def test_a_person_s_slots_are_derived_from_organization() -> None:
+def test_a_person_s_slots_are_derived_from_assignments() -> None:
     client = TestClient(ops_app())
     page = client.get(f"/rosters/people/{sample_data.person_id_of('priya.raman@example.edu')}").text
     assert page.count('<span class="pill-derived">Cypress') == 10  # every slot in her Wing
@@ -304,7 +304,7 @@ def test_rosters_home_explains_setup_until_it_is_done() -> None:
     start = client.get("/rosters/?stage=start").text
     assert "<h1>Rosters and setup</h1>" in start
     assert "is not set up yet" in start
-    steps = ("1. Slots", "2. Staff roster", "3. RA roster", "4. Staff and RA cells")
+    steps = ("1. Terms", "2. Slots", "3. Staff roster", "4. RA roster", "5. Assignments")
     assert [start.index(step) for step in steps] == sorted(start.index(step) for step in steps)
     done = client.get("/rosters/").text
     assert "is not set up yet" not in done
@@ -314,16 +314,16 @@ def test_rosters_home_explains_setup_until_it_is_done() -> None:
 
 def test_each_setup_step_is_inactive_until_its_prerequisite_exists() -> None:
     client = TestClient(ops_app())
-    start = client.get("/rosters/organization?stage=start").text
-    assert "Not open yet" not in start and "No slots yet." in start
+    start = client.get("/rosters/assignments?stage=start").text
+    assert '<div class="gated" inert>' in start and "Slots start from a term" in start
     for path in ("/rosters/staff", "/rosters/ras"):
         assert '<div class="gated" inert>' in client.get(f"{path}?stage=start").text
         opened = client.get(f"{path}?stage=slots").text
         assert "Not open yet" not in opened and "yet. Add" in opened
-    slots = client.get("/rosters/organization?stage=slots").text
+    slots = client.get("/rosters/assignments?stage=slots").text
     assert "The Staff and RA cells open once both rosters have people." in slots
     assert 'aria-label="Cypress A 04-05-06: Staff" value=""' in slots
-    assert "Not open yet" not in client.get("/rosters/organization").text
+    assert "Not open yet" not in client.get("/rosters/assignments").text
 
 
 def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
@@ -333,6 +333,40 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
     assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in sam
+
+
+def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:
+    """Terms (author, 2026-10-28): up to five a year, a past term read-only,
+    and a back link to the page it was opened from, else Assignments."""
+    client = TestClient(ops_app())
+    page = client.get("/rosters/assignments/terms").text
+    assert "<h1>Terms</h1>" in page
+    assert '<a class="back-link" href="/rosters/assignments">&larr; Back to Assignments</a>' in page
+    assert "· 6 in 2 years" in page
+    assert page.count("Past · read-only") == 3
+    assert page.count("chip-ok\">Current</span>") == 1
+    assert 'aria-label="Edit AY2025-2026, Term 1"' not in page  # past: no edit
+    assert 'aria-label="Edit AY2026-2027, Term 1"' in page
+    assert "Year,Term,Name,Start,End" in page
+    for back, label in (("/rosters/", "Home"), ("/rosters/staff", "Staff roster"), ("/rosters/ras", "RA roster")):
+        page = client.get("/rosters/assignments/terms", params={"return_to": back}).text
+        assert f'<a class="back-link" href="{back}">&larr; Back to {label}</a>' in page
+    preview = client.get("/rosters/assignments/terms?return_to=/rosters/&stage=start").text
+    assert '<a class="back-link" href="/rosters/?stage=start">' in preview  # the preview carries through
+    for elsewhere in ("https://example.com/", "//evil", "/rosters/people/x"):
+        assert 'href="/rosters/assignments">&larr; Back to Assignments' in client.get(
+            "/rosters/assignments/terms", params={"return_to": elsewhere}
+        ).text
+    assert 'href="/rosters/assignments/terms?return_to=/rosters/assignments"' in client.get("/rosters/assignments").text
+    assert "No terms yet." in client.get("/rosters/assignments/terms?stage=start").text
+
+
+def test_home_names_the_current_term() -> None:
+    home = TestClient(ops_app()).get("/rosters/").text
+    assert "<dt>Current</dt><dd>AY2026-2027, Term 1 (Sem 1 + Winter break)</dd>" in home
+    assert "<dt>Years</dt><dd>AY2025-2026, AY2026-2027</dd>" in home
+    start = TestClient(ops_app()).get("/rosters/?stage=start").text
+    assert 'href="/rosters/assignments/terms?return_to=/rosters/&amp;stage=start"' in start
 
 
 def test_home_gives_one_primary_step_at_a_time() -> None:
