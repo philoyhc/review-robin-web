@@ -501,12 +501,24 @@ def my_extra(ra: str = VIEWER) -> dict[str, int]:
     }
 
 
+def confirmation_needed(application: Application) -> bool:
+    """Whether the cover must confirm: always for an appeal (spec §7.4); for
+    ordinary leave only when the policy requires named and confirmed cover
+    (§12)."""
+    return application.appeal or (POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed")
+
+
 def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:
-    """Where an RA is named as cover (spec §23): to answer, agreed and to
-    come, and the rest."""
+    """Where an RA is named as cover (spec §23): to answer, covering now or
+    to come (agreed, or named where no answer is owed), and the rest."""
     named = [a for a in APPLICATIONS if a.cover == ra and a.stage not in ("Rejected", "Withdrawn")]
-    answer = tuple(a for a in named if a.cover_status == "Awaiting" and a.stage in OPEN_STAGES)
-    coming = tuple(a for a in named if a.cover_status == "Confirmed" and a.end >= TODAY)
+    answer = tuple(
+        a for a in named if a.cover_status == "Awaiting" and a.stage in OPEN_STAGES and confirmation_needed(a)
+    )
+    coming = tuple(
+        a for a in named if a not in answer and a.end >= TODAY
+        and (a.cover_status == "Confirmed" or (a.cover_status == "Awaiting" and not confirmation_needed(a)))
+    )
     past = tuple(a for a in named if a not in answer and a not in coming)
     return {"answer": answer, "coming": coming, "past": past}
 

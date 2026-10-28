@@ -19,7 +19,7 @@
         <h2 id="timeline-h">Timeline</h2>
         <ol class="plain">
           {% for when, what in steps %}<li>{% if when %}<span class="subtle">{{ when }}</span> · {% endif %}{{ what }}</li>{% endfor %}
-          {% if app.stage in leave.OPEN_STAGES %}<li class="subtle">Next: {{ "the Master's decision" if app.appeal else app.stage | lower }}</li>{% endif %}
+          {% if app.stage in leave.OPEN_STAGES %}<li class="subtle">Next: {% if app.cover_status == "Awaiting" and leave.confirmation_needed(app) %}awaiting cover confirmation from {{ app.cover }}, then {% endif %}{{ "the Master's decision" if app.appeal else app.stage | lower }}</li>{% endif %}
         </ol>
       </section>
     </div>
@@ -28,7 +28,7 @@
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Changed your plans?</h2>
           <p class="sub">Withdrawing ends the application; your cover and approvers are told.</p>
-          <button type="button" class="btn btn-danger" disabled>Withdraw</button>
+          <button type="button" class="btn btn-secondary" disabled>Withdraw</button>
         </section>
       {% endif %}
     </div>

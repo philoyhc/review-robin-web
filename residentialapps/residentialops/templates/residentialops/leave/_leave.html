@@ -26,6 +26,6 @@
 {% macro app_item(a, leave) -%}
   <li>
     <div class="item-head"><a class="strong" href="{{ url('/ra-leave/applications/' ~ a.id) }}">{{ a.dates }}</a>{{ stage_chip(a.stage) }}</div>
-    <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }}</div>
+    <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }} · sent {{ leave.short_date(a.submitted) }}</div>
   </li>
 {%- endmacro %}

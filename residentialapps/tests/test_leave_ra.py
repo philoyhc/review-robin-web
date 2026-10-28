@@ -75,3 +75,38 @@ def test_appeals_off_removes_the_extra_leave_route(monkeypatch) -> None:
     home = c.get(RA).text
     assert "/ra-leave/appeal" not in home and "kept apart from your entitlement" not in home
     assert "appeals are switched off" in c.get(RA + "appeal").text
+    assert "Leave in any blackout cannot be submitted while appeals are off" in c.get(RA + "apply").text
+
+
+def test_existing_extra_leave_shows_even_with_appeals_off(monkeypatch) -> None:
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    monkeypatch.setattr(sample_leave, "my_extra", lambda ra=None: {"granted": 0, "pending": 4})
+    home = client().get(RA).text
+    assert "kept apart from your entitlement" in home and "<dt>Pending</dt><dd>4</dd>" in home
+
+
+def test_cover_answers_follow_the_cover_setting(monkeypatch) -> None:
+    """Named only, or cover not required: no answer is owed for ordinary
+    leave (spec §12), so Ethan Wong's ask moves to Covering."""
+    detail = client().get(RA + "applications/L-0101").text
+    assert "Next: pending first approval" in detail
+    monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
+    asked = sample_leave.cover_asked()
+    assert asked["answer"] == () and [a.id for a in asked["coming"]] == ["L-0114", "L-0115"]
+    page = client().get(RA).text
+    assert 'id="ask-h"' not in page
+    monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named and confirmed")
+    monkeypatch.setitem(sample_leave.POLICY, "cover_required", False)
+    assert sample_leave.cover_asked()["answer"] == ()
+    assert "Covering RA (optional)" in client().get(RA + "apply").text
+
+
+def test_history_is_newest_first_and_unknown_ids_are_not_found(monkeypatch) -> None:
+    older = sample_leave.Application("L-0901", "Chloe Lim", "Personal leave", sample_leave.date(2026, 9, 1),
+                                     sample_leave.date(2026, 9, 2), "Ethan Wong", "Confirmed", "Approved",
+                                     sample_leave.date(2026, 8, 20))
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", sample_leave.APPLICATIONS + (older,))
+    history = client().get(RA + "history").text
+    assert re.findall(r'href="/ra-leave/applications/(L-\d+)"', history) == ["L-0101", "L-0901"]
+    assert "sent 27 Oct" in history
+    assert client().get(RA + "applications/L-9999").status_code == 404

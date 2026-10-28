@@ -51,8 +51,8 @@
             <dt>Pending</dt><dd>{{ r.pending }}</dd>
           </dl>
         {% endfor %}
-        {% if leave.POLICY.appeals %}
-          {% set extra = leave.my_extra(me) %}
+        {% set extra = leave.my_extra(me) %}
+        {% if leave.POLICY.appeals or extra.granted or extra.pending %}
           <h3 class="gap-above-sm">Extra leave</h3>
           <p class="subtle small">Granted by the Master on appeal, kept apart from your entitlement.</p>
           <dl class="kv"><dt>Granted</dt><dd>{{ extra.granted }}</dd><dt>Pending</dt><dd>{{ extra.pending }}</dd></dl>

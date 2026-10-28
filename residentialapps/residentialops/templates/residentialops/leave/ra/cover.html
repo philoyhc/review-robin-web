@@ -15,7 +15,7 @@
               <div class="subtle">{{ a.leave_type }} · {{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div>
               <div class="btnrow gap-above-sm">
                 <button type="button" class="btn btn-primary" aria-label="Confirm cover for {{ a.ra }}, {{ a.dates }}" disabled>Confirm</button>
-                <button type="button" class="btn btn-danger" aria-label="Decline cover for {{ a.ra }}, {{ a.dates }}" disabled>Decline</button>
+                <button type="button" class="btn btn-secondary" aria-label="Decline cover for {{ a.ra }}, {{ a.dates }}" disabled>Decline</button>
               </div>
             </li>
           {% endfor %}
@@ -24,7 +24,7 @@
     </section>
     <section class="card card-pad" aria-labelledby="coming-h">
       <h2 id="coming-h">Covering <span class="count">· {{ asked.coming | length }}</span></h2>
-      <p class="sub">Cover you have agreed to, now or to come.</p>
+      <p class="sub">Cover you have agreed to, or are named for where no answer is needed, now or to come.</p>
       {% if asked.coming %}
         <ul class="items">
           {% for a in asked.coming %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ stage_chip(a.stage) }}{% if a.start <= leave.TODAY %} · covering now{% endif %}</div></li>{% endfor %}
