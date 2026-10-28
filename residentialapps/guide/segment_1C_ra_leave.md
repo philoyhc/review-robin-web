@@ -31,7 +31,7 @@ Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prereq
 - **Placeholders answer only on a local run**, behind 1B's `placeholders_local_only`, until wired.
 - **Viewing as.** Placeholders cannot know the viewer's role before identity (1B item 3), so each page renders for one sample viewer named on it (an RA, Chloe Lim; a first approver, Daniel Koh; the admin, Rachel Yeo; the Master, Sam Lee). A labeled switch on the sample banner changes viewer; it is sample-only and goes with the sample module.
 - **Phone first:** a mobile-critical page is designed at 390 px and widened; a desktop-oriented one is designed at 1280 px and kept usable on a phone (`residentialapps/spec/applications.md`).
-- **Paths and names** follow the page map: `/ra-leave/…`, route names prefixed `residentialops_leave_`.
+- **Paths and names** follow the page map: `/ra-leave/…` for RAs, `/ra-leave/staff/…` for staff, `/ra-leave/admin/…` for sys admins (author, 2026-10-28); route names prefixed `residentialops_leave_`.
 
 ## Judgment calls — decided
 
@@ -57,10 +57,10 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 
 **Item 1 — Screens and conventions.** Record the base SHA in rung 1's PR body.
 
-1. **Home and the phone shell.** The Residential Operations home at `/` for an RA (balance, cover asked of you, my applications) and for an approver (what awaits them); the card columns that stack on a phone, the RA Leave tabs, the sample viewer switch; Home and RA Leave live in the switcher.
+1. **Landing and the phone shell.** ~~The Residential Operations home at `/` for an RA … and for an approver~~ (revised 2026-10-28) The landing at `/`, choosing an application; the RA home at `/ra-leave/` (balance, cover asked of you, my applications); the card columns that stack on a phone, the three audiences' tabs, the sample viewer switch; RA Leave live in the switcher.
 2. **RA pages.** Apply, Request extra leave, application detail (status timeline, withdraw), My cover, My history.
-3. **Approver pages.** Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, Team leave with its this-week summary.
-4. **Leave admin and conventions.** Cycles and entitlements, applications; `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
+3. **Staff pages** (`/ra-leave/staff/`). Staff home, Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, ~~Team leave~~ Precinct leave with its this-week summary.
+4. **Leave admin and conventions** (`/ra-leave/admin/`). ~~Cycles and entitlements, applications~~ Leave dashboard, Leave policy, Entitlements, Approval chain, Applications; `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
 5+. Iteration until approved, each with its own read.
 
 **Items 2–5** get their rungs when 1B closes, from what the core turned out to be.

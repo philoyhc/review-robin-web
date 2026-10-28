@@ -63,19 +63,27 @@ Events has no spec yet, so its rows are provisional.
 
 | Page | Path | Staff | RA |
 |---|---|---|---|
-| Home | `/` | Approvers land on what awaits them · mobile-critical | Balance, current applications, Apply (§8) · mobile-critical |
+| Landing | `/` | Choose an application the viewer reaches: RA Leave now, RA Events later; Rosters and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
 | Not registered | any path | First sign-in not yet linked · mobile-critical | The same · mobile-critical |
+| **RA Leave, RAs** | `/ra-leave/` | — | — |
+| RA home | `/ra-leave/` | — | Balance, cover requests to answer, current applications, Apply (§8) · mobile-critical |
 | Apply for leave | `/ra-leave/apply` | — | Leave type, dates, covering RA (§9) · mobile-critical |
 | Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15) · mobile-critical |
-| Application detail | `/ra-leave/applications/{id}` | Read from the queue or team view · responsive | Status timeline, withdraw · mobile-critical |
-| My cover | `/ra-leave/cover` | — | Confirm or decline being named as cover; notification links land here (§12, §23) · mobile-critical |
+| Application detail | `/ra-leave/applications/{id}` | — | Status timeline, withdraw · mobile-critical |
+| My cover | `/ra-leave/cover` | — | Acknowledge or decline being named as cover; notification links land here (§12, §23) · mobile-critical |
 | My history | `/ra-leave/history` | — | Own applications and leave (§19) · responsive |
-| Awaiting my decision | `/ra-leave/decide` | First approval (RF, RSLM), final approval (the admin), appeals (the Master), oldest first (§16, §24) · **mobile-critical** | — |
-| Decide | `/ra-leave/decide/{id}` | Entitlement, cover status, team context; Approve or Reject with remarks in a few taps (§13–§15) · **mobile-critical** | — |
-| Decided | `/ra-leave/decided` | The approver's own past decisions (§24) · responsive | — |
-| Team leave | `/ra-leave/team` | Who is away, cover, clashes; calendar and list (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
-| Leave admin: cycles and entitlements | `/ra-leave/admin/cycles` | Leave policy (leave types, balances, the approval route), cycle setup, entitlement import and preview, adjustments (§6, §21.1–§21.3) · desktop-oriented | — |
-| Leave admin: applications | `/ra-leave/admin/applications` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
+| **RA Leave, staff** | `/ra-leave/staff/` | — | — |
+| Staff home | `/ra-leave/staff/` | What awaits my decision; this week in my Precinct(s) (§24) · mobile-critical | — |
+| Awaiting my decision | `/ra-leave/staff/decide` | First approval, final approval (the admin), appeals (the Master), oldest first (§16, §24) · **mobile-critical** | — |
+| Decide | `/ra-leave/staff/decide/{id}` | Entitlement, cover status, Precinct context; Approve or Reject with remarks in a few taps; read-only once decided (§13–§15) · **mobile-critical** | — |
+| Decided | `/ra-leave/staff/decided` | The approver's own past decisions (§24) · responsive | — |
+| Precinct leave | `/ra-leave/staff/precinct` | Who is away, cover, clashes, pending, scoped by Assignments for the current term: an RF their Precinct(s), an RSLM their Wing, the Master and the admin the whole Unit, staff in no slot the whole Unit, read-only (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
+| **RA Leave, sys admins** | `/ra-leave/admin/` | — | — |
+| Leave dashboard | `/ra-leave/admin/` | The Unit: pending by stage, appeals awaiting the Master, overdue, clashes, routing gaps (§25) · desktop-oriented | — |
+| Leave policy | `/ra-leave/admin/policy` | Leave types; the entitlement period (a year or a term); whether cover must be confirmed; who approves first (the slot's RF, its RSLM, or either); whom an RA may name as cover (any RA, their Precinct's, their Wing's) (§6, §12, §21.1) · desktop-oriented | — |
+| Entitlements | `/ra-leave/admin/entitlements` | Each period's entitlements: import and preview, adjustments with a reason (§21.1, §21.3) · desktop-oriented | — |
+| Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the admin, appeals the Master), delegate overrides, gaps flagged (§21.2) · desktop-oriented | — |
+| Applications | `/ra-leave/admin/applications`, `…/{id}` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
 | Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
 | My proposals | `/ra-events/mine` | — | Provisional · responsive |
 | Review proposals | `/ra-events/review` | Provisional · responsive | — |
@@ -84,6 +92,13 @@ Events has no spec yet, so its rows are provisional.
 | Home, Assignments, Terms, Staff roster, RA roster | `/rosters/`, `/rosters/assignments`, `/rosters/assignments/terms`, `/rosters/staff`, `/rosters/ras` | Sys admins · desktop-oriented | — |
 | Sys admin | `/sys-admin/` | Audit log; sys admin grants (super-admin) · desktop-oriented | — |
 
+- **RA Leave by audience** (author, 2026-10-28): RAs' pages under
+  `/ra-leave/`, staff's under `/ra-leave/staff/`, sys admins' under
+  `/ra-leave/admin/`, each with its own home and tabs; RA Events follows the
+  same shape when built. The RA roster is the Rosters area's, not Leave
+  admin's.
+- **Configurable, not fixed** (author, 2026-10-28), on Leave policy: the
+  entitlement period, who approves first, and whom an RA may name as cover.
 - **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my
   decision and Decide must work one-handed on a phone. This raises the RA
   Leave spec's §2.5, which classed approver actions as responsive.
