@@ -83,16 +83,17 @@ def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
 
 
 def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
-    """Point 3: blackouts by week of a term, Sunday to Saturday, so they
-    carry across years; each either refuses leave or sends it to appeal."""
+    """Point 3: blackouts by week of a term, Sunday to Saturday, clipped to
+    the term, so they carry across years; each either refuses leave or
+    sends it to appeal."""
     page = client().get(ADMIN + "policy").text
     dates = [sample_leave.week_dates(b) for b in sample_leave.BLACKOUTS]
     assert [(d.isoformat(), e.isoformat()) for d, e in dates] == [
-        ("2026-08-02", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-10", "2027-01-16"),
-    ]
-    assert all(d.isoweekday() == 7 and e.isoweekday() == 6 for d, e in dates)  # Sunday to Saturday
+        ("2026-08-03", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-11", "2027-01-16"),
+    ]  # week 1's Sundays (2 Aug, 10 Jan) fall in the previous term, so are clipped
+    assert all(e.isoweekday() == 6 for _, e in dates)  # each ends on a Saturday
     rendered = re.findall(r'<td class="nowrap subtle">([^<]*)</td>', page)
-    assert rendered == ["2 Aug – 15 Aug", "15 Nov – 28 Nov", "10 Jan – 16 Jan"]
+    assert rendered == ["3 Aug – 15 Aug", "15 Nov – 28 Nov", "11 Jan – 16 Jan"]
     terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]
     assert re.findall(r"<option[^>]*>([^<]*)", terms) == ["Term 1", "Term 2", "Term 3"]
     effects = re.findall(r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only', page)
