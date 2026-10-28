@@ -73,6 +73,7 @@ COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 FIRST_APPROVERS = ("RF", "RSLM", "Either")
 FINAL_APPROVERS = ("Admin", "Master", "RSLM")
 POLICY = {
+    "appeals": True,  # on or off for the whole system (author, 2026-10-28)
     "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
     "cover_required": True,
     "cover_mode": "Named and confirmed",
