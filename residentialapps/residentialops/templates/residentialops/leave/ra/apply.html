@@ -1,0 +1,32 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import title, viewing with context %}
+{% block title %}Apply for leave{% endblock %}
+{% block content %}
+  {{ title("Apply for leave", leave, viewing(me)) }}
+  <p class="sub">Your approvers are worked out from your slot; you name your cover. Controls are inert until RA Leave is wired.</p>
+  <div class="split">
+    <div class="main">
+      <section class="card card-pad" aria-labelledby="form-h">
+        <h2 id="form-h">Your application</h2>
+        <div class="field-wide"><label for="ltype">Leave type</label>
+          <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
+        <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" disabled></div>
+        <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
+        <p class="subtle small">The days are counted for you. Leave in a Refused blackout cannot be submitted{% if leave.POLICY.appeals %}; in an Appeal-only one it goes to the Master as an appeal{% endif %}.</p>
+        <div class="field-wide"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
+          <input id="cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" aria-describedby="cover-what" disabled>
+          <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
+          <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your application waits at first approval until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
+        <div class="field-wide"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled></textarea></div>
+        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Submit</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}">Cancel</a></div>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="avail-h">
+        <h2 id="avail-h">Available to you</h2>
+        <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>{% endfor %}</dl>
+        {% if leave.POLICY.appeals %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}">Request extra leave</a> instead of a refusal.</p>{% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

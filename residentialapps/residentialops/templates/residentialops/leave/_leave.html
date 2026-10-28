@@ -8,10 +8,24 @@
   <span class="chip {{ {'Confirmed': 'chip-ok', 'Declined': 'chip-warn'}.get(status, 'chip-mute') }}">{{ status }}</span>
 {%- endmacro %}
 
-{# The sample banner's period line, on every admin page. #}
+{# The sample banner's period line, on every RA Leave page; an RA page adds
+   whom it is viewed as. #}
 {% macro title(heading, leave, extra="") -%}
   <div class="ptitle">
     <h1>{{ heading }}</h1>
     <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-mute">{{ leave.PERIOD_LABEL }}</span>{{ extra }}</span>
   </div>
+{%- endmacro %}
+
+{# Whom an RA page is drawn for, until identity is wired. #}
+{% macro viewing(me) -%}
+  <span class="chip chip-info">Viewing as {{ me }}</span>
+{%- endmacro %}
+
+{# One application as a phone-width list item, linked to its detail. #}
+{% macro app_item(a, leave) -%}
+  <li>
+    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/applications/' ~ a.id) }}">{{ a.dates }}</a>{{ stage_chip(a.stage) }}</div>
+    <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }}</div>
+  </li>
 {%- endmacro %}

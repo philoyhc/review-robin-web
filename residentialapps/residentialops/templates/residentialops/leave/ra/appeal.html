@@ -1,0 +1,39 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import title, viewing with context %}
+{% block title %}Request extra leave{% endblock %}
+{% block content %}
+  {{ title("Request extra leave", leave, viewing(me)) }}
+  {% if not leave.POLICY.appeals %}
+    <section class="card card-pad"><p class="sub">Extra leave is not offered: appeals are switched off on the Leave policy. Apply within your entitlement on <a href="{{ url('/ra-leave/apply') }}">Apply for leave</a>.</p></section>
+  {% else %}
+  <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Controls are inert until RA Leave is wired.</p>
+  <div class="split">
+    <div class="main">
+      <section class="card card-pad" aria-labelledby="form-h">
+        <h2 id="form-h">Your request</h2>
+        <div class="field-wide"><label for="ltype">Leave type</label>
+          <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
+        <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" disabled></div>
+        <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
+        <div class="field-wide"><label for="reason">Why you need it</label><textarea id="reason" class="input" rows="3" disabled></textarea></div>
+        <div class="field-wide"><label for="cover">Covering RA</label>
+          <input id="cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" aria-describedby="cover-what" disabled>
+          <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
+          <span id="cover-what" class="subtle small">An appeal always needs your cover to confirm (spec §7.4).</span></div>
+        <fieldset class="modes"><legend>The terms</legend>
+          <p class="sub">{{ leave.POLICY.appeal_terms }}</p>
+          <label class="check"><input type="checkbox" disabled> I accept these terms</label>
+        </fieldset>
+        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}">Cancel</a></div>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="count-h">
+        <h2 id="count-h">How it adds up</h2>
+        <p class="sub">Shown once you pick your dates: the days you ask for, what your entitlement covers, and the days needing the Master's approval (spec §7.2).</p>
+        <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} available</dd>{% endfor %}</dl>
+      </section>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}

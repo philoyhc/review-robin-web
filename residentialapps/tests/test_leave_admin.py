@@ -37,8 +37,8 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
     assert "Awaiting cover" not in page and "Awaiting cover" not in sample_leave.STAGES
     tiles = re.findall(r'href="([^"]*)">\s*<span class="tile-n">(\d+)</span>\s*<span class="tile-l">([^<]*)', page)
     assert [(n, label) for _, n, label in tiles] == [
-        ("4", "Pending first approval"), ("1", "Pending final approval"), ("1", "Appeal to the Master"),
-        ("2", "Cover not yet confirmed"),
+        ("5", "Pending first approval"), ("1", "Pending final approval"), ("1", "Appeal to the Master"),
+        ("3", "Cover not yet confirmed"),
     ]
     assert tiles[0][0] == "/ra-leave/admin/applications?stage=Pending%20first%20approval"
     assert tiles[3][0] == "/ra-leave/admin/applications?cover=unconfirmed"
@@ -55,11 +55,11 @@ def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() 
 def test_a_tile_opens_the_rows_it_counts() -> None:
     c = client()
     first = c.get(ADMIN + "applications", params={"stage": "Pending first approval"}).text
-    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', first) == ["L-0101", "L-0102", "L-0109", "L-0104"]
+    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', first) == ["L-0101", "L-0114", "L-0102", "L-0109", "L-0104"]
     assert "<option selected>Pending first approval</option>" in first
     cover = c.get(ADMIN + "applications?cover=unconfirmed").text
-    assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0109"]
-    assert "· 2 of 13" in cover
+    assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0109", "L-0114"]
+    assert "· 3 of 15" in cover
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:

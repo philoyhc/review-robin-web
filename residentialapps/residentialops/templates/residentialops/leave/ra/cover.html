@@ -1,0 +1,43 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, viewing with context %}
+{% block title %}My cover{% endblock %}
+{% block content %}
+  {{ title("My cover", leave, viewing(me)) }}
+  <p class="sub">Where another RA has named you as their cover (spec §23). Notification links land here.</p>
+  <div class="stack">
+    <section class="card card-pad" aria-labelledby="answer-h">
+      <h2 id="answer-h">To answer <span class="count">· {{ asked.answer | length }}</span></h2>
+      {% if asked.answer %}
+        <ul class="items">
+          {% for a in asked.answer %}
+            <li>
+              <div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div>
+              <div class="subtle">{{ a.leave_type }} · {{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div>
+              <div class="btnrow gap-above-sm">
+                <button type="button" class="btn btn-primary" aria-label="Confirm cover for {{ a.ra }}, {{ a.dates }}" disabled>Confirm</button>
+                <button type="button" class="btn btn-danger" aria-label="Decline cover for {{ a.ra }}, {{ a.dates }}" disabled>Decline</button>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}<p class="sub">Nothing to answer.</p>{% endif %}
+    </section>
+    <section class="card card-pad" aria-labelledby="coming-h">
+      <h2 id="coming-h">Covering <span class="count">· {{ asked.coming | length }}</span></h2>
+      <p class="sub">Cover you have agreed to, now or to come.</p>
+      {% if asked.coming %}
+        <ul class="items">
+          {% for a in asked.coming %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ stage_chip(a.stage) }}{% if a.start <= leave.TODAY %} · covering now{% endif %}</div></li>{% endfor %}
+        </ul>
+      {% else %}<p class="sub">None.</p>{% endif %}
+    </section>
+    <section class="card card-pad" aria-labelledby="past-h">
+      <h2 id="past-h">Earlier and declined <span class="count">· {{ asked.past | length }}</span></h2>
+      {% if asked.past %}
+        <ul class="items">
+          {% for a in asked.past %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ cover_chip(a.cover_status) }} · {{ stage_chip(a.stage) }}</div></li>{% endfor %}
+        </ul>
+      {% else %}<p class="sub">None.</p>{% endif %}
+    </section>
+  </div>
+{% endblock %}
