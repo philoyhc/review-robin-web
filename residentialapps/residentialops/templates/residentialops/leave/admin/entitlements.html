@@ -4,13 +4,13 @@
 {% block title %}Entitlements{% endblock %}
 {% block content %}
   {{ title("Entitlements", leave) }}
-  <p class="sub">Each RA's entitlement by leave type for {{ leave.PERIOD_LABEL }}, worked out from <a href="{{ url('/ra-leave/admin/policy') }}">Leave policy</a>: so far, for leave earned per month served. Available is entitlement plus adjustment, less approved and pending ordinary leave (spec §6). Extra leave the Master grants on appeal is kept apart and never charged here (§7.5).</p>
+  <p class="sub">Each RA's entitlement by leave type for {{ leave.TERM.label }}, worked out from <a href="{{ url('/ra-leave/admin/policy') }}">Leave policy</a>: so far, for leave earned per month served. A term's days are available only within it and do not carry over. Available is entitlement plus adjustment, less approved and pending ordinary leave (spec §6). Extra leave the Master grants on appeal is kept apart and never charged here (§7.5).</p>
 
   <section class="card card-pad muted filters" aria-label="Filter">
     <div class="filter-fields">
       <div class="filter filter-box"><label for="q">Filter</label><input id="q" class="input" type="text" placeholder="RA name or email" disabled></div>
       <div class="filter"><label for="ltype">Leave type</label><select id="ltype" class="input" disabled><option>All</option>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
-      <div class="filter"><label for="period">Period</label><select id="period" class="input" disabled><option>{{ leave.PERIOD_LABEL }}</option></select></div>
+      <div class="filter"><label for="term">Term</label><select id="term" class="input" disabled>{% for t in sample.TERMS if t.year == leave.PERIOD_LABEL %}<option{% if t == leave.TERM %} selected{% endif %}>{{ t.label }}</option>{% endfor %}</select></div>
     </div>
     <div class="btnrow"><button type="button" class="btn btn-secondary" disabled>Clear</button></div>
   </section>
