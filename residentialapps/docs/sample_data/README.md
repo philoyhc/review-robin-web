@@ -5,7 +5,7 @@ These are mock files for Example College. They are for trying the import screens
 - the Terms and Assignments CSVs, item 4;
 - the roster CSVs, item 5.
 
-In the error files, a refused row raises no warning, and a blank optional column (an enterprise name, a student ID) leaves the value on file as it is; a row repeating a known person's appointment and dates matches the row on file rather than adding one. These are the files' reading, for item 5 to confirm.
+In the error files, a refused row raises no warning, and a blank optional column (an enterprise name, a student ID) leaves the value on file as it is, as ruled for roster uploads (`residentialapps/guide/todo_master.md`, 2026-10-28, point 9; `residentialapps/spec/residentialops_ui.md` §7); a row repeating a known person's appointment and dates matches the row on file rather than adding one.
 
 Every person and address is fictional; no file here is imported into production. The units are the author's hostel breakdown (2026-10-27): 3 Wings, 9 Precincts and 30 Neighborhoods across Cypress, Maple and Willow. The Notes are each Neighborhood's room unit numbers, kept as text.
 
