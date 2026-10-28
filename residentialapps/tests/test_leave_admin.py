@@ -114,7 +114,9 @@ def test_policy_appeals_cover_and_approvals() -> None:
         radios = re.findall(rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page)
         assert [v for v, _ in radios] == list(options), name
         assert [v for v, c in radios if c] == [current], name
-    assert 'name="appeals"' not in page  # the appeal is always offered (spec §7.1–7.2)
+    on_off = re.findall(r'<input type="radio" id="appeals-\d" name="appeals" value="([^"]*)"( checked)?', page)
+    assert on_off == [("On", " checked" if sample_leave.POLICY["appeals"] else ""), ("Off", "" if sample_leave.POLICY["appeals"] else " checked")]
+    assert "refused while appeals are off" in page  # system-wide switch (author, 2026-10-28)
     assert sample_leave.POLICY["appeal_terms"] in page
     assert "unless the Master overrides it" in page and "no built-in default" in page
     assert "cannot be done in advance and banked" in page

@@ -82,7 +82,7 @@
         </table>
       </div>
       <ul class="plain subtle gap-above-sm">
-        <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal.</li>
+        <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal; refused while appeals are off.</li>
       </ul>
     </section>
 
@@ -90,8 +90,9 @@
     <section class="card card-pad" aria-labelledby="appeals-h">
       <h2 id="appeals-h">Appeals beyond entitlement</h2>
       <p class="sub">When an RA has no entitlement left, or applies into an Appeal-only blackout, they may ask the Master for extra leave. The Master decides personally; extra leave granted is kept apart from the entitlement (spec §7.5).</p>
+      {{ choice("appeals", "Appeals beyond entitlement are", ("On", "Off"), "On" if leave.POLICY.appeals else "Off", {"On": "Offered to an RA with no entitlement left, on the terms below", "Off": "Not offered anywhere: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
       <div class="field-wide">
-        <label for="appeal-terms">The terms shown to the RA when they appeal</label>
+        <label for="appeal-terms">The terms shown to the RA when they appeal, when appeals are on</label>
         <textarea id="appeal-terms" class="input" rows="2" disabled>{{ leave.POLICY.appeal_terms }}</textarea>
       </div>
       <p class="subtle small">Extra duties are taken on after the leave is granted. They cannot be done in advance and banked against a future appeal.</p>
