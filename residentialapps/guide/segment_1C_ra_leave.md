@@ -13,7 +13,7 @@ Ruling 13 puts RA Leave first among Residential's three pillars: it is the best 
 | Item | Lands | Waits on |
 |---|---|---|
 | 1. Screens and conventions | Every page-map RA Leave page as a placeholder, phone first; the UX conventions written down | — |
-| 2. Cycles and entitlements | The `leave/` pillar's models and migration; cycle setup, the cover-confirmation setting, entitlement import and adjustments; the admin cycles page wired | 1B closed |
+| 2. Cycles and entitlements | The `leave/` pillar's models and migration; the Leave policy (leave types and their rules, blackouts, appeals, cover, approvals), entitlements worked out from it and adjustments; the admin policy and entitlements pages wired | 1B closed |
 | 3. Apply and cover | Applications, validation, cover naming and confirmation; Apply, Request extra leave, My cover, application detail and RA home wired | Item 2 |
 | 4. Decisions | First and final approval, Master appeals, withdrawal; the queue, Decide and Decided wired | Item 3 |
 | 5. Team and records | Team leave, My history, Leave admin applications; the audit events | Item 4 |

@@ -81,9 +81,9 @@
         <dl class="kv">
           <dt>Leave types</dt><dd>{{ leave.LEAVE_TYPES | map(attribute="name") | join(", ") }}</dd>
           <dt>Blackouts</dt><dd>{{ leave.BLACKOUTS | length }} this year</dd>
-          <dt>Appeals</dt><dd>{{ "Allowed" if leave.POLICY.appeals else "Not allowed" }}</dd>
+          <dt>Appeals</dt><dd>To the Master, on stated terms</dd>
           <dt>Cover</dt><dd>{% if leave.POLICY.cover_required %}{{ leave.POLICY.cover_mode }}; {{ leave.POLICY.cover_pool }}{% else %}Not required{% endif %}</dd>
-          <dt>First approver</dt><dd>The slot's {{ leave.POLICY.first_approver }}</dd>
+          <dt>Approvers</dt><dd>The slot's {{ leave.POLICY.first_approver }}, then the {{ leave.POLICY.final_approver }}</dd>
         </dl>
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/policy') }}">Go to Policy</a>
       </section>

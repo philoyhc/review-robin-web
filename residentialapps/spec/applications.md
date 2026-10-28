@@ -80,9 +80,9 @@ Events has no spec yet, so its rows are provisional.
 | Precinct leave | `/ra-leave/staff/precinct` | Who is away, cover, clashes, pending, scoped by Assignments for the current term: an RF their Precinct(s), an RSLM their Wing, the Master and the admin the whole Unit, staff in no slot the whole Unit, read-only (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
 | **RA Leave, sys admins** | `/ra-leave/admin/` | — | — |
 | Leave dashboard | `/ra-leave/admin/` | The Unit: pending by stage, appeals awaiting the Master, overdue, clashes, routing gaps (§25) · desktop-oriented | — |
-| Leave policy | `/ra-leave/admin/policy` | Leave types needing an application (at least personal and official), each earned per term, per academic year or per month served and capped per year or term; blackout periods by week of a term, refused or appeal only; appeals beyond entitlement and their terms; cover required or not, named or confirmed, and from whom; first approver (the slot's RF, its RSLM, or either) and final approval (§6, §7, §12, §21.1; author, 2026-10-28) · desktop-oriented | — |
-| Entitlements | `/ra-leave/admin/entitlements` | Each period's entitlements: import and preview, adjustments with a reason (§21.1, §21.3) · desktop-oriented | — |
-| Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the admin, appeals the Master), delegate overrides, gaps flagged (§21.2) · desktop-oriented | — |
+| Leave policy | `/ra-leave/admin/policy` | Leave types needing an application (at least personal and official), each earned per term, per academic year or per month served and capped per year or term; blackout periods by week of a term, refused or appeal only; appeals beyond entitlement and their terms; cover required or not, named or confirmed, and from whom; first approver (the slot's RF, its RSLM, or either) and final approver (the admin, the Master, or the slot's RSLM) (§6, §7, §12, §21.1; author, 2026-10-28) · desktop-oriented | — |
+| Entitlements | `/ra-leave/admin/entitlements` | Each RA's entitlement worked out from the policy's rules, used and pending; adjustments with a reason, one at a time or by CSV (§21.1, §21.3) · desktop-oriented | — |
+| Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the policy's final approver, appeals the Master), delegate overrides, gaps flagged (§21.2) · desktop-oriented | — |
 | Applications | `/ra-leave/admin/applications`, `…/{id}` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
 | Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
 | My proposals | `/ra-events/mine` | — | Provisional · responsive |
@@ -97,8 +97,9 @@ Events has no spec yet, so its rows are provisional.
   `/ra-leave/admin/`, each with its own home and tabs; RA Events follows the
   same shape when built. The RA roster is the Rosters area's, not Leave
   admin's.
-- **Configurable, not fixed** (author, 2026-10-28), on Leave policy: the
-  entitlement period, who approves first, and whom an RA may name as cover.
+- **Configurable, not fixed** (author, 2026-10-28), on Leave policy: each
+  leave type's entitlement rule and cap, blackouts, cover, and who approves
+  first and finally.
 - **Approver pages are mobile-critical** (author, 2026-10-26): Awaiting my
   decision and Decide must work one-handed on a phone. This raises the RA
   Leave spec's §2.5, which classed approver actions as responsive.

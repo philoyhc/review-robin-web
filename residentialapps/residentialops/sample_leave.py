@@ -71,17 +71,18 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 FIRST_APPROVERS = ("RF", "RSLM", "Either")
+FINAL_APPROVERS = ("Admin", "Master", "RSLM")
 POLICY = {
-    "appeals": True,
     "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
     "cover_required": True,
     "cover_mode": "Named and confirmed",
     "cover_pool": "Same Precinct",
     "first_approver": "RF",
+    "final_approver": "Admin",
 }
 PERIOD_LABEL = "AY2026-2027"
 
-FINAL_APPROVER = "Rachel Yeo"  # the Residential Admin appointment
+FINAL_APPROVER = "Rachel Yeo"  # the Residential Admin appointment, the policy's final approver
 APPEAL_DECIDER = "Sam Lee"  # the Master
 
 # Cover is tracked beside the workflow, not as a stage of it: an
@@ -227,24 +228,38 @@ ADJUSTMENTS = {
 }
 
 
+def term_labels(year: str = PERIOD_LABEL) -> tuple[str, ...]:
+    return tuple(f"Term {t.number}" for t in sample_data.TERMS if t.year == year)
+
+
+def year_start(year: str = PERIOD_LABEL) -> date:
+    return min(t.start for t in sample_data.TERMS if t.year == year)
+
+
 def months_served(start: date) -> int:
-    """Whole months from an appointment's first day to TODAY."""
+    """Whole months served this year: from the later of the appointment's
+    first day and the year's, to TODAY, so earlier years' months are never
+    counted again."""
+    start = max(start, year_start())
     months = (TODAY.year * 12 + TODAY.month) - (start.year * 12 + start.month)
     return months - (1 if TODAY.day < start.day else 0)
 
 
 def entitlement(leave_type: LeaveType, appointment_start: date) -> int:
     """The year's entitlement so far: a per-term amount over the year's
-    terms, a yearly amount, or what the months served have earned, each
-    held to its cap."""
+    terms, a yearly amount, or what the months served have earned, held to
+    the cap. A cap per term holds the year to the cap times its terms.
+    Adjustments sit outside the cap: they are the admin's deliberate
+    exceptions, each with its reason."""
+    terms = sum(1 for t in sample_data.TERMS if t.year == PERIOD_LABEL)
+    cap = leave_type.cap * (terms if leave_type.cap_per == "term" else 1)
     if leave_type.accrual == "Per term":
-        terms = sum(1 for t in sample_data.TERMS if t.year == PERIOD_LABEL)
         days = leave_type.amount * terms
     elif leave_type.accrual == "Per academic year":
         days = leave_type.amount
     else:
         days = leave_type.amount * months_served(appointment_start)
-    return min(days, leave_type.cap)
+    return min(days, cap)
 
 
 def entitlement_rows() -> tuple[dict, ...]:

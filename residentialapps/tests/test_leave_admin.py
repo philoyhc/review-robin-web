@@ -74,7 +74,11 @@ def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
         assert re.findall(r"<option( selected)?>([^<]*)", earned) == [
             (" selected" if a == lt.accrual else "", a) for a in sample_leave.ACCRUALS
         ]
+        assert f'aria-label="Leave type {n}: abbreviation" value="{lt.abbrev}"' in page
+        assert f'aria-label="Leave type {n}: days earned" value="{lt.amount}"' in page
         assert f'aria-label="Leave type {n}: cap in days" value="{lt.cap}"' in page
+        per = page.split(f'aria-label="Leave type {n}: cap per"')[1].split("</select>")[0]
+        assert re.findall(r"<option selected>([^<]*)", per) == [lt.cap_per]
     assert "medical, compassionate" in page
 
 
@@ -87,7 +91,10 @@ def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
         ("2026-08-02", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-10", "2027-01-16"),
     ]
     assert all(d.isoweekday() == 7 and e.isoweekday() == 6 for d, e in dates)  # Sunday to Saturday
-    assert "2 Aug – 15 Aug" in page and "15 Nov – 28 Nov" in page
+    rendered = re.findall(r'<td class="nowrap subtle">([^<]*)</td>', page)
+    assert rendered == ["2 Aug – 15 Aug", "15 Nov – 28 Nov", "10 Jan – 16 Jan"]
+    terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]
+    assert re.findall(r"<option[^>]*>([^<]*)", terms) == ["Term 1", "Term 2", "Term 3"]
     effects = re.findall(r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only', page)
     assert [("Refused" if r else "Appeal only") for r, _ in effects] == [b.effect for b in sample_leave.BLACKOUTS]
 
@@ -98,18 +105,21 @@ def test_policy_appeals_cover_and_approvals() -> None:
     first and final approval."""
     page = client().get(ADMIN + "policy").text
     for name, options, current in (
-        ("appeals", ("Allowed", "Not allowed"), "Allowed"),
-        ("cover", ("Required", "Not required"), "Required"),
+        ("cover", ("Required", "Not required"), "Required" if sample_leave.POLICY["cover_required"] else "Not required"),
         ("cover-mode", sample_leave.COVER_MODES, sample_leave.POLICY["cover_mode"]),
         ("pool", sample_leave.COVER_POOLS, sample_leave.POLICY["cover_pool"]),
         ("first", sample_leave.FIRST_APPROVERS, sample_leave.POLICY["first_approver"]),
+        ("final", sample_leave.FINAL_APPROVERS, sample_leave.POLICY["final_approver"]),
     ):
         radios = re.findall(rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page)
         assert [v for v, _ in radios] == list(options), name
         assert [v for v, c in radios if c] == [current], name
-    assert "extra duties, as agreed with your RF" in page
+    assert 'name="appeals"' not in page  # the appeal is always offered (spec §7.1–7.2)
+    assert sample_leave.POLICY["appeal_terms"] in page
+    assert "unless the Master overrides it" in page and "no built-in default" in page
     assert "cannot be done in advance and banked" in page
     assert "The Residential Admin (Rachel Yeo)" in page and "The Master (Sam Lee), personally" in page
+    assert "<dt>Final approval</dt>" not in page  # a choice now, not fixed (author, 2026-10-28)
 
 
 def test_entitlements_follow_the_policy_rules() -> None:
@@ -141,7 +151,7 @@ def test_the_approval_chain_is_derived_from_assignments_and_the_policy() -> None
         assert r.first == (sample_leave.DELEGATES[r.precinct][0] if r.delegate else r.rf)
         assert f'aria-label="Set a delegate for {r.precinct}"' in page
     assert page.count(">Delegate</span>") == 1 and "Grace Ho has not signed in yet" in page
-    assert "for AY2026-2027, Term 1 and the policy's first approver (RF)" in page
+    assert "for AY2026-2027, Term 1 and the policy's first and final approvers (RF, Admin)" in page
 
 
 def test_applications_list_every_one_and_open_to_their_timeline() -> None:
@@ -171,3 +181,17 @@ def test_no_platform_only_date_format() -> None:
             continue
         assert not re.search(r"strftime\([\"'][^\"']*%-", path.read_text(encoding="utf-8")), path
     assert sample_leave.short_date(sample_leave.TODAY) == "28 Oct"
+
+
+def test_entitlement_rules_beyond_the_sample_types() -> None:
+    """The cap per term holds the year to the cap times its terms; a yearly
+    amount is granted at once; months served count from the year's start,
+    whole months only."""
+    lt = sample_leave.LeaveType
+    start = sample_leave.date(2026, 8, 1)
+    assert sample_leave.entitlement(lt("X", "X", "Per term", 5, 4, "term"), start) == 12
+    assert sample_leave.entitlement(lt("X", "X", "Per term", 5, 4, "year"), start) == 4
+    assert sample_leave.entitlement(lt("X", "X", "Per academic year", 10, 8, "year"), start) == 8
+    assert sample_leave.months_served(sample_leave.date(2024, 8, 1)) == 2  # a returning RA: this year only
+    assert sample_leave.months_served(sample_leave.date(2026, 9, 29)) == 0  # TODAY is the 28th
+    assert sample_leave.months_served(sample_leave.date(2026, 9, 28)) == 1
