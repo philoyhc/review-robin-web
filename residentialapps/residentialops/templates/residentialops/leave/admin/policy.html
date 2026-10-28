@@ -101,7 +101,7 @@
     {# 5. Cover (spec §12). #}
     <section class="card card-pad" aria-labelledby="cover-h">
       <h2 id="cover-h">Cover</h2>
-      <p class="sub">Whether an application must name a covering RA, whether that RA must confirm, and whom an RA may name. Appeals need confirmed cover unless the Master overrides it, on the record (spec §7.4).</p>
+      <p class="sub">Whether an application must name a covering RA, whether that RA must confirm, and whom an RA may name. {% if leave.POLICY.appeals %}Appeals need confirmed cover unless the Master overrides it, on the record (spec §7.4).{% endif %}</p>
       {{ choice("cover", "Cover for ordinary leave is", ("Required", "Not required"), "Required" if leave.POLICY.cover_required else "Not required") }}
       {{ choice("cover-mode", "When required, the covering RA is", leave.COVER_MODES, leave.POLICY.cover_mode, {"Named only": "Told, and need not confirm", "Named and confirmed": "Asked to confirm; the application waits at first approval until they do"}) }}
       {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}

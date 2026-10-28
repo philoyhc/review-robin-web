@@ -56,9 +56,10 @@ with the page.
   once identity is wired (1B item 3).
 - **Under the bar, the area's page tabs**, with short labels, scrolling
   sideways on a phone. Rosters and setup's are Home, Assignments, Staff
-  roster and RA roster (§7); RA Leave's, when built, are an RA's Home, Apply, Extra leave,
-  My cover, History, and an approver's Awaiting my decision, Team leave,
-  Decided; staff with Leave admin add its pages. A detail page adds a
+  roster and RA roster (§7); RA Leave's split by audience (`residentialapps/spec/applications.md`):
+  an RA's under `/ra-leave/`, staff's under `/ra-leave/staff/`, and sys
+  admins' under `/ra-leave/admin/` (Dashboard, Policy, Entitlements,
+  Approval chain, Applications), each set its own. A detail page adds a
   back link instead of a breadcrumb.
 - **The favicon** is the accent behind a white glyph, as inline SVG: a
   house for Residential Operations, a lined notepad for Support Logs

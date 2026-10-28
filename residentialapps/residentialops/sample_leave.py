@@ -213,7 +213,7 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
             ("Pranav Iyer", "Personal leave", _d("2026-10-29"), _d("2026-10-31"), "Qi Xuan Lim", "Confirmed", "Approved", _d("2026-10-15")),
             ("Hana Ito", "Official leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
-            ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Haikal Rahim", "Confirmed", "Rejected", _d("2026-10-02")),
+            ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Elise Tan", "Confirmed", "Rejected", _d("2026-10-02")),
             ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
             ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-19"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
             ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
@@ -230,8 +230,17 @@ def by_id(application_id: str) -> Application | None:
     return next((a for a in APPLICATIONS if a.id == application_id), None)
 
 
+def stages(open_only: bool = False) -> tuple[str, ...]:
+    """The stages the policy uses: no appeal stage while appeals are off,
+    no first-approval stage when none is needed."""
+    skip = {"Appeal to the Master"} if not POLICY["appeals"] else set()
+    if POLICY["first"] == "none":
+        skip.add("Pending first approval")
+    return tuple(s for s in (OPEN_STAGES if open_only else STAGES) if s not in skip)
+
+
 def pending_by_stage() -> tuple[tuple[str, int], ...]:
-    return tuple((stage, sum(1 for a in APPLICATIONS if a.stage == stage)) for stage in OPEN_STAGES)
+    return tuple((stage, sum(1 for a in APPLICATIONS if a.stage == stage)) for stage in stages(open_only=True))
 
 
 def cover_unconfirmed() -> tuple[Application, ...]:
@@ -269,7 +278,7 @@ def cover_while_away() -> tuple[Application, ...]:
 # Adjustments for TERM: (RA, leave type) -> (adjustment, reason); a wired
 # store keys them by term too.
 ADJUSTMENTS = {
-    ("Leon Chia", "Personal leave"): (2, "Granted by the Master's decision, 2026-08-03"),
+    ("Leon Chia", "Personal leave"): (2, "Correction: days charged twice for one application, 2026-08-03"),
 }
 
 
@@ -341,7 +350,7 @@ def entitlement_rows() -> tuple[dict, ...]:
 
 ENTITLEMENTS_CSV = """\
 Email,Leave type,Adjustment,Reason
-leon.chia@example.edu,Personal leave,2,Granted by the Master's decision"""
+leon.chia@example.edu,Personal leave,2,Correction: days charged twice for one application"""
 
 
 @dataclass(frozen=True)
@@ -389,6 +398,12 @@ DELEGATES = (
 )
 
 
+def delegable() -> list[str]:
+    """Who a delegate may stand in for: the holders of an appointment the
+    policy ticks for first approval."""
+    return [p.name for p in sample_data.STAFF if POLICY["first"] == "slot" and p.abbrev in POLICY["first_types"]]
+
+
 def acting(person: str, day: date | None = None) -> Delegate | None:
     day = day or TODAY
     return next((d for d in DELEGATES if d.acting_for == person and d.active(day)), None)
@@ -424,23 +439,26 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
 
 def timeline(application: Application) -> tuple[tuple[str, str], ...]:
     """The application's steps so far, as (when, what)."""
-    steps = [(application.submitted.isoformat(), f"Submitted by {application.ra}")]
+    submitted = short_date(application.submitted)
+    steps = [(submitted, f"Submitted by {application.ra}")]
     if application.cover_status == "Confirmed":
-        steps.append((application.submitted.isoformat(), f"Cover confirmed by {application.cover}"))
+        steps.append((submitted, f"Cover confirmed by {application.cover}"))
     elif application.cover_status == "Declined":
-        steps.append((application.submitted.isoformat(), f"Cover declined by {application.cover}"))
+        steps.append((submitted, f"Cover declined by {application.cover}"))
+    # The sample reads today's chain; a wired timeline records who decided.
     route = next(r for r in routes() if r.precinct == application.precinct)
+    first = "the first approver" if route.gap else route.first.split(" or ")[0]
     if application.appeal:
         steps.append(("", f"Sent to {APPEAL_DECIDER} as an extra-leave appeal"))
         if application.stage == "Approved":
             steps.append(("", f"Granted by {APPEAL_DECIDER}"))
         return tuple(steps)
     if application.stage in ("Pending final approval", "Approved") and POLICY["first"] == "slot":
-        steps.append(("", f"First approval by {route.first}"))
+        steps.append(("", f"First approval by {first}"))
     if application.stage == "Approved":
         steps.append(("", f"Final approval by {final_decider()}"))
     if application.stage == "Rejected":
-        steps.append(("", f"Rejected by {route.first if POLICY['first'] == 'slot' else final_decider()}"))
+        steps.append(("", f"Rejected by {first if POLICY['first'] == 'slot' else final_decider()}"))
     if application.stage == "Withdrawn":
         steps.append(("", f"Withdrawn by {application.ra}"))
     return tuple(steps)

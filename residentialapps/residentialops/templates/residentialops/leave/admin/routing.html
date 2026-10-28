@@ -11,13 +11,13 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.POLICY.appeals %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
+        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.POLICY.appeals %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
         <tbody>
           {% for route in routes %}
             <tr>
               <td class="nowrap">{{ route.wing }}</td>
               <td class="strong nowrap">{{ route.precinct }}</td>
-              <td>{{ route.ras }}</td>
+              <td class="num">{{ route.ras }}</td>
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
               <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
@@ -40,7 +40,7 @@
           {% for d in leave.DELEGATES %}
             {% set n = loop.index %}
             <tr>
-              <td><select class="input" aria-label="Delegate {{ n }}: acting for" disabled>{% for p in approvers %}<option{% if p == d.acting_for %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
+              <td><select class="input" aria-label="Delegate {{ n }}: acting for" disabled>{% for p in delegable %}<option{% if p == d.acting_for %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
               <td><select class="input" aria-label="Delegate {{ n }}: delegate" disabled>{% for p in staff %}<option{% if p == d.delegate %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: from" value="{{ d.start.isoformat() if d.start }}" disabled></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: to" value="{{ d.end.isoformat() if d.end }}" disabled></td>

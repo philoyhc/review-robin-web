@@ -137,7 +137,7 @@ def test_entitlements_follow_the_policy_rules() -> None:
     assert rows["Umairah Salleh", "Official leave"]["entitlement"] == 2
     assert sample_leave.months_served(sample_leave.date(2026, 9, 1)) == 1
     assert rows["Gwen Ho", "Personal leave"]["pending"] == 0  # her appeal is extra leave, not charged (§7.5)
-    assert "+2<div class=\"subtle\">Granted by the Master" in page  # the reason, visible
+    assert "+2<div class=\"subtle\">Correction: days charged twice" in page  # the reason, visible; never extra leave (§7.5, §21.3)
     assert "Email,Leave type,Adjustment,Reason" in page
     assert f"<option selected>{sample_leave.TERM.label}</option>" in page and "do not carry over" in page
     assert page.count(">Adjust</button>") == len(rows)
@@ -331,3 +331,38 @@ def test_approvals_edge_cases(monkeypatch) -> None:
     routes = sample_leave.routes()
     assert all(r.gap and r.first == "No one" for r in routes)
     assert client().get(ADMIN + "routing").text.count(">Gap</span>") == len(routes)
+
+
+def test_the_sample_keeps_its_own_policy() -> None:
+    """Every sample application could have been submitted under the sample's
+    policy: cover from the pool, no Refused blackout, and an Appeal-only
+    blackout only by appeal."""
+    slot_of = {ra: s for s in sample_data.SLOTS for ra in s.ras}
+    weeks = [(sample_leave.week_dates(b), b.effect) for b in sample_leave.BLACKOUTS]
+    assert sample_leave.POLICY["cover_pool"] == "Same Precinct"
+    for a in sample_leave.APPLICATIONS:
+        assert slot_of[a.cover].precinct == slot_of[a.ra].precinct, a.id
+        for (first, last), effect in weeks:
+            if a.start <= last and first <= a.end:
+                assert effect == "Appeal only" and a.appeal, a.id
+
+
+def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
+    """Appeals off: no appeal tile or stage filter. A ticked appointment no
+    slot holds: the dashboard flags the gap. An appeal is never reassigned:
+    the Master decides it personally."""
+    c = client()
+    assert ">Reassign the approval</button>" not in c.get(ADMIN + "applications/L-0105").text
+    assert ">Reassign the approval</button>" in c.get(ADMIN + "applications/L-0101").text
+    detail = c.get(ADMIN + "applications/L-0101").text
+    assert '<span class="chip chip-mute">AY2026-2027</span>' in detail and "27 Oct</span> · Submitted by Chloe Lim" in detail
+    assert sample_leave.delegable() == ["Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
+                                        "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong"]
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    dash = c.get(ADMIN).text
+    assert "Appeal to the Master" not in dash
+    stage_filter = c.get(ADMIN + "applications").text.split('id="stage"')[1].split("</select>")[0]
+    assert "Appeal to the Master" not in stage_filter
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))  # held on no slot
+    card = c.get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
+    assert "9 Precincts without a first approver." in card and card.count(">Gap</span>") == 9

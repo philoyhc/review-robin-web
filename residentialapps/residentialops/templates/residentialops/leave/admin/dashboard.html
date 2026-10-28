@@ -1,8 +1,8 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import stage_chip, title with context %}
-{% block title %}RA Leave admin{% endblock %}
+{% block title %}Leave dashboard{% endblock %}
 {% block content %}
-  {{ title("RA Leave admin", leave) }}
+  {{ title("Leave dashboard", leave) }}
   <p class="sub">The whole Unit's leave: what is pending, what needs attention, and who is away. RAs apply at <code>/ra-leave/</code> and staff decide at <code>/ra-leave/staff/</code>; this side configures and oversees.</p>
 
   {# Pending by stage, then cover still to confirm, which waits beside the
@@ -89,9 +89,12 @@
       </section>
       <section class="card card-pad" aria-labelledby="gaps-h">
         <h2 id="gaps-h">Approval chain</h2>
-        {% set standing = leave.routes() | selectattr("delegate") | list %}
-        <p class="sub">{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% elif leave.POLICY.first == "none" %}No first approval is needed, so no delegate stands in.{% else %}Every Precinct approves through its own approvers today.{% endif %}</p>
+        {% set chain = leave.routes() %}
+        {% set gaps = chain | selectattr("gap") | list %}
+        {% set standing = chain | selectattr("delegate") | list %}
+        <p class="sub">{% if gaps %}{{ gaps | length }} Precinct{{ "s" if gaps | length != 1 }} without a first approver. {% endif %}{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% elif leave.POLICY.first == "none" %}No first approval is needed, so no delegate stands in.{% elif not gaps %}Every Precinct approves through its own approvers today.{% endif %}</p>
         <ul class="plain">
+          {% for route in gaps %}<li><strong>{{ route.precinct }}</strong>: <span class="chip chip-warn">Gap</span> {{ route.note }}.</li>{% endfor %}
           {% for route in standing %}<li><strong>{{ route.precinct }}</strong>: {{ route.note }}; {{ route.first }} approves first meanwhile.</li>{% endfor %}
         </ul>
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/routing') }}">Go to Approval chain</a>
