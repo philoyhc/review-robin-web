@@ -114,7 +114,7 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
      - an Organization CSV that leaves out a slot clears its cells and retires it in the same import;
      - a re-imported slot is matched by its name, the last level (`Cypress A 04-05-06`), which is unique; a move to another Precinct or Wing is a change, and a rename is made on screen.
   3. **The Quick setup CSV loads every table at once.** It is the Organization CSV with one row per person per slot: its level columns and Notes, then `Roster` (`Staff` or `RA`), `Name`, `Email`, `Appointment`, `Abbrev`, `From`, `To`, `Enterprise name` and `Student ID`. A slot repeats for each person in it and a person for each slot they sit in. **A person's details are given once**, on their first row; a later row needs only their email, which identifies them (a name alone may not), and any detail it does repeat must agree. **A slot likewise is given once**: a later row of it needs only its last level, the slot's name (`Cypress A 04-05-06`), which is unique, and any higher level or Notes it repeats must agree. Repeating whole rows stays valid; a person in no slot (the Master, the Admin) leaves the level columns empty, and a slot with nobody the person columns. One preview sets the levels, the slots, both rosters with their types and abbreviations, and the cells. Its format is the mock's (`quick_setup.csv`). The whole contract is to be written as `residentialapps/spec/organization_and_rosters.md` when items 4 and 5 implement it.
-- **Rosters, terms and assignments, ruled 2026-10-28** (author; supersedes the two rulings above where they differ). Quick setup is held: its format, and how it meets terms and modes, wait on further rulings.
+- **Rosters, terms and assignments, ruled 2026-10-28** (author; supersedes the two rulings above where they differ). Quick setup is on hold as a possible future feature (*Possible future features*, below).
   1. **No appointment types tables.** A roster row carries its own `Appointment` and `Abbrev`; a roster's types are the pairs its rows hold, with no limit.
   2. **Roster uploads append**: rows are added, never removed by omission; ending or deleting an appointment is done on the page. A file giving a known email a different name, enterprise name or student ID warns, listing the changes, before it proceeds. A roster marks appointment to a role type; someone may hold an appointment with no assignment (yet). Appointments keep `From` and `To`.
   3. **Organization is renamed Assignments** (`/rosters/assignments`): who sits in which slot, for a term, as RRW's Assignments table but made by hand or upload rather than by rules. Levels stays its label editor; the slots stand from the term they are created for.
@@ -137,6 +137,12 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
 - **Unit vocabulary:** unit, team, house and cluster (`cluster_id` is a core unit).
 - **RA Events** has no functional spec yet.
+
+## Possible future features
+
+On hold, not scheduled; each needs the author's rulings before it is planned.
+
+- **Quick setup** *(held 2026-10-28)*: one CSV that loads the rosters and the assignments at once, for a first setup or a normal cycle's few changes. Its 2026-10-27 shape (one row per person per slot, a person's details and a slot's levels given once) predates terms and upload modes; how it meets them is unruled. Its mock, `residentialapps/docs/sample_data/quick_setup.csv`, is kept as that shape.
 
 ## Revise at each spec's next version
 
