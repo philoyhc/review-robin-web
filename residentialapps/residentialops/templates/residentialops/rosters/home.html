@@ -12,31 +12,32 @@
   {% if stage != "done" %}
     <section class="card card-pad gap-below" aria-labelledby="start-h">
       <h2 id="start-h">{{ sample.UNIT_NAME }} is not set up yet</h2>
-      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the five steps below, in order: the slots start from a term, the rosters open once the slots exist, and the assignments once the rosters have people. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
+      <p class="sub flush">Rosters and setup holds {{ sample.UNIT_NAME }}'s organization and who is appointed to it. It is set up in the four steps below, in order: the rosters open once the terms and slots exist, and the assignments once the rosters have people. Each takes rows by hand or a CSV, and a CSV is previewed before anything saves.</p>
     </section>
   {% endif %}
 
   <section class="card card-pad" aria-labelledby="setup-h">
     <h2 id="setup-h">Setup</h2>
-    {# Five steps in order (author, 2026-10-28): the terms, the slots, each
-       roster's people and appointments, then the assignments for a term.
-       The first step open is the one the Primary button points at. #}
+    {# Four steps in order (author, 2026-10-28): Setup (the terms, the
+       levels and the slots), each roster's people and appointments, then
+       the assignments for a term. Setup opens on Terms until it is done,
+       then on Assignments. The first step open is the one the Primary
+       button points at. #}
     <ol class="steps">
       {% set state = {
-           "start": {1: "next", 2: "closed", 3: "closed", 4: "closed", 5: "closed"},
-           "slots": {1: "done", 2: "done", 3: "next", 4: "next", 5: "closed"},
-           "done": {1: "done", 2: "done", 3: "done", 4: "done", 5: "done"},
+           "start": {1: "next", 2: "closed", 3: "closed", 4: "closed"},
+           "slots": {1: "done", 2: "next", 3: "next", 4: "closed"},
+           "done": {1: "done", 2: "done", 3: "done", 4: "done"},
          }[stage] %}
       {% set first_next = (state | dictsort | selectattr(1, "equalto", "next") | map("first") | list + [0])[0] %}
       {% set term = sample.CURRENT_TERM %}
       {% for n, title, path, what in (
-           (1, "Terms", "/rosters/assignments/terms", "Set out each year's terms, up to " ~ sample.MAX_TERMS ~ ", with their dates. Assignments are made for a term."),
-           (2, "Slots", "/rosters/assignments", "Name the levels and list the area slots: each " ~ level_name[3] ~ " under its " ~ level_name[2] ~ " and " ~ level_name[1] ~ ", with its notes, from the term they start in."),
-           (3, "Staff roster", "/rosters/staff", "Add the staff, each with one appointment, its abbreviation and its dates."),
-           (4, "RA roster", "/rosters/ras", "Add the RAs, each with one student appointment, its abbreviation and its dates."),
-           (5, "Assignments", "/rosters/assignments", "Assign staff and RAs to each slot for a term, from the rosters. Opens once both rosters have people."),
+           (1, "Setup", "/rosters/assignments" if state[1] == "done" else "/rosters/assignments/terms", "Name the levels and list the area slots; set out each year's terms. Assignments are made for a term."),
+           (2, "Staff roster", "/rosters/staff", "Add the staff, each with one appointment, its abbreviation and its dates."),
+           (3, "RA roster", "/rosters/ras", "Add the RAs, each with one student appointment, its abbreviation and its dates."),
+           (4, "Assignments", "/rosters/assignments", "Assign staff and RAs to each slot for a term, from the rosters. Opens once both rosters have people."),
          ) %}
-        {% set query = (["return_to=/rosters/"] if n == 1 else []) + (["stage=" ~ stage] if stage != "done" else []) %}
+        {% set query = (["return_to=/rosters/"] if path.endswith("/terms") else []) + (["stage=" ~ stage] if stage != "done" else []) %}
         <li>
           <h3>{{ n }}. {{ title }}
             {% if state[n] == "done" %}<span class="chip chip-ok">Set up</span>
@@ -46,16 +47,15 @@
           <p>{{ what }}</p>
           <dl class="kv">
             {% if n == 1 %}
+              <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
+              <dt>Slots</dt><dd>{% if state[1] == "done" %}{{ counts[3] }}{% else %}—{% endif %}</dd>
               <dt>Years</dt><dd>{% if state[1] == "done" %}{{ sample.TERMS | map(attribute="year") | unique | join(", ") }}{% else %}—{% endif %}</dd>
               <dt>{{ "Current" if term.status == "Current" else "Next" }}</dt><dd>{% if state[1] == "done" %}{{ term.label }} ({{ term.name }}){% else %}—{% endif %}</dd>
-            {% elif n == 2 %}
-              <dt>Levels</dt><dd>{{ sample.LEVEL_LABELS | join(", ") }}</dd>
-              <dt>Slots</dt><dd>{% if state[2] == "done" %}{{ counts[3] }}{% else %}—{% endif %}</dd>
-            {% elif n == 5 %}
-              <dt>Term</dt><dd>{% if state[5] == "done" %}{{ term.label }}{% else %}—{% endif %}</dd>
-              <dt>Filled</dt><dd>{% if state[5] == "done" %}{{ sample.SLOTS | selectattr("staff") | selectattr("ras") | list | length }} of {{ counts[3] }} slots{% else %}—{% endif %}</dd>
+            {% elif n == 4 %}
+              <dt>Term</dt><dd>{% if state[4] == "done" %}{{ term.label }}{% else %}—{% endif %}</dd>
+              <dt>Filled</dt><dd>{% if state[4] == "done" %}{{ sample.SLOTS | selectattr("staff") | selectattr("ras") | list | length }} of {{ counts[3] }} slots{% else %}—{% endif %}</dd>
             {% else %}
-              {% set types, people, noun = (sample.STAFF_APPOINTMENTS, staff_count, "people") if n == 3 else (sample.RA_APPOINTMENTS, ra_count, "RAs") %}
+              {% set types, people, noun = (sample.STAFF_APPOINTMENTS, staff_count, "people") if n == 2 else (sample.RA_APPOINTMENTS, ra_count, "RAs") %}
               <dt>Appointments</dt><dd>{% if state[n] == "done" %}{{ types | map("last") | join(", ") }}{% else %}—{% endif %}</dd>
               <dt>People</dt><dd>{% if state[n] == "done" %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
             {% endif %}
@@ -69,7 +69,7 @@
   {% if stage == "done" %}
     <section class="card card-pad gap-above" aria-labelledby="checks-h">
       <h2 id="checks-h">Checks</h2>
-      <p class="sub">Warnings across the five steps. None blocks a save.</p>
+      <p class="sub">Warnings across the four steps. None blocks a save.</p>
       <ul class="plain">
         {% for slot in sample.SLOTS %}
           {% if not slot.staff or not slot.ras %}<li>{{ slot.neighborhood }} has no {{ "Staff" if not slot.staff else "RA" }}. <a href="{{ url('/rosters/assignments') }}">Assignments</a></li>{% endif %}
