@@ -76,7 +76,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ## PR ladder
 
-**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, read-only access chips, the roster-CSV card. 3. Identity and access pages: not-registered, person detail, sys admin grants. Last build rung. 4+. Iteration until approved, each with its own read.
+**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, ~~read-only access chips~~ (no Access column, ruled 2026-10-28), the roster-CSV card. 3. Identity and access pages: not-registered, person detail, sys admin grants. Last build rung. 4+. Iteration until approved, each with its own read.
 
 **Item 2 — Databases.** 1. Settings, engines, both histories. 2. CI round-trip of both on Postgres. Last build rung.
 

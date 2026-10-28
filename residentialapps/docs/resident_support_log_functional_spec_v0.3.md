@@ -152,6 +152,8 @@ The staff roster should be the first implementation of an **extensible Residenti
 2. **RA roster** — required later by Residential Operations;
 3. **Student roster** — to be decided; Residential may instead continue to resolve students directly from Entra / Microsoft 365 without maintaining a complete local roster.
 
+**Eligibility is the Staff roster** (author, 2026-10-28, superseding in part what follows): Support Logs reads the Staff roster to know who is eligible, and every active Staff-roster member is eligible for every authorization type below. The appointments in the table say who is normally granted each, not who may be. Grants are made and shown in Support Logs only; the roster shows none (`residentialapps/docs/residentialapps_roles.md` rule 9).
+
 **Appointments are not permissions** (author, 2026-10-22). `residentialops` records who the RFs, RSLMs, Master and other staff are; `supportlogs` decides what each of them may do in Support Logs. A person can read or write Support Logs only when **both** hold:
 
 1. an **active Staff-roster entry** in `residentialops`, plus the qualifying appointment where the authorization type requires one (table below); and
@@ -159,7 +161,7 @@ The staff roster should be the first implementation of an **extensible Residenti
 
 Both are checked on every request, and access fails closed if either is missing. An appointment never grants Support Logs access by itself: an RF or RSLM appointment makes the person *eligible* for frontline access, and Support Logs may list eligible staff without access so an administrator can grant it, but the grant is always a deliberate, audited act in `supportlogs`. When the roster entry is retired or the qualifying appointment ends, access stops at once; Support Logs then shows the lapsed authorization to its administrators, who revoke it (audited in `supportlogs`). Support Logs never writes to the roster, and the roster never writes Support Logs authorizations.
 
-| Support Logs authorization | Eligibility in `residentialops` |
+| Support Logs authorization | Normally granted to (eligibility: any active Staff-roster entry) |
 |---|---|
 | Frontline access (§3.1) | active RF or RSLM appointment |
 | Senior identifiable access (§3.2) | active Master appointment; or any active Staff-roster entry, granted at the Master's request (a delegate) |

@@ -196,6 +196,10 @@ def test_the_staff_roster_shows_no_access() -> None:
     assert "Support Logs" not in page.text and "Team Viewer" not in page.text
     assert '<a href="/sys-admin/">Sys admin</a> page' in page.text
     assert 'colspan="7"' in TestClient(ops_app()).get("/rosters/staff?stage=slots").text
+    client = TestClient(ops_app())
+    assert "Team Viewer" not in client.get("/sys-admin/").text  # no such grant to audit
+    person = client.get(f"/rosters/people/{sample_data.person_id_of('grace.ho@example.edu')}").text
+    assert "Access is granted" not in person and "Support Logs" not in person
 
 
 def test_the_ra_roster_holds_people_and_appointments_only() -> None:
