@@ -1,7 +1,8 @@
-Name,Email,Appointment,From,To,Enterprise name,Student ID
-Chloe Lim,chloe.lim@example.edu,Residential Assistant,2026-08-01,,,A0230000X
-Chloe Lim (duplicate),chloe.lim@example.edu,Residential Assistant,2026-08-01,,,
-Owen Pang,owen.pang@example.edu,Residential Fellow,2026-08-01,,,
-Ivy Toh,ivy.toh@example.edu,Residential Assistant,2026-08-01,,,A02345
-Zara Khoo,,Residential Assistant,2026-08-01,,,
-Yusuf Ali,yusuf.ali@example.edu,Residential Assistant,2027-01-15,2026-12-31,,
+Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID
+Chloe Lim,chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,,A0230000X
+Chloe Lim (duplicate),chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,,
+Ethan Wong,ethan.wong@example.edu,Residential Assistant,RA,2026-08-01,,WONG ETHAN,A0234127C
+Owen Pang,owen.pang@example.edu,Residential Fellow,RF,2026-08-01,,,
+Ivy Toh,ivy.toh@example.edu,Residential Assistant,RA,2026-08-01,,,A02345
+Zara Khoo,,Residential Assistant,RA,2026-08-01,,,
+Yusuf Ali,yusuf.ali@example.edu,Residential Assistant,RA,2027-01-15,2026-12-31,,

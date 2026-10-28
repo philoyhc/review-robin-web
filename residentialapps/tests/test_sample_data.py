@@ -1,6 +1,7 @@
 """The mock CSVs in `residentialapps/docs/sample_data/` follow organization
-by units (`residentialapps/guide/todo_master.md`, 2026-10-27) and agree with
-one another, so the browser tests they feed start from a coherent Unit."""
+by units and the rosters' appointments (`residentialapps/guide/todo_master.md`,
+2026-10-27 and 2026-10-28) and agree with one another, so the browser tests
+they feed start from a coherent Unit."""
 
 from __future__ import annotations
 
@@ -10,12 +11,10 @@ from pathlib import Path
 
 DATA = Path(__file__).resolve().parents[1] / "docs" / "sample_data"
 
-ROSTER = ["Name", "Email", "Appointment", "From", "To", "Enterprise name"]
+ROSTER = ["Name", "Email", "Appointment", "Abbrev", "From", "To", "Enterprise name"]
 LEVELS = ["Level1.Wing", "Level2.Precinct", "Level3.Neighborhood"]
 UNITS = [*LEVELS, "Notes"]
 HEADERS = {
-    "staff_appointment_types": ["Title", "Abbrev"],
-    "student_appointment_types": ["Title", "Abbrev"],
     "staff_roster": ROSTER,
     "ra_roster": [*ROSTER, "Student ID"],
     "organization_units": UNITS,
@@ -41,13 +40,24 @@ def test_every_mock_csv_has_its_ruled_header() -> None:
             assert next(csv.reader(handle)) == HEADERS[kind], path.name
 
 
+def held(people: list[dict[str, str]]) -> dict[str, set[str]]:
+    """Each appointment a roster's rows hold, with the abbreviations given it."""
+    pairs: dict[str, set[str]] = {}
+    for p in people:
+        pairs.setdefault(p["Appointment"], set()).add(p["Abbrev"])
+    return pairs
+
+
 def test_the_rosters_hold_the_unit_s_people() -> None:
-    staff_types = {t["Title"] for t in rows("staff_appointment_types.csv")}
-    student_types = {t["Title"] for t in rows("student_appointment_types.csv")}
     staff = rows("staff_roster.csv")
     ras = rows("ra_roster.csv")
-    assert {p["Appointment"] for p in staff} <= staff_types
-    assert {p["Appointment"] for p in ras} <= student_types
+    assert held(staff) == {
+        "Master": {"Master"},
+        "Residential Admin": {"Admin"},
+        "Residential Student Life Manager": {"RSLM"},
+        "Residential Fellow": {"RF"},
+    }  # one abbreviation per appointment, every row giving it
+    assert held(ras) == {"Residential Assistant": {"RA"}}
     assert Counter(p["Appointment"] for p in staff) == {
         "Master": 1,
         "Residential Admin": 1,
@@ -57,6 +67,19 @@ def test_the_rosters_hold_the_unit_s_people() -> None:
     assert len(ras) == 30
     emails = [p["Email"] for p in (*staff, *ras)]
     assert len(emails) == len(set(emails))
+
+
+def test_the_roster_error_files_warn_on_one_identity_change_each() -> None:
+    """Ruling point 2: a known email with a different name, enterprise name
+    or student ID warns. Each error file has one such row, differing from
+    the roster in exactly the fields its README row names."""
+    for file, roster, email, changed in (
+        ("staff_roster_errors.csv", "staff_roster.csv", "meiling.tan@example.edu", {"Name", "Enterprise name"}),
+        ("ra_roster_errors.csv", "ra_roster.csv", "ethan.wong@example.edu", {"Student ID"}),
+    ):
+        on_file = {p["Email"]: p for p in rows(roster)}
+        row = next(r for r in rows(file) if r["Email"] == email)
+        assert {k for k in row if row[k] != on_file[email][k]} == changed, file
 
 
 def test_every_person_cell_names_someone_on_its_roster() -> None:
@@ -86,11 +109,14 @@ def test_the_placeholders_show_the_mock_data() -> None:
     def dates(p: dict[str, str]) -> str:
         return f"{p['From']} – {p['To']}".rstrip()
 
-    assert [(p.name, p.email, p.appointment, p.dates, p.enterprise_name) for p in sample_data.STAFF] == [
-        (p["Name"], p["Email"], p["Appointment"], dates(p), p["Enterprise name"]) for p in staff
+    assert [(p.name, p.email, p.appointment, p.abbrev, p.dates, p.enterprise_name) for p in sample_data.STAFF] == [
+        (p["Name"], p["Email"], p["Appointment"], p["Abbrev"], dates(p), p["Enterprise name"]) for p in staff
     ]
-    assert [(p.name, p.email, p.appointment, p.dates, p.enterprise_name, p.student_id) for p in sample_data.RAS] == [
-        (p["Name"], p["Email"], p["Appointment"], dates(p), p["Enterprise name"], p["Student ID"]) for p in ras
+    assert [
+        (p.name, p.email, p.appointment, p.abbrev, p.dates, p.enterprise_name, p.student_id) for p in sample_data.RAS
+    ] == [
+        (p["Name"], p["Email"], p["Appointment"], p["Abbrev"], dates(p), p["Enterprise name"], p["Student ID"])
+        for p in ras
     ]
     name = {p["Email"]: p["Name"] for p in (*staff, *ras)}
     assert [
@@ -99,12 +125,7 @@ def test_the_placeholders_show_the_mock_data() -> None:
         (*(row[k] for k in UNITS), tuple(name[e] for e in row["Staff"].split("; ")), (name[row["RA"]],))
         for row in rows("organization.csv")
     ]
-    for types, file in ((sample_data.STAFF_TYPES, "staff_appointment_types.csv"),
-                        (sample_data.STUDENT_TYPES, "student_appointment_types.csv")):
-        assert list(types) == [(t["Title"], t["Abbrev"]) for t in rows(file)]
     for sample, file in (
-        (sample_data.STAFF_TYPES_CSV, "staff_appointment_types.csv"),
-        (sample_data.STUDENT_TYPES_CSV, "student_appointment_types.csv"),
         (sample_data.STAFF_CSV, "staff_roster.csv"),
         (sample_data.RA_CSV, "ra_roster.csv"),
         (sample_data.ORGANIZATION_CSV, "organization.csv"),
@@ -114,8 +135,9 @@ def test_the_placeholders_show_the_mock_data() -> None:
 
 
 def test_quick_setup_holds_every_other_file() -> None:
-    """Read back, the Quick setup file gives the rosters, the types they
-    hold and the Organization file with every cell."""
+    """Read back, the Quick setup file gives the rosters, the appointments
+    they hold and the Organization file with every cell. Its format is held
+    for further rulings (2026-10-28); this checks the file as it stands."""
     quick = rows("quick_setup.csv")
     slot_of: dict[str, dict[str, str]] = {}
     for row in quick:  # a slot is given once; later rows carry its name alone
@@ -132,16 +154,12 @@ def test_quick_setup_holds_every_other_file() -> None:
             row.update({k: v for k, v in first[row["Email"]].items() if k not in UNITS})
         else:
             first[row["Email"]] = dict(row)
-    person = ["Name", "Email", "Appointment", "From", "To", "Enterprise name"]
+    person = ["Name", "Email", "Appointment", "Abbrev", "From", "To", "Enterprise name"]
     for roster, file in (("Staff", "staff_roster.csv"), ("RA", "ra_roster.csv")):
         extra = ["Student ID"] if roster == "RA" else []
         people = {r["Email"]: {k: r[k] for k in person + extra} for r in quick if r["Roster"] == roster}
         by_email = {p["Email"]: p for p in rows(file)}
         assert people == by_email, file  # the same people; the file's order is its own
-    held = {(r["Appointment"], r["Abbrev"]) for r in quick}
-    types = {(t["Title"], t["Abbrev"]) for f in ("staff_appointment_types.csv", "student_appointment_types.csv")
-             for t in rows(f) if t["Abbrev"]}
-    assert held == types
     slots: dict[str, dict[str, str]] = {}
     for r in quick:
         if r["Level3.Neighborhood"]:

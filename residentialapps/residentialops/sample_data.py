@@ -20,20 +20,18 @@ UNIT_NAME = "Example College"
 # The Unit's names for its levels, top first; the last level is the slot.
 LEVEL_LABELS = ("Wing", "Precinct", "Neighborhood")
 
-# Up to five levels and up to ten appointment types per roster
-# (author, 2026-10-27).
+# Up to five levels (author, 2026-10-27).
 MAX_LEVELS = 5
-MAX_TYPES = 10
 
-# Each roster's appointment types, as (title, abbreviation); no level.
-STAFF_TYPES = (
-    ("Master", "Master"),
-    ("Residential Admin", "Admin"),
-    ("Residential Student Life Manager", "RSLM"),
-    ("Residential Fellow", "RF"),
-    ("Other Staff", ""),
-)
-STUDENT_TYPES = (("Residential Assistant", "RA"),)
+# A roster row names its appointment and its abbreviation; there are no
+# appointment types tables (author, 2026-10-28).
+ABBREV = {
+    "Master": "Master",
+    "Residential Admin": "Admin",
+    "Residential Student Life Manager": "RSLM",
+    "Residential Fellow": "RF",
+    "Residential Assistant": "RA",
+}
 
 
 @dataclass(frozen=True)
@@ -87,6 +85,7 @@ class StaffMember:
     name: str
     email: str
     appointment: str
+    abbrev: str
     dates: str
     linked: bool
     access: tuple[str, ...]  # read-only chips: what each person is granted
@@ -98,6 +97,7 @@ class RosterRA:
     name: str
     email: str
     appointment: str
+    abbrev: str
     dates: str
     linked: bool
     enterprise_name: str
@@ -124,7 +124,7 @@ def _student_id(n: int) -> str:
 
 
 def _staff(name: str, appointment: str, access: tuple[str, ...], linked: bool = True) -> StaffMember:
-    return StaffMember(name, _email(name), appointment, DATES, linked, access, _enterprise(name))
+    return StaffMember(name, _email(name), appointment, ABBREV[appointment], DATES, linked, access, _enterprise(name))
 
 
 STAFF: tuple[StaffMember, ...] = (
@@ -139,28 +139,29 @@ STAFF: tuple[StaffMember, ...] = (
 )
 
 RAS: tuple[RosterRA, ...] = tuple(
-    RosterRA(name, _email(name), "Residential Assistant", DATES, name != "Nur Aisyah", _enterprise(name), _student_id(n))
+    RosterRA(name, _email(name), "Residential Assistant", "RA", DATES, name != "Nur Aisyah", _enterprise(name), _student_id(n))
     for n, name in enumerate(slot.ras[0] for slot in SLOTS)
 )
 
+
+def appointments(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tuple[tuple[str, str], ...]:
+    """A roster's appointments, as (appointment, abbreviation): the pairs its
+    rows hold, in first-held order."""
+    return tuple(dict.fromkeys((p.appointment, p.abbrev) for p in people))
+
+
+STAFF_APPOINTMENTS = appointments(STAFF)
+RA_APPOINTMENTS = appointments(RAS)
+
 # Excerpts of the mock files, shown on the pages' CSV cards.
-STAFF_TYPES_CSV = """\
-Title,Abbrev
-Residential Student Life Manager,RSLM
-Residential Fellow,RF"""
-
-STUDENT_TYPES_CSV = """\
-Title,Abbrev
-Residential Assistant,RA"""
-
 STAFF_CSV = """\
-Name,Email,Appointment,From,To,Enterprise name
-Sam Lee,sam.lee@example.edu,Master,2026-08-01,,LEE SAM
-Priya Raman,priya.raman@example.edu,Residential Student Life Manager,2026-08-01,,RAMAN PRIYA"""
+Name,Email,Appointment,Abbrev,From,To,Enterprise name
+Sam Lee,sam.lee@example.edu,Master,Master,2026-08-01,,LEE SAM
+Priya Raman,priya.raman@example.edu,Residential Student Life Manager,RSLM,2026-08-01,,RAMAN PRIYA"""
 
 RA_CSV = """\
-Name,Email,Appointment,From,To,Enterprise name,Student ID
-Chloe Lim,chloe.lim@example.edu,Residential Assistant,2026-08-01,,LIM CHLOE,A0230000X"""
+Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID
+Chloe Lim,chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,LIM CHLOE,A0230000X"""
 
 ORGANIZATION_CSV = """\
 Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA

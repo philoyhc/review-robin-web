@@ -19,8 +19,8 @@
   <section class="card card-pad" aria-labelledby="setup-h">
     <h2 id="setup-h">Setup</h2>
     {# Four steps in order (organization by units, author, 2026-10-27): the
-       slots, each roster with its types, then the slots' Staff and RA
-       cells. The first step open is the one the Primary button points at. #}
+       slots, each roster's people and appointments, then the slots' Staff
+       and RA cells. The first step open is the one the Primary button points at. #}
     <ol class="steps">
       {% set state = {
            "start": {1: "next", 2: "closed", 3: "closed", 4: "closed"},
@@ -30,8 +30,8 @@
       {% set first_next = (state | dictsort | selectattr(1, "equalto", "next") | map("first") | list + [0])[0] %}
       {% for n, title, path, what in (
            (1, "Slots", "/rosters/organization", "Name the levels and list the area slots: each " ~ level_name[3] ~ " under its " ~ level_name[2] ~ " and " ~ level_name[1] ~ ", with its notes."),
-           (2, "Staff roster", "/rosters/staff", "Add the staff appointment types, then the staff, each with one appointment and its dates."),
-           (3, "RA roster", "/rosters/ras", "Add the student appointment types, then the RAs."),
+           (2, "Staff roster", "/rosters/staff", "Add the staff, each with one appointment, its abbreviation and its dates."),
+           (3, "RA roster", "/rosters/ras", "Add the RAs, each with one student appointment, its abbreviation and its dates."),
            (4, "Staff and RA cells", "/rosters/organization", "Fill each slot's Staff and RA cells from the rosters. Opens once both rosters have people."),
          ) %}
         <li>
@@ -48,8 +48,8 @@
             {% elif n == 4 %}
               <dt>Filled</dt><dd>{% if state[4] == "done" %}{{ sample.SLOTS | selectattr("staff") | selectattr("ras") | list | length }} of {{ counts[3] }} slots{% else %}—{% endif %}</dd>
             {% else %}
-              {% set types, people, noun = (sample.STAFF_TYPES, staff_count, "people") if n == 2 else (sample.STUDENT_TYPES, ra_count, "RAs") %}
-              <dt>Types</dt><dd>{% if state[n] != "closed" %}{{ types | length }}{% else %}—{% endif %}</dd>
+              {% set types, people, noun = (sample.STAFF_APPOINTMENTS, staff_count, "people") if n == 2 else (sample.RA_APPOINTMENTS, ra_count, "RAs") %}
+              <dt>Appointments</dt><dd>{% if state[n] == "done" %}{{ types | map("last") | join(", ") }}{% else %}—{% endif %}</dd>
               <dt>People</dt><dd>{% if state[n] == "done" %}{{ people[0] }} {{ noun }}, {{ people[1] }} signed in{% else %}—{% endif %}</dd>
             {% endif %}
           </dl>
