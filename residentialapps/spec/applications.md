@@ -49,7 +49,7 @@ role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md
 
 | Area | Path | Reached by |
 |---|---|---|
-| RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; Team Viewers, read-only; sys admins |
+| RA Leave Management | `/ra-leave/` | RAs, RFs, RSLMs, the Master and the admin, by appointment; every linked Staff-roster member, read-only (who is away, who covers whom); sys admins |
 | RA Events Proposals | `/ra-events/` | As RA Leave |
 | Rosters and setup | `/rosters/` | Sys admins only: Staff and RA rosters with their appointments, and the assignments: the terms, levels and slots, and who is assigned to each slot for a term |
 | Sys admin | `/sys-admin/` | Sys admins, for the audit log; the super-admin, for the audit log and to grant and revoke sys admin |

@@ -236,9 +236,11 @@ A covering RA:
 
 Covering RA status does not grant access to the applicant's broader leave history or entitlement.
 
-## 4.5 Residential Staff / Team Viewer
+## 4.5 Residential Staff
 
-Authorized residential staff may view operational leave information within their assigned scope, including:
+**Superseded in part (author, 2026-10-28):** there is no Team Viewer grant. Every linked Staff-roster member has this view (`residentialapps/docs/residentialapps_roles.md`).
+
+Residential staff may view operational leave information within their assigned scope, including:
 
 - who is away;
 - who is covering whom;
@@ -274,7 +276,7 @@ Residential's own administrators are separate and narrower.
 
 ## 4.8 Fake roles for localhost
 
-For local development and testing, Residential Apps provides a fake role for each role above (RA, covering RA, first approver, final approver, Residential Master, team viewer, administrator), keyed off Cordware's fake user and switchable per run in `.env` or the shell, as RRW's are. They exist only while Cordware's fake auth is on, which Cordware refuses outside `APP_ENV=local`.
+For local development and testing, Residential Apps provides a fake role for each role above (RA, covering RA, first approver, final approver, Residential Master, staff, administrator), keyed off Cordware's fake user and switchable per run in `.env` or the shell, as RRW's are. They exist only while Cordware's fake auth is on, which Cordware refuses outside `APP_ENV=local`.
 
 ---
 
@@ -1009,7 +1011,7 @@ Residential's audit events and notification outbox, in `residentialops`. Support
 
 ### LeaveAuthorization
 
-Leave's own permissions, in `residentialops` beside the Leave tables: one row per grant of a Leave role that routing does not already give, chiefly **team viewer** (§4.5) and **Leave administrator** (§4.6), each naming its grantee (the `Person`, by stable core person ID), with its scope (all teams or named teams), granted_by / granted_at and revoked_by / revoked_at, and audited. A grant may require an appointment as eligibility (for example a staff appointment for team viewer), but the appointment alone grants nothing. RA-facing rights come from an active RA appointment (§5.5), and decision rights (first and final approval, appeal decisions) from `ApproverRouting`; neither needs a `LeaveAuthorization`.
+Leave's own permissions, in `residentialops` beside the Leave tables: one row per grant of a Leave role that routing does not already give, chiefly **Leave administrator** (§4.6; team viewer retired 2026-10-28, §4.5), each naming its grantee (the `Person`, by stable core person ID), with its scope (all teams or named teams), granted_by / granted_at and revoked_by / revoked_at, and audited. A grant may require an appointment as eligibility (for example a Staff-roster entry), but the appointment alone grants nothing. RA-facing rights come from an active RA appointment (§5.5), and decision rights (first and final approval, appeal decisions) from `ApproverRouting`; neither needs a `LeaveAuthorization`.
 
 ### ApproverRouting
 

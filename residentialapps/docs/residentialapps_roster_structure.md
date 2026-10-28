@@ -165,15 +165,15 @@ Refer to the **RF appointment**, not only `person_id`, so succession, a change o
 
 ## 5. Roles and authorization: keep separate
 
-The Staff and RA roster screens should show **real-world Appointment** and **Effective System Access** separately. Do not store one manually editable `system_role` column as a substitute for authorization.
+The Staff and RA roster screens show **real-world Appointment** only; they show no system access (author, 2026-10-28: each application shows its own grants, and Residential Operations' one grant, sys admin, is listed on its Sys admin page). Do not store one manually editable `system_role` column as a substitute for authorization.
 
-- In **Residential Operations (`/residentialops`)**, the explicit Administrator grant (made/revoked only by the platform super-admin) and Team Viewer grant remain governed by `residentialapps_roles.md`. RA, first approver, final approver, Master appeal decider and covering RA rights are determined by active appointments and named workflow/routing relationships where applicable.
-- In **Support Logs (`/supportlogs`)**, a valid Staff appointment is **eligibility only**. Frontline, senior identifiable, safety-flag recipient and opportunity-review permissions remain separate explicit grants in the `supportlogs` database. A Residential Administrator or RSLM appointment does not automatically grant Support Logs access.
+- In **Residential Operations (`/residentialops`)**, the explicit Administrator grant (made/revoked only by the platform super-admin; Team Viewer retired 2026-10-28) remains governed by `residentialapps_roles.md`. RA, first approver, final approver, Master appeal decider and covering RA rights are determined by active appointments and named workflow/routing relationships where applicable.
+- In **Support Logs (`/supportlogs`)**, an active Staff-roster entry is **eligibility only** (every Staff-roster member is eligible, author, 2026-10-28). Frontline, senior identifiable, safety-flag recipient and opportunity-review permissions remain separate explicit grants in the `supportlogs` database. A Residential Administrator or RSLM appointment does not automatically grant Support Logs access.
 - **Platform super-admin** is a protected deployment role. The two application Administrator grants are distinct and retain the document's no-self-action, audit and last-Administrator protections.
 
-The roster may provide read-only per-application status chips such as `Residential Operations: Administrator` or `Support Logs: Frontline`. Authorization settings belong to their respective administration screens, not a general-purpose CSV column.
+The roster shows no per-application access chips (author, 2026-10-28). Authorization settings belong to their respective administration screens, not a general-purpose CSV column.
 
-**Multiple-Unit consideration:** Unit-scoped rosters and app data are required now. The exact future scope of Administrator / Team Viewer / Support Logs permission grants across multiple Residential Units must be reconciled with `residentialapps_roles.md` before multi-unit rollout; do not silently change its presently authoritative rules.
+**Multiple-Unit consideration:** Unit-scoped rosters and app data are required now. The exact future scope of Administrator / Support Logs permission grants across multiple Residential Units must be reconciled with `residentialapps_roles.md` before multi-unit rollout; do not silently change its presently authoritative rules.
 
 ## 6. CSV imports and routine administrative presentation
 
