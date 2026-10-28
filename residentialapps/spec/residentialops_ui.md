@@ -170,6 +170,16 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   each a name and dates, never overlapping) with their length in days and
   their status, under an Add year Primary; each row but a past term's has
   an Edit button, since a past term is read-only. Its CSV card sits below.
+- **A blank cell in an upload** means what its mode makes it (author,
+  2026-10-28):
+  - a **roster** upload appends, so a blank optional column (enterprise
+    name, student ID) leaves the value on file as it is;
+  - an **Assignments** upload with **New slots** or **Refresh a term** is
+    the term's whole content, so a blank Staff, RA or Notes cell is empty
+    and replaces what was there; with **Add a term** there is nothing on
+    file, and a blank is simply empty;
+  - every **Terms** column is required, so a blank is refused;
+  - a refused row raises no warning besides its refusal, in every upload.
 - **The slots** open once terms exist; **both rosters** once the slots
   exist; the slots' Staff and RA cells once both rosters have people.
 - **A step not yet open is shown, not hidden**: its content renders

@@ -126,6 +126,12 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
      - **Refresh a term**: the slots must match those on file exactly; the current term's assignments, or a future term's that already has some, are replaced, with a warning;
      - **Add a term**: the slots must match exactly; the term has no assignments yet.
   8. **Home's steps**: Setup (the levels, the slots and the terms), Staff roster, RA roster, Assignments for a term (refined the same day from five steps, Terms and Slots apart). Assignments uploads choose their mode by radio buttons.
+  9. **A blank cell means what the upload's mode makes it** (ruled the same day):
+     - **Roster upload** (it appends): a blank optional column (enterprise name, student ID) leaves the value on file as it is;
+     - **Assignments, New slots or Refresh a term** (the file is the term's whole content): a blank Staff, RA or Notes cell is empty and replaces what was there;
+     - **Assignments, Add a term** (nothing on file): a blank is empty;
+     - **Terms**: every column is required; a blank is refused;
+     - in every upload, a refused row raises no warning besides its refusal.
 - **Role names** (terms ruled 2026-10-26: *sys admin* the system role, *admin* the appointment, `residentialapps/docs/residentialapps_roles.md`): administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
 - **Unit vocabulary:** unit, team, house and cluster (`cluster_id` is a core unit).
