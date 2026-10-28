@@ -222,9 +222,10 @@ def cover_while_away() -> tuple[Application, ...]:
     )
 
 
-# Adjustments for the term: (RA, leave type) -> (adjustment, reason).
+# Adjustments for TERM: (RA, leave type) -> (adjustment, reason); a wired
+# store keys them by term too.
 ADJUSTMENTS = {
-    ("Leon Chia", "Personal leave"): (2, "Carried over by the Master's decision, 2026-08-03"),
+    ("Leon Chia", "Personal leave"): (2, "Granted by the Master's decision, 2026-08-03"),
 }
 
 
@@ -270,8 +271,11 @@ def entitlement(leave_type: LeaveType, appointment_start: date, term: sample_dat
     return max(0, min(days, leave_type.cap - before))
 
 
-def in_term(application: Application, term: sample_data.Term = TERM) -> bool:
-    return term.start <= application.start <= term.end
+def days_in_term(application: Application, term: sample_data.Term = TERM) -> int:
+    """The application's days falling in the term: leave across a term's
+    end is charged to each term for its own days."""
+    first, last = max(application.start, term.start), min(application.end, term.end)
+    return max(0, (last - first).days + 1)
 
 
 def entitlement_rows() -> tuple[dict, ...]:
@@ -281,9 +285,9 @@ def entitlement_rows() -> tuple[dict, ...]:
         for leave_type in LEAVE_TYPES:
             name, days = leave_type.name, entitlement(leave_type, start)
             adjustment, reason = ADJUSTMENTS.get((ra.name, name), (0, ""))
-            mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name and not a.appeal and in_term(a)]
-            used = sum(a.days for a in mine if a.stage == "Approved")
-            pending = sum(a.days for a in mine if a.stage in OPEN_STAGES)
+            mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name and not a.appeal]
+            used = sum(days_in_term(a) for a in mine if a.stage == "Approved")
+            pending = sum(days_in_term(a) for a in mine if a.stage in OPEN_STAGES)
             rows.append({
                 "ra": ra.name, "email": ra.email, "type": name, "entitlement": days, "adjustment": adjustment,
                 "reason": reason, "used": used, "pending": pending, "available": days + adjustment - used - pending,
@@ -293,7 +297,7 @@ def entitlement_rows() -> tuple[dict, ...]:
 
 ENTITLEMENTS_CSV = """\
 Email,Leave type,Adjustment,Reason
-leon.chia@example.edu,Personal leave,2,Carried over by the Master's decision"""
+leon.chia@example.edu,Personal leave,2,Granted by the Master's decision"""
 
 
 @dataclass(frozen=True)
