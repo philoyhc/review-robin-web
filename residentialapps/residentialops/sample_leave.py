@@ -92,8 +92,14 @@ class Application:
     @property
     def dates(self) -> str:
         if self.start == self.end:
-            return self.start.strftime("%-d %b")
-        return f"{self.start.strftime('%-d %b')} – {self.end.strftime('%-d %b')}"
+            return short_date(self.start)
+        return f"{short_date(self.start)} – {short_date(self.end)}"
+
+
+def short_date(day: date) -> str:
+    """"28 Oct": the day without a leading zero, built by hand because
+    `%-d` is glibc's and Windows' strftime refuses it."""
+    return f"{day.day} {day.strftime('%b')}"
 
 
 def _d(text: str) -> date:
