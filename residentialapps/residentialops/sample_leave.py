@@ -313,12 +313,46 @@ class Route:
     gap: str  # why routing is incomplete, or ""
 
 
-DELEGATES = {"Maple 03-08": ("Benjamin Chua", "Grace Ho has not signed in yet")}
+@dataclass(frozen=True)
+class Delegate:
+    """A person who approves first in another's place, on every slot that
+    person approves for, between optional dates (author, 2026-10-28). First
+    approval only: final approval and appeals are not delegable."""
+
+    acting_for: str
+    delegate: str
+    start: date | None
+    end: date | None
+    reason: str  # reads after the name: "Grace Ho has not signed in yet"
+
+    def active(self, day: date = TODAY) -> bool:
+        return (self.start is None or self.start <= day) and (self.end is None or day <= self.end)
+
+    @property
+    def dates(self) -> str:
+        if self.start is None and self.end is None:
+            return "Until removed"
+        if self.end is None:
+            return f"From {short_date(self.start)}"
+        if self.start is None:
+            return f"Until {short_date(self.end)}"
+        return f"{short_date(self.start)} – {short_date(self.end)}"
+
+
+DELEGATES = (
+    Delegate("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),
+    Delegate("Daniel Koh", "Mei Ling Tan", date(2026, 12, 7), date(2026, 12, 18), "is on leave"),
+)
+
+
+def acting(person: str, day: date = TODAY) -> Delegate | None:
+    return next((d for d in DELEGATES if d.acting_for == person and d.active(day)), None)
 
 
 def routes() -> tuple[Route, ...]:
     """The approval chain per Precinct, derived from the current term's
-    assignments and the policy's first approver."""
+    assignments and the policy's first approver, a delegate standing in for
+    an approver whose delegation is active today."""
     staff = {p.name: p for p in sample_data.STAFF}
     found: dict[str, Route] = {}
     for slot in sample_data.SLOTS:
@@ -327,10 +361,12 @@ def routes() -> tuple[Route, ...]:
             continue
         rf = next(n for n in slot.staff if staff[n].abbrev == "RF")
         rslm = next(n for n in slot.staff if staff[n].abbrev == "RSLM")
-        first = {"RF": rf, "RSLM": rslm, "Either": f"{rf} or {rslm}"}[POLICY["first_approver"]]
-        delegate, gap = DELEGATES.get(slot.precinct, (None, ""))
+        named = {"RF": [rf], "RSLM": [rslm], "Either": [rf, rslm]}[POLICY["first_approver"]]
+        standing_in = [d for d in map(acting, named) if d]
+        first = " or ".join(d.delegate if (d := acting(n)) else n for n in named)
+        gap = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
         found[slot.precinct] = Route(
-            slot.precinct, slot.wing, len(slot.ras), rf, rslm, delegate or first, bool(delegate), gap
+            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), gap
         )
     return tuple(found.values())
 

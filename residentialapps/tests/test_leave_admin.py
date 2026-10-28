@@ -151,9 +151,27 @@ def test_the_approval_chain_is_derived_from_assignments_and_the_policy() -> None
     assert [r.precinct for r in routes] == list(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
     assert sum(r.ras for r in routes) == len(sample_data.SLOTS)
     for r in routes:
-        assert r.first == (sample_leave.DELEGATES[r.precinct][0] if r.delegate else r.rf)
-        assert f'aria-label="Set a delegate for {r.precinct}"' in page
+        assert r.first == ("Benjamin Chua" if r.rf == "Grace Ho" else r.rf)
     assert page.count(">Delegate</span>") == 1 and "Grace Ho has not signed in yet" in page
+
+
+def test_a_delegate_stands_in_for_a_person_between_dates() -> None:
+    """Ruled 2026-10-28: a delegate acts for one person on all their slots,
+    with optional dates; first approval only."""
+    grace, daniel = sample_leave.DELEGATES
+    assert grace.active() and grace.dates == "Until removed"
+    assert not daniel.active() and daniel.active(sample_leave.date(2026, 12, 7)) and not daniel.active(sample_leave.date(2026, 12, 19))
+    assert daniel.dates == "7 Dec – 18 Dec"
+    cypress = next(r for r in sample_leave.routes() if r.rf == "Daniel Koh")
+    assert cypress.first == "Daniel Koh" and not cypress.delegate  # not yet
+    page = client().get(ADMIN + "routing").text
+    card = page.split('id="delegates-h"')[1].split("</section>")[0]
+    assert "<span class=\"chip chip-warn\">Standing in</span>" in card and "<span class=\"chip chip-mute\">7 Dec – 18 Dec</span>" in card
+    acting_for = card.split('aria-label="Delegate 1: acting for"')[1].split("</select>")[0]
+    assert "<option selected>Grace Ho</option>" in acting_for and "Sam Lee" not in acting_for and "Rachel Yeo" not in acting_for
+    assert 'aria-label="Delegate 2: from" value="2026-12-07"' in card and 'aria-label="Delegate 1: from" value=""' in card
+    assert "final approval and appeals are not delegable" in card
+    assert "Set a delegate for" not in page  # by person now, not by Precinct
     assert "for AY2026-2027, Term 1 and the policy's first and final approvers (RF, Admin)" in page
 
 
