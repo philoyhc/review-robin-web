@@ -111,13 +111,43 @@
         <legend>What the upload does</legend>
         {% for mode, what in sample.UPLOAD_MODES %}
           {% set id = "mode-" ~ loop.index %}
-          <div class="mode"><input type="radio" id="{{ id }}" name="mode" value="{{ mode }}" aria-describedby="{{ id }}-what" disabled> <span><label for="{{ id }}"><strong>{{ mode }}</strong></label> <span id="{{ id }}-what" class="subtle">{{ what }}</span></span></div>
+          <div class="mode"><input type="radio" id="{{ id }}" name="mode" value="{{ mode }}" aria-describedby="{{ id }}-what"> <span><label for="{{ id }}"><strong>{{ mode }}</strong></label> <span id="{{ id }}-what" class="subtle">{{ what }}</span></span></div>
         {% endfor %}
       </fieldset>
+      {# Upload stays unavailable until a mode is chosen (author,
+         2026-10-28); choosing one is live so that can be seen. #}
       <div class="btnrow">
-        <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
-        <button type="button" class="btn btn-secondary" disabled>Export {{ term.label }}</button>
+        <button type="button" id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" title="Choose what the upload does first">Upload and preview</button>
       </div>
+      {# Export covers a run of terms, the term shown by default, so a file
+         can go back as one upload covering several. #}
+      <div class="filters export-range">
+        <div class="filter-fields">
+          {% for id, label in (("export-from", "From"), ("export-to", "To")) %}
+            <div class="filter">
+              <label for="{{ id }}">{{ label }}</label>
+              <select id="{{ id }}" class="input" disabled>
+                {% for option in sample.TERMS %}<option{% if option == term %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+              </select>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="btnrow"><button type="button" class="btn btn-secondary" disabled>Export</button></div>
+      </div>
+      <script>
+        (function () {
+          var upload = document.getElementById("upload");
+          var modes = document.querySelectorAll('input[name="mode"]');
+          function sync() {
+            var chosen = false;
+            for (var i = 0; i < modes.length; i++) { if (modes[i].checked) chosen = true; }
+            upload.classList.toggle("btn-unavailable", !chosen);
+            upload.title = chosen ? "" : "Choose what the upload does first";
+          }
+          for (var i = 0; i < modes.length; i++) modes[i].addEventListener("change", sync);
+          sync();  // a browser may restore a choice on reload or back
+        })();
+      </script>
     </section>
     <section class="card card-pad" aria-labelledby="labels-h">
       <h2 id="labels-h">Levels</h2>

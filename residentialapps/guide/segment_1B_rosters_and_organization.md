@@ -27,6 +27,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Rung 18** (2026-10-28): the Terms page (`/rosters/assignments/terms`, a detour with `?return_to=`) with mock terms, Organization renamed Assignments (`/rosters/assignments`), and Home's five steps. The term selector, Copy from Term N and the upload modes follow in rung 19; the Organization CSV and its files are renamed there with their Term column.
 - **Rung 19** (2026-10-28): Assignments by term: the term card (a live selector, Copy from, Set up terms), past terms read-only, an upcoming term empty until copied or uploaded, the partial-overlap warning (Umairah Salleh, 14 days), and the Assignments CSV with its `Term` column and upload-mode select. The `organization*.csv` mocks become `assignments*.csv`, plus `assignments_term2.csv` for Add a term. Quick setup is held, its file unchanged but for Umairah's start date.
 - **Rung 20** (2026-10-28, author's refinements): Home's Terms and Slots steps merge into one, 1 Setup; the Assignments CSV's upload mode is a radio group.
+- **Rung 21** (2026-10-28, author's refinements): Upload and preview stays unavailable until an upload mode is chosen (the radios live); Export covers a From–To run of terms, the term shown by default.
 
 ## Decision
 
