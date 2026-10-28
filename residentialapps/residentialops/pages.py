@@ -21,10 +21,18 @@ APP_NAME = "Residential Operations"
 # The switcher's areas; a path of None is an area not built yet.
 AREAS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": None},
-    {"label": "RA Leave", "path": None},
+    {"label": "RA Leave", "path": "/ra-leave/admin/"},  # the admin pages first (1C item 1)
     {"label": "RA Events", "path": None},
     {"label": "Rosters", "path": "/rosters/"},
     {"label": "Sys admin", "path": "/sys-admin/"},
+)
+
+LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
+    {"label": "Dashboard", "path": "/ra-leave/admin/"},
+    {"label": "Policy", "path": "/ra-leave/admin/policy"},
+    {"label": "Entitlements", "path": "/ra-leave/admin/entitlements"},
+    {"label": "Approval chain", "path": "/ra-leave/admin/routing"},
+    {"label": "Applications", "path": "/ra-leave/admin/applications"},
 )
 
 ROSTER_TABS: tuple[dict[str, str | None], ...] = (

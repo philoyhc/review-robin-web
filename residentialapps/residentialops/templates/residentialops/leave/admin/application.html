@@ -1,0 +1,46 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip with context %}
+{% block title %}{{ app.id }}{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/ra-leave/admin/applications') }}">‹ Applications</a>
+  <div class="ptitle">
+    <h1>{{ app.id }} · {{ app.ra }}</h1>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ stage_chip(app.stage) }}</span>
+  </div>
+
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="detail-h">
+        <h2 id="detail-h">Application</h2>
+        <dl class="kv">
+          <dt>RA</dt><dd>{{ app.ra }} · {{ app.slot.neighborhood }}, {{ app.precinct }}</dd>
+          <dt>Leave type</dt><dd>{{ app.leave_type }}</dd>
+          <dt>Dates</dt><dd>{{ app.dates }} ({{ app.days }} day{{ "s" if app.days != 1 }})</dd>
+          <dt>Cover</dt><dd>{{ app.cover }} {{ cover_chip(app.cover_status) }}</dd>
+          {% if app.remarks %}<dt>RA's remarks</dt><dd>{{ app.remarks }}</dd>{% endif %}
+        </dl>
+      </section>
+      <section class="card card-pad" aria-labelledby="timeline-h">
+        <h2 id="timeline-h">Timeline</h2>
+        <ol class="plain">
+          {% for when, what in steps %}<li>{% if when %}<span class="subtle">{{ when }}</span> · {% endif %}{{ what }}</li>{% endfor %}
+        </ol>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="admin-h">
+        <h2 id="admin-h">Administer</h2>
+        <p class="sub">Each action asks for a reason and is audited.</p>
+        <div class="stack-btns">
+          <button type="button" class="btn btn-secondary" disabled>Correct the record</button>
+          {% if app.stage in leave.OPEN_STAGES %}
+            <button type="button" class="btn btn-secondary" disabled>Reassign the approval</button>
+            <button type="button" class="btn btn-danger" disabled>Cancel the application</button>
+          {% elif app.stage == "Approved" %}
+            <button type="button" class="btn btn-danger" disabled>Cancel approved leave</button>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

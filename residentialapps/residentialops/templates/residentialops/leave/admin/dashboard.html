@@ -1,0 +1,100 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, title with context %}
+{% block title %}RA Leave admin{% endblock %}
+{% block content %}
+  {{ title("RA Leave admin", leave) }}
+  <p class="sub">The whole Unit's leave: what is pending, what needs attention, and who is away. RAs apply at <code>/ra-leave/</code> and staff decide at <code>/ra-leave/staff/</code>; this side configures and oversees.</p>
+
+  {# Pending by stage, then cover still to confirm, which waits beside the
+     first stage rather than being one (spec §11, §25). #}
+  <section class="tiles" aria-label="Pending by stage">
+    {% for stage, count in leave.pending_by_stage() %}
+      <a class="tile" href="{{ url('/ra-leave/admin/applications') }}?stage={{ stage | urlencode }}">
+        <span class="tile-n">{{ count }}</span>
+        <span class="tile-l">{{ stage }}</span>
+      </a>
+    {% endfor %}
+    <a class="tile" href="{{ url('/ra-leave/admin/applications') }}?cover=unconfirmed">
+      <span class="tile-n">{{ leave.cover_unconfirmed() | length }}</span>
+      <span class="tile-l">Cover not yet confirmed</span>
+    </a>
+  </section>
+
+  <div class="split gap-above">
+    <div class="main stack">
+      <section class="card" aria-labelledby="attention-h">
+        <div class="card-head">
+          <h2 id="attention-h">Needs attention</h2>
+          <p class="sub">Pending more than {{ leave.OVERDUE_DAYS }} days, cover declined, cover away themselves, and clashes in a Precinct.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Application</th><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Stage</th><th scope="col">Why</th></tr></thead>
+            <tbody>
+              {% set away_cover = leave.cover_while_away() %}
+              {% for a in leave.APPLICATIONS if a.overdue or (a.stage in leave.OPEN_STAGES and a.cover_status == "Declined") or a in away_cover %}
+                <tr>
+                  <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
+                  <td class="strong nowrap">{{ a.ra }}</td>
+                  <td class="nowrap">{{ a.precinct }}</td>
+                  <td>{{ stage_chip(a.stage) }}</td>
+                  <td>{% set why = [] %}{% if a.overdue %}{% set _ = why.append("Pending " ~ a.age ~ " days") %}{% endif %}{% if a.cover_status == "Declined" %}{% set _ = why.append(a.cover ~ " declined cover") %}{% endif %}{% if a in away_cover %}{% set _ = why.append(a.cover ~ " is away too") %}{% endif %}{{ why | join("; ") }}</td>
+                </tr>
+              {% endfor %}
+              {% for precinct, names in leave.clashes() %}
+                <tr>
+                  <td class="subtle">—</td>
+                  <td class="strong">{{ names | join(", ") }}</td>
+                  <td class="nowrap">{{ precinct }}</td>
+                  <td><span class="chip chip-warn">Clash</span></td>
+                  <td>Away on the same days in one Precinct</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="away-h">
+        <div class="card-head">
+          <h2 id="away-h">Away this week</h2>
+          <p class="sub">Approved leave from {{ leave.TODAY.strftime("%-d %b") }}, with each RA's cover.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th></tr></thead>
+            <tbody>
+              {% for a in leave.away_this_week() %}
+                <tr><td class="strong nowrap">{{ a.ra }}</td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ a.cover }}</td></tr>
+              {% else %}
+                <tr><td colspan="4" class="subtle">Nobody is away this week.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="side">
+      <section class="card card-pad" aria-labelledby="policy-h">
+        <h2 id="policy-h">Policy</h2>
+        <dl class="kv">
+          <dt>Period</dt><dd>{{ leave.POLICY.period }} ({{ leave.PERIOD_LABEL }})</dd>
+          <dt>Leave types</dt><dd>{{ leave.LEAVE_TYPES | map("first") | join(", ") }}</dd>
+          <dt>Cover</dt><dd>{{ "Must be confirmed" if leave.POLICY.cover_confirmation else "Named only" }}; {{ leave.POLICY.cover_pool }}</dd>
+          <dt>First approver</dt><dd>The slot's {{ leave.POLICY.first_approver }}</dd>
+        </dl>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/policy') }}">Go to Policy</a>
+      </section>
+      <section class="card card-pad" aria-labelledby="gaps-h">
+        <h2 id="gaps-h">Approval chain</h2>
+        {% set gaps = leave.routes() | selectattr("gap") | list %}
+        <p class="sub">{% if gaps %}{{ gaps | length }} Precinct{{ "s" if gaps | length != 1 }} need{{ "s" if gaps | length == 1 }} a look.{% else %}Every Precinct has its approvers.{% endif %}</p>
+        <ul class="plain">
+          {% for route in gaps %}<li><strong>{{ route.precinct }}</strong>: {{ route.gap }}; {{ route.first }} approves first meanwhile.</li>{% endfor %}
+        </ul>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/routing') }}">Go to Approval chain</a>
+      </section>
+    </div>
+  </div>
+{% endblock %}

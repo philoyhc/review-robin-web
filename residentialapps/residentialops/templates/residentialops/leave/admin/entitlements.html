@@ -1,0 +1,51 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import title with context %}
+{% from "residentialops/rosters/_filters.html" import csv_actions with context %}
+{% block title %}Entitlements{% endblock %}
+{% block content %}
+  {{ title("Entitlements", leave) }}
+  <p class="sub">Each RA's entitlement by leave type for {{ leave.PERIOD_LABEL }}. Available is entitlement plus adjustment, less approved and pending ordinary leave (spec §6). Extra leave the Master grants on appeal is kept apart and never charged here (§7.5).</p>
+
+  <section class="card card-pad muted filters" aria-label="Filter">
+    <div class="filter-fields">
+      <div class="filter filter-box"><label for="q">Filter</label><input id="q" class="input" type="text" placeholder="RA name or email" disabled></div>
+      <div class="filter"><label for="ltype">Leave type</label><select id="ltype" class="input" disabled><option>All</option>{% for name, _, _ in leave.LEAVE_TYPES %}<option>{{ name }}</option>{% endfor %}</select></div>
+      <div class="filter"><label for="period">Period</label><select id="period" class="input" disabled><option>{{ leave.PERIOD_LABEL }}</option></select></div>
+    </div>
+    <div class="btnrow"><button type="button" class="btn btn-secondary" disabled>Clear</button></div>
+  </section>
+
+  <section class="card" aria-labelledby="ent-h">
+    <div class="card-head">
+      <h2 id="ent-h">Entitlements <span class="count">· {{ rows | map(attribute="ra") | unique | list | length }} RAs</span></h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">RA</th><th scope="col">Leave type</th><th scope="col" class="num">Entitlement</th><th scope="col" class="num">Adjustment</th><th scope="col" class="num">Used</th><th scope="col" class="num">Pending</th><th scope="col" class="num">Available</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td class="strong nowrap">{% if loop.first or loop.previtem.ra != row.ra %}{{ row.ra }}{% else %}<span class="visually-hidden">{{ row.ra }}</span>{% endif %}</td>
+              <td class="nowrap">{{ row.type }}</td>
+              <td class="num">{{ row.entitlement }}</td>
+              <td class="num">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
+              <td class="num">{{ row.used }}</td>
+              <td class="num">{{ row.pending }}</td>
+              <td class="num strong">{{ row.available }}{% if row.available <= 0 %} <span class="chip chip-warn">None left</span>{% endif %}</td>
+              <td class="end"><button type="button" class="btn btn-secondary" aria-label="Adjust {{ row.ra }}'s {{ row.type | lower }}" disabled>Adjust</button></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="bottom-row">
+    <section class="card card-pad muted" aria-labelledby="csv-h">
+      <h2 id="csv-h">Entitlements CSV</h2>
+      <p class="sub">One row per RA per leave type: <code>Email,Leave type,Days</code>, by RA roster email, for the period chosen above. Preview lists the changes, and any RA on the RA roster the file leaves out, before anything saves.</p>
+      <pre class="sample">{{ leave.ENTITLEMENTS_CSV }}</pre>
+      {{ csv_actions() }}
+    </section>
+  </div>
+{% endblock %}

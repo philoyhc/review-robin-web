@@ -194,6 +194,9 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   is 18 px with its explanation beneath in subtle text.
 - **A notice** above the cards carries a page-level warning, such as an
   overlap; warnings that never block a save say so.
+- **Stat tiles** (`.tiles`, RA Leave admin's dashboard, 2026-10-28): a
+  count over its label, each tile a link to the rows it counts.
+- **Numbers in a table** sit right-aligned (`td.num`).
 
 ## 9. Placeholders and sample data
 
