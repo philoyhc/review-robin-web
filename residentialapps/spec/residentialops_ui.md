@@ -162,8 +162,10 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   and offers the copy. A partial-overlap warning, one notice per
   assignee, names the gap in days. Below the table, the Assignments CSV
   card (its upload mode chosen by radio buttons, none chosen at first:
-  New slots, Refresh a term, Add a term, each with what it does; and an
-  Export of the term shown) beside the levels.
+  New slots, Refresh a term, Add a term, each with what it does; Upload
+  and preview unavailable until one is chosen; and Export over a From–To
+  run of terms, the term shown by default, author, 2026-10-28) beside the
+  levels.
 - **Terms** (`/rosters/assignments/terms`) is a detour, after RRW's
   `/guide`: a "← Back to" link returns to the roster page named in
   `?return_to=`, else to Assignments. It lists each year's terms (up to 5,
@@ -202,7 +204,8 @@ Until a screen is wired:
 - its controls are present and `disabled`, except a roster's tick boxes,
   which open the expander so its shape can be checked (§6), and
   Assignments' term selector and its Show term button, which are
-  navigation (§7);
+  navigation, and its upload-mode radios, so the Upload button's
+  unavailable state can be seen (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.

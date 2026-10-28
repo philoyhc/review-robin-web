@@ -283,7 +283,7 @@ def test_a_roster_ticks_rows_into_an_expander_and_filters_from_one_box(path: str
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-@pytest.mark.parametrize("path", ["/rosters/staff", "/rosters/ras"])
+@pytest.mark.parametrize("path", ["/rosters/staff", "/rosters/ras", "/rosters/assignments"])
 def test_the_roster_scripts_parse(path: str, tmp_path: Path) -> None:
     page = TestClient(ops_app()).get(path).text
     scripts = re.findall(r"<script>(.*?)</script>", page, re.S)
@@ -405,13 +405,21 @@ def test_an_assignments_upload_says_what_it_does() -> None:
     assert "<legend>What the upload does</legend>" in page
     radios = re.findall(r'<input type="radio"[^>]*>', page)
     assert [re.search(r'value="([^"]*)"', r).group(1) for r in radios] == [m for m, _ in sample_data.UPLOAD_MODES]
-    assert all("disabled" in r and "checked" not in r for r in radios)  # none chosen until the operator picks one
+    assert all("disabled" not in r and "checked" not in r for r in radios)  # live; none chosen at first
+    assert 'id="upload" class="btn btn-primary btn-unavailable" disabled aria-disabled="true" title="Choose what the upload does first"' in page
     for n, (mode, what) in enumerate(sample_data.UPLOAD_MODES, start=1):
         assert f'aria-describedby="mode-{n}-what"' in radios[n - 1]  # a short name, the description apart
         assert f'<label for="mode-{n}"><strong>{mode}</strong></label>' in page
         assert f'<span id="mode-{n}-what" class="subtle">{escape(what)}</span>' in page
     assert "a past one is refused" in page
-    assert ">Export AY2026-2027, Term 1</button>" in page
+    for side in ("export-from", "export-to"):
+        chosen = re.findall(r"<option selected>([^<]*)", page.split(f'id="{side}"')[1].split("</select>")[0])
+        assert chosen == ["AY2026-2027, Term 1"]  # the term shown, by default
+    assert '<button type="button" class="btn btn-secondary" disabled>Export</button>' in page
+    later = TestClient(ops_app()).get("/rosters/assignments?term=AY2026-2027.2").text
+    assert re.findall(r"<option selected>([^<]*)", later.split('id="export-to"')[1].split("</select>")[0]) == [
+        "AY2026-2027, Term 2"
+    ]
 
 
 def test_home_checks_list_the_partial_overlap() -> None:
