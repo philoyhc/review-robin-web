@@ -83,16 +83,22 @@ def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
 
 
 def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
-    """Point 3: blackouts by week of a term, Sunday to Saturday, so they
-    carry across years; each either refuses leave or sends it to appeal."""
+    """Point 3: blackouts by week of a term, Sunday to Saturday, clipped to
+    the term, so they carry across years; each either refuses leave or
+    sends it to appeal."""
     page = client().get(ADMIN + "policy").text
     dates = [sample_leave.week_dates(b) for b in sample_leave.BLACKOUTS]
     assert [(d.isoformat(), e.isoformat()) for d, e in dates] == [
-        ("2026-08-02", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-10", "2027-01-16"),
-    ]
-    assert all(d.isoweekday() == 7 and e.isoweekday() == 6 for d, e in dates)  # Sunday to Saturday
+        ("2026-08-03", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-11", "2027-01-16"),
+    ]  # week 1's Sundays (2 Aug, 10 Jan) fall in the previous term, so are clipped
+    terms = {t.number: t for t in sample_data.TERMS if t.year == "AY2026-2027"}
+    assert all(terms[b.term].start <= d <= e <= terms[b.term].end for b, (d, e) in zip(sample_leave.BLACKOUTS, dates))
+    B = sample_leave.Blackout
+    assert sample_leave.week_dates(B(1, 30, 31, "Past the term", "Refused")) is None
+    assert sample_leave.week_dates(B(1, 3, 2, "Backwards", "Refused")) is None
+    assert sample_leave.week_dates(B(1, 23, 24, "Last week", "Refused"))[1].isoformat() == "2027-01-10"  # a Sunday: clipped
     rendered = re.findall(r'<td class="nowrap subtle">([^<]*)</td>', page)
-    assert rendered == ["2 Aug – 15 Aug", "15 Nov – 28 Nov", "10 Jan – 16 Jan"]
+    assert rendered == ["3 Aug – 15 Aug", "15 Nov – 28 Nov", "11 Jan – 16 Jan"]
     terms = page.split('aria-label="Blackout 1: term"')[1].split("</select>")[0]
     assert re.findall(r"<option[^>]*>([^<]*)", terms) == ["Term 1", "Term 2", "Term 3"]
     effects = re.findall(r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only', page)
@@ -338,7 +344,7 @@ def test_the_sample_keeps_its_own_policy() -> None:
     policy: cover from the pool, no Refused blackout, and an Appeal-only
     blackout only by appeal."""
     slot_of = {ra: s for s in sample_data.SLOTS for ra in s.ras}
-    weeks = [(sample_leave.week_dates(b), b.effect) for b in sample_leave.BLACKOUTS]
+    weeks = [(span, b.effect) for b in sample_leave.BLACKOUTS if (span := sample_leave.week_dates(b))]
     assert sample_leave.POLICY["cover_pool"] == "Same Precinct"
     for a in sample_leave.APPLICATIONS:
         assert slot_of[a.cover].precinct == slot_of[a.ra].precinct, a.id
@@ -359,6 +365,10 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
     assert sample_leave.delegable() == ["Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
                                         "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong"]
     monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    # An appeal already made stands (author, 2026-10-28): L-0105 keeps its tile and filter.
+    assert "Appeal to the Master" in sample_leave.stages(open_only=True)
+    no_appeals = tuple(a for a in sample_leave.APPLICATIONS if a.stage != "Appeal to the Master")
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", no_appeals)
     dash = c.get(ADMIN).text
     assert "Appeal to the Master" not in dash
     stage_filter = c.get(ADMIN + "applications").text.split('id="stage"')[1].split("</select>")[0]

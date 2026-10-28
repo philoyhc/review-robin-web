@@ -43,7 +43,7 @@ class Blackout:
     """A run of weeks in a term when leave is refused, or only open to
     appeal; counted by week so it carries to the next year. Week 1 starts on
     the Sunday on or before the term's first day; weeks run Sunday to
-    Saturday."""
+    Saturday, clipped to the term's own dates (author, 2026-10-28)."""
 
     term: int
     week_from: int
@@ -60,12 +60,17 @@ BLACKOUTS = (
 )
 
 
-def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, date]:
-    """The blackout's Sunday-to-Saturday dates in a year's term."""
+def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, date] | None:
+    """The blackout's dates in a year's term: its Sunday-to-Saturday weeks,
+    clipped to the term, so a blackout never reaches into the next or the
+    last term; None when no day of it falls in the term (or its weeks run
+    backwards), which the wired form refuses."""
     term = next(t for t in sample_data.TERMS if t.year == year and t.number == blackout.term)
     sunday = date.fromordinal(term.start.toordinal() - (term.start.isoweekday() % 7))
     first = date.fromordinal(sunday.toordinal() + 7 * (blackout.week_from - 1))
-    return first, date.fromordinal(sunday.toordinal() + 7 * blackout.week_to - 1)
+    last = date.fromordinal(sunday.toordinal() + 7 * blackout.week_to - 1)
+    first, last = max(first, term.start), min(last, term.end)
+    return (first, last) if first <= last else None
 
 
 COVER_MODES = ("Named only", "Named and confirmed")
@@ -233,7 +238,10 @@ def by_id(application_id: str) -> Application | None:
 def stages(open_only: bool = False) -> tuple[str, ...]:
     """The stages the policy uses: no appeal stage while appeals are off,
     no first-approval stage when none is needed."""
-    skip = {"Appeal to the Master"} if not POLICY["appeals"] else set()
+    # Appeals off removes the route for new applications; an appeal already
+    # made keeps its stage and is decided (author, 2026-10-28).
+    open_appeal = any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
+    skip = {"Appeal to the Master"} if not POLICY["appeals"] and not open_appeal else set()
     if POLICY["first"] == "none":
         skip.add("Pending first approval")
     return tuple(s for s in (OPEN_STAGES if open_only else STAGES) if s not in skip)
