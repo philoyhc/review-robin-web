@@ -208,8 +208,8 @@ def test_the_placeholders_show_the_mock_data() -> None:
 
 def test_quick_setup_holds_every_other_file() -> None:
     """Read back, the Quick setup file gives the rosters, the appointments
-    they hold and the Assignments file with every cell. Its format is held
-    for further rulings (2026-10-28); this checks the file as it stands."""
+    they hold and the Assignments file with every cell. Quick setup is on hold
+    as a possible future feature (2026-10-28); this checks the file as it stands."""
     quick = rows("quick_setup.csv")
     slot_of: dict[str, dict[str, str]] = {}
     for row in quick:  # a slot is given once; later rows carry its name alone

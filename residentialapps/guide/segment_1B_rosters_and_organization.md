@@ -111,11 +111,12 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 - Leave cycles, entitlements and applications: RA Leave, next (ruling 13).
 - Support Logs authorizations and content, then RA Events: after RA Leave.
 - Multi-Unit authorization: open in `todo_master.md`, needed before a second Unit is exposed.
+- Quick setup: on hold as a possible future feature (`residentialapps/guide/todo_master.md`, *Possible future features*), 2026-10-28.
 
 ## Doc impact
 
 - `cordware/spec/identity.md` — tenant ID and UPN on the identity (Item 3).
 - `residentialapps/docs/residentialapps_identity.md` — revised to what shipped (Item 3).
 - `residentialapps/docs/residentialapps_roster_structure.md` — revised to organization by units: levels, slots and their Staff and RA cells (Item 4).
-- `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the levels, slots, rosters, appointment types and cells, their inter-table rules and CSV precedence, Quick setup included, written as items 4 and 5 ship (author, 2026-10-27).
+- `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the levels, slots, rosters, appointment types and cells, their inter-table rules and CSV precedence, written as items 4 and 5 ship (author, 2026-10-27).
 - `residentialapps/guide/todo_master.md` — the entries this segment finishes, deleted at close.
