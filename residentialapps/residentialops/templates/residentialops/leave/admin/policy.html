@@ -21,16 +21,16 @@
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="types-h">
         <h2 id="types-h">Leave types</h2>
-        <p class="sub">Each type and the days an RA is entitled to in a period. Entitlements can then be adjusted per RA, on Entitlements.</p>
+        <p class="sub">Each type and its usual days per period. Each period's entitlements are loaded on Entitlements (spec §6), and adjusted per RA there.</p>
         <div class="table-wrap">
           <table class="rows">
-            <thead><tr><th scope="col">Leave type</th><th scope="col">Abbrev</th><th scope="col">Days per period</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+            <thead><tr><th scope="col">Leave type</th><th scope="col">Abbrev</th><th scope="col">Usual days</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
             <tbody>
               {% for name, abbrev, days in leave.LEAVE_TYPES %}
                 <tr>
                   <td><input class="input" type="text" aria-label="Leave type {{ loop.index }}: name" value="{{ name }}" disabled></td>
                   <td><input class="input" type="text" aria-label="Leave type {{ loop.index }}: abbreviation" value="{{ abbrev }}" disabled></td>
-                  <td><input class="input" type="number" aria-label="Leave type {{ loop.index }}: days per period" value="{{ days }}" disabled></td>
+                  <td><input class="input" type="number" aria-label="Leave type {{ loop.index }}: usual days" value="{{ days }}" disabled></td>
                   <td><span class="row-actions">
                     <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a leave type below {{ name }}" title="Add a leave type below this one" disabled>+</button>
                     <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ name }}" title="Remove this leave type" disabled>X</button>
@@ -45,7 +45,7 @@
       <section class="card card-pad" aria-labelledby="period-h">
         <h2 id="period-h">Entitlement period</h2>
         <p class="sub">The span an entitlement covers. Terms come from <a href="{{ url('/rosters/assignments/terms') }}">Terms</a>.</p>
-        {{ choice("period", "An entitlement runs for", leave.PERIODS, leave.POLICY.period, {"Year": "Each academic year (" ~ leave.PERIOD_LABEL ~ ")", "Term": "Each term, Term 1 to Term 3"}) }}
+        {{ choice("period", "An entitlement runs for", leave.PERIODS, leave.POLICY.period, {"Year": "Each academic year (" ~ leave.PERIOD_LABEL ~ ")", "Term": "Each term, as set out on Terms"}) }}
       </section>
 
       <section class="card card-pad" aria-labelledby="cover-h">

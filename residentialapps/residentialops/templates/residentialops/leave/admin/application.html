@@ -33,8 +33,12 @@
         <p class="sub">Each action asks for a reason and is audited.</p>
         <div class="stack-btns">
           <button type="button" class="btn btn-secondary" disabled>Correct the record</button>
-          <button type="button" class="btn btn-secondary" disabled>Reassign the approval</button>
-          <button type="button" class="btn btn-danger" disabled>{{ "Cancel approved leave" if app.stage == "Approved" else "Cancel the application" }}</button>
+          {% if app.stage in leave.OPEN_STAGES %}
+            <button type="button" class="btn btn-secondary" disabled>Reassign the approval</button>
+            <button type="button" class="btn btn-danger" disabled>Cancel the application</button>
+          {% elif app.stage == "Approved" %}
+            <button type="button" class="btn btn-danger" disabled>Cancel approved leave</button>
+          {% endif %}
         </div>
       </section>
     </div>

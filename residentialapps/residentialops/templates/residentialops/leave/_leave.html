@@ -1,7 +1,7 @@
 {# RA Leave's shared pieces: a stage or cover status as a chip, never
    color alone (`residentialapps/spec/residentialops_ui.md` §3). #}
 {% macro stage_chip(stage) -%}
-  <span class="chip {{ {'Approved': 'chip-ok', 'Rejected': 'chip-mute', 'Withdrawn': 'chip-mute', 'Appeal to the Master': 'chip-accent', 'Awaiting cover': 'chip-warn'}.get(stage, 'chip-info') }}">{{ stage }}</span>
+  <span class="chip {{ {'Approved': 'chip-ok', 'Rejected': 'chip-mute', 'Withdrawn': 'chip-mute', 'Appeal to the Master': 'chip-accent'}.get(stage, 'chip-info') }}">{{ stage }}</span>
 {%- endmacro %}
 
 {% macro cover_chip(status) -%}

@@ -8,9 +8,12 @@
   <section class="card card-pad muted filters" aria-label="Filter and actions">
     <div class="filter-fields">
       <div class="filter filter-box"><label for="q">Filter</label><input id="q" class="input" type="text" placeholder="RA, ID or cover" disabled></div>
-      <div class="filter"><label for="stage">Stage</label><select id="stage" class="input" disabled><option>All</option>{% for s in leave.STAGES %}<option>{{ s }}</option>{% endfor %}</select></div>
+      <div class="filter"><label for="stage">Stage</label><select id="stage" class="input" disabled><option>All</option>{% for s in leave.STAGES %}<option{% if s == stage %} selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+      <div class="filter"><label for="cover">Cover</label><select id="cover" class="input" disabled><option>All</option><option{% if cover == "unconfirmed" %} selected{% endif %}>Not yet confirmed</option></select></div>
       <div class="filter"><label for="precinct">Precinct</label><select id="precinct" class="input" disabled><option>All</option>{% for r in leave.routes() %}<option>{{ r.precinct }}</option>{% endfor %}</select></div>
       <div class="filter"><label for="ltype">Leave type</label><select id="ltype" class="input" disabled><option>All</option>{% for name, _, _ in leave.LEAVE_TYPES %}<option>{{ name }}</option>{% endfor %}</select></div>
+      <div class="filter"><label for="from">From</label><input id="from" class="input" type="date" disabled></div>
+      <div class="filter"><label for="to">To</label><input id="to" class="input" type="date" disabled></div>
     </div>
     <div class="btnrow">
       <button type="button" class="btn btn-secondary" disabled>Clear</button>
@@ -19,12 +22,12 @@
   </section>
 
   <section class="card" aria-labelledby="apps-h">
-    <div class="card-head"><h2 id="apps-h">Applications <span class="count">· {{ leave.APPLICATIONS | length }}</span></h2></div>
+    <div class="card-head"><h2 id="apps-h">Applications <span class="count">· {{ shown | length }}{% if shown | length != leave.APPLICATIONS | length %} of {{ leave.APPLICATIONS | length }}{% endif %}</span></h2></div>
     <div class="table-wrap">
       <table>
         <thead><tr><th scope="col">ID</th><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Leave type</th><th scope="col">Dates</th><th scope="col" class="num">Days</th><th scope="col">Cover</th><th scope="col">Stage</th><th scope="col">Submitted</th></tr></thead>
         <tbody>
-          {% for a in leave.APPLICATIONS | sort(attribute="submitted", reverse=True) %}
+          {% for a in shown | sort(attribute="submitted", reverse=True) %}
             <tr>
               <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
               <td class="strong nowrap">{{ a.ra }}</td>

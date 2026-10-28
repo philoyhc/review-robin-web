@@ -4,7 +4,7 @@
 {% block title %}Entitlements{% endblock %}
 {% block content %}
   {{ title("Entitlements", leave) }}
-  <p class="sub">Each RA's entitlement by leave type for {{ leave.PERIOD_LABEL }}. Available is entitlement plus adjustment, less approved and pending leave (spec §6). An adjustment is kept apart from extra leave, which the Master grants on appeal.</p>
+  <p class="sub">Each RA's entitlement by leave type for {{ leave.PERIOD_LABEL }}. Available is entitlement plus adjustment, less approved and pending ordinary leave (spec §6). Extra leave the Master grants on appeal is kept apart and never charged here (§7.5).</p>
 
   <section class="card card-pad muted filters" aria-label="Filter">
     <div class="filter-fields">
@@ -28,7 +28,7 @@
               <td class="strong nowrap">{% if loop.first or loop.previtem.ra != row.ra %}{{ row.ra }}{% else %}<span class="visually-hidden">{{ row.ra }}</span>{% endif %}</td>
               <td class="nowrap">{{ row.type }}</td>
               <td class="num">{{ row.entitlement }}</td>
-              <td class="num">{% if row.adjustment %}<span title="{{ row.reason }}">{{ "%+d" | format(row.adjustment) }}</span>{% else %}<span class="subtle">—</span>{% endif %}</td>
+              <td class="num">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
               <td class="num">{{ row.used }}</td>
               <td class="num">{{ row.pending }}</td>
               <td class="num strong">{{ row.available }}{% if row.available <= 0 %} <span class="chip chip-warn">None left</span>{% endif %}</td>
@@ -43,7 +43,7 @@
   <div class="bottom-row">
     <section class="card card-pad muted" aria-labelledby="csv-h">
       <h2 id="csv-h">Entitlements CSV</h2>
-      <p class="sub">One row per RA per leave type: <code>Email,Leave type,Days</code>, by RA roster email, for the period chosen above. An RA left out keeps the policy's days. Preview lists the changes before anything saves.</p>
+      <p class="sub">One row per RA per leave type: <code>Email,Leave type,Days</code>, by RA roster email, for the period chosen above. Preview lists the changes, and any RA on the RA roster the file leaves out, before anything saves.</p>
       <pre class="sample">{{ leave.ENTITLEMENTS_CSV }}</pre>
       {{ csv_actions() }}
     </section>

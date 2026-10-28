@@ -48,7 +48,15 @@ def routing(request: Request) -> Response:
 
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")
 def applications(request: Request) -> Response:
-    return _page(request, "applications.html")
+    # The dashboard's tiles link here filtered (`?stage=`, `?cover=`); the
+    # rest of the filter card is inert until item 2.
+    stage = request.query_params.get("stage", "")
+    cover = request.query_params.get("cover", "")
+    shown = tuple(
+        a for a in sample_leave.APPLICATIONS
+        if (not stage or a.stage == stage) and (cover != "unconfirmed" or a in sample_leave.cover_unconfirmed())
+    )
+    return _page(request, "applications.html", shown=shown, stage=stage, cover=cover)
 
 
 @router.get("/ra-leave/admin/applications/{application_id}", name="residentialops_leave_admin_application")

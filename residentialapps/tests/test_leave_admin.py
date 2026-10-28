@@ -31,20 +31,35 @@ def test_every_admin_page_answers_with_its_tab_current() -> None:
 
 
 def test_the_dashboard_counts_pending_by_stage_and_flags_what_needs_attention() -> None:
+    """Cover is tracked beside the workflow, never a stage (spec §11): an
+    unconfirmed cover waits at first approval and has its own tile."""
     page = client().get(ADMIN).text
-    for stage, count in sample_leave.pending_by_stage():
-        assert f'<span class="tile-n">{count}</span>\n        <span class="tile-l">{stage}</span>' in page
+    assert "Awaiting cover" not in page and "Awaiting cover" not in sample_leave.STAGES
+    tiles = re.findall(r'href="([^"]*)">\s*<span class="tile-n">(\d+)</span>\s*<span class="tile-l">([^<]*)', page)
+    assert [(n, label) for _, n, label in tiles] == [
+        ("4", "Pending first approval"), ("1", "Pending final approval"), ("1", "Appeal to the Master"),
+        ("2", "Cover not yet confirmed"),
+    ]
+    assert tiles[0][0] == "/ra-leave/admin/applications?stage=Pending%20first%20approval"
+    assert tiles[3][0] == "/ra-leave/admin/applications?cover=unconfirmed"
     attention = page.split('id="attention-h"')[1].split("</section>")[0]
-    for a in sample_leave.APPLICATIONS:
-        assert (f">{a.id}</a>" in attention) == (
-            a.overdue or (a.stage in sample_leave.OPEN_STAGES and a.cover_status == "Declined")
-            or a in sample_leave.cover_while_away()
-        ), a.id
+    assert re.findall(r">(L-\d+)</a>", attention) == ["L-0103", "L-0104", "L-0107", "L-0109"]
     assert "Pranav Iyer is away too" in attention and "Chloe Lim declined cover" in attention
-    assert "Away on the same days in one Precinct" in attention
+    assert attention.count("Away on the same days in one Precinct") == 1
+    assert "<td class=\"strong\">Olivia Ng, Pranav Iyer</td>" in attention
     away = page.split('id="away-h"')[1].split("</section>")[0]
-    assert [n for n in ("Maya Seah", "Olivia Ng", "Pranav Iyer") if n in away] == ["Maya Seah", "Olivia Ng", "Pranav Iyer"]
+    assert re.findall(r'<td class="strong nowrap">([^<]*)', away) == ["Maya Seah", "Olivia Ng", "Pranav Iyer"]
     assert "Maple 03-08</strong>: Grace Ho has not signed in yet" in page
+
+
+def test_a_tile_opens_the_rows_it_counts() -> None:
+    c = client()
+    first = c.get(ADMIN + "applications", params={"stage": "Pending first approval"}).text
+    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', first) == ["L-0101", "L-0102", "L-0109", "L-0104"]
+    assert "<option selected>Pending first approval</option>" in first
+    cover = c.get(ADMIN + "applications?cover=unconfirmed").text
+    assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0109"]
+    assert "· 2 of 13" in cover
 
 
 def test_policy_makes_the_period_first_approver_and_cover_pool_configurable() -> None:
@@ -55,25 +70,28 @@ def test_policy_makes_the_period_first_approver_and_cover_pool_configurable() ->
         ("period", sample_leave.PERIODS, sample_leave.POLICY["period"]),
         ("first", sample_leave.FIRST_APPROVERS, sample_leave.POLICY["first_approver"]),
         ("pool", sample_leave.COVER_POOLS, sample_leave.POLICY["cover_pool"]),
+        ("confirm", ("Cover must be confirmed", "Cover is named only"), "Cover must be confirmed"),
     ):
         radios = re.findall(rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page)
         assert [v for v, _ in radios] == list(options), name
         assert [v for v, c in radios if c] == [current], name
     for n, (leave_type, abbrev, days) in enumerate(sample_leave.LEAVE_TYPES, start=1):
         assert f'aria-label="Leave type {n}: name" value="{leave_type}"' in page
-        assert f'aria-label="Leave type {n}: days per period" value="{days}"' in page
+        assert f'aria-label="Leave type {n}: usual days" value="{days}"' in page
     assert "The Residential Admin (Rachel Yeo)" in page and "The Master (Sam Lee), personally" in page
 
 
 def test_entitlements_show_available_after_used_pending_and_adjustments() -> None:
     page = client().get(ADMIN + "entitlements").text
-    rows = sample_leave.entitlement_rows()
+    rows = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     assert len(rows) == len(sample_data.RAS) * len(sample_leave.LEAVE_TYPES)
-    for row in rows:
-        assert row["available"] == row["entitlement"] + row["adjustment"] - row["used"] - row["pending"]
-    gwen = next(r for r in rows if r["ra"] == "Gwen Ho" and r["type"] == "Annual leave")
-    assert gwen["available"] == 0  # hence her appeal to the Master
-    assert '<span title="Carried over by the Master' in page and ">+2</span>" in page
+    pick = ("entitlement", "adjustment", "used", "pending", "available")
+    assert [rows["Gwen Ho", "Annual leave"][k] for k in pick] == [14, 0, 14, 0, 0]  # used up: hence her appeal
+    assert [rows["Leon Chia", "Annual leave"][k] for k in pick] == [14, 2, 0, 5, 11]
+    assert [rows["Chloe Lim", "Annual leave"][k] for k in pick] == [14, 0, 0, 3, 11]
+    assert [rows["Bella Koh", "Compassionate leave"][k] for k in pick] == [3, 0, 0, 3, 0]
+    assert rows["Gwen Ho", "Annual leave"]["pending"] == 0  # her appeal is extra leave, not charged (§7.5)
+    assert "+2<div class=\"subtle\">Carried over by the Master" in page  # the reason, visible
     assert "Email,Leave type,Days" in page
     assert page.count(">Adjust</button>") == len(rows)
 
@@ -86,7 +104,7 @@ def test_the_approval_chain_is_derived_from_assignments_and_the_policy() -> None
     for r in routes:
         assert r.first == (sample_leave.DELEGATES[r.precinct][0] if r.delegate else r.rf)
         assert f'aria-label="Set a delegate for {r.precinct}"' in page
-    assert page.count("chip-warn") >= 1 and "Grace Ho has not signed in yet" in page
+    assert page.count(">Delegate</span>") == 1 and "Grace Ho has not signed in yet" in page
     assert "for AY2026-2027, Term 1 and the policy's first approver (RF)" in page
 
 
@@ -100,4 +118,7 @@ def test_applications_list_every_one_and_open_to_their_timeline() -> None:
     assert "Sent to Sam Lee as an extra-leave appeal" in detail
     approved = c.get(ADMIN + "applications/L-0106").text
     assert "Final approval by Rachel Yeo" in approved and ">Cancel approved leave</button>" in approved
+    assert "Reassign" not in approved
+    rejected = c.get(ADMIN + "applications/L-0110").text
+    assert ">Correct the record</button>" in rejected and "Cancel" not in rejected and "Reassign" not in rejected
     assert c.get(ADMIN + "applications/L-9999").status_code == 404

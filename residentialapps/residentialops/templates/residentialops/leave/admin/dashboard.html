@@ -5,14 +5,19 @@
   {{ title("RA Leave admin", leave) }}
   <p class="sub">The whole Unit's leave: what is pending, what needs attention, and who is away. RAs apply at <code>/ra-leave/</code> and staff decide at <code>/ra-leave/staff/</code>; this side configures and oversees.</p>
 
-  {# Pending by stage, oldest work first (spec §25). #}
+  {# Pending by stage, then cover still to confirm, which waits beside the
+     first stage rather than being one (spec §11, §25). #}
   <section class="tiles" aria-label="Pending by stage">
     {% for stage, count in leave.pending_by_stage() %}
-      <a class="tile" href="{{ url('/ra-leave/admin/applications') }}">
+      <a class="tile" href="{{ url('/ra-leave/admin/applications') }}?stage={{ stage | urlencode }}">
         <span class="tile-n">{{ count }}</span>
         <span class="tile-l">{{ stage }}</span>
       </a>
     {% endfor %}
+    <a class="tile" href="{{ url('/ra-leave/admin/applications') }}?cover=unconfirmed">
+      <span class="tile-n">{{ leave.cover_unconfirmed() | length }}</span>
+      <span class="tile-l">Cover not yet confirmed</span>
+    </a>
   </section>
 
   <div class="split gap-above">
