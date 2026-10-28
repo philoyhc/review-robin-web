@@ -308,4 +308,26 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     named = client().get(ADMIN + "policy").text
     assert 'value="Sam Lee, Rachel Yeo" disabled' in named
     assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
-    assert "No first approval, then Sam Lee, Rachel Yeo" in client().get(ADMIN).text
+    dash = client().get(ADMIN).text
+    assert "No first approval, then Sam Lee or Rachel Yeo" in dash and "No first approval is needed" in dash
+    rejected = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0110"))]
+    assert "Rejected by Sam Lee" in rejected
+    assert client().get(ADMIN + "applications/L-0106").status_code == 200
+    routing = client().get(ADMIN + "routing").text.split('id="delegates-h"')[1]
+    assert "Standing in" not in routing and routing.count(">No first approval</span>") == len(sample_leave.DELEGATES)
+
+
+def test_approvals_edge_cases(monkeypatch) -> None:
+    """Several Unit types: whichever approves first. No one named: the
+    timeline still reads. A ticked type no slot holds: a flagged gap, not
+    "None needed"."""
+    monkeypatch.setitem(sample_leave.POLICY, "final_types", ("Master", "Admin"))
+    assert sample_leave.final_approvers() == ("Sam Lee", "Rachel Yeo")
+    assert "then the Master or Admin" in client().get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "final", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
+    assert "Final approval by the final approver" in [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0106"))]
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
+    routes = sample_leave.routes()
+    assert all(r.gap and r.first == "No one" for r in routes)
+    assert client().get(ADMIN + "routing").text.count(">Gap</span>") == len(routes)

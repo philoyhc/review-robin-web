@@ -92,7 +92,7 @@ APPEAL_DECIDER = "Sam Lee"  # the Master
 
 def _appointments(names) -> tuple[tuple[str, str], ...]:
     staff = {p.name: p for p in sample_data.STAFF}
-    return tuple(dict.fromkeys((staff[n].appointment, staff[n].abbrev) for n in names))
+    return sample_data.appointments(tuple(staff[n] for n in dict.fromkeys(names)))
 
 
 def slot_appointments() -> tuple[tuple[str, str], ...]:
@@ -102,9 +102,11 @@ def slot_appointments() -> tuple[tuple[str, str], ...]:
 
 
 def unit_appointments() -> tuple[tuple[str, str], ...]:
-    """The staff appointments held by no one in a slot: the Unit's own."""
-    in_slots = {p for s in sample_data.SLOTS for p in s.staff}
-    return _appointments(p.name for p in sample_data.STAFF if p.name not in in_slots)
+    """The staff appointments that no slot's Staff cell holds: the Unit's
+    own. By appointment, not person, so an RF between slots stays a slot
+    appointment."""
+    on_slots = set(slot_appointments())
+    return tuple(a for a in sample_data.STAFF_APPOINTMENTS if a not in on_slots)
 
 
 def final_approvers() -> tuple[str, ...]:
@@ -119,7 +121,13 @@ def first_label() -> str:
 
 
 def final_label() -> str:
-    return " or ".join(POLICY["final_types"]) if POLICY["final"] == "unit" else ", ".join(POLICY["final_names"])
+    return " or ".join(POLICY["final_types"] if POLICY["final"] == "unit" else POLICY["final_names"])
+
+
+def final_decider() -> str:
+    """The sample's final approver on a decided application: the first who
+    may give it."""
+    return next(iter(final_approvers()), "the final approver")
 
 # Cover is tracked beside the workflow, not as a stage of it: an
 # application whose cover is unconfirmed waits at first approval (spec §11).
@@ -345,7 +353,8 @@ class Route:
     rslm: str
     first: str  # the first approver, by the policy, or a delegate
     delegate: bool
-    note: str  # why a delegate stands in on this day, or ""
+    note: str  # why a delegate stands in on this day, or why no one approves first
+    gap: bool = False  # the policy's ticked appointments match no one on these slots
 
 
 @dataclass(frozen=True)
@@ -400,10 +409,15 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
         by_type = {staff[n].abbrev: n for n in slot.staff}
         named = [by_type[t] for t in POLICY["first_types"] if t in by_type] if POLICY["first"] == "slot" else []
         standing_in = [d for n in named if (d := acting(n, day))]
-        first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named) or "None needed"
+        first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named)
         note = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
+        gap = POLICY["first"] == "slot" and not named
+        if POLICY["first"] == "none":
+            first = "None needed"
+        elif gap:
+            first, note = "No one", f"no {first_label() or 'ticked appointment'} on its slots"
         found[slot.precinct] = Route(
-            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note
+            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note, gap
         )
     return tuple(found.values())
 
@@ -424,9 +438,9 @@ def timeline(application: Application) -> tuple[tuple[str, str], ...]:
     if application.stage in ("Pending final approval", "Approved") and POLICY["first"] == "slot":
         steps.append(("", f"First approval by {route.first}"))
     if application.stage == "Approved":
-        steps.append(("", f"Final approval by {final_approvers()[0]}"))
+        steps.append(("", f"Final approval by {final_decider()}"))
     if application.stage == "Rejected":
-        steps.append(("", f"Rejected by {route.first if POLICY['first'] == 'slot' else final_approvers()[0]}"))
+        steps.append(("", f"Rejected by {route.first if POLICY['first'] == 'slot' else final_decider()}"))
     if application.stage == "Withdrawn":
         steps.append(("", f"Withdrawn by {application.ra}"))
     return tuple(steps)

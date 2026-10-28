@@ -20,7 +20,7 @@
               <td>{{ route.ras }}</td>
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
-              <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
+              <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
               <td>{{ leave.final_approvers() | join(" or ") }}</td>
               {% if leave.POLICY.appeals %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
             </tr>
@@ -32,7 +32,7 @@
 
   <section class="card card-pad gap-above" aria-labelledby="delegates-h">
     <h2 id="delegates-h">Delegates <span class="count">· {{ leave.DELEGATES | length }}</span></h2>
-    <p class="sub">A delegate approves first in a person's place on every slot that person approves for, between the dates given; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.POLICY.appeals else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
+    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.POLICY.appeals else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
     <div class="table-wrap">
       <table class="rows">
         <thead><tr><th scope="col">Acting for</th><th scope="col">Delegate</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Why</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
@@ -45,7 +45,7 @@
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: from" value="{{ d.start.isoformat() if d.start }}" disabled></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: to" value="{{ d.end.isoformat() if d.end }}" disabled></td>
               <td><input class="input" type="text" aria-label="Delegate {{ n }}: why {{ d.acting_for }} cannot approve" value="{{ d.reason }}" disabled></td>
-              <td class="nowrap">{% if d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
+              <td class="nowrap">{% if leave.POLICY.first == "none" %}<span class="chip chip-mute">No first approval</span>{% elif d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
               <td><span class="row-actions">
                 <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a delegate below the one for {{ d.acting_for }}, {{ d.dates }}" title="Add a delegate below this one" disabled>+</button>
                 <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove the delegate for {{ d.acting_for }}, {{ d.dates }}" title="Remove this delegate" disabled>X</button>
