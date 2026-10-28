@@ -8,7 +8,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 
 ## Status
 
-**Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3) and awaits the author's approval. RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
+**Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3, then per iteration rung) and awaits the author's approval; reviewed complete 2026-10-28 but for that approval. RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
 
 - **Iteration rung 4, 2026-10-27** (author's browser check): the tree is approved; Level labels gain a *Used* flag per level, and the Appointments card becomes five editable slots of title, type and level (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Iteration rung 5, 2026-10-27** (author's browser check): levels and appointments become rows with **+** and **X** (no fixed count, no *Used* flag), after RRW's response-field rows; Appointments gains an *Abbrev* column; Admin is *Residential Admin*, and *Other Staff* joins the defaults; up to five levels and ten appointments (the same ruling, amended).
@@ -28,6 +28,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Rung 19** (2026-10-28): Assignments by term: the term card (a live selector, Copy from, Set up terms), past terms read-only, an upcoming term empty until copied or uploaded, the partial-overlap warning (Umairah Salleh, 14 days), and the Assignments CSV with its `Term` column and upload-mode select. The `organization*.csv` mocks become `assignments*.csv`, plus `assignments_term2.csv` for Add a term. Quick setup is held, its file unchanged but for Umairah's start date.
 - **Rung 20** (2026-10-28, author's refinements): Home's Terms and Slots steps merge into one, 1 Setup; the Assignments CSV's upload mode is a radio group.
 - **Rung 21** (2026-10-28, author's refinements): Upload and preview stays unavailable until an upload mode is chosen (the radios live); Export covers a From–To run of terms, the term shown by default.
+- **Rung 22** (2026-10-28, item 1 review): the Sys admin audit and person detail's slots follow assignments by term (`#3329`); this plan's items 2–5 annotated to the 2026-10-28 rulings, intent left as written.
 
 ## Decision
 
@@ -35,11 +36,13 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 
 | Item | Lands | Wires |
 |---|---|---|
-| 1. Screens | Placeholders on RRW's templates and design system, filled with Unit 1's example data (one Wing, three Precincts, ten Neighborhoods), controls inert; iterated until the author approves | — |
+| 1. Screens | Placeholders on RRW's templates and design system, filled with Unit 1's example data (~~one Wing, three Precincts, ten Neighborhoods~~ Example College: 3 Wings, 9 Precincts, 30 Neighborhoods), controls inert; iterated until the author approves | — |
 | 2. Databases | Both databases' settings and engines; one `alembic.ini` with two histories; empty first migrations; the Postgres round-trip of both in CI | — |
 | 3. Identity | Cordware's identity gains tenant ID and UPN; Person with `person_id`; first-sign-in binding; sys admin granted by the super-admin; `RES_` fake roles | Not-registered page, person detail, sys admin grants |
-| 4. Organization | Unit, level labels, nodes, floor segments, appointment-to-level map; the structure CSV | Organization page |
-| 5. Rosters | Appointments, dated backup reporting, derived reporting; Staff and RA roster CSVs | Roster pages |
+| 4. ~~Organization~~ Terms and assignments | Unit, level labels, ~~nodes, floor segments, appointment-to-level map; the structure CSV~~ terms, slots standing from a term, assignments by term with the guard; the Terms and Assignments CSVs with their upload modes | ~~Organization page~~ Terms and Assignments pages |
+| 5. Rosters | Appointments (with Abbrev), ~~dated backup reporting, derived reporting~~; Staff and RA roster CSVs, appending | Roster pages |
+
+**Revised 2026-10-28** (author's rulings, `residentialapps/guide/todo_master.md`): items 4 and 5 follow rosters, terms and assignments — no posts, nodes, floor segments, appointment types tables, dated backups or derived reporting; who reports to whom is the slot's Staff and RA cells for a term.
 
 **Rejected: the screens as their own segment** (the author's three-segment option). Its close would have nothing to record before wiring; the screens-before-services order is held by item 1's approval gate instead.
 
@@ -53,16 +56,17 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Sample data is labelled** on every placeholder, and lives in one module so it can be deleted in one place.
 - **Binding** follows `residentialapps_identity.md` §6. No trusted (tenant, object ID) means no link and no access. The match is exact on email or UPN against exactly one unlinked Person, and uniqueness constraints guard concurrent first sign-ins.
 - **Databases per app:** `/residentialops` needs one URL, `/supportlogs` both (ruling 4). Runtime roles hold DML only.
-- **Structure import:** the file is the Unit's complete tree. A missing node is end-dated, and a node with a current appointment blocks the import. Floor gaps and overlaps warn.
-- **Reporting** is derived from the tree; only dated backups are stored.
-- **Across the tables**: organization by units, ruled in `residentialapps/guide/todo_master.md` (2026-10-27), superseding posts and the inter-table rules; items 4 and 5 implement it, and the placeholders follow it next.
+- ~~**Structure import:** the file is the Unit's complete tree. A missing node is end-dated, and a node with a current appointment blocks the import. Floor gaps and overlaps warn.~~ **Assignments import** (2026-10-28): a mode chosen per upload — New slots, Refresh a term, Add a term — each term checked on its own, past terms refused; a blank cell means what the mode makes it (ruling points 7 and 9).
+- ~~**Reporting** is derived from the tree; only dated backups are stored.~~ **Reporting** is a slot's RAs to its Staff, for a term; **the guard** qualifies an appointment covering the term, warns on part with the gap in days, refuses none (ruling point 6).
+- **Roster import** appends; a known email with a changed name, enterprise name or student ID warns first (ruling point 2).
+- **Across the tables**: organization by units (2026-10-27), then rosters, terms and assignments (2026-10-28), ruled in `residentialapps/guide/todo_master.md`; items 4 and 5 implement them, as the placeholders already do.
 - **Sys admin** is granted and revoked by the super-admin only, with no-self-action and last-sys-admin floors (`residentialapps_roles.md`).
 
 ## Judgment calls — decided
 
 - Databases come before identity: the Person table needs a database.
-- The setup CSVs come before the roster CSVs: a roster row appoints a person to a post the tree holds.
-- The appointment-to-level map lives on the Unit and is edited on the organization page.
+- ~~The setup CSVs come before the roster CSVs: a roster row appoints a person to a post the tree holds.~~ Revised 2026-10-28: the rosters come before assignments, since an assignee must hold an appointment; terms come before slots.
+- ~~The appointment-to-level map lives on the Unit and is edited on the organization page.~~ Retired with appointment types (2026-10-28).
 - Item 1 takes its `diff-reviewer` read on the item's cumulative diff at rung 3, its last build rung. An iteration rung after that read reopens `app/`-style code (templates, sample data), so each takes its own read, as `CLAUDE.md` "Where work runs" requires.
 
 ## Blast radius (measured)
@@ -77,23 +81,23 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ## PR ladder
 
-**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview. 2. Roster pages: level filters, link status, ~~read-only access chips~~ (no Access column, ruled 2026-10-28), the roster-CSV card. 3. Identity and access pages: not-registered, person detail, sys admin grants. Last build rung. 4+. Iteration until approved, each with its own read.
+**Item 1 — Screens.** 1. Organization page: level labels, the tree with floors, the structure-CSV card with a sample preview (became the Assignments and Terms pages, rungs 15–21). 2. Roster pages: level filters, link status, ~~read-only access chips~~ (no Access column, ruled 2026-10-28), the roster-CSV card. 3. Identity and access pages: not-registered, person detail, sys admin grants. Last build rung. 4+. Iteration until approved, each with its own read.
 
 **Item 2 — Databases.** 1. Settings, engines, both histories. 2. CI round-trip of both on Postgres. Last build rung.
 
 **Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
 
-**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page. Last build rung.
+~~**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page.~~ **Item 4 — Terms and assignments** (revised 2026-10-28). 1. Models and migration: terms, levels, slots by term, assignments. 2. Terms CSV and page. 3. Assignments CSV with its modes, the guard, Copy from: parse, preview, commit, export. 4. Wire the Assignments page. Last build rung.
 
-**Item 5 — Rosters.** 1. Appointments and reporting. 2. Roster CSVs. 3. Wire the roster pages. Last build rung.
+**Item 5 — Rosters.** 1. Appointments ~~and reporting~~ (with Abbrev). 2. Roster CSVs, appending, with the identity-change warning. 3. Wire the roster pages. Last build rung. (Revised 2026-10-28: item 5 lands before item 4's assignments, rung 3, since an assignee must hold an appointment.)
 
 ## Definition of done
 
 - The author approved item 1's screens; no page shows sample data at close.
 - Both Alembic histories round-trip on Postgres in CI.
 - The identity spec's acceptance scenarios 1–11 each have a test.
-- Unit 1's ten-row structure file imports, previews, and re-imports with a retire.
-- Staff and RA roster CSVs import against that tree, and an RA's reporting RF is derived.
+- ~~Unit 1's ten-row structure file imports, previews, and re-imports with a retire.~~ The mock terms and `assignments.csv` import and preview, each upload mode behaves as ruled, and `assignments_errors.csv` is refused row by row.
+- ~~Staff and RA roster CSVs import against that tree, and an RA's reporting RF is derived.~~ Staff and RA roster CSVs import and append; `*_roster_errors.csv` refuse and warn as their README rows say.
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 1B` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -117,6 +121,6 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 
 - `cordware/spec/identity.md` — tenant ID and UPN on the identity (Item 3).
 - `residentialapps/docs/residentialapps_identity.md` — revised to what shipped (Item 3).
-- `residentialapps/docs/residentialapps_roster_structure.md` — revised to organization by units: levels, slots and their Staff and RA cells (Item 4).
-- `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the levels, slots, rosters, appointment types and cells, their inter-table rules and CSV precedence, written as items 4 and 5 ship (author, 2026-10-27).
+- `residentialapps/docs/residentialapps_roster_structure.md` — revised to rosters, terms and assignments: levels, slots by term and their assignments (Item 4).
+- `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the terms, levels, slots, rosters and assignments, their inter-table rules, upload modes and blank cells, written as items 4 and 5 ship (author, 2026-10-27; revised 2026-10-28).
 - `residentialapps/guide/todo_master.md` — the entries this segment finishes, deleted at close.
