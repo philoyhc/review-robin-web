@@ -55,7 +55,19 @@ def home(request: Request) -> Response:
 
 @router.get("/rosters/assignments", name="residentialops_rosters_assignments")
 def assignments(request: Request) -> Response:
-    return render(request, "residentialops/rosters/assignments.html", **_context(request))
+    # The page shows one term, `?term=` (`AY2026-2027.1`), opening on the
+    # term today falls in, else the next (author, 2026-10-28).
+    terms = {term.key: term for term in sample_data.TERMS}
+    term = terms.get(request.query_params.get("term", ""), sample_data.CURRENT_TERM)
+    return render(
+        request,
+        "residentialops/rosters/assignments.html",
+        term=term,
+        assigned=term in sample_data.ASSIGNED_TERMS,
+        copy_from=tuple(t for t in sample_data.ASSIGNED_TERMS if t.start < term.start),
+        late_starts=sample_data.late_starts(term),
+        **_context(request),
+    )
 
 
 # The Terms page is a detour, after RRW's `/guide?return_to=`: its back

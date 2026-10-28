@@ -43,6 +43,16 @@ class Term:
         return f"{self.year}, Term {self.number}"
 
     @property
+    def code(self) -> str:
+        """As the Assignments CSV's Term column writes it."""
+        return f"{self.year} Term {self.number}"
+
+    @property
+    def key(self) -> str:
+        """As the page's `?term=` names it."""
+        return f"{self.year}.{self.number}"
+
+    @property
     def days(self) -> int:
         return (self.end - self.start).days + 1
 
@@ -66,6 +76,19 @@ TERMS: tuple[Term, ...] = tuple(
     )
 )
 CURRENT_TERM = next(t for t in TERMS if t.status != "Past")  # the page opens on it
+
+# The sample's assignments are for the current term alone: the Unit began
+# using Rosters and setup in AY2026-2027, and later terms wait to be
+# copied or uploaded.
+ASSIGNED_TERMS = (CURRENT_TERM,)
+
+# An Assignments upload says what it does (author, 2026-10-28), chosen on
+# the upload card and checked in the preview.
+UPLOAD_MODES = (
+    ("New slots", "The file defines the slots from its first term on, earlier terms keeping theirs. That term and every later one are wiped, after a warning naming them."),
+    ("Refresh a term", "The slots must match those on file exactly. The current or a future term's assignments are replaced, after a warning."),
+    ("Add a term", "The slots must match those on file exactly. The term has no assignments yet."),
+)
 
 # A roster row names its appointment and its abbreviation; there are no
 # appointment types tables (author, 2026-10-28).
@@ -182,8 +205,15 @@ STAFF: tuple[StaffMember, ...] = (
     ),
 )
 
+# Umairah Salleh's appointment starts after Term 1 does: her assignment
+# stands, with a warning naming the gap (author, 2026-10-28).
+LATE_START = {"Umairah Salleh": "2026-08-17 –"}
+
 RAS: tuple[RosterRA, ...] = tuple(
-    RosterRA(name, _email(name), "Residential Assistant", "RA", DATES, name != "Nur Aisyah", _enterprise(name), _student_id(n))
+    RosterRA(
+        name, _email(name), "Residential Assistant", "RA", LATE_START.get(name, DATES), name != "Nur Aisyah",
+        _enterprise(name), _student_id(n),
+    )
     for n, name in enumerate(slot.ras[0] for slot in SLOTS)
 )
 
@@ -212,14 +242,27 @@ RA_CSV = """\
 Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID
 Chloe Lim,chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,LIM CHLOE,A0230000X"""
 
-ORGANIZATION_CSV = """\
-Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA
-Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,chloe.lim@example.edu"""
+ASSIGNMENTS_CSV = """\
+Term,Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA
+AY2026-2027 Term 1,Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,chloe.lim@example.edu"""
 
 
 def linked_count(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tuple[int, int]:
     """On the roster, and linked to a sign-in."""
     return len(people), sum(1 for p in people if p.linked)
+
+
+def late_starts(term: Term) -> tuple[tuple[str, str, int], ...]:
+    """The assignment guard's warning: each assignee whose appointment starts
+    after the term does, with their slot and the gap in days. One wholly
+    outside the term is refused instead (author, 2026-10-28)."""
+    starts = {p.name: date.fromisoformat(p.dates.split()[0]) for p in (*STAFF, *RAS)}
+    return tuple(
+        (name, slot.neighborhood, (starts[name] - term.start).days)
+        for slot in SLOTS
+        for name in (*slot.staff, *slot.ras)
+        if starts[name] > term.start
+    )
 
 
 def slots_of(name: str) -> tuple[str, ...]:

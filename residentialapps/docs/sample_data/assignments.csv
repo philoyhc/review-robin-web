@@ -1,0 +1,31 @@
+Term,Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA
+AY2026-2027 Term 1,Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,chloe.lim@example.edu
+AY2026-2027 Term 1,Cypress,Cypress A 04-12,Cypress A 07-08-09,"RC1A L7: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,ethan.wong@example.edu
+AY2026-2027 Term 1,Cypress,Cypress A 04-12,Cypress A 10-11-12,"RC1A L10: 101, 102-105; Else: 101, 102",daniel.koh@example.edu; priya.raman@example.edu,hana.ito@example.edu
+AY2026-2027 Term 1,Cypress,Cypress A 13-20,Cypress A 13-14-15,"RC1A 101, 102",meiling.tan@example.edu; priya.raman@example.edu,isaac.goh@example.edu
+AY2026-2027 Term 1,Cypress,Cypress A 13-20,Cypress A 16-17-18,"RC1A 101, 102",meiling.tan@example.edu; priya.raman@example.edu,jiahui.ong@example.edu
+AY2026-2027 Term 1,Cypress,Cypress A 13-20,Cypress A 19-20,"RC1A 101, 102",meiling.tan@example.edu; priya.raman@example.edu,kai.ng@example.edu
+AY2026-2027 Term 1,Cypress,Cypress B 03-14,Cypress B 03-04-05,"RC1B 108, 107",arjun.nair@example.edu; priya.raman@example.edu,lucas.teo@example.edu
+AY2026-2027 Term 1,Cypress,Cypress B 03-14,Cypress B 06-07-08,"RC1B 108, 107",arjun.nair@example.edu; priya.raman@example.edu,maya.seah@example.edu
+AY2026-2027 Term 1,Cypress,Cypress B 03-14,Cypress B 09-10-11,"RC1B 108, 107",arjun.nair@example.edu; priya.raman@example.edu,nur.aisyah@example.edu
+AY2026-2027 Term 1,Cypress,Cypress B 03-14,Cypress B 12-13-14,"RC1B 108, 107",arjun.nair@example.edu; priya.raman@example.edu,aaron.sim@example.edu
+AY2026-2027 Term 1,Maple,Maple 03-08,Maple 03-04,"RC2 L3: 203-206, 202, 201; Else: 203, 202, 201",grace.ho@example.edu; marcus.tan@example.edu,bella.koh@example.edu
+AY2026-2027 Term 1,Maple,Maple 03-08,Maple 05-06,"RC2 L5: 203-206, 202, 201; Else: 203, 202, 201",grace.ho@example.edu; marcus.tan@example.edu,chenghao.lin@example.edu
+AY2026-2027 Term 1,Maple,Maple 03-08,Maple 07-08,"RC2 L7: 203-206, 202, 201; Else: 203, 202, 201",grace.ho@example.edu; marcus.tan@example.edu,dhruv.menon@example.edu
+AY2026-2027 Term 1,Maple,Maple 09-14,Maple 09-10,"RC2 203, 202, 201",benjamin.chua@example.edu; marcus.tan@example.edu,elise.tan@example.edu
+AY2026-2027 Term 1,Maple,Maple 09-14,Maple 11-12,"RC2 203, 202, 201",benjamin.chua@example.edu; marcus.tan@example.edu,faris.iskandar@example.edu
+AY2026-2027 Term 1,Maple,Maple 09-14,Maple 13-14,"RC2 203, 202, 201",benjamin.chua@example.edu; marcus.tan@example.edu,gwen.ho@example.edu
+AY2026-2027 Term 1,Maple,Maple 15-22,Maple 15-16,"RC2 203, 202, 201",farah.aziz@example.edu; marcus.tan@example.edu,haikal.rahim@example.edu
+AY2026-2027 Term 1,Maple,Maple 15-22,Maple 17-18,"RC2 203, 202, 201",farah.aziz@example.edu; marcus.tan@example.edu,ivy.toh@example.edu
+AY2026-2027 Term 1,Maple,Maple 15-22,Maple 19-20,"RC2 203, 202, 201",farah.aziz@example.edu; marcus.tan@example.edu,jasper.lee@example.edu
+AY2026-2027 Term 1,Maple,Maple 15-22,Maple 21-22,"RC2 203, 202, 201",farah.aziz@example.edu; marcus.tan@example.edu,kavya.pillai@example.edu
+AY2026-2027 Term 1,Willow,Willow A 04-12,Willow A 04-05-06,"RC3A 501, 502",kenneth.lau@example.edu; nadia.hassan@example.edu,leon.chia@example.edu
+AY2026-2027 Term 1,Willow,Willow A 04-12,Willow A 07-08-09,"RC3A 501, 502",kenneth.lau@example.edu; nadia.hassan@example.edu,mira.sato@example.edu
+AY2026-2027 Term 1,Willow,Willow A 04-12,Willow A 10-11-12,"RC3A 501, 502",kenneth.lau@example.edu; nadia.hassan@example.edu,nathan.yeo@example.edu
+AY2026-2027 Term 1,Willow,Willow A 13-25,Willow A 13-14-15,"RC3A 501, 502",siti.rahman@example.edu; nadia.hassan@example.edu,olivia.ng@example.edu
+AY2026-2027 Term 1,Willow,Willow A 13-25,Willow A 16-17-18,"RC3A 501, 502",siti.rahman@example.edu; nadia.hassan@example.edu,pranav.iyer@example.edu
+AY2026-2027 Term 1,Willow,Willow A 13-25,Willow A 19-20-21,"RC3A 501, 502",siti.rahman@example.edu; nadia.hassan@example.edu,qixuan.lim@example.edu
+AY2026-2027 Term 1,Willow,Willow A 13-25,Willow A 22-23-24-25,"RC3A 501, 502",siti.rahman@example.edu; nadia.hassan@example.edu,rui.chen@example.edu
+AY2026-2027 Term 1,Willow,Willow B 04-12,Willow B 04-05-06,"RC3B L4: 506-509, 505; Else: 506, 505",weijie.ong@example.edu; nadia.hassan@example.edu,sofia.wee@example.edu
+AY2026-2027 Term 1,Willow,Willow B 04-12,Willow B 07-08-09,"RC3B L7: 506-509, 505; Else: 506, 505",weijie.ong@example.edu; nadia.hassan@example.edu,timothy.low@example.edu
+AY2026-2027 Term 1,Willow,Willow B 04-12,Willow B 10-11-12,"RC3B L10: 506-509, 505; Else: 506, 505",weijie.ong@example.edu; nadia.hassan@example.edu,umairah.salleh@example.edu
