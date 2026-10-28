@@ -30,6 +30,7 @@ def person(request: Request, person_id: str) -> Response:
         area="Rosters",
         tabs=ROSTER_TABS,
         person=found,
+        term=sample_data.CURRENT_TERM,  # the slots shown are this term's
         back=ROSTER_BACK[found.roster],
     )
 
