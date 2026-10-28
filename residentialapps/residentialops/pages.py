@@ -35,6 +35,17 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Applications", "path": "/ra-leave/admin/applications"},
 )
 
+def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
+    """An RA's tabs; Extra leave only while appeals are on."""
+    return (
+        {"label": "Home", "path": "/ra-leave/"},
+        {"label": "Apply", "path": "/ra-leave/apply"},
+        *(({"label": "Extra leave", "path": "/ra-leave/appeal"},) if appeals else ()),
+        {"label": "My cover", "path": "/ra-leave/cover"},
+        {"label": "History", "path": "/ra-leave/history"},
+    )
+
+
 ROSTER_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": "/rosters/"},
     {"label": "Assignments", "path": "/rosters/assignments"},

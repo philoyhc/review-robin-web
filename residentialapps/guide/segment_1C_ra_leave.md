@@ -56,6 +56,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 ## Status
 
 - **Ladder reordered, 2026-10-28** (author): the admin pages (rung 4) are built first, the rest of RA Leave being downstream of their configuration; rungs 1–3 follow in order. Rung 4 lands first; the cumulative read moves to the item's last build rung.
+- **RA pages, 2026-10-28** (author: "RA pages next"): rung 2 lands with rung 1's RA home; the landing at `/` and the viewer switch wait for rung 1's remainder. The sample viewer is Chloe Lim; two applications were added naming her as cover.
 - **Iteration, 2026-10-28** (author): Leave policy reworked to the leave policy ruling (`residentialapps/guide/todo_master.md`): leave types with their own earning rule and cap, blackouts by week, appeals and their terms, cover required, named or confirmed. Entitlements follow the rules; its CSV carries adjustments only.
 
 ## PR ladder

@@ -1,0 +1,63 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import title, viewing, app_item with context %}
+{% block title %}My leave{% endblock %}
+{% block content %}
+  {{ title("My leave", leave, viewing(me)) }}
+  {# The balance first, as the spec orders the page (§8.1); its detail is
+     the side card, which a phone puts last. #}
+  <section class="tiles" aria-label="Available to you">
+    {% for r in leave.my_balances(me) %}
+      <a class="tile" href="#bal-h"><span class="tile-n">{{ r.available }}</span><span class="tile-l">{{ r.type }} available</span></a>
+    {% endfor %}
+  </section>
+  <div class="btnrow gap-above gap-below">
+    <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}">Apply for leave</a>
+    {% if leave.POLICY.appeals %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}">Request extra leave</a>{% endif %}
+  </div>
+
+  <div class="split">
+    <div class="main stack">
+      {% set asked = leave.cover_asked(me) %}
+      {% if asked.answer %}
+        <section class="card card-pad" aria-labelledby="ask-h">
+          <h2 id="ask-h">Asked to cover <span class="count">· {{ asked.answer | length }}</span></h2>
+          <p class="sub">An RA has named you as their cover. Answer on <a href="{{ url('/ra-leave/cover') }}">My cover</a>.</p>
+          <ul class="items">
+            {% for a in asked.answer %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div></li>{% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+      <section class="card card-pad" aria-labelledby="mine-h">
+        {% set open = leave.my_applications(me) | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
+        <h2 id="mine-h">My applications <span class="count">· {{ open | length }} in progress</span></h2>
+        {% if open %}
+          <ul class="items">{% for a in open %}{{ app_item(a, leave) }}{% endfor %}</ul>
+        {% else %}
+          <p class="sub">Nothing in progress.</p>
+        {% endif %}
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/history') }}">All my applications</a>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad" aria-labelledby="bal-h">
+        <h2 id="bal-h">My balance</h2>
+        <p class="sub">{{ leave.TERM.label }}. A term's days are used within it.</p>
+        {% for r in leave.my_balances(me) %}
+          <h3 class="gap-above-sm">{{ r.type }}</h3>
+          <dl class="kv">
+            <dt>Available</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>
+            <dt>Entitlement</dt><dd>{{ r.entitlement }}{% if r.adjustment %} {{ "%+d" | format(r.adjustment) }}{% endif %}</dd>
+            <dt>Used</dt><dd>{{ r.used }}</dd>
+            <dt>Pending</dt><dd>{{ r.pending }}</dd>
+          </dl>
+        {% endfor %}
+        {% set extra = leave.my_extra(me) %}
+        {% if leave.POLICY.appeals or extra.granted or extra.pending %}
+          <h3 class="gap-above-sm">Extra leave</h3>
+          <p class="subtle small">Granted by the Master on appeal, kept apart from your entitlement.</p>
+          <dl class="kv"><dt>Granted</dt><dd>{{ extra.granted }}</dd><dt>Pending</dt><dd>{{ extra.pending }}</dd></dl>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

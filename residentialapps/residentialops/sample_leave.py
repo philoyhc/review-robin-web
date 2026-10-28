@@ -222,6 +222,10 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
             ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-19"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
             ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
+            # Chloe Lim, the RA pages' sample viewer, is asked to cover one
+            # and has agreed to cover another.
+            ("Ethan Wong", "Personal leave", _d("2026-12-04"), _d("2026-12-06"), "Chloe Lim", "Awaiting", "Pending first approval", _d("2026-10-27")),
+            ("Hana Ito", "Personal leave", _d("2026-12-14"), _d("2026-12-15"), "Chloe Lim", "Confirmed", "Approved", _d("2026-10-20")),
         ),
         start=101,
     )
@@ -473,3 +477,59 @@ def timeline(application: Application) -> tuple[tuple[str, str], ...]:
     if application.stage == "Withdrawn":
         steps.append(("", f"Withdrawn by {application.ra}"))
     return tuple(steps)
+
+
+# The RA pages (`/ra-leave/`) render for one sample viewer until identity
+# is wired (segment 1C plan, "Viewing as").
+VIEWER = "Chloe Lim"
+
+
+def my_applications(ra: str = VIEWER) -> tuple[Application, ...]:
+    return tuple(sorted((a for a in APPLICATIONS if a.ra == ra), key=lambda a: a.submitted, reverse=True))
+
+
+def my_balances(ra: str = VIEWER) -> tuple[dict, ...]:
+    return tuple(r for r in entitlement_rows() if r["ra"] == ra)
+
+
+def my_extra(ra: str = VIEWER) -> dict[str, int]:
+    """Extra leave, shown apart from entitlement (spec §8.1, §7.5)."""
+    mine = [a for a in APPLICATIONS if a.ra == ra and a.appeal]
+    return {
+        "granted": sum(a.days for a in mine if a.stage == "Approved"),
+        "pending": sum(a.days for a in mine if a.stage in OPEN_STAGES),
+    }
+
+
+def confirmation_needed(application: Application) -> bool:
+    """Whether the cover must confirm: always for an appeal (spec §7.4); for
+    ordinary leave only when the policy requires named and confirmed cover
+    (§12)."""
+    return application.appeal or (POLICY["cover_required"] and POLICY["cover_mode"] == "Named and confirmed")
+
+
+def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:
+    """Where an RA is named as cover (spec §23): to answer, covering now or
+    to come (agreed, or named where no answer is owed), and the rest."""
+    named = [a for a in APPLICATIONS if a.cover == ra and a.stage not in ("Rejected", "Withdrawn")]
+    answer = tuple(
+        a for a in named if a.cover_status == "Awaiting" and a.stage in OPEN_STAGES and confirmation_needed(a)
+    )
+    coming = tuple(
+        a for a in named if a not in answer and a.end >= TODAY
+        and (a.cover_status == "Confirmed" or (a.cover_status == "Awaiting" and not confirmation_needed(a)))
+    )
+    past = tuple(a for a in named if a not in answer and a not in coming)
+    return {"answer": answer, "coming": coming, "past": past}
+
+
+def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
+    """Whom an RA may name as cover under the policy's pool, never
+    themselves (spec §9.2)."""
+    slot_of = {name: s for s in sample_data.SLOTS for name in s.ras}
+    mine = slot_of[ra]
+    level = {"Same Precinct": "precinct", "Same Wing": "wing"}.get(POLICY["cover_pool"])
+    return tuple(
+        name for s in sample_data.SLOTS for name in s.ras
+        if name != ra and (level is None or getattr(s, level) == getattr(mine, level))
+    )

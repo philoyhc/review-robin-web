@@ -198,6 +198,10 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 - **Stat tiles** (`.tiles`, RA Leave admin's dashboard, 2026-10-28): a
   count over its label, each tile a link to the rows it counts.
 - **Numbers in a table** sit right-aligned (`td.num`).
+- **Phone lists** (`ul.items`, RA Leave's RA pages, 2026-10-28): on a
+  mobile-critical page, rows are list items rather than table rows, each
+  a head line (`.item-head`: what, then its date or chip) over a subtle
+  line of details.
 
 ## 9. Placeholders and sample data
 
@@ -211,6 +215,8 @@ Until a screen is wired:
   navigation, and its upload-mode radios, so the Upload button's
   unavailable state can be seen (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
+- a page drawn for one person (RA Leave's RA pages) says so in a
+  **Viewing as** chip beside the Sample data chip;
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.
 

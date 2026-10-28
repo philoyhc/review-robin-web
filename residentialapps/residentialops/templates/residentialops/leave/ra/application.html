@@ -1,0 +1,36 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, viewing with context %}
+{% block title %}{{ app.dates }}{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/ra-leave/history') }}">‹ My applications</a>
+  {{ title(app.leave_type ~ (" · extra leave" if app.appeal else ""), leave, viewing(me) ~ stage_chip(app.stage)) }}
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="detail-h">
+        <h2 id="detail-h">{{ app.dates }}</h2>
+        <dl class="kv">
+          <dt>Days</dt><dd>{{ app.days }}</dd>
+          <dt>Cover</dt><dd>{{ app.cover }} {{ cover_chip(app.cover_status) }}</dd>
+          <dt>Submitted</dt><dd>{{ leave.short_date(app.submitted) }}</dd>
+          {% if app.remarks %}<dt>Your remarks</dt><dd>{{ app.remarks }}</dd>{% endif %}
+        </dl>
+      </section>
+      <section class="card card-pad" aria-labelledby="timeline-h">
+        <h2 id="timeline-h">Timeline</h2>
+        <ol class="plain">
+          {% for when, what in steps %}<li>{% if when %}<span class="subtle">{{ when }}</span> · {% endif %}{{ what }}</li>{% endfor %}
+          {% if app.stage in leave.OPEN_STAGES %}<li class="subtle">Next: {% if app.cover_status == "Awaiting" and leave.confirmation_needed(app) %}awaiting cover confirmation from {{ app.cover }}, then {% endif %}{{ "the Master's decision" if app.appeal else app.stage | lower }}</li>{% endif %}
+        </ol>
+      </section>
+    </div>
+    <div class="side">
+      {% if app.stage in leave.OPEN_STAGES %}
+        <section class="card card-pad muted" aria-labelledby="act-h">
+          <h2 id="act-h">Changed your plans?</h2>
+          <p class="sub">Withdrawing ends the application; your cover and approvers are told.</p>
+          <button type="button" class="btn btn-secondary" disabled>Withdraw</button>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
