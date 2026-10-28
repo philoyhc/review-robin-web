@@ -8,7 +8,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 
 ## Status
 
-**Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3, then per iteration rung) and was **approved by the author on 2026-10-28** after a review found it complete; item 1's gate is open. RA Leave's placeholder screens (1C item 1) remain next under ruling 13, then items 2–5; the order of items 4 and 5 (rosters before assignments) is proposed, not yet ruled. RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
+**Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3, then per iteration rung) and was **approved by the author on 2026-10-28** after a review found it complete; item 1's gate is open. RA Leave's placeholder screens (1C item 1) remain next under ruling 13, then items 2–5, with rosters before assignments (ruled 2026-10-28). RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
 
 - **Iteration rung 4, 2026-10-27** (author's browser check): the tree is approved; Level labels gain a *Used* flag per level, and the Appointments card becomes five editable slots of title, type and level (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Iteration rung 5, 2026-10-27** (author's browser check): levels and appointments become rows with **+** and **X** (no fixed count, no *Used* flag), after RRW's response-field rows; Appointments gains an *Abbrev* column; Admin is *Residential Admin*, and *Other Staff* joins the defaults; up to five levels and ten appointments (the same ruling, amended).
@@ -89,7 +89,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 ~~**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page.~~ **Item 4 — Terms and assignments** (revised 2026-10-28). 1. Models and migration: terms, levels, slots by term, assignments. 2. Terms CSV and page. 3. Assignments CSV with its modes, the guard, Copy from: parse, preview, commit, export. 4. Wire the Assignments page. Last build rung.
 
-**Item 5 — Rosters.** 1. Appointments ~~and reporting~~ (with Abbrev). 2. Roster CSVs, appending, with the identity-change warning. 3. Wire the roster pages. Last build rung. (Revised 2026-10-28: item 5 lands before item 4's assignments, rung 3, since an assignee must hold an appointment.)
+**Item 5 — Rosters.** 1. Appointments ~~and reporting~~ (with Abbrev). 2. Roster CSVs, appending, with the identity-change warning. 3. Wire the roster pages. Last build rung. (Ruled 2026-10-28: item 5 lands before item 4's assignments, rung 3, since an assignee must hold an appointment.)
 
 ## Definition of done
 
