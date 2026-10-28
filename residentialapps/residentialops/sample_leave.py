@@ -14,22 +14,70 @@ from residentialapps.residentialops import sample_data
 
 TODAY = sample_data.TODAY
 
-# Leave policy (`residentialapps/guide/todo_master.md`, RA Leave pages by
-# audience, 2026-10-28): the period, the first approver and the cover pool
-# are configurable; these are the sample's choices.
+# Leave policy (author, 2026-10-28; `residentialapps/guide/todo_master.md`,
+# leave policy): the leave types that need an application, each with its
+# own entitlement rule; blackout periods; appeals beyond entitlement;
+# cover; approvals. These are the sample's choices.
+
+
+@dataclass(frozen=True)
+class LeaveType:
+    name: str
+    abbrev: str
+    accrual: str  # one of ACCRUALS
+    amount: int  # days per term or per year, or per month served
+    cap: int  # the most an RA may have in a cap period
+    cap_per: str  # "year" or "term"
+
+
+ACCRUALS = ("Per term", "Per academic year", "Per month served")
+CAP_PERIODS = ("year", "term")
 LEAVE_TYPES = (
-    # (name, abbreviation, entitlement per period in days)
-    ("Annual leave", "AL", 14),
-    ("Compassionate leave", "CL", 3),
+    LeaveType("Personal leave", "PL", "Per term", 5, 12, "year"),
+    LeaveType("Official leave", "OL", "Per month served", 1, 8, "year"),
 )
-PERIODS = ("Year", "Term")
-FIRST_APPROVERS = ("RF", "RSLM", "Either")
+
+
+@dataclass(frozen=True)
+class Blackout:
+    """A run of weeks in a term when leave is refused, or only open to
+    appeal; counted by week so it carries to the next year. Week 1 starts on
+    the Sunday on or before the term's first day; weeks run Sunday to
+    Saturday."""
+
+    term: int
+    week_from: int
+    week_to: int
+    label: str
+    effect: str  # one of BLACKOUT_EFFECTS
+
+
+BLACKOUT_EFFECTS = ("Refused", "Appeal only")
+BLACKOUTS = (
+    Blackout(1, 1, 2, "Move-in and orientation", "Refused"),
+    Blackout(1, 16, 17, "Examinations", "Appeal only"),
+    Blackout(2, 1, 1, "Re-opening", "Refused"),
+)
+
+
+def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, date]:
+    """The blackout's Sunday-to-Saturday dates in a year's term."""
+    term = next(t for t in sample_data.TERMS if t.year == year and t.number == blackout.term)
+    sunday = date.fromordinal(term.start.toordinal() - (term.start.isoweekday() % 7))
+    first = date.fromordinal(sunday.toordinal() + 7 * (blackout.week_from - 1))
+    return first, date.fromordinal(sunday.toordinal() + 7 * blackout.week_to - 1)
+
+
+COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
+FIRST_APPROVERS = ("RF", "RSLM", "Either")
 POLICY = {
-    "period": "Year",
-    "cover_confirmation": True,
-    "first_approver": "RF",
+    "appeals": True,
+    "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
+    "cover_required": True,
+    "cover_mode": "Named and confirmed",
     "cover_pool": "Same Precinct",
+    "first_approver": "RF",
 }
 PERIOD_LABEL = "AY2026-2027"
 
@@ -110,20 +158,20 @@ APPLICATIONS: tuple[Application, ...] = tuple(
     Application(f"L-{n:04d}", *row)
     for n, row in enumerate(
         (
-            ("Chloe Lim", "Annual leave", _d("2026-11-06"), _d("2026-11-08"), "Ethan Wong", "Confirmed", "Pending first approval", _d("2026-10-27")),
-            ("Isaac Goh", "Annual leave", _d("2026-11-13"), _d("2026-11-15"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
-            ("Bella Koh", "Compassionate leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
-            ("Leon Chia", "Annual leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
-            ("Gwen Ho", "Annual leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Confirmed", "Appeal to the Master", _d("2026-10-25"),
+            ("Chloe Lim", "Personal leave", _d("2026-11-06"), _d("2026-11-08"), "Ethan Wong", "Confirmed", "Pending first approval", _d("2026-10-27")),
+            ("Isaac Goh", "Personal leave", _d("2026-11-12"), _d("2026-11-14"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
+            ("Bella Koh", "Personal leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
+            ("Leon Chia", "Personal leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
+            ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Confirmed", "Appeal to the Master", _d("2026-10-25"),
              "Balance exhausted; family wedding overseas."),
-            ("Maya Seah", "Annual leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
-            ("Olivia Ng", "Annual leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
-            ("Pranav Iyer", "Annual leave", _d("2026-10-29"), _d("2026-10-31"), "Qi Xuan Lim", "Confirmed", "Approved", _d("2026-10-15")),
-            ("Hana Ito", "Annual leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
-            ("Faris Iskandar", "Annual leave", _d("2026-10-10"), _d("2026-10-11"), "Haikal Rahim", "Confirmed", "Rejected", _d("2026-10-02")),
-            ("Ethan Wong", "Annual leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
-            ("Gwen Ho", "Annual leave", _d("2026-08-17"), _d("2026-08-28"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
-            ("Gwen Ho", "Annual leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
+            ("Maya Seah", "Personal leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
+            ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
+            ("Pranav Iyer", "Personal leave", _d("2026-10-29"), _d("2026-10-31"), "Qi Xuan Lim", "Confirmed", "Approved", _d("2026-10-15")),
+            ("Hana Ito", "Official leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
+            ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Haikal Rahim", "Confirmed", "Rejected", _d("2026-10-02")),
+            ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
+            ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-26"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
+            ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
         ),
         start=101,
     )
@@ -175,14 +223,36 @@ def cover_while_away() -> tuple[Application, ...]:
 
 # Entitlements for the period: (RA, leave type) -> (entitlement, adjustment, reason).
 ADJUSTMENTS = {
-    ("Leon Chia", "Annual leave"): (2, "Carried over by the Master's decision, 2026-08-03"),
+    ("Leon Chia", "Personal leave"): (2, "Carried over by the Master's decision, 2026-08-03"),
 }
+
+
+def months_served(start: date) -> int:
+    """Whole months from an appointment's first day to TODAY."""
+    months = (TODAY.year * 12 + TODAY.month) - (start.year * 12 + start.month)
+    return months - (1 if TODAY.day < start.day else 0)
+
+
+def entitlement(leave_type: LeaveType, appointment_start: date) -> int:
+    """The year's entitlement so far: a per-term amount over the year's
+    terms, a yearly amount, or what the months served have earned, each
+    held to its cap."""
+    if leave_type.accrual == "Per term":
+        terms = sum(1 for t in sample_data.TERMS if t.year == PERIOD_LABEL)
+        days = leave_type.amount * terms
+    elif leave_type.accrual == "Per academic year":
+        days = leave_type.amount
+    else:
+        days = leave_type.amount * months_served(appointment_start)
+    return min(days, leave_type.cap)
 
 
 def entitlement_rows() -> tuple[dict, ...]:
     rows = []
     for ra in sample_data.RAS:
-        for name, _, days in LEAVE_TYPES:
+        start = date.fromisoformat(ra.dates.split()[0])
+        for leave_type in LEAVE_TYPES:
+            name, days = leave_type.name, entitlement(leave_type, start)
             adjustment, reason = ADJUSTMENTS.get((ra.name, name), (0, ""))
             mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name and not a.appeal]
             used = sum(a.days for a in mine if a.stage == "Approved")
@@ -195,9 +265,8 @@ def entitlement_rows() -> tuple[dict, ...]:
 
 
 ENTITLEMENTS_CSV = """\
-Email,Leave type,Days
-chloe.lim@example.edu,Annual leave,14
-chloe.lim@example.edu,Compassionate leave,3"""
+Email,Leave type,Adjustment,Reason
+leon.chia@example.edu,Personal leave,2,Carried over by the Master's decision"""
 
 
 @dataclass(frozen=True)

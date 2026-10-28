@@ -62,37 +62,73 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
     assert "· 2 of 13" in cover
 
 
-def test_policy_makes_the_period_first_approver_and_cover_pool_configurable() -> None:
-    """Configurable, not fixed (author, 2026-10-28), each a radio group with
-    the sample's choice checked; inert until item 2."""
+def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
+    """Points 1–2 (author, 2026-10-28): leave that needs an application,
+    each type earned per term, per year or per month served, with a cap
+    per year or term."""
+    page = client().get(ADMIN + "policy").text
+    assert [lt.name for lt in sample_leave.LEAVE_TYPES] == ["Personal leave", "Official leave"]
+    for n, lt in enumerate(sample_leave.LEAVE_TYPES, start=1):
+        assert f'aria-label="Leave type {n}: name" value="{lt.name}"' in page
+        earned = page.split(f'aria-label="Leave type {n}: how it is earned"')[1].split("</select>")[0]
+        assert re.findall(r"<option( selected)?>([^<]*)", earned) == [
+            (" selected" if a == lt.accrual else "", a) for a in sample_leave.ACCRUALS
+        ]
+        assert f'aria-label="Leave type {n}: cap in days" value="{lt.cap}"' in page
+    assert "medical, compassionate" in page
+
+
+def test_policy_blackouts_count_by_week_and_refuse_or_send_to_appeal() -> None:
+    """Point 3: blackouts by week of a term, Sunday to Saturday, so they
+    carry across years; each either refuses leave or sends it to appeal."""
+    page = client().get(ADMIN + "policy").text
+    dates = [sample_leave.week_dates(b) for b in sample_leave.BLACKOUTS]
+    assert [(d.isoformat(), e.isoformat()) for d, e in dates] == [
+        ("2026-08-02", "2026-08-15"), ("2026-11-15", "2026-11-28"), ("2027-01-10", "2027-01-16"),
+    ]
+    assert all(d.isoweekday() == 7 and e.isoweekday() == 6 for d, e in dates)  # Sunday to Saturday
+    assert "2 Aug – 15 Aug" in page and "15 Nov – 28 Nov" in page
+    effects = re.findall(r'aria-label="Blackout \d: leave is" disabled><option( selected)?>Refused</option><option( selected)?>Appeal only', page)
+    assert [("Refused" if r else "Appeal only") for r, _ in effects] == [b.effect for b in sample_leave.BLACKOUTS]
+
+
+def test_policy_appeals_cover_and_approvals() -> None:
+    """Points 4–6: appeals beyond entitlement on stated terms, never banked
+    in advance; cover required or not, named or confirmed, from a pool;
+    first and final approval."""
     page = client().get(ADMIN + "policy").text
     for name, options, current in (
-        ("period", sample_leave.PERIODS, sample_leave.POLICY["period"]),
-        ("first", sample_leave.FIRST_APPROVERS, sample_leave.POLICY["first_approver"]),
+        ("appeals", ("Allowed", "Not allowed"), "Allowed"),
+        ("cover", ("Required", "Not required"), "Required"),
+        ("cover-mode", sample_leave.COVER_MODES, sample_leave.POLICY["cover_mode"]),
         ("pool", sample_leave.COVER_POOLS, sample_leave.POLICY["cover_pool"]),
-        ("confirm", ("Cover must be confirmed", "Cover is named only"), "Cover must be confirmed"),
+        ("first", sample_leave.FIRST_APPROVERS, sample_leave.POLICY["first_approver"]),
     ):
         radios = re.findall(rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page)
         assert [v for v, _ in radios] == list(options), name
         assert [v for v, c in radios if c] == [current], name
-    for n, (leave_type, abbrev, days) in enumerate(sample_leave.LEAVE_TYPES, start=1):
-        assert f'aria-label="Leave type {n}: name" value="{leave_type}"' in page
-        assert f'aria-label="Leave type {n}: usual days" value="{days}"' in page
+    assert "extra duties, as agreed with your RF" in page
+    assert "cannot be done in advance and banked" in page
     assert "The Residential Admin (Rachel Yeo)" in page and "The Master (Sam Lee), personally" in page
 
 
-def test_entitlements_show_available_after_used_pending_and_adjustments() -> None:
+def test_entitlements_follow_the_policy_rules() -> None:
     page = client().get(ADMIN + "entitlements").text
     rows = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     assert len(rows) == len(sample_data.RAS) * len(sample_leave.LEAVE_TYPES)
     pick = ("entitlement", "adjustment", "used", "pending", "available")
-    assert [rows["Gwen Ho", "Annual leave"][k] for k in pick] == [14, 0, 14, 0, 0]  # used up: hence her appeal
-    assert [rows["Leon Chia", "Annual leave"][k] for k in pick] == [14, 2, 0, 5, 11]
-    assert [rows["Chloe Lim", "Annual leave"][k] for k in pick] == [14, 0, 0, 3, 11]
-    assert [rows["Bella Koh", "Compassionate leave"][k] for k in pick] == [3, 0, 0, 3, 0]
-    assert rows["Gwen Ho", "Annual leave"]["pending"] == 0  # her appeal is extra leave, not charged (§7.5)
+    # Personal leave: 5 a term over three terms, capped at 12 a year.
+    assert [rows["Gwen Ho", "Personal leave"][k] for k in pick] == [12, 0, 12, 0, 0]  # used up: hence her appeal
+    assert [rows["Leon Chia", "Personal leave"][k] for k in pick] == [12, 2, 0, 5, 9]
+    assert [rows["Chloe Lim", "Personal leave"][k] for k in pick] == [12, 0, 0, 3, 9]
+    # Official leave: 1 a month served; two whole months since 1 Aug, and
+    # since Umairah Salleh's 17 Aug.
+    assert [rows["Hana Ito", "Official leave"][k] for k in pick] == [2, 0, 0, 2, 0]
+    assert rows["Umairah Salleh", "Official leave"]["entitlement"] == 2
+    assert sample_leave.months_served(sample_leave.date(2026, 9, 1)) == 1
+    assert rows["Gwen Ho", "Personal leave"]["pending"] == 0  # her appeal is extra leave, not charged (§7.5)
     assert "+2<div class=\"subtle\">Carried over by the Master" in page  # the reason, visible
-    assert "Email,Leave type,Days" in page
+    assert "Email,Leave type,Adjustment,Reason" in page
     assert page.count(">Adjust</button>") == len(rows)
 
 

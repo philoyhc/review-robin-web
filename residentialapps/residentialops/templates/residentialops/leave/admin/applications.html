@@ -11,7 +11,7 @@
       <div class="filter"><label for="stage">Stage</label><select id="stage" class="input" disabled><option>All</option>{% for s in leave.STAGES %}<option{% if s == stage %} selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
       <div class="filter"><label for="cover">Cover</label><select id="cover" class="input" disabled><option>All</option><option{% if cover == "unconfirmed" %} selected{% endif %}>Not yet confirmed</option></select></div>
       <div class="filter"><label for="precinct">Precinct</label><select id="precinct" class="input" disabled><option>All</option>{% for r in leave.routes() %}<option>{{ r.precinct }}</option>{% endfor %}</select></div>
-      <div class="filter"><label for="ltype">Leave type</label><select id="ltype" class="input" disabled><option>All</option>{% for name, _, _ in leave.LEAVE_TYPES %}<option>{{ name }}</option>{% endfor %}</select></div>
+      <div class="filter"><label for="ltype">Leave type</label><select id="ltype" class="input" disabled><option>All</option>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
       <div class="filter"><label for="from">From</label><input id="from" class="input" type="date" disabled></div>
       <div class="filter"><label for="to">To</label><input id="to" class="input" type="date" disabled></div>
     </div>
