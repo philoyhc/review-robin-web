@@ -68,21 +68,21 @@ Events has no spec yet, so its rows are provisional.
 | **RA Leave, RAs** | `/ra-leave/` | — | — |
 | RA home | `/ra-leave/` | — | Balance, cover requests to answer, current applications, Apply (§8) · mobile-critical |
 | Apply for leave | `/ra-leave/apply` | — | Leave type, dates, covering RA (§9) · mobile-critical |
-| Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15) · mobile-critical |
+| Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15); only while appeals are on · mobile-critical |
 | Application detail | `/ra-leave/applications/{id}` | — | Status timeline, withdraw · mobile-critical |
 | My cover | `/ra-leave/cover` | — | Acknowledge or decline being named as cover; notification links land here (§12, §23) · mobile-critical |
 | My history | `/ra-leave/history` | — | Own applications and leave (§19) · responsive |
 | **RA Leave, staff** | `/ra-leave/staff/` | — | — |
 | Staff home | `/ra-leave/staff/` | What awaits my decision; this week in my Precinct(s) (§24) · mobile-critical | — |
-| Awaiting my decision | `/ra-leave/staff/decide` | First approval, final approval (the admin), appeals (the Master), oldest first (§16, §24) · **mobile-critical** | — |
+| Awaiting my decision | `/ra-leave/staff/decide` | First approval, final approval (the admin), appeals (the Master, while appeals are on), oldest first (§16, §24) · **mobile-critical** | — |
 | Decide | `/ra-leave/staff/decide/{id}` | Entitlement, cover status, Precinct context; Approve or Reject with remarks in a few taps; read-only once decided (§13–§15) · **mobile-critical** | — |
 | Decided | `/ra-leave/staff/decided` | The approver's own past decisions (§24) · responsive | — |
 | Precinct leave | `/ra-leave/staff/precinct` | Who is away, cover, clashes, pending, scoped by Assignments for the current term: an RF their Precinct(s), an RSLM their Wing, the Master and the admin the whole Unit, staff in no slot the whole Unit, read-only (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
 | **RA Leave, sys admins** | `/ra-leave/admin/` | — | — |
-| Leave dashboard | `/ra-leave/admin/` | The Unit: pending by stage, appeals awaiting the Master, overdue, clashes, routing gaps (§25) · desktop-oriented | — |
+| Leave dashboard | `/ra-leave/admin/` | The Unit: pending by stage, appeals awaiting the Master (while appeals are on), overdue, clashes, routing gaps (§25) · desktop-oriented | — |
 | Leave policy | `/ra-leave/admin/policy` | Leave types needing an application (at least personal and official), each earned per term or per month served and capped per year or term, a term's days available only within it; blackout periods by week of a term, refused or appeal only; appeals beyond entitlement, on or off, and their terms; cover required or not, named or confirmed, and from whom; first approver (the slot's RF, its RSLM, or either) and final approver (the admin, the Master, or the slot's RSLM) (§6, §7, §12, §21.1; author, 2026-10-28) · desktop-oriented | — |
 | Entitlements | `/ra-leave/admin/entitlements` | Each RA's entitlement for a term, worked out from the policy's rules, used and pending; adjustments with a reason, one at a time or by CSV (§21.1, §21.3) · desktop-oriented | — |
-| Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the policy's final approver, appeals the Master), delegate overrides, gaps flagged (§21.2) · desktop-oriented | — |
+| Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the policy's final approver, appeals the Master while they are on), delegate overrides, gaps flagged (§21.2) · desktop-oriented | — |
 | Applications | `/ra-leave/admin/applications`, `…/{id}` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
 | Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
 | My proposals | `/ra-events/mine` | — | Provisional · responsive |

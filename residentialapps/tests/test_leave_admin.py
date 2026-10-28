@@ -225,3 +225,19 @@ def test_used_and_pending_count_only_the_terms_own_days(monkeypatch) -> None:
     assert after["Chloe Lim", "Personal leave"] == before["Chloe Lim", "Personal leave"]
     assert after["Leon Chia", "Personal leave"]["pending"] == before["Leon Chia", "Personal leave"]["pending"] + 3  # 8–10 Jan
     assert sample_leave.days_in_term(extra[1], [t for t in sample_data.TERMS if t.number == 2 and t.year == "AY2026-2027"][0]) == 2
+
+
+def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
+    """Appeals beyond entitlement switch on or off for the whole system
+    (author, 2026-10-28): off, no page offers or names an appeal route."""
+    c = client()
+    on = c.get(ADMIN).text.split('id="policy-h"')[1].split("</section>")[0]
+    assert "<dt>Appeals</dt><dd>On, to the Master</dd>" in on
+    assert ">Appeals</th>" in c.get(ADMIN + "routing").text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    policy = c.get(ADMIN + "policy").text
+    assert 'name="appeals" value="Off" checked' in policy
+    assert "Not offered anywhere" in policy and "The Master (Sam Lee), personally" not in policy
+    assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
+    routing = c.get(ADMIN + "routing").text
+    assert ">Appeals</th>" not in routing and "final approval is the same for the whole Unit" in routing
