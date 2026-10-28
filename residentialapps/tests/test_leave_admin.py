@@ -108,8 +108,6 @@ def test_policy_appeals_cover_and_approvals() -> None:
         ("cover", ("Required", "Not required"), "Required" if sample_leave.POLICY["cover_required"] else "Not required"),
         ("cover-mode", sample_leave.COVER_MODES, sample_leave.POLICY["cover_mode"]),
         ("pool", sample_leave.COVER_POOLS, sample_leave.POLICY["cover_pool"]),
-        ("first", sample_leave.FIRST_APPROVERS, sample_leave.POLICY["first_approver"]),
-        ("final", sample_leave.FINAL_APPROVERS, sample_leave.POLICY["final_approver"]),
     ):
         radios = re.findall(rf'<input type="radio" id="{name}-\d" name="{name}" value="([^"]*)"( checked)?', page)
         assert [v for v, _ in radios] == list(options), name
@@ -120,7 +118,7 @@ def test_policy_appeals_cover_and_approvals() -> None:
     assert sample_leave.POLICY["appeal_terms"] in page
     assert "unless the Master overrides it" in page and "no built-in default" in page
     assert "cannot be done in advance and banked" in page
-    assert "The Residential Admin (Rachel Yeo)" in page and "The Master (Sam Lee), personally" in page
+    assert "The Master (Sam Lee), personally" in page
     assert "<dt>Final approval</dt>" not in page  # a choice now, not fixed (author, 2026-10-28)
 
 
@@ -270,13 +268,44 @@ def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -
     cypress = next(r for r in sample_leave.routes(in_dec) if r.rf == "Daniel Koh")
     assert cypress.first == "Mei Ling Tan" and cypress.note == "Daniel Koh is on leave"
     monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Priya Raman", None, None, "is on leave"),))
-    monkeypatch.setitem(sample_leave.POLICY, "first_approver", "RSLM")
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
     maple = [r for r in sample_leave.routes() if r.wing == "Maple"]
     assert len(maple) == 3 and all(r.first == "Priya Raman" and r.delegate for r in maple)  # every slot Marcus approves
     assert all(not r.delegate for r in sample_leave.routes() if r.wing != "Maple")
-    monkeypatch.setitem(sample_leave.POLICY, "first_approver", "Either")
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RF", "RSLM"))
     assert next(
         r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Priya Raman"
     page = client().get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
     assert "A delegate stands in for 3 Precincts today." in page
     assert page.count("Marcus Tan is on leave; ") == 3
+
+
+def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatch) -> None:
+    """Ruled 2026-10-28: first approval by any of the appointments on the
+    RAs' slots (several = whichever approves first), or none needed; final
+    approval by any Unit-level appointment, or by named staff."""
+    assert sample_leave.slot_appointments() == (("Residential Fellow", "RF"), ("Residential Student Life Manager", "RSLM"))
+    assert sample_leave.unit_appointments() == (("Master", "Master"), ("Residential Admin", "Admin"))
+    page = client().get(ADMIN + "policy").text
+    radios = re.findall(r'<input type="radio" id="(first|final)-(\w+)" name="\1" value="\2"( checked)?', page)
+    assert [(g, v, bool(c)) for g, v, c in radios] == [
+        ("first", "slot", True), ("first", "none", False), ("final", "unit", True), ("final", "named", False),
+    ]
+    first = re.findall(r'name="first-types" value="(\w+)"( checked)?', page)
+    assert first == [("RF", " checked"), ("RSLM", "")]
+    final = re.findall(r'name="final-types" value="(\w+)"( checked)?', page)
+    assert final == [("Master", ""), ("Admin", " checked")]
+    assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
+    assert "No first approver needed" in page and "comma separated" in page
+
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    monkeypatch.setitem(sample_leave.POLICY, "final", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Sam Lee", "Rachel Yeo"))
+    assert {r.first for r in sample_leave.routes()} == {"None needed"}
+    assert sample_leave.final_approvers() == ("Sam Lee", "Rachel Yeo")
+    steps = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0106"))]
+    assert not any(s.startswith("First approval") for s in steps) and "Final approval by Sam Lee" in steps
+    named = client().get(ADMIN + "policy").text
+    assert 'value="Sam Lee, Rachel Yeo" disabled' in named
+    assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
+    assert "No first approval, then Sam Lee, Rachel Yeo" in client().get(ADMIN).text

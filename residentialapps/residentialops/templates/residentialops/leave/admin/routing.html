@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.POLICY.first_approver }}, {{ leave.POLICY.final_approver }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.POLICY.appeals else ' is' }} the same for the whole Unit.</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() }}, {{ leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.POLICY.appeals else ' is' }} the same for the whole Unit.</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">
@@ -21,7 +21,7 @@
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
               <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
-              <td class="nowrap">{{ leave.FINAL_APPROVER }}</td>
+              <td>{{ leave.final_approvers() | join(" or ") }}</td>
               {% if leave.POLICY.appeals %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
             </tr>
           {% endfor %}

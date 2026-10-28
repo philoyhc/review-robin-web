@@ -70,21 +70,56 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
-FIRST_APPROVERS = ("RF", "RSLM", "Either")
-FINAL_APPROVERS = ("Admin", "Master", "RSLM")
 POLICY = {
     "appeals": True,  # on or off for the whole system (author, 2026-10-28)
     "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
     "cover_required": True,
     "cover_mode": "Named and confirmed",
     "cover_pool": "Same Precinct",
-    "first_approver": "RF",
-    "final_approver": "Admin",
+    # Approvals (author, 2026-10-28): first by one or more of the
+    # appointments on the RA's slot, whichever approves first, or none;
+    # final by one or more Unit-level appointments, or by named staff.
+    "first": "slot",  # or "none"
+    "first_types": ("RF",),
+    "final": "unit",  # or "named"
+    "final_types": ("Admin",),
+    "final_names": (),
 }
 PERIOD_LABEL = "AY2026-2027"
 
-FINAL_APPROVER = "Rachel Yeo"  # the Residential Admin appointment, the policy's final approver
 APPEAL_DECIDER = "Sam Lee"  # the Master
+
+
+def _appointments(names) -> tuple[tuple[str, str], ...]:
+    staff = {p.name: p for p in sample_data.STAFF}
+    return tuple(dict.fromkeys((staff[n].appointment, staff[n].abbrev) for n in names))
+
+
+def slot_appointments() -> tuple[tuple[str, str], ...]:
+    """(appointment, abbreviation) for each staff appointment found in the
+    slots' Staff cells, in the order first met."""
+    return _appointments(n for s in sample_data.SLOTS for n in s.staff)
+
+
+def unit_appointments() -> tuple[tuple[str, str], ...]:
+    """The staff appointments held by no one in a slot: the Unit's own."""
+    in_slots = {p for s in sample_data.SLOTS for p in s.staff}
+    return _appointments(p.name for p in sample_data.STAFF if p.name not in in_slots)
+
+
+def final_approvers() -> tuple[str, ...]:
+    """Who may give final approval, whichever does first."""
+    if POLICY["final"] == "named":
+        return tuple(POLICY["final_names"])
+    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["final_types"])
+
+
+def first_label() -> str:
+    return " or ".join(POLICY["first_types"]) if POLICY["first"] == "slot" else "none"
+
+
+def final_label() -> str:
+    return " or ".join(POLICY["final_types"]) if POLICY["final"] == "unit" else ", ".join(POLICY["final_names"])
 
 # Cover is tracked beside the workflow, not as a stage of it: an
 # application whose cover is unconfirmed waits at first approval (spec §11).
@@ -362,9 +397,10 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
             continue
         rf = next(n for n in slot.staff if staff[n].abbrev == "RF")
         rslm = next(n for n in slot.staff if staff[n].abbrev == "RSLM")
-        named = {"RF": [rf], "RSLM": [rslm], "Either": [rf, rslm]}[POLICY["first_approver"]]
+        by_type = {staff[n].abbrev: n for n in slot.staff}
+        named = [by_type[t] for t in POLICY["first_types"] if t in by_type] if POLICY["first"] == "slot" else []
         standing_in = [d for n in named if (d := acting(n, day))]
-        first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named)
+        first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named) or "None needed"
         note = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
         found[slot.precinct] = Route(
             slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note
@@ -385,12 +421,12 @@ def timeline(application: Application) -> tuple[tuple[str, str], ...]:
         if application.stage == "Approved":
             steps.append(("", f"Granted by {APPEAL_DECIDER}"))
         return tuple(steps)
-    if application.stage in ("Pending final approval", "Approved"):
+    if application.stage in ("Pending final approval", "Approved") and POLICY["first"] == "slot":
         steps.append(("", f"First approval by {route.first}"))
     if application.stage == "Approved":
-        steps.append(("", f"Final approval by {FINAL_APPROVER}"))
+        steps.append(("", f"Final approval by {final_approvers()[0]}"))
     if application.stage == "Rejected":
-        steps.append(("", f"Rejected by {route.first}"))
+        steps.append(("", f"Rejected by {route.first if POLICY['first'] == 'slot' else final_approvers()[0]}"))
     if application.stage == "Withdrawn":
         steps.append(("", f"Withdrawn by {application.ra}"))
     return tuple(steps)
