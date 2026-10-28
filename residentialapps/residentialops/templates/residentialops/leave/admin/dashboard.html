@@ -58,7 +58,7 @@
       <section class="card" aria-labelledby="away-h">
         <div class="card-head">
           <h2 id="away-h">Away this week</h2>
-          <p class="sub">Approved leave from {{ leave.TODAY.strftime("%-d %b") }}, with each RA's cover.</p>
+          <p class="sub">Approved leave from {{ leave.short_date(leave.TODAY) }}, with each RA's cover.</p>
         </div>
         <div class="table-wrap">
           <table>

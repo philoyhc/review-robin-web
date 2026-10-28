@@ -122,3 +122,16 @@ def test_applications_list_every_one_and_open_to_their_timeline() -> None:
     rejected = c.get(ADMIN + "applications/L-0110").text
     assert ">Correct the record</button>" in rejected and "Cancel" not in rejected and "Reassign" not in rejected
     assert c.get(ADMIN + "applications/L-9999").status_code == 404
+
+
+def test_no_platform_only_date_format() -> None:
+    """`%-d` and the like are glibc's: Windows' strftime raises on them, so
+    the pages 500 on the author's machine while passing here."""
+    from pathlib import Path
+
+    package = Path(__file__).resolve().parents[1]
+    for path in (*package.rglob("*.py"), *package.rglob("*.html")):
+        if "tests" in path.parts:
+            continue
+        assert not re.search(r"strftime\([\"'][^\"']*%-", path.read_text(encoding="utf-8")), path
+    assert sample_leave.short_date(sample_leave.TODAY) == "28 Oct"
