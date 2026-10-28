@@ -64,8 +64,8 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
     """Points 1–2 (author, 2026-10-28): leave that needs an application,
-    each type earned per term, per year or per month served, with a cap
-    per year or term."""
+    each type earned per term or per month served, with a cap per year or
+    term."""
     page = client().get(ADMIN + "policy").text
     assert [lt.name for lt in sample_leave.LEAVE_TYPES] == ["Personal leave", "Official leave"]
     for n, lt in enumerate(sample_leave.LEAVE_TYPES, start=1):
@@ -127,18 +127,19 @@ def test_entitlements_follow_the_policy_rules() -> None:
     rows = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
     assert len(rows) == len(sample_data.RAS) * len(sample_leave.LEAVE_TYPES)
     pick = ("entitlement", "adjustment", "used", "pending", "available")
-    # Personal leave: 5 a term over three terms, capped at 12 a year.
-    assert [rows["Gwen Ho", "Personal leave"][k] for k in pick] == [12, 0, 12, 0, 0]  # used up: hence her appeal
-    assert [rows["Leon Chia", "Personal leave"][k] for k in pick] == [12, 2, 0, 5, 9]
-    assert [rows["Chloe Lim", "Personal leave"][k] for k in pick] == [12, 0, 0, 3, 9]
-    # Official leave: 1 a month served; two whole months since 1 Aug, and
-    # since Umairah Salleh's 17 Aug.
+    # Personal leave: 5 for Term 1, available only within it.
+    assert [rows["Gwen Ho", "Personal leave"][k] for k in pick] == [5, 0, 5, 0, 0]  # used up: hence her appeal
+    assert [rows["Leon Chia", "Personal leave"][k] for k in pick] == [5, 2, 0, 5, 2]
+    assert [rows["Chloe Lim", "Personal leave"][k] for k in pick] == [5, 0, 0, 3, 2]
+    # Official leave: 1 a month served in the term; two whole months since
+    # its 3 Aug start, and since Umairah Salleh's 17 Aug.
     assert [rows["Hana Ito", "Official leave"][k] for k in pick] == [2, 0, 0, 2, 0]
     assert rows["Umairah Salleh", "Official leave"]["entitlement"] == 2
     assert sample_leave.months_served(sample_leave.date(2026, 9, 1)) == 1
     assert rows["Gwen Ho", "Personal leave"]["pending"] == 0  # her appeal is extra leave, not charged (§7.5)
-    assert "+2<div class=\"subtle\">Carried over by the Master" in page  # the reason, visible
+    assert "+2<div class=\"subtle\">Granted by the Master" in page  # the reason, visible
     assert "Email,Leave type,Adjustment,Reason" in page
+    assert f"<option selected>{sample_leave.TERM.label}</option>" in page and "do not carry over" in page
     assert page.count(">Adjust</button>") == len(rows)
 
 
@@ -184,14 +185,41 @@ def test_no_platform_only_date_format() -> None:
 
 
 def test_entitlement_rules_beyond_the_sample_types() -> None:
-    """The cap per term holds the year to the cap times its terms; a yearly
-    amount is granted at once; months served count from the year's start,
-    whole months only."""
+    """Leave days go with their term and are available only within it
+    (author, 2026-10-28). A cap per term holds each term; a cap per year
+    holds the terms together, earlier terms taking their share first.
+    Months served count within the term, whole months only."""
     lt = sample_leave.LeaveType
     start = sample_leave.date(2026, 8, 1)
-    assert sample_leave.entitlement(lt("X", "X", "Per term", 5, 4, "term"), start) == 12
-    assert sample_leave.entitlement(lt("X", "X", "Per term", 5, 4, "year"), start) == 4
-    assert sample_leave.entitlement(lt("X", "X", "Per academic year", 10, 8, "year"), start) == 8
-    assert sample_leave.months_served(sample_leave.date(2024, 8, 1)) == 2  # a returning RA: this year only
+    terms = [t for t in sample_data.TERMS if t.year == sample_leave.PERIOD_LABEL]
+    per_term = lt("X", "X", "Per term", 5, 4, "term")
+    assert [sample_leave.entitlement(per_term, start, t) for t in terms] == [4, 4, 4]
+    per_year = lt("X", "X", "Per term", 5, 12, "year")
+    assert [sample_leave.entitlement(per_year, start, t) for t in terms] == [5, 5, 2]
+    assert sample_leave.ACCRUALS == ("Per term", "Per month served")
+    assert sample_leave.months_served(sample_leave.date(2024, 8, 1)) == 2  # a returning RA: this term only
     assert sample_leave.months_served(sample_leave.date(2026, 9, 29)) == 0  # TODAY is the 28th
     assert sample_leave.months_served(sample_leave.date(2026, 9, 28)) == 1
+    assert sample_leave.months_served(start, terms[1]) == 0  # Term 2 has not begun
+    monthly = lt("X", "X", "Per month served", 2, 6, "year")
+    assert sample_leave.entitlement(monthly, start, terms[0]) == 4  # two months so far
+    page = client().get(ADMIN + "policy").text
+    assert "do not carry to the next" in page and "Per academic year" not in page
+
+
+def test_used_and_pending_count_only_the_terms_own_days(monkeypatch) -> None:
+    """Leave in another term never touches this term's figures; leave across
+    a term's end is charged to each term for its own days."""
+    before = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
+    App = sample_leave.Application
+    extra = (
+        App("L-0901", "Chloe Lim", "Personal leave", sample_leave.date(2027, 2, 1), sample_leave.date(2027, 2, 3),
+            "Ethan Wong", "Confirmed", "Approved", sample_leave.date(2026, 10, 20)),
+        App("L-0902", "Leon Chia", "Personal leave", sample_leave.date(2027, 1, 8), sample_leave.date(2027, 1, 12),
+            "Mira Sato", "Confirmed", "Pending first approval", sample_leave.date(2026, 10, 20)),
+    )
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", sample_leave.APPLICATIONS + extra)
+    after = {(r["ra"], r["type"]): r for r in sample_leave.entitlement_rows()}
+    assert after["Chloe Lim", "Personal leave"] == before["Chloe Lim", "Personal leave"]
+    assert after["Leon Chia", "Personal leave"]["pending"] == before["Leon Chia", "Personal leave"]["pending"] + 3  # 8–10 Jan
+    assert sample_leave.days_in_term(extra[1], [t for t in sample_data.TERMS if t.number == 2 and t.year == "AY2026-2027"][0]) == 2

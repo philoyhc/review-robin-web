@@ -25,12 +25,12 @@ class LeaveType:
     name: str
     abbrev: str
     accrual: str  # one of ACCRUALS
-    amount: int  # days per term or per year, or per month served
+    amount: int  # days per term, or per month served
     cap: int  # the most an RA may have in a cap period
     cap_per: str  # "year" or "term"
 
 
-ACCRUALS = ("Per term", "Per academic year", "Per month served")
+ACCRUALS = ("Per term", "Per month served")
 CAP_PERIODS = ("year", "term")
 LEAVE_TYPES = (
     LeaveType("Personal leave", "PL", "Per term", 5, 12, "year"),
@@ -171,7 +171,7 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             ("Hana Ito", "Official leave", _d("2026-11-02"), _d("2026-11-03"), "Chloe Lim", "Declined", "Pending first approval", _d("2026-10-24")),
             ("Faris Iskandar", "Personal leave", _d("2026-10-10"), _d("2026-10-11"), "Haikal Rahim", "Confirmed", "Rejected", _d("2026-10-02")),
             ("Ethan Wong", "Personal leave", _d("2026-10-17"), _d("2026-10-18"), "Hana Ito", "Confirmed", "Withdrawn", _d("2026-10-05")),
-            ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-26"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
+            ("Gwen Ho", "Personal leave", _d("2026-08-17"), _d("2026-08-19"), "Elise Tan", "Confirmed", "Approved", _d("2026-08-05")),
             ("Gwen Ho", "Personal leave", _d("2026-09-21"), _d("2026-09-22"), "Faris Iskandar", "Confirmed", "Approved", _d("2026-09-10")),
         ),
         start=101,
@@ -222,9 +222,10 @@ def cover_while_away() -> tuple[Application, ...]:
     )
 
 
-# Entitlements for the period: (RA, leave type) -> (entitlement, adjustment, reason).
+# Adjustments for TERM: (RA, leave type) -> (adjustment, reason); a wired
+# store keys them by term too.
 ADJUSTMENTS = {
-    ("Leon Chia", "Personal leave"): (2, "Carried over by the Master's decision, 2026-08-03"),
+    ("Leon Chia", "Personal leave"): (2, "Granted by the Master's decision, 2026-08-03"),
 }
 
 
@@ -232,34 +233,49 @@ def term_labels(year: str = PERIOD_LABEL) -> tuple[str, ...]:
     return tuple(f"Term {t.number}" for t in sample_data.TERMS if t.year == year)
 
 
-def year_start(year: str = PERIOD_LABEL) -> date:
-    return min(t.start for t in sample_data.TERMS if t.year == year)
+TERM = sample_data.CURRENT_TERM  # the term whose days the pages show
 
 
-def months_served(start: date) -> int:
-    """Whole months served this year: from the later of the appointment's
-    first day and the year's, to TODAY, so earlier years' months are never
-    counted again."""
-    start = max(start, year_start())
-    months = (TODAY.year * 12 + TODAY.month) - (start.year * 12 + start.month)
-    return months - (1 if TODAY.day < start.day else 0)
+def months_served(start: date, term: sample_data.Term = TERM) -> int:
+    """Whole months served in a term, to TODAY or the term's end: from the
+    later of the appointment's first day and the term's."""
+    start, end = max(start, term.start), min(TODAY, term.end)
+    if end < start:
+        return 0
+    months = (end.year * 12 + end.month) - (start.year * 12 + start.month)
+    return months - (1 if end.day < start.day else 0)
 
 
-def entitlement(leave_type: LeaveType, appointment_start: date) -> int:
-    """The year's entitlement so far: a per-term amount over the year's
-    terms, a yearly amount, or what the months served have earned, held to
-    the cap. A cap per term holds the year to the cap times its terms.
-    Adjustments sit outside the cap: they are the admin's deliberate
-    exceptions, each with its reason."""
-    terms = sum(1 for t in sample_data.TERMS if t.year == PERIOD_LABEL)
-    cap = leave_type.cap * (terms if leave_type.cap_per == "term" else 1)
+def earned(leave_type: LeaveType, appointment_start: date, term: sample_data.Term) -> int:
+    """A term's days before any cap: the per-term amount, or what the months
+    served in it have earned."""
     if leave_type.accrual == "Per term":
-        days = leave_type.amount * terms
-    elif leave_type.accrual == "Per academic year":
-        days = leave_type.amount
-    else:
-        days = leave_type.amount * months_served(appointment_start)
-    return min(days, cap)
+        return leave_type.amount if appointment_start <= term.end else 0
+    return leave_type.amount * months_served(appointment_start, term)
+
+
+def entitlement(leave_type: LeaveType, appointment_start: date, term: sample_data.Term = TERM) -> int:
+    """A term's entitlement so far. Leave days go with their term and are
+    available only within it (author, 2026-10-28): nothing carries to the
+    next. A cap per term holds the term's days; a cap per year holds them to
+    what the year's earlier terms have not already taken. Adjustments sit
+    outside the cap: they are the admin's deliberate exceptions, each with
+    its reason."""
+    days = earned(leave_type, appointment_start, term)
+    if leave_type.cap_per == "term":
+        return min(days, leave_type.cap)
+    before = sum(
+        min(earned(leave_type, appointment_start, t), leave_type.cap)
+        for t in sample_data.TERMS if t.year == term.year and t.number < term.number
+    )
+    return max(0, min(days, leave_type.cap - before))
+
+
+def days_in_term(application: Application, term: sample_data.Term = TERM) -> int:
+    """The application's days falling in the term: leave across a term's
+    end is charged to each term for its own days."""
+    first, last = max(application.start, term.start), min(application.end, term.end)
+    return max(0, (last - first).days + 1)
 
 
 def entitlement_rows() -> tuple[dict, ...]:
@@ -270,8 +286,8 @@ def entitlement_rows() -> tuple[dict, ...]:
             name, days = leave_type.name, entitlement(leave_type, start)
             adjustment, reason = ADJUSTMENTS.get((ra.name, name), (0, ""))
             mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name and not a.appeal]
-            used = sum(a.days for a in mine if a.stage == "Approved")
-            pending = sum(a.days for a in mine if a.stage in OPEN_STAGES)
+            used = sum(days_in_term(a) for a in mine if a.stage == "Approved")
+            pending = sum(days_in_term(a) for a in mine if a.stage in OPEN_STAGES)
             rows.append({
                 "ra": ra.name, "email": ra.email, "type": name, "entitlement": days, "adjustment": adjustment,
                 "reason": reason, "used": used, "pending": pending, "available": days + adjustment - used - pending,
@@ -281,7 +297,7 @@ def entitlement_rows() -> tuple[dict, ...]:
 
 ENTITLEMENTS_CSV = """\
 Email,Leave type,Adjustment,Reason
-leon.chia@example.edu,Personal leave,2,Carried over by the Master's decision"""
+leon.chia@example.edu,Personal leave,2,Granted by the Master's decision"""
 
 
 @dataclass(frozen=True)
