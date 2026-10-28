@@ -371,16 +371,22 @@ def test_assignments_show_one_term_at_a_time() -> None:
     assert page.count("<option value=") == len(sample_data.TERMS)
     assert '<button type="submit" class="btn btn-secondary">Show term</button>' in page  # live: navigation
     assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page
-    assert "Umairah Salleh's appointment starts 14 days into AY2026-2027, Term 1" in page
+    assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in page
+    term_select = page.split('<select id="term"')[1].split(">")[0]
+    assert "disabled" not in term_select  # live: navigation
+    assert '<select id="copy-from" class="input" disabled>' in page and '<select id="mode" class="input" disabled>' in page
+    assert "No earlier term has assignments" in page
     upcoming = client.get("/rosters/assignments?term=AY2026-2027.2").text
     assert "No assignments yet for AY2026-2027, Term 2." in upcoming
     assert "Copy AY2026-2027, Term 1's to edit" in upcoming
     assert ">Copy from AY2026-2027, Term 1</button>" in upcoming
     assert 'aria-label="Cypress A 04-05-06: RA" value=""' in upcoming
-    assert "starts 14 days" not in upcoming
+    assert "covers all but" not in upcoming
     past = client.get("/rosters/assignments?term=AY2025-2026.3").text
     assert "is past</strong> and read-only. No assignments were recorded for it." in past
-    assert ">Copy from an earlier term</button>" in past and "No earlier term" in past
+    assert 'id="copy-from"' not in past and ">Copy from" not in past  # nothing to copy into a past term
+    assert "No slots in AY2025-2026, Term 3: the slots stand from AY2026-2027, Term 1." in past
+    assert 'aria-label="Cypress A 04-05-06: RA"' not in past and "covers all but" not in past
     assert "(Current)</option>" in client.get("/rosters/assignments?term=nonsense").text.split(" selected>")[1].split("\n")[0]
     staged = client.get("/rosters/assignments?stage=slots").text
     assert '<input type="hidden" name="stage" value="slots">' in staged
@@ -394,6 +400,11 @@ def test_an_assignments_upload_says_what_it_does() -> None:
         assert f"<dt>{mode}</dt><dd>{escape(what)}</dd>" in page
     assert "a past one is refused" in page
     assert ">Export AY2026-2027, Term 1</button>" in page
+
+
+def test_home_checks_list_the_partial_overlap() -> None:
+    home = TestClient(ops_app()).get("/rosters/").text
+    assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in home.split('id="checks-h"')[1]
 
 
 def test_home_names_the_current_term() -> None:

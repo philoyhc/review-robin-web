@@ -64,8 +64,9 @@ def assignments(request: Request) -> Response:
         "residentialops/rosters/assignments.html",
         term=term,
         assigned=term in sample_data.ASSIGNED_TERMS,
+        has_slots=term.start >= sample_data.SLOTS_FROM.start,
         copy_from=tuple(t for t in sample_data.ASSIGNED_TERMS if t.start < term.start),
-        late_starts=sample_data.late_starts(term),
+        late_starts=sample_data.late_starts(term) if term in sample_data.ASSIGNED_TERMS else (),
         **_context(request),
     )
 

@@ -157,11 +157,13 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   chosen in a term card above the slots table (`?term=AY2026-2027.1`),
   opening on the term today falls in, else the next. The card also holds
   Copy from (an earlier term's assignments, to edit) and Set up terms. A
-  past term is read-only, under a notice; a term without assignments says
-  so and offers the copy. A partial-overlap warning, one notice per
+  past term is read-only, under a notice and with no Copy from; a term
+  before the slots stand lists none; a term without assignments says so
+  and offers the copy. A partial-overlap warning, one notice per
   assignee, names the gap in days. Below the table, the Assignments CSV
   card (its upload mode chosen in a select: New slots, Refresh a term, Add
-  a term, each described) beside the levels.
+  a term, each described, and an Export of the term shown) beside the
+  levels.
 - **Terms** (`/rosters/assignments/terms`) is a detour, after RRW's
   `/guide`: a "← Back to" link returns to the roster page named in
   `?return_to=`, else to Assignments. It lists each year's terms (up to 5,
@@ -189,7 +191,8 @@ Until a screen is wired:
   in one module, deleted in one place by the item that wires it;
 - its controls are present and `disabled`, except a roster's tick boxes,
   which open the expander so its shape can be checked (§6), and
-  Assignments' term selector, which is navigation (§7);
+  Assignments' term selector and its Show term button, which are
+  navigation (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.

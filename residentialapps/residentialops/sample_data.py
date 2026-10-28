@@ -77,16 +77,17 @@ TERMS: tuple[Term, ...] = tuple(
 )
 CURRENT_TERM = next(t for t in TERMS if t.status != "Past")  # the page opens on it
 
-# The sample's assignments are for the current term alone: the Unit began
-# using Rosters and setup in AY2026-2027, and later terms wait to be
-# copied or uploaded.
+# The sample's slots stand from the current term, and its assignments are
+# for that term alone: the Unit began using Rosters and setup in
+# AY2026-2027, and later terms wait to be copied or uploaded.
+SLOTS_FROM = CURRENT_TERM
 ASSIGNED_TERMS = (CURRENT_TERM,)
 
 # An Assignments upload says what it does (author, 2026-10-28), chosen on
 # the upload card and checked in the preview.
 UPLOAD_MODES = (
     ("New slots", "The file defines the slots from its first term on, earlier terms keeping theirs. That term and every later one are wiped, after a warning naming them."),
-    ("Refresh a term", "The slots must match those on file exactly. The current or a future term's assignments are replaced, after a warning."),
+    ("Refresh a term", "The slots must match those on file exactly. The current term's assignments, or a future term's that already has some, are replaced, after a warning."),
     ("Add a term", "The slots must match those on file exactly. The term has no assignments yet."),
 )
 
@@ -252,17 +253,33 @@ def linked_count(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tupl
     return len(people), sum(1 for p in people if p.linked)
 
 
+def _span(dates: str) -> tuple[date, date]:
+    """An appointment's first and last days; an open end runs on."""
+    start, _, end = dates.partition("–")
+    return date.fromisoformat(start.strip()), date.fromisoformat(end.strip()) if end.strip() else date.max
+
+
+def gap_days(dates: str, term: Term) -> int | None:
+    """The assignment guard (author, 2026-10-28): 0 for an appointment
+    covering the whole term, the days of the term it misses for one covering
+    part of it (a warning), None for one wholly outside it (refused)."""
+    start, end = _span(dates)
+    if start > term.end or end < term.start:
+        return None
+    return max(0, (start - term.start).days) + max(0, (term.end - end).days)
+
+
 def late_starts(term: Term) -> tuple[tuple[str, str, int], ...]:
-    """The assignment guard's warning: each assignee whose appointment starts
-    after the term does, with their slot and the gap in days. One wholly
-    outside the term is refused instead (author, 2026-10-28)."""
-    starts = {p.name: date.fromisoformat(p.dates.split()[0]) for p in (*STAFF, *RAS)}
-    return tuple(
-        (name, slot.neighborhood, (starts[name] - term.start).days)
-        for slot in SLOTS
-        for name in (*slot.staff, *slot.ras)
-        if starts[name] > term.start
-    )
+    """The guard's warnings for a term's assignments: each assignee whose
+    appointment covers only part of it, with their slot and the gap."""
+    dates = {p.name: p.dates for p in (*STAFF, *RAS)}
+    found = []
+    for slot in SLOTS:
+        for name in (*slot.staff, *slot.ras):
+            gap = gap_days(dates[name], term)
+            if gap:
+                found.append((name, slot.neighborhood, gap))
+    return tuple(found)
 
 
 def slots_of(name: str) -> tuple[str, ...]:

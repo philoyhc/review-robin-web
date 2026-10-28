@@ -141,6 +141,19 @@ def test_one_assignee_starts_partway_into_the_term() -> None:
     assert sample_data.late_starts(sample_data.CURRENT_TERM) == (("Umairah Salleh", "Willow B 10-11-12", 14),)
 
 
+def test_the_guard_covers_qualifies_and_refuses() -> None:
+    """Ruling point 6: whole cover qualifies (0), part cover warns with the
+    days missed at either end, and none at all is refused (None)."""
+    from residentialapps.residentialops.sample_data import CURRENT_TERM as term, gap_days
+
+    assert gap_days("2026-08-01 –", term) == 0
+    assert gap_days("2026-08-17 –", term) == 14
+    assert gap_days("2026-08-01 – 2026-12-31", term) == 10  # ends ten days early
+    assert gap_days("2026-08-10 – 2027-01-05", term) == 7 + 5
+    assert gap_days("2027-01-11 –", term) is None  # starts after the term
+    assert gap_days("2025-01-01 – 2026-08-02", term) is None  # ends before it
+
+
 def test_every_person_cell_names_someone_on_its_roster() -> None:
     """A slot's Staff are its RF and its Wing's RSLM, from the Staff roster;
     its RA is one person from the RA roster."""
@@ -195,7 +208,7 @@ def test_the_placeholders_show_the_mock_data() -> None:
 
 def test_quick_setup_holds_every_other_file() -> None:
     """Read back, the Quick setup file gives the rosters, the appointments
-    they hold and the Organization file with every cell. Its format is held
+    they hold and the Assignments file with every cell. Its format is held
     for further rulings (2026-10-28); this checks the file as it stands."""
     quick = rows("quick_setup.csv")
     slot_of: dict[str, dict[str, str]] = {}
