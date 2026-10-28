@@ -17,15 +17,15 @@
   <section class="card" aria-labelledby="staff-h">
     <div class="card-head">
       <h2 id="staff-h">Staff roster {% if rosters_filled %}<span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span>{% endif %}</h2>
-      <p class="sub">A row is a person and one staff appointment, with its dates. Access is granted separately and shown read-only.</p>
+      <p class="sub">A row is a person and one staff appointment, with its dates. What each can do follows from their appointment; sys admin, the one grant, is made on the <a href="{{ url('/sys-admin/') }}">Sys admin</a> page.</p>
     </div>
     <div class="table-wrap">
       <table class="roster">
         <thead>
-          <tr>{{ select_all('staff') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Sign-in</th><th scope="col">Access</th></tr>
+          <tr>{{ select_all('staff') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
         </thead>
         <tbody>
-          {% if not rosters_filled %}<tr><td colspan="8" class="subtle">No staff yet. Add a person, or upload the Staff roster CSV below.</td></tr>{% endif %}
+          {% if not rosters_filled %}<tr><td colspan="7" class="subtle">No staff yet. Add a person, or upload the Staff roster CSV below.</td></tr>{% endif %}
           {% for person in (sample.STAFF if rosters_filled else ()) %}
             <tr>
               {{ select_row(person.name) }}
@@ -35,7 +35,6 @@
               <td>{{ person.abbrev }}</td>
               <td class="nowrap">{{ person.dates }}</td>
               <td>{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
-              <td><div class="chips">{% for grant in person.access %}<span class="chip {{ 'chip-support' if grant.startswith('Support Logs') else ('chip-accent' if grant == 'Sys admin' else 'chip-info') }}">{{ grant }}</span>{% endfor %}</div></td>
             </tr>
           {% endfor %}
         </tbody>

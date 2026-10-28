@@ -238,6 +238,8 @@ Covering RA status does not grant access to the applicant's broader leave histor
 
 ## 4.5 Residential Staff / Team Viewer
 
+**Superseded in part (author, 2026-10-28):** there is no Team Viewer grant. Every linked Staff-roster member has this view, within their scope (`residentialapps/docs/residentialapps_roles.md`).
+
 Authorized residential staff may view operational leave information within their assigned scope, including:
 
 - who is away;

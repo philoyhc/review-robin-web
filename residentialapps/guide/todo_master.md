@@ -132,6 +132,7 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
      - **Assignments, Add a term** (nothing on file): a blank is empty;
      - **Terms**: every column is required; a blank is refused;
      - in every upload, a refused row raises no warning besides its refusal.
+  10. **No Access column; Team Viewer retired** (ruled the same day): the Staff roster shows no access. Other applications' grants stay in them: Support Logs reads the Staff roster for eligibility (every Staff-roster member is eligible) and makes and shows its grants itself. In Residential Operations a staff account is a staff account: appointments and routing decide what each does, every linked Staff-roster member has the read-only operational leave view, and sys admin, granted by the super-admin on the Sys admin page, is the only grant (`residentialapps/docs/residentialapps_roles.md`).
 - **Role names** (terms ruled 2026-10-26: *sys admin* the system role, *admin* the appointment, `residentialapps/docs/residentialapps_roles.md`): administrator is "Administrator", "System Administrator", "Leave administrator" and "Residential admin" across the specs; who administers the shared core is not named.
 - **Appointments:** RF, RSLM, Master, RA, and the Master's admin delegate; a Support Logs delegate is granted at the Master's request.
 - **Unit vocabulary:** unit, team, house and cluster (`cluster_id` is a core unit).

@@ -156,7 +156,6 @@ class StaffMember:
     abbrev: str
     dates: str
     linked: bool
-    access: tuple[str, ...]  # read-only chips: what each person is granted
     enterprise_name: str
 
 
@@ -173,8 +172,6 @@ class RosterRA:
 
 
 DATES = "2026-08-01 –"
-FRONTLINE = ("Support Logs · frontline",)
-SENIOR = ("Sys admin", "Support Logs · senior")
 
 
 def _email(name: str) -> str:
@@ -191,16 +188,16 @@ def _student_id(n: int) -> str:
     return f"A0{230000 + 4127 * n:06d}{'XBMHKLRTUWY'[n % 11]}"
 
 
-def _staff(name: str, appointment: str, access: tuple[str, ...], linked: bool = True) -> StaffMember:
-    return StaffMember(name, _email(name), appointment, ABBREV[appointment], DATES, linked, access, _enterprise(name))
+def _staff(name: str, appointment: str, linked: bool = True) -> StaffMember:
+    return StaffMember(name, _email(name), appointment, ABBREV[appointment], DATES, linked, _enterprise(name))
 
 
 STAFF: tuple[StaffMember, ...] = (
-    _staff("Sam Lee", "Master", SENIOR),
-    _staff("Rachel Yeo", "Residential Admin", SENIOR),
-    *(_staff(name, "Residential Student Life Manager", FRONTLINE) for name in ("Priya Raman", "Marcus Tan", "Nadia Hassan")),
+    _staff("Sam Lee", "Master"),
+    _staff("Rachel Yeo", "Residential Admin"),
+    *(_staff(name, "Residential Student Life Manager") for name in ("Priya Raman", "Marcus Tan", "Nadia Hassan")),
     *(
-        _staff(name, "Residential Fellow", ("Team Viewer",) if name == "Grace Ho" else FRONTLINE, name != "Grace Ho")
+        _staff(name, "Residential Fellow", name != "Grace Ho")
         for name in ("Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
                      "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong")
     ),
@@ -380,7 +377,6 @@ AUDIT_EVENTS = (
     ("2026-10-24 11:18", "Organization imported", "Organization", "Rachel Yeo",
      "30 slots: 0 new, 2 changed, 0 retired"),
     ("2026-10-24 11:02", "Level labels changed", "Organization", "Rachel Yeo", "Level 2: “Zone” → “Precinct”"),
-    ("2026-10-20 14:30", "Team Viewer granted", "Access grants", "Sam Lee", "Grace Ho"),
     ("2026-08-01 08:05", "Roster imported", "Rosters", "Rachel Yeo", "Staff roster: 14 added; RA roster: 30 added"),
     ("2026-08-01 08:00", "Sys admin granted", "Access grants", SUPER_ADMIN, "Sam Lee, Rachel Yeo"),
 )
