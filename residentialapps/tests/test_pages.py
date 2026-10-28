@@ -65,35 +65,41 @@ def test_the_organization_page_lists_the_slots_with_staff_and_ra_cells() -> None
     assert "Appointment types" not in page.text  # they moved to the rosters
 
 
-def test_levels_and_appointment_types_are_rows() -> None:
-    """Levels and appointment types are rows added with + and removed with X,
-    after RRW's response-field rows; no fixed count."""
-    client = TestClient(ops_app())
-    page = client.get("/rosters/organization").text
+def test_levels_are_rows() -> None:
+    """Levels are rows added with + and removed with X, after RRW's
+    response-field rows; no fixed count."""
+    page = TestClient(ops_app()).get("/rosters/organization").text
     for n, label in enumerate(sample_data.LEVEL_LABELS, start=1):
         assert f'aria-label="Add a level below Level {n}"' in page
         assert f'aria-label="Remove Level {n}"' in page
     assert "up to 5;" in page
-    for path, heading, types in (
-        ("/rosters/staff", "Staff appointment types", sample_data.STAFF_TYPES),
-        ("/rosters/ras", "Student appointment types", sample_data.STUDENT_TYPES),
+
+
+def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
+    """No appointment types card (author, 2026-10-28): each row gives its
+    appointment and abbreviation, and the filter offers the ones held."""
+    client = TestClient(ops_app())
+    for path, people, appointments in (
+        ("/rosters/staff", sample_data.STAFF, sample_data.STAFF_APPOINTMENTS),
+        ("/rosters/ras", sample_data.RAS, sample_data.RA_APPOINTMENTS),
     ):
         roster = client.get(path).text
-        assert f'<h2 id="{"staff" if "Staff" in heading else "student"}-types-h">{heading}</h2>' in roster
-        for n, (title, abbrev) in enumerate(types, start=1):
-            assert f'aria-label="{heading[:-1]} {n}: title" value="{title}"' in roster
-            assert f'aria-label="{heading[:-1]} {n}: abbreviation" value="{abbrev}"' in roster
-        assert 'title="Add a type below this one"' in roster
-        assert "<select" not in roster.split("types-h")[1].split("</section>")[0]  # no level, no type
+        assert "appointment types" not in roster.lower()
+        assert "Save types" not in roster
+        headers = re.findall(r'<th scope="col">([^<]*)', roster.split("<tbody>")[0])
+        assert headers[headers.index("Appointment") + 1] == "Abbrev"
+        for person in people:
+            assert f"<td>{person.appointment}</td>\n              <td>{person.abbrev}</td>" in roster
+        options = roster.split('id="appointment"')[1].split("</select>")[0]
+        assert re.findall(r"<option>([^<]*)", options) == ["All", *(a for a, _ in appointments)]
+        assert "removes no one" in roster  # an upload appends
 
 
 def test_each_page_shows_its_csv() -> None:
     client = TestClient(ops_app())
     assert "Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Staff,RA" in client.get("/rosters/organization").text
-    staff = client.get("/rosters/staff").text
-    assert "<h3>Staff appointment types CSV</h3>" in staff
-    assert "Name,Email,Appointment,From,To,Enterprise name" in staff
-    assert "Name,Email,Appointment,From,To,Enterprise name,Student ID" in client.get("/rosters/ras").text
+    assert "Name,Email,Appointment,Abbrev,From,To,Enterprise name\n" in client.get("/rosters/staff").text
+    assert "Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID" in client.get("/rosters/ras").text
 
 
 def test_every_page_is_labeled_a_placeholder(host_client: TestClient) -> None:
@@ -173,7 +179,7 @@ def test_the_staff_roster_shows_access_read_only() -> None:
     assert "<h1>Staff roster</h1>" in page.text
     assert "· 14 people, 13 linked" in page.text
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
-    assert headers == ["Name", "Email", "Appointment", "From – to", "Sign-in", "Access"]
+    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in", "Access"]
     assert "Not yet signed in</span>" in page.text
     assert "Support Logs · frontline" in page.text
 
@@ -183,7 +189,7 @@ def test_the_ra_roster_holds_people_and_appointments_only() -> None:
     assert page.status_code == 200
     assert "· 30 RAs, 29 linked" in page.text
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
-    assert headers == ["Name", "Email", "Appointment", "From – to", "Sign-in"]
+    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in"]
 
 
 def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:

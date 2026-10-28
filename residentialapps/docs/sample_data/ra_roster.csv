@@ -1,31 +1,31 @@
-Name,Email,Appointment,From,To,Enterprise name,Student ID
-Chloe Lim,chloe.lim@example.edu,Residential Assistant,2026-08-01,,LIM CHLOE,A0230000X
-Ethan Wong,ethan.wong@example.edu,Residential Assistant,2026-08-01,,WONG ETHAN,A0234127B
-Hana Ito,hana.ito@example.edu,Residential Assistant,2026-08-01,,ITO HANA,A0238254M
-Isaac Goh,isaac.goh@example.edu,Residential Assistant,2026-08-01,,GOH ISAAC,A0242381H
-Jia Hui Ong,jiahui.ong@example.edu,Residential Assistant,2026-08-01,,ONG JIA HUI,A0246508K
-Kai Ng,kai.ng@example.edu,Residential Assistant,2026-08-01,,NG KAI,A0250635L
-Lucas Teo,lucas.teo@example.edu,Residential Assistant,2026-08-01,,TEO LUCAS,A0254762R
-Maya Seah,maya.seah@example.edu,Residential Assistant,2026-08-01,,SEAH MAYA,A0258889T
-Nur Aisyah,nur.aisyah@example.edu,Residential Assistant,2026-08-01,,AISYAH NUR,A0263016U
-Aaron Sim,aaron.sim@example.edu,Residential Assistant,2026-08-01,,SIM AARON,A0267143W
-Bella Koh,bella.koh@example.edu,Residential Assistant,2026-08-01,,KOH BELLA,A0271270Y
-Cheng Hao Lin,chenghao.lin@example.edu,Residential Assistant,2026-08-01,,LIN CHENG HAO,A0275397X
-Dhruv Menon,dhruv.menon@example.edu,Residential Assistant,2026-08-01,,MENON DHRUV,A0279524B
-Elise Tan,elise.tan@example.edu,Residential Assistant,2026-08-01,,TAN ELISE,A0283651M
-Faris Iskandar,faris.iskandar@example.edu,Residential Assistant,2026-08-01,,ISKANDAR FARIS,A0287778H
-Gwen Ho,gwen.ho@example.edu,Residential Assistant,2026-08-01,,HO GWEN,A0291905K
-Haikal Rahim,haikal.rahim@example.edu,Residential Assistant,2026-08-01,,RAHIM HAIKAL,A0296032L
-Ivy Toh,ivy.toh@example.edu,Residential Assistant,2026-08-01,,TOH IVY,A0300159R
-Jasper Lee,jasper.lee@example.edu,Residential Assistant,2026-08-01,,LEE JASPER,A0304286T
-Kavya Pillai,kavya.pillai@example.edu,Residential Assistant,2026-08-01,,PILLAI KAVYA,A0308413U
-Leon Chia,leon.chia@example.edu,Residential Assistant,2026-08-01,,CHIA LEON,A0312540W
-Mira Sato,mira.sato@example.edu,Residential Assistant,2026-08-01,,SATO MIRA,A0316667Y
-Nathan Yeo,nathan.yeo@example.edu,Residential Assistant,2026-08-01,,YEO NATHAN,A0320794X
-Olivia Ng,olivia.ng@example.edu,Residential Assistant,2026-08-01,,NG OLIVIA,A0324921B
-Pranav Iyer,pranav.iyer@example.edu,Residential Assistant,2026-08-01,,IYER PRANAV,A0329048M
-Qi Xuan Lim,qixuan.lim@example.edu,Residential Assistant,2026-08-01,,LIM QI XUAN,A0333175H
-Rui Chen,rui.chen@example.edu,Residential Assistant,2026-08-01,,CHEN RUI,A0337302K
-Sofia Wee,sofia.wee@example.edu,Residential Assistant,2026-08-01,,WEE SOFIA,A0341429L
-Timothy Low,timothy.low@example.edu,Residential Assistant,2026-08-01,,LOW TIMOTHY,A0345556R
-Umairah Salleh,umairah.salleh@example.edu,Residential Assistant,2026-08-01,,SALLEH UMAIRAH,A0349683T
+Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID
+Chloe Lim,chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,LIM CHLOE,A0230000X
+Ethan Wong,ethan.wong@example.edu,Residential Assistant,RA,2026-08-01,,WONG ETHAN,A0234127B
+Hana Ito,hana.ito@example.edu,Residential Assistant,RA,2026-08-01,,ITO HANA,A0238254M
+Isaac Goh,isaac.goh@example.edu,Residential Assistant,RA,2026-08-01,,GOH ISAAC,A0242381H
+Jia Hui Ong,jiahui.ong@example.edu,Residential Assistant,RA,2026-08-01,,ONG JIA HUI,A0246508K
+Kai Ng,kai.ng@example.edu,Residential Assistant,RA,2026-08-01,,NG KAI,A0250635L
+Lucas Teo,lucas.teo@example.edu,Residential Assistant,RA,2026-08-01,,TEO LUCAS,A0254762R
+Maya Seah,maya.seah@example.edu,Residential Assistant,RA,2026-08-01,,SEAH MAYA,A0258889T
+Nur Aisyah,nur.aisyah@example.edu,Residential Assistant,RA,2026-08-01,,AISYAH NUR,A0263016U
+Aaron Sim,aaron.sim@example.edu,Residential Assistant,RA,2026-08-01,,SIM AARON,A0267143W
+Bella Koh,bella.koh@example.edu,Residential Assistant,RA,2026-08-01,,KOH BELLA,A0271270Y
+Cheng Hao Lin,chenghao.lin@example.edu,Residential Assistant,RA,2026-08-01,,LIN CHENG HAO,A0275397X
+Dhruv Menon,dhruv.menon@example.edu,Residential Assistant,RA,2026-08-01,,MENON DHRUV,A0279524B
+Elise Tan,elise.tan@example.edu,Residential Assistant,RA,2026-08-01,,TAN ELISE,A0283651M
+Faris Iskandar,faris.iskandar@example.edu,Residential Assistant,RA,2026-08-01,,ISKANDAR FARIS,A0287778H
+Gwen Ho,gwen.ho@example.edu,Residential Assistant,RA,2026-08-01,,HO GWEN,A0291905K
+Haikal Rahim,haikal.rahim@example.edu,Residential Assistant,RA,2026-08-01,,RAHIM HAIKAL,A0296032L
+Ivy Toh,ivy.toh@example.edu,Residential Assistant,RA,2026-08-01,,TOH IVY,A0300159R
+Jasper Lee,jasper.lee@example.edu,Residential Assistant,RA,2026-08-01,,LEE JASPER,A0304286T
+Kavya Pillai,kavya.pillai@example.edu,Residential Assistant,RA,2026-08-01,,PILLAI KAVYA,A0308413U
+Leon Chia,leon.chia@example.edu,Residential Assistant,RA,2026-08-01,,CHIA LEON,A0312540W
+Mira Sato,mira.sato@example.edu,Residential Assistant,RA,2026-08-01,,SATO MIRA,A0316667Y
+Nathan Yeo,nathan.yeo@example.edu,Residential Assistant,RA,2026-08-01,,YEO NATHAN,A0320794X
+Olivia Ng,olivia.ng@example.edu,Residential Assistant,RA,2026-08-01,,NG OLIVIA,A0324921B
+Pranav Iyer,pranav.iyer@example.edu,Residential Assistant,RA,2026-08-01,,IYER PRANAV,A0329048M
+Qi Xuan Lim,qixuan.lim@example.edu,Residential Assistant,RA,2026-08-01,,LIM QI XUAN,A0333175H
+Rui Chen,rui.chen@example.edu,Residential Assistant,RA,2026-08-01,,CHEN RUI,A0337302K
+Sofia Wee,sofia.wee@example.edu,Residential Assistant,RA,2026-08-01,,WEE SOFIA,A0341429L
+Timothy Low,timothy.low@example.edu,Residential Assistant,RA,2026-08-01,,LOW TIMOTHY,A0345556R
+Umairah Salleh,umairah.salleh@example.edu,Residential Assistant,RA,2026-08-01,,SALLEH UMAIRAH,A0349683T

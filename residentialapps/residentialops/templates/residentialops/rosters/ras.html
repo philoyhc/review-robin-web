@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import filter_bar, gate, select_all, select_row, csv_actions, selection_script, stage_switch, types_card with context %}
+{% from "residentialops/rosters/_filters.html" import filter_bar, gate, select_all, select_row, csv_actions, selection_script, stage_switch with context %}
 {% block title %}RA roster{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -10,7 +10,7 @@
      units, author, 2026-10-27): which slot each serves is set on Organization. #}
   {% call gate(rosters_open, "The rosters open once Organization's slots are saved.", "/rosters/organization", "Go to Organization") %}
   {{ filter_bar([
-       {"id": "appointment", "label": "Appointment", "options": sample.STUDENT_TYPES | map("first")},
+       {"id": "appointment", "label": "Appointment", "options": sample.RA_APPOINTMENTS | map("first")},
        {"id": "signin", "label": "Sign-in", "options": ("Linked", "Not yet signed in")},
      ], "Add RA", "Name or email") }}
 
@@ -22,16 +22,17 @@
     <div class="table-wrap">
       <table class="roster">
         <thead>
-          <tr>{{ select_all('RAs') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
+          <tr>{{ select_all('RAs') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
         </thead>
         <tbody>
-          {% if not rosters_filled %}<tr><td colspan="6" class="subtle">No RAs yet. Add an RA, or upload the RA roster CSV below.</td></tr>{% endif %}
+          {% if not rosters_filled %}<tr><td colspan="7" class="subtle">No RAs yet. Add an RA, or upload the RA roster CSV below.</td></tr>{% endif %}
           {% for ra in (sample.RAS if rosters_filled else ()) %}
             <tr>
               {{ select_row(ra.name) }}
               <td class="strong nowrap"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(ra.email)) }}">{{ ra.name }}</a></td>
               <td class="subtle">{{ ra.email }}</td>
               <td>{{ ra.appointment }}</td>
+              <td>{{ ra.abbrev }}</td>
               <td class="nowrap">{{ ra.dates }}</td>
               <td>{% if ra.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
@@ -41,13 +42,11 @@
     </div>
   </section>
 
-  {# Below the table, the appointment types (two thirds) beside the
-     roster CSV (a third), author, 2026-10-27. #}
+  {# Below the table, the roster CSV; the appointment types card went (author, 2026-10-28). #}
   <div class="bottom-row">
-    {{ types_card("student-types", "Student appointment types", "Student appointment type", "student", sample.STUDENT_TYPES, sample.MAX_TYPES, sample.STUDENT_TYPES_CSV) }}
     <section class="card card-pad muted" aria-labelledby="csv-h">
       <h2 id="csv-h">RA roster CSV</h2>
-      <p class="sub">A row names a student and one of the student appointment types beside it. The file is the whole roster: preview lists new, changed and ended rows, and anyone it leaves out is end-dated, before anything saves.</p>
+      <p class="sub">A row names a student, their appointment and its abbreviation (<code>Appointment,Abbrev</code>), and its dates. An upload adds to the roster and removes no one; ending an appointment is done here. Preview lists the rows it adds, and warns before going on if a known email comes with a different name, enterprise name or student ID.</p>
       <pre class="sample">{{ sample.RA_CSV }}</pre>
       {{ csv_actions() }}
     </section>

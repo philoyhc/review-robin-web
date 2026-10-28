@@ -1,15 +1,15 @@
-Name,Email,Appointment,From,To,Enterprise name
-Sam Lee,sam.lee@example.edu,Master,2026-08-01,,LEE SAM
-Rachel Yeo,rachel.yeo@example.edu,Residential Admin,2026-08-01,,YEO RACHEL
-Priya Raman,priya.raman@example.edu,Residential Student Life Manager,2026-08-01,,RAMAN PRIYA
-Marcus Tan,marcus.tan@example.edu,Residential Student Life Manager,2026-08-01,,TAN MARCUS
-Nadia Hassan,nadia.hassan@example.edu,Residential Student Life Manager,2026-08-01,,HASSAN NADIA
-Daniel Koh,daniel.koh@example.edu,Residential Fellow,2026-08-01,,KOH DANIEL
-Mei Ling Tan,meiling.tan@example.edu,Residential Fellow,2026-08-01,,TAN MEI LING
-Arjun Nair,arjun.nair@example.edu,Residential Fellow,2026-08-01,,NAIR ARJUN
-Grace Ho,grace.ho@example.edu,Residential Fellow,2026-08-01,,HO GRACE
-Benjamin Chua,benjamin.chua@example.edu,Residential Fellow,2026-08-01,,CHUA BENJAMIN
-Farah Aziz,farah.aziz@example.edu,Residential Fellow,2026-08-01,,AZIZ FARAH
-Kenneth Lau,kenneth.lau@example.edu,Residential Fellow,2026-08-01,,LAU KENNETH
-Siti Rahman,siti.rahman@example.edu,Residential Fellow,2026-08-01,,RAHMAN SITI
-Wei Jie Ong,weijie.ong@example.edu,Residential Fellow,2026-08-01,,ONG WEI JIE
+Name,Email,Appointment,Abbrev,From,To,Enterprise name
+Sam Lee,sam.lee@example.edu,Master,Master,2026-08-01,,LEE SAM
+Rachel Yeo,rachel.yeo@example.edu,Residential Admin,Admin,2026-08-01,,YEO RACHEL
+Priya Raman,priya.raman@example.edu,Residential Student Life Manager,RSLM,2026-08-01,,RAMAN PRIYA
+Marcus Tan,marcus.tan@example.edu,Residential Student Life Manager,RSLM,2026-08-01,,TAN MARCUS
+Nadia Hassan,nadia.hassan@example.edu,Residential Student Life Manager,RSLM,2026-08-01,,HASSAN NADIA
+Daniel Koh,daniel.koh@example.edu,Residential Fellow,RF,2026-08-01,,KOH DANIEL
+Mei Ling Tan,meiling.tan@example.edu,Residential Fellow,RF,2026-08-01,,TAN MEI LING
+Arjun Nair,arjun.nair@example.edu,Residential Fellow,RF,2026-08-01,,NAIR ARJUN
+Grace Ho,grace.ho@example.edu,Residential Fellow,RF,2026-08-01,,HO GRACE
+Benjamin Chua,benjamin.chua@example.edu,Residential Fellow,RF,2026-08-01,,CHUA BENJAMIN
+Farah Aziz,farah.aziz@example.edu,Residential Fellow,RF,2026-08-01,,AZIZ FARAH
+Kenneth Lau,kenneth.lau@example.edu,Residential Fellow,RF,2026-08-01,,LAU KENNETH
+Siti Rahman,siti.rahman@example.edu,Residential Fellow,RF,2026-08-01,,RAHMAN SITI
+Wei Jie Ong,weijie.ong@example.edu,Residential Fellow,RF,2026-08-01,,ONG WEI JIE

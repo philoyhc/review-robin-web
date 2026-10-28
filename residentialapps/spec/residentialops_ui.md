@@ -92,15 +92,14 @@ perform is `disabled`, not hidden.
 
 ## 5. Row builders
 
-A list the viewer edits row by row — the levels on Organization and each
-roster's appointment types — takes RRW's Band 3 response-field rows as its
-model (author, 2026-10-27):
+A list the viewer edits row by row — the levels on Organization — takes
+RRW's Band 3 response-field rows as its model (author, 2026-10-27):
 
 - **Each row ends in + and X**: a Secondary + adds a row below, a
   Destructive X removes the row. There is no fixed number of rows.
 - **Each list has a limit**, and its + says so once the list is full:
-  up to 5 levels and up to 10 appointment types per roster
-  (`residentialapps/guide/todo_master.md`, organization by units).
+  up to 5 levels (`residentialapps/guide/todo_master.md`, organization
+  by units).
 - **Measures, after RRW's rows** (measured in Chromium, 2026-10-27):
   16 px text in boxes padded 4 px 8 px, glyph buttons 32 px wide at
   weight 500, 4 px cells and a rule under each row (`.rows`). Boxes, selects and
@@ -125,18 +124,18 @@ model (author, 2026-10-27):
   `spec/setup_pages.md`); End appointment end-dates and keeps the history; Delete, for a row made in
   error, waits on its confirm tick box. Unticking every row closes it.
 - **The setup cards sit below the table, on one row** (author,
-  2026-10-27): on a roster, its appointment types (two thirds) beside its
-  CSV card (a third); on Organization, its CSV card (two thirds) beside the
-  levels (a third). From 960 px they share the row (`.bottom-row`), and
+  2026-10-27): on a roster, its CSV card (two thirds; the appointment
+  types card beside it went, author, 2026-10-28); on Organization, its CSV
+  card (two thirds) beside the levels (a third). From 960 px they share the row (`.bottom-row`), and
   below it they stack. A CSV card carries the sample, then Upload and
   preview and Export.
 - **A value has one home.** Where it is set, it is plain text and edited
   there; where another page repeats it, it is a pill (`.pill-derived`),
   read-only (author, 2026-10-27): a person's slots, on their detail page,
   come from Organization's cells. Sign-in and access stay status chips (§3).
-- **Each roster page's appointment types** (Staff appointment types,
-  Student appointment types) are a row builder (§5) with their own CSV in
-  the same card.
+- **A roster row carries its appointment and its abbreviation**, in
+  their own columns; a roster's appointments are the pairs its rows hold,
+  with no types table and no limit (author, 2026-10-28).
 - **Organization's slots table** takes the same tick boxes and expander,
   with Retire in place of End appointment. One row per slot, under its
   higher levels, whose names show on a group's first row only; a new top
@@ -150,7 +149,7 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 
 - **Home** (`/rosters/`) summarizes four numbered steps, each with its
   state, counts and a link: 1 the slots (Organization's levels and slots),
-  2 the Staff roster, 3 the RA roster (each its types, then people), 4 the
+  2 the Staff roster, 3 the RA roster (people and their appointments), 4 the
   slots' Staff and RA cells, and a Checks card listing the warnings across
   the steps. Until setup is done it opens on how to do it, after RRW's
   first-run lobby card (`spec/sessions_overview.md`).
@@ -186,7 +185,7 @@ RRW's floor applies: text at 4.5:1 and control boundaries at 3:1 in both
 themes. Beyond it:
 
 - **Every control has an accessible name.** A control repeated per row
-  names its row: "Staff appointment type 2: title", "Remove Level 3".
+  names its row: "Cypress A 04-05-06: Staff", "Remove Level 3".
 - **A column of buttons has a header**, visually hidden when the buttons
   speak for themselves.
 - **Color is never the only signal** (§3).
