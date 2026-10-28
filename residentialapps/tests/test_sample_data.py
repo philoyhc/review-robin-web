@@ -69,6 +69,19 @@ def test_the_rosters_hold_the_unit_s_people() -> None:
     assert len(emails) == len(set(emails))
 
 
+def test_the_roster_error_files_warn_on_one_identity_change_each() -> None:
+    """Ruling point 2: a known email with a different name, enterprise name
+    or student ID warns. Each error file has one such row, differing from
+    the roster in exactly the fields its README row names."""
+    for file, roster, email, changed in (
+        ("staff_roster_errors.csv", "staff_roster.csv", "meiling.tan@example.edu", {"Name", "Enterprise name"}),
+        ("ra_roster_errors.csv", "ra_roster.csv", "ethan.wong@example.edu", {"Student ID"}),
+    ):
+        on_file = {p["Email"]: p for p in rows(roster)}
+        row = next(r for r in rows(file) if r["Email"] == email)
+        assert {k for k in row if row[k] != on_file[email][k]} == changed, file
+
+
 def test_every_person_cell_names_someone_on_its_roster() -> None:
     """A slot's Staff are its RF and its Wing's RSLM, from the Staff roster;
     its RA is one person from the RA roster."""

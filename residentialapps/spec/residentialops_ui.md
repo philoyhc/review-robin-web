@@ -123,11 +123,10 @@ model (author, 2026-10-27):
   more than one ticked fades it (author, 2026-10-27; RRW's rule,
   `spec/setup_pages.md`); End appointment end-dates and keeps the history; Delete, for a row made in
   error, waits on its confirm tick box. Unticking every row closes it.
-- **The setup cards sit below the table, on one row** (author,
-  2026-10-27): on a roster, its CSV card (two thirds; the appointment
-  types card beside it went, author, 2026-10-28); on Organization, its CSV
-  card (two thirds) beside the levels (a third). From 960 px they share the row (`.bottom-row`), and
-  below it they stack. A CSV card carries the sample, then Upload and
+- **The setup cards sit below the table, on one row** (`.bottom-row`,
+  author, 2026-10-27): its CSV card takes two thirds from 960 px, beside
+  the levels (a third) on Organization and alone on a roster (author,
+  2026-10-28); below 960 px the cards stack at full width. A CSV card carries the sample, then Upload and
   preview and Export.
 - **A value has one home.** Where it is set, it is plain text and edited
   there; where another page repeats it, it is a pill (`.pill-derived`),

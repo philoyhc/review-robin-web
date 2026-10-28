@@ -62,7 +62,7 @@ def test_the_organization_page_lists_the_slots_with_staff_and_ra_cells() -> None
     assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page.text
     assert page.text.count('<tr class="wing-start">') == 3  # a Wing's name shows on its first row only
     assert "RC1A L4: 101, 102-105" in page.text  # the notes, kept as text
-    assert "Appointment types" not in page.text  # they moved to the rosters
+    assert "Appointment types" not in page.text  # no types tables (2026-10-28)
 
 
 def test_levels_are_rows() -> None:
@@ -93,6 +93,15 @@ def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
         options = roster.split('id="appointment"')[1].split("</select>")[0]
         assert re.findall(r"<option>([^<]*)", options) == ["All", *(a for a, _ in appointments)]
         assert "removes no one" in roster  # an upload appends
+    assert "different name or enterprise name." in client.get("/rosters/staff").text
+    assert "different name, enterprise name or student ID." in client.get("/rosters/ras").text
+
+
+def test_home_lists_each_roster_s_appointments() -> None:
+    home = TestClient(ops_app()).get("/rosters/").text
+    assert "<dt>Appointments</dt><dd>Master, Admin, RSLM, RF</dd>" in home
+    assert "<dt>Appointments</dt><dd>RA</dd>" in home
+    assert "<dt>Types</dt>" not in home
 
 
 def test_each_page_shows_its_csv() -> None:
