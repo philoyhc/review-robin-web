@@ -3,10 +3,8 @@
 {% block title %}Leave policy{% endblock %}
 {% block content %}
   {{ title("Leave policy", leave) }}
-  <p class="sub">What RAs may apply for and how applications travel. Set before a period opens: ordinary applications cannot be submitted until the cover setting is chosen (spec §12).</p>
+  <p class="sub">What RAs may apply for and how applications travel, set before the year opens (author, 2026-10-28). The choices shown are the sample's; cover has no built-in default, and ordinary applications cannot be submitted until it is chosen (spec §12). Controls are inert until RA Leave is wired.</p>
 
-  {# Configurable, not fixed (author, 2026-10-28): the period, the first
-     approver and the cover pool. Radios are inert until item 2. #}
   {% macro choice(name, legend, options, current, notes={}) %}
     <fieldset class="modes">
       <legend>{{ legend }}</legend>
@@ -17,54 +15,107 @@
     </fieldset>
   {% endmacro %}
 
-  <div class="split">
-    <div class="main stack">
-      <section class="card card-pad" aria-labelledby="types-h">
-        <h2 id="types-h">Leave types</h2>
-        <p class="sub">Each type and its usual days per period. Each period's entitlements are loaded on Entitlements (spec §6), and adjusted per RA there.</p>
-        <div class="table-wrap">
-          <table class="rows">
-            <thead><tr><th scope="col">Leave type</th><th scope="col">Abbrev</th><th scope="col">Usual days</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
-            <tbody>
-              {% for name, abbrev, days in leave.LEAVE_TYPES %}
-                <tr>
-                  <td><input class="input" type="text" aria-label="Leave type {{ loop.index }}: name" value="{{ name }}" disabled></td>
-                  <td><input class="input" type="text" aria-label="Leave type {{ loop.index }}: abbreviation" value="{{ abbrev }}" disabled></td>
-                  <td><input class="input" type="number" aria-label="Leave type {{ loop.index }}: usual days" value="{{ days }}" disabled></td>
-                  <td><span class="row-actions">
-                    <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a leave type below {{ name }}" title="Add a leave type below this one" disabled>+</button>
-                    <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ name }}" title="Remove this leave type" disabled>X</button>
-                  </span></td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </section>
+  {% macro options(values, current) -%}
+    {% for value in values %}<option{% if value == current %} selected{% endif %}>{{ value }}</option>{% endfor %}
+  {%- endmacro %}
 
-      <section class="card card-pad" aria-labelledby="period-h">
-        <h2 id="period-h">Entitlement period</h2>
-        <p class="sub">The span an entitlement covers. Terms come from <a href="{{ url('/rosters/assignments/terms') }}">Terms</a>.</p>
-        {{ choice("period", "An entitlement runs for", leave.PERIODS, leave.POLICY.period, {"Year": "Each academic year (" ~ leave.PERIOD_LABEL ~ ")", "Term": "Each term, as set out on Terms"}) }}
-      </section>
+  <div class="stack">
+    {# 1–2. Leave that needs an application, each type with its own
+       entitlement rule: days per term, per academic year or per month
+       served, held to a cap per year or per term. #}
+    <section class="card card-pad" aria-labelledby="types-h">
+      <h2 id="types-h">Leave types</h2>
+      <p class="sub">The kinds of leave an RA applies for, typically personal and official, each with its own entitlement. Leave that needs no application here (medical, compassionate) stays outside RA Leave.</p>
+      <div class="table-wrap">
+        <table class="rows">
+          <thead><tr><th scope="col">Leave type</th><th scope="col">Abbrev</th><th scope="col">Earned</th><th scope="col">Days</th><th scope="col">Cap</th><th scope="col">Per</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+          <tbody>
+            {% for lt in leave.LEAVE_TYPES %}
+              {% set n = loop.index %}
+              <tr>
+                <td><input class="input" type="text" aria-label="Leave type {{ n }}: name" value="{{ lt.name }}" disabled></td>
+                <td><input class="input" type="text" aria-label="Leave type {{ n }}: abbreviation" value="{{ lt.abbrev }}" disabled></td>
+                <td><select class="input" aria-label="Leave type {{ n }}: how it is earned" disabled>{{ options(leave.ACCRUALS, lt.accrual) }}</select></td>
+                <td><input class="input" type="number" aria-label="Leave type {{ n }}: days earned" value="{{ lt.amount }}" disabled></td>
+                <td><input class="input" type="number" aria-label="Leave type {{ n }}: cap in days" value="{{ lt.cap }}" disabled></td>
+                <td><select class="input" aria-label="Leave type {{ n }}: cap per" disabled>{{ options(leave.CAP_PERIODS, lt.cap_per) }}</select></td>
+                <td><span class="row-actions">
+                  <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a leave type below {{ lt.name }}" title="Add a leave type below this one" disabled>+</button>
+                  <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ lt.name }}" title="Remove this leave type; at least two stay" disabled>X</button>
+                </span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <ul class="plain subtle gap-above-sm">
+        <li><strong>Per term</strong>: the days for each term, the year's terms granted together. <strong>Per academic year</strong>: the days for the year at once. <strong>Per month served</strong>: the days earned for each whole month of an RA's appointment.</li>
+        <li>The cap holds what an RA earns in a year, or in each term. Per-RA adjustments sit outside it, each with its reason, and are made on <a href="{{ url('/ra-leave/admin/entitlements') }}">Entitlements</a>.</li>
+      </ul>
+    </section>
 
-      <section class="card card-pad" aria-labelledby="cover-h">
-        <h2 id="cover-h">Cover</h2>
-        <p class="sub">Every application names a covering RA, who is notified. Extra-leave appeals always need the cover's confirmation (spec §7.4).</p>
-        {{ choice("confirm", "For ordinary leave", ("Cover must be confirmed", "Cover is named only"), "Cover must be confirmed" if leave.POLICY.cover_confirmation else "Cover is named only", {"Cover must be confirmed": "The application waits at first approval until the covering RA confirms", "Cover is named only": "The covering RA is told, and need not confirm"}) }}
-        {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
-      </section>
+    {# 3. Blackouts by week, so they carry from one year to the next. #}
+    <section class="card card-pad" aria-labelledby="blackout-h">
+      <h2 id="blackout-h">Blackout periods</h2>
+      <p class="sub">Weeks when leave is refused outright, or open only by appeal to the Master. Counted by week of a term so they carry to the next year: week 1 starts on the Sunday on or before the term's first day, and each week runs Sunday to Saturday.</p>
+      <div class="table-wrap">
+        <table class="rows">
+          <thead><tr><th scope="col">Term</th><th scope="col">From week</th><th scope="col">To week</th><th scope="col">What</th><th scope="col">Leave is</th><th scope="col">{{ leave.PERIOD_LABEL }}</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+          <tbody>
+            {% for b in leave.BLACKOUTS %}
+              {% set n = loop.index %}
+              {% set first, last = leave.week_dates(b) %}
+              <tr>
+                <td><select class="input" aria-label="Blackout {{ n }}: term" disabled>{{ options(leave.term_labels(), "Term " ~ b.term) }}</select></td>
+                <td><input class="input" type="number" aria-label="Blackout {{ n }}: from week" value="{{ b.week_from }}" disabled></td>
+                <td><input class="input" type="number" aria-label="Blackout {{ n }}: to week" value="{{ b.week_to }}" disabled></td>
+                <td><input class="input" type="text" aria-label="Blackout {{ n }}: what" value="{{ b.label }}" disabled></td>
+                <td><select class="input" aria-label="Blackout {{ n }}: leave is" disabled>{{ options(leave.BLACKOUT_EFFECTS, b.effect) }}</select></td>
+                <td class="nowrap subtle">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}</td>
+                <td><span class="row-actions">
+                  <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a blackout below {{ b.label }}" title="Add a blackout below this one" disabled>+</button>
+                  <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ b.label }}" title="Remove this blackout" disabled>X</button>
+                </span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <ul class="plain subtle gap-above-sm">
+        <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal.</li>
+      </ul>
+    </section>
 
-      <section class="card card-pad" aria-labelledby="approvals-h">
-        <h2 id="approvals-h">Approvals</h2>
-        <p class="sub">Who decides, read from each RA's slot on Assignments for the current term. A Precinct's delegate is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
-        {{ choice("first", "First approval by the slot's", leave.FIRST_APPROVERS, leave.POLICY.first_approver, {"RF": "The Residential Fellow in the slot's Staff cell", "RSLM": "The Residential Student Life Manager", "Either": "Whichever of the two decides first"}) }}
-        <dl class="kv">
-          <dt>Final approval</dt><dd>The Residential Admin ({{ leave.FINAL_APPROVER }})</dd>
-          <dt>Extra-leave appeals</dt><dd>The Master ({{ leave.APPEAL_DECIDER }}), personally</dd>
-        </dl>
-      </section>
-      <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Save policy</button></div>
-    </div>
+    {# 4. Appeals beyond entitlement (spec §7). #}
+    <section class="card card-pad" aria-labelledby="appeals-h">
+      <h2 id="appeals-h">Appeals beyond entitlement</h2>
+      <p class="sub">When an RA has no entitlement left, or applies into an Appeal-only blackout, they may ask the Master for extra leave. The Master decides personally; extra leave granted is kept apart from the entitlement (spec §7.5).</p>
+      <div class="field-wide">
+        <label for="appeal-terms">The terms shown to the RA when they appeal</label>
+        <textarea id="appeal-terms" class="input" rows="2" disabled>{{ leave.POLICY.appeal_terms }}</textarea>
+      </div>
+      <p class="subtle small">Extra duties are taken on after the leave is granted. They cannot be done in advance and banked against a future appeal.</p>
+    </section>
+
+    {# 5. Cover (spec §12). #}
+    <section class="card card-pad" aria-labelledby="cover-h">
+      <h2 id="cover-h">Cover</h2>
+      <p class="sub">Whether an application must name a covering RA, whether that RA must confirm, and whom an RA may name. Appeals need confirmed cover unless the Master overrides it, on the record (spec §7.4).</p>
+      {{ choice("cover", "Cover for ordinary leave is", ("Required", "Not required"), "Required" if leave.POLICY.cover_required else "Not required") }}
+      {{ choice("cover-mode", "When required, the covering RA is", leave.COVER_MODES, leave.POLICY.cover_mode, {"Named only": "Told, and need not confirm", "Named and confirmed": "Asked to confirm; the application waits at first approval until they do"}) }}
+      {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
+    </section>
+
+    {# 6. Approvals. #}
+    <section class="card card-pad" aria-labelledby="approvals-h">
+      <h2 id="approvals-h">Approvals</h2>
+      <p class="sub">Every application takes a first and a final approval, by different people. The slot's approvers are read from the RA's slot on Assignments for the current term; a Precinct's delegate is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
+      {{ choice("first", "First approval by the slot's", leave.FIRST_APPROVERS, leave.POLICY.first_approver, {"RF": "The Residential Fellow in the slot's Staff cell", "RSLM": "The Residential Student Life Manager", "Either": "Whichever of the two decides first"}) }}
+      {{ choice("final", "Final approval by", leave.FINAL_APPROVERS, leave.POLICY.final_approver, {"Admin": "The Residential Admin (" ~ leave.FINAL_APPROVER ~ ")", "Master": "The Master (" ~ leave.APPEAL_DECIDER ~ ")", "RSLM": "The slot's Residential Student Life Manager, when the RF approves first"}) }}
+      <dl class="kv">
+        <dt>Appeals</dt><dd>The Master ({{ leave.APPEAL_DECIDER }}), personally</dd>
+      </dl>
+    </section>
+    <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Save policy</button></div>
   </div>
 {% endblock %}

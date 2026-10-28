@@ -211,6 +211,9 @@
       .tile:hover { border-color: var(--accent); }
       .tile-n { font-size: 28px; font-weight: 700; line-height: 1.1; }
       .tile-l { font-size: 13px; color: var(--text-subtle); }
+      .field-wide { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 14px; }
+      .field-wide textarea { width: 100%; max-width: 640px; font: inherit; }
+      p.small { font-size: 12px; margin: 4px 0 0; }
       .stack-btns { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
       ol.history { margin: 0; padding: 0; list-style: none; font-size: 14px; }
       ol.history li { padding: 8px 0; border-top: 1px solid var(--border-subtle); }
@@ -263,6 +266,11 @@
          removes it. */
       .rows .input { font-size: 16px; min-height: 0; height: 30px; padding: 4px 8px; }
       .rows select.input { height: 30px; padding-top: 0; padding-bottom: 0; }
+      /* Selects and numbers in a row builder take their content's width,
+         leaving the text boxes the rest (RA Leave policy, 2026-10-28). */
+      .rows td:has(> select.input), .rows td:has(> input[type="number"]) { width: 1%; }
+      .rows select.input { width: auto; }
+      .rows input[type="number"].input { width: 5.5em; }
       .rows .btn-glyph { width: 32px; height: 30px; min-height: 0; padding: 0; font-weight: 500; line-height: 1.35; }
       .row-actions { display: inline-flex; gap: 4px; white-space: nowrap; }
       .level-field {
