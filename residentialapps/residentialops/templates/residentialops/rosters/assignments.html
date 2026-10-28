@@ -110,7 +110,8 @@
       <fieldset class="modes">
         <legend>What the upload does</legend>
         {% for mode, what in sample.UPLOAD_MODES %}
-          <label class="mode"><input type="radio" name="mode" value="{{ mode }}" disabled> <span><strong>{{ mode }}</strong> <span class="subtle">{{ what }}</span></span></label>
+          {% set id = "mode-" ~ loop.index %}
+          <div class="mode"><input type="radio" id="{{ id }}" name="mode" value="{{ mode }}" aria-describedby="{{ id }}-what" disabled> <span><label for="{{ id }}"><strong>{{ mode }}</strong></label> <span id="{{ id }}-what" class="subtle">{{ what }}</span></span></div>
         {% endfor %}
       </fieldset>
       <div class="btnrow">
