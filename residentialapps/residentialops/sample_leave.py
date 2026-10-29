@@ -166,15 +166,45 @@ def unit_appointments() -> tuple[tuple[str, str], ...]:
 
 
 def final_approvers() -> tuple[str, ...]:
-    """Who may give final approval, whichever does first."""
+    """Whom the policy names for final approval, whichever does first; each
+    approves only where they hold a place in the RA's slot (`final_for`)."""
     if POLICY["final"] == "named":
         return tuple(POLICY["final_names"])
     return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["final_types"])
 
 
-def final_gap() -> bool:
-    """The policy names no one who may give final approval."""
-    return not final_approvers()
+def in_slots(person: str, precinct: str) -> bool:
+    """Whether a person holds a place in a Precinct's slots: on their Staff
+    cell, or as an overseer, in every slot. Only such a person approves,
+    first or final, decides or opens an appeal for its RAs (author,
+    2026-10-29)."""
+    return person in overseers() or any(person in s.staff for s in sample_data.SLOTS if s.precinct == precinct)
+
+
+def precincts() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
+
+
+def final_for(precinct: str) -> tuple[str, ...]:
+    """Who gives final approval for a Precinct's RAs: those the policy
+    names who hold a place in its slots."""
+    return tuple(n for n in final_approvers() if in_slots(n, precinct))
+
+
+def final_gap(precinct: str | None = None) -> bool:
+    """No one may give final approval for the Precinct, or, with none
+    given, for some Precinct."""
+    return not final_for(precinct) if precinct else any(not final_for(p) for p in precincts())
+
+
+def final_gaps() -> tuple[str, ...]:
+    return tuple(p for p in precincts() if not final_for(p))
+
+
+def decides_appeals(precinct: str) -> bool:
+    """The Master decides a Precinct's appeals while in its slots, as an
+    overseer is in every slot."""
+    return in_slots(APPEAL_DECIDER, precinct)
 
 
 def first_label() -> str:
@@ -185,10 +215,10 @@ def final_label() -> str:
     return " or ".join(POLICY["final_types"] if POLICY["final"] == "unit" else POLICY["final_names"])
 
 
-def final_decider() -> str:
+def final_decider(application: "Application") -> str:
     """The sample's final approver on a decided application: the first who
-    may give it."""
-    return next(iter(final_approvers()), "the final approver")
+    may give it for its Precinct."""
+    return next(iter(final_for(application.precinct)), "the final approver")
 
 # Cover is tracked beside the workflow, not as a stage of it: an
 # application whose cover is unconfirmed waits at first approval (spec §11).
@@ -577,10 +607,18 @@ class Delegate:
         return f"{short_date(self.start)} – {short_date(self.end)}"
 
 
+# A delegate holds a place in the slots they stand in for: here each
+# Wing's RSLM (author, 2026-10-29).
 DELEGATES = (
-    Delegate("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),
-    Delegate("Daniel Koh", "Mei Ling Tan", date(2026, 12, 7), date(2026, 12, 18), "is on leave"),
+    Delegate("Grace Ho", "Marcus Tan", None, None, "has not signed in yet"),
+    Delegate("Daniel Koh", "Priya Raman", date(2026, 12, 7), date(2026, 12, 18), "is on leave"),
 )
+
+
+def delegate_fits(d: Delegate) -> bool:
+    """Whether a delegate holds a place in every slot of the person they
+    stand in for; one who does not cannot approve there."""
+    return all(d.delegate in s.staff or d.delegate in overseers() for s in sample_data.SLOTS if d.acting_for in s.staff)
 
 
 def delegable() -> list[str]:
@@ -593,8 +631,9 @@ def delegable() -> list[str]:
 
 
 def acting(person: str, day: date | None = None) -> Delegate | None:
+    """The delegate standing in for a person on the day, if one fits."""
     day = day or TODAY
-    return next((d for d in DELEGATES if d.acting_for == person and d.active(day)), None)
+    return next((d for d in DELEGATES if d.acting_for == person and d.active(day) and delegate_fits(d)), None)
 
 
 def routes(day: date | None = None) -> tuple[Route, ...]:
@@ -613,7 +652,11 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
         named = [by_type[t] for t in POLICY["first_types"] if t in by_type] if POLICY["first"] == "slot" else []
         standing_in = [d for n in named if (d := acting(n, day))]
         first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named)
-        note = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
+        unfit = [d for n in named for d in DELEGATES if d.acting_for == n and d.active(day or TODAY) and not delegate_fits(d)]
+        note = "; ".join(
+            [f"{d.acting_for} {d.reason}" for d in standing_in]
+            + [f"{d.acting_for}'s delegate {d.delegate} is not in these slots" for d in unfit]
+        )
         gap = POLICY["first"] == "slot" and not named
         if POLICY["first"] == "none":
             first = "None needed"
@@ -647,9 +690,9 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     if application.stage in ("Pending final approval", "Approved", "Cancelled") and POLICY["first"] == "slot":
         steps.append(_step(application, "first", f"First approval by {first}"))
     if application.stage in ("Approved", "Cancelled"):
-        steps.append(_step(application, "final", f"Final approval by {final_decider()}"))
+        steps.append(_step(application, "final", f"Final approval by {final_decider(application)}"))
     if application.stage == "Rejected":
-        who = first if POLICY["first"] == "slot" else final_decider()
+        who = first if POLICY["first"] == "slot" else final_decider(application)
         steps.append(_step(application, "rejected", f"Rejected by {who}"))
     if application.stage == "Withdrawn":
         steps.append(_step(application, "withdrawn", f"Withdrawn by {application.ra}"))
@@ -733,9 +776,9 @@ def staff_role(name: str) -> str:
     first = [r.precinct for r in routes() if not r.gap and name in r.first.split(" or ")]
     if first and POLICY["first"] == "slot":
         does.append("first approver for " + ", ".join(first))
-    if name in final_approvers():
+    if any(name in final_for(p) for p in precincts()):
         does.append("final approver")
-    if name == APPEAL_DECIDER and appeals_decided():
+    if name == APPEAL_DECIDER and appeals_decided() and any(decides_appeals(p) for p in precincts()):
         does.append("decides appeals")
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
@@ -762,9 +805,9 @@ def queue(viewer: str) -> tuple[tuple[Application, str], ...]:
     for a in APPLICATIONS:
         if a.stage == "Pending first approval" and viewer in routes_first(a):
             found.append((a, "First approval"))
-        elif a.stage == "Pending final approval" and viewer in final_approvers():
+        elif a.stage == "Pending final approval" and viewer in final_for(a.precinct):
             found.append((a, "Final approval"))
-        elif a.stage == "Appeal to the Master" and viewer == APPEAL_DECIDER:
+        elif a.stage == "Appeal to the Master" and viewer == APPEAL_DECIDER and decides_appeals(a.precinct):
             found.append((a, "Appeal"))
     return tuple(sorted(found, key=lambda pair: pair[0].submitted))
 
@@ -785,16 +828,16 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
     found = []
     for a in APPLICATIONS:
         if a.appeal:
-            if viewer == APPEAL_DECIDER and a.stage in ("Approved", "Rejected"):
+            if viewer == APPEAL_DECIDER and decides_appeals(a.precinct) and a.stage in ("Approved", "Rejected"):
                 found.append((a, "Appeal", a.stage))
             continue
         if a.stage in ("Pending final approval", "Approved", "Cancelled") and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Approved"))
         if a.stage == "Rejected" and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Rejected"))
-        if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider() == viewer:
+        if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider(a) == viewer:
             found.append((a, "Final approval", "Rejected"))
-        if a.stage in ("Approved", "Cancelled") and final_decider() == viewer:
+        if a.stage in ("Approved", "Cancelled") and final_decider(a) == viewer:
             found.append((a, "Final approval", "Approved"))
     return tuple(sorted(found, key=lambda t: t[0].submitted, reverse=True))
 
@@ -807,24 +850,17 @@ def overseers() -> tuple[str, ...]:
 
 def scope(viewer: str) -> tuple[str, ...]:
     """The Precincts whose RAs a staff member oversees (spec §22; author,
-    2026-10-29): the overseers every one; an RF their slots' Precincts, an
-    RSLM their Wing's; and wherever the approval chain gives them a
-    decision (a final approver, or the Master while appeals are decided,
-    every one; a delegate standing in, the slots of whom they stand in
-    for; an inviter, while appeals are by invitation, their RAs'). Staff with
+    2026-10-29): the overseers every one, as if in every slot; an RF their
+    slots' Precincts, an RSLM their Wing's. Every decision is confined to
+    these (`in_slots`), so the approval chain never widens them. Staff with
     none, such as Unit-level staff holding no slot, see no RA Leave."""
-    every = tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
-    if viewer in overseers() or viewer in final_approvers() or (viewer == APPEAL_DECIDER and appeals_decided()):
+    every = precincts()
+    if viewer in overseers():
         return every
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
     held = [s for s in sample_data.SLOTS if viewer in s.staff]
     wings = {s.wing for s in held if abbrev == "RSLM"}
     found = {s.precinct for s in held} | {s.precinct for s in sample_data.SLOTS if s.wing in wings}
-    for d in DELEGATES:
-        if d.delegate == viewer and d.active() and POLICY["first"] == "slot" and d.acting_for in delegable():
-            found |= {s.precinct for s in sample_data.SLOTS if d.acting_for in s.staff}
-    if POLICY["appeals"] == "By invitation":
-        found |= {s.precinct for s in sample_data.SLOTS if any(ra in s.ras for ra in invitable_ras(viewer))}
     return tuple(p for p in every if p in found)
 
 
@@ -924,14 +960,19 @@ INVITATIONS = (
 
 
 def inviters_for(ra: str) -> tuple[str, ...]:
-    """Who may open an appeal for an RA, by the policy's inviter setting."""
+    """Who may open an appeal for an RA, by the policy's inviter setting,
+    and only among those holding a place in the RA's slot."""
+    slot = next((s for s in sample_data.SLOTS if ra in s.ras), None)
+    if slot is None:
+        return ()
     if POLICY["inviters"] == "named":
-        return tuple(POLICY["inviter_names"])
-    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
-    if POLICY["inviters"] == "slot":
-        slot = next((s for s in sample_data.SLOTS if ra in s.ras), None)
-        return tuple(n for n in (slot.staff if slot else ()) if abbrev[n] in POLICY["inviter_types"])
-    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
+        named = tuple(POLICY["inviter_names"])
+    elif POLICY["inviters"] == "slot":
+        abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
+        named = tuple(n for n in slot.staff if abbrev[n] in POLICY["inviter_types"])
+    else:
+        named = tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
+    return tuple(n for n in named if n in slot.staff or n in overseers())
 
 
 def all_inviters() -> tuple[str, ...]:

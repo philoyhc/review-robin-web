@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ "no final approver set" if leave.final_gap() else leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} the same for the whole Unit.</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ leave.final_label() or "no final approver set" }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} given only by those holding a place in the RA's slot: the Master and the designated admin hold one in every slot (Leave policy).</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">
@@ -21,8 +21,8 @@
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
               <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
-              <td>{% if leave.final_gap() %}No one <span class="chip chip-warn">Gap</span><div class="subtle">no final approver is set on Policy</div>{% else %}{{ leave.final_approvers() | join(" or ") }}{% endif %}</td>
-              {% if leave.appeals_decided() %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
+              <td>{% if leave.final_gap(route.precinct) %}No one <span class="chip chip-warn">Gap</span><div class="subtle">{{ "no final approver is set on Policy" if not leave.final_approvers() else "none named holds a place in its slots" }}</div>{% else %}{{ leave.final_for(route.precinct) | join(" or ") }}{% endif %}</td>
+              {% if leave.appeals_decided() %}<td class="nowrap">{% if leave.decides_appeals(route.precinct) %}{{ leave.APPEAL_DECIDER }}{% else %}No one <span class="chip chip-warn">Gap</span>{% endif %}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>
@@ -32,7 +32,7 @@
 
   <section class="card card-pad gap-above" aria-labelledby="delegates-h">
     <h2 id="delegates-h">Delegates <span class="count">· {{ leave.DELEGATES | length }}</span></h2>
-    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.appeals_on() else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
+    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given, and must hold a place in those slots; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.appeals_on() else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
     <div class="table-wrap">
       <table class="rows">
         <thead><tr><th scope="col">Acting for</th><th scope="col">Delegate</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Why</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
@@ -45,7 +45,7 @@
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: from" value="{{ d.start.isoformat() if d.start }}" disabled></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: to" value="{{ d.end.isoformat() if d.end }}" disabled></td>
               <td><input class="input" type="text" aria-label="Delegate {{ n }}: why {{ d.acting_for }} cannot approve" value="{{ d.reason }}" disabled></td>
-              <td class="nowrap">{% if leave.POLICY.first == "none" %}<span class="chip chip-mute">No first approval</span>{% elif d.acting_for not in delegable %}<span class="chip chip-mute">Not a first approver</span>{% elif d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
+              <td class="nowrap">{% if leave.POLICY.first == "none" %}<span class="chip chip-mute">No first approval</span>{% elif d.acting_for not in delegable %}<span class="chip chip-mute">Not a first approver</span>{% elif not leave.delegate_fits(d) %}<span class="chip chip-warn">Not in their slots</span>{% elif d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
               <td><span class="row-actions">
                 <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a delegate below the one for {{ d.acting_for }}, {{ d.dates }}" title="Add a delegate below this one" disabled>+</button>
                 <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove the delegate for {{ d.acting_for }}, {{ d.dates }}" title="Remove this delegate" disabled>X</button>

@@ -155,7 +155,7 @@ def test_the_approval_chain_is_derived_from_assignments_and_the_policy() -> None
     assert [r.precinct for r in routes] == list(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
     assert sum(r.ras for r in routes) == len(sample_data.SLOTS)
     for r in routes:
-        assert r.first == ("Benjamin Chua" if r.rf == "Grace Ho" else r.rf)
+        assert r.first == ("Marcus Tan" if r.rf == "Grace Ho" else r.rf)
     assert page.count(">Delegate</span>") == 1 and "Grace Ho has not signed in yet" in page
 
 
@@ -263,7 +263,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
     # L-0105, made before appeals were turned off, stands and is decided.
-    assert ">Appeals</th>" in routing and "final approval and appeals are the same for the whole Unit" in routing
+    assert ">Appeals</th>" in routing and "final approval and appeals are given only by those holding a place in the RA's slot" in routing
 
 
 def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -> None:
@@ -273,15 +273,16 @@ def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -
     D = sample_leave.Delegate
     in_dec = sample_leave.date(2026, 12, 10)
     cypress = next(r for r in sample_leave.routes(in_dec) if r.rf == "Daniel Koh")
-    assert cypress.first == "Mei Ling Tan" and cypress.note == "Daniel Koh is on leave"
-    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Priya Raman", None, None, "is on leave"),))
+    assert cypress.first == "Priya Raman" and cypress.note == "Daniel Koh is on leave"
+    # The Master, in every slot, may stand in for an RSLM on all of theirs.
+    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Sam Lee", None, None, "is on leave"),))
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
     maple = [r for r in sample_leave.routes() if r.wing == "Maple"]
-    assert len(maple) == 3 and all(r.first == "Priya Raman" and r.delegate for r in maple)  # every slot Marcus approves
+    assert len(maple) == 3 and all(r.first == "Sam Lee" and r.delegate for r in maple)  # every slot Marcus approves
     assert all(not r.delegate for r in sample_leave.routes() if r.wing != "Maple")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RF", "RSLM"))
     assert next(
-        r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Priya Raman"
+        r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Sam Lee"
     page = client().get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
     assert "A delegate stands in for 3 Precincts today." in page
     assert page.count("Marcus Tan is on leave; ") == 3
