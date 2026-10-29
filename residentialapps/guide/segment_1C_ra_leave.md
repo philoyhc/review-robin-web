@@ -60,6 +60,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 - **Landing, 2026-10-29** (author): rung 1's landing at `/`, with its own sample viewer switch (`?as=`: Chloe Lim, Daniel Koh, Rachel Yeo, Sam Lee); RA Leave opens on the viewer's own side. The RA pages' viewer stays fixed to Chloe Lim.
 - **Appeals by invitation, 2026-10-29** (author): appeals are open, by invitation or off; by invitation adds the admin Appeals page, and a staff Appeals tab for whoever the policy lets open appeals (chosen as approvers are: slot appointments, Unit appointments or named staff; same day).
 - **Staff pages, 2026-10-29** (author: "yes" to the staff pages next): rung 3, with a sample viewer switch on the staff pages (`?as=`: Daniel Koh, Rachel Yeo, Sam Lee), the part of rung 1's switch they need.
+- **Day count, 2026-10-29** (author): how leave days count is a Leave policy setting (every day, weekdays, or working days less a list of observed public holidays); balances and extra leave follow it.
 - **Iteration, 2026-10-28** (author): Leave policy reworked to the leave policy ruling (`residentialapps/guide/todo_master.md`): leave types with their own earning rule and cap, blackouts by week, appeals and their terms, cover required, named or confirmed. Entitlements follow the rules; its CSV carries adjustments only.
 
 ## PR ladder
@@ -89,7 +90,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 
 ## Open questions
 
-- **Leave types and the day count** (§6, §9.1): the leave types are ruled (Leave policy, 2026-10-28; item 1 draws personal and official leave); whether weekends and public holidays count is open. The author decides before item 2; item 1 counts calendar days as a placeholder.
+- **Leave types and the day count** (§6, §9.1): answered — leave types ruled 2026-10-28; the day count is a Leave policy setting, every day by default (author, 2026-10-29).
 - **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B or 1C closes, whichever is first.
 
 ## Out of scope

@@ -77,6 +77,7 @@ APPEAL_MODES = ("Open", "By invitation", "Off")
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 POLICY = {
+    "day_count": "Every day",  # one of DAY_COUNTS; see leave_days()
     # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
     # open to every RA, by invitation once someone the policy names agrees
     # in principle, or off.
@@ -100,6 +101,33 @@ POLICY = {
     "final_types": ("Admin",),
     "final_names": (),
 }
+
+
+# How an application's days are counted (author, 2026-10-29): RAs work
+# weekends and public holidays, so every day counts by default. The
+# holidays are the admin's list of observed dates, a Sunday holiday's
+# Monday in lieu entered as its own row.
+DAY_COUNTS = ("Every day", "Weekdays", "Working days")
+PUBLIC_HOLIDAYS = (
+    (date(2026, 8, 10), "National Day (observed)"),
+    (date(2026, 11, 9), "Deepavali (observed)"),
+    (date(2026, 12, 25), "Christmas Day"),
+    (date(2027, 1, 1), "New Year's Day"),
+)
+
+
+def leave_days(first: date, last: date) -> int:
+    """The days an application charges, by the policy's day count: every
+    day, weekdays only, or working days (weekdays less public holidays)."""
+    holidays = {d for d, _ in PUBLIC_HOLIDAYS}
+    days = [date.fromordinal(n) for n in range(first.toordinal(), last.toordinal() + 1)]
+    if POLICY["day_count"] in ("Weekdays", "Working days"):
+        days = [d for d in days if d.isoweekday() < 6]
+    if POLICY["day_count"] == "Working days":
+        days = [d for d in days if d not in holidays]
+    return len(days)
+
+
 PERIOD_LABEL = "AY2026-2027"
 
 APPEAL_DECIDER = "Sam Lee"  # the Master
@@ -179,7 +207,7 @@ class Application:
 
     @property
     def days(self) -> int:
-        return (self.end - self.start).days + 1
+        return leave_days(self.start, self.end)
 
     @property
     def slot(self) -> sample_data.Slot:
@@ -352,7 +380,7 @@ def days_in_term(application: Application, term: sample_data.Term = TERM) -> int
     """The application's days falling in the term: leave across a term's
     end is charged to each term for its own days."""
     first, last = max(application.start, term.start), min(application.end, term.end)
-    return max(0, (last - first).days + 1)
+    return leave_days(first, last) if first <= last else 0
 
 
 def entitlement_rows() -> tuple[dict, ...]:

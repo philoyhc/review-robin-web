@@ -80,6 +80,7 @@
         <h2 id="policy-h">Policy</h2>
         <dl class="kv">
           <dt>Leave types</dt><dd>{{ leave.LEAVE_TYPES | map(attribute="name") | join(", ") }}</dd>
+          <dt>Days counted</dt><dd>{{ leave.POLICY.day_count }}</dd>
           <dt>Blackouts</dt><dd>{{ leave.BLACKOUTS | length }} this year</dd>
           <dt>Appeals</dt><dd>{{ {"Open": "Open, to the Master", "By invitation": "By invitation, to the Master", "Off": "Off"}[leave.POLICY.appeals] }}</dd>
           <dt>Cover</dt><dd>{% if leave.POLICY.cover_required %}{{ leave.POLICY.cover_mode }}; {{ leave.POLICY.cover_pool }}{% else %}Not required{% endif %}</dd>
