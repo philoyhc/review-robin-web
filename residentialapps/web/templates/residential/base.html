@@ -382,7 +382,7 @@
         <div class="tabs-in">
           {% for tab in tabs %}
             {% if tab.path %}
-              <a href="{{ url(tab.path) }}"{% if is_here(tab.path) %} aria-current="page"{% endif %}>{{ tab.label }}</a>
+              <a href="{{ url(tab.path) }}{{ tab.query or '' }}"{% if is_here(tab.path) %} aria-current="page"{% endif %}>{{ tab.label }}</a>
             {% else %}
               <span title="Not built yet">{{ tab.label }}</span>
             {% endif %}

@@ -29,3 +29,26 @@
     <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }} · sent {{ leave.short_date(a.submitted) }}</div>
   </li>
 {%- endmacro %}
+
+{# The staff pages' sample viewer switch, one person per role, until
+   identity is wired. #}
+{% macro staff_switch(me, leave, here) -%}
+  <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
+    <span class="subtle small">Sample viewer:</span>
+    <span class="chips chip-wrap">
+      {% for name, role in leave.STAFF_VIEWERS %}
+        <a class="chip {{ 'chip-info' if name == me else 'chip-mute' }}" href="{{ url(here) }}{{ '' if loop.first else '?as=' ~ (name | urlencode) }}"{% if name == me %} aria-current="true"{% endif %} title="{{ role }}">{{ name }}</a>
+      {% endfor %}
+    </span>
+    <span class="subtle small">{{ (leave.STAFF_VIEWERS | selectattr(0, "equalto", me) | first)[1] }}</span>
+  </nav>
+{%- endmacro %}
+
+{# An application in a staff list, linked to Decide. #}
+{% macro staff_item(a, leave, as_query, label="") -%}
+  <li>
+    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a>{% if label %}<span class="chip chip-accent">{{ label }}</span>{% endif %}</div>
+    <div class="subtle">{{ a.dates }} · {{ a.days }} day{{ "s" if a.days != 1 }} · {{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.precinct }}</div>
+    <div class="subtle">Cover {{ a.cover }} {{ cover_chip(a.cover_status) }}{% if a.stage in leave.OPEN_STAGES %} · waiting {{ a.age }} day{{ "s" if a.age != 1 }}{% if a.overdue %} <span class="chip chip-warn">Overdue</span>{% endif %}{% endif %}</div>
+  </li>
+{%- endmacro %}

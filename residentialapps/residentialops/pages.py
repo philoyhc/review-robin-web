@@ -46,6 +46,19 @@ def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
     )
 
 
+def leave_staff_tabs(query: str = "") -> tuple[dict[str, str | None], ...]:
+    """A staff member's tabs, carrying the sample viewer (`?as=`)."""
+    return tuple(
+        {"label": label, "path": path, "query": query}
+        for label, path in (
+            ("Home", "/ra-leave/staff/"),
+            ("Awaiting", "/ra-leave/staff/decide"),
+            ("Decided", "/ra-leave/staff/decided"),
+            ("Precinct leave", "/ra-leave/staff/precinct"),
+        )
+    )
+
+
 ROSTER_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": "/rosters/"},
     {"label": "Assignments", "path": "/rosters/assignments"},
