@@ -34,7 +34,8 @@ def choices(viewer: str) -> list[dict[str, str]]:
     point: RA Leave's RA, staff or admin side by who they are; Rosters and
     Sys admin for sys admins only (the landing's cards)."""
     is_ra = any(ra.name == viewer for ra in sample_data.RAS)
-    is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS)
+    # Staff see RA Leave only while they oversee some RA (author, 2026-10-29).
+    is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS) and bool(sample_leave.scope(viewer))
     is_sys_admin = any(name == viewer for name, *_ in sample_data.SYS_ADMINS)
     staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
     found = []
@@ -83,8 +84,9 @@ def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
 
 
 def leave_staff_tabs(query: str = "", appeals: bool = False) -> tuple[dict[str, str | None], ...]:
-    """A staff member's tabs, carrying the sample viewer (`?as=`); Appeals
-    for those the policy lets open appeals."""
+    """A staff member's tabs, the same for every staff member who oversees
+    RAs, carrying the sample viewer (`?as=`); Appeals while the Master
+    decides appeals."""
     return tuple(
         {"label": label, "path": path, "query": query}
         for label, path in (

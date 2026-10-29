@@ -1,5 +1,8 @@
-{# The Appeals page's body, shared by the admin page and the staff page
-   of those the policy lets open appeals (author, 2026-10-29). #}
+{# The Appeals page's body, shared by the admin page and the staff one:
+   the invitations and appeals of the RAs shown (`seen`, by default every
+   RA the viewer may open one for), and the card to open one for whoever
+   the policy lets (`may_open`; author, 2026-10-29). #}
+  {% set seen = seen | default(ra_choices) %}
   {% if leave.POLICY.appeals != "By invitation" %}
     <div class="notice">Invitations take effect only while appeals are by invitation; {{ "every RA may appeal now" if leave.POLICY.appeals == "Open" else "appeals are off" }}.</div>
   {% endif %}
@@ -7,7 +10,7 @@
     <div class="main stack">
       <section class="card" aria-labelledby="inv-h">
         <div class="card-head">
-          {% set invitations = leave.INVITATIONS | selectattr("ra", "in", ra_choices) | list %}
+          {% set invitations = leave.INVITATIONS | selectattr("ra", "in", seen) | list %}
           <h2 id="inv-h">Invitations <span class="count">· {{ invitations | length }}</span></h2>
           <p class="sub">Each lets one RA send one appeal, until it is sent or lapses.</p>
         </div>
@@ -24,7 +27,7 @@
                   <td class="nowrap">{{ leave.short_date(i.until) }}</td>
                   <td>{{ i.note }}</td>
                   <td class="nowrap">{% if i.used_by %}<a href="{{ url(app_link ~ i.used_by) }}{{ link_suffix }}">{{ status }}</a>{% else %}<span class="chip {{ 'chip-info' if status == 'Open' else 'chip-mute' }}">{{ status }}</span>{% endif %}</td>
-                  <td class="end">{% if status == "Open" %}<button type="button" class="btn btn-secondary" aria-label="Withdraw {{ i.ra }}'s invitation" disabled>Withdraw</button>{% endif %}</td>
+                  <td class="end">{% if status == "Open" and i.ra in ra_choices %}<button type="button" class="btn btn-secondary" aria-label="Withdraw {{ i.ra }}'s invitation" disabled>Withdraw</button>{% endif %}</td>
                 </tr>
               {% else %}<tr><td colspan="7" class="subtle">None.</td></tr>
               {% endfor %}
@@ -33,7 +36,7 @@
         </div>
       </section>
       <section class="card" aria-labelledby="open-h">
-        {% set open = leave.APPLICATIONS | selectattr("stage", "equalto", "Appeal to the Master") | selectattr("ra", "in", ra_choices) | list %}
+        {% set open = leave.APPLICATIONS | selectattr("stage", "equalto", "Appeal to the Master") | selectattr("ra", "in", seen) | list %}
         <div class="card-head"><h2 id="open-h">Appeals with the Master <span class="count">· {{ open | length }}</span></h2></div>
         <div class="table-wrap">
           <table>
@@ -44,6 +47,12 @@
       </section>
     </div>
     <div class="side">
+      {% if may_open is defined and not may_open %}
+      <section class="card card-pad muted" aria-labelledby="new-h">
+        <h2 id="new-h">Opening appeals</h2>
+        <p class="sub">{% if leave.all_inviters() %}Appeals are opened by {{ leave.inviter_label() }} (Leave policy); you are not among them, so this page is read-only for you.{% else %}Leave policy names no one to open appeals.{% endif %}</p>
+      </section>
+      {% else %}
       <section class="card card-pad" aria-labelledby="new-h">
         <h2 id="new-h">Open an appeal for an RA</h2>
         {% if agreers %}<p class="sub">After {{ leave.inviter_label() }} has agreed in principle (Leave policy). Each may open appeals only for the RAs the policy gives them.</p>{% else %}<p class="sub">No one may open an appeal: Leave policy names no one for it.</p>{% endif %}
@@ -57,5 +66,6 @@
         <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Open the appeal</button></div>
         <p class="subtle small gap-above-sm">The RA is told, and Request extra leave opens for them until they send it or the date passes. Every invitation is audited.</p>
       </section>
+      {% endif %}
     </div>
   </div>

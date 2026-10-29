@@ -100,7 +100,7 @@ def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
 
 def test_home_lists_each_roster_s_appointments() -> None:
     home = TestClient(ops_app()).get("/rosters/").text
-    assert "<dt>Appointments</dt><dd>Master, Admin, RSLM, RF</dd>" in home
+    assert "<dt>Appointments</dt><dd>Master, Admin, RSLM, RF, Exec</dd>" in home
     assert "<dt>Appointments</dt><dd>RA</dd>" in home
     assert "<dt>Types</dt>" not in home
 
@@ -189,7 +189,7 @@ def test_the_staff_roster_shows_no_access() -> None:
     page = TestClient(ops_app()).get("/rosters/staff")
     assert page.status_code == 200
     assert "<h1>Staff roster</h1>" in page.text
-    assert "· 14 people, 13 linked" in page.text
+    assert "· 15 people, 14 linked" in page.text
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
     assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in"]
     assert "Not yet signed in</span>" in page.text

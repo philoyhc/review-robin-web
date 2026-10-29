@@ -100,6 +100,9 @@ POLICY = {
     "final": "unit",  # or "named"
     "final_types": ("Admin",),
     "final_names": (),
+    # Who oversees every RA, as if in every slot (author, 2026-10-29): the
+    # Master and the designated admin, chosen as Unit-level appointments.
+    "overseers": ("Master", "Admin"),
 }
 
 
@@ -715,8 +718,10 @@ def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
 # the sample banner (`?as=`), one per role, until identity is wired.
 STAFF_VIEWERS = (
     ("Daniel Koh", "RF"),
+    ("Priya Raman", "RSLM"),
     ("Rachel Yeo", "Residential Admin"),
     ("Sam Lee", "Master"),
+    ("Hui Min Goh", "Residential Executive"),
 )
 
 
@@ -734,6 +739,8 @@ def staff_role(name: str) -> str:
         does.append("decides appeals")
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
+    if not scope(name):
+        return f"{appointment}, oversees no RA, so RA Leave is not shown"
     return f"{appointment}, {', '.join(does)}" if does else f"{appointment}, no decisions under the policy"
 
 
@@ -792,19 +799,31 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
     return tuple(sorted(found, key=lambda t: t[0].submitted, reverse=True))
 
 
+def overseers() -> tuple[str, ...]:
+    """Who oversees every RA, as if in every slot: the staff holding the
+    policy's ticked Unit-level appointments (author, 2026-10-29)."""
+    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["overseers"])
+
+
 def scope(viewer: str) -> tuple[str, ...]:
-    """The Precincts a staff member's leave view covers (spec §22): an RF's
-    own, an RSLM's Wing's, everyone else's the whole Unit."""
+    """The Precincts whose RAs a staff member oversees (spec §22; author,
+    2026-10-29): the overseers every one; an RF their slots' Precincts, an
+    RSLM their Wing's; and wherever the approval chain gives them a
+    decision (a final approver or the Master every one, a delegate the
+    slots of whom they stand in for, an inviter their RAs'). Staff with
+    none, such as Unit-level staff holding no slot, see no RA Leave."""
+    every = tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
+    if viewer in overseers() or viewer in final_approvers() or viewer == APPEAL_DECIDER:
+        return every
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
     held = [s for s in sample_data.SLOTS if viewer in s.staff]
-    rf = {s.precinct for s in held if abbrev == "RF"}
-    wing = {s.wing for s in held if abbrev == "RSLM"}
-    every = tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
-    if rf:
-        return tuple(p for p in every if p in rf)
-    if wing:
-        return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS if s.wing in wing))
-    return every
+    wings = {s.wing for s in held if abbrev == "RSLM"}
+    found = {s.precinct for s in held} | {s.precinct for s in sample_data.SLOTS if s.wing in wings}
+    for d in DELEGATES:
+        if d.delegate == viewer and d.active() and POLICY["first"] == "slot":
+            found |= {s.precinct for s in sample_data.SLOTS if d.acting_for in s.staff}
+    found |= {s.precinct for s in sample_data.SLOTS if any(ra in s.ras for ra in invitable_ras(viewer))}
+    return tuple(p for p in every if p in found)
 
 
 def can_open(viewer: str, application: Application) -> bool:
@@ -837,6 +856,12 @@ def by_precinct(viewer: str) -> tuple[dict, ...]:
         }
         for p in scope(viewer)
     )
+
+
+def ras_in_scope(viewer: str) -> tuple[str, ...]:
+    """The RAs a staff member oversees: those in the slots of their scope."""
+    precincts = scope(viewer)
+    return tuple(ra for s in sample_data.SLOTS if s.precinct in precincts for ra in s.ras)
 
 
 def in_scope(viewer: str) -> tuple[Application, ...]:

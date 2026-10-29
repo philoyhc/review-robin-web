@@ -37,7 +37,8 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct", "appeals")
     ]
-    assert "/ra-leave/staff/appeals" not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    # Every overseer gets the same tabs, Appeals included while appeals are on.
+    assert "/ra-leave/staff/appeals" in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
 
@@ -156,7 +157,7 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
     assert "3 RAs you may" in page and "<option selected>Daniel Koh</option>" in page
     pool = page.split('id="ra-names"')[1].split("</datalist>")[0]
     assert re.findall(r'value="([^"]*)"', pool) == ["Chloe Lim", "Ethan Wong", "Hana Ito"]
-    assert "Appeals" not in c.get(STAFF + SAM).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert "read-only for you" in c.get(STAFF + "appeals" + SAM).text  # Sam oversees, may not open
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Rachel Yeo",))
     assert sample_leave.all_inviters() == ("Rachel Yeo",)
@@ -173,8 +174,6 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     assert '/ra-leave/staff/appeals' in c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ())
     assert sample_leave.inviter_label() == "" and sample_leave.all_inviters() == ()
-    for query in ("", RACHEL, SAM):
-        assert "/ra-leave/staff/appeals" not in c.get(STAFF + query).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert "Leave policy names no one to open appeals." in c.get(STAFF + "appeals" + SAM).text
     assert "No one may open an appeal: Leave policy names no one for it." in c.get("/ra-leave/admin/appeals").text
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
@@ -239,3 +238,31 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     menu = c.get(STAFF + RACHEL).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
     assert 'href="/ra-leave/staff/?as=Rachel%20Yeo"' in menu and 'href="/sys-admin/"' in menu
     assert "/sys-admin/" not in c.get(STAFF).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
+
+
+def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
+    """Ruled 2026-10-29: the Master and the designated admin oversee every
+    RA, as if in every slot; an RF and an RSLM the RAs on their slots;
+    Unit-level staff holding no slot see no RA Leave. The pages are the
+    same for every overseer; actions follow the approval chain."""
+    c = client()
+    assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
+    assert len(sample_leave.scope("Priya Raman")) == 3  # an RSLM: the Cypress Wing
+    assert sample_leave.scope("Hui Min Goh") == ()
+    page = c.get(STAFF + "?as=Hui%20Min%20Goh").text
+    assert "You oversee no RA" in page and 'class="tabs-in"' not in page
+    assert "Hui Min Goh: Residential Executive, oversees no RA, so RA Leave is not shown" in page
+    assert c.get(STAFF + "decide/L-0101?as=Hui%20Min%20Goh").status_code == 404
+    landing = c.get("/?as=Hui%20Min%20Goh").text
+    assert "/ra-leave/" not in landing.split('<main class="page">')[1]
+    # An RSLM gets the same tabs as an RF, and decides nothing by default.
+    tabs = lambda q: re.findall(r'<a href="/ra-leave/staff/(\w*)', c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0])  # noqa: E731
+    assert tabs("?as=Priya%20Raman") == tabs("") == tabs(SAM) == ["", "decide", "decided", "precinct", "appeals"]
+    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Priya%20Raman").text
+    # Untick the admin: Rachel Yeo still sees every RA, as the final approver.
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master",))
+    assert sample_leave.overseers() == ("Sam Lee",) and len(sample_leave.scope("Rachel Yeo")) == 9
+    # Tick the Executive: Hui Min Goh oversees every RA, deciding nothing.
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
+    assert len(sample_leave.scope("Hui Min Goh")) == 9
+    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Hui%20Min%20Goh").text

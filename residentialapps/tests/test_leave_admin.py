@@ -292,7 +292,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     RAs' slots (several = whichever approves first), or none needed; final
     approval by any Unit-level appointment, or by named staff."""
     assert sample_leave.slot_appointments() == (("Residential Fellow", "RF"), ("Residential Student Life Manager", "RSLM"))
-    assert sample_leave.unit_appointments() == (("Master", "Master"), ("Residential Admin", "Admin"))
+    assert sample_leave.unit_appointments() == (("Master", "Master"), ("Residential Admin", "Admin"), ("Residential Executive", "Exec"))
     page = client().get(ADMIN + "policy").text
     radios = re.findall(r'<input type="radio" id="(first|final)-(\w+)" name="\1" value="\2"( checked)?', page)
     assert [(g, v, bool(c)) for g, v, c in radios] == [
@@ -301,7 +301,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     first = re.findall(r'name="first-types" value="(\w+)"( checked)?', page)
     assert first == [("RF", " checked"), ("RSLM", "")]
     final = re.findall(r'name="final-types" value="(\w+)"( checked)?', page)
-    assert final == [("Master", ""), ("Admin", " checked")]
+    assert final == [("Master", ""), ("Admin", " checked"), ("Exec", "")]
     assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
     assert "No first approver needed" in page and "comma separated" in page
 
@@ -412,7 +412,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     policy = c.get(ADMIN + "policy").text
     assert "they open an appeal for that RA on Appeals" in policy and "once someone chosen below agrees" in policy
     inviters = re.findall(r'name="inviter-unit-types" value="(\w+)"( checked)?', policy)
-    assert inviters == [("Master", " checked"), ("Admin", " checked")]
+    assert inviters == [("Master", " checked"), ("Admin", " checked"), ("Exec", "")]
     assert 'name="inviters" value="unit" checked' in policy
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert sample_leave.appeals_on()
