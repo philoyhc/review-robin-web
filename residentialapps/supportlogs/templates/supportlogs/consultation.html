@@ -1,0 +1,31 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Consultation check{% endblock %}
+{% block content %}
+  {{ sample_title("Consultation check", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# Students in, whom to consult out, for an approved purpose (§10.7). The
+     check is an audited action (§11.3) and decides nothing. A sample: the
+     list travels in the query string here; wired, it is posted, so no email
+     reaches a URL or a log. #}
+  <p class="notice" role="note">Running a check is recorded: its purpose, the students checked, what was shown and whom to consult.</p>
+  {% if (purpose or emails) and not filled %}<p class="notice" role="alert">{{ "Add a purpose." if not purpose.strip() else "No email address was found in the list." }}</p>{% endif %}
+  <form class="card card-pad" action="{{ url('/consultation/check') }}" method="get" aria-labelledby="check-h">
+    <h2 id="check-h">Check a list of students</h2>
+    <p class="sub">For a unit asking Residential about students applying for an opportunity. The check shows whom to consult before Residential replies; it never decides whether a student should take part.</p>
+    {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+    <div class="field-wide"><label for="purpose">Purpose</label>
+      <input id="purpose" name="purpose" class="input" required maxlength="120" aria-describedby="purpose-what" value="{{ purpose }}">
+      <span id="purpose-what" class="subtle small">The opportunity and who asked, as the record will show it.</span></div>
+    <div class="field-wide"><label for="emails">Students' institutional emails</label>
+      <textarea id="emails" name="emails" class="input" rows="6" required aria-describedby="emails-what">{{ emails }}</textarea>
+      <span id="emails-what" class="subtle small">One per line, or separated by commas; a name around an address is fine. {% if not filled %}<a href="{{ url('/consultation/') }}{{ qs(sample=1) }}">Fill with the sample list</a>{% endif %}</span></div>
+    <button type="submit" class="btn btn-primary">Check</button>
+  </form>
+  <section class="card card-pad muted gap-above" aria-labelledby="runs-h">
+    {% set mine = sample.CHECK_RUNS | selectattr("by", "equalto", me.name) | list %}
+    <h2 id="runs-h">Your past checks</h2>
+    {% if not mine %}<p class="sub">None yet.</p>{% endif %}
+    <ul class="items">{% for r in mine %}<li><div class="item-head"><span class="strong">{{ r.purpose }}</span><span class="nowrap subtle">{{ sample.short_date(r.on) }}</span></div><div class="subtle">{{ r.by }} · {{ r.checked }} students · {{ r.flagged }} to consult about</div></li>{% endfor %}</ul>
+  </section>
+{% endblock %}

@@ -124,7 +124,7 @@ appointment, and RAs never reach it:
 | A safety flag | `/flags/{id}` | Its raiser, and safety-flag recipients; the flags list on Home and Overview, with the unacknowledged count on that tab |
 | My plans | `/plans/`, `/plans/{id}` (a plan) | Frontline, their own and those shared with them, read-only; a plan, any, for senior identifiable, who convert a follow-up, and for Other Staff identifiable view, read-only |
 | Overview | `/overview/`, `…/students/{id}` (a student's history across staff), `…/audit` (the support-activity audit) | Senior identifiable (the Master and the admin, by default), who alone open a history or the audit; Other Staff with view, read-only: workload, coverage, hotspots and clusters, students named for identifiable view and counts only for aggregate; safety-flag recipients' flags list here, every plan for identifiable viewers, and the students flagged for formal assignment for senior staff |
-| Consultation check | `/consultation/` | Consultation check |
+| Consultation check | `/consultation/`, `…/check` (a check's result) | Consultation check: a purpose and a list of emails in; each student's state (*No consultation indicated*, *Consultation suggested*, *Consultation required*), its named reasons and whom to consult out, never notes or a score |
 | Sys admin | `/sys-admin/` (Access), `…/configuration`, `…/clusters`, `…/audit` | Support Logs sys admins: access over the Staff roster, configuration, the cluster list and the administrative audit log, with no support content or support-activity audit; the super-admin, for the same and to grant Support Logs sys admin |
 
 The main area's tabs follow the viewer's grants (Log, Students and Plans

@@ -11,6 +11,7 @@ invented and bland: nothing here may read as a real case."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from urllib.parse import quote
@@ -610,4 +611,103 @@ AUDIT = (
     AuditEvent(datetime(2026, 10, 26, 19, 40), "Daniel Koh", "Raised a safety flag", "S-05"),
     AuditEvent(datetime(2026, 10, 20, 9, 0), "Priya Raman", "Shared records with Daniel Koh", "S-08"),
     AuditEvent(datetime(2026, 10, 20, 8, 55), "Daniel Koh", "Viewed the student", "S-08"),
+)
+
+
+# --- Consultation check (rung 6; §10.7–10.8). Rule-based and transparent:
+# named reasons, never a score, computed on demand. A check run records its
+# purpose, the students checked, the states and reasons shown and whom to
+# consult (§11.3), never a suitability decision.
+
+NONE_INDICATED = "No consultation indicated"
+SUGGESTED = "Consultation suggested"
+REQUIRED = "Consultation required"
+CONSULTATION_STATES = (REQUIRED, SUGGESTED, NONE_INDICATED)  # strongest first
+# Each reason and the state it brings (§10.8); the thresholds are policy,
+# configured before go-live (§17).
+CONSULTATION_REASONS = (
+    ("Unresolved safety escalation", REQUIRED),
+    ("Active safety-plan support", REQUIRED),
+    ("Active formal check-in assignment", SUGGESTED),
+    ("Active informal follow-up", SUGGESTED),
+    ("Marked increase in recent support", SUGGESTED),
+    ("Several staff recently involved", SUGGESTED),
+)
+NONE_MEANS = ("No consultation indicated means only that nothing recorded in Support Logs prompted a second look. "
+              "It never means a student is well or suitable.")
+SAMPLE_EMAILS = ("clara.tan@u.example.edu", "gwyneth.low@u.example.edu", "hana.rahim@u.example.edu",
+                 "jia.wen.lee@u.example.edu", "farid.osman@u.example.edu", "someone.else@u.example.edu")
+
+
+@dataclass(frozen=True)
+class Consultation:
+    email: str
+    student: Student | None
+    state: str
+    reasons: tuple[str, ...]
+    consult: tuple[str, ...]  # staff with current or recent involvement
+
+
+def consultation(email: str) -> Consultation:
+    """One student's result (§10.7): the reasons met, the strongest state
+    they bring, and whom to consult. An email with no Support Logs record
+    is No consultation indicated, as nothing recorded prompts a look."""
+    email = email.strip().lower()
+    s = next((s for s in STUDENTS if s.email == email), None)
+    if s is None:
+        return Consultation(email, None, NONE_INDICATED, (), ())
+    plans = [p for p in PLANS if p.student == s.id and p.status == "Active"]
+    recent = [e for e in ENCOUNTERS if e.student == s.id and in_period(e)]
+    hot = next((r for r in hotspots() if r["student"].id == s.id), None)
+    met = {
+        "Unresolved safety escalation": any(f.student == s.id and f.active for f in FLAGS),
+        "Active safety-plan support": any(p.safety_plan for p in plans),
+        "Active formal check-in assignment": any(p.formal for p in plans),
+        "Active informal follow-up": any(not p.formal for p in plans),
+        "Marked increase in recent support": bool(hot and hot["rising"]),
+        "Several staff recently involved": len({e.staff for e in recent}) >= 2,
+    }
+    reasons = tuple(r for r, _ in CONSULTATION_REASONS if met[r])
+    brought = {state for r, state in CONSULTATION_REASONS if r in reasons}
+    state = next((st for st in CONSULTATION_STATES if st in brought), NONE_INDICATED)
+    raisers = [f.raised_by for f in FLAGS if f.student == s.id and f.active]
+    consult = () if not reasons else tuple(dict.fromkeys([p.staff for p in plans] + raisers + [e.staff for e in recent]))
+    return Consultation(email, s, state, reasons, consult)
+
+
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+
+
+def emails_in(text: str) -> tuple[list[str], list[str]]:
+    """The distinct emails in a pasted list, in order, and the entries read
+    as none. Entries are separated by commas, semicolons or new lines; an
+    address is taken from inside a name, angle brackets, quotes or
+    `mailto:`. An entry with no address is never quietly dropped: a check
+    that cannot read an entry must not show it as No consultation indicated
+    (§10.7)."""
+    emails, unread = [], []
+    for entry in re.split(r"[,;\n]", text):
+        entry = entry.strip()
+        if not entry:
+            continue
+        found = EMAIL.findall(entry)
+        if found:
+            emails += [e.lower() for e in found]
+        else:
+            unread.append(entry)
+    return list(dict.fromkeys(emails)), list(dict.fromkeys(unread))
+
+
+@dataclass(frozen=True)
+class CheckRun:
+    on: date
+    by: str
+    purpose: str
+    checked: int
+    flagged: int  # suggested or required
+
+
+CHECK_RUNS = (
+    CheckRun(date(2026, 10, 22), "Marcus Tan", "Overseas field trip, Semester 2", 14, 2),
+    CheckRun(date(2026, 9, 30), "Nadia Hassan", "Student exchange nominations", 8, 1),
 )
