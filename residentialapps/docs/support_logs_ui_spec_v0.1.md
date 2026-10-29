@@ -1,5 +1,7 @@
 # Support Logs — UI Specification (draft)
 
+> **Superseded 2026-10-29 by `residentialapps/spec/supportlogs_ui.md`** (segment 1D item 1, rung 6), which settles this draft's conventions and answers or carries its open questions (§9). Kept as history: its §6 accent and token figures are still cited.
+
 > **Moved 2026-10-25 from the private deployment repository** (author), where it was `docs/support_logs_ui_spec_v0.1.md` (at `ad94c1c`). Deployment status (which grants are in place, configuration dates, what IT has delivered) was made generic on the way; it is tracked privately with the deployment. "Strategy v1.0" below is the Cordware deployment strategy, also held privately; what Residential depends on from it is in `residentialapps/guide/todo_master.md`.
 >
 > **Amended 2026-10-25 (author): one package, two applications.** Residential is one `residentialapps/` package mounted as two applications, Residential Operations at `/residentialops` and Support Logs at `/supportlogs`; nothing is mounted at `/residentialapps`. Passages below that say "one application" or mount it at `/residentialapps` predate this and are revised at this spec's next version.
