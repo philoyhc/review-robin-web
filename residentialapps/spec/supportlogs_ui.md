@@ -21,6 +21,8 @@ under `data-app="supportlogs"`.
 - **The frontline's pages are mobile-critical**: Home, Log encounter,
   Safety concern, Students, a student, My plans, a plan and a safety flag
   are designed at 390 px (functional spec §14, §16).
+- **The page map has no device column for Support Logs**, so this
+  section gives the classes.
 - **Overview and the Consultation check are responsive**: their tables
   scroll sideways in `.table-wrap` on a phone. **Sys admin is
   desktop-oriented**.
@@ -49,16 +51,16 @@ form's end, and the main action is a full-width Primary on the page
   than one destination reaches. Otherwise the bare mount redirects to the
   one page the viewer has.
 - **There is no Safety flags tab** (author, 2026-10-29). Flags list on Home
-  for the frontline and for a recipient with nothing else, and on Overview
-  for senior recipients. That tab carries the count of unacknowledged
+  for the frontline and for a recipient without Overview, and on Overview
+  for a recipient who has it (senior staff or Other Staff view). That tab carries the count of unacknowledged
   flags as a red badge, with its words for screen readers.
 - **A detail page** (a student, a plan, a flag, a history) has a back link
   and marks the tab of its list (`aria-current="true"`).
 
 ## 3. Color
 
-- **Teal is Support Logs' accent** (`#0f766e`, dark `#2dd4bf`; hover
-  `#115e59` / `#5eead4`), on the shared tokens, under the
+- **Teal is Support Logs' accent** (`#0f766e`, dark `#2dd4bf`), on the
+  shared tokens, under the
   one-accent-per-application rule of `residentialops_ui.md` §3.
 - **Safety is red and separate**:
   - the Safety concern screen's header is the solid error color (`.safety-head`);
@@ -93,13 +95,20 @@ form's end, and the main action is a full-width Primary on the page
   Operations' per-row flags are. Other Staff view is a select of its
   scope.
 - Every control meets `residentialops_ui.md` §4: 44 px under a finger,
-  `disabled` and never hidden until wired.
+  and `disabled` until wired. A field that does not apply is hidden, not
+  disabled: Log encounter's "Who started it?" when the type already says,
+  and the follow-up fields until they are asked for.
+- **The forms that show their confirmation are live on sample data**:
+  Log encounter's Save, Safety concern's Save and raise, Share, Flag for
+  formal assignment and the Consultation check's Check. Each submits to its
+  confirmation page and stores nothing.
 
 ## 5. Lists and tables
 
 - **Phone lists** (`ul.items`) carry the frontline's rows.
-- **Overview, Consultation check and Sys admin use tables.** Each table is
-  sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
+- **Tables carry Overview's workload, hotspots and clusters, the
+  Consultation check's result, Access and both audits**; their other cards
+  are lists. Each table is sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
   is not their value. The exception is a table whose order is its
   meaning: the Consultation check result is strongest first, so it takes
   no sort.
@@ -144,10 +153,12 @@ As `residentialops_ui.md` §9:
 - a **Sample data** chip;
 - one sample module;
 - local runs only;
-- disabled controls.
+- disabled controls, except the live forms of §4.
 
-A **Viewing as** card on every page switches the sample viewer (`?as=`)
-among one per authorization type, a viewer reaching two pages, the
+A **Sample viewer** card on every sample page (not the not-registered
+page) switches the viewer (`?as=`), and a **Viewing as** chip by the
+title names them. The viewers are one per authorization type, a viewer
+reaching two pages, the
 super-admin and a rostered RF with no grant (the `403` page). Every link
 carries the viewer.
 
