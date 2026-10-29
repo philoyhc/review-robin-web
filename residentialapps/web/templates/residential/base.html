@@ -385,6 +385,16 @@
         .page { padding: 20px 24px 48px; }
         .ptitle h1 { font-size: 24px; }
       }
+      /* On a phone, or under a finger, every control is at least 44 px
+         tall, a chip that is a link and a token's remove button included,
+         and a tick box by its label; a link inside a sentence keeps its
+         line, and the desktop pages' row builders, column chips, sort
+         buttons and table tick boxes keep theirs (author, 2026-10-29). */
+      @media (max-width: 639px), (pointer: coarse) {
+        .btn, .input, .theme-toggle button, a.chip, .tokens, label.check { min-height: 44px; }
+        .token-x { min-width: 44px; min-height: 44px; }
+        .token-input { min-height: 36px; }
+      }
     </style>
   </head>
   <body>
