@@ -1,26 +1,9 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import recorded, flags_card, due_chip with context %}
 {% block title %}{{ placeholder.title }}{% endblock %}
 {% block content %}
   {{ sample_title(placeholder.title, me.name, '<span class="chip chip-mute">Placeholder: rung ' ~ placeholder.rung ~ '</span>') }}
   {{ viewer_card(viewer_choices, me.name) }}
-  {% if show_flags or show_plans %}{{ recorded() }}{% endif %}
-  {% if show_flags %}{{ flags_card(me, closed=true) }}{% endif %}
-  {% if show_referrals %}
-    <section class="card card-pad gap-below" aria-labelledby="refs-h">
-      <h2 id="refs-h">Flagged for formal assignment <span class="count">· {{ sample.REFERRALS | length }}</span></h2>
-      <p class="sub">Students frontline staff have flagged for review (§3.1); assigning one opens a plan.</p>
-      <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}<li><div class="item-head"><span class="strong">{{ s.name }}</span><button type="button" class="btn btn-secondary" disabled aria-label="Assign a plan for {{ s.name }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
-    </section>
-  {% endif %}
-  {% if show_plans %}
-    <section class="card card-pad gap-below" aria-labelledby="plans-h">
-      <h2 id="plans-h">Every plan <span class="count">· {{ sample.PLANS | length }}</span></h2>
-      <p class="sub">Formal assignments and follow-ups across the team{% if not sample.holds(me, sample.SENIOR) %}, read-only{% endif %}.</p>
-      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>
-    </section>
-  {% endif %}
   <section class="card card-pad" aria-labelledby="holds-h">
     <h2 id="holds-h">What this page will hold</h2>
     <p class="sub">Built in rung {{ placeholder.rung }} of segment 1D item 1; wired once Residential's core is.</p>

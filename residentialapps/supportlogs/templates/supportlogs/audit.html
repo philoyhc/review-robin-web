@@ -1,0 +1,22 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Support-activity audit{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  {{ sample_title("Support-activity audit", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# Support-activity events reveal who was seen and when, so only senior
+     staff with identifiable access review them, and the review is itself
+     an audited read (§11.3). Administrative events are Sys admin's. #}
+  <p class="notice" role="note">Reviewing this log is recorded.</p>
+  <section class="card card-pad" aria-labelledby="audit-h">
+    <h2 id="audit-h">The latest events <span class="count">· {{ sample.AUDIT | length }}</span></h2>
+    <div class="field-wide"><label for="audit-find">Find by staff, student or date</label><input id="audit-find" class="input" type="search" disabled></div>
+    <div class="table-wrap">
+      <table data-sort-auto id="audit-table">
+        <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Student</th></tr></thead>
+        <tbody>{% for a in sample.AUDIT %}<tr><td class="nowrap" data-sort-value="{{ a.at.isoformat() }}">{{ sample.when(a.at) }}</td><td>{{ a.actor }}</td><td>{{ a.action }}</td><td>{% if a.student %}<a href="{{ url('/overview/students/' ~ a.student) }}{{ as_query }}">{{ sample.student(a.student).name }}</a>{% endif %}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

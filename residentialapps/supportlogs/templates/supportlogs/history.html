@@ -1,0 +1,42 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import due_chip, flag_item with context %}
+{% block title %}{{ chosen.name }}{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  {{ sample_title(chosen.name, me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# A student's history across staff (§4.5, §11.2): a student-centred view,
+     not a case file; an audited read for senior identifiable access. #}
+  <p class="sub">{{ chosen.email }} · {{ sample.STUDENT_CLUSTER.get(chosen.id, "No cluster") }}</p>
+  <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff.</p>
+  {% set seen = sample.ENCOUNTERS | selectattr("student", "equalto", chosen.id) | sort(attribute="when", reverse=true) | list %}
+  {% set plans = sample.PLANS | selectattr("student", "equalto", chosen.id) | list %}
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="enc-h">
+        <h2 id="enc-h">Encounters <span class="count">· {{ seen | length }}</span></h2>
+        <p class="sub">Every staff member's, the latest first.</p>
+        {% if seen %}<ul class="items">{% for e in seen %}<li><div class="item-head"><span class="strong">{{ e.type }}</span><span class="nowrap subtle">{{ sample.short_date(e.when.date()) }}</span></div><div class="subtle">{{ e.staff }} · {{ e.duration }}{% if e.concerns %} · {{ e.concerns | join(", ") }}{% endif %}</div>{% if e.note %}<div class="subtle">“{{ e.note }}”</div>{% endif %}</li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
+      </section>
+      {% if sample.holds(me, sample.RECIPIENT) %}
+        {% set theirs = sample.flags_for(me, sid=chosen.id) %}
+        <section class="card card-pad" aria-labelledby="flags-h">
+          <h2 id="flags-h">Safety flags <span class="count">· {{ theirs | length }}</span></h2>
+          {% if theirs %}<ul class="items">{% for f in theirs %}{{ flag_item(f, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
+        </section>
+      {% endif %}
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="plans-h">
+        <h2 id="plans-h">Plans <span class="count">· {{ plans | length }}</span></h2>
+        {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.cadence }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
+      </section>
+      <section class="card card-pad muted" aria-labelledby="staff-h">
+        <h2 id="staff-h">Staff involved</h2>
+        <p class="sub">Whom to talk to about {{ chosen.name }} (§4.5).</p>
+        <ul class="plain">{% for name in (seen | map(attribute="staff") | list + plans | map(attribute="staff") | list) | unique %}<li>{{ name }}</li>{% endfor %}</ul>
+      </section>
+    </div>
+  </div>
+{% endblock %}

@@ -100,7 +100,8 @@ def test_the_grantor_sees_who_they_shared_with(client: TestClient) -> None:
 
 def test_overview_lists_every_plan_and_the_flagged_students(client: TestClient) -> None:
     sam = client.get("/overview/?as=Sam%20Lee").text
-    assert re.findall(r'href="(/plans/P-\d+)\?as=Sam%20Lee"', section(sam, "plans-h")) == ["/plans/P-01", "/plans/P-02", "/plans/P-03", "/plans/P-04", "/plans/P-05"]
+    assert re.findall(r'href="(/plans/P-\d+)\?as=Sam%20Lee"', section(sam, "plans-h")) == [
+        f"/plans/{p.id}" for p in sorted(sample.PLANS, key=lambda p: not p.formal)]
     refs = section(sam, "refs-h")
     assert "Elena Park" in refs and "Flagged 27 Oct by Daniel Koh · suggests weekly" in refs
     siti = client.get("/overview/?as=Siti%20Rahman").text
