@@ -59,6 +59,13 @@
   </li>
 {%- endmacro %}
 
+{# An application's blackouts and, for an appeal still open or granted,
+   its §7.5 split, as rows of a detail list (audit, 2026-10-29). #}
+{% macro appeal_rows(app, leave) -%}
+  {% for b, first, last in leave.blackouts_on(app) %}<dt>Blackout</dt><dd>{{ b.label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}: {{ b.effect | lower }}</dd>{% endfor %}
+  {% if app.appeal and (app.stage in leave.OPEN_STAGES or app.stage == "Approved") %}{% set split = leave.appeal_split(app) %}<dt>From entitlement</dt><dd>{{ split.charged }} day{{ "s" if split.charged != 1 }} of {{ app.leave_type }}</dd><dt>Extra leave</dt><dd>{{ split.extra }} day{{ "s" if split.extra != 1 }}, kept apart (spec §7.5)</dd>{% endif %}
+{%- endmacro %}
+
 {# The RA pages' sample viewer switch (audit, 2026-10-29): each viewer
    reaches states the others do not. #}
 {% macro ra_switch(me, leave, here) -%}

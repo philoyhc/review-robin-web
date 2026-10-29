@@ -90,7 +90,7 @@ def test_decided_lists_the_viewer_s_own_decisions() -> None:
     assert ids(c.get(STAFF + "decided").text, "dec-h") == ["L-0115", "L-0117"]
     rachel = c.get(STAFF + "decided" + RACHEL).text
     assert len(ids(rachel, "dec-h")) == 9 and "Final approval: Approved" in rachel
-    assert ids(c.get(STAFF + "decided" + SAM).text, "dec-h") == ["L-0118"]  # the appeal the Master granted
+    assert ids(c.get(STAFF + "decided" + SAM).text, "dec-h") == ["L-0120", "L-0118"]  # the appeals the Master refused and granted
 
 
 def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
@@ -358,3 +358,23 @@ def test_decide_lists_this_term_s_other_leave_only() -> None:
     lucas = sample_leave.by_id("L-0118")
     assert [o.id for o in sample_leave.other_leave(lucas)] == ["L-0119"]
     assert sample_leave.delegate_choices("Hui Min Goh") == []  # in no slot
+
+
+def test_the_audit_s_appeal_screens() -> None:
+    """The 1C.1 audit (2026-10-29): staff in the RA's slot add remarks to an
+    appeal for the Master (§15); the Master may decide over unconfirmed
+    cover (§7.4); a refused appeal is decided; an appeal's days split
+    between entitlement and extra leave (§7.5); blackouts show."""
+    c = client()
+    rachel = c.get(STAFF + "decide/L-0105" + RACHEL).text  # in every slot, not the decider
+    assert "Your remarks for the Master" in rachel and ">Add remarks</button>" in rachel
+    assert ">Approve</button>" not in rachel
+    sam = c.get(STAFF + "decide/L-0105" + SAM).text  # the Master
+    assert "Your remarks for the Master" not in sam
+    assert "Decide without the cover's confirmation" in sam  # Elise Tan has not confirmed
+    assert "<dt>From entitlement</dt><dd>0 days of Personal leave</dd><dt>Extra leave</dt><dd>4 days" in sam
+    assert "<dt>Blackout</dt><dd>Examinations, 15 Nov – 28 Nov: appeal only</dd>" in sam
+    refused = sample_leave.by_id("L-0120")
+    assert refused.appeal and refused.stage == "Rejected"
+    assert ("18 Sep", "Rejected by Sam Lee", "The Precinct is short that week; apply within next term's days.") in sample_leave.timeline(refused)
+    assert "From entitlement" not in c.get(STAFF + "decide/L-0120" + SAM).text  # refused: nothing to split

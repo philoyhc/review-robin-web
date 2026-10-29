@@ -305,7 +305,7 @@ class Application:
     def appeal(self) -> bool:
         """An extra-leave appeal: decided by the Master, and kept apart from
         normal entitlement once granted (spec §7.5)."""
-        return self.stage == "Appeal to the Master" or self.id in GRANTED_APPEALS
+        return self.stage == "Appeal to the Master" or self.id in GRANTED_APPEALS | REJECTED_APPEALS
 
     @property
     def days(self) -> int:
@@ -352,7 +352,9 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             ("Isaac Goh", "Personal leave", _d("2026-11-12"), _d("2026-11-14"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
             ("Bella Koh", "Personal leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
             ("Leon Chia", "Personal leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
-            ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Confirmed", "Appeal to the Master", _d("2026-10-25"),
+            # Cover not yet confirmed: the Master may decide over it, on the
+            # record (spec §7.4; audit, 2026-10-29).
+            ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Awaiting", "Appeal to the Master", _d("2026-10-25"),
              "Balance exhausted; family wedding overseas."),
             ("Maya Seah", "Personal leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
             ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
@@ -373,6 +375,9 @@ APPLICATIONS: tuple[Application, ...] = tuple(
              "Balance used; grandmother's funeral abroad."),
             # The leave that used Lucas Teo's balance before his appeal.
             ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
+            # An appeal the Master refused (scenario I; audit, 2026-10-29).
+            ("Maya Seah", "Personal leave", _d("2026-09-28"), _d("2026-10-01"), "Lucas Teo", "Confirmed", "Rejected", _d("2026-09-15"),
+             "Balance used; a friend's wedding overseas."),
         ),
         start=101,
     )
@@ -380,6 +385,7 @@ APPLICATIONS: tuple[Application, ...] = tuple(
 
 
 GRANTED_APPEALS: frozenset[str] = frozenset({"L-0118"})  # extra leave the Master granted
+REJECTED_APPEALS: frozenset[str] = frozenset({"L-0120"})  # an appeal the Master refused
 
 # The sample's record of each decision: its date and remarks, by step
 # (spec §14, §15, §19). Who decided is read from today's chain in
@@ -401,6 +407,7 @@ DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
     },
     "L-0117": {"first": (_d("2026-09-15"), "Good luck at the games."), "final": (_d("2026-09-16"), "")},
     "L-0119": {"first": (_d("2026-08-18"), ""), "final": (_d("2026-08-19"), "")},
+    "L-0120": {"appeal": (_d("2026-09-18"), "The Precinct is short that week; apply within next term's days.")},
     "L-0118": {
         "staff": (_d("2026-08-29"), "Lucas has covered two extra weekends; I support it."),
         "appeal": (_d("2026-08-31"), "Granted, on the extra duties agreed with Arjun Nair."),
@@ -818,6 +825,7 @@ RA_VIEWERS = (
     ("Gwen Ho", "an appeal with the Master"),
     ("Lucas Teo", "extra leave granted"),
     ("Faris Iskandar", "a rejected application"),
+    ("Maya Seah", "an appeal the Master refused"),
     ("Kai Ng", "approved leave cancelled; invited to appeal (preview appeals by invitation)"),
 )
 
@@ -1078,6 +1086,23 @@ def away_on(application: Application) -> tuple[Application, ...]:
         if b.id != application.id and b.ra != application.ra and b.precinct == application.precinct
         and b.start <= application.end and application.start <= b.end
     )
+
+
+def appeal_split(application: Application) -> dict[str, int]:
+    """An appeal's days split as §7.5 keeps them: what the RA's own
+    entitlement still covers is charged to it, the rest is extra leave."""
+    charged = min(application.days, max(balance_of(application)["available"], 0))
+    return {"charged": charged, "extra": application.days - charged}
+
+
+def blackouts_on(application: Application) -> tuple[tuple[Blackout, date, date], ...]:
+    """The blackouts an application's dates touch, with their dates (§6)."""
+    found = []
+    for b in BLACKOUTS:
+        span = week_dates(b)
+        if span and span[0] <= application.end and span[1] >= application.start:
+            found.append((b, *span))
+    return tuple(found)
 
 
 def balance_of(application: Application) -> dict:
