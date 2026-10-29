@@ -16,7 +16,7 @@ Support Logs has a factory and a health route at `/supportlogs` and nothing else
 | 2. Authorizations and configuration | The `supportlogs` models and first migration; authorization types over the Staff roster (§3.5), configured lists (§5.5–5.10), clusters (§10.5); Sys admin wired | 1B closed |
 | 3. Encounters and safety | Encounter logging, students and the local working set (§4), informal follow-up (§6), safety flags (§5.10); the frontline pages wired | Item 2 |
 | 4. Plans and sharing | Formal assignments and conversion (§7, §8), peer-view grants (§11.1), the student view and full history (§9) | Item 3 |
-| 5. Oversight and review | The senior dashboard (§10.2–10.6), opportunity review (§10.7–10.8), the support-activity audit (§11.3) | Item 4 |
+| 5. Oversight and review | The senior dashboard (§10.2–10.6), consultation check (§10.7–10.8), the support-activity audit (§11.3) | Item 4 |
 
 Email and Teams are out of scope: v1 reminds in-app only (§17).
 
@@ -37,7 +37,16 @@ Email and Teams are out of scope: v1 reminds in-app only (§17).
 - **Sample data is labeled** and lives in one module, `residentialapps/supportlogs/sample_support.py`, deleted in one place by items 2–5. Its staff are the Staff roster's mock people (`residentialapps/docs/sample_data/`), copied, not imported: `supportlogs` may not import `residentialops` (`residentialapps/spec/architecture.md`, "Import boundaries"); a test holds the copy to the mock.
 - **No real-looking support content.** Sample students are invented, notes bland and short (§5.8), safety flags generic; nothing reads as a real case.
 - **Placeholders answer only on a local run**, as 1B's and 1C's do, until wired.
-- **Viewing as.** One sample viewer per authorization type (§3.5, roles rule 8): a frontline RF, a senior identifiable Master, a safety-flag recipient without frontline access, an opportunity reviewer, Other Staff with aggregate view and with identifiable view, a Support Logs sys admin, the super-admin (administration only), and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only, independent of the local fake-auth user.
+- **Viewing as.** One sample viewer per authorization type (§3.5, roles rule 8): a frontline RF, a senior identifiable Master, a safety-flag recipient without frontline access, a consultation checker, Other Staff with aggregate view and with identifiable view, a Support Logs sys admin, the super-admin (administration only), and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only, independent of the local fake-auth user.
+- **Access is managed in Support Logs alone** (author, 2026-10-29): Sys admin's **Access** page (`/sys-admin/`) lists every active Staff-roster member, read from `residentialops` as the eligibility list, and grants each of them the authorization types, kept in `supportlogs`; the roster shows no access and Support Logs never writes to it (roles rule 9).
+  - One row per person: name and appointment (read-only, a derived pill), then a column per type — Frontline, Senior identifiable, Safety-flag recipient, Consultation check, Other Staff view (None, Aggregate or Identifiable), Sys admin — each a Toggle, with a filter box and chips for With access and No access.
+  - A grant or revocation asks for a reason, a senior grant whose request it answers (the Master's, §3.5), and is audited (§11.3).
+  - **Lapsed grants** head the page: a grant whose holder no longer has an active Staff-roster entry (retired, or no appointment on it current) stops at once and is listed until a sys admin revokes it (§3.5); which appointment they hold never matters (roles rule 9).
+  - The Sys admin column is the super-admin's alone; a sys admin sees it read-only. No self-action, and the last Support Logs sys admin cannot be revoked (roles rules 1, 6). The super-admin holds administration from the platform, named in a note, never a row.
+- **Names and tabs** (author, 2026-10-29):
+  - **Consultation check**, not *opportunity review*: a list of students in, and whom to consult out, for any approved purpose (§10.7, §17 Q12). Its states are *No consultation indicated*, *Consultation suggested* and *Consultation required*; the first never means a student is well or suitable.
+  - **No Safety flags tab**: flags are listed on Home for the frontline and on Overview for recipients, each opening its detail page; a recipient with neither frontline nor senior access lands on a Home holding only the flags.
+  - **Senior staff get an Overview tab**, beside the tabs their other grants give them, for workload, hotspots, clusters, coverage, every plan and the flags; not a separate set of pages.
 - **Scope is the grant, not the slot.** A frontline user sees what §11.1 gives them; nothing is derived from who oversees whom in Assignments, which covers RAs only (`residentialapps/guide/todo_master.md`, 2026-10-29), without a ruling.
 - **Reads are actions** (§11.3): every placeholder that shows a named student says the view is recorded, as the real page will.
 - **Configured lists are never hard-coded in templates** (UI §3, "Configured lists"): the sample module holds the seeded defaults and the pages render from it.
@@ -68,10 +77,10 @@ Taken 2026-10-29 at `de0bf729`.
 
 1. **Chrome and home.** The shared pieces moved to `residentialapps/web/`; the teal accent under `data-app="supportlogs"`; Support Logs' switcher and tabs (open question 1); the home at the bare mount, listing what the viewer reaches or redirecting; the `403` page; the sample module and the viewer card. Every other page a static placeholder.
 2. **Frontline, phone first.** Log encounter with its optional details and the after-save confirmation; Students; the student view; My follow-ups; the personal dashboard (UI screens 1–3, 5–7; §4–§6, §9, §10.1).
-3. **Safety.** Safety concern; safety flag detail; Safety flags for recipients, with the unacknowledged count in the navigation (UI screens 4, 8, 9; §5.10).
+3. **Safety.** Safety concern; safety flag detail; the active and closed flags listed on Home for the frontline and on Overview for recipients, not a tab of their own, with the unacknowledged count in the navigation (UI screens 4, 8, 9; §5.10).
 4. **Plans and sharing.** Formal assignments with source, cadence and the safety-plan marker; conversion from a follow-up (§7, §8); Flag for formal assignment; peer-view grants (§11.1).
-5. **Oversight.** The senior dashboard: workload with load weighting, hotspots, clusters, due coverage (§10.2–10.6); senior student history; the support-activity audit (§11.3).
-6. **Opportunity review and Sys admin.** A review run, its three states and reasons, the consultation record (§10.7–10.8); Sys admin: authorizations over the roster, configured lists, the cluster list, the administrative audit (§3.3). `residentialapps/spec/supportlogs_ui.md` written from rungs 1–6.
+5. **Overview.** Senior staff's Overview tab: workload with load weighting, hotspots, clusters, due coverage (§10.2–10.6); senior student history; the support-activity audit (§11.3).
+6. **Consultation check and Sys admin.** A check run, its three states and reasons, the consultation record (§10.7–10.8); Sys admin: Access (above, Semantics), configured lists, the cluster list, the administrative audit (§3.3). `residentialapps/spec/supportlogs_ui.md` written from rungs 1–6.
 7+. Iteration until approved, each with its own read.
 
 **Items 2–5** get their rungs when 1B closes.
