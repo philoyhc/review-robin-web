@@ -398,3 +398,15 @@ def test_an_appeal_charges_the_ra_s_own_days_first(monkeypatch) -> None:
     after = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Isaac Goh" and r["type"] == "Personal leave")
     assert after["available"] == 0 and after["pending"] == row["pending"] + have  # its own days, pending
     assert sample_leave.my_extra("Isaac Goh")["pending"] == 2  # only the rest is extra
+
+
+def test_staff_home_shows_leave_later_this_term_and_admin_detail_the_balance() -> None:
+    """The 1C.1 audit (2026-10-29): beyond this week, the staff home lists
+    approved leave later this term (§24); the admin application page shows
+    the RA's balance for correcting the record (§20)."""
+    c = client()
+    later = c.get(STAFF + SAM).text.split("Later this term</h3>")[1].split("</section>")[0]
+    assert "Hana Ito" in later and "14 Dec – 15 Dec" in later
+    assert [a.id for a in sample_leave.coming_up("Sam Lee")] == ["L-0115"]
+    admin = c.get("/ra-leave/admin/applications/L-0101").text
+    assert "Chloe Lim's Personal leave, " in admin and "<dt>Available</dt>" in admin

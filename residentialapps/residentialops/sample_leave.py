@@ -1127,6 +1127,47 @@ def blackouts_on(application: Application) -> tuple[tuple[Blackout, date, date],
     return tuple(found)
 
 
+def approvers_for(ra: str) -> str:
+    """Who decides an RA's ordinary leave, in order, as Apply names them
+    (§9.1; audit, 2026-10-29): the slot's first approver, then the final."""
+    precinct = next(s.precinct for s in sample_data.SLOTS if ra in s.ras)
+    route = next(r for r in routes() if r.precinct == precinct)
+    final = " or ".join(final_for(precinct)) or "no one yet: no final approver holds a place in your slot"
+    if POLICY["first"] == "none":
+        return final
+    first = "the first approver (none named yet)" if route.gap else route.first
+    return f"{first}, then {final}"
+
+
+def term_blackouts() -> tuple[tuple[Blackout, date, date], ...]:
+    """This term's blackouts not yet over, with their dates (§6)."""
+    found = []
+    for b in BLACKOUTS:
+        span = week_dates(b)
+        if span and span[0] <= TERM.end and span[1] >= max(TERM.start, TODAY):
+            found.append((b, *span))
+    return tuple(found)
+
+
+def draft_short(draft: "Draft") -> int:
+    """How many days a draft asks beyond what the RA has of its type; 0 when
+    it fits (§10, scenario G)."""
+    available = next(r["available"] for r in entitlement_rows() if r["ra"] == draft.ra and r["type"] == draft.leave_type)
+    return max(draft.days - max(available, 0), 0)
+
+
+def coming_up(viewer: str) -> tuple[Application, ...]:
+    """Approved leave in the viewer's scope starting after this week and
+    before the term ends (§24)."""
+    _, _, _, week_end = period("week")
+    _, _, _, horizon = period("term")
+    precincts = scope(viewer)
+    return tuple(
+        sorted((a for a in APPLICATIONS if a.stage == "Approved" and a.precinct in precincts and week_end < a.start <= horizon),
+               key=lambda a: a.start)
+    )
+
+
 def balance_of(application: Application) -> dict:
     return next(r for r in entitlement_rows() if r["ra"] == application.ra and r["type"] == application.leave_type)
 

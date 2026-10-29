@@ -56,6 +56,7 @@
   <li>
     <div class="item-head"><a class="strong" href="{{ url('/ra-leave/apply') }}?draft={{ d.id }}{{ as_query | replace("?", "&") }}">{{ d.dates }}</a><span class="chip chip-mute">Draft</span></div>
     <div class="subtle">{{ d.leave_type }} · {{ d.days }} day{{ "s" if d.days != 1 }}{% if d.cover %} · cover {{ d.cover }}, not yet asked{% endif %} · saved {{ leave.short_date(d.saved) }}</div>
+    {% set short = leave.draft_short(d) %}{% if short %}<div><span class="chip chip-warn">{{ short }} day{{ "s" if short != 1 }} over your {{ d.leave_type }}</span></div>{% endif %}
   </li>
 {%- endmacro %}
 
