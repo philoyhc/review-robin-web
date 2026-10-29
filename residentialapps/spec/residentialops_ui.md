@@ -146,7 +146,9 @@ model (author, 2026-10-27):
   2026-10-29): a chip row under a roster's heading shows or hides each
   column but Name, a filled chip a shown column, remembered per browser;
   each header's button sorts ascending, descending, then back to the
-  page's order.
+  page's order. Assignments' slots table sorts the same way, with a chip
+  for Notes alone; sorted, each row names its levels and the grouping
+  rules go.
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).

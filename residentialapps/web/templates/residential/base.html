@@ -327,6 +327,11 @@
       table.slots td.group { font-weight: 600; white-space: nowrap; }
       table.slots tr.wing-start > td { border-top: 2px solid var(--border-default); }
       table.slots td.notes { font-size: 12px; color: var(--text-subtle); min-width: 160px; }
+      /* Sorted, the slots lose their grouping: every row names its levels,
+         and the heavier rule between top levels goes. */
+      table.slots.sorted td.group { font-weight: 400; }
+      table.slots.sorted td.group .visually-hidden { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+      table.slots.sorted tr.wing-start > td { border-top: 1px solid var(--border-subtle); }
       table.slots td.cell .input { min-height: 30px; font-size: 14px; min-width: 180px; }
       .input {
         font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
@@ -509,6 +514,7 @@
             h.querySelector(".sort-btn span").textContent = "\u2195";
           });
           th.setAttribute("aria-sort", next);
+          table.classList.toggle("sorted", next !== "none");
           th.querySelector(".sort-btn span").textContent = { none: "\u2195", ascending: "\u2191", descending: "\u2193" }[next];
           var body = table.tBodies[0];
           var rows = Array.prototype.slice.call(body.querySelectorAll("tr[data-row]"));

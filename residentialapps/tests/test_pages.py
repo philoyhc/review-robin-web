@@ -56,12 +56,12 @@ def test_the_assignments_page_lists_the_slots_with_staff_and_ra_cells() -> None:
     assert "Sample data" in page.text
     assert "<h1>Assignments</h1>" in page.text
     slots = page.text[page.text.index('id="slots-h"'):]
-    headers = re.findall(r'<th scope="col">([^<]*)', slots.split("<tbody>")[0])
+    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', slots.split("<tbody>")[0])
     assert headers == ["Wing", "Precinct", "Neighborhood", "Notes", "Staff", "RA"]
     assert "· 30 Neighborhoods in 9 Precincts and 3 Wings" in page.text
     assert 'aria-label="Cypress A 04-05-06: Staff" value="Daniel Koh, Priya Raman"' in page.text
     assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page.text
-    assert page.text.count('<tr class="wing-start">') == 3  # a Wing's name shows on its first row only
+    assert page.text.count('<tr data-row class="wing-start">') == 3  # a Wing's name shows on its first row only
     assert "RC1A L4: 101, 102-105" in page.text  # the notes, kept as text
     assert "Appointment types" not in page.text  # no types tables (2026-10-28)
 
@@ -531,3 +531,14 @@ def test_the_rosters_have_column_chips_and_sortable_headers() -> None:
         row = page.split("<tr data-row>")[1].split("</tr>")[0]
         assert re.findall(r'data-col="(\w+)"', row) == ["name", *cols]  # each cell answers to its chip
         assert f'data-col-toggles-for="{table}"' not in client.get(f"{path}?stage=slots").text  # no rows, no chips
+
+
+def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
+    """Ruled 2026-10-29: the slots table takes sorting on every header,
+    and a column chip for Notes alone."""
+    page = TestClient(ops_app()).get("/rosters/assignments").text
+    chips = page.split('data-col-toggles-for="slots-table"')[1].split("</p>")[0]
+    assert re.findall(r'data-col-toggle="(\w+)"', chips) == ["notes"]
+    head = page.split('id="slots-table"')[1].split("</thead>")[0]
+    assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["wing", "precinct", "neighborhood", "notes", "staff", "ra"]
+    assert '<td class="cell" data-col="ra" data-sort-value="Chloe Lim">' in page
