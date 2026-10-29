@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote, urlencode
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -94,6 +95,12 @@ def areas_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
     return tuple(areas)
 
 
+def query(me: sample.Viewer, **params: str) -> str:
+    """A query string carrying the sample viewer and ``params``, or empty."""
+    pairs = ([("as", me.name)] if me != sample.DEFAULT else []) + [(k, v) for k, v in params.items() if v]
+    return "?" + urlencode(pairs, quote_via=quote) if pairs else ""
+
+
 def render(
     request: Request,
     template: str,
@@ -120,6 +127,7 @@ def render(
             "initials": initials(identity.display_label) if identity else "?",
             "me": me,
             "as_query": sample.as_query(me),
+            "qs": lambda **params: query(me, **params),
             "sample": sample,
             # The viewer switch goes to each person's Home, which sends them
             # where they belong.
@@ -140,11 +148,16 @@ def forbidden(request: Request, me: sample.Viewer) -> Response:
     return render(request, "supportlogs/forbidden.html", me=me, area=area, tabs=tabs, status_code=403)
 
 
-def page(request: Request, *grants: str, area: str = MAIN, **context: Any) -> Response:
-    """A placeholder page for the sample viewer, or the `403` page when
-    they hold none of the grants it needs."""
+def gated(request: Request, template: str, *grants: str, area: str = MAIN, **context: Any) -> Response:
+    """A page for the sample viewer, or the `403` page when they hold none
+    of the grants it needs."""
     me = sample.viewer(request.query_params.get("as"))
     if not sample.holds(me, *grants):
         return forbidden(request, me)
     tabs = sys_admin_tabs(me) if area == SYS_ADMIN_AREA else tabs_for(me)
-    return render(request, "supportlogs/placeholder.html", me=me, area=area, tabs=tabs, **context)
+    return render(request, template, me=me, area=area, tabs=tabs, **context)
+
+
+def page(request: Request, *grants: str, area: str = MAIN, **context: Any) -> Response:
+    """A placeholder page naming its rung and what it will hold."""
+    return gated(request, "supportlogs/placeholder.html", *grants, area=area, **context)

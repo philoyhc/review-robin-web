@@ -1,0 +1,28 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Students{% endblock %}
+{% block content %}
+  {{ sample_title("Students", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# The finder (UI spec screen 7): the same search as Log encounter's,
+     then the viewer's own working set (§4.3). #}
+  <section class="card card-pad gap-below" aria-labelledby="find-h">
+    <h2 id="find-h">Find a student</h2>
+    <div class="field-wide"><label for="find">Name or email</label>
+      <input id="find" class="input" type="search" disabled aria-describedby="find-what">
+      <span id="find-what" class="subtle small">Your own students first, then the directory, searched as you; by email when the directory cannot be read (§4.2). Once wired.</span></div>
+  </section>
+  {% set mine = sample.working_set(me.name) %}
+  <section class="card card-pad" aria-labelledby="mine-h">
+    <h2 id="mine-h">My students <span class="count">· {{ mine | length }}</span></h2>
+    <p class="sub">Your plans and follow-ups, then everyone you have logged an encounter with, the most recently seen first.</p>
+    <ul class="items">
+      {% for s, reasons, seen in mine %}
+        <li>
+          <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chips">{% for r in reasons %}<span class="chip {{ 'chip-accent' if r.startswith('Plan') else 'chip-mute' }}">{{ r }}</span>{% endfor %}</span></div>
+          <div class="subtle">{{ s.email }}{% if seen %} · seen {{ sample.short_date(seen) }}{% endif %}</div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

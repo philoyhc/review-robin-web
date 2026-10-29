@@ -1,0 +1,24 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Encounter saved{% endblock %}
+{% block content %}
+  {{ sample_title("Encounter saved", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# After saving (UI spec §3): what was saved, and Add to my follow-ups for
+     a student not on them, so the routine path can end here. #}
+  <section class="card card-pad gap-below" aria-labelledby="saved-h" role="status">
+    <h2 id="saved-h">{{ kind }} with {{ chosen.name }}, {{ duration }}</h2>
+    <p class="sub">Logged now. A sample: nothing is stored.</p>
+    {% if added %}
+      <p class="flush">Added to your follow-ups.</p>
+    {% elif not following %}
+      <p class="flush">{{ chosen.name }} is not on your follow-ups.</p>
+      <button type="button" class="btn btn-secondary gap-above-sm" disabled>Add to my follow-ups</button>
+    {% endif %}
+  </section>
+  <div class="btnrow">
+    <a class="btn btn-primary" href="{{ url('/log') }}{{ as_query }}">Log another</a>
+    <a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Open {{ chosen.name }}</a>
+    <a class="btn btn-secondary" href="{{ url('/') }}{{ as_query }}">Home</a>
+  </div>
+{% endblock %}

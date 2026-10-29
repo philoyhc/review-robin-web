@@ -1,0 +1,61 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import due_chip, kind_chips, encounter_item with context %}
+{% block title %}{{ chosen.name }}{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/students/') }}{{ as_query }}">‹ Students</a>
+  {{ sample_title(chosen.name, me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# The student view (UI spec screen 5; functional spec §9): a
+     student-centred view, not a case file, of what the viewer's
+     authorizations cover (§11.1). #}
+  <p class="sub">{{ chosen.email }}</p>
+  <p class="notice" role="note">Opening this view is recorded. It shows your own records for {{ chosen.name }}, any a colleague has shared with you, and the safety flags you may see.</p>
+  {% set mine = sample.plans_of(me.name, chosen.id) %}
+  {% set plan = mine[0] if mine else none %}
+  {% set seen = sample.encounters_by(me.name, chosen.id) %}
+  <section class="tiles gap-below" aria-label="Following up">
+    <div class="tile"><span class="tile-n">{{ plan.cadence if plan else "None" }}</span><span class="tile-l">Cadence</span></div>
+    <div class="tile"><span class="tile-n">{{ sample.short_date(seen[0].when.date()) if seen else "None" }}</span><span class="tile-l">Last contact</span></div>
+    {% set nd = sample.next_due(plan) if plan else none %}
+    <div class="tile"><span class="tile-n">{{ sample.short_date(nd) if nd else "None" }}</span><span class="tile-l">Next due</span></div>
+  </section>
+  <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ qs(student=chosen.id) }}">Log encounter with {{ chosen.name }}</a>
+  <div class="split gap-above">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="enc-h">
+        <h2 id="enc-h">Encounters <span class="count">· {{ seen | length }}</span></h2>
+        <p class="sub">Yours with {{ chosen.name }}, the latest first.</p>
+        {% if seen %}<ul class="items">{% for e in seen %}{{ encounter_item(e, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
+        <button type="button" class="btn btn-secondary gap-above-sm" disabled>Full history</button>
+      </section>
+      <section class="card card-pad" aria-labelledby="flags-h">
+        <h2 id="flags-h">Safety flags</h2>
+        <p class="sub">Flags for {{ chosen.name }} you may see, active first, then closed with their outcomes (§5.10). Placeholder: rung 3.</p>
+      </section>
+      <section class="card card-pad" aria-labelledby="shared-h">
+        <h2 id="shared-h">Shared with</h2>
+        <p class="sub">Colleagues you have shared your records for {{ chosen.name }} with, each with Revoke (§11.1). Placeholder: rung 4.</p>
+        <button type="button" class="btn btn-secondary" disabled>Share with a colleague</button>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="plan-h">
+        <h2 id="plan-h">Following up</h2>
+        {% if plan %}
+          <p class="flush">{{ kind_chips(plan) }} {{ due_chip(plan) }}</p>
+          <dl class="kv gap-above-sm">
+            <dt>Since</dt><dd>{{ sample.short_date(plan.start) }}</dd>
+            {% if plan.formal %}<dt>Assigned by</dt><dd>{{ plan.assigned_by }}</dd>{% if plan.review %}<dt>Review</dt><dd>{{ sample.short_date(plan.review) }}</dd>{% endif %}{% endif %}
+          </dl>
+          {% if plan.instruction %}<p class="subtle small">{{ plan.instruction }}</p>{% endif %}
+          {% if not plan.formal %}<button type="button" class="btn btn-secondary gap-above-sm" disabled>Stop following up</button>{% endif %}
+        {% else %}
+          <p class="sub">Not on your follow-ups.</p>
+          <button type="button" class="btn btn-secondary" disabled>Start following up</button>
+        {% endif %}
+        {% if not (plan and plan.formal) %}<button type="button" class="btn btn-secondary gap-above-sm" disabled>Flag for formal assignment</button>{% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}
