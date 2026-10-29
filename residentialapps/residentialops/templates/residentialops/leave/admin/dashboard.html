@@ -3,7 +3,7 @@
 {% block title %}Leave dashboard{% endblock %}
 {% block content %}
   {{ title("Leave dashboard", leave) }}
-  <p class="sub">The whole Unit's leave: what is pending, what needs attention, and who is away. RAs apply at <code>/ra-leave/</code> and staff decide at <code>/ra-leave/staff/</code>; this side configures and oversees.</p>
+  <p class="sub">The whole Unit's leave: what is pending, what needs attention, who is away and when, extra leave granted, and recent corrections. RAs apply at <code>/ra-leave/</code> and staff decide at <code>/ra-leave/staff/</code>; this side configures and oversees.</p>
 
   {# Pending by stage, then cover still to confirm, which waits beside the
      first stage rather than being one (spec §11, §25). #}
@@ -73,9 +73,57 @@
           </table>
         </div>
       </section>
+
+      <section class="card" aria-labelledby="upcoming-h">
+        <div class="card-head">
+          <h2 id="upcoming-h">Upcoming leave <span class="count">· {{ leave.upcoming() | length }}</span></h2>
+          <p class="sub">Approved leave after this week, to the end of {{ leave.TERM.label }}.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th></tr></thead>
+            <tbody>
+              {% for a in leave.upcoming() %}
+                <tr><td class="strong nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.ra }}</a></td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ a.cover }}</td></tr>
+              {% else %}
+                <tr><td colspan="4" class="subtle">No approved leave later this term.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="corrections-h">
+        <div class="card-head">
+          <h2 id="corrections-h">Recent administrative corrections</h2>
+          <p class="sub">Corrections, cancellations and adjustments, newest first; each is kept in the <a href="{{ url('/sys-admin/') }}">audit log</a> with its old and new values (spec §26).</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Reason</th></tr></thead>
+            <tbody>
+              {% for c in leave.CORRECTIONS %}
+                <tr><td class="nowrap">{{ leave.short_date(c.when) }}</td><td class="nowrap">{{ c.actor }}</td><td>{% if c.application %}<a href="{{ url('/ra-leave/admin/applications/' ~ c.application) }}">{{ c.what }}</a>{% else %}{{ c.what }}{% endif %}</td><td>{{ c.reason }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
 
     <div class="side">
+      <section class="card card-pad" aria-labelledby="extra-h">
+        <h2 id="extra-h">Extra leave granted</h2>
+        <p class="sub">By the Master, beyond entitlement, by term; kept apart from entitlement (spec §7.5).</p>
+        <dl class="kv">{% for term, count, days in leave.extra_by_term() %}<dt>{{ term }}</dt><dd>{% if count %}{{ days }} day{{ "s" if days != 1 }}, {{ count }} appeal{{ "s" if count != 1 }}{% else %}None{% endif %}</dd>{% endfor %}</dl>
+      </section>
+      <section class="card card-pad" aria-labelledby="anomaly-h">
+        <h2 id="anomaly-h">Entitlement anomalies</h2>
+        {% set odd = leave.entitlement_anomalies() %}
+        {% if odd %}<ul class="plain">{% for r, why in odd %}<li><strong>{{ r.ra }}</strong>, {{ r.type }}: {{ why }}.</li>{% endfor %}</ul>
+        {% else %}<p class="sub">None in {{ leave.TERM.label }}: no RA is overdrawn, and every adjustment has its reason.</p>{% endif %}
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/entitlements') }}">Go to Entitlements</a>
+      </section>
       <section class="card card-pad" aria-labelledby="policy-h">
         <h2 id="policy-h">Policy</h2>
         <dl class="kv">

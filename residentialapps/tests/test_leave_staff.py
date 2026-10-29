@@ -89,7 +89,7 @@ def test_decided_lists_the_viewer_s_own_decisions() -> None:
     assert ids(c.get(STAFF + "decided").text, "dec-h") == ["L-0115", "L-0117"]
     rachel = c.get(STAFF + "decided" + RACHEL).text
     assert len(ids(rachel, "dec-h")) == 8 and "Final approval: Approved" in rachel
-    assert "None yet." in c.get(STAFF + "decided" + SAM).text
+    assert ids(c.get(STAFF + "decided" + SAM).text, "dec-h") == ["L-0118"]  # the appeal the Master granted
 
 
 def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import re
 
 from fastapi.testclient import TestClient
@@ -153,3 +154,15 @@ def test_history_shows_decision_dates_and_remarks(monkeypatch) -> None:
     # With no first approval needed, history drops that step as the timeline does.
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     assert "Good luck at the games." not in client().get(RA + "history").text
+
+
+def test_an_ra_can_name_new_cover_on_an_open_application(monkeypatch) -> None:
+    """Spec §12 and scenario L: an open application offers Change cover,
+    and a declined cover says the application waits on new cover."""
+    page = client().get(RA + "applications/L-0101").text
+    assert "Change cover" in page and "Ethan Wong" in page
+    assert '<option value="Ethan Wong">' not in page  # never the cover already named
+    declined = dataclasses.replace(sample_leave.by_id("L-0101"), cover_recorded="Declined")
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", tuple(declined if a.id == "L-0101" else a for a in sample_leave.APPLICATIONS))
+    assert "cannot cover you. Name someone else" in client().get(RA + "applications/L-0101").text
+    assert "Change cover" not in client().get(RA + "applications/L-0117").text  # decided

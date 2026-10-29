@@ -25,6 +25,17 @@
     </div>
     <div class="side">
       {% if app.stage in leave.OPEN_STAGES %}
+        {# Naming new cover (spec §12, scenario L): a declined cover must be
+           replaced before the application can be approved. #}
+        <section class="card card-pad" aria-labelledby="cover-h">
+          <h2 id="cover-h">Your cover</h2>
+          {% if app.cover_status == "Declined" and leave.confirmation_needed(app) %}<p class="sub"><span class="chip chip-warn">Declined</span> {{ app.cover }} cannot cover you. Name someone else; your application cannot be approved until they confirm.</p>
+          {% else %}<p class="sub">{{ app.cover }} {{ cover_chip(app.cover_status) }}. Changing your cover tells {{ app.cover }} they are released{% if leave.confirmation_needed(app) %} and asks the new RA to confirm{% else %} and tells the new RA{% endif %}.</p>{% endif %}
+          <div class="field-wide"><label for="new-cover">New covering RA</label>
+            <input id="new-cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" disabled>
+            <datalist id="cover-pool">{% for name in leave.cover_choices(me) if name != app.cover %}<option value="{{ name }}"></option>{% endfor %}</datalist></div>
+          <button type="button" class="btn btn-primary" disabled>Change cover</button>
+        </section>
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Changed your plans?</h2>
           <p class="sub">Withdrawing ends the application; your cover and approvers are told.</p>
