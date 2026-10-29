@@ -203,3 +203,11 @@ def test_an_application_can_be_saved_as_a_draft_and_reopened() -> None:
                  "/ra-leave/staff/decide", "/ra-leave/staff/precinct?period=term"):
         assert "18 Dec" not in c.get(path).text, path
     assert all(a.id != draft.id for a in sample_leave.APPLICATIONS)
+
+
+def test_the_audit_s_ra_page_fixes() -> None:
+    """The 1C.1 audit (2026-10-29): the back link names the page it opens,
+    and withdrawing, which ends the application, is Destructive."""
+    page = TestClient(ops_app()).get("/ra-leave/applications/L-0101").text
+    assert '<a class="back" href="/ra-leave/history">‹ My history</a>' in page
+    assert '<button type="button" class="btn btn-danger" disabled>Withdraw</button>' in page

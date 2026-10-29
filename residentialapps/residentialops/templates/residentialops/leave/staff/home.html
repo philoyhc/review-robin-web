@@ -28,7 +28,7 @@
       <section class="card card-pad" aria-labelledby="week-h">
         {% set precincts = leave.scope(me) %}
         <h2 id="week-h">This week</h2>
-        <p class="sub">Away from {{ leave.short_date(leave.TODAY) }} in {{ precincts[0] if precincts | length == 1 else precincts | length ~ " Precincts" }}.</p>
+        {% set _, _, first, last = leave.period() %}<p class="sub">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}, in {{ precincts[0] if precincts | length == 1 else precincts | length ~ " Precincts" }}.</p>
         {% set away = leave.away_this_week() | selectattr("precinct", "in", precincts) | list %}
         {% if away %}<ul class="items">{% for a in away %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one is away.</p>{% endif %}
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/precinct') }}{{ as_query }}">Precinct leave</a>

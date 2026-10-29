@@ -63,7 +63,7 @@ Events has no spec yet, so its rows are provisional.
 
 | Page | Path | Staff | RA |
 |---|---|---|---|
-| Landing | `/` | Choose an application the viewer reaches: RA Leave now, on the viewer's own side (RA or staff), RA Events later; RA Leave admin, Rosters and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
+| Landing | `/` | Choose an application the viewer reaches: RA Leave now, on the viewer's own side (RA or staff), RA Events later; RA Leave admin, Rosters and setup and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
 | Not registered | any path | First sign-in not yet linked · mobile-critical | The same · mobile-critical |
 | **RA Leave, RAs** | `/ra-leave/` | — | — |
 | RA home | `/ra-leave/` | — | Balance, cover requests to answer, drafts, current applications, Apply (§8) · mobile-critical |
@@ -84,7 +84,7 @@ Events has no spec yet, so its rows are provisional.
 | Leave policy | `/ra-leave/admin/policy` | Leave types needing an application (at least two, typically personal and official), each earned per term or per month served and capped per year or term, a term's days available only within it; blackout periods by week of a term, refused or appeal only; appeals beyond entitlement, open, by invitation or off, who may open one by invitation (as approvers are chosen), and their terms; how leave days count (every day, weekdays, or working days less public holidays); cover required or not, named or confirmed, and from whom; first approval by one or more of the appointments on the RAs' slots (several: whichever approves first) or none needed; final approval by one or more Unit-level appointments or by named staff (§6, §7, §9.1, §12, §21.1; author, 2026-10-28 and 2026-10-29) · desktop-oriented | — |
 | Entitlements | `/ra-leave/admin/entitlements` | Each RA's entitlement for a term, worked out from the policy's rules, used and pending; adjustments with a reason, one at a time or by CSV (§21.1, §21.3) · desktop-oriented | — |
 | Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the policy's final approver, appeals the Master while they are on), delegates by person, each standing in for one of the slots' approvers on all their slots with optional From–To dates, first approval only; only staff holding a place in a Precinct's slots approve for it, first or final, decide or open its appeals, or stand in there (those in every slot on Assignments hold one in each), any other named role a gap; gaps flagged (§21.2; author, 2026-10-28 and 2026-10-29) · desktop-oriented | — |
-| Applications | `/ra-leave/admin/applications`, `…/{id}` | Search, correct, cancel (approved leave cancelled keeps its record, as Cancelled, and releases its days and its cover, as withdrawn leave does, §20, §30), reassign, record external leave (§21.4); export what the filter shows as CSV (§4.6); an application's emails, each sent or not, one not sent with Resend (§17.2; author, 2026-10-29) · desktop-oriented | — |
+| Applications | `/ra-leave/admin/applications`, `…/{id}` | Search, correct, cancel (approved leave cancelled keeps its record, as Cancelled, and releases its days and its cover, as withdrawn leave does, §20, §30), reassign, record external leave (§21.4); export what the filter shows as CSV (§4.6); extra leave marked as such (§7.5); an application's emails, each sent or not, one not sent with Resend (§17.2; author, 2026-10-29) · desktop-oriented | — |
 | Appeals | `/ra-leave/admin/appeals` | By invitation: whoever the policy lets open appeals (by default the Master or the Master's admin delegate), having agreed in principle, opens an appeal for one RA; the invitations and their status; appeals with the Master (§7; author, 2026-10-29) · desktop-oriented | — |
 | Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
 | My proposals | `/ra-events/mine` | — | Provisional · responsive |
@@ -97,7 +97,7 @@ Events has no spec yet, so its rows are provisional.
 - **RA Leave by audience** (author, 2026-10-28): RAs' pages under
   `/ra-leave/`, staff's under `/ra-leave/staff/`, sys admins' under
   `/ra-leave/admin/`, each with its own home and tabs; RA Events follows the
-  same shape when built. The RA roster is the Rosters area's, not Leave
+  same shape when built. The RA roster is the Rosters and setup area's, not Leave
   admin's.
 - **Configurable, not fixed** (author, 2026-10-28), on Leave policy: each
   leave type's entitlement rule and cap, blackouts, cover, and who approves

@@ -28,7 +28,7 @@
                   <td class="nowrap">{{ leave.short_date(i.until) }}</td>
                   <td>{{ i.note }}</td>
                   <td class="nowrap">{% if i.used_by %}<a href="{{ url(app_link ~ i.used_by) }}{{ link_suffix }}">{{ status }}</a>{% else %}<span class="chip {{ 'chip-info' if status == 'Open' else 'chip-mute' }}">{{ status }}</span>{% endif %}</td>
-                  <td class="end">{% if status == "Open" and i.ra in ra_choices %}<button type="button" class="btn btn-secondary" aria-label="Withdraw {{ i.ra }}'s invitation" disabled>Withdraw</button>{% endif %}</td>
+                  <td class="end">{% if status == "Open" and i.ra in ra_choices %}<button type="button" class="btn btn-danger" aria-label="Withdraw {{ i.ra }}'s invitation" disabled>Withdraw</button>{% endif %}</td>
                 </tr>
               {% else %}<tr><td colspan="7" class="subtle">None.</td></tr>
               {% endfor %}

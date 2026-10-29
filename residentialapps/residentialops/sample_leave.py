@@ -212,8 +212,13 @@ def first_label() -> str:
     return " or ".join(POLICY["first_types"]) if POLICY["first"] == "slot" else "none"
 
 
-def final_label() -> str:
-    return " or ".join(POLICY["final_types"] if POLICY["final"] == "unit" else POLICY["final_names"])
+def final_label(full: bool = False) -> str:
+    """The final approvers as a phrase; `full` names a Unit appointment as
+    Policy does, "Residential Admin (Admin)", rather than by its abbreviation."""
+    if POLICY["final"] != "unit":
+        return " or ".join(POLICY["final_names"])
+    titles = {abbrev: title for title, abbrev in unit_appointments()}
+    return " or ".join(f"{titles[t]} ({t})" if full and titles.get(t, t) != t else t for t in POLICY["final_types"])
 
 
 def final_decider(application: "Application") -> str:
@@ -680,6 +685,14 @@ def delegate_fits(d: Delegate) -> bool:
     return all(d.delegate in s.staff or d.delegate in overseers() for s in sample_data.SLOTS if d.acting_for in s.staff)
 
 
+def delegate_choices(person: str) -> list[str]:
+    """Who may stand in for a person: staff holding a place in every slot
+    they approve for (the overseers hold one in every slot)."""
+    if not any(person in s.staff for s in sample_data.SLOTS):
+        return []  # in no slot: no one stands in for them
+    return [p.name for p in sample_data.STAFF if p.name != person and delegate_fits(Delegate(person, p.name, None, None, ""))]
+
+
 def delegable() -> list[str]:
     """Who a delegate may stand in for: the people on the slots holding an
     appointment the policy ticks for first approval; with no first approval,
@@ -974,8 +987,12 @@ def can_open(viewer: str, application: Application) -> bool:
 
 
 def other_leave(application: Application) -> tuple[Application, ...]:
-    """The applicant's other applications, for the decider (spec §15)."""
-    return tuple(a for a in APPLICATIONS if a.ra == application.ra and a.id != application.id)
+    """The applicant's other applications this term, for the decider (spec
+    §15): leave days go with their term."""
+    return tuple(
+        a for a in APPLICATIONS
+        if a.ra == application.ra and a.id != application.id and a.start <= TERM.end and a.end >= TERM.start
+    )
 
 
 def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[dict, ...]:

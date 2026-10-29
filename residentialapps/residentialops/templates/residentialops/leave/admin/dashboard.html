@@ -159,7 +159,7 @@
           <dt>Blackouts</dt><dd>{{ leave.BLACKOUTS | length }} this year</dd>
           <dt>Appeals</dt><dd>{{ {"Open": "Open, to the Master", "By invitation": "By invitation, to the Master", "Off": "Off"}[leave.POLICY.appeals] }}</dd>
           <dt>Cover</dt><dd>{% if leave.POLICY.cover_required %}{{ leave.POLICY.cover_mode }}; {{ leave.POLICY.cover_pool }}{% else %}Not required{% endif %}</dd>
-          <dt>Approvers</dt><dd>{% if leave.POLICY.first == 'slot' and leave.POLICY.first_types %}The slot's {{ leave.first_label() }}{% elif leave.POLICY.first == 'slot' %}No first approver ticked{% else %}No first approval{% endif %}, then {% if not leave.final_approvers() %}no one: no final approver is set{% else %}{{ 'the ' if leave.POLICY.final == 'unit' }}{{ leave.final_label() }}{% endif %}</dd>
+          <dt>Approvers</dt><dd>{% if leave.POLICY.first == 'slot' and leave.POLICY.first_types %}The slot's {{ leave.first_label() }}{% elif leave.POLICY.first == 'slot' %}No first approver ticked{% else %}No first approval{% endif %}, then {% if not leave.final_approvers() %}no one: no final approver is set{% else %}{{ 'the ' if leave.POLICY.final == 'unit' }}{{ leave.final_label(full=True) }}{% endif %}</dd>
         </dl>
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/policy') }}">Go to Policy</a>
       </section>

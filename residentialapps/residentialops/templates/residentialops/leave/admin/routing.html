@@ -42,7 +42,7 @@
             {% set n = loop.index %}
             <tr>
               <td><select class="input" aria-label="Delegate {{ n }}: acting for" disabled>{% for p in delegable %}<option{% if p == d.acting_for %} selected{% endif %}>{{ p }}</option>{% endfor %}{% if d.acting_for not in delegable %}<option selected>{{ d.acting_for }}</option>{% endif %}</select></td>
-              <td><select class="input" aria-label="Delegate {{ n }}: delegate" disabled>{% for p in staff %}<option{% if p == d.delegate %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
+              <td><select class="input" aria-label="Delegate {{ n }}: delegate" disabled>{% set pool = leave.delegate_choices(d.acting_for) %}{% for p in pool %}<option{% if p == d.delegate %} selected{% endif %}>{{ p }}</option>{% endfor %}{% if d.delegate not in pool %}<option selected>{{ d.delegate }}</option>{% endif %}</select></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: from" value="{{ d.start.isoformat() if d.start }}" disabled></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: to" value="{{ d.end.isoformat() if d.end }}" disabled></td>
               <td><input class="input" type="text" aria-label="Delegate {{ n }}: why {{ d.acting_for }} cannot approve" value="{{ d.reason }}" disabled></td>

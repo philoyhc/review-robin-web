@@ -27,7 +27,7 @@ def person(request: Request, person_id: str) -> Response:
     return render(
         request,
         "residentialops/access/person.html",
-        area="Rosters",
+        area="Rosters and setup",
         tabs=ROSTER_TABS,
         person=found,
         term=sample_data.CURRENT_TERM,  # the slots shown are this term's

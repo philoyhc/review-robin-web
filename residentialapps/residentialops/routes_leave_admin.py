@@ -43,14 +43,16 @@ def entitlements(request: Request) -> Response:
 
 @router.get("/ra-leave/admin/routing", name="residentialops_leave_admin_routing")
 def routing(request: Request) -> Response:
-    staff = [p.name for p in sample_data.STAFF]
-    return _page(request, "routing.html", routes=sample_leave.routes(), staff=staff, delegable=sample_leave.delegable())
+    return _page(request, "routing.html", routes=sample_leave.routes(), delegable=sample_leave.delegable())
 
 
 @router.get("/ra-leave/admin/appeals", name="residentialops_leave_admin_appeals")
 def appeals(request: Request) -> Response:
     ras = tuple(p.name for p in sample_data.RAS)
-    return _page(request, "appeals.html", ra_choices=ras, agreers=sample_leave.all_inviters())
+    # The form opens appeals only by invitation; open or off, the card says
+    # why there is none to open, as on the staff page.
+    may_open = sample_leave.POLICY["appeals"] == "By invitation" and bool(sample_leave.all_inviters())
+    return _page(request, "appeals.html", may_open=may_open, ra_choices=ras, agreers=sample_leave.all_inviters())
 
 
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")

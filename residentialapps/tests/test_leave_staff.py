@@ -178,7 +178,8 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ())
     assert sample_leave.inviter_label() == "" and sample_leave.all_inviters() == ()
     assert "Leave policy names no one to open appeals." in c.get(STAFF + "appeals" + SAM).text
-    assert "No one may open an appeal: Leave policy names no one for it." in c.get("/ra-leave/admin/appeals").text
+    assert "Leave policy names no one to open appeals." in c.get("/ra-leave/admin/appeals").text  # as the staff page
+    assert 'id="inv-ra"' not in c.get("/ra-leave/admin/appeals").text
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF", "RSLM"))
     assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh", "Priya Raman")
@@ -346,3 +347,14 @@ def test_staff_see_only_the_emails_they_sent() -> None:
     mine = c.get(STAFF + "decide/L-0115").text  # Daniel Koh approved it first
     assert ">Resend to Hana Ito</button>" in mine.split('id="emails-h"')[1].split("</section>")[0]
     assert 'id="emails-h"' not in c.get(STAFF + "decide/L-0115" + SAM).text
+
+
+def test_decide_lists_this_term_s_other_leave_only() -> None:
+    """Leave days go with their term (ruled 2026-10-29): Decide's other leave
+    is this term's, and an empty list says so."""
+    term = sample_leave.TERM
+    for a in sample_leave.APPLICATIONS:
+        assert all(o.start <= term.end and o.end >= term.start for o in sample_leave.other_leave(a))
+    lucas = sample_leave.by_id("L-0118")
+    assert [o.id for o in sample_leave.other_leave(lucas)] == ["L-0119"]
+    assert sample_leave.delegate_choices("Hui Min Goh") == []  # in no slot

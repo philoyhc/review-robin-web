@@ -29,7 +29,7 @@ def _context(request: Request) -> dict[str, Any]:
     if stage not in STAGES:
         stage = "done"
     return {
-        "area": "Rosters",
+        "area": "Rosters and setup",
         "tabs": ROSTER_TABS,
         "sample": sample_data,
         "level_name": LEVEL_NAME,

@@ -588,11 +588,13 @@ def test_other_tables_sort_and_applications_has_column_chips() -> None:
         assert client.get(path).text.count("<table data-sort-auto>") == tables, path
 
 
-def test_people_boxes_across_the_app() -> None:
+def test_people_boxes_across_the_app(monkeypatch: pytest.MonkeyPatch) -> None:
     """Ruled 2026-10-29: every box for choosing people shows each verified
     person as a pill with its remove button; a one-person box (a cover,
     the RA an appeal is opened for) offers its typeahead until one is
     chosen."""
+    from residentialapps.residentialops import sample_leave
+
     client = TestClient(ops_app())
     for path, label in (
         ("/ra-leave/apply", "Covering RA"), ("/ra-leave/appeal", "Covering RA"),
@@ -600,7 +602,10 @@ def test_people_boxes_across_the_app() -> None:
         ("/ra-leave/admin/appeals", "RA"), ("/ra-leave/admin/policy", "Staff who may give final approval"),
         ("/ra-leave/admin/policy", "Staff who may open an appeal"),
     ):
-        page = client.get(path).text
+        with monkeypatch.context() as m:
+            if path == "/ra-leave/admin/appeals":  # opened for an RA only by invitation
+                m.setitem(sample_leave.POLICY, "appeals", "By invitation")
+            page = client.get(path).text
         assert f'<div class="tokens" role="group" aria-label="{label}"' in page, (path, label)
     assert 'aria-describedby="cover-what" class="token-input"' in client.get("/ra-leave/apply").text
     assert 'placeholder="Start typing a name"' not in client.get("/ra-leave/admin/policy").text

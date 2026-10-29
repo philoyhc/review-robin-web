@@ -3,7 +3,7 @@
 {% from "residentialops/_people.html" import person_tokens %}
 {% block title %}{{ app.dates }}{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/ra-leave/history') }}">‹ My applications</a>
+  <a class="back" href="{{ url('/ra-leave/history') }}">‹ My history</a>
   {{ title(app.leave_type ~ (" · extra leave" if app.appeal else ""), leave, viewing(me) ~ stage_chip(app.stage)) }}
   <div class="split">
     <div class="main stack">
@@ -49,7 +49,7 @@
         <section class="card card-pad muted" aria-labelledby="act-h">
           <h2 id="act-h">Changed your plans?</h2>
           <p class="sub">Withdrawing ends the application; your cover and approvers are told.</p>
-          <button type="button" class="btn btn-secondary" disabled>Withdraw</button>
+          <button type="button" class="btn btn-danger" disabled>Withdraw</button>
         </section>
       {% endif %}
     </div>
