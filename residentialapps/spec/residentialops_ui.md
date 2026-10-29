@@ -140,7 +140,9 @@ model (author, 2026-10-27):
   column is read from Assignments for the current term: the Unit for those
   in every slot, else their slots named by the highest levels they make
   up (the Unit, a Wing, a Precinct) and any left over by name, or a None chip
-  (author, 2026-10-29). Sign-in stays a status chip (§3). The Staff roster shows no access: sys admin is listed on the Sys admin page, and other applications' grants stay in those applications (author, 2026-10-28).
+  (author, 2026-10-29). The RA roster's Neighborhood column reads the same
+  way: the slot each RA's cell names for the current term, by its own name,
+  or a None chip (author, 2026-10-29). Sign-in stays a status chip (§3). The Staff roster shows no access: sys admin is listed on the Sys admin page, and other applications' grants stay in those applications (author, 2026-10-28).
 - **Column chips and sorting**, after RRW's roster pages (author,
   2026-10-29): a chip row under a roster's heading shows or hides each
   column but Name, a shown column's chip accent filled (dark with light

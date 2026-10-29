@@ -5,6 +5,7 @@ segment 1B item 1, and the URL rules every page keeps
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 import shutil
 import subprocess
 from pathlib import Path
@@ -205,12 +206,35 @@ def test_the_staff_roster_shows_no_access() -> None:
     assert "Access is granted" not in person and "Support Logs" not in person
 
 
-def test_the_ra_roster_holds_people_and_appointments_only() -> None:
+def test_the_ra_roster_lists_people_appointments_and_neighborhoods() -> None:
     page = TestClient(ops_app()).get("/rosters/ras")
     assert page.status_code == 200
     assert "· 30 RAs, 29 linked" in page.text
     headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
-    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in"]
+    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", sample_data.LEVEL_LABELS[-1], "Sign-in"]
+
+
+def test_the_ra_roster_shows_each_ras_neighborhood(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ruled 2026-10-29: as the Staff roster's Oversight, the RA roster
+    shows the slot each RA serves for the current term, read from
+    Assignments, or None."""
+    term = sample_data.CURRENT_TERM
+    assert sample_data.assignment("Chloe Lim", term) == ("Cypress A 04-05-06",)
+    assert sample_data.assignment("Chloe Lim", sample_data.TERMS[0]) == ()  # a term with no assignments
+    assert sample_data.assignment("Daniel Koh", term) == ()  # staff are not an RA cell
+    page = TestClient(ops_app()).get("/rosters/ras").text
+    row = page.split('aria-label="Select Chloe Lim"')[1].split("</tr>")[0]
+    assert '<td data-col="neighborhood" data-sort-value="Cypress A 04-05-06"><span class="pills"><span class="pill-derived">Cypress A 04-05-06</span></span></td>' in row
+    shown = re.findall(r'data-col="neighborhood" data-sort-value="([^"]*)"', page)
+    assert len(shown) == len(sample_data.RAS) and all(shown)  # every sample RA holds a slot
+    assert '<span class="chip chip-mute">None</span>' not in page
+    # An RA no slot names shows a None chip, as Oversight does.
+    first = sample_data.SLOTS[0]
+    monkeypatch.setattr(sample_data, "SLOTS", (replace(first, ras=()), *sample_data.SLOTS[1:]))
+    page = TestClient(ops_app()).get("/rosters/ras").text
+    row = page.split(f'aria-label="Select {first.ras[0]}"')[1].split("</tr>")[0]
+    assert '<td data-col="neighborhood" data-sort-value=""><span class="chip chip-mute">None</span></td>' in row
+    assert page.count('<span class="chip chip-mute">None</span>') == 1
 
 
 def test_the_roster_tabs_link_all_three_pages(host_client: TestClient) -> None:
@@ -522,7 +546,7 @@ def test_the_rosters_have_column_chips_and_sortable_headers() -> None:
     client = TestClient(ops_app())
     for path, table, cols in (
         ("/rosters/staff", "staff-table", ["email", "appointment", "abbrev", "dates", "oversight", "signin"]),
-        ("/rosters/ras", "ra-table", ["email", "appointment", "abbrev", "dates", "signin"]),
+        ("/rosters/ras", "ra-table", ["email", "appointment", "abbrev", "dates", "neighborhood", "signin"]),
     ):
         page = client.get(path).text
         chips = page.split(f'data-col-toggles-for="{table}"')[1].split("</p>")[0]
