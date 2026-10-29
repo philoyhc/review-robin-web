@@ -29,6 +29,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 - **Rung 20** (2026-10-28, author's refinements): Home's Terms and Slots steps merge into one, 1 Setup; the Assignments CSV's upload mode is a radio group.
 - **Rung 21** (2026-10-28, author's refinements): Upload and preview stays unavailable until an upload mode is chosen (the radios live); Export covers a From–To run of terms, the term shown by default.
 - **Rung 22** (2026-10-28, item 1 review): the Sys admin audit and person detail's slots follow assignments by term (`#3329`); this plan's items 2–5 annotated to the 2026-10-28 rulings, intent left as written.
+- **Under 1C, 2026-10-29** (author, as RA Leave settled who sees it, `residentialapps/guide/segment_1C_ra_leave.md`): Assignments gains an Every slot card (by default the Master and the admin); the Staff roster an Oversight column naming what each person covers, None sorting last; the RA roster a Neighborhood column; column chips and sortable headers, kept across reloads; person boxes; Add new slot under the slots table (`residentialapps/spec/residentialops_ui.md`). Item 1's approval stands.
 
 ## Decision
 
