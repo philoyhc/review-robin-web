@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import filter_bar, gate, select_all, select_row, csv_actions, selection_script, stage_switch with context %}
+{% from "residentialops/rosters/_filters.html" import filter_bar, gate, select_all, select_row, csv_actions, selection_script, stage_switch, column_chips, sort_th with context %}
 {% block title %}Staff roster{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -18,24 +18,25 @@
     <div class="card-head">
       <h2 id="staff-h">Staff roster {% if rosters_filled %}<span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span>{% endif %}</h2>
       <p class="sub">A row is a person and one staff appointment, with its dates. What each can do follows from their appointments and routing. Oversight comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }}: the Unit for those in every slot, else their slots, named by the level they make up where they make one up, or none. The one grant, sys admin, is made on the <a href="{{ url('/sys-admin/') }}">Sys admin</a> page.</p>
+      {% if rosters_filled %}{{ column_chips("staff-table", [("email", "Email"), ("appointment", "Appointment"), ("abbrev", "Abbrev"), ("dates", "From – to"), ("oversight", "Oversight"), ("signin", "Sign-in")]) }}{% endif %}
     </div>
     <div class="table-wrap">
-      <table class="roster">
+      <table class="roster" id="staff-table" data-col-store="residentialops-staff-table-columns">
         <thead>
-          <tr>{{ select_all('staff') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Oversight</th><th scope="col">Sign-in</th></tr>
+          <tr>{{ select_all('staff') }}{{ sort_th("name", "Name") }}{{ sort_th("email", "Email") }}{{ sort_th("appointment", "Appointment") }}{{ sort_th("abbrev", "Abbrev") }}{{ sort_th("dates", "From – to") }}{{ sort_th("oversight", "Oversight") }}{{ sort_th("signin", "Sign-in") }}</tr>
         </thead>
         <tbody>
           {% if not rosters_filled %}<tr><td colspan="8" class="subtle">No staff yet. Add a person, or upload the Staff roster CSV below.</td></tr>{% endif %}
           {% for person in (sample.STAFF if rosters_filled else ()) %}
-            <tr>
+            <tr data-row>
               {{ select_row(person.name) }}
-              <td class="strong nowrap"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
-              <td class="subtle">{{ person.email }}</td>
-              <td>{{ person.appointment }}</td>
-              <td>{{ person.abbrev }}</td>
-              <td class="nowrap">{{ person.dates }}</td>
-              <td>{% set over = sample.oversight(person.name, sample.CURRENT_TERM) %}{% if over %}<span class="pills">{% for name in over %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="chip chip-mute">None</span>{% endif %}</td>
-              <td>{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
+              <td class="strong nowrap" data-col="name"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(person.email)) }}">{{ person.name }}</a></td>
+              <td class="subtle" data-col="email">{{ person.email }}</td>
+              <td data-col="appointment">{{ person.appointment }}</td>
+              <td data-col="abbrev">{{ person.abbrev }}</td>
+              <td class="nowrap" data-col="dates">{{ person.dates }}</td>
+              <td data-col="oversight">{% set over = sample.oversight(person.name, sample.CURRENT_TERM) %}{% if over %}<span class="pills">{% for name in over %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="chip chip-mute">None</span>{% endif %}</td>
+              <td data-col="signin">{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>

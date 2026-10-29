@@ -56,12 +56,15 @@ def test_the_assignments_page_lists_the_slots_with_staff_and_ra_cells() -> None:
     assert "Sample data" in page.text
     assert "<h1>Assignments</h1>" in page.text
     slots = page.text[page.text.index('id="slots-h"'):]
-    headers = re.findall(r'<th scope="col">([^<]*)', slots.split("<tbody>")[0])
+    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', slots.split("<tbody>")[0])
     assert headers == ["Wing", "Precinct", "Neighborhood", "Notes", "Staff", "RA"]
     assert "· 30 Neighborhoods in 9 Precincts and 3 Wings" in page.text
-    assert 'aria-label="Cypress A 04-05-06: Staff" value="Daniel Koh, Priya Raman"' in page.text
-    assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page.text
-    assert page.text.count('<tr class="wing-start">') == 3  # a Wing's name shows on its first row only
+    staff = page.text.split('aria-label="Cypress A 04-05-06: Staff"')[1].split("</div>")[0]
+    assert re.findall(r'<span class="token">([^<]+)<button', staff) == ["Daniel Koh", "Priya Raman"]
+    ra = page.text.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
+    assert re.findall(r'<span class="token">([^<]+)<button', ra) == ["Chloe Lim"]
+    assert 'aria-label="Remove Chloe Lim from Cypress A 04-05-06: RA"' in ra
+    assert page.text.count('<tr data-row class="wing-start">') == 3  # a Wing's name shows on its first row only
     assert "RC1A L4: 101, 102-105" in page.text  # the notes, kept as text
     assert "Appointment types" not in page.text  # no types tables (2026-10-28)
 
@@ -87,10 +90,10 @@ def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
         roster = client.get(path).text
         assert "appointment types" not in roster.lower()
         assert "Save types" not in roster
-        headers = re.findall(r'<th scope="col">([^<]*)', roster.split("<tbody>")[0])
+        headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', roster.split("<tbody>")[0])
         assert headers[headers.index("Appointment") + 1] == "Abbrev"
         for person in people:
-            assert f"<td>{person.appointment}</td>\n              <td>{person.abbrev}</td>" in roster
+            assert f'<td data-col="appointment">{person.appointment}</td>\n              <td data-col="abbrev">{person.abbrev}</td>' in roster
         options = roster.split('id="appointment"')[1].split("</select>")[0]
         assert re.findall(r"<option>([^<]*)", options) == ["All", *(a for a, _ in appointments)]
         assert "removes no one" in roster  # an upload appends
@@ -190,7 +193,7 @@ def test_the_staff_roster_shows_no_access() -> None:
     assert page.status_code == 200
     assert "<h1>Staff roster</h1>" in page.text
     assert "· 15 people, 14 linked" in page.text
-    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
+    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
     assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Oversight", "Sign-in"]
     assert "Not yet signed in</span>" in page.text
     assert "Support Logs" not in page.text and "Team Viewer" not in page.text
@@ -206,7 +209,7 @@ def test_the_ra_roster_holds_people_and_appointments_only() -> None:
     page = TestClient(ops_app()).get("/rosters/ras")
     assert page.status_code == 200
     assert "· 30 RAs, 29 linked" in page.text
-    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
+    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
     assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in"]
 
 
@@ -333,7 +336,7 @@ def test_each_setup_step_is_inactive_until_its_prerequisite_exists() -> None:
         assert "Not open yet" not in opened and "yet. Add" in opened
     slots = client.get("/rosters/assignments?stage=slots").text
     assert "The Staff and RA cells open once both rosters have people." in slots
-    assert 'aria-label="Cypress A 04-05-06: Staff" value=""' in slots
+    assert '<span class="token">' not in slots.split('aria-label="Cypress A 04-05-06: Staff"')[1].split("</div>")[0]
     assert "Not open yet" not in client.get("/rosters/assignments").text
 
 
@@ -385,7 +388,7 @@ def test_assignments_show_one_term_at_a_time() -> None:
     assert '<option value="AY2026-2027.1" selected>AY2026-2027, Term 1 · Sem 1 + Winter break (Current)</option>' in page
     assert page.split('id="term"')[1].split("</select>")[0].count("<option value=") == len(sample_data.TERMS)
     assert '<button type="submit" class="btn btn-secondary">Show term</button>' in page  # live: navigation
-    assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page
+    assert '<span class="token">Chloe Lim<button' in page.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
     assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in page
     term_select = page.split('<select id="term"')[1].split(">")[0]
     assert "disabled" not in term_select  # live: navigation
@@ -395,7 +398,7 @@ def test_assignments_show_one_term_at_a_time() -> None:
     assert "No assignments yet for AY2026-2027, Term 2." in upcoming
     assert "Copy AY2026-2027, Term 1's to edit" in upcoming
     assert ">Copy from AY2026-2027, Term 1</button>" in upcoming
-    assert 'aria-label="Cypress A 04-05-06: RA" value=""' in upcoming
+    assert '<span class="token">' not in upcoming.split('aria-label="Cypress A 04-05-06: RA"')[1].split("</div>")[0]
     assert "covers all but" not in upcoming
     past = client.get("/rosters/assignments?term=AY2025-2026.3").text
     assert "is past</strong> and read-only. No assignments were recorded for it." in past
@@ -490,9 +493,8 @@ def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None
     client = TestClient(ops_app())
     page = client.get("/rosters/assignments").text
     table = page.split('id="slots-h"')[1]
-    assert table.count('<span class="visually-hidden">In every slot: </span>') == len(sample_data.SLOTS)
-    assert '<span class="pill-derived">Sam Lee</span><span class="pill-derived">Rachel Yeo</span>' in table
-    assert "In every slot: </span>" not in client.get("/rosters/assignments?stage=slots").text
+    # The Every slot card names them; the cells do not repeat them (2026-10-29).
+    assert "Sam Lee" not in table.split("</table>")[0]
     roster = client.get("/rosters/staff").text
     # Named by the levels the slots make up (ruled 2026-10-29): the Unit,
     # a Wing, a Precinct, else the slots themselves.
@@ -512,3 +514,33 @@ def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None
     assert '<span class="chip chip-mute">None</span>' in roster
     assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in roster and '<span class="pill-derived">Cypress</span>' in roster
     assert roster.count('<span class="chip chip-mute">None</span>') == 1  # Hui Min Goh alone
+
+
+def test_the_rosters_have_column_chips_and_sortable_headers() -> None:
+    """Ruled 2026-10-29: each roster takes RRW's column chips, every column
+    but Name, and a sort button on every header."""
+    client = TestClient(ops_app())
+    for path, table, cols in (
+        ("/rosters/staff", "staff-table", ["email", "appointment", "abbrev", "dates", "oversight", "signin"]),
+        ("/rosters/ras", "ra-table", ["email", "appointment", "abbrev", "dates", "signin"]),
+    ):
+        page = client.get(path).text
+        chips = page.split(f'data-col-toggles-for="{table}"')[1].split("</p>")[0]
+        assert re.findall(r'data-col-toggle="(\w+)" aria-pressed="true"', chips) == cols  # Name has none
+        head = page.split(f'id="{table}"')[1].split("</thead>")[0]
+        assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["name", *cols]
+        assert head.count('class="sort-btn" aria-label="Sort by ') == len(cols) + 1
+        row = page.split("<tr data-row>")[1].split("</tr>")[0]
+        assert re.findall(r'data-col="(\w+)"', row) == ["name", *cols]  # each cell answers to its chip
+        assert f'data-col-toggles-for="{table}"' not in client.get(f"{path}?stage=slots").text  # no rows, no chips
+
+
+def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
+    """Ruled 2026-10-29: the slots table takes sorting on every header,
+    and a column chip for Notes alone."""
+    page = TestClient(ops_app()).get("/rosters/assignments").text
+    chips = page.split('data-col-toggles-for="slots-table"')[1].split("</p>")[0]
+    assert re.findall(r'data-col-toggle="(\w+)"', chips) == ["notes"]
+    head = page.split('id="slots-table"')[1].split("</thead>")[0]
+    assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["wing", "precinct", "neighborhood", "notes", "staff", "ra"]
+    assert '<td class="cell" data-col="ra" data-sort-value="Chloe Lim">' in page

@@ -169,7 +169,39 @@
       .chips { display: flex; flex-wrap: wrap; gap: 4px; }
       /* A value another table owns, read-only here; plain text is this table's own. */
       .pills { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-      td.cell .pills { display: flex; margin-top: 4px; }  /* under the cell's input, not beside it */
+      /* A box of people: a pill per matched person, its remove button, then
+         the typeahead for the next (author, 2026-10-29). */
+      .tokens {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 36px; padding: 3px 6px;
+        border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card);
+      }
+      .token {
+        display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 8px; border-radius: 9999px;
+        background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-size: 13px; font-weight: 600; white-space: nowrap;
+      }
+      .token-x { border: 0; background: transparent; color: inherit; font: inherit; padding: 0 4px; min-width: 20px; cursor: pointer; }
+      .token-x:disabled { cursor: not-allowed; }
+      .token-input { flex: 1 1 80px; min-width: 80px; border: 0; background: transparent; color: var(--text-body); font: inherit; font-size: 14px; padding: 4px 2px; }
+      /* A table's column chips, after RRW's roster pages: a filled chip is
+         a shown column, a plain one hidden; Name has none (author,
+         2026-10-29). */
+      .col-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 13px; color: var(--text-subtle); }
+      .col-chip {
+        min-height: 28px; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--accent);
+        background: transparent; color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
+      }
+      .col-chip[aria-pressed="true"] { background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-weight: 600; }
+      /* Each header sorts by its button: ascending, descending, then back
+         to the table's own order. */
+      th.sortable { white-space: nowrap; }
+      .sort-btn {
+        display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 0 4px;
+        min-width: 22px; min-height: 22px; border: 1px solid transparent; border-radius: 4px; background: transparent;
+        color: var(--text-subtle); font: inherit; cursor: pointer;
+      }
+      .sort-btn:hover { border-color: var(--border-default); }
+      th[aria-sort="ascending"] .sort-btn, th[aria-sort="descending"] .sort-btn { color: var(--text-body); font-weight: 700; }
+      .sort-btn:focus-visible, .col-chip:focus-visible, .token-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
       .pill-derived {
         display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 9999px; white-space: nowrap;
         font-size: 13px; color: var(--text-body); background: var(--surface-muted); border: 1px solid var(--border-subtle);
@@ -186,7 +218,8 @@
       th.sel, td.sel { width: 1%; padding-right: 0; }
       td.sel input, th.sel input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
       tr.selected > td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
-      tr.selected > td:last-child { box-shadow: inset -4px 0 0 var(--accent); }
+      /* The right rail sits on the last shown cell, a hidden column's aside. */
+      tr.selected > td:last-child:not([hidden]), tr.selected > td.edge { box-shadow: inset -4px 0 0 var(--accent); }
       tr.expander > td { box-shadow: inset 4px 0 0 var(--accent), inset -4px 0 0 var(--accent); background: var(--accent-tint); padding: 10px 16px; }
       .expander-body { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
       .expander-body .btnrow { margin-left: auto; }
@@ -308,6 +341,11 @@
       table.slots td.group { font-weight: 600; white-space: nowrap; }
       table.slots tr.wing-start > td { border-top: 2px solid var(--border-default); }
       table.slots td.notes { font-size: 12px; color: var(--text-subtle); min-width: 160px; }
+      /* Sorted, the slots lose their grouping: every row names its levels,
+         and the heavier rule between top levels goes. */
+      table.slots.sorted td.group { font-weight: 400; }
+      table.slots.sorted td.group .visually-hidden { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+      table.slots.sorted tr.wing-start > td { border-top: 1px solid var(--border-subtle); }
       table.slots td.cell .input { min-height: 30px; font-size: 14px; min-width: 180px; }
       .input {
         font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
@@ -425,6 +463,97 @@
           });
         });
         sync();
+      })();
+    </script>
+    <script>
+      // Column chips and header sorting for any table that opts in
+      // (author, 2026-10-29, after RRW's roster pages): a chip in a row
+      // `[data-col-toggles-for=<table id>]` with `data-col-toggle=<key>`
+      // shows or hides the table's cells marked `data-col=<key>`, kept per
+      // browser under the table's `data-col-store`; a `.sort-btn` in a
+      // `th.sortable` sorts the rows marked `data-row` by that column's
+      // `data-sort-value` (else its text), then back to the page's order.
+      (function () {
+        function cells(table, key) { return table.querySelectorAll('[data-col="' + key + '"]'); }
+        function edges(table) {
+          Array.prototype.forEach.call(table.querySelectorAll("tr"), function (tr) {
+            var shown = Array.prototype.filter.call(tr.cells, function (c) { c.classList.remove("edge"); return !c.hidden; });
+            if (shown.length) shown[shown.length - 1].classList.add("edge");
+          });
+        }
+        function show(table, chip, on) {
+          var key = chip.getAttribute("data-col-toggle");
+          chip.setAttribute("aria-pressed", on ? "true" : "false");
+          Array.prototype.forEach.call(cells(table, key), function (c) { c.hidden = !on; });
+          var th = table.querySelector('th[data-col="' + key + '"]');
+          if (!on && th && th.hasAttribute("aria-sort")) sortBy(th, "none");  // no sort left on a hidden column
+          edges(table);
+        }
+        function tableOf(chip) {
+          var row = chip.closest("[data-col-toggles-for]");
+          return row ? document.getElementById(row.getAttribute("data-col-toggles-for")) : null;
+        }
+        function save(table) {
+          var state = {};
+          var row = document.querySelector('[data-col-toggles-for="' + table.id + '"]');
+          Array.prototype.forEach.call(row.querySelectorAll("[data-col-toggle]"), function (c) {
+            state[c.getAttribute("data-col-toggle")] = c.getAttribute("aria-pressed") === "true";
+          });
+          try { localStorage.setItem(table.getAttribute("data-col-store"), JSON.stringify(state)); } catch (e) { /* ignore */ }
+        }
+        document.addEventListener("click", function (event) {
+          if (!event.target || !event.target.closest) return;
+          var chip = event.target.closest("[data-col-toggle]");
+          if (chip) {
+            var table = tableOf(chip);
+            if (!table) return;
+            show(table, chip, chip.getAttribute("aria-pressed") !== "true");
+            save(table);
+            return;
+          }
+          var btn = event.target.closest(".sort-btn");
+          if (btn) sortBy(btn.closest("th"));
+        });
+        Array.prototype.forEach.call(document.querySelectorAll("[data-col-toggles-for]"), function (row) {
+          var table = document.getElementById(row.getAttribute("data-col-toggles-for"));
+          if (!table) return;
+          var stored = null;
+          try { stored = JSON.parse(localStorage.getItem(table.getAttribute("data-col-store")) || "null"); } catch (e) { stored = null; }
+          Array.prototype.forEach.call(row.querySelectorAll("[data-col-toggle]"), function (chip) {
+            var key = chip.getAttribute("data-col-toggle");
+            show(table, chip, !(stored && stored[key] === false));
+          });
+        });
+        Array.prototype.forEach.call(document.querySelectorAll("tr[data-row]"), function (tr, i) { tr.setAttribute("data-order", i); });
+        function value(tr, key) {
+          var cell = tr.querySelector('[data-col="' + key + '"]');
+          if (!cell) return "";
+          return cell.hasAttribute("data-sort-value") ? cell.getAttribute("data-sort-value") : cell.textContent.trim();
+        }
+        function sortBy(th, to) {
+          var table = th.closest("table");
+          var key = th.getAttribute("data-col");
+          var next = to || { none: "ascending", ascending: "descending", descending: "none" }[th.getAttribute("aria-sort") || "none"];
+          Array.prototype.forEach.call(table.querySelectorAll("th.sortable"), function (h) {
+            h.removeAttribute("aria-sort");  // on the sorted header alone
+            h.querySelector(".sort-btn span").textContent = "\u2195";
+          });
+          if (next !== "none") th.setAttribute("aria-sort", next);
+          table.classList.toggle("sorted", next !== "none");
+          th.querySelector(".sort-btn span").textContent = { none: "\u2195", ascending: "\u2191", descending: "\u2193" }[next];
+          var body = table.tBodies[0];
+          var rows = Array.prototype.slice.call(body.querySelectorAll("tr[data-row]"));
+          rows.sort(function (a, b) {
+            if (next === "none") return a.getAttribute("data-order") - b.getAttribute("data-order");
+            var d = value(a, key).localeCompare(value(b, key), undefined, { numeric: true, sensitivity: "base" });
+            return next === "ascending" ? d : -d;
+          });
+          var expander = body.querySelector("tr.expander");
+          rows.forEach(function (tr) { body.appendChild(tr); });
+          // The expander stays under the row ticked last, wherever it sorts to.
+          var anchor = body.querySelector("tr[data-last-ticked]");
+          if (expander && anchor) anchor.insertAdjacentElement("afterend", expander);
+        }
       })();
     </script>
   </body>

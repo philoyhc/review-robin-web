@@ -136,12 +136,18 @@ model (author, 2026-10-27):
 - **A value has one home.** Where it is set, it is plain text and edited
   there; where another page repeats it, it is a pill (`.pill-derived`),
   read-only (author, 2026-10-27): a person's slots, on their detail page,
-  come from the Assignments page's cells; the staff in every slot show as
-  pills under each slot's Staff cell, and the Staff roster's Oversight
+  come from the Assignments page's cells, and the Staff roster's Oversight
   column is read from Assignments for the current term: the Unit for those
   in every slot, else their slots named by the highest levels they make
   up (the Unit, a Wing, a Precinct) and any left over by name, or a None chip
   (author, 2026-10-29). Sign-in stays a status chip (§3). The Staff roster shows no access: sys admin is listed on the Sys admin page, and other applications' grants stay in those applications (author, 2026-10-28).
+- **Column chips and sorting**, after RRW's roster pages (author,
+  2026-10-29): a chip row under a roster's heading shows or hides each
+  column but Name, a filled chip a shown column, remembered per browser;
+  each header's button sorts ascending, descending, then back to the
+  page's order. Assignments' slots table sorts the same way, with a chip
+  for Notes alone; sorted, each row names its levels and the grouping
+  rules go.
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).
@@ -149,7 +155,11 @@ model (author, 2026-10-27):
   with Retire in place of End appointment. One row per slot, under its
   higher levels, whose names show on a group's first row only; a new top
   level opens under a heavier rule. Notes are small subtle text; the Staff
-  and RA cells are typeahead boxes (organization by units, 2026-10-27).
+  and RA cells are typeahead boxes (organization by units, 2026-10-27),
+  each person matched to a roster a token with its remove button, then
+  the box to add the next (author, 2026-10-29); the Every slot card's
+  names take the same box, and staff in every slot are not repeated in
+  the cells.
 
 ## 7. Setup order
 

@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import filter_bar, gate, select_all, select_row, csv_actions, selection_script, stage_switch with context %}
+{% from "residentialops/rosters/_filters.html" import filter_bar, gate, select_all, select_row, csv_actions, selection_script, stage_switch, column_chips, sort_th with context %}
 {% block title %}RA roster{% endblock %}
 {% block content %}
   <div class="ptitle">
@@ -18,23 +18,24 @@
     <div class="card-head">
       <h2 id="ra-h">RA roster {% if rosters_filled %}<span class="count">· {{ count[0] }} RAs, {{ count[1] }} linked</span>{% endif %}</h2>
       <p class="sub">A row is a student and one student appointment, with its dates.</p>
+      {% if rosters_filled %}{{ column_chips("ra-table", [("email", "Email"), ("appointment", "Appointment"), ("abbrev", "Abbrev"), ("dates", "From – to"), ("signin", "Sign-in")]) }}{% endif %}
     </div>
     <div class="table-wrap">
-      <table class="roster">
+      <table class="roster" id="ra-table" data-col-store="residentialops-ra-table-columns">
         <thead>
-          <tr>{{ select_all('RAs') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
+          <tr>{{ select_all('RAs') }}{{ sort_th("name", "Name") }}{{ sort_th("email", "Email") }}{{ sort_th("appointment", "Appointment") }}{{ sort_th("abbrev", "Abbrev") }}{{ sort_th("dates", "From – to") }}{{ sort_th("signin", "Sign-in") }}</tr>
         </thead>
         <tbody>
           {% if not rosters_filled %}<tr><td colspan="7" class="subtle">No RAs yet. Add an RA, or upload the RA roster CSV below.</td></tr>{% endif %}
           {% for ra in (sample.RAS if rosters_filled else ()) %}
-            <tr>
+            <tr data-row>
               {{ select_row(ra.name) }}
-              <td class="strong nowrap"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(ra.email)) }}">{{ ra.name }}</a></td>
-              <td class="subtle">{{ ra.email }}</td>
-              <td>{{ ra.appointment }}</td>
-              <td>{{ ra.abbrev }}</td>
-              <td class="nowrap">{{ ra.dates }}</td>
-              <td>{% if ra.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
+              <td class="strong nowrap" data-col="name"><a href="{{ url('/rosters/people/' ~ sample.person_id_of(ra.email)) }}">{{ ra.name }}</a></td>
+              <td class="subtle" data-col="email">{{ ra.email }}</td>
+              <td data-col="appointment">{{ ra.appointment }}</td>
+              <td data-col="abbrev">{{ ra.abbrev }}</td>
+              <td class="nowrap" data-col="dates">{{ ra.dates }}</td>
+              <td data-col="signin">{% if ra.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>
