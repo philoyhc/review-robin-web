@@ -806,19 +806,19 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     return tuple(steps)
 
 
-# The RA pages (`/ra-leave/`) render for one sample viewer until identity
-# is wired (segment 1C plan, "Viewing as").
+# The RA pages (`/ra-leave/`) render for a sample viewer until identity is
+# wired (segment 1C plan, "Viewing as"): Chloe Lim by default.
 VIEWER = "Chloe Lim"
 # The RA pages' sample viewers (`?as=`; audit, 2026-10-29), each reaching
 # states Chloe Lim's applications do not.
 RA_VIEWERS = (
     ("Chloe Lim", "cover asked of her, a draft, an email not sent"),
     ("Hana Ito", "her cover declined: name new cover"),
-    ("Ethan Wong", "awaiting cover confirmation; a withdrawn application"),
+    ("Ethan Wong", "awaiting cover confirmation; a withdrawn application; a draft"),
     ("Gwen Ho", "an appeal with the Master"),
     ("Lucas Teo", "extra leave granted"),
     ("Faris Iskandar", "a rejected application"),
-    ("Kai Ng", "approved leave cancelled"),
+    ("Kai Ng", "approved leave cancelled; invited to appeal (preview appeals by invitation)"),
 )
 
 

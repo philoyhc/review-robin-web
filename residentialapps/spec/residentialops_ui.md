@@ -270,9 +270,9 @@ Until a screen is wired:
   the page (`?as=`; the RA and staff pages' tabs and links carry it),
   the RA pages' viewers each reaching states the others do not (audit,
   2026-10-29);
-- RA Leave previews each appeal mode (open, by invitation, off) in the
-  browser, from a sample switch on Leave policy, a cookie every RA Leave
-  page reads; while one is previewed a **Previewing appeals** chip by
+- RA Leave previews each appeal mode (`Open`, `By invitation`, `Off`) in
+  the browser, from a sample switch on Leave policy, a cookie each request
+  reads; while one is previewed a **Previewing appeals** chip by
   each RA Leave title says so and links back (audit, 2026-10-29);
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.

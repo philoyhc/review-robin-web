@@ -48,7 +48,9 @@ def choices(viewer: str) -> list[dict[str, str]]:
 def areas_for(viewer: str) -> tuple[dict[str, str | None], ...]:
     """The switcher for a sample viewer (§2): the landing, then what they
     reach, carrying a staff viewer's `?as=`."""
-    landing = "/" if viewer == sample_data.LANDING_VIEWERS[0][0] else f"/?as={quote(viewer)}"
+    # The landing knows its own viewers; anyone else goes to its default.
+    known = viewer in dict(sample_data.LANDING_VIEWERS) and viewer != sample_data.LANDING_VIEWERS[0][0]
+    landing = f"/?as={quote(viewer)}" if known else "/"
     return (
         {"label": "Home", "path": landing},
         *({"label": c["label"], "path": c["path"] or None} for c in choices(viewer)),

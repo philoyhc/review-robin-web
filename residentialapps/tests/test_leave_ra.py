@@ -263,4 +263,7 @@ def test_each_appeal_mode_can_be_previewed() -> None:
     assert 'aria-current="true">By invitation</a>' in policy and ">Open (the sample policy)</a>" in policy
     c.get("/ra-leave/admin/policy/preview-appeals?mode=Open")  # the policy's own mode clears it
     assert "Previewing appeals" not in c.get("/ra-leave/").text
-    assert sample_leave.APPEALS_PREVIEW.get() is None  # nothing leaks out of a request
+    # A preview is the browser's: another client sees the policy itself.
+    c.get("/ra-leave/admin/policy/preview-appeals?mode=Off")
+    assert "Previewing appeals" not in TestClient(ops_app()).get("/ra-leave/").text
+    assert 'href="/">Home' in c.get("/ra-leave/?as=Hana%20Ito").text  # the landing does not know her
