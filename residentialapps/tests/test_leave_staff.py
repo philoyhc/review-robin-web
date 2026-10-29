@@ -376,5 +376,25 @@ def test_the_audit_s_appeal_screens() -> None:
     assert "<dt>Blackout</dt><dd>Examinations, 15 Nov – 28 Nov: appeal only</dd>" in sam
     refused = sample_leave.by_id("L-0120")
     assert refused.appeal and refused.stage == "Rejected"
-    assert ("18 Sep", "Rejected by Sam Lee", "The Precinct is short that week; apply within next term's days.") in sample_leave.timeline(refused)
+    assert refused.days == 7 and sample_leave.timeline(refused)[-1] == (
+        "11 Sep", "Rejected by Sam Lee", "The Precinct is short that week; take your five days, or apply in a quieter week.")
+    assert c.get(STAFF + "decide/L-0105" + "?as=Daniel%20Koh").status_code == 404  # outside his scope
     assert "From entitlement" not in c.get(STAFF + "decide/L-0120" + SAM).text  # refused: nothing to split
+
+
+def test_an_appeal_charges_the_ra_s_own_days_first(monkeypatch) -> None:
+    """Spec §7.5: an appeal's days are charged to the RA's own entitlement
+    as far as it goes; only the rest is extra leave, and the balance, the
+    extra-leave totals and Decide agree (audit, 2026-10-29)."""
+    row = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Isaac Goh" and r["type"] == "Personal leave")
+    have = row["available"]
+    assert have > 0
+    start = sample_leave.date(2026, 12, 1)
+    appeal = sample_leave.Application("L-0199", "Isaac Goh", "Personal leave", start,
+                                      sample_leave.date.fromordinal(start.toordinal() + have + 1),
+                                      "Kai Ng", "Awaiting", "Appeal to the Master", sample_leave.TODAY)
+    monkeypatch.setattr(sample_leave, "APPLICATIONS", sample_leave.APPLICATIONS + (appeal,))
+    assert sample_leave.appeal_split(appeal) == {"charged": have, "extra": 2}
+    after = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Isaac Goh" and r["type"] == "Personal leave")
+    assert after["available"] == 0 and after["pending"] == row["pending"] + have  # its own days, pending
+    assert sample_leave.my_extra("Isaac Goh")["pending"] == 2  # only the rest is extra
