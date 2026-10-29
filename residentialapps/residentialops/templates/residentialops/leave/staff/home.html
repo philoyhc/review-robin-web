@@ -7,7 +7,7 @@
   {% set mine = leave.queue(me) %}
   <section class="tiles" aria-label="At a glance">
     <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}"><span class="tile-n">{{ mine | length }}</span><span class="tile-l">Awaiting my decision</span></a>
-    <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}"><span class="tile-n">{{ leave.waiting_on_cover_count(me) }}</span><span class="tile-l">Of those, waiting on cover</span></a>
+    <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query ~ ('&' if as_query else '?') }}cover=waiting"><span class="tile-n">{{ leave.waiting_on_cover_count(me) }}</span><span class="tile-l">Of those, waiting on cover</span></a>
     <a class="tile" href="{{ url('/ra-leave/staff/decided') }}{{ as_query }}"><span class="tile-n">{{ leave.decided(me) | length }}</span><span class="tile-l">Decided</span></a>
   </section>
   <div class="split gap-above">
@@ -17,6 +17,11 @@
         <p class="sub">Oldest first.</p>
         {% if mine %}<ul class="items">{% for a, role in mine[:3] %}{{ staff_item(a, leave, as_query, role) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
         {% if mine | length > 3 %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}">All {{ mine | length }}</a>{% endif %}
+      </section>
+      <section class="card card-pad" aria-labelledby="recent-h">
+        {% set recent = leave.decided(me) %}
+        <h2 id="recent-h">Recent decisions</h2>
+        {% if recent %}<ul class="items">{% for a, role, outcome in recent[:3] %}<li><div class="item-head"><a class="strong" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a><span class="chip {{ 'chip-ok' if outcome == 'Approved' else 'chip-mute' }}">{{ role }}: {{ outcome }}</span></div><div class="subtle">{{ a.dates }} · {{ a.leave_type }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
       </section>
     </div>
     <div class="side">

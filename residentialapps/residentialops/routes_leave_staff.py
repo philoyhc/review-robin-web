@@ -41,7 +41,8 @@ def home(request: Request) -> Response:
 
 @router.get("/ra-leave/staff/decide", name="residentialops_leave_staff_queue")
 def awaiting(request: Request) -> Response:
-    return _page(request, "queue.html")
+    # Staff home's "waiting on cover" tile opens the queue filtered.
+    return _page(request, "queue.html", cover_only=request.query_params.get("cover") == "waiting")
 
 
 @router.get("/ra-leave/staff/decide/{application_id}", name="residentialops_leave_staff_decide")
@@ -50,7 +51,7 @@ def decide(request: Request, application_id: str) -> Response:
     # actionable when it awaits their decision, read-only otherwise.
     viewer = sample_leave.staff_viewer(request.query_params.get("as"))
     found = sample_leave.by_id(application_id)
-    if found is None or found.precinct not in sample_leave.scope(viewer):
+    if found is None or not sample_leave.can_open(viewer, found):
         raise HTTPException(status_code=404)
     role = next((r for a, r in sample_leave.queue(viewer) if a.id == found.id), None)
     return _page(request, "decide.html", app=found, role=role, steps=sample_leave.timeline(found))

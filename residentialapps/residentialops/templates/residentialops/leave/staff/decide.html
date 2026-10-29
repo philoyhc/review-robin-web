@@ -12,7 +12,7 @@
         <section class="card card-pad" aria-labelledby="act-h">
           <h2 id="act-h">{{ "Decide the appeal" if role == "Appeal" else role }}</h2>
           {% if cover_wait and role != "Appeal" %}
-            <p class="sub"><span class="chip chip-warn">Waiting on cover</span> {{ app.cover }} has {{ "declined" if app.cover_status == "Declined" else "not yet confirmed" }}; this can be approved once cover is confirmed, or rejected now.</p>
+            <p class="sub"><span class="chip chip-warn">Waiting on cover</span> {% if app.cover_status == "Declined" %}{{ app.cover }} has declined; the RA must name new cover before this can be approved, or you may reject it now.{% else %}{{ app.cover }} has not yet confirmed; this can be approved once they do, or rejected now.{% endif %}</p>
           {% elif cover_wait %}
             <p class="sub"><span class="chip chip-warn">Cover not confirmed</span> An appeal needs confirmed cover (spec §7.4). You may override that, on the record.</p>
             <label class="check gap-below"><input type="checkbox" disabled> Decide without the cover's confirmation</label>
@@ -50,9 +50,15 @@
           <dt>Entitlement</dt><dd>{{ bal.entitlement }}{% if bal.adjustment %} {{ "%+d" | format(bal.adjustment) }}{% endif %}</dd>
           <dt>Used</dt><dd>{{ bal.used }}</dd>
           <dt>Pending</dt><dd>{{ bal.pending }}</dd>
-          {% if app.appeal %}<dt>Beyond entitlement</dt><dd>{{ [app.days - [bal.available, 0] | max, 0] | max }} day{{ "s" if app.days != 1 }}</dd>{% endif %}
+          {% if app.appeal %}{% set beyond = [app.days - [bal.available, 0] | max, 0] | max %}<dt>Beyond entitlement</dt><dd>{{ beyond }} day{{ "s" if beyond != 1 }}</dd>{% endif %}
         </dl>
         {% if app.appeal %}<p class="subtle small gap-above-sm">Extra leave granted is kept apart from the entitlement (spec §7.5).</p>{% endif %}
+      </section>
+      <section class="card card-pad" aria-labelledby="own-h">
+        <h2 id="own-h">{{ app.ra }}'s other leave</h2>
+        {% set own = leave.other_leave(app) %}
+        {% if own %}<ul class="items">{% for b in own %}<li><div class="item-head"><span class="strong nowrap">{{ b.dates }}</span>{{ stage_chip(b.stage) }}</div><div class="subtle">{{ b.leave_type }}{% if b.appeal %} · extra leave{% endif %} · {{ b.days }} day{{ "s" if b.days != 1 }}</div></li>{% endfor %}</ul>
+        {% else %}<p class="sub">None this year.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="ctx-h">
         <h2 id="ctx-h">{{ app.precinct }} on these days</h2>

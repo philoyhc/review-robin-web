@@ -37,10 +37,10 @@
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
       {% for name, role in leave.STAFF_VIEWERS %}
-        <a class="chip {{ 'chip-info' if name == me else 'chip-mute' }}" href="{{ url(here) }}{{ '' if loop.first else '?as=' ~ (name | urlencode) }}"{% if name == me %} aria-current="true"{% endif %} title="{{ role }}">{{ name }}</a>
+        <a class="chip {{ 'chip-info' if name == me else 'chip-mute' }}" href="{{ url(here) }}{{ '' if loop.first else '?as=' ~ (name | urlencode) }}"{% if name == me %} aria-current="true"{% endif %}>{{ name }}<span class="visually-hidden">, {{ role }}</span></a>
       {% endfor %}
     </span>
-    <span class="subtle small">{{ (leave.STAFF_VIEWERS | selectattr(0, "equalto", me) | first)[1] }}</span>
+    <ul class="plain subtle small">{% for name, role in leave.STAFF_VIEWERS %}<li>{{ name }}: {{ role }}</li>{% endfor %}</ul>
   </nav>
 {%- endmacro %}
 

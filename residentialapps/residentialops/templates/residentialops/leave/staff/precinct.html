@@ -11,9 +11,9 @@
   {% set pending = apps | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
   {% set clashes = leave.clashes() | selectattr(0, "in", precincts) | list %}
   <section class="tiles" aria-label="This week">
-    <div class="tile"><span class="tile-n">{{ away | length }}</span><span class="tile-l">Away this week</span></div>
-    <div class="tile"><span class="tile-n">{{ pending | length }}</span><span class="tile-l">Pending</span></div>
-    <div class="tile"><span class="tile-n">{{ clashes | length }}</span><span class="tile-l">Clashes</span></div>
+    <a class="tile" href="#away-h"><span class="tile-n">{{ away | length }}</span><span class="tile-l">Away this week</span></a>
+    <a class="tile" href="#upcoming-h"><span class="tile-n">{{ pending | length }}</span><span class="tile-l">Pending</span></a>
+    <a class="tile" href="#clash-h"><span class="tile-n">{{ clashes | length }}</span><span class="tile-l">Clashes</span></a>
   </section>
   <div class="stack gap-above">
     <section class="card" aria-labelledby="away-h">
@@ -28,6 +28,13 @@
       <div class="table-wrap"><table>
         <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th><th scope="col">Stage</th></tr></thead>
         <tbody>{% for a in apps | sort(attribute="start") if a.start > leave.TODAY and (a.stage == "Approved" or a.stage in leave.OPEN_STAGES) %}<tr><td class="strong nowrap">{{ a.ra }}</td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td class="nowrap">{{ a.cover }} {{ cover_chip(a.cover_status) }}</td><td>{{ stage_chip(a.stage) }}</td></tr>{% else %}<tr><td colspan="5" class="subtle">None.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    <section class="card" aria-labelledby="team-h">
+      <div class="card-head"><h2 id="team-h">By Precinct</h2><p class="sub">RAs, those away this week, and applications pending.</p></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col" class="num">Away</th><th scope="col" class="num">Pending</th></tr></thead>
+        <tbody>{% for row in leave.by_precinct(me) %}<tr><td class="strong nowrap">{{ row.precinct }}</td><td class="num">{{ row.ras }}</td><td class="num">{{ row.away }}</td><td class="num">{{ row.pending }}</td></tr>{% endfor %}</tbody>
       </table></div>
     </section>
     <section class="card card-pad" aria-labelledby="clash-h">

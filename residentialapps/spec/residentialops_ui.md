@@ -216,7 +216,8 @@ Until a screen is wired:
   unavailable state can be seen (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - a page drawn for one person (RA Leave's RA pages) says so in a
-  **Viewing as** chip beside the Sample data chip;
+  **Viewing as** chip beside the Sample data chip, and RA Leave's staff
+  pages switch that person on the page (`?as=`, carried by the tabs);
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.
 

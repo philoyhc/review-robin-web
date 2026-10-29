@@ -258,7 +258,9 @@ def pending_by_stage() -> tuple[tuple[str, int], ...]:
 def cover_unconfirmed() -> tuple[Application, ...]:
     """Open applications whose cover has not confirmed (spec §25,
     outstanding cover confirmations)."""
-    return tuple(a for a in APPLICATIONS if a.stage in OPEN_STAGES and a.cover_status != "Confirmed")
+    return tuple(
+        a for a in APPLICATIONS if a.stage in OPEN_STAGES and a.cover_status != "Confirmed" and confirmation_needed(a)
+    )
 
 
 def away_this_week() -> tuple[Application, ...]:
@@ -592,6 +594,8 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
             found.append((a, "First approval", "Approved"))
         if a.stage == "Rejected" and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Rejected"))
+        if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider() == viewer:
+            found.append((a, "Final approval", "Rejected"))
         if a.stage == "Approved" and final_decider() == viewer:
             found.append((a, "Final approval", "Approved"))
     return tuple(sorted(found, key=lambda t: t[0].submitted, reverse=True))
@@ -610,6 +614,36 @@ def scope(viewer: str) -> tuple[str, ...]:
     if wing:
         return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS if s.wing in wing))
     return every
+
+
+def can_open(viewer: str, application: Application) -> bool:
+    """Decide opens an application in the viewer's Precinct-leave scope, or
+    one that is (or was) theirs to decide, wherever it is: a delegate's or a
+    named final approver's (spec §13-§15)."""
+    return (
+        application.precinct in scope(viewer)
+        or any(a.id == application.id for a, _ in queue(viewer))
+        or any(a.id == application.id for a, _, _ in decided(viewer))
+    )
+
+
+def other_leave(application: Application) -> tuple[Application, ...]:
+    """The applicant's other applications, for the decider (spec §15)."""
+    return tuple(a for a in APPLICATIONS if a.ra == application.ra and a.id != application.id)
+
+
+def by_precinct(viewer: str) -> tuple[dict, ...]:
+    """Numbers away and pending per Precinct in the viewer's scope (§22)."""
+    away = away_this_week()
+    return tuple(
+        {
+            "precinct": p,
+            "ras": sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p),
+            "away": sum(1 for a in away if a.precinct == p),
+            "pending": sum(1 for a in APPLICATIONS if a.precinct == p and a.stage in OPEN_STAGES),
+        }
+        for p in scope(viewer)
+    )
 
 
 def in_scope(viewer: str) -> tuple[Application, ...]:

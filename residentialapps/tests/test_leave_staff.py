@@ -32,7 +32,7 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
             page = c.get(STAFF + path + query)
             assert page.status_code == 200, (path, query)
             assert "Sample data" in page.text and f"Viewing as {name}" in page.text, (path, query)
-            assert 'aria-current="true" title' in page.text
+            assert 'aria-current="true">' in page.text
     tabs = c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct")
@@ -50,12 +50,16 @@ def test_each_viewer_s_queue_is_the_decision_theirs_to_make() -> None:
     home = c.get(STAFF).text
     tiles = re.findall(r'<span class="tile-n">(\d+)</span><span class="tile-l">([^<]*)', home)
     assert tiles == [("3", "Awaiting my decision"), ("2", "Of those, waiting on cover"), ("1", "Decided")]
+    waiting = c.get(STAFF + "decide?cover=waiting").text
+    assert ids(waiting, "queue-h") == ["L-0109", "L-0114"]
+    assert 'href="/ra-leave/staff/decide?as=Sam%20Lee&amp;cover=waiting"' in c.get(STAFF + SAM).text
 
 
 def test_decide_shows_entitlement_cover_and_precinct_context() -> None:
     c = client()
     hana = c.get(STAFF + "decide/L-0109").text
-    assert ">Waiting on cover</span> Chloe Lim has declined" in hana and ">Approve</button>" in hana
+    assert ">Waiting on cover</span> Chloe Lim has declined; the RA must name new cover" in hana
+    assert ">Approve</button>" in hana
     assert "<dt>Available</dt><dd>0 days</dd>" in hana
     appeal = c.get(STAFF + "decide/L-0105" + SAM).text
     assert "Decide the appeal" in appeal and "<dt>Beyond entitlement</dt><dd>4 days</dd>" in appeal
@@ -85,3 +89,41 @@ def test_decided_lists_the_viewer_s_own_decisions() -> None:
     rachel = c.get(STAFF + "decided" + RACHEL).text
     assert len(ids(rachel, "dec-h")) == 6 and "Final approval: Approved" in rachel
     assert "None yet." in c.get(STAFF + "decided" + SAM).text
+
+
+def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
+    """Every row in a viewer's queue or Decided list opens Decide, under
+    each approval setting, a delegate's and a named approver's included."""
+    import itertools
+
+    c = client()
+    people = ("Daniel Koh", "Rachel Yeo", "Sam Lee", "Benjamin Chua", "Grace Ho", "Marcus Tan", "Mei Ling Tan")
+    settings = (
+        {}, {"first_types": ("RF", "RSLM")}, {"first": "none"},
+        {"final": "named", "final_names": ("Daniel Koh",)}, {"appeals": False},
+    )
+    for setting, day in itertools.product(settings, (None, sample_leave.date(2026, 12, 10))):
+        with monkeypatch.context() as m:
+            for key, value in setting.items():
+                m.setitem(sample_leave.POLICY, key, value)
+            if day:
+                m.setattr(sample_leave, "routes", lambda d=None, _r=sample_leave.routes: _r(day))
+            for person in people:
+                for a in [a for a, _ in sample_leave.queue(person)] + [a for a, _, _ in sample_leave.decided(person)]:
+                    assert sample_leave.can_open(person, a), (setting, day, person, a.id)
+    assert c.get(STAFF + "decide/L-0103?as=Benjamin%20Chua").status_code == 404  # not a staff viewer: defaults to Daniel
+    assert sample_leave.can_open("Benjamin Chua", sample_leave.by_id("L-0103"))  # standing in for Grace Ho
+
+
+def test_with_no_first_approval_rejections_belong_to_the_final_approver(monkeypatch) -> None:
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    assert ("L-0110", "Final approval", "Rejected") in [(a.id, r, o) for a, r, o in sample_leave.decided("Rachel Yeo")]
+
+
+def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None:
+    c = client()
+    appeal = c.get(STAFF + "decide/L-0105" + SAM).text.split('id="own-h"')[1].split("</section>")[0]
+    assert appeal.count("<li>") == 2 and "17 Aug – 19 Aug" in appeal
+    rows = re.findall(r'<td class="strong nowrap">([^<]*)</td><td class="num">(\d+)</td><td class="num">(\d+)</td><td class="num">(\d+)</td>',
+                      c.get(STAFF + "precinct" + SAM).text)
+    assert ("Willow A 13-25", "4", "2", "0") in rows and len(rows) == 9

@@ -74,7 +74,7 @@ Events has no spec yet, so its rows are provisional.
 | My history | `/ra-leave/history` | — | Own applications and leave (§19) · responsive |
 | **RA Leave, staff** | `/ra-leave/staff/` | — | — |
 | Staff home | `/ra-leave/staff/` | What awaits my decision; this week in my Precinct(s) (§24) · mobile-critical | — |
-| Awaiting my decision | `/ra-leave/staff/decide` | First approval, final approval (whoever the policy names), appeals (the Master, while appeals are on), oldest first (§16, §24) · **mobile-critical** | — |
+| Awaiting my decision | `/ra-leave/staff/decide` | First approval, final approval (whoever the policy names), appeals (the Master: while appeals are on, and any already made), oldest first (§16, §24) · **mobile-critical** | — |
 | Decide | `/ra-leave/staff/decide/{id}` | Entitlement, cover status, Precinct context; Approve or Reject with remarks in a few taps; read-only once decided (§13–§15) · **mobile-critical** | — |
 | Decided | `/ra-leave/staff/decided` | The approver's own past decisions (§24) · responsive | — |
 | Precinct leave | `/ra-leave/staff/precinct` | Who is away, cover, clashes, pending, scoped by Assignments for the current term: an RF their Precinct(s), an RSLM their Wing, the Master and the admin the whole Unit, staff in no slot the whole Unit, read-only (§22) · desktop-oriented, with a this-week summary that is mobile-critical | — |
