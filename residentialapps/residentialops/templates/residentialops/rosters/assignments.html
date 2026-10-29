@@ -103,7 +103,7 @@
             <tr><td colspan="7" class="subtle">No slots in {{ term.label }}: the slots stand from {{ sample.SLOTS_FROM.label }}.</td></tr>
           {% endif %}
           {% if not slots_open %}
-            <tr><td colspan="7" class="subtle">No slots yet. Name the levels, then add a slot or upload the Assignments CSV below.</td></tr>
+            <tr><td colspan="7" class="subtle">No slots yet. Name the levels, then Add new slot or upload the Assignments CSV below.</td></tr>
           {% endif %}
           {% set seen = namespace(wing="", precinct="") %}
           {% for slot in (sample.SLOTS if slots_open and has_slots else ()) %}

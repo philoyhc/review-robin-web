@@ -606,9 +606,11 @@ def test_a_filled_one_person_box_keeps_its_label_target() -> None:
 
 def test_add_new_slot_sits_under_the_slots_table() -> None:
     """Ruled 2026-10-29: the button moves to the table's bottom right."""
-    page = TestClient(ops_app()).get("/rosters/assignments").text
-    assert "Add slot<" not in page
-    table_end = page.index("</table>", page.index('id="slots-table"'))
-    button = page.index(">Add new slot</button>")
-    assert table_end < button < page.index("</section>", table_end)
-    assert '<div class="card-pad btnrow end">' in page
+    for stage in ("start", "slots", "done"):
+        page = TestClient(ops_app()).get("/rosters/assignments", params={"stage": stage}).text
+        head = page[page.index('id="slots-h"'):page.index('id="slots-table"')]
+        assert "btn-primary" not in head, stage
+        table_end = page.index("</table>", page.index('id="slots-table"'))
+        button = page.index(">Add new slot</button>")
+        assert table_end < button < page.index("</section>", table_end), stage
+        assert "btnrow end" in page[page.rindex("<div", 0, button):button], stage
