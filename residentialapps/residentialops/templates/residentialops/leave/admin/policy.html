@@ -23,6 +23,9 @@
     </div>
   {% endmacro %}
 
+  {# The Staff roster's names, for every named-staff box on the page. #}
+  <datalist id="staff-names">{% for p in sample.STAFF %}<option value="{{ p.name }}">{{ p.appointment }}</option>{% endfor %}</datalist>
+
   {% macro options(values, current) -%}
     {% for value in values %}<option{% if value == current %} selected{% endif %}>{{ value }}</option>{% endfor %}
   {%- endmacro %}
@@ -141,7 +144,7 @@
           {{ checks("final-types", "Appointments that may give final approval", leave.unit_appointments(), leave.POLICY.final_types) }}</div></div>
         <div class="mode"><input type="radio" id="final-named" name="final" value="named"{% if leave.POLICY.final == "named" %} checked{% endif %} aria-describedby="final-named-what" disabled> <div><label for="final-named"><strong>By named staff</strong></label> <span id="final-named-what" class="subtle">One or more from the Staff roster, comma separated; whichever approves first</span>
           <input class="input names" type="text" list="staff-names" aria-label="Staff who may give final approval" placeholder="Start typing a name" value="{{ leave.POLICY.final_names | join(', ') }}" disabled>
-          <datalist id="staff-names">{% for p in sample.STAFF %}<option value="{{ p.name }}">{{ p.appointment }}</option>{% endfor %}</datalist></div></div>
+          </div></div>
       </fieldset>
       <dl class="kv">
         <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>

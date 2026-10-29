@@ -394,7 +394,7 @@ def test_stage_names_and_titles_follow_the_policy(monkeypatch) -> None:
 
 def test_appeals_by_invitation(monkeypatch) -> None:
     """Ruled 2026-10-29: appeals open, by invitation, or off. By invitation,
-    an RA writes in, the Master or the Master's admin delegate agrees in
+    an RA writes in, someone the policy lets open appeals agrees in
     principle and opens an appeal for them on Appeals; until then the RA is
     not offered one."""
     c = client()

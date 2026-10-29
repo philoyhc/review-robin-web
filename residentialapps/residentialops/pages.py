@@ -49,7 +49,7 @@ def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
 
 def leave_staff_tabs(query: str = "", appeals: bool = False) -> tuple[dict[str, str | None], ...]:
     """A staff member's tabs, carrying the sample viewer (`?as=`); Appeals
-    for the Master and the Master's admin delegate."""
+    for those the policy lets open appeals."""
     return tuple(
         {"label": label, "path": path, "query": query}
         for label, path in (

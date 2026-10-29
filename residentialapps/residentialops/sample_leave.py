@@ -78,8 +78,8 @@ COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 POLICY = {
     # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
-    # open to every RA, by invitation once the Master or the Master's admin
-    # delegate agrees in principle, or off.
+    # open to every RA, by invitation once someone the policy names agrees
+    # in principle, or off.
     "appeals": "Open",  # one of APPEAL_MODES
     # Who may open an appeal by invitation (author, 2026-10-29), chosen as
     # approvers are: appointments on the RA's slot, Unit-level
@@ -687,9 +687,9 @@ def appeals_on() -> bool:
 
 @dataclass(frozen=True)
 class Invitation:
-    """By invitation, an RA may send an appeal once the Master or the
-    Master's admin delegate, having heard from them, agrees in principle and
-    opens it for them on Appeals (author, 2026-10-29)."""
+    """By invitation, an RA may send an appeal once someone the policy lets
+    open appeals, having heard from them, agrees in principle and opens it
+    for them on Appeals (author, 2026-10-29)."""
 
     ra: str
     agreed_by: str

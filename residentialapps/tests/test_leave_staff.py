@@ -162,3 +162,27 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
     assert sample_leave.all_inviters() == ("Rachel Yeo",)
     assert "you are not among them" in c.get(STAFF + "appeals" + SAM).text
 
+
+
+def test_inviter_settings_at_their_edges(monkeypatch) -> None:
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Rachel Yeo",))
+    rachel = c.get(STAFF + "appeals" + RACHEL).text
+    assert f"{len(sample_leave.sample_data.RAS)} RAs you may" in rachel
+    assert '/ra-leave/staff/appeals' in c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ())
+    assert sample_leave.inviter_label() == "no one named" and sample_leave.all_inviters() == ()
+    for query in ("", RACHEL, SAM):
+        assert "/ra-leave/staff/appeals" not in c.get(STAFF + query).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert "Leave policy names no one to open appeals." in c.get(STAFF + "appeals" + SAM).text
+    assert "No one may open an appeal: Leave policy names no one for it." in c.get("/ra-leave/admin/appeals").text
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF", "RSLM"))
+    assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh", "Priya Raman")
+    assert sample_leave.inviters_for("Nobody") == ()  # on no slot: no one may
+    policy = c.get("/ra-leave/admin/policy").text
+    assert re.findall(r'name="inviter-slot-types" value="(\w+)"( checked)?', policy) == [("RF", " checked"), ("RSLM", " checked")]
+    assert 'name="inviters" value="slot" checked' in policy
+    agreed = c.get("/ra-leave/admin/appeals").text.split('id="inv-by"')[1].split("</select>")[0]
+    assert agreed.count("<option>") == 9 + 3  # every RF and RSLM on a slot
