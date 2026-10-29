@@ -5,21 +5,22 @@
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}
   <p class="sub">Your approvers are worked out from your slot; you name your cover. Controls are inert until RA Leave is wired.</p>
+  {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.</div>{% endif %}
   <div class="split">
     <div class="main">
       <section class="card card-pad" aria-labelledby="form-h">
         <h2 id="form-h">Your application</h2>
         <div class="field-wide"><label for="ltype">Leave type</label>
-          <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
-        <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" disabled></div>
-        <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
+          <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option{% if draft and draft.leave_type == lt.name %} selected{% endif %}>{{ lt.name }}</option>{% endfor %}</select></div>
+        <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date"{% if draft %} value="{{ draft.start.isoformat() }}"{% endif %} disabled></div>
+        <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date"{% if draft %} value="{{ draft.end.isoformat() }}"{% endif %} disabled></div>
         <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% elif leave.appeals_on() %}Leave in a blackout cannot be submitted.{% else %}Leave in any blackout cannot be submitted while appeals are off.{% endif %}</p>
         <div class="field-wide"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
-          {{ person_tokens("Covering RA", (), "cover-pool", "cover", single=true, describedby="cover-what") }}
+          {{ person_tokens("Covering RA", (draft.cover,) if draft and draft.cover else (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your application waits at first approval until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
-        <div class="field-wide"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled></textarea></div>
-        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Submit</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}">Cancel</a></div>
+        <div class="field-wide"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled>{{ draft.remarks if draft }}</textarea></div>
+        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Submit</button><button type="button" class="btn btn-secondary" disabled>Save draft</button>{% if draft %}<button type="button" class="btn btn-danger" disabled>Discard draft</button>{% endif %}<a class="btn btn-secondary" href="{{ url('/ra-leave/') }}">Cancel</a></div>
       </section>
     </div>
     <div class="side">

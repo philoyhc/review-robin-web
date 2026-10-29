@@ -766,6 +766,42 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
 VIEWER = "Chloe Lim"
 
 
+@dataclass(frozen=True)
+class Draft:
+    """An application saved, not submitted (spec §11: Draft, then Pending
+    first approval on submit). Ordinary leave only; an appeal's draft
+    (§30, `APPEAL_DRAFT`) waits for the wiring. The RA's alone: no one is asked or told, and
+    it counts against nothing, until it is submitted (author, 2026-10-29)."""
+    id: str
+    ra: str
+    leave_type: str
+    start: date
+    end: date
+    cover: str
+    remarks: str
+    saved: date
+
+    @property
+    def dates(self) -> str:
+        return short_date(self.start) if self.start == self.end else f"{short_date(self.start)} – {short_date(self.end)}"
+
+    @property
+    def days(self) -> int:
+        return leave_days(self.start, self.end)
+
+
+DRAFTS: tuple[Draft, ...] = (
+    Draft("D-0001", "Chloe Lim", "Official leave", _d("2026-12-18"), _d("2026-12-20"), "Ethan Wong",
+          "Hall games away fixture; dates to confirm.", _d("2026-10-26")),
+    Draft("D-0002", "Ethan Wong", "Personal leave", _d("2026-12-21"), _d("2026-12-22"), "Chloe Lim",
+          "", _d("2026-10-27")),  # another RA's: not the sample viewer's to open
+)
+
+
+def my_drafts(ra: str = VIEWER) -> tuple[Draft, ...]:
+    return tuple(d for d in DRAFTS if d.ra == ra)
+
+
 def my_applications(ra: str = VIEWER) -> tuple[Application, ...]:
     return tuple(sorted((a for a in APPLICATIONS if a.ra == ra), key=lambda a: a.submitted, reverse=True))
 

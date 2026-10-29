@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import title, viewing, app_item with context %}
+{% from "residentialops/leave/_leave.html" import title, viewing, app_item, draft_item with context %}
 {% block title %}My leave{% endblock %}
 {% block content %}
   {{ title("My leave", leave, viewing(me)) }}
@@ -26,6 +26,14 @@
             {% for a in asked.answer %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div></li>{% endfor %}
           </ul>
         </section>
+      {% endif %}
+      {% set drafts = leave.my_drafts(me) %}
+      {% if drafts %}
+      <section class="card card-pad" aria-labelledby="drafts-h">
+        <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
+        <p class="sub">Not sent: no one is asked or told until you submit.</p>
+        <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
+      </section>
       {% endif %}
       <section class="card card-pad" aria-labelledby="mine-h">
         {% set open = leave.my_applications(me) | selectattr("stage", "in", leave.OPEN_STAGES) | list %}

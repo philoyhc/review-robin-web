@@ -51,6 +51,14 @@
   </li>
 {%- endmacro %}
 
+{# A draft in the RA's lists: theirs alone, reopened on Apply. #}
+{% macro draft_item(d, leave) -%}
+  <li>
+    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/apply') }}?draft={{ d.id }}">{{ d.dates }}</a><span class="chip chip-mute">Draft</span></div>
+    <div class="subtle">{{ d.leave_type }} · {{ d.days }} day{{ "s" if d.days != 1 }}{% if d.cover %} · cover {{ d.cover }}, not yet asked{% endif %} · saved {{ leave.short_date(d.saved) }}</div>
+  </li>
+{%- endmacro %}
+
 {# The staff pages' sample viewer switch, one person per role, until
    identity is wired. #}
 {% macro staff_switch(me, leave, here) -%}

@@ -34,7 +34,13 @@ def home(request: Request) -> Response:
 
 @router.get("/ra-leave/apply", name="residentialops_leave_apply")
 def apply(request: Request) -> Response:
-    return _page(request, "apply.html")
+    # A saved draft reopens here, filled in (author, 2026-10-29); only the
+    # RA's own.
+    key = request.query_params.get("draft")
+    draft = next((d for d in sample_leave.my_drafts(sample_leave.VIEWER) if d.id == key), None)
+    if key and draft is None:
+        raise HTTPException(status_code=404)
+    return _page(request, "apply.html", draft=draft)
 
 
 @router.get("/ra-leave/appeal", name="residentialops_leave_appeal")
