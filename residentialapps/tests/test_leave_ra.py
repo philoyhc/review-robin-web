@@ -296,3 +296,13 @@ def test_apply_names_approvers_and_blackouts_and_warns_on_a_draft_over_balance()
     assert "It asks 2 days more Official leave than you have: submitting it offers Request extra leave instead." in c.get(
         f"/ra-leave/apply?draft={draft.id}").text
     assert '<span class="chip chip-warn">2 days over your Official leave</span>' in c.get("/ra-leave/").text
+
+
+def test_apply_s_blackouts_follow_whether_the_ra_may_appeal() -> None:
+    """Cold read, 2026-10-29: with appeals off, an Appeal-only blackout
+    admits no leave, as the form above it says."""
+    c = TestClient(ops_app())
+    c.cookies.set(sample_leave.PREVIEW_COOKIE, "Off")
+    apply = c.get("/ra-leave/apply").text
+    assert "while appeals are off" in apply
+    assert "Examinations, 15 Nov – 28 Nov: no leave" in apply and "appeal only" not in apply

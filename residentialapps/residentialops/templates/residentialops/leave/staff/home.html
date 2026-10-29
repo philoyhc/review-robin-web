@@ -31,10 +31,12 @@
         {% set _, _, first, last = leave.period() %}<p class="sub">{{ leave.short_date(first) }} – {{ leave.short_date(last) }}, in {{ precincts[0] if precincts | length == 1 else precincts | length ~ " Precincts" }}.</p>
         {% set away = leave.away_this_week() | selectattr("precinct", "in", precincts) | list %}
         {% if away %}<ul class="items">{% for a in away %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one is away.</p>{% endif %}
-        {% set later = leave.coming_up(me) %}
-        <h3 class="gap-above-sm">Later this term</h3>
-        {% if later %}<ul class="items">{% for a in later %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No approved leave later this term.</p>{% endif %}
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/staff/precinct') }}{{ as_query }}">Precinct leave</a>
+      </section>
+      <section class="card card-pad" aria-labelledby="later-h">
+        {% set later = leave.coming_up(me) %}
+        <h2 id="later-h">Later this term</h2>
+        {% if later %}<ul class="items">{% for a in later %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">Cover {{ a.cover }} · {{ a.precinct }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No approved leave later this term.</p>{% endif %}
       </section>
     </div>
   </div>

@@ -1132,7 +1132,7 @@ def approvers_for(ra: str) -> str:
     (§9.1; audit, 2026-10-29): the slot's first approver, then the final."""
     precinct = next(s.precinct for s in sample_data.SLOTS if ra in s.ras)
     route = next(r for r in routes() if r.precinct == precinct)
-    final = " or ".join(final_for(precinct)) or "no one yet: no final approver holds a place in your slot"
+    final = " or ".join(final_for(precinct)) or "no final approver yet (none holds a place in your slot)"
     if POLICY["first"] == "none":
         return final
     first = "the first approver (none named yet)" if route.gap else route.first
@@ -1143,7 +1143,7 @@ def term_blackouts() -> tuple[tuple[Blackout, date, date], ...]:
     """This term's blackouts not yet over, with their dates (§6)."""
     found = []
     for b in BLACKOUTS:
-        span = week_dates(b)
+        span = week_dates(b, PERIOD_LABEL)
         if span and span[0] <= TERM.end and span[1] >= max(TERM.start, TODAY):
             found.append((b, *span))
     return tuple(found)
@@ -1157,15 +1157,8 @@ def draft_short(draft: "Draft") -> int:
 
 
 def coming_up(viewer: str) -> tuple[Application, ...]:
-    """Approved leave in the viewer's scope starting after this week and
-    before the term ends (§24)."""
-    _, _, _, week_end = period("week")
-    _, _, _, horizon = period("term")
-    precincts = scope(viewer)
-    return tuple(
-        sorted((a for a in APPLICATIONS if a.stage == "Approved" and a.precinct in precincts and week_end < a.start <= horizon),
-               key=lambda a: a.start)
-    )
+    """`upcoming()` in the viewer's scope, for the staff home (§24)."""
+    return tuple(a for a in upcoming() if a.precinct in scope(viewer))
 
 
 def balance_of(application: Application) -> dict:

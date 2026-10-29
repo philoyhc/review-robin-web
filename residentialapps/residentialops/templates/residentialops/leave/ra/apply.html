@@ -29,7 +29,7 @@
         <h2 id="avail-h">Available to you</h2>
         <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>{% endfor %}</dl>
         {% set blackouts = leave.term_blackouts() %}
-        {% if blackouts %}<h3 class="gap-above-sm">Blackouts this term</h3><ul class="plain subtle small">{% for b, first, last in blackouts %}<li>{{ b.label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}: {{ b.effect | lower }}</li>{% endfor %}</ul>{% endif %}
+        {% if blackouts %}<h3 class="gap-above-sm">Blackouts ahead this term</h3><ul class="plain subtle small">{% for b, first, last in blackouts %}<li>{{ b.label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}: {{ b.effect | lower if leave.can_appeal(me) else "no leave" }}</li>{% endfor %}</ul>{% endif %}
         {% if leave.can_appeal(me) %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}{{ as_query }}">Request extra leave</a> instead of a refusal.</p>{% endif %}
       </section>
     </div>
