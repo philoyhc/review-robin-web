@@ -51,7 +51,7 @@
 {% macro person_tokens(label, names, list_id, input_id="") %}
   <div class="tokens" role="group" aria-label="{{ label }}">
     {% for name in names %}<span class="token">{{ name }}<button type="button" class="token-x" aria-label="Remove {{ name }} from {{ label }}" disabled>×</button></span>{% endfor %}
-    <input{% if input_id %} id="{{ input_id }}"{% endif %} class="token-input" type="text" list="{{ list_id }}" aria-label="Add to {{ label }}" placeholder="Add a name" disabled>
+    <input{% if input_id %} id="{{ input_id }}"{% else %} aria-label="Add to {{ label }}"{% endif %} class="token-input" type="text" list="{{ list_id }}" placeholder="Add a name" disabled>
   </div>
 {% endmacro %}
 

@@ -344,10 +344,10 @@
       /* Sorted, a grouped table loses its grouping: every row names its
          group (`td.group`), and the slots' heavier rule between top levels
          goes. */
-      table.sorted td.group { font-weight: 400; }
+      table.slots.sorted td.group { font-weight: 400; }
       table.sorted td.group .visually-hidden { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
       table.slots.sorted tr.wing-start > td { border-top: 1px solid var(--border-subtle); }
-      table.slots td.cell .input { min-height: 30px; font-size: 14px; min-width: 180px; }
+      table.slots td.cell .tokens { min-width: 180px; }
       .input {
         font: inherit; font-size: 15px; min-height: 36px; padding: 0 10px; width: 100%;
         border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-body);
@@ -571,6 +571,7 @@
           rows.sort(function (a, b) {
             if (next === "none") return a.getAttribute("data-order") - b.getAttribute("data-order");
             var d = value(a, key).localeCompare(value(b, key), undefined, { numeric: true, sensitivity: "base" });
+            if (!d) return a.getAttribute("data-order") - b.getAttribute("data-order");  // ties keep the page's order
             return next === "ascending" ? d : -d;
           });
           var expander = body.querySelector("tr.expander");
