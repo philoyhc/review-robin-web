@@ -266,8 +266,14 @@ Until a screen is wired:
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - a page drawn for one person (RA Leave's RA and staff pages, the
   landing) says so in a **Viewing as** chip beside the Sample data chip;
-  the staff pages and the landing switch that person on the page
-  (`?as=`; the staff pages' tabs carry it);
+  the RA pages, the staff pages and the landing switch that person on
+  the page (`?as=`; the RA and staff pages' tabs and links carry it),
+  the RA pages' viewers each reaching states the others do not (audit,
+  2026-10-29);
+- RA Leave previews each appeal mode (open, by invitation, off) in the
+  browser, from a sample switch on Leave policy, a cookie every RA Leave
+  page reads; while one is previewed a **Previewing appeals** chip by
+  each RA Leave title says so and links back (audit, 2026-10-29);
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.
 

@@ -1,9 +1,10 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import title, viewing with context %}
+{% from "residentialops/leave/_leave.html" import title, viewing, ra_switch with context %}
 {% from "residentialops/_people.html" import person_tokens %}
 {% block title %}Apply for leave{% endblock %}
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}
+  {{ ra_switch(me, leave, here) }}
   <p class="sub">Your approvers are worked out from your slot; you name your cover. Controls are inert until RA Leave is wired.</p>
   {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.</div>{% endif %}
   <div class="split">
@@ -20,14 +21,14 @@
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your application waits at first approval until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
         <div class="field-wide"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled>{{ draft.remarks if draft }}</textarea></div>
-        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Submit</button><button type="button" class="btn btn-secondary" disabled>Save draft</button>{% if draft %}<button type="button" class="btn btn-danger" disabled>Discard draft</button>{% endif %}<a class="btn btn-secondary" href="{{ url('/ra-leave/') }}">Cancel</a></div>
+        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Submit</button><button type="button" class="btn btn-secondary" disabled>Save draft</button>{% if draft %}<button type="button" class="btn btn-danger" disabled>Discard draft</button>{% endif %}<a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}\">Cancel</a></div>
       </section>
     </div>
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="avail-h">
         <h2 id="avail-h">Available to you</h2>
         <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>{% endfor %}</dl>
-        {% if leave.can_appeal(me) %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}">Request extra leave</a> instead of a refusal.</p>{% endif %}
+        {% if leave.can_appeal(me) %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}{{ as_query }}\">Request extra leave</a> instead of a refusal.</p>{% endif %}
       </section>
     </div>
   </div>

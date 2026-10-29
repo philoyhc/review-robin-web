@@ -116,12 +116,16 @@ def test_history_is_newest_first_and_unknown_ids_are_not_found(monkeypatch) -> N
 def test_by_invitation_the_ra_is_not_offered_an_appeal_until_invited(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     c = client()
-    home = c.get(RA).text
+
+    def page(path: str) -> str:  # the page less its sample viewer switch, which names every RA's state
+        return re.sub(r'<nav class="card card-pad muted gap-below" aria-label="Sample viewer">.*?</nav>', "", c.get(path).text, flags=re.S)
+
+    home = page(RA)
     # Not shown to an uninvited RA at all (author, 2026-10-29).
     assert ">Request extra leave</a>" not in home and 'href="/ra-leave/appeal"' not in home  # no tab either
     assert "Extra leave" not in home and "the Master" not in home
     assert c.get(RA + "appeal").status_code == 404
-    apply = c.get(RA + "apply").text
+    apply = page(RA + "apply")
     assert "Leave in a blackout cannot be submitted." in apply and "Master" not in apply
     monkeypatch.setattr(sample_leave, "INVITATIONS", sample_leave.INVITATIONS + (
         sample_leave.Invitation("Chloe Lim", "Sam Lee", sample_leave.date(2026, 10, 28), sample_leave.date(2026, 11, 4), "Agreed"),))
@@ -211,3 +215,45 @@ def test_the_audit_s_ra_page_fixes() -> None:
     page = TestClient(ops_app()).get("/ra-leave/applications/L-0101").text
     assert '<a class="back" href="/ra-leave/history">‹ My history</a>' in page
     assert '<button type="button" class="btn btn-danger" disabled>Withdraw</button>' in page
+
+
+def test_the_ra_pages_switch_sample_viewer() -> None:
+    """The 1C.1 audit (2026-10-29): RA states Chloe Lim's applications do not
+    reach are seen by switching the RA pages' sample viewer (`?as=`),
+    carried by the tabs and links."""
+    c = TestClient(ops_app())
+    hana = c.get("/ra-leave/?as=Hana%20Ito").text
+    assert "Viewing as Hana Ito" in hana
+    assert 'href="/ra-leave/applications/L-0109?as=Hana%20Ito"' in hana  # her declined cover
+    assert 'href="/ra-leave/apply?as=Hana%20Ito"' in hana
+    tabs = hana.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert all(href.endswith("?as=Hana%20Ito") for href in re.findall(r'<a href="([^"]*)"', tabs))
+    detail = c.get("/ra-leave/applications/L-0109?as=Hana%20Ito").text
+    assert "cannot cover you. Name someone else" in detail
+    assert c.get("/ra-leave/applications/L-0109").status_code == 404  # Chloe Lim's view: not hers
+    for name, state in (("Faris Iskandar", "Rejected"), ("Kai Ng", "Cancelled"), ("Ethan Wong", "Withdrawn")):
+        assert f'<span class="chip chip-mute">{state}</span>' in c.get("/ra-leave/history", params={"as": name}).text, name
+    assert "Viewing as Chloe Lim" in c.get("/ra-leave/?as=Nobody").text  # an unknown viewer: the default
+    draft = c.get("/ra-leave/").text
+    assert 'href="/ra-leave/apply?draft=D-0001"' in draft  # the default viewer's links carry nothing
+
+
+def test_each_appeal_mode_can_be_previewed() -> None:
+    """The 1C.1 audit (2026-10-29): Leave policy's sample switch previews
+    appeals open, by invitation or off in this browser, so their screens
+    can be seen; the policy's own mode clears the preview."""
+    c = TestClient(ops_app())
+    assert sample_leave.policy_appeals() == "Open"
+    went = c.get("/ra-leave/admin/policy/preview-appeals?mode=Off", follow_redirects=False)
+    assert went.status_code == 303 and went.headers["location"] == "/ra-leave/admin/policy#appeals-h"
+    home = c.get("/ra-leave/").text
+    assert ">Previewing appeals: Off</a>" in home
+    assert "/ra-leave/appeal" not in home.split('class="tabs-in"')[1].split("</nav>")[0]  # no Extra leave tab
+    c.get("/ra-leave/admin/policy/preview-appeals?mode=By%20invitation")
+    assert c.get("/ra-leave/appeal").status_code == 404  # Chloe Lim is not invited
+    assert 'id="inv-ra"' in c.get("/ra-leave/admin/appeals").text  # opened for an RA
+    policy = c.get("/ra-leave/admin/policy").text
+    assert 'aria-current="true">By invitation</a>' in policy and ">Open (the sample policy)</a>" in policy
+    c.get("/ra-leave/admin/policy/preview-appeals?mode=Open")  # the policy's own mode clears it
+    assert "Previewing appeals" not in c.get("/ra-leave/").text
+    assert sample_leave.APPEALS_PREVIEW.get() is None  # nothing leaks out of a request

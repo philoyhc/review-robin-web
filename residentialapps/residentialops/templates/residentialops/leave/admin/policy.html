@@ -128,6 +128,15 @@
     <section class="card card-pad" aria-labelledby="appeals-h">
       <h2 id="appeals-h">Appeals beyond entitlement</h2>
       <p class="sub">An RA with no entitlement left, or applying into an Appeal-only blackout, may ask the Master for extra leave, as openly as this setting allows. The Master decides personally; extra leave granted is kept apart from the entitlement (spec §7.5).</p>
+      <nav class="card card-pad muted gap-below" aria-label="Sample preview of appeals">
+        <span class="subtle small">Sample: preview every RA Leave page, in this browser, as if appeals were</span>
+        <span class="chips chip-wrap">
+          {% for mode in leave.APPEAL_MODES %}
+            {% set on = mode == leave.POLICY.appeals %}
+            <a class="chip {{ 'chip-info' if on else 'chip-mute' }}" href="{{ url('/ra-leave/admin/policy/preview-appeals') }}?mode={{ mode | urlencode }}"{% if on %} aria-current="true"{% endif %}>{{ mode }}{% if mode == leave.policy_appeals() %} (the sample policy){% endif %}</a>
+          {% endfor %}
+        </span>
+      </nav>
       {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; once someone chosen below agrees in principle, they open an appeal for that RA on Appeals, and the RA can then send it", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
       <fieldset class="modes">
         <legend>By invitation, who may open an appeal</legend>

@@ -63,14 +63,18 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Appeals", "path": "/ra-leave/admin/appeals"},
 )
 
-def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
-    """An RA's tabs; Extra leave only while the RA may send an appeal."""
-    return (
-        {"label": "Home", "path": "/ra-leave/"},
-        {"label": "Apply", "path": "/ra-leave/apply"},
-        *(({"label": "Extra leave", "path": "/ra-leave/appeal"},) if appeals else ()),
-        {"label": "My cover", "path": "/ra-leave/cover"},
-        {"label": "History", "path": "/ra-leave/history"},
+def leave_ra_tabs(appeals: bool, query: str = "") -> tuple[dict[str, str | None], ...]:
+    """An RA's tabs, carrying the sample viewer (`?as=`); Extra leave only
+    while the RA may send an appeal."""
+    return tuple(
+        {"label": label, "path": path, "query": query}
+        for label, path in (
+            ("Home", "/ra-leave/"),
+            ("Apply", "/ra-leave/apply"),
+            *((("Extra leave", "/ra-leave/appeal"),) if appeals else ()),
+            ("My cover", "/ra-leave/cover"),
+            ("History", "/ra-leave/history"),
+        )
     )
 
 
@@ -96,6 +100,15 @@ ROSTER_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Staff roster", "path": "/rosters/staff"},
     {"label": "RA roster", "path": "/rosters/ras"},
 )
+
+
+async def sample_preview(request: Request) -> None:
+    """The appeal mode this browser previews (`Leave policy`'s sample
+    switch, audit 2026-10-29), set for the request before any page reads the
+    policy. Async, so the value carries into the threadpool the page runs in."""
+    mode = request.cookies.get(sample_leave.PREVIEW_COOKIE)
+    if mode in sample_leave.APPEAL_MODES:
+        sample_leave.APPEALS_PREVIEW.set(mode)
 
 
 def placeholders_local_only() -> None:

@@ -27,7 +27,7 @@
 {% macro title(heading, leave, extra="") -%}
   <div class="ptitle">
     <h1>{{ heading }}</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-mute">{{ leave.PERIOD_LABEL }}</span>{{ extra }}</span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-mute">{{ leave.PERIOD_LABEL }}</span>{% if leave.appeals_preview() %}<a class="chip chip-accent" href="{{ url('/ra-leave/admin/policy') }}#appeals-h">Previewing appeals: {{ leave.appeals_preview() }}</a>{% endif %}{{ extra }}</span>
   </div>
 {%- endmacro %}
 
@@ -45,7 +45,7 @@
 {# One application as a phone-width list item, linked to its detail. #}
 {% macro app_item(a, leave) -%}
   <li>
-    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/applications/' ~ a.id) }}">{{ a.dates }}</a>{{ stage_chip(a.stage) }}</div>
+    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/applications/' ~ a.id) }}{{ as_query }}">{{ a.dates }}</a>{{ stage_chip(a.stage) }}</div>
     <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }} · sent {{ leave.short_date(a.submitted) }}</div>
     {% for when, what, remarks in leave.history_steps(a) %}<div class="subtle">{{ what }}{% if when %}, {{ when }}{% endif %}{% if remarks %}: “{{ remarks }}”{% endif %}</div>{% endfor %}
   </li>
@@ -54,9 +54,23 @@
 {# A draft in the RA's lists: theirs alone, reopened on Apply. #}
 {% macro draft_item(d, leave) -%}
   <li>
-    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/apply') }}?draft={{ d.id }}">{{ d.dates }}</a><span class="chip chip-mute">Draft</span></div>
+    <div class="item-head"><a class="strong" href="{{ url('/ra-leave/apply') }}?draft={{ d.id }}{{ as_query | replace("?", "&") }}">{{ d.dates }}</a><span class="chip chip-mute">Draft</span></div>
     <div class="subtle">{{ d.leave_type }} · {{ d.days }} day{{ "s" if d.days != 1 }}{% if d.cover %} · cover {{ d.cover }}, not yet asked{% endif %} · saved {{ leave.short_date(d.saved) }}</div>
   </li>
+{%- endmacro %}
+
+{# The RA pages' sample viewer switch (audit, 2026-10-29): each viewer
+   reaches states the others do not. #}
+{% macro ra_switch(me, leave, here) -%}
+  <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
+    <span class="subtle small">Sample viewer:</span>
+    <span class="chips chip-wrap">
+      {% for name, _ in leave.RA_VIEWERS %}
+        <a class="chip {{ 'chip-info' if name == me else 'chip-mute' }}" href="{{ url(here) }}{{ '' if loop.first else '?as=' ~ (name | urlencode) }}"{% if name == me %} aria-current="true"{% endif %}>{{ name }}</a>
+      {% endfor %}
+    </span>
+    <ul class="plain subtle small">{% for name, what in leave.RA_VIEWERS %}<li>{{ name }}: {{ what }}</li>{% endfor %}</ul>
+  </nav>
 {%- endmacro %}
 
 {# The staff pages' sample viewer switch, one person per role, until
