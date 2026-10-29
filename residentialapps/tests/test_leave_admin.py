@@ -570,9 +570,10 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     board = c.get("/ra-leave/admin/").text.split('id="unsent-h"')[1].split("</section>")[0]
     assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', board) == [e.application for e in failed]
     assert board.count(">Resend</button>") == len(failed)
+    assert 'disabled aria-label="Resend L-0116 approved leave cancelled to Kai Ng">' in board
     # The admin sees every email on the application, sent or not.
     page = c.get("/ra-leave/admin/applications/L-0116").text.split('id="emails-h"')[1].split("</section>")[0]
-    assert page.count('<span class="chip chip-ok">Sent</span>') == 1
+    assert page.count('<span class="chip chip-ok">Sent</span>') == 1  # Cover released
     assert page.count('<span class="chip chip-warn">Not sent</span>') == 1
     assert ">Resend to Kai Ng</button>" in page and "no mailbox for the address" in page
     assert 'id="emails-h"' not in c.get("/ra-leave/admin/applications/L-0102").text  # no emails, no card

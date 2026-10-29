@@ -59,7 +59,7 @@
       <section class="card" aria-labelledby="unsent-h">
         <div class="card-head">
           <h2 id="unsent-h">Emails not sent <span class="count">· {{ unsent | length }}</span></h2>
-          <p class="sub">Each is kept in the outbox; resend it here, or its sender can from the application (spec §17.2). Nothing retries on its own.</p>
+          <p class="sub">Each is kept in the outbox; resend it here (author, 2026-10-29), or its sender can from the application (spec §17.2). Nothing retries on its own.</p>
         </div>
         <div class="table-wrap">
           <table>
@@ -72,7 +72,7 @@
                   <td class="nowrap">{{ e.sender }}</td>
                   <td class="nowrap">{{ e.to }}</td>
                   <td class="subtle">{{ e.why }}</td>
-                  <td><button type="button" class="btn btn-secondary" disabled aria-label="Resend {{ e.about | lower }} to {{ e.to }}">Resend</button></td>
+                  <td><button type="button" class="btn btn-secondary" disabled aria-label="Resend {{ e.application }} {{ e.about | lower }} to {{ e.to }}">Resend</button></td>
                 </tr>
               {% else %}
                 <tr><td colspan="6" class="subtle">Every email was sent.</td></tr>

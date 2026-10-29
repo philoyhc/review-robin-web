@@ -507,6 +507,7 @@ class Email:
 
 OUTBOX: tuple[Email, ...] = (
     Email("L-0101", "Chloe Lim", "Ethan Wong", "Cover asked", "27 Oct, 09:12", "Sent"),
+    Email("L-0101", "Ethan Wong", "Chloe Lim", "Cover confirmed", "27 Oct, 11:30", "Sent"),
     Email("L-0101", "Chloe Lim", "Daniel Koh", "Application submitted", "27 Oct, 09:12", "Failed",
           "Microsoft 365 did not accept the send: the sign-in had expired"),
     Email("L-0115", "Daniel Koh", "Hana Ito", "First approval", "21 Oct, 18:40", "Failed",

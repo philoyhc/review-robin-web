@@ -13,9 +13,11 @@
 {% macro email_items(emails) -%}
   <ul class="items">
     {% for e in emails %}
-      <li class="item"><span class="strong">{{ e.about }}</span> to {{ e.to }} <span class="chip {{ 'chip-ok' if e.status == 'Sent' else 'chip-warn' }}">{{ "Sent" if e.status == "Sent" else "Not sent" }}</span>
-        <div class="subtle small">From {{ e.sender }}, {{ e.at }}{% if e.why %}. {{ e.why }}{% endif %}</div>
-        {% if e.status != "Sent" %}<button type="button" class="btn btn-secondary gap-above-sm" disabled>Resend to {{ e.to }}</button>{% endif %}</li>
+      <li>
+        <div class="item-head"><span class="strong">{{ e.about }} to {{ e.to }}</span><span class="chip {{ 'chip-ok' if e.status == 'Sent' else 'chip-warn' }}">{{ "Sent" if e.status == "Sent" else "Not sent" }}</span></div>
+        <div class="subtle">From {{ e.sender }}, {{ e.at }}{% if e.why %}. {{ e.why }}{% endif %}</div>
+        {% if e.status != "Sent" %}<button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Resend {{ e.about | lower }} to {{ e.to }}">Resend to {{ e.to }}</button>{% endif %}
+      </li>
     {% endfor %}
   </ul>
 {%- endmacro %}

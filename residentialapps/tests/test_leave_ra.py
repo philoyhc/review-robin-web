@@ -174,5 +174,7 @@ def test_the_ra_sees_the_emails_they_sent_and_resends_a_failed_one() -> None:
     page = TestClient(ops_app()).get("/ra-leave/applications/L-0101").text
     emails = page.split('id="emails-h"')[1].split("</section>")[0]
     assert "Emails you sent" in page
-    assert "Application submitted</span> to Daniel Koh" in emails and ">Resend to Daniel Koh</button>" in emails
-    assert "Cover asked</span> to Ethan Wong" in emails and ">Resend to Ethan Wong" not in emails  # sent
+    assert "Application submitted to Daniel Koh</span>" in emails and ">Resend to Daniel Koh</button>" in emails
+    assert "Cover asked to Ethan Wong</span>" in emails and ">Resend to Ethan Wong" not in emails  # sent
+    assert "Cover confirmed" not in emails  # Ethan Wong's email, not the viewer's
+    assert 'disabled aria-label="Resend application submitted to Daniel Koh">' in emails  # inert, named for its row
