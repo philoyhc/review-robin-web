@@ -403,6 +403,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     rows = re.findall(r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page)
     assert rows[:2] == [("Gwen Ho", "Sam Lee"), ("Kai Ng", "Rachel Yeo")]
     assert ">Sent: L-0105</a>" in page and 'aria-label="Withdraw Kai Ng\'s invitation"' in page
+    assert '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
     assert "Invitations take effect only while appeals are by invitation" in page
     policy = c.get(ADMIN + "policy").text
     assert "they open an appeal for that RA on Appeals" in policy
@@ -412,5 +413,11 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert not sample_leave.can_appeal("Chloe Lim")
     assert not sample_leave.invitation_for("Kai Ng", sample_leave.date(2026, 11, 11))  # lapsed
     assert "Invitations take effect" not in c.get(ADMIN + "appeals").text
+    assert 'name="appeals" value="By invitation" checked' in c.get(ADMIN + "policy").text
+    routing = c.get(ADMIN + "routing").text
+    assert ">Appeals</th>" in routing and "final approval and appeals are not delegable" in routing
+    assert "Extra leave the Master grants on appeal" in c.get(ADMIN + "entitlements").text
+    future = sample_leave.Invitation("Mira Sato", "Sam Lee", sample_leave.date(2026, 11, 2), sample_leave.date(2026, 11, 9), "From next week")
+    assert sample_leave.invitation_status(future) == "From 2 Nov" and not sample_leave.invitation_for("Mira Sato")
     assert "<dd>By invitation, to the Master</dd>" in c.get(ADMIN).text
     assert "Appeal to the Master" in c.get(ADMIN).text  # appeals exist: the tile stays

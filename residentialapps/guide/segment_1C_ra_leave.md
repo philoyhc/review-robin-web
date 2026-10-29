@@ -68,7 +68,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 1. **Landing and the phone shell.** ~~The Residential Operations home at `/` for an RA … and for an approver~~ (revised 2026-10-28) The landing at `/`, choosing an application; the RA home at `/ra-leave/` (balance, cover asked of you, my applications); the card columns that stack on a phone, the three audiences' tabs, the sample viewer switch; RA Leave live in the switcher.
 2. **RA pages.** Apply, Request extra leave, application detail (status timeline, withdraw), My cover, My history.
 3. **Staff pages** (`/ra-leave/staff/`). Staff home, Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, ~~Team leave~~ Precinct leave with its this-week summary.
-4. **Leave admin and conventions** (`/ra-leave/admin/`). ~~Cycles and entitlements, applications~~ Leave dashboard, Leave policy, Entitlements, Approval chain, Applications; `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
+4. **Leave admin and conventions** (`/ra-leave/admin/`). ~~Cycles and entitlements, applications~~ Leave dashboard, Leave policy, Entitlements, Approval chain, Applications, Appeals (added 2026-10-29); `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
 5+. Iteration until approved, each with its own read.
 
 **Items 2–5** get their rungs when 1B closes, from what the core turned out to be.

@@ -696,6 +696,7 @@ class Invitation:
 INVITATIONS = (
     Invitation("Gwen Ho", "Sam Lee", date(2026, 10, 24), date(2026, 11, 7), "Family wedding overseas; agreed in principle", "L-0105"),
     Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; the Master agreed by email"),
+    Invitation("Nathan Yeo", "Sam Lee", date(2026, 9, 14), date(2026, 9, 28), "Conference abroad; not sent in time"),
 )
 APPEAL_AGREERS = ("Sam Lee", "Rachel Yeo")  # the Master and the Master's admin delegate
 
@@ -709,7 +710,9 @@ def invitation_for(ra: str, day: date | None = None) -> Invitation | None:
 def invitation_status(invitation: Invitation) -> str:
     if invitation.used_by:
         return f"Sent: {invitation.used_by}"
-    return "Open" if invitation.until >= TODAY else "Lapsed"
+    if invitation.until < TODAY:
+        return "Lapsed"
+    return "Open" if invitation.opened <= TODAY else "From " + short_date(invitation.opened)
 
 
 def can_appeal(ra: str) -> bool:

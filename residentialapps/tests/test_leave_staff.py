@@ -100,7 +100,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
     people = ("Daniel Koh", "Rachel Yeo", "Sam Lee", "Benjamin Chua", "Grace Ho", "Marcus Tan", "Mei Ling Tan")
     settings = (
         {}, {"first_types": ("RF", "RSLM")}, {"first": "none"},
-        {"final": "named", "final_names": ("Daniel Koh",)}, {"appeals": "Off"},
+        {"final": "named", "final_names": ("Daniel Koh",)}, {"appeals": "Off"}, {"appeals": "By invitation"},
     )
     for setting, day in itertools.product(settings, (None, sample_leave.date(2026, 12, 10))):
         with monkeypatch.context() as m:

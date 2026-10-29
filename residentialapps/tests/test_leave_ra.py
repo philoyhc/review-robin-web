@@ -116,13 +116,16 @@ def test_by_invitation_the_ra_is_not_offered_an_appeal_until_invited(monkeypatch
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     c = client()
     home = c.get(RA).text
+    # Not shown to an uninvited RA at all (author, 2026-10-29).
     assert ">Request extra leave</a>" not in home and 'href="/ra-leave/appeal"' not in home  # no tab either
-    assert "kept apart from your entitlement" in home
-    assert "Extra leave is by invitation. Write to the Master first" in c.get(RA + "appeal").text
-    assert "Write to the Master; extra leave is by invitation." in c.get(RA + "apply").text
+    assert "Extra leave" not in home and "the Master" not in home
+    assert c.get(RA + "appeal").status_code == 404
+    apply = c.get(RA + "apply").text
+    assert "Leave in a blackout cannot be submitted." in apply and "Master" not in apply
     monkeypatch.setattr(sample_leave, "INVITATIONS", sample_leave.INVITATIONS + (
         sample_leave.Invitation("Chloe Lim", "Sam Lee", sample_leave.date(2026, 10, 28), sample_leave.date(2026, 11, 4), "Agreed"),))
     monkeypatch.setattr(sample_leave, "VIEWER", "Chloe Lim")
     invited = c.get(RA + "appeal").text
     assert "The Master has agreed to consider your appeal; send it by 4 Nov." in invited
     assert '>Request extra leave</a>' in c.get(RA).text
+    assert "in an Appeal-only one it goes to the Master as an appeal" in c.get(RA + "apply").text

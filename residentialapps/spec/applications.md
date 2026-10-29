@@ -68,7 +68,7 @@ Events has no spec yet, so its rows are provisional.
 | **RA Leave, RAs** | `/ra-leave/` | — | — |
 | RA home | `/ra-leave/` | — | Balance, cover requests to answer, current applications, Apply (§8) · mobile-critical |
 | Apply for leave | `/ra-leave/apply` | — | Leave type, dates, covering RA (§9) · mobile-critical |
-| Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15); open to every RA, or by invitation only to an invited RA, never while off · mobile-critical |
+| Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15); open to every RA, or by invitation only to an invited RA (not shown to the rest), never while off · mobile-critical |
 | Application detail | `/ra-leave/applications/{id}` | — | Status timeline, withdraw · mobile-critical |
 | My cover | `/ra-leave/cover` | — | Acknowledge or decline being named as cover; notification links land here (§12, §23) · mobile-critical |
 | My history | `/ra-leave/history` | — | Own applications and leave (§19) · responsive |
@@ -83,8 +83,8 @@ Events has no spec yet, so its rows are provisional.
 | Leave policy | `/ra-leave/admin/policy` | Leave types needing an application (at least two, typically personal and official), each earned per term or per month served and capped per year or term, a term's days available only within it; blackout periods by week of a term, refused or appeal only; appeals beyond entitlement, open, by invitation or off, and their terms; cover required or not, named or confirmed, and from whom; first approval by one or more of the appointments on the RAs' slots (several: whichever approves first) or none needed; final approval by one or more Unit-level appointments or by named staff (§6, §7, §12, §21.1; author, 2026-10-28) · desktop-oriented | — |
 | Entitlements | `/ra-leave/admin/entitlements` | Each RA's entitlement for a term, worked out from the policy's rules, used and pending; adjustments with a reason, one at a time or by CSV (§21.1, §21.3) · desktop-oriented | — |
 | Approval chain | `/ra-leave/admin/routing` | Approvers per Precinct, derived from Assignments and the policy (first approver from the RA's slot, final the policy's final approver, appeals the Master while they are on), delegates by person, each standing in for one of the slots' approvers on all their slots with optional From–To dates, first approval only; gaps flagged (§21.2; author, 2026-10-28) · desktop-oriented | — |
-| Appeals | `/ra-leave/admin/appeals` | By invitation: the Master or the Master's admin delegate, having agreed in principle, opens an appeal for one RA; the invitations and their status; appeals with the Master (§7; author, 2026-10-29) · desktop-oriented | — |
 | Applications | `/ra-leave/admin/applications`, `…/{id}` | Search, correct, cancel, reassign, record external leave (§21.4) · desktop-oriented | — |
+| Appeals | `/ra-leave/admin/appeals` | By invitation: the Master or the Master's admin delegate, having agreed in principle, opens an appeal for one RA; the invitations and their status; appeals with the Master (§7; author, 2026-10-29) · desktop-oriented | — |
 | Propose an event | `/ra-events/propose` | — | Provisional · mobile-critical |
 | My proposals | `/ra-events/mine` | — | Provisional · responsive |
 | Review proposals | `/ra-events/review` | Provisional · responsive | — |

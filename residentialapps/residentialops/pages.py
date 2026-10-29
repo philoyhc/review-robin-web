@@ -37,7 +37,7 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
 )
 
 def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
-    """An RA's tabs; Extra leave only while appeals are on."""
+    """An RA's tabs; Extra leave only while the RA may send an appeal."""
     return (
         {"label": "Home", "path": "/ra-leave/"},
         {"label": "Apply", "path": "/ra-leave/apply"},
