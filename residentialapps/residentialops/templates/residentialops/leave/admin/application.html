@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items with context %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, email_items with context %}
 {% block title %}{{ app.id }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/ra-leave/admin/applications') }}">‹ Applications</a>
@@ -23,6 +23,14 @@
           {{ timeline_items(steps) }}
         </ol>
       </section>
+      {% set emails = leave.emails_for(app) %}
+      {% if emails %}
+      <section class="card card-pad" aria-labelledby="emails-h">
+        <h2 id="emails-h">Emails</h2>
+        <p class="sub">Each sent from the account of whoever acted. A Leave admin may resend one not sent.</p>
+        {{ email_items(emails) }}
+      </section>
+      {% endif %}
     </div>
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="admin-h">

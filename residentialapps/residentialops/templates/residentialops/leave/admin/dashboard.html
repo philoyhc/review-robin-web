@@ -55,6 +55,33 @@
         </div>
       </section>
 
+      {% set unsent = leave.failed_emails() %}
+      <section class="card" aria-labelledby="unsent-h">
+        <div class="card-head">
+          <h2 id="unsent-h">Emails not sent <span class="count">· {{ unsent | length }}</span></h2>
+          <p class="sub">Each is kept in the outbox; resend it here, or its sender can from the application (spec §17.2). Nothing retries on its own.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Application</th><th scope="col">Email</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Why</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+              {% for e in unsent %}
+                <tr>
+                  <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ e.application) }}">{{ e.application }}</a></td>
+                  <td>{{ e.about }}<div class="subtle small">{{ e.at }}</div></td>
+                  <td class="nowrap">{{ e.sender }}</td>
+                  <td class="nowrap">{{ e.to }}</td>
+                  <td class="subtle">{{ e.why }}</td>
+                  <td><button type="button" class="btn btn-secondary" disabled aria-label="Resend {{ e.about | lower }} to {{ e.to }}">Resend</button></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="subtle">Every email was sent.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="card" aria-labelledby="away-h">
         <div class="card-head">
           <h2 id="away-h">Away this week</h2>

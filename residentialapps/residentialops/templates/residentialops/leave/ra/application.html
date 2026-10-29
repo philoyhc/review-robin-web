@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing with context %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing, email_items with context %}
 {% from "residentialops/_people.html" import person_tokens %}
 {% block title %}{{ app.dates }}{% endblock %}
 {% block content %}
@@ -23,6 +23,14 @@
           {% if app.stage in leave.OPEN_STAGES %}<li class="subtle">Next: {% if app.cover_status == "Awaiting" and leave.confirmation_needed(app) %}awaiting cover confirmation from {{ app.cover }}, then {% endif %}{{ "the Master's decision" if app.appeal else app.stage | lower }}</li>{% endif %}
         </ol>
       </section>
+      {% set emails = leave.emails_for(app, me) %}
+      {% if emails %}
+      <section class="card card-pad" aria-labelledby="emails-h">
+        <h2 id="emails-h">Emails you sent</h2>
+        <p class="sub">Sent from your account. One not sent can be sent again from here.</p>
+        {{ email_items(emails) }}
+      </section>
+      {% endif %}
     </div>
     <div class="side">
       {% if app.stage in leave.OPEN_STAGES %}

@@ -166,3 +166,13 @@ def test_an_ra_can_name_new_cover_on_an_open_application(monkeypatch) -> None:
     monkeypatch.setattr(sample_leave, "APPLICATIONS", tuple(declined if a.id == "L-0101" else a for a in sample_leave.APPLICATIONS))
     assert "cannot cover you. Name someone else" in client().get(RA + "applications/L-0101").text
     assert "Change cover" not in client().get(RA + "applications/L-0117").text  # decided
+
+
+def test_the_ra_sees_the_emails_they_sent_and_resends_a_failed_one() -> None:
+    """Spec §17.2 (author, 2026-10-29): an email the RA's action sent that
+    failed is shown on the application with Resend."""
+    page = TestClient(ops_app()).get("/ra-leave/applications/L-0101").text
+    emails = page.split('id="emails-h"')[1].split("</section>")[0]
+    assert "Emails you sent" in page
+    assert "Application submitted</span> to Daniel Koh" in emails and ">Resend to Daniel Koh</button>" in emails
+    assert "Cover asked</span> to Ethan Wong" in emails and ">Resend to Ethan Wong" not in emails  # sent
