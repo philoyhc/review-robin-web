@@ -249,6 +249,16 @@ def every_slot_people(term: "Term") -> tuple[str, ...]:
     return tuple(p.name for p in STAFF if p.abbrev in chosen["appointments"] or p.name in chosen["names"])
 
 
+def oversight(name: str, term: "Term") -> str:
+    """A rostered staff member's oversight for a term, as the Staff roster
+    shows it: every slot, the slots they are in, or none (author,
+    2026-10-29)."""
+    if name in every_slot_people(term):
+        return "Every slot"
+    held = sum(1 for s in SLOTS if name in s.staff)
+    return f"{held} slot{'s' if held != 1 else ''}" if held else "None"
+
+
 def unit_appointments() -> tuple[tuple[str, str], ...]:
     """The staff appointments that no slot's Staff cell holds: the Unit's
     own. By appointment, not person, so an RF between slots stays a slot

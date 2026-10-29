@@ -17,15 +17,15 @@
   <section class="card" aria-labelledby="staff-h">
     <div class="card-head">
       <h2 id="staff-h">Staff roster {% if rosters_filled %}<span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span>{% endif %}</h2>
-      <p class="sub">A row is a person and one staff appointment, with its dates. What each can do follows from their appointments and routing; sys admin, the one grant, is made on the <a href="{{ url('/sys-admin/') }}">Sys admin</a> page.</p>
+      <p class="sub">A row is a person and one staff appointment, with its dates. What each can do follows from their appointments and routing; Oversight, read from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }}, is every slot, the slots they are in, or none; sys admin, the one grant, is made on the <a href="{{ url('/sys-admin/') }}">Sys admin</a> page.</p>
     </div>
     <div class="table-wrap">
       <table class="roster">
         <thead>
-          <tr>{{ select_all('staff') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Sign-in</th></tr>
+          <tr>{{ select_all('staff') }}<th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Abbrev</th><th scope="col">From – to</th><th scope="col">Oversight</th><th scope="col">Sign-in</th></tr>
         </thead>
         <tbody>
-          {% if not rosters_filled %}<tr><td colspan="7" class="subtle">No staff yet. Add a person, or upload the Staff roster CSV below.</td></tr>{% endif %}
+          {% if not rosters_filled %}<tr><td colspan="8" class="subtle">No staff yet. Add a person, or upload the Staff roster CSV below.</td></tr>{% endif %}
           {% for person in (sample.STAFF if rosters_filled else ()) %}
             <tr>
               {{ select_row(person.name) }}
@@ -34,6 +34,7 @@
               <td>{{ person.appointment }}</td>
               <td>{{ person.abbrev }}</td>
               <td class="nowrap">{{ person.dates }}</td>
+              <td class="nowrap">{% set over = sample.oversight(person.name, sample.CURRENT_TERM) %}{% if over == "None" %}<span class="chip chip-mute">None</span>{% else %}<span class="pill-derived">{{ over }}</span>{% endif %}</td>
               <td>{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
           {% endfor %}

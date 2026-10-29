@@ -136,7 +136,10 @@ model (author, 2026-10-27):
 - **A value has one home.** Where it is set, it is plain text and edited
   there; where another page repeats it, it is a pill (`.pill-derived`),
   read-only (author, 2026-10-27): a person's slots, on their detail page,
-  come from the Assignments page's cells. Sign-in stays a status chip (§3). The Staff roster shows no access: sys admin is listed on the Sys admin page, and other applications' grants stay in those applications (author, 2026-10-28).
+  come from the Assignments page's cells; the staff in every slot show as
+  pills under each slot's Staff cell, and the Staff roster's Oversight
+  column (every slot, N slots, or a None chip) is read from Assignments
+  for the current term (author, 2026-10-29). Sign-in stays a status chip (§3). The Staff roster shows no access: sys admin is listed on the Sys admin page, and other applications' grants stay in those applications (author, 2026-10-28).
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).
