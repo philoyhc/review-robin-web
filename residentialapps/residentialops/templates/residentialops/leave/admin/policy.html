@@ -157,7 +157,7 @@
     {# 6. Approvals. #}
     <section class="card card-pad" aria-labelledby="approvals-h">
       <h2 id="approvals-h">Approvals</h2>
-      <p class="sub">An application takes a first approval, unless none is needed, then a final one, by different people. Only someone holding a place in the RA's slot approves it, first or final: those who oversee every RA (below) hold one in every slot; anyone else named for a role, or standing in as a delegate, approves only where they do. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
+      <p class="sub">An application takes a first approval, unless none is needed, then a final one, by different people. Only someone holding a place in the RA's slot approves it, first or final: those in every slot, set on Assignments, hold one in each; anyone else named for a role, or standing in as a delegate, approves only where they do. The slot's approvers are read from the RA's slot on Assignments for the current term; a delegate who approves first while an approver cannot is set on <a href="{{ url('/ra-leave/admin/routing') }}">Approval chain</a>.</p>
       <fieldset class="modes">
         <legend>First approval</legend>
         <div class="mode"><input type="radio" id="first-slot" name="first" value="slot"{% if leave.POLICY.first == "slot" %} checked{% endif %} aria-describedby="first-slot-what" disabled> <div><label for="first-slot"><strong>By the RA's slot's</strong></label> <span id="first-slot-what" class="subtle">Tick one or more of the appointments on the RAs' slots; with more than one, whichever approves first</span>
@@ -172,11 +172,7 @@
           <input class="input names" type="text" list="staff-names" aria-label="Staff who may give final approval" placeholder="Start typing a name" value="{{ leave.POLICY.final_names | join(', ') if leave.POLICY.final == 'named' }}" disabled>
           </div></div>
       </fieldset>
-      <fieldset class="modes">
-        <legend>Who oversees every RA</legend>
-        <p class="sub">As if in every slot: they see every RA's leave, by default the Master and the designated admin. Other staff see the RAs on their own slots (an RF their Precincts, an RSLM their Wing), and staff holding no slot see no RA Leave. What each may approve follows the approvals above.</p>
-        {{ checks("overseers", "Unit-level appointments that oversee every RA", leave.unit_appointments(), leave.POLICY.overseers) }}
-      </fieldset>
+      <p class="subtle small">Who is in every slot, and so oversees every RA, is set for each term on <a href="{{ url('/rosters/assignments') }}">Assignments</a>: {{ leave.overseers() | join(", ") or "no one" }} for {{ leave.TERM.label }}.</p>
       <dl class="kv">
         <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
       </dl>

@@ -49,6 +49,30 @@
       <div class="notice" role="note"><strong>Warning:</strong> {{ name }}'s appointment covers all but {{ days }} days of {{ term.label }}; their assignment to {{ slot }} stands. This does not block a save.</div>
     {% endfor %}
   {% endif %}
+  {# Every slot (author, 2026-10-29): staff in every slot for the term, by
+     Unit-level appointment or by name. They oversee every RA, as if on
+     every Staff cell; rostered staff in no slot and not here oversee none.
+     Kept per term, copied with the term's assignments; it opens with the
+     Staff cells, and a past term or one before the slots stand has none. #}
+  {% if has_slots and term.status != "Past" %}
+  {% set chosen = sample.every_slot(term) if cells_open else {"appointments": (), "names": ()} %}
+  {% set people = sample.every_slot_people(term) if cells_open else () %}
+  <section class="card card-pad gap-below" aria-labelledby="every-h">
+    <h2 id="every-h">Every slot{% if cells_open %} <span class="count">· {{ people | length }} staff</span>{% endif %}</h2>
+    <p class="sub">Staff in every slot for {{ term.label }}, as if on every Staff cell below: they oversee every RA, and may take any role an application gives to someone in an RA's slot. Choose by Unit-level appointment, by name, or both. Rostered staff in no slot and not here oversee no RA.</p>
+    {% call gate(cells_open, "Every slot opens with the Staff and RA cells, once both rosters have people.", "/rosters/staff", "Staff roster") %}
+    <div class="checks" role="group" aria-label="Unit-level appointments in every slot">
+      {% for appointment, abbrev in sample.unit_appointments() %}
+        <label class="check"><input type="checkbox" name="every-slot-types" value="{{ abbrev }}"{% if abbrev in chosen.appointments %} checked{% endif %} disabled> {{ appointment }}{% if abbrev != appointment %} ({{ abbrev }}){% endif %}</label>
+      {% endfor %}
+    </div>
+    <div class="field-wide"><label for="every-slot-names">Also by name</label>
+      <input id="every-slot-names" class="input" type="text" list="every-slot-staff" placeholder="Start typing a name" value="{{ chosen.names | join(', ') }}" disabled>
+      <datalist id="every-slot-staff">{% for p in (sample.STAFF if cells_open else ()) %}<option value="{{ p.name }}">{{ p.appointment }}</option>{% endfor %}</datalist></div>
+    <p class="subtle small">{% if people %}In every slot: {{ people | join(", ") }}.{% else %}No one is in every slot for {{ term.label }}{% if not assigned %}; copying an earlier term's assignments copies its choices too{% endif %}.{% endif %}</p>
+    {% endcall %}
+  </section>
+  {% endif %}
   <section class="card" aria-labelledby="slots-h">
     <div class="card-head">
       <h2 id="slots-h">Slots {% if slots_open and has_slots %}<span class="count">· {{ counts[3] }} {{ level_name[3] }}s in {{ counts[2] }} {{ level_name[2] }}s and {{ counts[1] }} {{ level_name[1] }}s</span>{% endif %}</h2>

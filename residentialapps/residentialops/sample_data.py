@@ -227,6 +227,36 @@ def appointments(people: tuple[StaffMember, ...] | tuple[RosterRA, ...]) -> tupl
 
 
 STAFF_APPOINTMENTS = appointments(STAFF)
+
+
+# Who is in every slot for a term, set on Assignments (author,
+# 2026-10-29): by Unit-level appointment, by name, or both. They oversee
+# every RA, as if in every slot; staff in no slot and not here oversee
+# none. Kept per term, copied forward with a term's assignments.
+EVERY_SLOT: dict[str, dict[str, tuple[str, ...]]] = {
+    "AY2026-2027.1": {"appointments": ("Master", "Admin"), "names": ()},
+}
+
+
+def every_slot(term: "Term") -> dict[str, tuple[str, ...]]:
+    return EVERY_SLOT.get(term.key, {"appointments": (), "names": ()})
+
+
+def every_slot_people(term: "Term") -> tuple[str, ...]:
+    """Those in every slot for a term: holders of the ticked appointments,
+    then anyone named, in Staff-roster order."""
+    chosen = every_slot(term)
+    return tuple(p.name for p in STAFF if p.abbrev in chosen["appointments"] or p.name in chosen["names"])
+
+
+def unit_appointments() -> tuple[tuple[str, str], ...]:
+    """The staff appointments that no slot's Staff cell holds: the Unit's
+    own. By appointment, not person, so an RF between slots stays a slot
+    appointment."""
+    on_slots = {(p.appointment, p.abbrev) for p in STAFF if any(p.name in s.staff for s in SLOTS)}
+    return tuple(a for a in STAFF_APPOINTMENTS if a not in on_slots)
+
+
 RA_APPOINTMENTS = appointments(RAS)
 
 # Excerpts of the mock files, shown on the pages' CSV cards.

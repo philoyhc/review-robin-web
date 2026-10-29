@@ -379,7 +379,7 @@ def test_assignments_show_one_term_at_a_time() -> None:
     client = TestClient(ops_app())
     page = client.get("/rosters/assignments").text
     assert '<option value="AY2026-2027.1" selected>AY2026-2027, Term 1 · Sem 1 + Winter break (Current)</option>' in page
-    assert page.count("<option value=") == len(sample_data.TERMS)
+    assert page.split('id="term"')[1].split("</select>")[0].count("<option value=") == len(sample_data.TERMS)
     assert '<button type="submit" class="btn btn-secondary">Show term</button>' in page  # live: navigation
     assert 'aria-label="Cypress A 04-05-06: RA" value="Chloe Lim"' in page
     assert "Umairah Salleh's appointment covers all but 14 days of AY2026-2027, Term 1" in page
@@ -446,3 +446,34 @@ def test_home_gives_one_primary_step_at_a_time() -> None:
     assert steps.count("btn btn-primary") == 1
     assert 'btn btn-primary" href="/rosters/staff?stage=slots" aria-label="Go to step 2, Staff roster"' in steps
     assert 'href="/rosters/assignments?stage=slots" aria-label="Go to step 1, Setup"' in steps  # done: no return_to
+
+
+def test_assignments_sets_who_is_in_every_slot(monkeypatch) -> None:
+    """Ruled 2026-10-29: on Assignments, per term, staff in every slot by
+    Unit-level appointment or by name, above the slots table; they oversee
+    every RA, and rostered staff in no slot and not here oversee none."""
+    from residentialapps.residentialops import sample_data, sample_leave
+
+    client = TestClient(ops_app())
+    page = client.get("/rosters/assignments").text
+    card = page.split('id="every-h"')[1].split("</section>")[0]
+    assert page.index('id="every-h"') < page.index('id="slots-h"')
+    assert re.findall(r'name="every-slot-types" value="(\w+)"( checked)?', card) == [
+        ("Master", " checked"), ("Admin", " checked"), ("Exec", ""),
+    ]
+    assert "In every slot: Sam Lee, Rachel Yeo." in card
+    assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
+    # By name too: a named person is in every slot, and oversees every RA.
+    term = sample_data.CURRENT_TERM.key
+    monkeypatch.setitem(sample_data.EVERY_SLOT, term, {"appointments": ("Master",), "names": ("Hui Min Goh",)})
+    assert sample_leave.overseers() == ("Sam Lee", "Hui Min Goh") and len(sample_leave.scope("Hui Min Goh")) == 9
+    assert sample_leave.scope("Rachel Yeo") == ()
+    later = client.get("/rosters/assignments?term=AY2026-2027.2").text
+    assert "No one is in every slot for AY2026-2027, Term 2; copying an earlier term" in later
+    assert "set for each term on" in client.get("/ra-leave/admin/policy").text
+    # It opens with the Staff cells: before the rosters have people it is
+    # shown gated and names no one; a past term has none.
+    gated = client.get("/rosters/assignments?stage=slots").text.split('id="every-h"')[1].split("</section>")[0]
+    assert "Not open yet." in gated and "Sam Lee" not in gated and " checked" not in gated
+    page = client.get("/rosters/assignments").text
+    assert page.index("Warning:") < page.index('id="every-h"')  # page-level notices first
