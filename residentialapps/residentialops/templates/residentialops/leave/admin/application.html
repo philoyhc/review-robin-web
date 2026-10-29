@@ -34,6 +34,16 @@
       {% endif %}
     </div>
     <div class="side">
+      {% set bal = leave.balance_of(app) %}
+      <section class="card card-pad" aria-labelledby="bal-h">
+        <h2 id="bal-h">{{ app.ra }}'s {{ app.leave_type }}, {{ leave.TERM.label }}</h2>
+        <dl class="kv">
+          <dt>Entitlement</dt><dd>{{ bal.entitlement }}{% if bal.adjustment %} {{ "%+d" | format(bal.adjustment) }}{% endif %}</dd>
+          <dt>Used</dt><dd>{{ bal.used }}</dd><dt>Pending</dt><dd>{{ bal.pending }}</dd>
+          <dt>Available</dt><dd>{{ bal.available }}</dd>
+        </dl>
+        <p class="subtle small">For correcting the record.</p>
+      </section>
       <section class="card card-pad muted" aria-labelledby="admin-h">
         <h2 id="admin-h">Administer</h2>
         <p class="sub">Each action asks for a reason and is audited.</p>

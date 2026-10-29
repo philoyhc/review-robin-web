@@ -279,3 +279,30 @@ def test_the_ra_sees_an_appeal_s_split_and_a_refused_appeal() -> None:
     maya = c.get("/ra-leave/history?as=Maya%20Seah").text
     assert "Rejected by Sam Lee" in maya
     assert "For example, 4 days of Personal leave asked with 2 available: 2 from your entitlement, 2 extra" in c.get("/ra-leave/appeal").text
+
+
+def test_apply_names_approvers_and_blackouts_and_warns_on_a_draft_over_balance() -> None:
+    """The 1C.1 audit (2026-10-29): Apply names the RA's approvers (§9.1)
+    and this term's blackouts (§6); a draft asking more than the RA has says
+    so on Apply and in the lists (§10, scenario G)."""
+    c = TestClient(ops_app())
+    apply = c.get("/ra-leave/apply").text
+    assert f"Your approvers, from your slot: {sample_leave.approvers_for('Chloe Lim')}." in apply
+    assert sample_leave.approvers_for("Chloe Lim") == "Daniel Koh, then Rachel Yeo"
+    assert "Examinations, 15 Nov – 28 Nov: appeal only" in apply
+    assert "Move-in and orientation" not in apply  # over already
+    draft = sample_leave.my_drafts()[0]
+    assert sample_leave.draft_short(draft) == 2  # 3 days of Official leave, 1 available
+    assert "It asks 2 days more Official leave than you have: submitting it offers Request extra leave instead." in c.get(
+        f"/ra-leave/apply?draft={draft.id}").text
+    assert '<span class="chip chip-warn">2 days over your Official leave</span>' in c.get("/ra-leave/").text
+
+
+def test_apply_s_blackouts_follow_whether_the_ra_may_appeal() -> None:
+    """Cold read, 2026-10-29: with appeals off, an Appeal-only blackout
+    admits no leave, as the form above it says."""
+    c = TestClient(ops_app())
+    c.cookies.set(sample_leave.PREVIEW_COOKIE, "Off")
+    apply = c.get("/ra-leave/apply").text
+    assert "while appeals are off" in apply
+    assert "Examinations, 15 Nov – 28 Nov: no leave" in apply and "appeal only" not in apply

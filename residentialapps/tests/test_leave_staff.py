@@ -398,3 +398,24 @@ def test_an_appeal_charges_the_ra_s_own_days_first(monkeypatch) -> None:
     after = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Isaac Goh" and r["type"] == "Personal leave")
     assert after["available"] == 0 and after["pending"] == row["pending"] + have  # its own days, pending
     assert sample_leave.my_extra("Isaac Goh")["pending"] == 2  # only the rest is extra
+
+
+def test_staff_home_shows_leave_later_this_term_and_admin_detail_the_balance() -> None:
+    """The 1C.1 audit (2026-10-29): beyond this week, the staff home lists
+    approved leave later this term (§24); the admin application page shows
+    the RA's balance for correcting the record (§21.4, scenario M)."""
+    c = client()
+    later = c.get(STAFF + SAM).text.split('id="later-h">Later this term</h2>')[1].split("</section>")[0]
+    assert "Hana Ito" in later and "14 Dec – 15 Dec" in later
+    assert [a.id for a in sample_leave.coming_up("Sam Lee")] == ["L-0115"]
+    admin = c.get("/ra-leave/admin/applications/L-0101").text
+    card = admin.split('id="bal-h">')[1].split("</section>")[0]
+    assert card.startswith("Chloe Lim's Personal leave, ")
+    assert re.findall(r"<dt>(\w+)</dt><dd>(\d+)</dd>", card) == [
+        ("Entitlement", "5"), ("Used", "0"), ("Pending", "3"), ("Available", "2")]
+
+
+def test_staff_home_says_when_no_leave_is_later_this_term(monkeypatch) -> None:
+    monkeypatch.setattr(sample_leave, "upcoming", lambda: ())
+    later = client().get(STAFF + SAM).text.split('id="later-h">Later this term</h2>')[1].split("</section>")[0]
+    assert "No approved leave later this term." in later

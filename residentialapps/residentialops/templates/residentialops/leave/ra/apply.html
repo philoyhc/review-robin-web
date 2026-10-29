@@ -5,8 +5,8 @@
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}
   {{ ra_switch(me, leave, here) }}
-  <p class="sub">Your approvers are worked out from your slot; you name your cover. Controls are inert until RA Leave is wired.</p>
-  {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.</div>{% endif %}
+  <p class="sub">Your approvers, from your slot: {{ leave.approvers_for(me) }}. You name your cover. Controls are inert until RA Leave is wired.</p>
+  {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.{% set short = leave.draft_short(draft) %}{% if short %} It asks {{ short }} day{{ "s" if short != 1 }} more {{ draft.leave_type }} than you have: {% if leave.can_appeal(me) %}submitting it offers Request extra leave instead.{% else %}shorten it before you submit.{% endif %}{% endif %}</div>{% endif %}
   <div class="split">
     <div class="main">
       <section class="card card-pad" aria-labelledby="form-h">
@@ -28,6 +28,8 @@
       <section class="card card-pad muted" aria-labelledby="avail-h">
         <h2 id="avail-h">Available to you</h2>
         <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>{% endfor %}</dl>
+        {% set blackouts = leave.term_blackouts() %}
+        {% if blackouts %}<h3 class="gap-above-sm">Blackouts ahead this term</h3><ul class="plain subtle small">{% for b, first, last in blackouts %}<li>{{ b.label }}, {{ leave.short_date(first) }} – {{ leave.short_date(last) }}: {{ b.effect | lower if leave.can_appeal(me) else "no leave" }}</li>{% endfor %}</ul>{% endif %}
         {% if leave.can_appeal(me) %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}{{ as_query }}">Request extra leave</a> instead of a refusal.</p>{% endif %}
       </section>
     </div>
