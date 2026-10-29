@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from residentialapps.supportlogs.routes_consultation import router as consultation_router
 from residentialapps.supportlogs.routes_frontline import router as frontline_router
 from residentialapps.supportlogs.routes_health import router as health_router
 from residentialapps.supportlogs.routes_home import router as home_router
@@ -24,5 +25,6 @@ def create_app() -> FastAPI:
     app.include_router(safety_router)
     app.include_router(plans_router)
     app.include_router(overview_router)
+    app.include_router(consultation_router)
     app.include_router(pages_router)
     return app

@@ -1,0 +1,33 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Consultation check{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/consultation/') }}{{ as_query }}">‹ Consultation check</a>
+  {{ sample_title("Consultation check", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# Each student's state, its named reasons and whom to consult (§10.7):
+     current state and recent activity only, no score, no notes (§10.8,
+     §11.2). The run, with what it showed, is recorded. #}
+  <p class="sub">{{ purpose }} · {{ results | length }} students · the strongest first</p>
+  <p class="notice" role="note">This check is recorded with what it showed. {{ sample.NONE_MEANS }}</p>
+  <section class="card card-pad" aria-labelledby="res-h">
+    <h2 id="res-h">Results</h2>
+    <div class="table-wrap">
+      <table data-sort-auto id="check-table">
+        <thead><tr><th scope="col">Student</th><th scope="col">State</th><th scope="col">Why</th><th scope="col">Consult</th><th scope="col">Consultation</th></tr></thead>
+        <tbody>{% for r in results %}<tr>
+          <td>{% if r.student %}<span class="strong">{{ r.student.name }}</span><br>{% endif %}<span class="subtle">{{ r.email }}</span>{% if not r.student %}<br><span class="subtle small">No Support Logs record</span>{% endif %}</td>
+          <td data-sort-value="{{ loop.index }}"><span class="chip {{ 'chip-safety' if r.state == sample.REQUIRED else 'chip-warn' if r.state == sample.SUGGESTED else 'chip-mute' }}">{{ r.state }}</span></td>
+          <td>{% if r.reasons %}<ul class="plain">{% for reason in r.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>{% endif %}</td>
+          <td>{{ r.consult | join(", ") }}</td>
+          <td>{% if r.reasons %}<label class="visually-hidden" for="done-{{ loop.index }}">Consultation for {{ r.student.name }}</label><select id="done-{{ loop.index }}" class="input" disabled><option>Not yet</option><option>Requested</option><option>Done</option></select>{% endif %}</td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card card-pad muted gap-above" aria-labelledby="rules-h">
+    <h2 id="rules-h">How a state is reached</h2>
+    <p class="sub">Named rules, configured before go-live; never a score, and nothing older than current support (§10.8).</p>
+    <dl class="kv">{% for reason, state in sample.CONSULTATION_REASONS %}<dt>{{ reason }}</dt><dd>{{ state }}</dd>{% endfor %}</dl>
+  </section>
+{% endblock %}

@@ -31,11 +31,6 @@ class Placeholder:
 
 
 PLACEHOLDERS = (
-    Placeholder("/consultation/", "consultation", "Consultation check", (sample.CONSULTATION,), 6, (
-        "A purpose and a list of students' emails, for any approved purpose (§10.7)",
-        "Each student: No consultation indicated, Consultation suggested or Consultation required, with the reasons, and whom to consult (§10.8)",
-        "Consultation requested or done; past checks",
-    )),
     Placeholder("/sys-admin/", "sys_admin", "Access", sample.ADMINISTRATION, 6, (
         "Every active Staff-roster member, read from Residential Operations as the eligibility list",
         "A toggle per authorization type, a reason and an audit event per change",
