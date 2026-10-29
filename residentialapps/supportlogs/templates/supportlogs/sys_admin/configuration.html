@@ -1,0 +1,44 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Configuration{% endblock %}
+{% block content %}
+  {{ sample_title("Configuration", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# The lists staff choose from, seeded from the functional spec and
+     rendered from one place, never hard-coded in a page (UI spec §3). A
+     change is recorded; a retired value stays on the records that hold it. #}
+  <p class="sub">The lists staff choose from. Each change is recorded; a value taken out stays on the records that already hold it.</p>
+  {% set lists = (
+    ("durations", "Durations", "§5.5", sample.DURATIONS),
+    ("types", "Encounter types", "§5.6", sample.ENCOUNTER_TYPES),
+    ("concerns", "Concern areas", "§5.7", sample.CONCERN_AREAS | map(attribute=0) | list),
+    ("modes", "Location / mode", "§5.9", sample.MODES),
+    ("follow", "Follow-up cadences", "§6.4", sample.FOLLOW_UP_CADENCES),
+    ("sources", "Assignment sources", "§7.3", sample.ASSIGNMENT_SOURCES),
+    ("cadences", "Assignment cadences", "§7.4", sample.ASSIGNMENT_CADENCES),
+    ("steps", "Escalation steps", "§5.10", sample.ESCALATION_STEPS),
+    ("outcomes", "Closure outcomes", "§5.10", sample.CLOSURE_OUTCOMES),
+  ) %}
+  <div class="card-grid">
+    {% for key, title, section, values in lists %}
+      <section class="card card-pad" aria-labelledby="{{ key }}-h">
+        <h2 id="{{ key }}-h">{{ title }} <span class="count">· {{ values | length }}</span></h2>
+        <ul class="plain">{% for v in values %}<li>{{ v }}</li>{% endfor %}</ul>
+        <button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Edit {{ title | lower }}">Edit</button>
+        <p class="subtle small flush">{{ section }}</p>
+      </section>
+    {% endfor %}
+    <section class="card card-pad" aria-labelledby="note-h">
+      <h2 id="note-h">Notes</h2>
+      <dl class="kv"><dt>Length</dt><dd>{{ sample.NOTE_LIMIT }} characters</dd><dt>Guidance</dt><dd>{{ sample.NOTE_GUIDANCE }}</dd></dl>
+      <button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Edit notes">Edit</button>
+      <p class="subtle small flush">§5.8</p>
+    </section>
+    <section class="card card-pad" aria-labelledby="rules-h">
+      <h2 id="rules-h">Consultation rules</h2>
+      <dl class="kv">{% for reason, state in sample.CONSULTATION_REASONS %}<dt>{{ reason }}</dt><dd>{{ state }}</dd>{% endfor %}</dl>
+      <button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Edit consultation rules">Edit</button>
+      <p class="subtle small flush">§10.8; thresholds set before go-live (§17)</p>
+    </section>
+  </div>
+{% endblock %}

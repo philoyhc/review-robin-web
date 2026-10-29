@@ -1,6 +1,7 @@
-"""Support Logs' placeholder screens, segment 1D item 1 rung 1: the chrome,
+"""Support Logs' screens on sample data, segment 1D item 1: the chrome,
 Home, the tabs each grant gives, the `403` page, and the URL rules every
-page keeps (`residentialapps/guide/segment_1D_support_logs.md`)."""
+page keeps (`residentialapps/guide/segment_1D_support_logs.md`); Sys admin
+(rung 6)."""
 
 from __future__ import annotations
 
@@ -15,7 +16,6 @@ from fastapi.testclient import TestClient
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
-from residentialapps.supportlogs.routes_pages import PLACEHOLDERS
 from residentialapps.tests._host import host_with
 from residentialapps.tests.test_pages import flatten
 from residentialapps.web import pages as web_pages
@@ -40,24 +40,38 @@ def tabs(page: str) -> list[str]:
     return re.findall(r'<a [^>]*>([^<]+?)(?: <span class="tab-badge">.*?</span></span>)?</a>', nav)
 
 
+# Each tab's page and the grants that reach it: (path, title, grants).
+PAGES = (
+    ("/log", "Log encounter", (sample.FRONTLINE,)),
+    ("/students/", "Students", (sample.FRONTLINE,)),
+    ("/plans/", "My plans", (sample.FRONTLINE,)),
+    ("/overview/", "Overview", (sample.SENIOR, *sample.VIEW)),
+    ("/consultation/", "Consultation check", (sample.CONSULTATION,)),
+    ("/sys-admin/", "Access", sample.ADMINISTRATION),
+    ("/sys-admin/configuration", "Configuration", sample.ADMINISTRATION),
+    ("/sys-admin/clusters", "Clusters", sample.ADMINISTRATION),
+    ("/sys-admin/audit", "Audit log", sample.ADMINISTRATION),
+)
+
+
 @pytest.fixture(scope="module")
 def client() -> TestClient:
     return TestClient(create_app())
 
 
-def test_every_page_is_a_placeholder_for_whoever_reaches_it(client: TestClient) -> None:
-    for p in PLACEHOLDERS:
-        page = client.get(at(p.path, holder(*p.grants).name))
-        assert page.status_code == 200, p.path
-        assert "Sample data" in page.text and f"Placeholder: rung {p.rung}" in page.text, p.path
-        assert f"<h1>{p.title}</h1>" in page.text, p.path
+def test_every_page_shows_sample_data_to_whoever_reaches_it(client: TestClient) -> None:
+    for path, title, grants in PAGES:
+        page = client.get(at(path, holder(*grants).name))
+        assert page.status_code == 200, path
+        assert "Sample data" in page.text and "Placeholder" not in page.text, path
+        assert f"<h1>{title}</h1>" in page.text, path
 
 
 def test_a_page_beyond_the_viewer_s_grants_is_403(client: TestClient) -> None:
-    for p in PLACEHOLDERS:
-        outsider = next(v for v in sample.VIEWERS if v.grants and not sample.holds(v, *p.grants))
-        page = client.get(at(p.path, outsider.name))
-        assert page.status_code == 403, (p.path, outsider.name)
+    for path, _, grants in PAGES:
+        outsider = next(v for v in sample.VIEWERS if v.grants and not sample.holds(v, *grants))
+        page = client.get(at(path, outsider.name))
+        assert page.status_code == 403, (path, outsider.name)
         assert "You do not have access to this page." in page.text
 
 
@@ -168,21 +182,22 @@ def test_not_registered_shows_the_message_and_nobody_else(client: TestClient) ->
 def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
     local = TestClient(create_app())
-    for path in ["/", "/not-registered", *(p.path for p in PLACEHOLDERS)]:
+    for path in ["/", "/not-registered", *(path for path, _, _ in PAGES)]:
         assert local.get(path).status_code == 404, path
     assert local.get("/health").status_code == 200
 
 
 def test_route_names_carry_the_application_s_prefix() -> None:
     names = [r.name for r in flatten(create_app().routes) if isinstance(r, APIRoute)]
-    assert len(names) > len(PLACEHOLDERS) and all(n.startswith("supportlogs_") for n in names)
+    assert len(names) > len(PAGES) and all(n.startswith("supportlogs_") for n in names)
 
 
 def test_mounted_pages_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
     pages = ["/", "/not-registered", at("/", "Nadia Hassan"), at("/log", "Rachel Yeo"), at("/", "Wei Jie Ong"),
-             *(at(p.path, holder(*p.grants).name) for p in PLACEHOLDERS)]
+             *(at(path, holder(*grants).name) for path, _, grants in PAGES),
+             at("/sys-admin/", "Platform super-admin")]
     for path in pages:
         page = mounted.get(MOUNT + path)
         assert page.status_code in (200, 403), path

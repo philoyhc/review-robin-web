@@ -1,0 +1,17 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Clusters{% endblock %}
+{% block content %}
+  {{ sample_title("Clusters", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# The cluster list only: which students belong to each is support data,
+     set by senior staff and audited, never here (§3.3, §10.5). Shown as
+     the assignments file's Precincts until clusters are ruled. #}
+  <section class="card card-pad" aria-labelledby="cl-h">
+    <h2 id="cl-h">Clusters <span class="count">· {{ sample.CLUSTERS | length }}</span></h2>
+    <p class="sub">The groups Overview reports by. Which students belong to each is set by senior staff, not here. Shown as Precincts until clusters are decided; these controls assume clusters are Support Logs' own list, one answer to that question.</p>
+    <ul class="items">{% for c in sample.CLUSTERS %}<li><div class="item-head"><span class="strong">{{ c }}</span><span class="btnrow"><button type="button" class="btn btn-secondary" disabled aria-label="Rename {{ c }}">Rename</button><button type="button" class="btn btn-danger" disabled aria-label="Retire {{ c }}">Retire</button></span></div></li>{% endfor %}</ul>
+    <div class="field-wide gap-above-sm"><label for="new-cluster">Add a cluster</label><input id="new-cluster" class="input" disabled></div>
+    <button type="button" class="btn btn-primary" disabled>Add</button>
+  </section>
+{% endblock %}

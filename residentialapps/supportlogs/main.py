@@ -10,9 +10,9 @@ from residentialapps.supportlogs.routes_frontline import router as frontline_rou
 from residentialapps.supportlogs.routes_health import router as health_router
 from residentialapps.supportlogs.routes_home import router as home_router
 from residentialapps.supportlogs.routes_overview import router as overview_router
-from residentialapps.supportlogs.routes_pages import router as pages_router
 from residentialapps.supportlogs.routes_plans import router as plans_router
 from residentialapps.supportlogs.routes_safety import router as safety_router
+from residentialapps.supportlogs.routes_sys_admin import router as sys_admin_router
 
 
 def create_app() -> FastAPI:
@@ -26,5 +26,5 @@ def create_app() -> FastAPI:
     app.include_router(plans_router)
     app.include_router(overview_router)
     app.include_router(consultation_router)
-    app.include_router(pages_router)
+    app.include_router(sys_admin_router)
     return app

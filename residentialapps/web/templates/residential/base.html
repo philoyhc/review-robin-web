@@ -305,6 +305,9 @@
       .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
       .tile { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); color: var(--text-body); text-decoration: none; }
       .tile:hover { border-color: var(--accent); }
+      /* A grid of cards, one per configured list; one
+         column below 260px. */
+      .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px; align-items: start; }
       .tile-n { font-size: 28px; font-weight: 700; line-height: 1.1; }
       .tile-l { font-size: 13px; color: var(--text-subtle); }
       /* The landing's applications: one large target each, phone first. */

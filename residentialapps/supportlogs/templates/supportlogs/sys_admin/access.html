@@ -1,0 +1,52 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Access{% endblock %}
+{% block content %}
+  {{ sample_title("Access", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# Who may use Support Logs (author, 2026-10-29): the Staff roster is the
+     eligibility list, read from Residential Operations and never written;
+     the grants are Support Logs' own (roles rule 9). Every member is
+     eligible for every type; an appointment grants nothing (§3.5). #}
+  <p class="sub">Every active Staff-roster member, from Residential Operations. Grants are made here and shown nowhere else.</p>
+  {% if sample.LAPSED %}
+    <section class="card card-pad gap-below" aria-labelledby="lapsed-h">
+      <h2 id="lapsed-h">Lapsed grants <span class="count">· {{ sample.LAPSED | length }}</span></h2>
+      <p class="sub">Their holder has no active Staff-roster entry, so the grants stopped at once. They stay listed until revoked.</p>
+      <ul class="items">{% for l in sample.LAPSED %}<li><div class="item-head"><span class="strong">{{ l.name }}</span><button type="button" class="btn btn-danger" disabled aria-label="Revoke {{ l.name }}'s lapsed grants">Revoke</button></div><div class="subtle">{{ l.grants | join(", ") }} · stopped {{ sample.short_date(l.since) }} · {{ l.why }}</div></li>{% endfor %}</ul>
+    </section>
+  {% endif %}
+  <section class="card gap-below" aria-labelledby="access-h">
+    <div class="card-head">
+      <h2 id="access-h">Staff and their access</h2>
+      <p class="sub">A grant or a revocation asks for a reason and, for a senior grant, the request it answers; each is recorded. Nobody changes their own access, and the last sys admin cannot be revoked. {% if super_admin %}You grant and revoke Sys admin.{% else %}Sys admin is the super-admin's to grant: you see it read-only.{% endif %}</p>
+    </div>
+    <div class="filters inset">
+      <div class="filter-fields">
+        <div class="filter"><label for="find">Find a person</label><input id="find" class="input" type="search" placeholder="Name" disabled></div>
+        <div class="filter"><label for="show">Show</label><select id="show" class="input" disabled><option>Everyone</option><option>With access</option><option>No access</option></select></div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table data-sort-auto id="access-table">
+        <thead><tr><th scope="col">Name</th><th scope="col">Appointment</th>{% for col in sample.ACCESS_COLUMNS %}<th scope="col"{% if col == sample.SYS_ADMIN %} data-super-admin-only{% endif %}>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for name, appointment in sample.STAFF_ROSTER %}{% set held = sample.grants_of(name) %}{% set own = name == me.name %}<tr{% if own %} data-own-row{% endif %}>
+          <td class="strong">{{ name }}{% if own %} <span class="chip chip-mute">You</span>{% endif %}</td>
+          <td data-sort-value="{{ appointment }}"><span class="pill-derived">{{ sample.APPOINTMENTS[appointment] }}{% if sample.APPOINTMENTS[appointment] != appointment %} ({{ appointment }}){% endif %}</span></td>
+          {% for col in sample.ACCESS_COLUMNS %}{% set scope = sample.view_scope(name) %}<td data-sort-value="{{ ('' if scope == 'None' else scope) if col == 'Other Staff view' else ('Yes' if col in held else '') }}"{% if col == sample.SYS_ADMIN %} data-super-admin-only{% endif %}>
+            {% if col == "Other Staff view" %}
+              <label class="visually-hidden" for="view-{{ loop.index }}-{{ name | replace(' ', '-') }}">Other Staff view for {{ name }}</label>
+              <select id="view-{{ loop.index }}-{{ name | replace(' ', '-') }}" class="input" disabled>{% for option in ("None", "Aggregate", "Identifiable") %}<option{% if option == scope %} selected{% endif %}>{{ option }}</option>{% endfor %}</select>
+            {% else %}
+              <input type="checkbox" aria-label="{{ col }} for {{ name }}"{% if col in held %} checked{% endif %} disabled>
+            {% endif %}
+          </td>{% endfor %}
+        </tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card card-pad muted" aria-labelledby="super-h">
+    <h2 id="super-h">The super-admin</h2>
+    <p class="sub flush">Holds administration from the platform, with no Staff-roster entry and no row here: grants Sys admin, sees no support content (§3.4).</p>
+  </section>
+{% endblock %}
