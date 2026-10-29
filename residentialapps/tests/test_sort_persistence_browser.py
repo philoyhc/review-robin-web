@@ -46,13 +46,18 @@ def page() -> Iterator[Page]:
         tab.route(f"{ORIGIN}/**", serve)
         yield tab
         browser.close()
-        assert errors == []
+        assert errors == [], f"page errors: {errors}"
 
 
 def _names(page: Page, table: str) -> list[str]:
     return page.eval_on_selector_all(
         f"{table} tr[data-row]", "rows => rows.map(r => r.cells[1].textContent.trim())"
     )
+
+
+def _kept(page: Page) -> list[str]:
+    keys = page.evaluate("Object.keys(localStorage)")
+    return [k for k in keys if k.startswith("residential-sort:/rosters/staff:")]
 
 
 def test_a_sort_is_kept_across_a_reload_until_cleared(page: Page) -> None:
@@ -70,6 +75,7 @@ def test_a_sort_is_kept_across_a_reload_until_cleared(page: Page) -> None:
 
     page.goto(f"{ORIGIN}/rosters/staff?stage=done")  # a query string keeps it
     assert name.get_attribute("aria-sort") == "descending"
+    assert _names(page, "#staff-table") == descending
 
     name.locator(".sort-btn").click()  # back to the page's order
     page.reload()
@@ -82,13 +88,16 @@ def test_hiding_the_sorted_column_drops_the_kept_sort(page: Page) -> None:
     header = page.locator("#staff-table th.sortable").nth(1)
     column = header.get_attribute("data-col")
     header.locator(".sort-btn").click()
+    assert header.get_attribute("aria-sort") == "ascending"
+    assert _kept(page)
     page.locator(f'[data-col-toggle="{column}"]').click()
+    assert page.locator("#staff-table th[aria-sort]").count() == 0  # cleared on hiding,
+    assert not _kept(page)  # not only on the next load
     page.reload()
     assert page.locator("#staff-table th[aria-sort]").count() == 0
     page.locator(f'[data-col-toggle="{column}"]').click()  # shown again, still unsorted
     assert page.locator("#staff-table th[aria-sort]").count() == 0
-    keys = page.evaluate("Object.keys(localStorage)")
-    assert not [k for k in keys if k.startswith("residential-sort:/rosters/staff:")]
+    assert not _kept(page)
 
 
 def test_each_table_on_a_page_keeps_its_own_sort(page: Page) -> None:

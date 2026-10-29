@@ -206,8 +206,10 @@ reject it.
   present so `tests/integration/test_inline_scripts_parse.py` runs
   rather than skips — a silent tool-gated skip, so read the skip list,
   not just the exit code. The other tool-gated tests are
-  `tests/browser/`, which need a Chromium build (preinstalled in the web
-  sandbox) and skip with a reason without one; CI sets
+  `tests/browser/` and Residential's
+  `residentialapps/tests/test_sort_persistence_browser.py`, which need a
+  Chromium build (preinstalled in the web sandbox) and skip with a reason
+  without one; CI sets
   `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. Both also run in
   CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`, unless the PR is
   prose only: then CI runs the `prose` lane alone, `tests/unit/` plus the
