@@ -1,5 +1,5 @@
 """Support Logs' page rendering: its templates, its areas and tabs, and the
-gate each placeholder page names (segment 1D item 1). Support Logs takes
+gate each page takes (segment 1D item 1). Support Logs takes
 RA Leave's RA layout: the slim top bar, page tabs under it, no bottom bar
 (author, 2026-10-29)."""
 
@@ -179,8 +179,3 @@ def gated(request: Request, template: str, *grants: str, area: str = MAIN, **con
         return forbidden(request, me)
     tabs = sys_admin_tabs(me) if area == SYS_ADMIN_AREA else tabs_for(me)
     return render(request, template, me=me, area=area, tabs=tabs, **context)
-
-
-def page(request: Request, *grants: str, area: str = MAIN, **context: Any) -> Response:
-    """A placeholder page naming its rung and what it will hold."""
-    return gated(request, "supportlogs/placeholder.html", *grants, area=area, **context)

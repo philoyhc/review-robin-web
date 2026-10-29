@@ -711,3 +711,78 @@ CHECK_RUNS = (
     CheckRun(date(2026, 10, 22), "Marcus Tan", "Overseas field trip, Semester 2", 14, 2),
     CheckRun(date(2026, 9, 30), "Nadia Hassan", "Student exchange nominations", 8, 1),
 )
+
+
+# --- Sys admin (rung 6; §3.3, roles rules 1, 6, 8, 9). Administration
+# sees who holds what, the configured lists and the administrative audit;
+# never support content.
+
+# The Staff roster's active members (`staff_roster.csv`, copied: Support
+# Logs reads it as the eligibility list and never writes to it). A test
+# holds the copy to the file.
+STAFF_ROSTER = (
+    ("Sam Lee", "Master"), ("Rachel Yeo", "Admin"), ("Priya Raman", "RSLM"), ("Marcus Tan", "RSLM"),
+    ("Nadia Hassan", "RSLM"), ("Daniel Koh", "RF"), ("Mei Ling Tan", "RF"), ("Arjun Nair", "RF"),
+    ("Grace Ho", "RF"), ("Benjamin Chua", "RF"), ("Farah Aziz", "RF"), ("Kenneth Lau", "RF"),
+    ("Siti Rahman", "RF"), ("Wei Jie Ong", "RF"), ("Hui Min Goh", "Exec"),
+)
+# The Access page's columns, each a grant; Other Staff view is one column
+# with its scope (roles rule 8).
+ACCESS_COLUMNS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, "Other Staff view", SYS_ADMIN)
+# Colleagues who hold grants but are not sample viewers.
+_OTHER_GRANTS = {
+    "Mei Ling Tan": frozenset({FRONTLINE}),
+    "Arjun Nair": frozenset({FRONTLINE}),
+    "Grace Ho": frozenset({FRONTLINE}),
+}
+
+
+def grants_of(name: str) -> frozenset[str]:
+    v = next((v for v in VIEWERS if v.name == name), None)
+    return v.grants if v else _OTHER_GRANTS.get(name, frozenset())
+
+
+def view_scope(name: str) -> str:
+    """Other Staff view's scope for a person: None, Aggregate or
+    Identifiable."""
+    held = grants_of(name)
+    return "Identifiable" if VIEW_IDENTIFIABLE in held else "Aggregate" if VIEW_AGGREGATE in held else "None"
+
+
+@dataclass(frozen=True)
+class Lapsed:
+    """A grant whose holder has no active Staff-roster entry: it stopped at
+    once and stays listed until a sys admin revokes it (§3.5)."""
+
+    name: str
+    grants: tuple[str, ...]
+    since: date
+    why: str
+
+
+LAPSED = (Lapsed("Jason Teo", (FRONTLINE,), date(2026, 9, 30), "Left the Staff roster: RF appointment ended"),)
+
+
+@dataclass(frozen=True)
+class AdminEvent:
+    """An administrative audit event (§11.3): grants, configuration and
+    other administration; reviewable by sys admins and the super-admin."""
+
+    at: datetime
+    actor: str
+    kind: str  # "Access", "Configuration" or "Clusters"
+    action: str
+    reason: str = ""
+
+
+ADMIN_AUDIT = (
+    AdminEvent(datetime(2026, 10, 27, 10, 5), "Rachel Yeo", "Access", "Granted Consultation check to Nadia Hassan",
+               "Exchange nominations, as the Master asked"),
+    AdminEvent(datetime(2026, 10, 20, 9, 30), "Rachel Yeo", "Configuration", "Added the closure outcome “No further action”"),
+    AdminEvent(datetime(2026, 10, 12, 16, 0), "Rachel Yeo", "Access", "Granted Other Staff view (identifiable) to Siti Rahman",
+               "Covering the Master's oversight, as the Master asked"),
+    AdminEvent(datetime(2026, 10, 1, 9, 0), "Rachel Yeo", "Access", "Lapsed: Jason Teo's Frontline, off the Staff roster"),
+    AdminEvent(datetime(2026, 8, 3, 9, 15), "Rachel Yeo", "Clusters", "Added the cluster Maple 03-08"),
+    AdminEvent(datetime(2026, 8, 1, 9, 0), "Platform super-admin", "Access", "Granted Sys admin to Rachel Yeo",
+               "Support Logs set up for the term"),
+)

@@ -69,6 +69,7 @@ NOT_PROSE_READERS = {
     "residentialapps/tests/test_sample_data.py": "reads the mock CSVs, not prose; the residential lane runs it",
     "residentialapps/tests/test_supportlogs.py": "reads the Staff roster mock CSV, not prose; the residential lane runs it",
     "residentialapps/tests/test_supportlogs_overview.py": "reads the assignments mock CSV, not prose; the residential lane runs it",
+    "residentialapps/tests/test_supportlogs_sys_admin.py": "reads the Staff roster mock CSV, not prose; the residential lane runs it",
 }
 PROSE_LITERAL = re.compile(
     r"""["'](?:spec|docs|guide|cordware/spec|residentialapps/(?:docs|guide|spec)|residentialapps/README\.md)(?:/[^"'\n]*)?["']"""
