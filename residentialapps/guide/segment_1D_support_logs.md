@@ -1,0 +1,104 @@
+# Segment 1D — Support Logs
+
+**Opened:** 2026-10-29 · **Theme:** Support Logs' screens on placeholders, phone first for the frontline, as RA Leave's were; then wired on the shared core · **Related:** `residentialapps/guide/todo_master.md` (rulings 1–13, ruling 14 below), `residentialapps/guide/segment_1B_rosters_and_organization.md` (the core Support Logs reads), `residentialapps/guide/segment_1C_ra_leave.md` (the pattern this follows), `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` (the functional spec, cited as §), `residentialapps/docs/support_logs_ui_spec_v0.1.md` (the draft UI spec, cited as UI §), `residentialapps/spec/applications.md` (page map)
+
+## Opportunity
+
+Support Logs has a factory and a health route at `/supportlogs` and nothing else: no pages, no templates, no sample data. It has a functional spec at v0.3 and a draft UI spec with nine phone screens, six of them mocked up on a design canvas (UI §2), but the two disagree with the page map on its navigation: the UI spec has a bottom bar of Home, Log, Students and Follow-ups, the page map four areas (`/encounters/`, `/plans/`, `/dashboard/`, `/sys-admin/`). Neither has been tried as real pages, and the surfaces beyond the frontline (oversight, opportunity review, audit, administration) are drawn nowhere. RA Leave showed that placeholder screens settle these questions faster than prose.
+
+## Decision
+
+**Screens now, wiring after the core** (author, 2026-10-29: "we might as well complete the screens for supportlogs too"). Ruling 13's order stays for the wiring; item 1 is pulled forward, as 1C's was.
+
+| Item | Lands | Waits on |
+|---|---|---|
+| 1. Screens and conventions | Every Support Logs page as a placeholder on sample data, the frontline phone first; the UI spec settled and written to `residentialapps/spec/` | — |
+| 2. Authorizations and configuration | The `supportlogs` models and first migration; authorization types over the Staff roster (§3.5), configured lists (§5.5–5.10), clusters (§10.5); Sys admin wired | 1B closed |
+| 3. Encounters and safety | Encounter logging, students and the local working set (§4), informal follow-up (§6), safety flags (§5.10); the frontline pages wired | Item 2 |
+| 4. Plans and sharing | Formal assignments and conversion (§7, §8), peer-view grants (§11.1), the student view and full history (§9) | Item 3 |
+| 5. Oversight and review | The senior dashboard (§10.2–10.6), opportunity review (§10.7–10.8), the support-activity audit (§11.3) | Item 4 |
+
+Email and Teams are out of scope: v1 reminds in-app only (§17).
+
+**Rejected: wait for the core, then plan screens and wiring together.** The UI questions below are independent of the data, and settling them now lets 1B's wiring serve both applications' screens at once.
+
+**Rejected: Support Logs' screens inside Residential Operations' chrome.** UI §1 item 6 and the one-accent rule (UI §6) set Support Logs apart: its own name, navigation and teal accent.
+
+## Semantics
+
+- **Item 1's gate:** no wiring item starts until the author approves the screens; later items change a page only as far as real data requires.
+- **Sample data is labeled** and lives in one module, `residentialapps/supportlogs/sample_support.py`, deleted in one place by items 2–5. Its staff are the Staff roster's mock people (`residentialapps/docs/sample_data/`), copied, not imported: `supportlogs` may not import `residentialops` (`residentialapps/spec/architecture.md`, "Import boundaries"); a test holds the copy to the mock.
+- **No real-looking support content.** Sample students are invented, notes bland and short (§5.8), safety flags generic; nothing reads as a real case.
+- **Placeholders answer only on a local run**, as 1B's and 1C's do, until wired.
+- **Viewing as.** One sample viewer per authorization type (§3.5): a frontline RF, a senior identifiable Master, a safety-flag recipient without frontline access, an opportunity reviewer, a Support Logs sys admin, and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only.
+- **Reads are actions** (§11.3): every placeholder that shows a named student says the view is recorded, as the real page will.
+- **Configured lists are never hard-coded in templates** (UI §3, "Configured lists"): the sample module holds the seeded defaults and the pages render from it.
+
+## Judgment calls — decided
+
+- What both applications' pages need — the render helper, `placeholders_local_only`, the sample-viewer card, person and table macros — moves from `residentialapps/residentialops/` to `residentialapps/web/` in rung 1, since neither application may import the other.
+- The settled conventions go to a new `residentialapps/spec/supportlogs_ui.md`, citing `residentialapps/spec/residentialops_ui.md` for what is shared (devices, the base styles, sort and chips) rather than restating it; the draft UI spec is retired to `docs/` history at the close.
+- Item 1 takes its `diff-reviewer` read once per code PR, as 1C's did from rung 4 (`CLAUDE.md` "Where work runs").
+
+## Blast radius (measured)
+
+Taken 2026-10-29 at `de0bf729`.
+
+| What | Count | Command |
+|---|---|---|
+| Support Logs files today | 3 (`__init__`, `main`, `routes_health`) | `ls residentialapps/supportlogs/*.py` |
+| Screens in the draft UI spec | 9, six mocked up | `sed -n 26,36p residentialapps/docs/support_logs_ui_spec_v0.1.md \| grep -c "^\| [0-9]"` |
+| Areas in the page map | 4 | `residentialapps/spec/applications.md`, "Support Logs" table |
+| Functional spec sections | 86 | `grep -c "^## \|^### " residentialapps/docs/resident_support_log_functional_spec_v0.3.md` |
+| Residential Operations templates, for scale | 34 | `find residentialapps/residentialops/templates -name "*.html" \| wc -l` |
+| Shared macros to move to `web/` | 2 (`_people.html`, `_tables.html`) | `find residentialapps/residentialops/templates -maxdepth 2 -name "_*.html"` |
+
+## PR ladder
+
+**Item 1 — Screens and conventions.** Record the base SHA in rung 1's PR body.
+
+1. **Chrome and home.** The shared pieces moved to `residentialapps/web/`; the teal accent under `data-app="supportlogs"`; Support Logs' navigation (open question 1); the home at the bare mount, listing what the viewer reaches or redirecting; the `403` page; the sample module and the viewer card. Every other page a static placeholder.
+2. **Frontline, phone first.** Log encounter with its optional details and the after-save confirmation; Students; the student view; My follow-ups; the personal dashboard (UI screens 1–3, 5–7; §4–§6, §9, §10.1).
+3. **Safety.** Safety concern; safety flag detail; Safety flags for recipients, with the unacknowledged count in the navigation (UI screens 4, 8, 9; §5.10).
+4. **Plans and sharing.** Formal assignments with source, cadence and the safety-plan marker; conversion from a follow-up (§7, §8); Flag for formal assignment; peer-view grants (§11.1).
+5. **Oversight.** The senior dashboard: workload with load weighting, hotspots, clusters, due coverage (§10.2–10.6); senior student history; the support-activity audit (§11.3).
+6. **Opportunity review and Sys admin.** A review run, its three states and reasons, the consultation record (§10.7–10.8); Sys admin: authorizations over the roster, configured lists, the cluster list, the administrative audit (§3.3). `residentialapps/spec/supportlogs_ui.md` written from rungs 1–6.
+7+. Iteration until approved, each with its own read.
+
+**Items 2–5** get their rungs when 1B closes.
+
+## Definition of done
+
+- The author approved item 1's screens; no Support Logs page shows sample data at close.
+- `residentialapps/spec/supportlogs_ui.md` states the conventions the screens use; the draft UI spec's open questions are each answered there or carried to the plan.
+- A frontline user logs a routine encounter in one screen and a safety flag reaches a recipient who acknowledges and closes it, end to end in tests (item 3).
+- Every identifiable read and every change writes a `supportlogs` audit event, split administrative from support activity (§11.3; items 2–5).
+- `## Doc impact` section present and current
+- `python3 tools/close_check.py 1D` exits 0; any warning adjudicated
+- `spec-writer` run against the doc-impact specs; flags adjudicated
+- `## Status` compacted to intended vs done; answered open questions collapsed
+- `guide/todo_master.md` entries deleted; plan moved to `guide/archive/` + index row
+
+## Open questions
+
+1. **Navigation and paths** (author, before rung 1): the UI spec's bottom bar (Home, Log, Students, Follow-ups) or Residential Operations' top bar and tabs; and the page map's `/encounters/`, `/plans/`, `/dashboard/` or paths after the bottom bar's destinations. Proposed: the bottom bar on a phone, a top bar from 960 px, paths after the destinations (`/log`, `/students/`, `/follow-ups`, `/flags/`, `/oversight/`, `/review/`, `/sys-admin/`), the page map revised to match.
+2. **UI §9's questions** (author, at the rung that first needs each): the Safety button role and the filled red Save and raise (rung 3); choice chips as styled radios and checkboxes (rung 2); sentence-case status labels (rung 2); Residential's customizer (out of item 1, below).
+3. **The crisis protocol** (§17 Q7) is placeholder text and numbers until the institution supplies it; the screen shows that it is.
+4. **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B, 1C or 1D closes.
+
+## Out of scope
+
+- The §17 policy questions (retention, who holds which authorization, signal thresholds): decided before Support Logs goes live (`residentialapps/guide/todo_master.md`), not before its screens.
+- Residential's customizer and contrast audit page (UI §9 Q6): its own slice, after the screens.
+- Email and Teams reminders: in-app only in v1 (§15, §17).
+- RA Events: third in ruling 13.
+
+## Doc impact
+
+- `residentialapps/spec/supportlogs_ui.md` — new: the conventions Support Logs' screens settle, from the draft UI spec (Item 1).
+- `residentialapps/spec/applications.md` — the Support Logs page map, with any path the screens settle, from contract to built (Item 1).
+- `residentialapps/spec/residentialops_ui.md` — its pointer to Support Logs' UI spec, and the shared pieces moved to `residentialapps/web/` (Item 1).
+- `residentialapps/spec/architecture.md` — what `residentialapps/web/` holds for both applications (Item 1); the `supportlogs` models and their database (Item 2).
+- `residentialapps/docs/support_logs_ui_spec_v0.1.md` — a banner pointing to the settled spec (Item 1).
+- `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — revised to what shipped, with the revisions already queued (at close).
+- `residentialapps/guide/todo_master.md` — ruling 14 now; the entries this segment finishes, deleted at close.
