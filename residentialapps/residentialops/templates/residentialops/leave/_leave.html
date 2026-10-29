@@ -32,8 +32,8 @@
 {% macro app_item(a, leave) -%}
   <li>
     <div class="item-head"><a class="strong" href="{{ url('/ra-leave/applications/' ~ a.id) }}">{{ a.dates }}</a>{{ stage_chip(a.stage) }}</div>
-    <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }} · sent {{ leave.short_date(a.submitted) }}{% set when, remarks = leave.last_decision(a) %}{% if when %} · decided {{ when }}{% endif %}</div>
-    {% if remarks %}<div class="subtle">“{{ remarks }}”</div>{% endif %}
+    <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }} · sent {{ leave.short_date(a.submitted) }}</div>
+    {% for when, what, remarks in leave.history_steps(a) %}<div class="subtle">{{ what }}{% if when %}, {{ when }}{% endif %}{% if remarks %}: “{{ remarks }}”{% endif %}</div>{% endfor %}
   </li>
 {%- endmacro %}
 

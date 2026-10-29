@@ -331,13 +331,11 @@ def _step(application: "Application", step: str, what: str) -> tuple[str, str, s
     return (when, what, remarks)
 
 
-def last_decision(application: "Application") -> tuple[str, str]:
-    """The latest recorded decision's date, and every decision's remarks in
-    order, for a history item (spec §19)."""
-    steps = sorted((s for k, s in DECISIONS.get(application.id, {}).items() if k != "staff"), key=lambda s: s[0])
-    if not steps:
-        return ("", "")
-    return (short_date(steps[-1][0]), " ".join(r for _, r in steps if r))
+def history_steps(application: "Application") -> tuple[tuple[str, str, str], ...]:
+    """The decisions and closing actions on an application, as its timeline
+    shows them under today's policy, for a history item (spec §19): each
+    with its date and remarks."""
+    return tuple(s for s in timeline(application) if not s[1].startswith(("Submitted", "Cover ", "Sent to")))
 
 
 def by_id(application_id: str) -> Application | None:
@@ -587,7 +585,7 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     if application.stage == "Withdrawn":
         steps.append(_step(application, "withdrawn", f"Withdrawn by {application.ra}"))
     if application.stage == "Cancelled":
-        steps.append(_step(application, "cancelled", f"Cancelled by {CANCELLED_BY}, Leave admin"))
+        steps.append(_step(application, "cancelled", f"Cancelled by {CANCELLED_BY}, Residential Admin"))
     return tuple(steps)
 
 

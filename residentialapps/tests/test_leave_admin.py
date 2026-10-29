@@ -497,7 +497,7 @@ def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
     assert cancelled.stage == "Cancelled" and cancelled.cover_status == "Cancelled"
     assert '<option>Cancelled</option>' in c.get(ADMIN + "applications").text
     steps = sample_leave.timeline(cancelled)
-    assert steps[-1] == ("20 Oct", "Cancelled by Rachel Yeo, Leave admin", sample_leave.DECISIONS["L-0116"]["cancelled"][1])
+    assert steps[-1] == ("20 Oct", "Cancelled by Rachel Yeo, Residential Admin", sample_leave.DECISIONS["L-0116"]["cancelled"][1])
     assert sample_leave.by_id("L-0111").cover_status == "Cancelled"  # withdrawn
     kai = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Kai Ng" and r["type"] == "Personal leave")
     assert kai["used"] == 0  # cancelled leave is not charged

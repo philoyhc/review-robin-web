@@ -145,8 +145,11 @@ def test_review_fixes_on_the_ra_side(monkeypatch) -> None:
     assert "pending first approval" not in c.get(RA + "applications/L-0101").text
 
 
-def test_history_shows_decision_dates_and_remarks() -> None:
+def test_history_shows_decision_dates_and_remarks(monkeypatch) -> None:
     """Spec §19: each record shows its decision dates and remarks."""
     history = client().get(RA + "history").text
-    assert "decided 16 Sept" in history or "decided 16 Sep" in history
-    assert "Good luck at the games." in history
+    assert "First approval by Daniel Koh, 15 Sep: “Good luck at the games.”" in history
+    assert "Final approval by Rachel Yeo, 16 Sep" in history
+    # With no first approval needed, history drops that step as the timeline does.
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    assert "Good luck at the games." not in client().get(RA + "history").text
