@@ -1,6 +1,6 @@
 # Segment 1D — Support Logs
 
-**Opened:** 2026-10-29 · **Theme:** Support Logs' screens on placeholders, phone first for the frontline, as RA Leave's were; then wired on the shared core · **Related:** `residentialapps/guide/todo_master.md` (rulings 1–13, ruling 14 below), `residentialapps/guide/segment_1B_rosters_and_organization.md` (the core Support Logs reads), `residentialapps/guide/segment_1C_ra_leave.md` (the pattern this follows), `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` (the functional spec, cited as §), `residentialapps/docs/support_logs_ui_spec_v0.1.md` (the draft UI spec, cited as UI §), `residentialapps/spec/applications.md` (page map)
+**Opened:** 2026-10-29 · **Theme:** Support Logs' screens on placeholders, phone first for the frontline, as RA Leave's were; then wired on the shared core · **Related:** `residentialapps/guide/todo_master.md` (rulings 1–14), `residentialapps/docs/residentialapps_roles.md` (holds over the functional spec until its next version), `residentialapps/guide/segment_1B_rosters_and_organization.md` (the core Support Logs reads), `residentialapps/guide/segment_1C_ra_leave.md` (the pattern this follows), `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` (the functional spec, cited as §), `residentialapps/docs/support_logs_ui_spec_v0.1.md` (the draft UI spec, cited as UI §), `residentialapps/spec/applications.md` (page map)
 
 ## Opportunity
 
@@ -24,13 +24,21 @@ Email and Teams are out of scope: v1 reminds in-app only (§17).
 
 **Rejected: Support Logs' screens inside Residential Operations' chrome.** UI §1 item 6 and the one-accent rule (UI §6) set Support Logs apart: its own name, navigation and teal accent.
 
+**What already overrides the two Support Logs specs** (a scan of `residentialapps/`, 2026-10-29), so the screens follow it, not the specs:
+- **Authorizations** (`residentialapps/docs/residentialapps_roles.md`): every Staff-roster member is eligible for every type, with no qualifying appointment (rule 9; §3.5 still says otherwise); Support Logs sys admin is granted by the super-admin only (rule 1), who administers and sees no content (§3.4); a sixth type, **Other Staff view**, aggregate or identifiable, read-only (rule 8); no self-action, a last-sys-admin floor (rule 6).
+- **Pages** (`residentialapps/spec/applications.md`): four areas, Encounter log, Plans, Dashboard and Sys admin; **Plans** are check-in plans, assigned (often by Counselling, a formal assignment, §7) or self-set (§10.1); the home at the bare mount lists what the viewer reaches or redirects; the not-registered page in its fixed wording (`residentialapps/docs/residentialapps_identity.md` §6); a `403` page for a linked viewer who reaches nothing.
+- **No neutral screens** (ruling 3): the UI spec's sign-in landing and switcher are dropped (UI §6, §9 Q5).
+- **Chrome** (`residentialapps/spec/residentialops_ui.md` §2, author 2026-10-26): one slim top bar at every width, no bottom bar, which would compete with a phone browser's toolbar; the favicon is already Support Logs' notepad on teal.
+- **Inherited from 1B and 1C:** placeholders local only, the sample viewer card, disabled not hidden, 44 px touch targets, kept sorts with None last, column chips, person tokens, derived pills, `url()`, gated steps.
+
 ## Semantics
 
 - **Item 1's gate:** no wiring item starts until the author approves the screens; later items change a page only as far as real data requires.
 - **Sample data is labeled** and lives in one module, `residentialapps/supportlogs/sample_support.py`, deleted in one place by items 2–5. Its staff are the Staff roster's mock people (`residentialapps/docs/sample_data/`), copied, not imported: `supportlogs` may not import `residentialops` (`residentialapps/spec/architecture.md`, "Import boundaries"); a test holds the copy to the mock.
 - **No real-looking support content.** Sample students are invented, notes bland and short (§5.8), safety flags generic; nothing reads as a real case.
 - **Placeholders answer only on a local run**, as 1B's and 1C's do, until wired.
-- **Viewing as.** One sample viewer per authorization type (§3.5): a frontline RF, a senior identifiable Master, a safety-flag recipient without frontline access, an opportunity reviewer, a Support Logs sys admin, and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only.
+- **Viewing as.** One sample viewer per authorization type (§3.5, roles rule 8): a frontline RF, a senior identifiable Master, a safety-flag recipient without frontline access, an opportunity reviewer, Other Staff with aggregate view and with identifiable view, a Support Logs sys admin, the super-admin (administration only), and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only, independent of the local fake-auth user.
+- **Scope is the grant, not the slot.** A frontline user sees what §11.1 gives them; nothing is derived from who oversees whom in Assignments, which covers RAs only (`residentialapps/guide/todo_master.md`, 2026-10-29), without a ruling.
 - **Reads are actions** (§11.3): every placeholder that shows a named student says the view is recorded, as the real page will.
 - **Configured lists are never hard-coded in templates** (UI §3, "Configured lists"): the sample module holds the seeded defaults and the pages render from it.
 
@@ -51,6 +59,7 @@ Taken 2026-10-29 at `de0bf729`.
 | Areas in the page map | 4 | `residentialapps/spec/applications.md`, "Support Logs" table |
 | Functional spec sections | 86 | `grep -c "^## \|^### " residentialapps/docs/resident_support_log_functional_spec_v0.3.md` |
 | Residential Operations templates, for scale | 34 | `find residentialapps/residentialops/templates -name "*.html" \| wc -l` |
+| Authorization types | 6 (§3.5's five, Other Staff view), plus the super-admin | `residentialapps/docs/residentialapps_roles.md` rules 1, 8 |
 | Shared macros to move to `web/` | 2 (`_people.html`, `_tables.html`) | `find residentialapps/residentialops/templates -maxdepth 2 -name "_*.html"` |
 
 ## PR ladder
@@ -81,10 +90,11 @@ Taken 2026-10-29 at `de0bf729`.
 
 ## Open questions
 
-1. **Navigation and paths** (author, before rung 1): the UI spec's bottom bar (Home, Log, Students, Follow-ups) or Residential Operations' top bar and tabs; and the page map's `/encounters/`, `/plans/`, `/dashboard/` or paths after the bottom bar's destinations. Proposed: the bottom bar on a phone, a top bar from 960 px, paths after the destinations (`/log`, `/students/`, `/follow-ups`, `/flags/`, `/oversight/`, `/review/`, `/sys-admin/`), the page map revised to match.
-2. **UI §9's questions** (author, at the rung that first needs each): the Safety button role and the filled red Save and raise (rung 3); choice chips as styled radios and checkboxes (rung 2); sentence-case status labels (rung 2); Residential's customizer (out of item 1, below).
-3. **The crisis protocol** (§17 Q7) is placeholder text and numbers until the institution supplies it; the screen shows that it is.
-4. **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B, 1C or 1D closes.
+1. **Navigation and paths** (author, before rung 1): the UI spec's bottom bar (Home, Log, Students, Follow-ups) against the slim top bar Residential Operations ruled for every width; the page map's four areas against the UI spec's destinations. Proposed: the top bar and tabs, as ruled, its reason holding here too; the page map's areas, with tabs for the UI spec's screens (Encounter log: Log, Students; Plans: My plans, which is My follow-ups; Dashboard: mine, oversight; Safety flags and Opportunity review as areas for those who hold them); the UI spec revised to match.
+2. **Clusters** (§10.5): the core's Wings or Precincts, or a list of Support Logs' own (`residentialapps/docs/residentialapps_roster_structure.md` avoids the word for this reason). Proposed: the sample shows Precincts, labeled as clusters, until ruled.
+3. **UI §9's questions** (author, at the rung that first needs each): the Safety button role and the filled red Save and raise (rung 3); choice chips as styled radios and checkboxes (rung 2); sentence-case status labels (rung 2); Residential's customizer (out of item 1, below).
+4. **The crisis protocol** (§17 Q7) is placeholder text and numbers until the institution supplies it; the screen shows that it is.
+5. **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B, 1C or 1D closes.
 
 ## Out of scope
 
@@ -101,4 +111,5 @@ Taken 2026-10-29 at `de0bf729`.
 - `residentialapps/spec/architecture.md` — what `residentialapps/web/` holds for both applications (Item 1); the `supportlogs` models and their database (Item 2).
 - `residentialapps/docs/support_logs_ui_spec_v0.1.md` — a banner pointing to the settled spec (Item 1).
 - `residentialapps/docs/resident_support_log_functional_spec_v0.3.md` — revised to what shipped, with the revisions already queued (at close).
+- `residentialapps/docs/residentialapps_roster_structure.md` — §6's "effective system roles" indicators, stale against roles rule 9 (Item 1).
 - `residentialapps/guide/todo_master.md` — ruling 14 now; the entries this segment finishes, deleted at close.
