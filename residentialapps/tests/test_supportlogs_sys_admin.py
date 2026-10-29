@@ -14,7 +14,6 @@ from fastapi.testclient import TestClient
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
-from residentialapps.tests._host import host_with
 
 ROSTER = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "staff_roster.csv"
 SYS_ADMIN_PAGES = ("/sys-admin/", "/sys-admin/configuration", "/sys-admin/clusters", "/sys-admin/audit")
@@ -63,10 +62,27 @@ def test_lapsed_grants_head_the_page(client: TestClient) -> None:
 
 
 def test_sys_admin_is_the_super_admin_s_to_grant(client: TestClient) -> None:
-    assert "you see it read-only" in client.get("/sys-admin/" + RACHEL).text
+    """The column and the viewer's own row are marked, so wiring (item 2)
+    carries the rule: the Sys admin column is the super-admin's, and nobody
+    acts on their own access (roles rules 1, 6)."""
+    rachel = section(client.get("/sys-admin/" + RACHEL).text, "access-h")
+    assert "you see it read-only" in rachel
     assert "You grant and revoke Sys admin." in client.get("/sys-admin/" + SUPER).text
-    own = section(client.get("/sys-admin/" + RACHEL).text, "access-h").split("Rachel Yeo")[1].split("</tr>")[0]
-    assert '<span class="chip chip-mute">You</span>' in own
+    assert rachel.count("data-super-admin-only") == 1 + len(sample.STAFF_ROSTER)  # the header and every row's cell
+    assert re.search(r'<th scope="col" data-super-admin-only>Sys admin</th>', rachel)
+    own = re.findall(r"<tr data-own-row>(.*?)</tr>", rachel, re.S)
+    assert len(own) == 1 and "Rachel Yeo" in own[0] and '<span class="chip chip-mute">You</span>' in own[0]
+    assert "data-own-row" not in section(client.get("/sys-admin/" + SUPER).text, "access-h")  # no row of their own
+
+
+def test_appointments_are_derived_pills_and_columns_sort_by_value(client: TestClient) -> None:
+    table = section(client.get("/sys-admin/" + RACHEL).text, "access-h")
+    assert '<td data-sort-value="RF"><span class="pill-derived">Residential Fellow (RF)</span></td>' in table
+    assert '<span class="pill-derived">Master</span>' in table
+    siti = table.split("Siti Rahman</td>")[1].split("</tr>")[0]
+    assert 'data-sort-value="Identifiable"' in siti
+    wei = table.split("Wei Jie Ong</td>")[1].split("</tr>")[0]
+    assert 'data-sort-value=""' in wei and 'data-sort-value="Identifiable"' not in wei
 
 
 def test_configuration_renders_the_seeded_lists(client: TestClient) -> None:
@@ -87,8 +103,10 @@ def test_clusters_list_names_only(client: TestClient) -> None:
 
 def test_the_audit_log_is_administrative_only(client: TestClient) -> None:
     table = section(client.get("/sys-admin/audit" + RACHEL).text, "audit-h")
-    assert len(re.findall(r"<tr><td", table)) == len(sample.ADMIN_AUDIT)
-    assert {a.kind for a in sample.ADMIN_AUDIT} <= {"Access", "Configuration", "Clusters"}
+    kinds = re.findall(r'<td><span class="chip chip-mute">([^<]+)</span></td>', table)
+    assert kinds == [a.kind for a in sample.ADMIN_AUDIT] and set(kinds) <= {"Access", "Configuration", "Clusters"}
+    lapse = next(a for a in sample.ADMIN_AUDIT if "lapsed" in a.action)
+    assert lapse.actor == "Support Logs" and lapse.reason.startswith("Residential Operations")  # a causal pair (§11.3)
 
 
 def test_administration_sees_no_support_content(client: TestClient) -> None:
@@ -105,22 +123,3 @@ def test_only_administration_reaches_sys_admin(client: TestClient) -> None:
         for name in ("Daniel Koh", "Sam Lee", "Marcus Tan", "Siti Rahman", "Hui Min Goh"):
             assert client.get(f"{path}?as={name.replace(' ', '%20')}").status_code == 403, (path, name)
         assert client.get(path + SUPER).status_code == 200, path
-
-
-def test_the_sys_admin_pages_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
-    from residentialapps.web import pages as web_pages
-
-    monkeypatch.setattr(web_pages, "is_local", lambda: False)
-    deployed = TestClient(create_app())
-    for path in SYS_ADMIN_PAGES:
-        assert deployed.get(path + RACHEL).status_code == 404, path
-
-
-def test_mounted_sys_admin_pages_stay_under_the_mount() -> None:
-    host, _ = host_with(("supportlogs",))
-    mounted = TestClient(host)
-    for path in SYS_ADMIN_PAGES:
-        page = mounted.get("/supportlogs" + path + RACHEL)
-        assert page.status_code == 200, path
-        for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
-            assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)

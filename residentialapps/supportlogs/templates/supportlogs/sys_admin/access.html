@@ -24,21 +24,21 @@
     <div class="filters inset">
       <div class="filter-fields">
         <div class="filter"><label for="find">Find a person</label><input id="find" class="input" type="search" placeholder="Name" disabled></div>
+        <div class="filter"><label for="show">Show</label><select id="show" class="input" disabled><option>Everyone</option><option>With access</option><option>No access</option></select></div>
       </div>
-      <p class="chips" role="group" aria-label="Show"><button type="button" class="col-chip" aria-pressed="false" disabled>With access</button> <button type="button" class="col-chip" aria-pressed="false" disabled>No access</button></p>
     </div>
     <div class="table-wrap">
       <table data-sort-auto id="access-table">
-        <thead><tr><th scope="col">Name</th><th scope="col">Appointment</th>{% for col in sample.ACCESS_COLUMNS %}<th scope="col">{{ col }}</th>{% endfor %}</tr></thead>
-        <tbody>{% for name, appointment in sample.STAFF_ROSTER %}{% set held = sample.grants_of(name) %}{% set own = name == me.name %}<tr>
+        <thead><tr><th scope="col">Name</th><th scope="col">Appointment</th>{% for col in sample.ACCESS_COLUMNS %}<th scope="col"{% if col == sample.SYS_ADMIN %} data-super-admin-only{% endif %}>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for name, appointment in sample.STAFF_ROSTER %}{% set held = sample.grants_of(name) %}{% set own = name == me.name %}<tr{% if own %} data-own-row{% endif %}>
           <td class="strong">{{ name }}{% if own %} <span class="chip chip-mute">You</span>{% endif %}</td>
-          <td><span class="chip chip-mute">{{ appointment }}</span></td>
-          {% for col in sample.ACCESS_COLUMNS %}<td>
+          <td data-sort-value="{{ appointment }}"><span class="pill-derived">{{ sample.APPOINTMENTS[appointment] }}{% if sample.APPOINTMENTS[appointment] != appointment %} ({{ appointment }}){% endif %}</span></td>
+          {% for col in sample.ACCESS_COLUMNS %}{% set scope = sample.view_scope(name) %}<td data-sort-value="{{ ('' if scope == 'None' else scope) if col == 'Other Staff view' else ('Yes' if col in held else '') }}"{% if col == sample.SYS_ADMIN %} data-super-admin-only{% endif %}>
             {% if col == "Other Staff view" %}
               <label class="visually-hidden" for="view-{{ loop.index }}-{{ name | replace(' ', '-') }}">Other Staff view for {{ name }}</label>
-              <select id="view-{{ loop.index }}-{{ name | replace(' ', '-') }}" class="input" disabled>{% for scope in ("None", "Aggregate", "Identifiable") %}<option{% if scope == sample.view_scope(name) %} selected{% endif %}>{{ scope }}</option>{% endfor %}</select>
+              <select id="view-{{ loop.index }}-{{ name | replace(' ', '-') }}" class="input" disabled>{% for option in ("None", "Aggregate", "Identifiable") %}<option{% if option == scope %} selected{% endif %}>{{ option }}</option>{% endfor %}</select>
             {% else %}
-              <label class="check"><input type="checkbox" aria-label="{{ col }} for {{ name }}"{% if col in held %} checked{% endif %} disabled><span aria-hidden="true">{{ "Yes" if col in held else "" }}</span></label>
+              <input type="checkbox" aria-label="{{ col }} for {{ name }}"{% if col in held %} checked{% endif %} disabled>
             {% endif %}
           </td>{% endfor %}
         </tr>{% endfor %}</tbody>

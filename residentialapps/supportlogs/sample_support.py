@@ -726,6 +726,8 @@ STAFF_ROSTER = (
     ("Grace Ho", "RF"), ("Benjamin Chua", "RF"), ("Farah Aziz", "RF"), ("Kenneth Lau", "RF"),
     ("Siti Rahman", "RF"), ("Wei Jie Ong", "RF"), ("Hui Min Goh", "Exec"),
 )
+APPOINTMENTS = {"Master": "Master", "Admin": "Residential Admin", "RSLM": "Residential Student Life Manager",
+                "RF": "Residential Fellow", "Exec": "Residential Executive"}
 # The Access page's columns, each a grant; Other Staff view is one column
 # with its scope (roles rule 8).
 ACCESS_COLUMNS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, "Other Staff view", SYS_ADMIN)
@@ -781,7 +783,8 @@ ADMIN_AUDIT = (
     AdminEvent(datetime(2026, 10, 20, 9, 30), "Rachel Yeo", "Configuration", "Added the closure outcome “No further action”"),
     AdminEvent(datetime(2026, 10, 12, 16, 0), "Rachel Yeo", "Access", "Granted Other Staff view (identifiable) to Siti Rahman",
                "Covering the Master's oversight, as the Master asked"),
-    AdminEvent(datetime(2026, 10, 1, 9, 0), "Rachel Yeo", "Access", "Lapsed: Jason Teo's Frontline, off the Staff roster"),
+    AdminEvent(datetime(2026, 9, 30, 0, 0), "Support Logs", "Access", "Jason Teo's Frontline lapsed",
+               "Residential Operations: Jason Teo's RF appointment ended"),
     AdminEvent(datetime(2026, 8, 3, 9, 15), "Rachel Yeo", "Clusters", "Added the cluster Maple 03-08"),
     AdminEvent(datetime(2026, 8, 1, 9, 0), "Platform super-admin", "Access", "Granted Sys admin to Rachel Yeo",
                "Support Logs set up for the term"),
