@@ -236,6 +236,13 @@ def test_the_ra_pages_switch_sample_viewer() -> None:
     assert "Viewing as Chloe Lim" in c.get("/ra-leave/?as=Nobody").text  # an unknown viewer: the default
     draft = c.get("/ra-leave/").text
     assert 'href="/ra-leave/apply?draft=D-0001"' in draft  # the default viewer's links carry nothing
+    # Every RA-side link on every RA page carries the viewer, and is a clean URL.
+    for path in ("", "apply", "appeal", "cover", "history", "applications/L-0109"):
+        page = c.get(f"/ra-leave/{path}?as=Hana%20Ito").text
+        assert '\\"' not in page, path
+        page = re.sub(r'<nav class="card card-pad muted gap-below" aria-label="Sample viewer">.*?</nav>', "", page, flags=re.S)
+        links = re.findall(r'href="(/ra-leave/(?!staff|admin)[^"#]*)"', page)
+        assert links and all("as=Hana%20Ito" in href for href in links), (path, [h for h in links if "as=Hana" not in h])
 
 
 def test_each_appeal_mode_can_be_previewed() -> None:

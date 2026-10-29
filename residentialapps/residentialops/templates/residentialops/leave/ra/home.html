@@ -12,8 +12,8 @@
     {% endfor %}
   </section>
   <div class="btnrow gap-above gap-below">
-    <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}{{ as_query }}\">Apply for leave</a>
-    {% if leave.can_appeal(me) %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}{{ as_query }}\">Request extra leave</a>{% endif %}
+    <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}{{ as_query }}">Apply for leave</a>
+    {% if leave.can_appeal(me) %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}{{ as_query }}">Request extra leave</a>{% endif %}
   </div>
 
   <div class="split">
@@ -22,7 +22,7 @@
       {% if asked.answer %}
         <section class="card card-pad" aria-labelledby="ask-h">
           <h2 id="ask-h">Asked to cover <span class="count">· {{ asked.answer | length }}</span></h2>
-          <p class="sub">An RA has named you as their cover. Answer on <a href="{{ url('/ra-leave/cover') }}{{ as_query }}\">My cover</a>.</p>
+          <p class="sub">An RA has named you as their cover. Answer on <a href="{{ url('/ra-leave/cover') }}{{ as_query }}">My cover</a>.</p>
           <ul class="items">
             {% for a in asked.answer %}<li><div class="item-head"><span class="strong">{{ a.ra }}</span><span class="nowrap">{{ a.dates }}</span></div><div class="subtle">{{ a.days }} day{{ "s" if a.days != 1 }} · asked {{ leave.short_date(a.submitted) }}</div></li>{% endfor %}
           </ul>
@@ -44,7 +44,7 @@
         {% else %}
           <p class="sub">Nothing in progress.</p>
         {% endif %}
-        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/history') }}{{ as_query }}\">All my applications</a>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/history') }}{{ as_query }}">All my applications</a>
       </section>
     </div>
     <div class="side">

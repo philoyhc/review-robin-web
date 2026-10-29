@@ -31,7 +31,8 @@ def choices(viewer: str) -> list[dict[str, str]]:
     staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
     found = []
     if is_ra:
-        found.append({"label": "RA Leave", "path": "/ra-leave/", "what": "Your balance, apply for leave, cover asked of you"})
+        ra_query = "" if viewer == sample_leave.VIEWER else f"?as={quote(viewer)}"
+        found.append({"label": "RA Leave", "path": "/ra-leave/" + ra_query, "what": "Your balance, apply for leave, cover asked of you"})
     elif is_staff:
         found.append({"label": "RA Leave", "path": "/ra-leave/staff/" + staff_query, "what": "Decisions awaiting you and your Precinct's leave"})
     found.append({"label": "RA Events", "path": "", "what": "Coming later"})
