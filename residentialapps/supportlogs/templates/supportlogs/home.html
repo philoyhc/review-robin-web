@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import plan_item, encounter_item, recorded with context %}
+{% from "supportlogs/_frontline.html" import plan_item, encounter_item, recorded, flags_card with context %}
 {% block title %}Home{% endblock %}
 {% block content %}
   {{ sample_title("Support Logs", me.name) }}
@@ -8,10 +8,7 @@
   {{ recorded() }}
   {# The personal dashboard (UI spec screen 1; functional spec §10.1), in
      its order. #}
-  <section class="card card-pad gap-below" aria-labelledby="flags-h">
-    <h2 id="flags-h">Active safety flags</h2>
-    <p class="sub">{% if flags %}Every active flag, unacknowledged first, as you receive them{% else %}The flags you raised, until each is closed{% endif %} (§5.10). Placeholder: rung 3.</p>
-  </section>
+  {{ flags_card(me, closed=sample.holds(me, sample.RECIPIENT)) }}
   <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ as_query }}">Log encounter</a>
   {% set urgent = sample.attention(me.name) %}
   {% set mine = sample.plans_of(me.name) %}

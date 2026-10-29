@@ -28,8 +28,12 @@ def _me(request: Request) -> sample.Viewer:
 @router.get("/log", name="supportlogs_log")
 def log(request: Request) -> Response:
     # Opened from a student or a Log button, the student is chosen already.
-    chosen = sample.student(request.query_params.get("student"))
-    return gated(request, "supportlogs/log.html", FRONTLINE, chosen=chosen, current_tab="/log")
+    # Back from Safety concern keeps the duration and type chosen too.
+    q = request.query_params
+    chosen = sample.student(q.get("student"))
+    duration = q.get("duration") if q.get("duration") in sample.DURATIONS else None
+    kind = q.get("type") if q.get("type") in sample.ENCOUNTER_TYPES else None
+    return gated(request, "supportlogs/log.html", FRONTLINE, chosen=chosen, duration=duration, kind=kind, current_tab="/log")
 
 
 @router.get("/log/saved", name="supportlogs_log_saved")

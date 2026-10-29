@@ -49,6 +49,9 @@
         --warn-border: #d97706;
         /* [A] The safety-plan support marker (support_logs_ui_spec_v0.1.md §6). */
         --marker-safety-plan-bg: #ede9fe; --marker-safety-plan-fg: #5b21b6;
+        /* The safety roles (support_logs_ui_spec_v0.1.md §6). */
+        --status-error-soft-bg: #fdecea; --status-error-soft-border: #f2b8b5; --status-error-soft-fg: #8a1c14;
+        --status-error-solid-bg: #dc2626; --status-error-solid-fg: #ffffff;
       }
       :root[data-app="residentialops"] {
         --accent: #a21caf;
@@ -81,6 +84,8 @@
         --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
         --warn-border: #b45309;
         --marker-safety-plan-bg: #2e1065; --marker-safety-plan-fg: #c4b5fd;
+        --status-error-soft-bg: #450a0a; --status-error-soft-border: #7f1d1d; --status-error-soft-fg: #fca5a5;
+        --status-error-solid-bg: #dc2626; --status-error-solid-fg: #ffffff;
       }
       :root[data-theme="dark"][data-app="residentialops"] {
         --accent: #e879f9;
@@ -282,6 +287,18 @@
       .choice:has(input:checked)::before { content: "\2713"; }
       .choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
       details.more > summary { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+      /* Safety: its own color and heading, set apart from routine controls
+         (support_logs_ui_spec_v0.1.md §1, §6). */
+      .safety-head { margin: 0 0 16px; padding: 14px 16px; border-radius: 8px; background: var(--status-error-solid-bg); color: var(--status-error-solid-fg); }
+      .safety-head h1 { margin: 0; font-size: 22px; }
+      .safety-head a { color: inherit; }
+      .safety-head a:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+      .card.safety { border-color: var(--status-error-soft-border); background: var(--status-error-soft-bg); color: var(--status-error-soft-fg); }
+      .card.safety a { color: inherit; }
+      .chip-safety { background: var(--status-error-soft-bg); color: var(--status-error-soft-fg); border: 1px solid var(--status-error-soft-border); }
+      .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 4px; border-radius: 9999px; background: var(--status-error-solid-bg); color: var(--status-error-solid-fg); font-size: 12px; font-weight: 700; }
+      ul.calls { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+      ul.calls a { display: flex; justify-content: space-between; gap: 12px; align-items: center; min-height: 52px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border-default); background: var(--surface-card); color: var(--text-body); font-weight: 600; text-decoration: none; }
       .chip-marker { background: var(--marker-safety-plan-bg); color: var(--marker-safety-plan-fg); }
       /* RA Leave admin: stat tiles, a count over its label, each a link to
          the rows it counts. */
@@ -479,7 +496,7 @@
         <div class="tabs-in">
           {% for tab in tabs %}
             {% if tab.path %}
-              <a href="{{ url(tab.path) }}{{ tab.query or '' }}"{% if is_here(tab.path) %} aria-current="page"{% elif tab.path == current_tab %} aria-current="true"{% endif %}>{{ tab.label }}</a>
+              <a href="{{ url(tab.path) }}{{ tab.query or '' }}"{% if is_here(tab.path) %} aria-current="page"{% elif tab.path == current_tab %} aria-current="true"{% endif %}>{{ tab.label }}{% if tab.badge %} <span class="tab-badge">{{ tab.badge }}<span class="visually-hidden"> unacknowledged safety flag{{ "s" if tab.badge != 1 }}</span></span>{% endif %}</a>
             {% else %}
               <span title="Not built yet">{{ tab.label }}</span>
             {% endif %}

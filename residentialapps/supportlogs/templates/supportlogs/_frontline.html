@@ -48,3 +48,38 @@
     {% if e.note %}<div class="subtle">“{{ e.note }}”</div>{% endif %}
   </li>
 {%- endmacro %}
+
+{# A safety flag as a list item, opening its detail (UI spec screen 8);
+   its state in words: unacknowledged, acknowledged by whom, or closed
+   with its outcome. #}
+{% macro flag_chip(f) -%}
+  {% if f.status == "open" %}<span class="chip chip-safety">Unacknowledged</span>
+  {%- elif f.status == "acknowledged" %}<span class="chip chip-info">Acknowledged · {{ f.acknowledged_by }}</span>
+  {%- else %}<span class="chip chip-mute">Closed · {{ f.outcome }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro flag_item(f, with_student=true) -%}
+  {% set s = sample.student(f.student) %}
+  <li>
+    <div class="item-head"><a class="strong" href="{{ url('/flags/' ~ f.id) }}{{ as_query }}" aria-label="Safety flag for {{ s.name }}, raised {{ sample.when(f.raised_at) }}">{{ s.name if with_student else "Raised " ~ sample.when(f.raised_at) }}</a>{{ flag_chip(f) }}</div>
+    <div class="subtle">{% if with_student %}Raised {{ sample.when(f.raised_at) }} · {% endif %}by {{ f.raised_by }} · {{ f.step }}</div>
+  </li>
+{%- endmacro %}
+
+{# The flags a viewer may see: active ones, unacknowledged above
+   acknowledged, and for a recipient the closed ones with their outcomes
+   below (UI spec screen 9). #}
+{% macro flags_card(me, closed=false) -%}
+  {% set active = sample.flags_for(me, active=true) %}
+  <section class="card card-pad safety gap-below" aria-labelledby="flags-h">
+    <h2 id="flags-h">{{ "Safety flags" if closed else "Active safety flags" }} <span class="count">· {{ active | length }} active</span></h2>
+    <p class="sub">{% if sample.holds(me, sample.RECIPIENT) %}Every active flag, unacknowledged first, each until it is closed with an outcome.{% else %}The flags you raised, until each is closed with an outcome.{% endif %}</p>
+    {% if active %}<ul class="items">{% for f in active %}{{ flag_item(f) }}{% endfor %}</ul>{% else %}<p class="sub">None active.</p>{% endif %}
+    {% if closed %}
+      {% set done = sample.flags_for(me, active=false) %}
+      <h3 class="gap-above-sm">Closed</h3>
+      <div class="field-wide"><label for="flag-find">Find by student or date</label><input id="flag-find" class="input" type="search" disabled></div>
+      {% if done %}<ul class="items">{% for f in done %}{{ flag_item(f) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
+    {% endif %}
+  </section>
+{%- endmacro %}

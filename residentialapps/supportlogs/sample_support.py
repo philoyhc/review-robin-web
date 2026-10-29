@@ -284,3 +284,95 @@ def recent_window(staff: str, days: int = 14) -> dict:
 
 def short_date(d: date) -> str:
     return f"{d.day} {d:%b}"
+
+
+# --- Safety flags (rung 3, §5.10). Generic by design: a flag records that
+# escalation happened and the step taken, never method, plan or clinical
+# detail. Each is raised from an encounter above, or before the sample's
+# window (Clara Tan's, which led to her managed safety support plan).
+
+ESCALATION_STEPS = (
+    "Counselling duty line contacted",
+    "Duty senior staff contacted",
+    "Campus security contacted",
+    "Emergency services called",
+)
+CLOSURE_OUTCOMES = ("Referred to counselling", "Assessed by counselling", "No further action")
+# Placeholders until the institution supplies its crisis protocol (§17 Q7):
+# the numbers dial nothing.
+CRISIS_CONTACTS = (
+    ("Emergency services", "+00000000001"),
+    ("Campus security", "+00000000002"),
+    ("Counselling duty line", "+00000000003"),
+    ("Duty senior staff (on duty: to be named)", "+00000000004"),
+)
+CRISIS_STEPS = (
+    "Make sure the student is not alone and is safe now.",
+    "If there is immediate danger, call emergency services first.",
+    "Call the counselling duty line, then tell the duty senior staff member.",
+    "Record below the step you took and when.",
+)
+MINIMISE = "Record that escalation happened and the step taken; never method, plan or clinical detail."
+
+
+@dataclass(frozen=True)
+class Flag:
+    id: str
+    student: str
+    raised_by: str
+    raised_at: datetime
+    step: str
+    status: str  # "open", "acknowledged" or "closed" (§13, SafetyEscalation)
+    step_at: datetime | None = None  # escalated_at; the raising time when it is the same
+    acknowledged_by: str = ""
+    acknowledged_at: datetime | None = None
+    outcome: str = ""
+    closed_by: str = ""
+    closed_at: datetime | None = None
+
+    @property
+    def active(self) -> bool:
+        return self.status != "closed"
+
+
+FLAGS = (
+    Flag("F-01", "S-05", "Daniel Koh", datetime(2026, 10, 26, 19, 40), "Counselling duty line contacted", "open",
+         step_at=datetime(2026, 10, 26, 19, 25)),
+    Flag("F-02", "S-10", "Priya Raman", datetime(2026, 10, 28, 20, 45), "Duty senior staff contacted", "acknowledged",
+         acknowledged_by="Sam Lee", acknowledged_at=datetime(2026, 10, 29, 8, 30)),
+    Flag("F-03", "S-03", "Daniel Koh", datetime(2026, 9, 18, 22, 0), "Counselling duty line contacted", "closed",
+         acknowledged_by="Sam Lee", acknowledged_at=datetime(2026, 9, 18, 22, 30),
+         outcome="Assessed by counselling", closed_by="Sam Lee", closed_at=datetime(2026, 9, 19, 16, 0)),
+    Flag("F-04", "S-08", "Priya Raman", datetime(2026, 10, 3, 18, 15), "Duty senior staff contacted", "closed",
+         acknowledged_by="Hui Min Goh", acknowledged_at=datetime(2026, 10, 3, 18, 40),
+         outcome="No further action", closed_by="Hui Min Goh", closed_at=datetime(2026, 10, 4, 10, 0)),
+)
+
+
+def flag(fid: str | None) -> Flag | None:
+    return next((f for f in FLAGS if f.id == fid), None)
+
+
+def may_see(v: Viewer, f: Flag) -> bool:
+    """Who sees a flag (§5.10): whoever raised it, and every safety-flag
+    recipient."""
+    return holds(v, RECIPIENT) or f.raised_by == v.name
+
+
+def flags_for(v: Viewer, active: bool | None = None, sid: str | None = None) -> list[Flag]:
+    """The flags a viewer may see: active first, unacknowledged above
+    acknowledged, then closed ones, the latest first in each."""
+    found = [f for f in FLAGS if may_see(v, f) and (active is None or f.active == active)
+             and (sid is None or f.student == sid)]
+    order = {"open": 0, "acknowledged": 1, "closed": 2}
+    return sorted(sorted(found, key=lambda f: f.raised_at, reverse=True), key=lambda f: order[f.status])
+
+
+def unacknowledged(v: Viewer) -> int:
+    """The navigation's count for a recipient (UI spec screen 9): v1 has no
+    automated alerts, so this is where a new flag is first seen."""
+    return sum(1 for f in FLAGS if f.status == "open") if holds(v, RECIPIENT) else 0
+
+
+def when(moment: datetime) -> str:
+    return f"{moment.day} {moment:%b}, {moment:%H:%M}"

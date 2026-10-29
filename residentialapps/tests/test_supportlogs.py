@@ -37,7 +37,7 @@ def holder(*grants: str) -> sample.Viewer:
 
 def tabs(page: str) -> list[str]:
     nav = page.split('<nav class="tabs"')[1].split("</nav>")[0]
-    return re.findall(r">([^<>]+)</a>", nav)
+    return re.findall(r'<a [^>]*>([^<]+?)(?: <span class="tab-badge">.*?</span></span>)?</a>', nav)
 
 
 @pytest.fixture(scope="module")
@@ -90,7 +90,7 @@ def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClie
     dashboard = client.get("/").text
     assert 'id="due-h">Due and overdue' in dashboard and ">Log encounter</a>" in dashboard
     assert "The flags you raised" in dashboard
-    assert "unacknowledged first, as you receive them" in client.get(at("/", "Priya Raman")).text
+    assert "Every active flag, unacknowledged first" in client.get(at("/", "Priya Raman")).text
     for name, there in [("Sam Lee", "/overview/"), ("Siti Rahman", "/overview/"), ("Marcus Tan", "/consultation/"),
                         ("Rachel Yeo", "/sys-admin/"), ("Platform super-admin", "/sys-admin/")]:
         page = client.get(at("/", name), follow_redirects=False)
@@ -117,7 +117,7 @@ def test_the_403_page_names_an_area_the_viewer_has(client: TestClient) -> None:
 def test_a_recipient_with_nothing_else_lands_on_the_flags(client: TestClient) -> None:
     page = client.get(at("/", "Hui Min Goh"))
     assert page.status_code == 200
-    assert 'id="flags-h">Safety flags</h2>' in page.text
+    assert 'id="flags-h">Safety flags <span class="count">' in page.text
     assert tabs(page.text) == ["Home"]
 
 

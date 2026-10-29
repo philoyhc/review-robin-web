@@ -31,16 +31,10 @@ class Placeholder:
 
 
 PLACEHOLDERS = (
-    Placeholder("/log/safety", "log_safety", "Safety concern", (sample.FRONTLINE,), 3, (
-        "Call actions first: emergency services, campus security, the counselling duty line, duty senior staff (§5.10)",
-        "The encounter's context, the crisis protocol's steps and the escalation step taken",
-        "Save and raise safety flag, and Cancel",
-    ), tab="/log"),
     Placeholder("/overview/", "overview", "Overview", (sample.SENIOR, *sample.VIEW), 5, (
         "Team workload with load weighting (§10.2–10.3)",
         "Hotspots and clusters (§10.4–10.5)",
         "Due and overdue coverage (§10.6), and every plan",
-        "Safety flags, for those who receive them (§5.10)",
         "Other Staff view: counts only when aggregate; named drill-downs and plans, read-only, when identifiable",
     )),
     Placeholder("/consultation/", "consultation", "Consultation check", (sample.CONSULTATION,), 6, (
@@ -69,7 +63,11 @@ PLACEHOLDERS = (
 
 def _route(p: Placeholder):
     def show(request: Request) -> Response:
-        return page(request, *p.grants, area=p.area, placeholder=p, current_tab=p.tab)
+        # Overview lists the flags for a recipient (author, 2026-10-29), ahead
+        # of the rest of the page in rung 5.
+        me = sample.viewer(request.query_params.get("as"))
+        show_flags = p.path == "/overview/" and sample.holds(me, sample.RECIPIENT)
+        return page(request, *p.grants, area=p.area, placeholder=p, current_tab=p.tab, show_flags=show_flags)
 
     return show
 
