@@ -307,3 +307,35 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Master", "Admin", "Exec"), "names": ()})
     page = c.get(STAFF + "decide/L-0105?as=Hui%20Min%20Goh").text
     assert "‹ Appeals" in page
+
+
+def test_precinct_leave_shows_a_chosen_period() -> None:
+    """Spec §22, "for a selected period" (author, 2026-10-29): this week by
+    default, next week, the next four weeks or the rest of the term; who is
+    away, the Precinct counts and the clashes follow it."""
+    c = client()
+
+    def away(query: str) -> list[str]:
+        page = c.get(STAFF + "precinct" + query).text
+        part = page.split('id="away-h"')[1].split("</section>")[0]
+        return re.findall(r'<td class="strong nowrap">([^<]+)</td>', part)
+
+    assert sample_leave.period("bogus")[:2] == ("week", "This week")
+    assert away(SAM) == away(SAM + "&period=week") == ["Maya Seah", "Olivia Ng", "Pranav Iyer"]
+    assert away(SAM + "&period=next") == []
+    assert "Hana Ito" in away(SAM + "&period=term") and "Hana Ito" not in away(SAM)
+    week, nxt = (c.get(STAFF + "precinct" + SAM + q).text for q in ("", "&period=next"))
+    assert '<option value="week" selected>This week</option>' in week
+    assert '<option value="next" selected>Next week</option>' in nxt
+    assert '<input type="hidden" name="as" value="Sam Lee">' in week  # the viewer survives a change
+    assert "Olivia Ng and Pranav Iyer" in week and "Olivia Ng and Pranav Iyer" not in nxt  # clashes follow
+    _, _, start, end = sample_leave.period("next")
+    assert sample_leave.clashes(start, end) == () and sample_leave.clashes()  # none next week, some in all
+    # The Precinct counts follow the period too, counting RAs.
+    def counts(key: str) -> dict[str, int]:
+        _, _, start, end = sample_leave.period(key)
+        return {r["precinct"]: r["away"] for r in sample_leave.by_precinct("Sam Lee", start, end)}
+    assert sum(counts("week").values()) == 3 and sum(counts("next").values()) == 0
+    assert sum(counts("term").values()) == 4
+    four = sample_leave.period("four")
+    assert (four[1], four[2], four[3].toordinal() - four[2].toordinal()) == ("These four weeks", sample_leave.TODAY, 27)

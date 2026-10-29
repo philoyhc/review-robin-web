@@ -82,7 +82,8 @@ def decided(request: Request) -> Response:
 
 @router.get("/ra-leave/staff/precinct", name="residentialops_leave_staff_precinct")
 def precinct(request: Request) -> Response:
-    return _page(request, "precinct.html")
+    # For a chosen period (spec §22; author, 2026-10-29), this week by default.
+    return _page(request, "precinct.html", period=sample_leave.period(request.query_params.get("period")))
 
 
 @router.get("/ra-leave/staff/appeals", name="residentialops_leave_staff_appeals")

@@ -253,8 +253,9 @@ Until a screen is wired:
   in one module, deleted in one place by the item that wires it;
 - its controls are present and `disabled`, except a roster's tick boxes,
   which open the expander so its shape can be checked (§6), and
-  Assignments' term selector and its Show term button, which are
-  navigation, and its upload-mode radios, so the Upload button's
+  Assignments' term selector and its Show term button, and Precinct
+  leave's Period selector and its Show period button, which are
+  navigation, and Assignments' upload-mode radios, so the Upload button's
   unavailable state can be seen (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
 - a page drawn for one person (RA Leave's RA and staff pages, the
