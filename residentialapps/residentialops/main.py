@@ -3,8 +3,9 @@ Cordware's registry entry `residentialops`."""
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
+from residentialapps.residentialops.pages import sample_preview
 from residentialapps.residentialops.routes_access import router as access_router
 from residentialapps.residentialops.routes_health import router as health_router
 from residentialapps.residentialops.routes_home import router as home_router
@@ -17,7 +18,10 @@ from residentialapps.residentialops.routes_rosters import router as rosters_rout
 def create_app() -> FastAPI:
     # No schema pages: neither application is an API, and they would list
     # its routes to anyone signed out.
-    app = FastAPI(title="Residential Operations", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(
+        title="Residential Operations", docs_url=None, redoc_url=None, openapi_url=None,
+        dependencies=[Depends(sample_preview)],  # sample-only: goes with sample_leave
+    )
     app.include_router(health_router)
     app.include_router(home_router)
     app.include_router(rosters_router)

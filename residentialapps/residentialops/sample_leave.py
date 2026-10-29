@@ -7,6 +7,7 @@ alone so that 1C items 2–5 delete it in one place
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date
 
@@ -76,7 +77,38 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
 APPEAL_MODES = ("Open", "By invitation", "Off")
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
-POLICY = {
+# The sample's appeal mode can be previewed per browser (`Leave policy`'s
+# sample switch, a cookie read once a request), so the by-invitation and
+# off screens can be seen without editing this file (audit, 2026-10-29).
+APPEALS_PREVIEW: ContextVar[str | None] = ContextVar("appeals_preview", default=None)
+
+
+class _Policy(dict):
+    """The sample policy; reading `appeals` gives the previewed mode, if any."""
+
+    def __getitem__(self, key: str):
+        preview = APPEALS_PREVIEW.get() if key == "appeals" else None
+        return preview if preview in APPEAL_MODES else super().__getitem__(key)
+
+    def get(self, key: str, default=None):
+        return self[key] if key in self else default
+
+
+PREVIEW_COOKIE = "residential-sample-appeals"
+
+
+def policy_appeals() -> str:
+    """The sample policy's own appeal mode, whatever is previewed."""
+    return dict.__getitem__(POLICY, "appeals")
+
+
+def appeals_preview() -> str | None:
+    """The appeal mode previewed in this browser, if it differs from the policy's."""
+    mode = APPEALS_PREVIEW.get()
+    return mode if mode in APPEAL_MODES and mode != policy_appeals() else None
+
+
+POLICY = _Policy({
     "day_count": "Every day",  # one of DAY_COUNTS; see leave_days()
     # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
     # open to every RA, by invitation once someone the policy names agrees
@@ -100,7 +132,7 @@ POLICY = {
     "final": "unit",  # or "named"
     "final_types": ("Admin",),
     "final_names": (),
-}
+})
 
 
 # How an application's days are counted (author, 2026-10-29): RAs work
@@ -774,9 +806,25 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     return tuple(steps)
 
 
-# The RA pages (`/ra-leave/`) render for one sample viewer until identity
-# is wired (segment 1C plan, "Viewing as").
+# The RA pages (`/ra-leave/`) render for a sample viewer until identity is
+# wired (segment 1C plan, "Viewing as"): Chloe Lim by default.
 VIEWER = "Chloe Lim"
+# The RA pages' sample viewers (`?as=`; audit, 2026-10-29), each reaching
+# states Chloe Lim's applications do not.
+RA_VIEWERS = (
+    ("Chloe Lim", "cover asked of her, a draft, an email not sent"),
+    ("Hana Ito", "her cover declined: name new cover"),
+    ("Ethan Wong", "awaiting cover confirmation; a withdrawn application; a draft"),
+    ("Gwen Ho", "an appeal with the Master"),
+    ("Lucas Teo", "extra leave granted"),
+    ("Faris Iskandar", "a rejected application"),
+    ("Kai Ng", "approved leave cancelled; invited to appeal (preview appeals by invitation)"),
+)
+
+
+def ra_viewer(name: str | None) -> str:
+    """The RA pages' sample viewer: one of RA_VIEWERS, else Chloe Lim."""
+    return name if name in dict(RA_VIEWERS) else VIEWER
 
 
 @dataclass(frozen=True)

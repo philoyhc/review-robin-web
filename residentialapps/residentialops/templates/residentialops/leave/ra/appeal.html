@@ -1,11 +1,12 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import title, viewing with context %}
+{% from "residentialops/leave/_leave.html" import title, viewing, ra_switch with context %}
 {% from "residentialops/_people.html" import person_tokens %}
 {% block title %}Request extra leave{% endblock %}
 {% block content %}
   {{ title("Request extra leave", leave, viewing(me)) }}
+  {{ ra_switch(me, leave, here) }}
   {% if not leave.appeals_on() %}
-    <section class="card card-pad"><p class="sub">Extra leave is not offered: appeals are switched off on the Leave policy. Apply within your entitlement on <a href="{{ url('/ra-leave/apply') }}">Apply for leave</a>.</p></section>
+    <section class="card card-pad"><p class="sub">Extra leave is not offered: appeals are switched off on the Leave policy. Apply within your entitlement on <a href="{{ url('/ra-leave/apply') }}{{ as_query }}">Apply for leave</a>.</p></section>
   {% else %}
   {% set invited = leave.invitation_for(me) %}
   {% if invited and leave.POLICY.appeals == "By invitation" %}<div class="notice">The Master has agreed to consider your appeal; send it by {{ leave.short_date(invited.until) }}.</div>{% endif %}
@@ -28,7 +29,7 @@
           <p class="sub">{{ leave.POLICY.appeal_terms }}</p>
           <label class="check"><input type="checkbox" disabled> I accept these terms</label>
         </fieldset>
-        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}">Cancel</a></div>
+        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Send to the Master</button><a class="btn btn-secondary" href="{{ url('/ra-leave/') }}{{ as_query }}">Cancel</a></div>
       </section>
     </div>
     <div class="side">

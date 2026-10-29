@@ -31,7 +31,8 @@ def choices(viewer: str) -> list[dict[str, str]]:
     staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
     found = []
     if is_ra:
-        found.append({"label": "RA Leave", "path": "/ra-leave/", "what": "Your balance, apply for leave, cover asked of you"})
+        ra_query = "" if viewer == sample_leave.VIEWER else f"?as={quote(viewer)}"
+        found.append({"label": "RA Leave", "path": "/ra-leave/" + ra_query, "what": "Your balance, apply for leave, cover asked of you"})
     elif is_staff:
         found.append({"label": "RA Leave", "path": "/ra-leave/staff/" + staff_query, "what": "Decisions awaiting you and your Precinct's leave"})
     found.append({"label": "RA Events", "path": "", "what": "Coming later"})
@@ -47,7 +48,9 @@ def choices(viewer: str) -> list[dict[str, str]]:
 def areas_for(viewer: str) -> tuple[dict[str, str | None], ...]:
     """The switcher for a sample viewer (§2): the landing, then what they
     reach, carrying a staff viewer's `?as=`."""
-    landing = "/" if viewer == sample_data.LANDING_VIEWERS[0][0] else f"/?as={quote(viewer)}"
+    # The landing knows its own viewers; anyone else goes to its default.
+    known = viewer in dict(sample_data.LANDING_VIEWERS) and viewer != sample_data.LANDING_VIEWERS[0][0]
+    landing = f"/?as={quote(viewer)}" if known else "/"
     return (
         {"label": "Home", "path": landing},
         *({"label": c["label"], "path": c["path"] or None} for c in choices(viewer)),
@@ -63,14 +66,18 @@ LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Appeals", "path": "/ra-leave/admin/appeals"},
 )
 
-def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
-    """An RA's tabs; Extra leave only while the RA may send an appeal."""
-    return (
-        {"label": "Home", "path": "/ra-leave/"},
-        {"label": "Apply", "path": "/ra-leave/apply"},
-        *(({"label": "Extra leave", "path": "/ra-leave/appeal"},) if appeals else ()),
-        {"label": "My cover", "path": "/ra-leave/cover"},
-        {"label": "History", "path": "/ra-leave/history"},
+def leave_ra_tabs(appeals: bool, query: str = "") -> tuple[dict[str, str | None], ...]:
+    """An RA's tabs, carrying the sample viewer (`?as=`); Extra leave only
+    while the RA may send an appeal."""
+    return tuple(
+        {"label": label, "path": path, "query": query}
+        for label, path in (
+            ("Home", "/ra-leave/"),
+            ("Apply", "/ra-leave/apply"),
+            *((("Extra leave", "/ra-leave/appeal"),) if appeals else ()),
+            ("My cover", "/ra-leave/cover"),
+            ("History", "/ra-leave/history"),
+        )
     )
 
 
@@ -96,6 +103,15 @@ ROSTER_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Staff roster", "path": "/rosters/staff"},
     {"label": "RA roster", "path": "/rosters/ras"},
 )
+
+
+async def sample_preview(request: Request) -> None:
+    """The appeal mode this browser previews (`Leave policy`'s sample
+    switch, audit 2026-10-29), set for the request before any page reads the
+    policy. Async, so the value carries into the threadpool the page runs in."""
+    mode = request.cookies.get(sample_leave.PREVIEW_COOKIE)
+    if mode in sample_leave.APPEAL_MODES:
+        sample_leave.APPEALS_PREVIEW.set(mode)
 
 
 def placeholders_local_only() -> None:

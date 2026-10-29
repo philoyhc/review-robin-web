@@ -6,9 +6,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import RedirectResponse, Response
 
 from residentialapps.residentialops import sample_data, sample_leave
+from residentialapps.web.urls import url_path
 from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS, placeholders_local_only, render
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
@@ -34,6 +35,19 @@ def dashboard(request: Request) -> Response:
 @router.get("/ra-leave/admin/policy", name="residentialops_leave_admin_policy")
 def policy(request: Request) -> Response:
     return _page(request, "policy.html")
+
+
+@router.get("/ra-leave/admin/policy/preview-appeals", name="residentialops_leave_admin_preview_appeals")
+def preview_appeals(request: Request) -> Response:
+    # Sample-only (audit, 2026-10-29): preview every RA Leave page as if
+    # appeals were in a mode, in this browser; the policy's own mode clears it.
+    mode = request.query_params.get("mode", "")
+    response = RedirectResponse(url_path(request, "/ra-leave/admin/policy") + "#appeals-h", status_code=303)
+    if mode in sample_leave.APPEAL_MODES and mode != sample_leave.policy_appeals():
+        response.set_cookie(sample_leave.PREVIEW_COOKIE, mode, path=url_path(request, "/"), samesite="lax", httponly=True)
+    else:
+        response.delete_cookie(sample_leave.PREVIEW_COOKIE, path=url_path(request, "/"))
+    return response
 
 
 @router.get("/ra-leave/admin/entitlements", name="residentialops_leave_admin_entitlements")

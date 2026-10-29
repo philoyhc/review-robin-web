@@ -1,10 +1,11 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing, email_items with context %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing, email_items, ra_switch with context %}
 {% from "residentialops/_people.html" import person_tokens %}
 {% block title %}{{ app.dates }}{% endblock %}
 {% block content %}
-  <a class="back" href="{{ url('/ra-leave/history') }}">‹ My history</a>
+  <a class="back" href="{{ url('/ra-leave/history') }}{{ as_query }}">‹ My history</a>
   {{ title(app.leave_type ~ (" · extra leave" if app.appeal else ""), leave, viewing(me) ~ stage_chip(app.stage)) }}
+  {{ ra_switch(me, leave, "/ra-leave/history") }}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="detail-h">
