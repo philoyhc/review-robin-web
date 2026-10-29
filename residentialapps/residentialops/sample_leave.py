@@ -300,6 +300,8 @@ APPLICATIONS: tuple[Application, ...] = tuple(
              "Representing the hall at the inter-hall games."),
             ("Lucas Teo", "Personal leave", _d("2026-09-07"), _d("2026-09-09"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-28"),
              "Balance used; grandmother's funeral abroad."),
+            # The leave that used Lucas Teo's balance before his appeal.
+            ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
         ),
         start=101,
     )
@@ -327,6 +329,7 @@ DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
         "cancelled": (_d("2026-10-20"), "Kai Ng is leading the Precinct's November event; cancelled at his request."),
     },
     "L-0117": {"first": (_d("2026-09-15"), "Good luck at the games."), "final": (_d("2026-09-16"), "")},
+    "L-0119": {"first": (_d("2026-08-18"), ""), "final": (_d("2026-08-19"), "")},
     "L-0118": {
         "staff": (_d("2026-08-29"), "Lucas has covered two extra weekends; I support it."),
         "appeal": (_d("2026-08-31"), "Granted, on the extra duties agreed with Arjun Nair."),
@@ -499,12 +502,12 @@ def days_in_term(application: Application, term: sample_data.Term = TERM) -> int
 
 
 def entitlement_anomalies() -> tuple[tuple[dict, str], ...]:
-    """Entitlement rows to look at (spec §25): overdrawn, or an adjustment
+    """Entitlement rows to look at (spec §25): over entitlement, or an adjustment
     with no reason recorded."""
     found = []
     for r in entitlement_rows():
         if r["available"] < 0:
-            found.append((r, f"Overdrawn by {-r['available']} day{'s' if r['available'] != -1 else ''}"))
+            found.append((r, f"Over entitlement by {-r['available']} day{'s' if r['available'] != -1 else ''}, pending included"))
         elif r["adjustment"] and not r["reason"]:
             found.append((r, "Adjusted with no reason recorded"))
     return tuple(found)

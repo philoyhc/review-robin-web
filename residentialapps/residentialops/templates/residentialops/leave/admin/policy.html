@@ -69,7 +69,7 @@
     <section class="card card-pad" aria-labelledby="count-h">
       <h2 id="count-h">Counting leave days</h2>
       <p class="sub">Which days in an application count, against entitlement or as extra leave. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
-      {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free", "Working days": "Monday to Friday, less the public holidays below"}) }}
+      {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free, and dates falling only on a weekend cannot be applied for", "Working days": "Monday to Friday, less the public holidays below; dates counting no day cannot be applied for"}) }}
       <div class="table-wrap">
         <table class="rows">
           <thead><tr><th scope="col">Public holiday</th><th scope="col">Date</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>

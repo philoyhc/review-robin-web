@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import stage_chip, title with context %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title with context %}
 {% block title %}Leave dashboard{% endblock %}
 {% block content %}
   {{ title("Leave dashboard", leave) }}
@@ -84,7 +84,7 @@
             <thead><tr><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Dates</th><th scope="col">Cover</th></tr></thead>
             <tbody>
               {% for a in leave.upcoming() %}
-                <tr><td class="strong nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.ra }}</a></td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ a.cover }}</td></tr>
+                <tr><td class="strong nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.ra }}</a></td><td class="nowrap">{{ a.precinct }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ a.cover }} {{ cover_chip(a.cover_status) }}</td></tr>
               {% else %}
                 <tr><td colspan="4" class="subtle">No approved leave later this term.</td></tr>
               {% endfor %}
@@ -121,7 +121,7 @@
         <h2 id="anomaly-h">Entitlement anomalies</h2>
         {% set odd = leave.entitlement_anomalies() %}
         {% if odd %}<ul class="plain">{% for r, why in odd %}<li><strong>{{ r.ra }}</strong>, {{ r.type }}: {{ why }}.</li>{% endfor %}</ul>
-        {% else %}<p class="sub">None in {{ leave.TERM.label }}: no RA is overdrawn, and every adjustment has its reason.</p>{% endif %}
+        {% else %}<p class="sub">None in {{ leave.TERM.label }}: no RA is over entitlement, and every adjustment has its reason.</p>{% endif %}
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/entitlements') }}">Go to Entitlements</a>
       </section>
       <section class="card card-pad" aria-labelledby="policy-h">

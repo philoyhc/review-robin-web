@@ -59,7 +59,7 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
     assert "<option selected>Pending first approval</option>" in first
     cover = c.get(ADMIN + "applications?cover=unconfirmed").text
     assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0109", "L-0114"]
-    assert "· 3 of 18" in cover
+    assert "· 3 of 19" in cover
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
@@ -517,11 +517,14 @@ def test_dashboard_reports_and_export(monkeypatch) -> None:
     for heading in ("Upcoming leave", "Extra leave granted", "Entitlement anomalies", "Recent administrative corrections"):
         assert f">{heading}" in dashboard, heading
     assert "<dt>AY2026-2027, Term 1</dt><dd>3 days, 1 appeal</dd>" in dashboard
-    assert "Cancelled approved leave for Kai Ng" in dashboard and "No RA is overdrawn" not in dashboard
+    assert "Cancelled approved leave for Kai Ng" in dashboard and "no RA is over entitlement" in dashboard
     assert [a.id for a in sample_leave.upcoming()] == ["L-0115"]
+    # Lucas Teo's appeal goes beyond a balance his earlier leave used.
+    lucas = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Lucas Teo" and r["type"] == "Personal leave")
+    assert lucas["available"] == 0 and "Beyond entitlement</dt><dd>3 days" in c.get("/ra-leave/staff/decide/L-0118?as=Sam%20Lee").text
     assert "Export CSV" in c.get(ADMIN + "applications").text
     monkeypatch.setitem(sample_leave.ADJUSTMENTS, ("Chloe Lim", "Personal leave"), (-9, ""))
-    assert "<strong>Chloe Lim</strong>, Personal leave: Overdrawn by 7 days." in c.get(ADMIN).text
+    assert "<strong>Chloe Lim</strong>, Personal leave: Over entitlement by 7 days, pending included." in c.get(ADMIN).text
 
 
 def test_an_application_counting_no_days_is_not_submitted(monkeypatch) -> None:
