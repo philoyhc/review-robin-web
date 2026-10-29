@@ -35,8 +35,10 @@
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="count-h">
         <h2 id="count-h">How it adds up</h2>
-        <p class="sub">Shown once you pick your dates: the days you ask for, what your entitlement covers, and the days needing the Master's approval (spec §7.2).</p>
+        <p class="sub">Shown once you pick your dates: the days you ask for, what your entitlement covers, and the days needing the Master's approval (spec §7.2). Your own days are used first; only the rest is extra leave, kept apart from your entitlement (§7.5).</p>
         <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} available</dd>{% endfor %}</dl>
+        {% set r = leave.my_balances(me)[0] %}{% set asked = [r.available, 0] | max + 2 %}
+        <p class="subtle small gap-above-sm">For example, {{ asked }} days of {{ r.type }} asked with {{ [r.available, 0] | max }} available: {{ [r.available, 0] | max }} from your entitlement, 2 extra, for the Master to decide.</p>
       </section>
     </div>
   </div>

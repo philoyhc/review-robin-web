@@ -305,7 +305,7 @@ class Application:
     def appeal(self) -> bool:
         """An extra-leave appeal: decided by the Master, and kept apart from
         normal entitlement once granted (spec §7.5)."""
-        return self.stage == "Appeal to the Master" or self.id in GRANTED_APPEALS
+        return self.stage == "Appeal to the Master" or self.id in GRANTED_APPEALS | REJECTED_APPEALS
 
     @property
     def days(self) -> int:
@@ -352,7 +352,9 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             ("Isaac Goh", "Personal leave", _d("2026-11-12"), _d("2026-11-14"), "Kai Ng", "Awaiting", "Pending first approval", _d("2026-10-26")),
             ("Bella Koh", "Personal leave", _d("2026-10-30"), _d("2026-11-01"), "Cheng Hao Lin", "Confirmed", "Pending final approval", _d("2026-10-23")),
             ("Leon Chia", "Personal leave", _d("2026-12-01"), _d("2026-12-05"), "Mira Sato", "Confirmed", "Pending first approval", _d("2026-10-21")),
-            ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Confirmed", "Appeal to the Master", _d("2026-10-25"),
+            # Cover not yet confirmed: the Master may decide over it, on the
+            # record (spec §7.4; audit, 2026-10-29).
+            ("Gwen Ho", "Personal leave", _d("2026-11-20"), _d("2026-11-23"), "Elise Tan", "Awaiting", "Appeal to the Master", _d("2026-10-25"),
              "Balance exhausted; family wedding overseas."),
             ("Maya Seah", "Personal leave", _d("2026-10-27"), _d("2026-10-29"), "Lucas Teo", "Confirmed", "Approved", _d("2026-10-12")),
             ("Olivia Ng", "Personal leave", _d("2026-10-28"), _d("2026-10-30"), "Pranav Iyer", "Confirmed", "Approved", _d("2026-10-14")),
@@ -373,6 +375,9 @@ APPLICATIONS: tuple[Application, ...] = tuple(
              "Balance used; grandmother's funeral abroad."),
             # The leave that used Lucas Teo's balance before his appeal.
             ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
+            # An appeal the Master refused (scenario I; audit, 2026-10-29).
+            ("Maya Seah", "Personal leave", _d("2026-09-21"), _d("2026-09-27"), "Lucas Teo", "Confirmed", "Rejected", _d("2026-09-08"),
+             "Seven days, two more than my five: a friend's wedding overseas."),
         ),
         start=101,
     )
@@ -380,6 +385,7 @@ APPLICATIONS: tuple[Application, ...] = tuple(
 
 
 GRANTED_APPEALS: frozenset[str] = frozenset({"L-0118"})  # extra leave the Master granted
+REJECTED_APPEALS: frozenset[str] = frozenset({"L-0120"})  # an appeal the Master refused
 
 # The sample's record of each decision: its date and remarks, by step
 # (spec §14, §15, §19). Who decided is read from today's chain in
@@ -401,6 +407,7 @@ DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
     },
     "L-0117": {"first": (_d("2026-09-15"), "Good luck at the games."), "final": (_d("2026-09-16"), "")},
     "L-0119": {"first": (_d("2026-08-18"), ""), "final": (_d("2026-08-19"), "")},
+    "L-0120": {"appeal": (_d("2026-09-11"), "The Precinct is short that week; take your five days, or apply in a quieter week.")},
     "L-0118": {
         "staff": (_d("2026-08-29"), "Lucas has covered two extra weekends; I support it."),
         "appeal": (_d("2026-08-31"), "Granted, on the extra duties agreed with Arjun Nair."),
@@ -468,7 +475,7 @@ def extra_by_term() -> tuple[tuple[str, int, int], ...]:
     granted = [a for a in APPLICATIONS if a.appeal and a.stage == "Approved"]
     return tuple(
         (t.label, sum(1 for a in granted if t.start <= a.start <= t.end),
-         sum(a.days for a in granted if t.start <= a.start <= t.end))
+         sum(appeal_split(a)["extra"] for a in granted if t.start <= a.start <= t.end))
         for t in sample_data.TERMS if t.year == PERIOD_LABEL
     )
 
@@ -641,16 +648,38 @@ def entitlement_anomalies() -> tuple[tuple[dict, str], ...]:
     return tuple(found)
 
 
+def _appeal_charges() -> dict[str, int]:
+    """How many of each live appeal's days its RA's own entitlement covers
+    (§7.5): what the ordinary leave leaves, taken by appeals in the order
+    they were made; the rest is extra leave. A wired record keeps the split
+    it was decided with rather than working it out again."""
+    charges: dict[str, int] = {}
+    for ra in sample_data.RAS:
+        start = date.fromisoformat(ra.dates.split()[0])
+        for leave_type in LEAVE_TYPES:
+            name = leave_type.name
+            mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name]
+            left = entitlement(leave_type, start) + ADJUSTMENTS.get((ra.name, name), (0, ""))[0] - sum(
+                days_in_term(a) for a in mine if not a.appeal and (a.stage == "Approved" or a.stage in OPEN_STAGES))
+            for a in sorted((a for a in mine if a.appeal and (a.stage == "Approved" or a.stage in OPEN_STAGES)), key=lambda a: a.submitted):
+                charges[a.id] = min(days_in_term(a), max(left, 0))
+                left -= charges[a.id]
+    return charges
+
+
 def entitlement_rows() -> tuple[dict, ...]:
     rows = []
+    charges = _appeal_charges()
     for ra in sample_data.RAS:
         start = date.fromisoformat(ra.dates.split()[0])
         for leave_type in LEAVE_TYPES:
             name, days = leave_type.name, entitlement(leave_type, start)
             adjustment, reason = ADJUSTMENTS.get((ra.name, name), (0, ""))
-            mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name and not a.appeal]
-            used = sum(days_in_term(a) for a in mine if a.stage == "Approved")
-            pending = sum(days_in_term(a) for a in mine if a.stage in OPEN_STAGES)
+            mine = [a for a in APPLICATIONS if a.ra == ra.name and a.leave_type == name]
+            # An appeal's own-days part is charged as ordinary leave is; its
+            # extra part never touches the entitlement (§7.5).
+            used = sum(charges.get(a.id, days_in_term(a)) for a in mine if a.stage == "Approved")
+            pending = sum(charges.get(a.id, days_in_term(a)) for a in mine if a.stage in OPEN_STAGES)
             rows.append({
                 "ra": ra.name, "email": ra.email, "type": name, "entitlement": days, "adjustment": adjustment,
                 "reason": reason, "used": used, "pending": pending, "available": days + adjustment - used - pending,
@@ -818,6 +847,7 @@ RA_VIEWERS = (
     ("Gwen Ho", "an appeal with the Master"),
     ("Lucas Teo", "extra leave granted"),
     ("Faris Iskandar", "a rejected application"),
+    ("Maya Seah", "an appeal the Master refused"),
     ("Kai Ng", "approved leave cancelled; invited to appeal (preview appeals by invitation)"),
 )
 
@@ -875,8 +905,8 @@ def my_extra(ra: str = VIEWER) -> dict[str, int]:
     """Extra leave, shown apart from entitlement (spec §8.1, §7.5)."""
     mine = [a for a in APPLICATIONS if a.ra == ra and a.appeal]
     return {
-        "granted": sum(a.days for a in mine if a.stage == "Approved"),
-        "pending": sum(a.days for a in mine if a.stage in OPEN_STAGES),
+        "granted": sum(appeal_split(a)["extra"] for a in mine if a.stage == "Approved"),
+        "pending": sum(appeal_split(a)["extra"] for a in mine if a.stage in OPEN_STAGES),
     }
 
 
@@ -1078,6 +1108,23 @@ def away_on(application: Application) -> tuple[Application, ...]:
         if b.id != application.id and b.ra != application.ra and b.precinct == application.precinct
         and b.start <= application.end and application.start <= b.end
     )
+
+
+def appeal_split(application: Application) -> dict[str, int]:
+    """An appeal's days split as §7.5 keeps them: what the RA's own
+    entitlement covers is charged to it, the rest is extra leave."""
+    charged = _appeal_charges().get(application.id, 0)
+    return {"charged": charged, "extra": application.days - charged}
+
+
+def blackouts_on(application: Application) -> tuple[tuple[Blackout, date, date], ...]:
+    """The blackouts an application's dates touch, with their dates (§6)."""
+    found = []
+    for b in BLACKOUTS:
+        span = week_dates(b)
+        if span and span[0] <= application.end and span[1] >= application.start:
+            found.append((b, *span))
+    return tuple(found)
 
 
 def balance_of(application: Application) -> dict:

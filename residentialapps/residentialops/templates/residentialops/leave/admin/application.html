@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, email_items with context %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, email_items, appeal_rows with context %}
 {% block title %}{{ app.id }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/ra-leave/admin/applications') }}">‹ Applications</a>
@@ -15,6 +15,7 @@
           <dt>Dates</dt><dd>{{ app.dates }} ({{ app.days }} day{{ "s" if app.days != 1 }})</dd>
           <dt>Cover</dt><dd>{{ app.cover }} {{ cover_chip(app.cover_status) }}</dd>
           {% if app.remarks %}<dt>RA's remarks</dt><dd>{{ app.remarks }}</dd>{% endif %}
+          {{ appeal_rows(app, leave) }}
         </dl>
       </section>
       <section class="card card-pad" aria-labelledby="timeline-h">

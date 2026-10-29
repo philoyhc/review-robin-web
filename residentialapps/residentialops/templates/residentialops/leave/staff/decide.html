@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing, staff_switch, staff_item, email_items with context %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, timeline_items, viewing, staff_switch, staff_item, email_items, appeal_rows with context %}
 {% block title %}{{ app.ra }} · {{ app.dates }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url(back_path) }}{{ as_query }}">‹ {{ back_label }}</a>
@@ -23,6 +23,15 @@
             <button type="button" class="btn btn-secondary" disabled>Reject</button>
           </div>
         </section>
+      {% elif app.stage == "Appeal to the Master" and leave.in_slots(me, app.precinct) %}
+        {# Staff in the RA's slot may add remarks for the Master (spec §15;
+           audit, 2026-10-29); the Master decides. #}
+        <section class="card card-pad" aria-labelledby="act-h">
+          <h2 id="act-h">Your remarks for the Master</h2>
+          <p class="sub">The Master decides this appeal. Your remarks join its timeline, for the Master to weigh (spec §15).</p>
+          <div class="field-wide"><label for="staff-remarks">Remarks</label><textarea id="staff-remarks" class="input" rows="2" disabled></textarea></div>
+          <button type="button" class="btn btn-primary" disabled>Add remarks</button>
+        </section>
       {% else %}
         <section class="card card-pad muted"><p class="sub">{% if app.stage in leave.OPEN_STAGES %}This application does not await your decision.{% else %}Decided; shown read-only.{% endif %}</p></section>
       {% endif %}
@@ -34,6 +43,7 @@
           <dt>Dates</dt><dd>{{ app.dates }} ({{ app.days }} day{{ "s" if app.days != 1 }})</dd>
           <dt>Cover</dt><dd>{{ app.cover }} {{ cover_chip(app.cover_status) }}</dd>
           {% if app.remarks %}<dt>{{ "Reason" if app.appeal else "RA's remarks" }}</dt><dd>{{ app.remarks }}</dd>{% endif %}
+          {{ appeal_rows(app, leave) }}
           {% if app.stage in leave.OPEN_STAGES %}<dt>Waiting</dt><dd>{{ app.age }} day{{ "s" if app.age != 1 }}</dd>{% endif %}
         </dl>
       </section>
