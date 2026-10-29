@@ -19,6 +19,7 @@ from starlette.requests import Request
 from residentialapps.residentialops import pages, sample_data
 from residentialapps.residentialops.main import create_app as ops_app
 from residentialapps.tests._host import host_with
+from residentialapps.web import pages as web_pages
 from residentialapps.web.urls import templates
 
 PACKAGE = Path(__file__).resolve().parents[1]
@@ -288,7 +289,7 @@ def test_not_registered_shows_the_message_and_nobody_else() -> None:
 
 def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
     """Sample data, no gates yet: deployed, every placeholder is 404."""
-    monkeypatch.setattr(pages, "is_local", lambda: False)
+    monkeypatch.setattr(web_pages, "is_local", lambda: False)
     client = TestClient(ops_app())
     for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:
         assert client.get(path).status_code == 404, path
@@ -626,7 +627,7 @@ def test_a_filled_one_person_box_keeps_its_label_target() -> None:
     """Once a one-person box holds someone, the typeahead goes; its id passes
     to the remove button, so `<label for>` still names a control, and the
     description moves with the group."""
-    box = pages.TEMPLATES.env.get_template("residentialops/_people.html").module.person_tokens
+    box = pages.TEMPLATES.env.get_template("residential/_people.html").module.person_tokens
     html = str(box("Covering RA", ("Chloe Lim",), "ra-names", "cover", single=True, describedby="cover-what"))
     assert "token-input" not in html
     assert 'id="cover" class="token-x"' in html

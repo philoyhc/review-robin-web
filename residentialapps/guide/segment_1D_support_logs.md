@@ -71,6 +71,10 @@ Taken 2026-10-29 at `de0bf729`.
 | Authorization types | 6 (§3.5's five, Other Staff view), plus the super-admin | `residentialapps/docs/residentialapps_roles.md` rules 1, 8 |
 | Shared macros to move to `web/` | 2 (`_people.html`, `_tables.html`) | `find residentialapps/residentialops/templates -maxdepth 2 -name "_*.html"` |
 
+## Status
+
+- **Rung 1, 2026-10-29** (author: "start rung 1"): the shared pieces in `residentialapps/web/` (`pages.py`, `_people.html`, `_tables.html`, the new `_sample.html`); the teal accent; Home, the `403` and not-registered pages, and the other pages as placeholders, at the paths in `residentialapps/spec/applications.md`, tabs by grant. Base SHA for the item's read: `d15502e0`.
+
 ## PR ladder
 
 **Item 1 — Screens and conventions.** Record the base SHA in rung 1's PR body.

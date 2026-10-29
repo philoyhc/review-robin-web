@@ -116,10 +116,18 @@ appointment, and RAs never reach it:
 
 | Page | Path | Reached by |
 |---|---|---|
-| Encounter log | `/encounters/` | Frontline authorization (RFs and RSLMs, by default) |
-| Plans | `/plans/` | Frontline; senior identifiable (the Master and the admin, by default); Other Staff with identifiable view, read-only |
-| Dashboard | `/dashboard/` | Frontline (personal); senior identifiable (oversight); Other Staff with view, aggregate or identifiable as granted |
-| Sys admin | `/sys-admin/` | Support Logs sys admins: authorizations, configuration, categories, the cluster list and the administrative audit log, with no support content or support-activity audit; the super-admin, for the same and to grant Support Logs sys admin |
+| Home | `/` | Anyone with a grant: the frontline's dashboard; otherwise the pages the viewer reaches, or straight there when there is one; a safety-flag recipient with nothing else, the flags |
+| Log encounter | `/log`, `/log/safety` | Frontline authorization (RFs and RSLMs, by default) |
+| Students | `/students/` | Frontline |
+| My plans | `/plans/` | Frontline |
+| Overview | `/overview/` | Senior identifiable (the Master and the admin, by default); Other Staff with view, aggregate or identifiable as granted, read-only; safety-flag recipients' flags list here |
+| Consultation check | `/consultation/` | Consultation check |
+| Sys admin | `/sys-admin/` (Access), `…/configuration`, `…/clusters`, `…/audit` | Support Logs sys admins: access over the Staff roster, configuration, the cluster list and the administrative audit log, with no support content or support-activity audit; the super-admin, for the same and to grant Support Logs sys admin |
+
+The main area's tabs follow the viewer's grants (Home; Log, Students and
+Plans for the frontline; Overview; Consultation check), in RA Leave's RA
+layout with no bottom bar; Sys admin is an area of its own (segment 1D,
+author, 2026-10-29). Placeholders until wired (1D item 1).
 
 Each application also has:
 

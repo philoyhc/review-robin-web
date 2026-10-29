@@ -1,0 +1,180 @@
+"""Support Logs' placeholder screens, segment 1D item 1 rung 1: the chrome,
+Home, the tabs each grant gives, the `403` page, and the URL rules every
+page keeps (`residentialapps/guide/segment_1D_support_logs.md`)."""
+
+from __future__ import annotations
+
+import csv
+import re
+from pathlib import Path
+from urllib.parse import quote
+
+import pytest
+from fastapi.routing import APIRoute
+from fastapi.testclient import TestClient
+
+from residentialapps.supportlogs import sample_support as sample
+from residentialapps.supportlogs.main import create_app
+from residentialapps.supportlogs.routes_pages import PLACEHOLDERS
+from residentialapps.tests._host import host_with
+from residentialapps.tests.test_pages import flatten
+from residentialapps.web import pages as web_pages
+
+MOUNT = "/supportlogs"
+ROSTER = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "staff_roster.csv"
+LINK = re.compile(r'\b(?:href|action|formaction|src)\s*=\s*"([^"]*)"')
+FAVICON = re.compile(r'<link rel="icon"[^>]*>')
+
+
+def at(path: str, name: str) -> str:
+    return f"{path}?as={quote(name)}"
+
+
+def holder(*grants: str) -> sample.Viewer:
+    """The first sample viewer holding one of ``grants``."""
+    return next(v for v in sample.VIEWERS if sample.holds(v, *grants))
+
+
+def tabs(page: str) -> list[str]:
+    nav = page.split('<nav class="tabs"')[1].split("</nav>")[0]
+    return re.findall(r">([^<>]+)</a>", nav)
+
+
+@pytest.fixture(scope="module")
+def client() -> TestClient:
+    return TestClient(create_app())
+
+
+def test_every_page_is_a_placeholder_for_whoever_reaches_it(client: TestClient) -> None:
+    for p in PLACEHOLDERS:
+        page = client.get(at(p.path, holder(*p.grants).name))
+        assert page.status_code == 200, p.path
+        assert "Sample data" in page.text and f"Placeholder: rung {p.rung}" in page.text, p.path
+        assert f"<h1>{p.title}</h1>" in page.text, p.path
+
+
+def test_a_page_beyond_the_viewer_s_grants_is_403(client: TestClient) -> None:
+    for p in PLACEHOLDERS:
+        outsider = next(v for v in sample.VIEWERS if v.grants and not sample.holds(v, *p.grants))
+        page = client.get(at(p.path, outsider.name))
+        assert page.status_code == 403, (p.path, outsider.name)
+        assert "You do not have access to this page." in page.text
+
+
+def test_no_grant_means_no_support_logs(client: TestClient) -> None:
+    """Access is a grant, never an appointment (§3.5): an RF on the roster
+    with no grant gets the `403` page, with no tabs or switcher."""
+    none = next(v for v in sample.VIEWERS if not v.grants)
+    assert none.appointment == "RF"
+    page = client.get(at("/", none.name))
+    assert page.status_code == 403
+    assert "You do not have access to Support Logs." in page.text
+    assert 'class="tabs"' not in page.text and 'aria-label="Switch area"' not in page.text
+    assert 'aria-label="Sample viewer"' in page.text  # so the sample can switch back
+
+
+def test_each_grant_gives_its_tabs(client: TestClient) -> None:
+    """Author, 2026-10-29: the frontline's Home, Log, Students and Plans;
+    senior staff and Other Staff view an Overview tab; no Safety flags tab."""
+    assert tabs(client.get("/").text) == ["Home", "Log", "Students", "Plans"]
+    assert tabs(client.get(at("/overview/", "Sam Lee")).text) == ["Home", "Overview"]
+    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Home", "Overview"]
+    assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Home", "Consultation check"]
+    assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Access", "Configuration", "Clusters", "Audit log"]
+    for v in sample.VIEWERS:
+        assert "Safety flags</a>" not in client.get(at("/", v.name)).text
+
+
+def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClient) -> None:
+    dashboard = client.get("/").text
+    assert "Placeholder: rung 2" in dashboard and ">Log encounter</a>" in dashboard
+    assert "The flags you raised" in dashboard
+    assert "unacknowledged first, as you receive them" in client.get(at("/", "Priya Raman")).text
+    for name, there in [("Sam Lee", "/overview/"), ("Siti Rahman", "/overview/"), ("Marcus Tan", "/consultation/"),
+                        ("Rachel Yeo", "/sys-admin/"), ("Platform super-admin", "/sys-admin/")]:
+        page = client.get(at("/", name), follow_redirects=False)
+        assert (page.status_code, page.headers["location"]) == (302, at(there, name)), name
+
+
+def test_a_recipient_with_nothing_else_lands_on_the_flags(client: TestClient) -> None:
+    page = client.get(at("/", "Hui Min Goh"))
+    assert page.status_code == 200
+    assert 'id="flags-h">Safety flags</h2>' in page.text
+    assert tabs(page.text) == ["Home"]
+
+
+def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> None:
+    def areas(page: str) -> list[str]:
+        menu = page.split('aria-label="Switch area"', 2)[-1].split("</nav>")[0]
+        return re.findall(r'href="[^"]*"[^>]*>([^<]+?)\s*(?:<|$)', menu)[:-1]  # less All applications
+
+    assert areas(client.get("/").text) == ["Support Logs"]
+    assert areas(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Sys admin"]
+    assert areas(client.get(at("/sys-admin/", "Platform super-admin")).text) == ["Sys admin"]
+
+
+def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
+    """Tabs, the switcher and Home carry `?as=`; the viewer switch names
+    each person; only the host's landing page goes without."""
+    for name, path in [("Priya Raman", "/"), ("Priya Raman", "/log"), ("Rachel Yeo", "/sys-admin/clusters")]:
+        page = client.get(at(path, name)).text
+        card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
+        rest = page.replace(card, "")
+        for link in LINK.findall(FAVICON.sub("", rest)):
+            assert link == "/" or link.endswith("?as=" + quote(name)), (path, link)
+
+
+def test_the_viewer_switch_lists_every_viewer(client: TestClient) -> None:
+    card = client.get("/").text.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
+    assert re.findall(r'href="([^"]*)"', card) == ["/" + sample.as_query(v) for v in sample.VIEWERS]
+    assert 'href="/" aria-current="true"' in card
+
+
+def test_support_logs_is_teal_with_its_notepad(client: TestClient) -> None:
+    page = client.get("/").text
+    assert 'data-app="supportlogs"' in page and "fill='%230f766e'" in page
+    assert ':root[data-app="supportlogs"] {\n        --accent: #0f766e;' in page
+    assert "<title>Home · Support Logs</title>" in page
+
+
+def test_not_registered_shows_the_message_and_nobody_else(client: TestClient) -> None:
+    page = client.get("/not-registered").text
+    assert "You are not registered in Residential Apps." in page
+    assert 'aria-label="Switch area"' not in page and 'class="tabs"' not in page
+    assert "example.edu" not in page and "Example College" not in page
+
+
+def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(web_pages, "is_local", lambda: False)
+    local = TestClient(create_app())
+    for path in ["/", "/not-registered", *(p.path for p in PLACEHOLDERS)]:
+        assert local.get(path).status_code == 404, path
+    assert local.get("/health").status_code == 200
+
+
+def test_route_names_carry_the_application_s_prefix() -> None:
+    names = [r.name for r in flatten(create_app().routes) if isinstance(r, APIRoute)]
+    assert len(names) > len(PLACEHOLDERS) and all(n.startswith("supportlogs_") for n in names)
+
+
+def test_mounted_pages_stay_under_the_mount() -> None:
+    host, _ = host_with(("supportlogs",))
+    mounted = TestClient(host)
+    for path in ["/", "/not-registered", *(at(p.path, holder(*p.grants).name) for p in PLACEHOLDERS)]:
+        page = mounted.get(MOUNT + path)
+        assert page.status_code == 200, path
+        for link in LINK.findall(FAVICON.sub("", page.text)):
+            assert link == "/" or link.startswith((f"{MOUNT}/", "#")), (path, link)
+    redirect = mounted.get(MOUNT + at("/", "Rachel Yeo"), follow_redirects=False)
+    assert redirect.headers["location"] == MOUNT + at("/sys-admin/", "Rachel Yeo")
+
+
+def test_the_sample_staff_are_the_roster_s() -> None:
+    """Support Logs may not import Residential Operations, so its sample
+    staff are copied from the roster's mock; this holds them to it."""
+    with ROSTER.open(newline="") as f:
+        roster = {row["Name"]: row["Abbrev"] for row in csv.DictReader(f)}
+    for v in sample.VIEWERS:
+        if v.appointment:
+            assert roster.get(v.name) == v.appointment, v.name
+    assert sample.DEFAULT.grants == {sample.FRONTLINE}
