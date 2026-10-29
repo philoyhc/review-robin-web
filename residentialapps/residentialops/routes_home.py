@@ -20,14 +20,14 @@ def choices(viewer: str) -> list[dict[str, str]]:
     """The applications the viewer reaches, each at its own entry point:
     RA Leave's RA, staff or admin side by who they are; Rosters and Sys
     admin for sys admins only."""
-    names = [n for n, _ in sample_data.LANDING_VIEWERS]
     is_ra = any(ra.name == viewer for ra in sample_data.RAS)
+    is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS)
     is_sys_admin = any(name == viewer for name, *_ in sample_data.SYS_ADMINS)
     staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
     found = []
     if is_ra:
         found.append({"label": "RA Leave", "path": "/ra-leave/", "what": "Your balance, apply for leave, cover asked of you"})
-    elif viewer in names:
+    elif is_staff:
         found.append({"label": "RA Leave", "path": "/ra-leave/staff/" + staff_query, "what": "Decisions awaiting you and your Precinct's leave"})
     found.append({"label": "RA Events", "path": "", "what": "Coming later"})
     if is_sys_admin:

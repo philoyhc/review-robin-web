@@ -21,7 +21,7 @@
         {% if app.path %}
           <a class="app" href="{{ url(app.path) }}"><span class="app-name">{{ app.label }}</span><span class="app-what">{{ app.what }}</span></a>
         {% else %}
-          <span class="app app-off" aria-disabled="true"><span class="app-name">{{ app.label }}</span><span class="app-what">{{ app.what }}</span></span>
+          <span class="app app-off"><span class="app-name">{{ app.label }}</span><span class="app-what">{{ app.what }}</span></span>
         {% endif %}
       </li>
     {% endfor %}
