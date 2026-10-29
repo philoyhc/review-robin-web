@@ -341,10 +341,11 @@
       table.slots td.group { font-weight: 600; white-space: nowrap; }
       table.slots tr.wing-start > td { border-top: 2px solid var(--border-default); }
       table.slots td.notes { font-size: 12px; color: var(--text-subtle); min-width: 160px; }
-      /* Sorted, the slots lose their grouping: every row names its levels,
-         and the heavier rule between top levels goes. */
-      table.slots.sorted td.group { font-weight: 400; }
-      table.slots.sorted td.group .visually-hidden { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+      /* Sorted, a grouped table loses its grouping: every row names its
+         group (`td.group`), and the slots' heavier rule between top levels
+         goes. */
+      table.sorted td.group { font-weight: 400; }
+      table.sorted td.group .visually-hidden { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
       table.slots.sorted tr.wing-start > td { border-top: 1px solid var(--border-subtle); }
       table.slots td.cell .input { min-height: 30px; font-size: 14px; min-width: 180px; }
       .input {
@@ -522,6 +523,30 @@
           Array.prototype.forEach.call(row.querySelectorAll("[data-col-toggle]"), function (chip) {
             var key = chip.getAttribute("data-col-toggle");
             show(table, chip, !(stored && stored[key] === false));
+          });
+        });
+        // `data-sort-auto`: a header button per labelled column, its cells
+        // keyed by position; rows whose cells do not line up are left out.
+        Array.prototype.forEach.call(document.querySelectorAll("table[data-sort-auto]"), function (table) {
+          var heads = table.tHead ? table.tHead.rows[0].cells : [];
+          Array.prototype.forEach.call(heads, function (th, i) {
+            var label = th.textContent.trim();
+            if (!label || th.querySelector(".visually-hidden")) return;
+            th.classList.add("sortable");
+            th.setAttribute("data-col", "c" + i);
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "sort-btn";
+            btn.setAttribute("aria-label", "Sort by " + label);
+            btn.innerHTML = '<span aria-hidden="true">\u2195</span>';
+            th.appendChild(btn);
+          });
+          Array.prototype.forEach.call(table.tBodies[0] ? table.tBodies[0].rows : [], function (tr) {
+            if (tr.cells.length !== heads.length) return;
+            tr.setAttribute("data-row", "");
+            Array.prototype.forEach.call(tr.cells, function (td, i) {
+              if (!td.hasAttribute("data-col")) td.setAttribute("data-col", "c" + i);
+            });
           });
         });
         Array.prototype.forEach.call(document.querySelectorAll("tr[data-row]"), function (tr, i) { tr.setAttribute("data-order", i); });

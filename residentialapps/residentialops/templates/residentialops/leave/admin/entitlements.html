@@ -20,18 +20,18 @@
       <h2 id="ent-h">Entitlements <span class="count">· {{ rows | map(attribute="ra") | unique | list | length }} RAs</span></h2>
     </div>
     <div class="table-wrap">
-      <table>
+      <table data-sort-auto>
         <thead><tr><th scope="col">RA</th><th scope="col">Leave type</th><th scope="col" class="num">Entitlement</th><th scope="col" class="num">Adjustment</th><th scope="col" class="num">Used</th><th scope="col" class="num">Pending</th><th scope="col" class="num">Available</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
           {% for row in rows %}
             <tr>
-              <td class="strong nowrap">{% if loop.first or loop.previtem.ra != row.ra %}{{ row.ra }}{% else %}<span class="visually-hidden">{{ row.ra }}</span>{% endif %}</td>
+              <td class="strong nowrap group" data-sort-value="{{ row.ra }}">{% if loop.first or loop.previtem.ra != row.ra %}{{ row.ra }}{% else %}<span class="visually-hidden">{{ row.ra }}</span>{% endif %}</td>
               <td class="nowrap">{{ row.type }}</td>
               <td class="num">{{ row.entitlement }}</td>
-              <td class="num">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
+              <td class="num" data-sort-value="{{ '%05d' | format(row.adjustment + 10000) }}">{% if row.adjustment %}{{ "%+d" | format(row.adjustment) }}<div class="subtle">{{ row.reason }}</div>{% else %}<span class="subtle">—</span>{% endif %}</td>
               <td class="num">{{ row.used }}</td>
               <td class="num">{{ row.pending }}</td>
-              <td class="num strong">{{ row.available }}{% if row.available <= 0 %} <span class="chip chip-warn">None left</span>{% endif %}</td>
+              <td class="num strong" data-sort-value="{{ '%05d' | format(row.available + 10000) }}">{{ row.available }}{% if row.available <= 0 %} <span class="chip chip-warn">None left</span>{% endif %}</td>
               <td class="end"><button type="button" class="btn btn-secondary" aria-label="Adjust {{ row.ra }}'s {{ row.type | lower }}" disabled>Adjust</button></td>
             </tr>
           {% endfor %}

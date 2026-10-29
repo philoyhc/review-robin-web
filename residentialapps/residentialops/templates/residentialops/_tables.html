@@ -1,0 +1,15 @@
+{# Column chips and sortable headers for any Residential Operations table
+   (author, 2026-10-29, after RRW's roster pages); the behaviour is the
+   residential base's script. A table with `data-sort-auto` takes a sort
+   button on every header without these macros. #}
+{# `cols` is (key, label) per column a viewer may hide. #}
+{% macro column_chips(table_id, cols) %}
+  <p class="col-chips" data-col-toggles-for="{{ table_id }}"><span>Show columns:</span>
+    {% for key, label in cols %}<button type="button" class="col-chip" data-col-toggle="{{ key }}" aria-pressed="true">{{ label }}</button>{% endfor %}
+  </p>
+{% endmacro %}
+
+{% macro sort_th(key, label) %}
+  <th scope="col" class="sortable" data-col="{{ key }}">{{ label }}<button type="button" class="sort-btn" aria-label="Sort by {{ label }}"><span aria-hidden="true">↕</span></button></th>
+{% endmacro %}
+

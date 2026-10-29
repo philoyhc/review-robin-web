@@ -544,3 +544,21 @@ def test_the_slots_table_sorts_with_a_notes_chip_only() -> None:
     head = page.split('id="slots-table"')[1].split("</thead>")[0]
     assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["wing", "precinct", "neighborhood", "notes", "staff", "ra"]
     assert '<td class="cell" data-col="ra" data-sort-value="Chloe Lim">' in page
+
+
+def test_other_tables_sort_and_applications_has_column_chips() -> None:
+    """Ruled 2026-10-29: Leave admin's Applications takes column chips (all
+    but ID and RA) and sorting; Entitlements, Approval chain, Sys admin's
+    tables and Precinct leave sort (`data-sort-auto`)."""
+    client = TestClient(ops_app())
+    apps = client.get("/ra-leave/admin/applications").text
+    chips = apps.split('data-col-toggles-for="apps-table"')[1].split("</p>")[0]
+    assert re.findall(r'data-col-toggle="(\w+)"', chips) == ["precinct", "type", "dates", "days", "cover", "stage", "submitted"]
+    head = apps.split('id="apps-table"')[1].split("</thead>")[0]
+    assert len(re.findall(r'class="sortable"', head)) == 9
+    assert 'data-col="dates" data-sort-value="2026-' in apps
+    for path, tables in (
+        ("/ra-leave/admin/entitlements", 1), ("/ra-leave/admin/routing", 1),
+        ("/sys-admin/", 2), ("/ra-leave/staff/precinct?as=Sam%20Lee", 3),
+    ):
+        assert client.get(path).text.count("<table data-sort-auto>") == tables, path

@@ -12,7 +12,7 @@
       <p class="sub">Only the super-admin grants and revokes. Sys admins run Rosters and read the audit log. The last sys admin cannot be revoked, and nobody acts on their own grant.{% if not (viewer and viewer.is_super_admin) %} You see this read-only.{% endif %}</p>
     </div>
     <div class="table-wrap">
-      <table>
+      <table data-sort-auto>
         <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Appointment</th><th scope="col">Granted</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
           {% for name, email, appointment, granted in sample.SYS_ADMINS %}
@@ -69,7 +69,7 @@
       <button type="button" class="btn btn-secondary" disabled>Apply</button>
     </div>
     <div class="table-wrap">
-      <table>
+      <table data-sort-auto>
         <thead><tr><th scope="col">When</th><th scope="col">Event</th><th scope="col">Actor</th><th scope="col">Detail</th></tr></thead>
         <tbody>
           {% for when, event, kind, actor, detail in sample.AUDIT_EVENTS %}

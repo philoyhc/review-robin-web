@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/rosters/_filters.html" import gate, select_all, select_row, selection_script, stage_switch, column_chips, sort_th, person_tokens with context %}
+{% from "residentialops/rosters/_filters.html" import gate, select_all, select_row, selection_script, stage_switch, person_tokens with context %}
+{% from "residentialops/_tables.html" import column_chips, sort_th %}
 {% block title %}Assignments{% endblock %}
 {% block content %}
   <div class="ptitle">

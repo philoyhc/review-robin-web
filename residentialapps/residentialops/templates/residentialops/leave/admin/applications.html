@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title with context %}
+{% from "residentialops/_tables.html" import column_chips, sort_th %}
 {% block title %}Applications{% endblock %}
 {% block content %}
   {{ title("Applications", leave) }}
@@ -23,22 +24,23 @@
   </section>
 
   <section class="card" aria-labelledby="apps-h">
-    <div class="card-head"><h2 id="apps-h">Applications <span class="count">· {{ shown | length }}{% if shown | length != leave.APPLICATIONS | length %} of {{ leave.APPLICATIONS | length }}{% endif %}</span></h2></div>
+    <div class="card-head"><h2 id="apps-h">Applications <span class="count">· {{ shown | length }}{% if shown | length != leave.APPLICATIONS | length %} of {{ leave.APPLICATIONS | length }}{% endif %}</span></h2>
+      {{ column_chips("apps-table", [("precinct", "Precinct"), ("type", "Leave type"), ("dates", "Dates"), ("days", "Days"), ("cover", "Cover"), ("stage", "Stage"), ("submitted", "Submitted")]) }}</div>
     <div class="table-wrap">
-      <table>
-        <thead><tr><th scope="col">ID</th><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Leave type</th><th scope="col">Dates</th><th scope="col" class="num">Days</th><th scope="col">Cover</th><th scope="col">Stage</th><th scope="col">Submitted</th></tr></thead>
+      <table id="apps-table" data-col-store="residentialops-apps-table-columns">
+        <thead><tr>{{ sort_th("id", "ID") }}{{ sort_th("ra", "RA") }}{{ sort_th("precinct", "Precinct") }}{{ sort_th("type", "Leave type") }}{{ sort_th("dates", "Dates") }}{{ sort_th("days", "Days") }}{{ sort_th("cover", "Cover") }}{{ sort_th("stage", "Stage") }}{{ sort_th("submitted", "Submitted") }}</tr></thead>
         <tbody>
           {% for a in shown | sort(attribute="submitted", reverse=True) %}
-            <tr>
-              <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
-              <td class="strong nowrap">{{ a.ra }}</td>
-              <td class="nowrap">{{ a.precinct }}</td>
-              <td class="nowrap">{{ a.leave_type }}</td>
-              <td class="nowrap">{{ a.dates }}</td>
-              <td class="num">{{ a.days }}</td>
-              <td class="nowrap">{{ a.cover }} {{ cover_chip(a.cover_status) }}</td>
-              <td>{{ stage_chip(a.stage) }}</td>
-              <td class="nowrap">{{ leave.short_date(a.submitted) }}{% if a.overdue %} <span class="chip chip-warn">{{ a.age }} days</span>{% endif %}</td>
+            <tr data-row>
+              <td class="nowrap" data-col="id"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
+              <td class="strong nowrap" data-col="ra">{{ a.ra }}</td>
+              <td class="nowrap" data-col="precinct">{{ a.precinct }}</td>
+              <td class="nowrap" data-col="type">{{ a.leave_type }}</td>
+              <td class="nowrap" data-col="dates" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td>
+              <td class="num" data-col="days" data-sort-value="{{ '%05d' | format(a.days) }}">{{ a.days }}</td>
+              <td class="nowrap" data-col="cover">{{ a.cover }} {{ cover_chip(a.cover_status) }}</td>
+              <td data-col="stage">{{ stage_chip(a.stage) }}</td>
+              <td class="nowrap" data-col="submitted" data-sort-value="{{ a.submitted.isoformat() }}">{{ leave.short_date(a.submitted) }}{% if a.overdue %} <span class="chip chip-warn">{{ a.age }} days</span>{% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>
