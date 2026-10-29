@@ -66,7 +66,7 @@
         <h2 id="own-h">{{ app.ra }}'s other leave</h2>
         {% set own = leave.other_leave(app) %}
         {% if own %}<ul class="items">{% for b in own %}<li><div class="item-head"><span class="strong nowrap">{{ b.dates }}</span>{{ stage_chip(b.stage) }}</div><div class="subtle">{{ b.leave_type }}{% if b.appeal %} · extra leave{% endif %} · {{ b.days }} day{{ "s" if b.days != 1 }}</div></li>{% endfor %}</ul>
-        {% else %}<p class="sub">None this year.</p>{% endif %}
+        {% else %}<p class="sub">None this term.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="ctx-h">
         <h2 id="ctx-h">{{ app.precinct }} on these days</h2>

@@ -212,8 +212,13 @@ def first_label() -> str:
     return " or ".join(POLICY["first_types"]) if POLICY["first"] == "slot" else "none"
 
 
-def final_label() -> str:
-    return " or ".join(POLICY["final_types"] if POLICY["final"] == "unit" else POLICY["final_names"])
+def final_label(full: bool = False) -> str:
+    """The final approvers as a phrase; `full` names a Unit appointment as
+    Policy does, "Residential Admin (Admin)", rather than by its abbreviation."""
+    if POLICY["final"] != "unit":
+        return " or ".join(POLICY["final_names"])
+    titles = {abbrev: title for title, abbrev in unit_appointments()}
+    return " or ".join(f"{titles[t]} ({t})" if full and titles.get(t, t) != t else t for t in POLICY["final_types"])
 
 
 def final_decider(application: "Application") -> str:
@@ -678,6 +683,12 @@ def delegate_fits(d: Delegate) -> bool:
     """Whether a delegate holds a place in every slot of the person they
     stand in for; one who does not cannot approve there."""
     return all(d.delegate in s.staff or d.delegate in overseers() for s in sample_data.SLOTS if d.acting_for in s.staff)
+
+
+def delegate_choices(person: str) -> list[str]:
+    """Who may stand in for a person: staff holding a place in every slot
+    they approve for (the overseers hold one in every slot)."""
+    return [p.name for p in sample_data.STAFF if p.name != person and delegate_fits(Delegate(person, p.name, None, None, ""))]
 
 
 def delegable() -> list[str]:

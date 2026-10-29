@@ -332,7 +332,7 @@ def test_approvals_edge_cases(monkeypatch) -> None:
     "None needed"."""
     monkeypatch.setitem(sample_leave.POLICY, "final_types", ("Master", "Admin"))
     assert sample_leave.final_approvers() == ("Sam Lee", "Rachel Yeo")
-    assert "then the Master or Admin" in client().get(ADMIN).text
+    assert "then the Master or Residential Admin (Admin)" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
     assert "Final approval by the final approver" in [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0106"))]
@@ -402,6 +402,11 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     principle and opens an appeal for them on Appeals; until then the RA is
     not offered one."""
     c = client()
+    # Open, the admin page opens none, as the staff page (audit, 2026-10-29).
+    open_page = c.get(ADMIN + "appeals").text
+    assert 'id="inv-ra"' not in open_page and "every RA may send one, so none is opened for them" in open_page
+    assert "Invitations take effect only while appeals are by invitation" in open_page
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     page = c.get(ADMIN + "appeals").text
     assert 'href="/ra-leave/admin/appeals" aria-current="page"' in page
     rows = re.findall(r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page)
@@ -410,7 +415,6 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert page.split('id="inv-by"')[1].split("</select>")[0].count("<option>") == 2  # the Unit's Master and Admin
     assert ">Sent: L-0105</a>" in page and 'aria-label="Withdraw Kai Ng\'s invitation"' in page
     assert '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
-    assert "Invitations take effect only while appeals are by invitation" in page
     policy = c.get(ADMIN + "policy").text
     assert "they open an appeal for that RA on Appeals" in policy and "once someone chosen below agrees" in policy
     inviters = re.findall(r'name="inviter-unit-types" value="(\w+)"( checked)?', policy)
@@ -581,3 +585,22 @@ def test_failed_emails_stay_visible_and_can_be_resent() -> None:
     assert "it goes from the admin's account, naming its original sender" in c.get("/ra-leave/admin/applications/L-0116").text
     assert "from your own account, naming its original sender" in c.get("/ra-leave/admin/").text
     assert 'id="emails-h"' not in c.get("/ra-leave/admin/applications/L-0102").text  # no emails, no card
+
+
+def test_the_audit_s_consistency_fixes() -> None:
+    """The 1C.1 audit (2026-10-29): extra leave is marked in Applications; a
+    delegate is chosen among those holding a place in the slots; the admin
+    pages' switcher reaches the staff side; final approvers read as Policy
+    names them."""
+    c = client()
+    apps = c.get(ADMIN + "applications").text
+    row = apps.split('href="/ra-leave/admin/applications/L-0118"')[1].split("</tr>")[0]
+    assert '<span class="chip chip-accent">Extra leave</span>' in row
+    assert "Hui Min Goh" not in sample_leave.delegate_choices("Daniel Koh")  # in no slot
+    assert all(sample_leave.delegate_fits(sample_leave.Delegate("Daniel Koh", p, None, None, ""))
+               for p in sample_leave.delegate_choices("Daniel Koh"))
+    routing = c.get(ADMIN + "routing").text
+    assert ">Hui Min Goh</option>" not in routing
+    board = c.get(ADMIN).text
+    assert 'href="/ra-leave/staff/?as=Rachel%20Yeo">RA Leave</a>' in board
+    assert ">Rosters and setup</a>" in board

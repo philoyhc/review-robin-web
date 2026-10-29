@@ -22,10 +22,10 @@ def test_each_viewer_sees_only_what_they_reach() -> None:
     assert apps("?as=Daniel%20Koh") == [("/ra-leave/staff/", "RA Leave")]
     assert apps("?as=Sam%20Lee") == [
         ("/ra-leave/staff/?as=Sam%20Lee", "RA Leave"), ("/ra-leave/admin/", "RA Leave admin"),
-        ("/rosters/", "Rosters"), ("/sys-admin/", "Sys admin"),
+        ("/rosters/", "Rosters and setup"), ("/sys-admin/", "Sys admin"),
     ]
     assert apps("?as=Rachel%20Yeo")[0] == ("/ra-leave/staff/?as=Rachel%20Yeo", "RA Leave")
-    assert [label for _, label in apps("?as=Rachel%20Yeo")][1:] == ["RA Leave admin", "Rosters", "Sys admin"]
+    assert [label for _, label in apps("?as=Rachel%20Yeo")][1:] == ["RA Leave admin", "Rosters and setup", "Sys admin"]
     assert apps("?as=Nobody") == apps()  # an unknown viewer: the default
     page = TestClient(ops_app()).get("/").text
     assert '<span class="app app-off"><span class="app-name">RA Events</span><span class="app-what">Coming later' in page

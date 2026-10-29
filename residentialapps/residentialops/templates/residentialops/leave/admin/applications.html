@@ -35,7 +35,7 @@
               <td class="nowrap" data-col="id"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
               <td class="strong nowrap" data-col="ra">{{ a.ra }}</td>
               <td class="nowrap" data-col="precinct">{{ a.precinct }}</td>
-              <td class="nowrap" data-col="type">{{ a.leave_type }}</td>
+              <td class="nowrap" data-col="type">{{ a.leave_type }}{% if a.appeal %} <span class="chip chip-accent">Extra leave</span>{% endif %}</td>
               <td class="nowrap" data-col="dates" data-sort-value="{{ a.start.isoformat() }}">{{ a.dates }}</td>
               <td class="num" data-col="days" data-sort-value="{{ '%05d' | format(a.days) }}">{{ a.days }}</td>
               <td class="nowrap" data-col="cover">{{ a.cover }} {{ cover_chip(a.cover_status) }}</td>

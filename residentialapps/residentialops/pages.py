@@ -25,7 +25,7 @@ AREAS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": "/"},
     {"label": "RA Leave admin", "path": "/ra-leave/admin/"},
     {"label": "RA Events", "path": None},
-    {"label": "Rosters", "path": "/rosters/"},
+    {"label": "Rosters and setup", "path": "/rosters/"},
     {"label": "Sys admin", "path": "/sys-admin/"},
 )
 
@@ -47,7 +47,7 @@ def choices(viewer: str) -> list[dict[str, str]]:
     if is_sys_admin:
         found += [
             {"label": "RA Leave admin", "path": "/ra-leave/admin/", "what": "Policy, entitlements, approval chain, applications, appeals"},
-            {"label": "Rosters", "path": "/rosters/", "what": "Setup, rosters and assignments"},
+            {"label": "Rosters and setup", "path": "/rosters/", "what": "Setup, rosters and assignments"},
             {"label": "Sys admin", "path": "/sys-admin/", "what": "Audit log and sys admin grants"},
         ]
     return found
