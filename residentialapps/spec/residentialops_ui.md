@@ -158,7 +158,8 @@ model (author, 2026-10-27):
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).
 - **Assignments' slots table** takes the same tick boxes and expander,
-  with Retire in place of End appointment. One row per slot, under its
+  with Retire in place of End appointment, and **Add new slot** at its
+  bottom right (author, 2026-10-29). One row per slot, under its
   higher levels, whose names show on a group's first row only; a new top
   level opens under a heavier rule. Notes are small subtle text; the Staff
   and RA cells are typeahead boxes (organization by units, 2026-10-27),
