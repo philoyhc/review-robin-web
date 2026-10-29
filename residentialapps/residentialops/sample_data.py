@@ -255,7 +255,7 @@ def coverage(neighborhoods: set[str]) -> tuple[str, ...]:
     all of it, else the slots themselves (author, 2026-10-29)."""
     if neighborhoods >= {s.neighborhood for s in SLOTS}:
         return (UNIT_NAME,)
-    names = []
+    names: list[str] = []
     for wing in dict.fromkeys(s.wing for s in SLOTS):
         in_wing = [s for s in SLOTS if s.wing == wing]
         if all(s.neighborhood in neighborhoods for s in in_wing):

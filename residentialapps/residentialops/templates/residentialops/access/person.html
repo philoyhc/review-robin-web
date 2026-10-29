@@ -38,7 +38,7 @@
         {% if person.name in every_slot %}
           <h3 class="gap-above-sm">Slots</h3>
           <p class="sub">In every slot for {{ term.label }}, set on <a href="{{ url('/rosters/assignments') }}">Assignments</a>.</p>
-          <span class="pills"><span class="pill-derived">Every slot</span></span>
+          <span class="pills"><span class="pill-derived">{{ unit_name }}</span></span>
         {% elif person.slots %}
           <h3 class="gap-above-sm">Slots</h3>
           <p class="sub">Where Assignments names them, in a Staff or RA cell, for {{ term.label }}.</p>

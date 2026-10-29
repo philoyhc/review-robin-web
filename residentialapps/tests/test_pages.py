@@ -345,7 +345,7 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
     # The Master is in no Staff cell, but in every slot (ruled 2026-10-29).
-    assert '<span class="pill-derived">Every slot</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
+    assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
     hui = client.get(f"/rosters/people/{sample_data.person_id_of('huimin.goh@example.edu')}").text
     assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in hui  # in no slot at all
     assert sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == ()  # a term with no assignments
@@ -504,6 +504,11 @@ def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None
     assert sample_data.coverage({"Cypress A 04-05-06", "Maple 03-04", "Maple 05-06", "Maple 07-08"}) == (
         "Cypress A 04-05-06", "Maple 03-08",
     )
+    every = {s.neighborhood for s in sample_data.SLOTS}
+    cypress = {s.neighborhood for s in sample_data.SLOTS if s.wing == "Cypress"}
+    assert sample_data.coverage(cypress | {"Maple 03-04"}) == ("Cypress", "Maple 03-04")  # a Wing and part of another
+    assert sample_data.coverage(every) == (sample_data.UNIT_NAME,)  # every slot by Staff cells
+    assert sample_data.coverage(set()) == ()
     assert '<span class="chip chip-mute">None</span>' in roster
     assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in roster and '<span class="pill-derived">Cypress</span>' in roster
     assert roster.count('<span class="chip chip-mute">None</span>') == 1  # Hui Min Goh alone
