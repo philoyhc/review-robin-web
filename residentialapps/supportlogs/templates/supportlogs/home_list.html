@@ -1,0 +1,21 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Home{% endblock %}
+{% block content %}
+  {{ sample_title("Support Logs", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {% if flags %}
+    <section class="card card-pad gap-below" aria-labelledby="flags-h">
+      <h2 id="flags-h">Safety flags</h2>
+      <p class="sub">Every active flag, unacknowledged first, then closed flags with their outcomes, each opening its detail (§5.10). Rung 3.</p>
+    </section>
+  {% endif %}
+  {% if places %}
+    <p class="sub">Choose where to go. You see only what you can use.</p>
+    <ul class="apps" aria-label="Your pages">
+      {% for p in places %}
+        <li><a class="app" href="{{ url(p.path) }}{{ p.query }}"><span class="app-name">{{ p.label }}</span></a></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

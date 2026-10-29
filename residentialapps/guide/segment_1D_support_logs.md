@@ -37,7 +37,7 @@ Email and Teams are out of scope: v1 reminds in-app only (§17).
 - **Sample data is labeled** and lives in one module, `residentialapps/supportlogs/sample_support.py`, deleted in one place by items 2–5. Its staff are the Staff roster's mock people (`residentialapps/docs/sample_data/`), copied, not imported: `supportlogs` may not import `residentialops` (`residentialapps/spec/architecture.md`, "Import boundaries"); a test holds the copy to the mock.
 - **No real-looking support content.** Sample students are invented, notes bland and short (§5.8), safety flags generic; nothing reads as a real case.
 - **Placeholders answer only on a local run**, as 1B's and 1C's do, until wired.
-- **Viewing as.** One sample viewer per authorization type (§3.5, roles rule 8): a frontline RF, a senior identifiable Master, a safety-flag recipient without frontline access, a consultation checker, Other Staff with aggregate view and with identifiable view, a Support Logs sys admin, the super-admin (administration only), and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only, independent of the local fake-auth user.
+- **Viewing as.** One sample viewer per authorization type (§3.5, roles rule 8): a frontline RF, a frontline recipient, a senior identifiable Master, a safety-flag recipient without frontline access, a consultation checker, Other Staff with aggregate view and with identifiable view, someone reaching two pages (so Home lists them), a Support Logs sys admin, the super-admin (administration only), and someone with no authorization (the `403` page); switched by a labeled sample card (`?as=`), sample-only, independent of the local fake-auth user.
 - **Access is managed in Support Logs alone** (author, 2026-10-29): Sys admin's **Access** page (`/sys-admin/`) lists every active Staff-roster member, read from `residentialops` as the eligibility list, and grants each of them the authorization types, kept in `supportlogs`; the roster shows no access and Support Logs never writes to it (roles rule 9).
   - One row per person: name and appointment (read-only, a derived pill), then a column per type — Frontline, Senior identifiable, Safety-flag recipient, Consultation check, Other Staff view (None, Aggregate or Identifiable), Sys admin — each a Toggle, with a filter box and chips for With access and No access.
   - A grant or revocation asks for a reason, a senior grant whose request it answers (the Master's, §3.5), and is audited (§11.3).
@@ -53,7 +53,7 @@ Email and Teams are out of scope: v1 reminds in-app only (§17).
 
 ## Judgment calls — decided
 
-- What both applications' pages need — the render helper, `placeholders_local_only`, the sample-viewer card, person and table macros — moves from `residentialapps/residentialops/` to `residentialapps/web/` in rung 1, since neither application may import the other.
+- What both applications' pages need goes to `residentialapps/web/` in rung 1, since neither application may import the other: `placeholders_local_only`, the person and table macros, and a sample title and viewer card (`_sample.html`). Each application keeps its own render helper (its areas and tabs differ); Residential Operations' hand-rolled viewer cards adopt the shared one when next touched (rung 1, 2026-10-29).
 - The settled conventions go to a new `residentialapps/spec/supportlogs_ui.md`, citing `residentialapps/spec/residentialops_ui.md` for what is shared (devices, the base styles, sort and chips) rather than restating it; the draft UI spec is retired to `docs/` history at the close.
 - Item 1 takes its `diff-reviewer` read once per code PR, as 1C's did from rung 4 (`CLAUDE.md` "Where work runs").
 
@@ -70,6 +70,10 @@ Taken 2026-10-29 at `de0bf729`.
 | Residential Operations templates, for scale | 34 | `find residentialapps/residentialops/templates -name "*.html" \| wc -l` |
 | Authorization types | 6 (§3.5's five, Other Staff view), plus the super-admin | `residentialapps/docs/residentialapps_roles.md` rules 1, 8 |
 | Shared macros to move to `web/` | 2 (`_people.html`, `_tables.html`) | `find residentialapps/residentialops/templates -maxdepth 2 -name "_*.html"` |
+
+## Status
+
+- **Rung 1, 2026-10-29** (author: "start rung 1"): the shared pieces in `residentialapps/web/` (`pages.py`, `_people.html`, `_tables.html`, the new `_sample.html`); the teal accent; Home, the `403` and not-registered pages, and the other pages as placeholders, at the paths in `residentialapps/spec/applications.md`, tabs by grant. Base SHA for the item's read: `d15502e0`.
 
 ## PR ladder
 

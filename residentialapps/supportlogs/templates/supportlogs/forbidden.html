@@ -1,0 +1,16 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import viewer_card with context %}
+{% block title %}No access{% endblock %}
+{% block content %}
+  <p><span class="chip chip-warn">Sample data</span> <span class="chip chip-info">Viewing as {{ me.name }}</span></p>
+  {{ viewer_card(viewer_choices, me.name) }}
+  <section class="card card-pad narrow">
+    {% if me.grants %}
+      <h1 class="denial">You do not have access to this page.</h1>
+      <p class="flush">Your Support Logs access does not include it.</p>
+    {% else %}
+      <h1 class="denial">You do not have access to Support Logs.</h1>
+      <p class="flush">Access is granted by a Support Logs sys admin. If you need it, ask them.</p>
+    {% endif %}
+  </section>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Home{% endblock %}
+{% block content %}
+  {{ sample_title("Support Logs", me.name, '<span class="chip chip-mute">Placeholder: rung 2</span>') }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# The personal dashboard (UI spec screen 1; functional spec §10.1), in its
+     order; rung 2 fills each card. #}
+  <section class="card card-pad gap-below" aria-labelledby="flags-h">
+    <h2 id="flags-h">Active safety flags</h2>
+    <p class="sub">{% if flags %}Every active flag, unacknowledged first, as you receive them{% else %}The flags you raised, until each is closed{% endif %} (§5.10). Rung 3.</p>
+  </section>
+  <div class="btnrow gap-below">
+    <a class="btn btn-primary" href="{{ url('/log') }}{{ as_query }}">Log encounter</a>
+  </div>
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="due-h">
+        <h2 id="due-h">Due and overdue</h2>
+        <p class="sub">Plans, follow-ups and students not seen despite a cadence, each with Log. Rung 2.</p>
+      </section>
+      <section class="card card-pad" aria-labelledby="following-h">
+        <h2 id="following-h">Following</h2>
+        <p class="sub">Every active plan and follow-up, with cadence and last contact; All opens <a href="{{ url('/plans/') }}{{ as_query }}">My plans</a>. Rung 2.</p>
+      </section>
+      <section class="card card-pad" aria-labelledby="recent-h">
+        <h2 id="recent-h">Recent encounters</h2>
+        <p class="sub">My last few, each opening the student. Rung 2.</p>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="mine-h">
+        <h2 id="mine-h">My last 14 days</h2>
+        <p class="sub">Encounters, support time, students, by encounter type. Rung 2.</p>
+      </section>
+    </div>
+  </div>
+{% endblock %}

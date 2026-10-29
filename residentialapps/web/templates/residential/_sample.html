@@ -1,0 +1,23 @@
+{# Placeholders' sample chrome, shared by both applications (segment 1D
+   item 1): the title row with its Sample data and Viewing as chips, and the
+   sample viewer card (`residentialapps/spec/residentialops_ui.md` §9). A
+   choice is {name, what, path}: the page the viewer switch goes to for that
+   person, its `?as=` included. #}
+{% macro sample_title(heading, me, extra="") -%}
+  <div class="ptitle">
+    <h1>{{ heading }}</h1>
+    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-info">Viewing as {{ me }}</span>{{ extra }}</span>
+  </div>
+{%- endmacro %}
+
+{% macro viewer_card(choices, me) -%}
+  <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
+    <span class="subtle small">Sample viewer:</span>
+    <span class="chips chip-wrap">
+      {% for c in choices %}
+        <a class="chip {{ 'chip-info' if c.name == me else 'chip-mute' }}" href="{{ url(c.path) }}"{% if c.name == me %} aria-current="true"{% endif %}>{{ c.name }}</a>
+      {% endfor %}
+    </span>
+    <ul class="plain subtle small">{% for c in choices %}<li>{{ c.name }}: {{ c.what }}</li>{% endfor %}</ul>
+  </nav>
+{%- endmacro %}

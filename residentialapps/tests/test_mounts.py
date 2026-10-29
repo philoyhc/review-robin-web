@@ -70,9 +70,12 @@ def test_unset_mounts_rrw_and_both() -> None:
     assert order == sorted(order)
 
 
-def test_bare_mount_has_no_page_yet() -> None:
+def test_support_logs_has_its_home_at_the_mount() -> None:
+    """Segment 1D item 1: Home at the bare mount; a placeholder, so it
+    answers on a local run only, like the other screens."""
     host, _ = host_with(("supportlogs",))
-    assert TestClient(host).get(f"{REGISTRY['supportlogs'].path}/").status_code == 404
+    page = TestClient(host).get(f"{REGISTRY['supportlogs'].path}/")
+    assert page.status_code == 200 and "<h1>Support Logs</h1>" in page.text
 
 
 def test_residential_operations_has_its_landing_at_the_mount() -> None:

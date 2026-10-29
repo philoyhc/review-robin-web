@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import title, viewing, ra_switch with context %}
-{% from "residentialops/_people.html" import person_tokens %}
+{% from "residential/_people.html" import person_tokens %}
 {% block title %}Apply for leave{% endblock %}
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}

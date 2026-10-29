@@ -2,7 +2,7 @@
    the invitations and appeals of the RAs shown (`seen`, by default every
    RA the viewer may open one for), and the card to open one for whoever
    the policy lets (`may_open`; author, 2026-10-29). #}
-{% from "residentialops/_people.html" import person_tokens %}
+{% from "residential/_people.html" import person_tokens %}
   {% set seen = seen | default(ra_choices) %}
   {% if leave.POLICY.appeals != "By invitation" %}
     <div class="notice">Invitations take effect only while appeals are by invitation; {{ "every RA may appeal now" if leave.POLICY.appeals == "Open" else "appeals are off" }}.</div>

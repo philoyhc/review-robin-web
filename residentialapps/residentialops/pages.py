@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
-from cordware.identity import current_identity, is_local
+from cordware.identity import current_identity
 from residentialapps.residentialops import sample_data, sample_leave
+from residentialapps.web.pages import initials
+from residentialapps.web.pages import placeholders_local_only as placeholders_local_only  # for the routes
 from residentialapps.web.urls import templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
@@ -114,20 +115,6 @@ async def sample_preview(request: Request) -> None:
         sample_leave.APPEALS_PREVIEW.set(mode)
 
 
-def placeholders_local_only() -> None:
-    """Segment 1B item 1's screens show sample data and enforce no
-    access rules yet, so they answer only on a local run (`APP_ENV=local`).
-    Deployed, they are 404 until items 3–5 wire them to real data and
-    gates; a router depends on this until then."""
-    if not is_local():
-        raise HTTPException(status_code=404)
-
-
-def _initials(label: str) -> str:
-    parts = [p for p in label.replace("@", " ").split() if p[:1].isalpha()]
-    return "".join(p[0] for p in parts[:2]).upper() or "?"
-
-
 def render(
     request: Request,
     template: str,
@@ -152,7 +139,7 @@ def render(
             "areas": areas_for(sample_leave.CANCELLED_BY) if areas is None else areas,
             "tabs": tabs,
             "viewer": viewer,
-            "initials": _initials(viewer.display_label) if viewer else "?",
+            "initials": initials(viewer.display_label) if viewer else "?",
             **context,
         },
     )
