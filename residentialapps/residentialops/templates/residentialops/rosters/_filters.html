@@ -44,17 +44,6 @@
   <td class="sel"><input type="checkbox" class="row-select" aria-label="Select {{ name }}"></td>
 {% endmacro %}
 
-{# A box of people (author, 2026-10-29): each person matched to a roster
-   is a pill with its remove button, then a typeahead to add the next;
-   unmatched text stays in the box until it matches. The value is set
-   here, so these are tokens, not derived pills. #}
-{% macro person_tokens(label, names, list_id, input_id="") %}
-  <div class="tokens" role="group" aria-label="{{ label }}">
-    {% for name in names %}<span class="token">{{ name }}<button type="button" class="token-x" aria-label="Remove {{ name }} from {{ label }}" disabled>×</button></span>{% endfor %}
-    <input{% if input_id %} id="{{ input_id }}"{% else %} aria-label="Add to {{ label }}"{% endif %} class="token-input" type="text" list="{{ list_id }}" placeholder="Add a name" disabled>
-  </div>
-{% endmacro %}
-
 {# The CSV card's actions, under its sample. #}
 {% macro csv_actions() %}
   <div class="btnrow">

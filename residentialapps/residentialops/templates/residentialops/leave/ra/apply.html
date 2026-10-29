@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import title, viewing with context %}
+{% from "residentialops/_people.html" import person_tokens %}
 {% block title %}Apply for leave{% endblock %}
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}
@@ -14,7 +15,7 @@
         <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
         <p class="subtle small">The days are counted for you ({{ leave.POLICY.day_count | lower }}). {{ leave.zero_day_rule() }} {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% elif leave.appeals_on() %}Leave in a blackout cannot be submitted.{% else %}Leave in any blackout cannot be submitted while appeals are off.{% endif %}</p>
         <div class="field-wide"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
-          <input id="cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" aria-describedby="cover-what" disabled>
+          {{ person_tokens("Covering RA", (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">{{ leave.POLICY.cover_pool }}: {{ leave.cover_choices(me) | length }} RAs you may name.{% if leave.POLICY.cover_required and leave.POLICY.cover_mode == "Named and confirmed" %} They are asked to confirm; your application waits at first approval until they do.{% elif leave.POLICY.cover_required %} They are told; they need not confirm.{% endif %}</span></div>
         <div class="field-wide"><label for="remarks">Remarks (optional)</label><textarea id="remarks" class="input" rows="2" disabled></textarea></div>

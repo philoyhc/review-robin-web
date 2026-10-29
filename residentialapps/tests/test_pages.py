@@ -562,3 +562,21 @@ def test_other_tables_sort_and_applications_has_column_chips() -> None:
         ("/sys-admin/", 2), ("/ra-leave/staff/precinct?as=Sam%20Lee", 3),
     ):
         assert client.get(path).text.count("<table data-sort-auto>") == tables, path
+
+
+def test_people_boxes_across_the_app() -> None:
+    """Ruled 2026-10-29: every box for choosing people shows each verified
+    person as a pill with its remove button; a one-person box (a cover,
+    the RA an appeal is opened for) offers its typeahead until one is
+    chosen."""
+    client = TestClient(ops_app())
+    for path, label in (
+        ("/ra-leave/apply", "Covering RA"), ("/ra-leave/appeal", "Covering RA"),
+        ("/ra-leave/applications/L-0101", "New covering RA"),
+        ("/ra-leave/admin/appeals", "RA"), ("/ra-leave/admin/policy", "Staff who may give final approval"),
+        ("/ra-leave/admin/policy", "Staff who may open an appeal"),
+    ):
+        page = client.get(path).text
+        assert f'<div class="tokens" role="group" aria-label="{label}">' in page, (path, label)
+    assert 'aria-describedby="cover-what" class="token-input"' in client.get("/ra-leave/apply").text
+    assert 'placeholder="Start typing a name"' not in client.get("/ra-leave/admin/policy").text

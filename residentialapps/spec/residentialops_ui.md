@@ -143,7 +143,8 @@ model (author, 2026-10-27):
   (author, 2026-10-29). Sign-in stays a status chip (§3). The Staff roster shows no access: sys admin is listed on the Sys admin page, and other applications' grants stay in those applications (author, 2026-10-28).
 - **Column chips and sorting**, after RRW's roster pages (author,
   2026-10-29): a chip row under a roster's heading shows or hides each
-  column but Name, a filled chip a shown column, remembered per browser;
+  column but Name, a shown column's chip dark filled with light text and a
+  hidden one's light with dark text, as RRW's chips, remembered per browser;
   each header's button sorts ascending, descending, then back to the
   page's order. Assignments' slots table sorts the same way, with a chip
   for Notes alone; sorted, each row names its levels and the grouping
@@ -160,9 +161,11 @@ model (author, 2026-10-27):
   higher levels, whose names show on a group's first row only; a new top
   level opens under a heavier rule. Notes are small subtle text; the Staff
   and RA cells are typeahead boxes (organization by units, 2026-10-27),
-  each person matched to a roster a token with its remove button, then
-  the box to add the next (author, 2026-10-29); the Every slot card's
-  names take the same box, and staff in every slot are not repeated in
+  each person matched to a roster a token, dark filled, with its remove
+  button, then the box to add the next (author, 2026-10-29); the Every
+  slot card's names take the same box, as does every box for choosing
+  people (Leave policy's named staff; a cover, and the RA an appeal is
+  opened for, one person each), and staff in every slot are not repeated in
   the cells.
 
 ## 7. Setup order

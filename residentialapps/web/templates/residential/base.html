@@ -177,7 +177,7 @@
       }
       .token {
         display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 8px; border-radius: 9999px;
-        background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-size: 13px; font-weight: 600; white-space: nowrap;
+        background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 600; white-space: nowrap;  /* a chosen person: dark filled, as a selected chip */
       }
       .token-x { border: 0; background: transparent; color: inherit; font: inherit; padding: 0 4px; min-width: 20px; cursor: pointer; }
       .token-x:disabled { cursor: not-allowed; }
@@ -186,11 +186,13 @@
          a shown column, a plain one hidden; Name has none (author,
          2026-10-29). */
       .col-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 13px; color: var(--text-subtle); }
+      /* As RRW's chips: dark filled with light text when selected, a light
+         fill with dark text when not (author, 2026-10-29). */
       .col-chip {
         min-height: 28px; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--accent);
-        background: transparent; color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
+        background: var(--surface-muted); color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
       }
-      .col-chip[aria-pressed="true"] { background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-weight: 600; }
+      .col-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
       /* Each header sorts by its button: ascending, descending, then back
          to the table's own order. */
       th.sortable { white-space: nowrap; }
