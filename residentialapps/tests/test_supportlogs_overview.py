@@ -19,6 +19,10 @@ from residentialapps.tests._host import host_with
 ASSIGNMENTS = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "assignments.csv"
 
 
+# Identifiable and aggregate view, frontline, frontline and recipient, recipient only.
+NOT_SENIOR = ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Priya Raman", "Hui Min Goh")
+
+
 @pytest.fixture(scope="module")
 def client() -> TestClient:
     return TestClient(create_app())
@@ -29,7 +33,8 @@ def section(page: str, heading_id: str) -> str:
 
 
 def cells(table: str) -> list[list[str]]:
-    return [re.findall(r"<td[^>]*>(.*?)</td>", row) for row in re.findall(r"<tr>(.*?)</tr>", table.split("<tbody>")[1])]
+    rows = re.findall(r"<tr>(.*?)</tr>", table.split("<tbody>")[1], re.S)
+    return [[c.strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)] for row in rows]
 
 
 def plain(cell: str) -> str:
@@ -47,8 +52,12 @@ def test_workload_weighs_formal_assignments_by_cadence(client: TestClient) -> No
 def test_hotspots_name_students_for_identifiable_views_only(client: TestClient) -> None:
     sam = section(client.get("/overview/?as=Sam%20Lee").text, "hot-h")
     assert 'href="/overview/students/S-07?as=Sam%20Lee">Gwyneth Low</a>' in sam
-    gwyneth = sam.split("Gwyneth Low")[1].split("</tr>")[0]
-    assert "Rising" in gwyneth and "score" not in gwyneth
+    rows = cells(sam)
+    assert [plain(r[0]) for r in rows] == [r["student"].name for r in sample.hotspots()]
+    assert [r[1:5] for r in rows] == [[str(r[k]) for k in ("contacts", "before", "minutes", "staff")] for r in sample.hotspots()]
+    hana = next(r for r in sample.hotspots() if r["student"].id == "S-08")
+    assert (hana["contacts"], hana["staff"]) == (1, 1)  # staff counted over the same 14 days as contacts
+    assert [plain(r[0]) for r in rows if "Rising" in r[5]] == ["Gwyneth Low"]
     siti = section(client.get("/overview/?as=Siti%20Rahman").text, "hot-h")
     assert "Gwyneth Low" in siti and "/overview/students/" not in siti  # named, but no history
     kenneth = client.get("/overview/?as=Kenneth%20Lau").text
@@ -78,7 +87,8 @@ def test_clusters_are_the_precincts_of_the_assignments_file(client: TestClient) 
     assert set(sample.CLUSTERS) <= precincts
     assert set(sample.STUDENT_CLUSTER) == {s.id for s in sample.STUDENTS}
     rows = cells(section(client.get("/overview/?as=Kenneth%20Lau").text, "cl-h"))
-    assert [plain(r[0]) for r in rows] == list(sample.CLUSTERS)
+    assert [[plain(c) for c in r] for r in rows] == [
+        [r["cluster"], *(str(r[k]) for k in ("students", "contacts", "minutes", "rising"))] for r in sample.clusters()]
 
 
 def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient) -> None:
@@ -88,18 +98,22 @@ def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient)
     assert re.findall(r"<li>([^<]+)</li>", staff) == ["Arjun Nair", "Priya Raman"]  # not Daniel: shared with, never seen her
     encounters = section(page, "enc-h")
     assert encounters.count("<li>") == sum(1 for e in sample.ENCOUNTERS if e.student == "S-08")
-    for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh"):
-        assert client.get(f"/overview/students/S-08?as={name.replace(' ', '%20')}").status_code == 403, name
+    for name in NOT_SENIOR:
+        for sid in ("S-08", "S-99"):  # an unknown id is 403 too: no probing
+            assert client.get(f"/overview/students/{sid}?as={name.replace(' ', '%20')}").status_code == 403, (name, sid)
     assert client.get("/overview/students/S-99?as=Sam%20Lee").status_code == 404
 
 
 def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) -> None:
     page = client.get("/overview/audit?as=Sam%20Lee").text
     assert "Reviewing this log is recorded." in page
-    assert len(cells(section(page, "audit-h"))) == len(sample.AUDIT)
+    rows = cells(section(page, "audit-h"))
+    assert len(rows) == len(sample.AUDIT)
+    for row, event in zip(rows, sample.AUDIT):
+        assert f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{sample.student(event.student).name}</a>' == row[3]
     assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/overview/?as=Sam%20Lee").text
     assert "/overview/audit" not in client.get("/overview/?as=Siti%20Rahman").text
-    for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh"):
+    for name in NOT_SENIOR:
         assert client.get(f"/overview/audit?as={name.replace(' ', '%20')}").status_code == 403, name
 
 

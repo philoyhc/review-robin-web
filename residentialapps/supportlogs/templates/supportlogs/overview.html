@@ -35,11 +35,11 @@
       {% set hot = sample.hotspots() %}
       <section class="card card-pad" aria-labelledby="hot-h">
         <h2 id="hot-h">Hotspots</h2>
-        <p class="sub">Contacts in the last 14 days against the 14 before, staff involved, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).</p>
+        <p class="sub">Contacts, minutes and staff involved in the last 14 days, contacts in the 14 before, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).</p>
         {% if named %}
           <div class="table-wrap">
             <table data-sort-auto id="hot-table">
-              <thead><tr><th scope="col">Student</th><th scope="col" class="num">Contacts, 14 days</th><th scope="col" class="num">The 14 before</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Staff</th><th scope="col">Signals</th></tr></thead>
+              <thead><tr><th scope="col">Student</th><th scope="col" class="num">Contacts, 14 days</th><th scope="col" class="num">The 14 before</th><th scope="col" class="num">Minutes, 14 days</th><th scope="col" class="num">Staff, 14 days</th><th scope="col">Signals</th></tr></thead>
               <tbody>{% for r in hot %}<tr>
                 <td class="strong">{% if senior %}<a href="{{ url('/overview/students/' ~ r.student.id) }}{{ as_query }}">{{ r.student.name }}</a>{% else %}{{ r.student.name }}{% endif %}</td>
                 <td class="num">{{ r.contacts }}</td><td class="num">{{ r.before }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.staff }}</td>
@@ -66,8 +66,8 @@
       {% set cov = sample.coverage() %}
       <section class="card card-pad" aria-labelledby="cov-h">
         <h2 id="cov-h">Coverage</h2>
-        <p class="sub">Formal check-ins overdue or due this week, and reviews within three weeks (§10.6).</p>
-        {% for key, label in (("overdue", "Overdue"), ("soon", "Due this week"), ("review", "Review soon")) %}
+        <p class="sub">Formal check-ins overdue or due this week, and reviews due within three weeks or past (§10.6).</p>
+        {% for key, label in (("overdue", "Overdue"), ("soon", "Due this week"), ("review", "Review due")) %}
           <h3 class="gap-above-sm">{{ label }} <span class="count">· {{ cov[key] | length }}</span></h3>
           {% if named and cov[key] %}<ul class="items">{% for p in cov[key] %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ sample.student(p.student).name }}</a>{% if key == "review" %}<span class="chip chip-mute">Review {{ sample.short_date(p.review) }}</span>{% else %}{{ due_chip(p) }}{% endif %}</div><div class="subtle">{{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>{% endif %}
         {% endfor %}

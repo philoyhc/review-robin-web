@@ -556,7 +556,7 @@ def hotspots() -> list[dict]:
             "contacts": len(now),
             "before": len(before),
             "minutes": sum(MINUTES[e.duration] for e in now),
-            "staff": len({e.staff for e in mine if in_period(e)}),
+            "staff": len({e.staff for e in now}),
             "formal": any(p.formal for p in PLANS if p.student == s.id and p.status == "Active"),
             "flags": flags_active,
             "rising": len(now) >= 2 and len(now) > len(before),
@@ -566,7 +566,7 @@ def hotspots() -> list[dict]:
 
 def coverage() -> dict:
     """Coverage (§10.6): formal check-ins overdue and due soon, and
-    assignments whose review is within three weeks."""
+    assignments whose review is within three weeks or already past."""
     formal = [p for p in PLANS if p.formal and p.status == "Active"]
     return {
         "overdue": [p for p in formal if due(p)[0] == "overdue"],
