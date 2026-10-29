@@ -88,7 +88,7 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
 
 def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClient) -> None:
     dashboard = client.get("/").text
-    assert "Placeholder: rung 2" in dashboard and ">Log encounter</a>" in dashboard
+    assert 'id="due-h">Due and overdue' in dashboard and ">Log encounter</a>" in dashboard
     assert "The flags you raised" in dashboard
     assert "unacknowledged first, as you receive them" in client.get(at("/", "Priya Raman")).text
     for name, there in [("Sam Lee", "/overview/"), ("Siti Rahman", "/overview/"), ("Marcus Tan", "/consultation/"),
@@ -132,14 +132,17 @@ def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> 
 
 
 def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
-    """Tabs, the switcher and Home carry `?as=`; the viewer switch names
-    each person; only the host's landing page goes without."""
-    for name, path in [("Priya Raman", "/"), ("Priya Raman", "/log"), ("Rachel Yeo", "/sys-admin/clusters")]:
-        page = client.get(at(path, name)).text
+    """Every link carries `?as=`, a form its hidden `as`; the viewer switch
+    names each person; only the host's landing page goes without."""
+    pages = [("Priya Raman", "/"), ("Priya Raman", "/log"), ("Priya Raman", "/students/S-08"),
+             ("Priya Raman", "/plans/?show=week"), ("Rachel Yeo", "/sys-admin/clusters")]
+    for name, path in pages:
+        page = client.get(path + ("&" if "?" in path else "?") + "as=" + quote(name)).text
         card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
         rest = page.replace(card, "")
-        for link in LINK.findall(FAVICON.sub("", rest)):
-            assert link == "/" or link.endswith("?as=" + quote(name)), (path, link)
+        for link in re.findall(r'\bhref="([^"]*)"', FAVICON.sub("", rest)):
+            assert link == "/" or "as=" + quote(name) in link, (path, link)
+        assert rest.count("<form") == rest.count(f'<input type="hidden" name="as" value="{name}">'), path
 
 
 def test_the_viewer_switch_lists_every_viewer(client: TestClient) -> None:

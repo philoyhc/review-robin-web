@@ -1,0 +1,50 @@
+{# The frontline pages' pieces (segment 1D rung 2). Status is a chip with
+   words, never color alone: overdue in warning, due today in info, the
+   rest muted (UI spec §5, §6). #}
+{# Every page naming a student says the view is recorded (§11.3; the
+   plan's Semantics), as the real page will. #}
+{% macro recorded() -%}
+  <p class="subtle small">Pages that name students are recorded when opened.</p>
+{%- endmacro %}
+
+{# The plan a student is on, as Log encounter's follow-ups say it, and the
+   data its student choice carries so the section follows a change. #}
+{% macro plan_text(p) -%}
+  On your {{ "plans" if p.formal else "follow-ups" }}: {{ p.cadence | lower }}{% if p.formal %}, set by {{ p.assigned_by }}{% endif %}.
+{%- endmacro %}
+
+{% macro plan_data(p) -%}
+  {% if p %} data-plan="{{ plan_text(p) }}" data-cadence="{{ p.cadence }}"{% if p.formal %} data-formal{% endif %}{% endif %}
+{%- endmacro %}
+
+{% macro due_chip(p) -%}
+  {% set state, label = sample.due(p) %}
+  <span class="chip {{ {'overdue': 'chip-warn', 'today': 'chip-info'}.get(state, 'chip-mute') }}">{{ label }}</span>
+{%- endmacro %}
+
+{% macro kind_chips(p) -%}
+  {% if p.formal %}<span class="chip chip-accent">Plan · {{ p.source }}</span>{% else %}<span class="chip chip-mute">Following</span>{% endif %}
+  {%- if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}
+{%- endmacro %}
+
+{# One plan as a phone-list item: the student, its kind, its due state,
+   its cadence and last contact; `log` adds the row's Log action. #}
+{% macro plan_item(p, log=false) -%}
+  {% set s = sample.student(p.student) %}
+  {% set seen = sample.last_contact(p) %}
+  <li>
+    <div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{{ due_chip(p) }}</div>
+    <div class="subtle">{{ kind_chips(p) }} {{ p.cadence }} · last contact {{ sample.short_date(seen) if seen else "none yet" }}</div>
+    {% if p.safety_plan %}<div class="subtle">{{ p.instruction }}</div>{% endif %}
+    {% if log %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/log') }}{{ qs(student=s.id) }}" aria-label="Log an encounter with {{ s.name }}">Log</a>{% endif %}
+  </li>
+{%- endmacro %}
+
+{% macro encounter_item(e, with_student=true) -%}
+  {% set s = sample.student(e.student) %}
+  <li>
+    <div class="item-head">{% if with_student %}<a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}<span class="strong">{{ e.type }}</span>{% endif %}<span class="nowrap subtle">{{ sample.short_date(e.when.date()) }}</span></div>
+    <div class="subtle">{% if with_student %}{{ e.type }} · {% endif %}{{ e.duration }}{% if e.concerns %} · {{ e.concerns | join(", ") }}{% endif %}{% if e.follow_up == "Yes" %} · follow-up needed{% endif %}</div>
+    {% if e.note %}<div class="subtle">“{{ e.note }}”</div>{% endif %}
+  </li>
+{%- endmacro %}

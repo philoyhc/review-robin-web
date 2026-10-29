@@ -1,37 +1,46 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import plan_item, encounter_item, recorded with context %}
 {% block title %}Home{% endblock %}
 {% block content %}
-  {{ sample_title("Support Logs", me.name, '<span class="chip chip-mute">Placeholder: rung 2</span>') }}
+  {{ sample_title("Support Logs", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
-  {# The personal dashboard (UI spec screen 1; functional spec §10.1), in its
-     order; rung 2 fills each card. #}
+  {{ recorded() }}
+  {# The personal dashboard (UI spec screen 1; functional spec §10.1), in
+     its order. #}
   <section class="card card-pad gap-below" aria-labelledby="flags-h">
     <h2 id="flags-h">Active safety flags</h2>
-    <p class="sub">{% if flags %}Every active flag, unacknowledged first, as you receive them{% else %}The flags you raised, until each is closed{% endif %} (§5.10). Rung 3.</p>
+    <p class="sub">{% if flags %}Every active flag, unacknowledged first, as you receive them{% else %}The flags you raised, until each is closed{% endif %} (§5.10). Placeholder: rung 3.</p>
   </section>
-  <div class="btnrow gap-below">
-    <a class="btn btn-primary" href="{{ url('/log') }}{{ as_query }}">Log encounter</a>
-  </div>
-  <div class="split">
+  <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ as_query }}">Log encounter</a>
+  {% set urgent = sample.attention(me.name) %}
+  {% set mine = sample.plans_of(me.name) %}
+  <div class="split gap-above">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="due-h">
-        <h2 id="due-h">Due and overdue</h2>
-        <p class="sub">Plans, follow-ups and students not seen despite a cadence, each with Log. Rung 2.</p>
+        <h2 id="due-h">Due and overdue <span class="count">· {{ urgent | length }}</span></h2>
+        <p class="sub">Plans and follow-ups overdue or due in the next seven days, the most urgent first.</p>
+        {% if urgent %}<ul class="items">{% for p in urgent %}{{ plan_item(p, log=true) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing due this week.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="following-h">
-        <h2 id="following-h">Following</h2>
-        <p class="sub">Every active plan and follow-up, with cadence and last contact; All opens <a href="{{ url('/plans/') }}{{ as_query }}">My plans</a>. Rung 2.</p>
+        <h2 id="following-h">Following <span class="count">· {{ mine | length }}</span></h2>
+        <p class="sub">Every active plan and follow-up, due or not.</p>
+        {% if mine %}<ul class="items">{% for p in mine[:3] %}{{ plan_item(p) }}{% endfor %}</ul>{% else %}<p class="sub">No one yet.</p>{% endif %}
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/plans/') }}{{ as_query }}">All {{ mine | length }}</a>
       </section>
       <section class="card card-pad" aria-labelledby="recent-h">
+        {% set recent = sample.encounters_by(me.name) %}
         <h2 id="recent-h">Recent encounters</h2>
-        <p class="sub">My last few, each opening the student. Rung 2.</p>
+        {% if recent %}<ul class="items">{% for e in recent[:4] %}{{ encounter_item(e) }}{% endfor %}</ul>{% else %}<p class="sub">None logged yet.</p>{% endif %}
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/students/') }}{{ as_query }}">My students</a>
       </section>
     </div>
     <div class="side">
+      {% set w = sample.recent_window(me.name) %}
       <section class="card card-pad muted" aria-labelledby="mine-h">
         <h2 id="mine-h">My last 14 days</h2>
-        <p class="sub">Encounters, support time, students, by encounter type. Rung 2.</p>
+        <dl class="kv"><dt>Encounters</dt><dd>{{ w.encounters }}</dd><dt>Support time</dt><dd>{{ w.minutes }} min</dd><dt>Students</dt><dd>{{ w.students }}</dd></dl>
+        {% if w.by_type %}<h3 class="gap-above-sm">By encounter type</h3><dl class="kv">{% for t, n in w.by_type %}<dt>{{ t }}</dt><dd>{{ n }}</dd>{% endfor %}</dl>{% endif %}
       </section>
     </div>
   </div>

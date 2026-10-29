@@ -31,27 +31,11 @@ class Placeholder:
 
 
 PLACEHOLDERS = (
-    Placeholder("/log", "log", "Log encounter", (sample.FRONTLINE,), 2, (
-        "Student, duration and type on one screen, with the student's card once chosen (§5.1–5.6)",
-        "Optional details on the same page: concern areas, follow-up needed, add to my follow-ups, how, who started it, a short note (§5.7–5.9)",
-        "Save encounter at the form's end, disabled until the three required choices are made (§5.3)",
-        "Mark a safety concern, set apart at the bottom (§5.10)",
-    )),
     Placeholder("/log/safety", "log_safety", "Safety concern", (sample.FRONTLINE,), 3, (
         "Call actions first: emergency services, campus security, the counselling duty line, duty senior staff (§5.10)",
         "The encounter's context, the crisis protocol's steps and the escalation step taken",
         "Save and raise safety flag, and Cancel",
     ), tab="/log"),
-    Placeholder("/students/", "students", "Students", (sample.FRONTLINE,), 2, (
-        "Search as the signed-in staff member, with the email fallback (§4.2)",
-        "My students first: plans, follow-ups and everyone I have logged an encounter with (§4.3)",
-        "Each opening the student view, which says the view is recorded (§9, §11.3)",
-    )),
-    Placeholder("/plans/", "plans", "My plans", (sample.FRONTLINE,), 2, (
-        "All, Overdue, This week",
-        "Formal assignments first, with source and cadence, and the safety-plan marker (§7, §5.10)",
-        "Then informal follow-ups (§6), and Add a student to follow up",
-    )),
     Placeholder("/overview/", "overview", "Overview", (sample.SENIOR, *sample.VIEW), 5, (
         "Team workload with load weighting (§10.2–10.3)",
         "Hotspots and clusters (§10.4–10.5)",

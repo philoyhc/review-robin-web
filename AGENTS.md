@@ -207,11 +207,12 @@ reject it.
   rather than skips — a silent tool-gated skip, so read the skip list,
   not just the exit code. The other tool-gated tests are
   `tests/browser/` and Residential's
-  `residentialapps/tests/test_sort_persistence_browser.py` and
-  `residentialapps/tests/test_touch_targets_browser.py`, which need a
+  `residentialapps/tests/test_sort_persistence_browser.py`,
+  `residentialapps/tests/test_touch_targets_browser.py` and
+  `residentialapps/tests/test_supportlogs_log_browser.py`, which need a
   Chromium build (preinstalled in the web sandbox) and skip with a reason
   without one; CI sets
-  `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. Both also run in
+  `RRW_REQUIRE_BROWSER=1` so a missing browser fails there. They also run in
   CI (`ci.yml`) on every PR, alongside `ci-postgres.yml`, unless the PR is
   prose only: then CI runs the `prose` lane alone, `tests/unit/` plus the
   tests that read prose (`tools/ci_lanes.py`, segment 22A). A PR touching

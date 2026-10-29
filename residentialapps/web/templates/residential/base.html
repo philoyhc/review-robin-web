@@ -47,6 +47,8 @@
         --chip-ok-bg: #dcfce7; --chip-ok-fg: #166534;
         --chip-mute-bg: #f3f4f6; --chip-mute-fg: #3a465c;
         --warn-border: #d97706;
+        /* [A] The safety-plan support marker (support_logs_ui_spec_v0.1.md §6). */
+        --marker-safety-plan-bg: #ede9fe; --marker-safety-plan-fg: #5b21b6;
       }
       :root[data-app="residentialops"] {
         --accent: #a21caf;
@@ -78,6 +80,7 @@
         --chip-ok-bg: #052e16; --chip-ok-fg: #86efac;
         --chip-mute-bg: #232c3b; --chip-mute-fg: #a9b4c6;
         --warn-border: #b45309;
+        --marker-safety-plan-bg: #2e1065; --marker-safety-plan-fg: #c4b5fd;
       }
       :root[data-theme="dark"][data-app="residentialops"] {
         --accent: #e879f9;
@@ -265,6 +268,21 @@
       .item-head > a { display: inline-flex; align-items: center; min-height: 44px; }
       .item-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-bottom: 2px; }
       th.num, td.num { text-align: right; white-space: nowrap; }
+      /* Choice chips (support_logs_ui_spec_v0.1.md §5): native radios and
+         checkboxes styled as pills; a chosen one takes the accent tint, a
+         check and a heavier label, so it shows without color. */
+      fieldset.choices { margin: 12px 0; padding: 0; border: 0; min-width: 0; }
+      fieldset.choices legend { padding: 0; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+      .choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+      .choice-row.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .choice { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--border-default); border-radius: 9999px; background: var(--surface-card); font-size: 15px; cursor: pointer; }
+      .choice[hidden], .field-wide[hidden] { display: none; }
+      .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+      .choice:has(input:checked) { background: var(--accent-tint-strong); border-color: var(--accent); color: var(--text-body); font-weight: 600; }
+      .choice:has(input:checked)::before { content: "\2713"; }
+      .choice:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+      details.more > summary { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+      .chip-marker { background: var(--marker-safety-plan-bg); color: var(--marker-safety-plan-fg); }
       /* RA Leave admin: stat tiles, a count over its label, each a link to
          the rows it counts. */
       .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
@@ -316,6 +334,8 @@
       }
       .btn-primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
       .btn-secondary { background: transparent; color: var(--text-body); border: 1px solid var(--border-default); }
+      /* A phone page's main action: full width and 52 px tall (support_logs_ui_spec_v0.1.md §4). */
+      .btn-wide { width: 100%; justify-content: center; min-height: 52px; font-size: 16px; }
       .btn:disabled { cursor: not-allowed; opacity: 0.85; }  /* 0.85 keeps disabled text at 4.5:1 or better */
       /* An action the selection rules out, apart from a placeholder's inert ones. */
       .btn.btn-unavailable { opacity: 0.4; }

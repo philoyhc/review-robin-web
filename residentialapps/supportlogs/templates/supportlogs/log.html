@@ -1,0 +1,143 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded, plan_text, plan_data with context %}
+{% block title %}Log encounter{% endblock %}
+{% block content %}
+  {{ sample_title("Log encounter", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  {# The routine path on one screen: student, duration, type, Save (UI
+     spec screen 2; functional spec §5.1). The optional details sit on the
+     same page, folded (author, 2026-10-29: no separate screen, no fixed
+     footer). A sample: Save shows the confirmation, nothing is stored. #}
+  <form id="log-form" class="card card-pad" action="{{ url('/log/saved') }}" method="get" aria-labelledby="log-h">
+    <h2 id="log-h" class="visually-hidden">Encounter</h2>
+    {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+    <div class="field-wide"><label for="when">When</label>
+      <input id="when" class="input" type="datetime-local" value="{{ sample.NOW.strftime('%Y-%m-%dT%H:%M') }}" aria-describedby="when-what">
+      <span id="when-what" class="subtle small">Now, unless you are logging an earlier encounter (§5.2).</span></div>
+
+    <fieldset class="choices" aria-describedby="student-what">
+      <legend>Student</legend>
+      {% if chosen %}
+        <div class="card card-pad muted">
+          {% set cp = sample.plans_of(me.name, chosen.id) %}
+          <input type="hidden" name="student" value="{{ chosen.id }}"{{ plan_data(cp[0] if cp else none) }}>
+          <div class="item-head"><span class="strong">{{ chosen.name }}</span><a href="{{ url('/log') }}{{ as_query }}">Change</a></div>
+          <div class="subtle">{{ chosen.email }}</div>
+        </div>
+      {% else %}
+        <div class="choice-row">
+          {% for s, reasons, seen in sample.working_set(me.name)[:6] %}
+            {% set sp = sample.plans_of(me.name, s.id) %}
+            <label class="choice"><input type="radio" name="student" value="{{ s.id }}"{{ plan_data(sp[0] if sp else none) }}>{{ s.name }}</label>
+          {% endfor %}
+        </div>
+        <div class="field-wide gap-above-sm"><label for="find">Or find a student</label>
+          <input id="find" class="input" type="search" placeholder="Name or email" disabled></div>
+      {% endif %}
+      <span id="student-what" class="subtle small">Your own students first; others from the directory, searched as you, once wired (§4.2).</span>
+    </fieldset>
+
+    <fieldset class="choices">
+      <legend>Duration</legend>
+      <div class="choice-row">{% for d in sample.DURATIONS %}<label class="choice"><input type="radio" name="duration" value="{{ d }}">{{ d }}</label>{% endfor %}</div>
+    </fieldset>
+
+    <fieldset class="choices">
+      <legend>Type</legend>
+      <div class="choice-row two">{% for t in sample.ENCOUNTER_TYPES %}<label class="choice"><input type="radio" name="type" value="{{ t }}"{% if t in sample.SAYS_WHO %} data-says-who{% endif %}>{{ t }}</label>{% endfor %}</div>
+    </fieldset>
+
+    <details class="more gap-above-sm">
+      <summary class="strong">Add details <span class="subtle">(optional)</span></summary>
+      <fieldset class="choices">
+        <legend>Concern areas</legend>
+        <div class="choice-row">{% for area, covers in sample.CONCERN_AREAS %}<label class="choice"><input type="checkbox" name="concern" value="{{ area }}">{{ area }}</label>{% endfor %}</div>
+        <details class="more">
+          <summary class="subtle small">What each area covers</summary>
+          <dl class="kv small">{% for area, covers in sample.CONCERN_AREAS %}<dt>{{ area }}</dt><dd>{{ covers }}</dd>{% endfor %}</dl>
+        </details>
+      </fieldset>
+      <fieldset class="choices">
+        <legend>Follow-up needed?</legend>
+        <div class="choice-row">{% for v in ("No", "Yes") %}<label class="choice"><input type="radio" name="needed" value="{{ v }}">{{ v }}</label>{% endfor %}<button type="button" class="btn btn-secondary" data-clear="needed">Clear</button></div>
+      </fieldset>
+      {% set plan = sample.plans_of(me.name, chosen.id)[0] if chosen and sample.plans_of(me.name, chosen.id) else none %}
+      <fieldset class="choices">
+        <legend>My follow-ups</legend>
+        {# Drawn for the student chosen; the script redraws it when the
+           student choice changes (Codex review, 2026-10-29). #}
+        <p id="on-plan" class="flush"{% if not plan %} hidden{% endif %}>{% if plan %}{{ plan_text(plan) }}{% endif %}</p>
+        <label class="choice" id="add-follow"{% if plan %} hidden{% endif %}><input type="checkbox" name="follow" value="yes">Add to my follow-ups</label>
+        <div class="field-wide" id="cadence-field"{% if plan and plan.formal %} hidden{% endif %}><label for="cadence" id="cadence-label">{{ "Keep or change the cadence" if plan else "Cadence" }}</label>
+          <select id="cadence" class="input">{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if plan and plan.cadence == c %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+        <span class="subtle small">Needing follow-up does not mean you take it on (§6.2).</span>
+      </fieldset>
+      <fieldset class="choices">
+        <legend>How</legend>
+        <div class="choice-row">{% for m in sample.MODES %}<label class="choice"><input type="radio" name="mode" value="{{ m }}">{{ m }}</label>{% endfor %}<button type="button" class="btn btn-secondary" data-clear="mode">Clear</button></div>
+      </fieldset>
+      <fieldset class="choices" id="who">
+        <legend>Who started it?</legend>
+        <div class="choice-row">{% for w in sample.STARTED_BY %}<label class="choice"><input type="radio" name="started" value="{{ w }}">{{ w }}</label>{% endfor %}<button type="button" class="btn btn-secondary" data-clear="started">Clear</button></div>
+      </fieldset>
+      {# The note has no name: a sample sends nothing it would store. #}
+      <div class="field-wide"><label for="note">Short note</label>
+        <textarea id="note" class="input" rows="3" maxlength="{{ sample.NOTE_LIMIT }}" aria-describedby="note-what"></textarea>
+        <span id="note-what" class="subtle small">{{ sample.NOTE_GUIDANCE }} <span id="note-count">0 / {{ sample.NOTE_LIMIT }}</span></span></div>
+    </details>
+
+    <button id="save" type="submit" class="btn btn-primary btn-wide gap-above" aria-describedby="save-what">Save encounter</button>
+    <p id="save-what" class="subtle small">Saves once a student, a duration and a type are chosen (§5.3).</p>
+  </form>
+  <p class="gap-above"><a class="btn btn-danger" href="{{ url('/log/safety') }}{{ as_query }}">Mark a safety concern</a></p>
+  <script>
+    (function () {
+      var form = document.getElementById("log-form");
+      var save = document.getElementById("save");
+      var note = document.getElementById("note");
+      var who = document.getElementById("who");
+      function chosen(name) {
+        return !!form.querySelector('input[name="' + name + '"]:checked, input[type="hidden"][name="' + name + '"]');
+      }
+      function followUps() {
+        var pick = form.querySelector('input[name="student"]:checked, input[type="hidden"][name="student"]');
+        var text = pick ? pick.getAttribute("data-plan") : null;
+        var onPlan = document.getElementById("on-plan");
+        var add = document.getElementById("add-follow");
+        onPlan.hidden = !text;
+        onPlan.textContent = text || "";
+        add.hidden = !!text;
+        if (text) add.querySelector("input").checked = false;
+        document.getElementById("cadence-field").hidden = !!(pick && pick.hasAttribute("data-formal"));
+        document.getElementById("cadence-label").textContent = text ? "Keep or change the cadence" : "Cadence";
+        document.getElementById("cadence").value = (text && pick.getAttribute("data-cadence")) || "No fixed cadence";
+      }
+      function sync() {
+        save.disabled = !(chosen("student") && chosen("duration") && chosen("type"));
+        var kind = form.querySelector('input[name="type"]:checked');
+        who.hidden = !!(kind && kind.hasAttribute("data-says-who"));
+        if (who.hidden) {
+          // The type says who started it: a choice made before must not travel.
+          Array.prototype.forEach.call(who.querySelectorAll("input"), function (input) { input.checked = false; });
+        }
+        document.getElementById("note-count").textContent = note.value.length + " / " + note.maxLength;
+      }
+      Array.prototype.forEach.call(form.querySelectorAll("[data-clear]"), function (button) {
+        button.addEventListener("click", function () {
+          Array.prototype.forEach.call(form.querySelectorAll('input[name="' + button.getAttribute("data-clear") + '"]'), function (input) {
+            input.checked = false;
+          });
+          sync();
+        });
+      });
+      form.addEventListener("change", function (event) {
+        if (event.target.name === "student") followUps();
+        sync();
+      });
+      form.addEventListener("input", sync);
+      sync();
+    })();
+  </script>
+{% endblock %}
