@@ -41,12 +41,12 @@
 
     <fieldset class="choices">
       <legend>Duration</legend>
-      <div class="choice-row">{% for d in sample.DURATIONS %}<label class="choice"><input type="radio" name="duration" value="{{ d }}">{{ d }}</label>{% endfor %}</div>
+      <div class="choice-row">{% for d in sample.DURATIONS %}<label class="choice"><input type="radio" name="duration" value="{{ d }}"{% if d == duration %} checked{% endif %}>{{ d }}</label>{% endfor %}</div>
     </fieldset>
 
     <fieldset class="choices">
       <legend>Type</legend>
-      <div class="choice-row two">{% for t in sample.ENCOUNTER_TYPES %}<label class="choice"><input type="radio" name="type" value="{{ t }}"{% if t in sample.SAYS_WHO %} data-says-who{% endif %}>{{ t }}</label>{% endfor %}</div>
+      <div class="choice-row two">{% for t in sample.ENCOUNTER_TYPES %}<label class="choice"><input type="radio" name="type" value="{{ t }}"{% if t in sample.SAYS_WHO %} data-says-who{% endif %}{% if t == kind %} checked{% endif %}>{{ t }}</label>{% endfor %}</div>
     </fieldset>
 
     <details class="more gap-above-sm">

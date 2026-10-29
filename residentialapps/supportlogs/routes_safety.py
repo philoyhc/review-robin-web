@@ -43,6 +43,8 @@ def safety_raised(request: Request) -> Response:
     """The confirmation once a flag is raised. A sample: nothing is stored.
     Anything missing goes back to the form with what was chosen."""
     me = sample.viewer(request.query_params.get("as"))
+    if not sample.holds(me, sample.FRONTLINE):
+        return gated(request, "supportlogs/safety_raised.html", sample.FRONTLINE)  # the 403 page
     context = _context(request)
     step = request.query_params.get("step")
     if not (context["chosen"] and context["duration"] and context["kind"] and step in sample.ESCALATION_STEPS):
@@ -50,8 +52,10 @@ def safety_raised(request: Request) -> Response:
                 "duration": context["duration"] or "", "type": context["kind"] or ""}
         return RedirectResponse(url_path(request, "/log/safety") + query(me, **kept), status_code=303)
     in_set = any(s.id == context["chosen"].id for s, _, _ in sample.working_set(me.name))
+    at = request.query_params.get("at", "")
+    at = at.replace("T", " ") if len(at) == 16 and at[10] == "T" else ""  # a datetime-local value, shown as given
     return gated(request, "supportlogs/safety_raised.html", sample.FRONTLINE, current_tab="/log",
-                 step=step, in_set=in_set, **context)
+                 step=step, at=at, in_set=in_set, **context)
 
 
 @router.get("/flags/{fid}", name="supportlogs_flag")

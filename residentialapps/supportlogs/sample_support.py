@@ -323,6 +323,7 @@ class Flag:
     raised_at: datetime
     step: str
     status: str  # "open", "acknowledged" or "closed" (§13, SafetyEscalation)
+    step_at: datetime | None = None  # escalated_at; the raising time when it is the same
     acknowledged_by: str = ""
     acknowledged_at: datetime | None = None
     outcome: str = ""
@@ -335,7 +336,8 @@ class Flag:
 
 
 FLAGS = (
-    Flag("F-01", "S-05", "Daniel Koh", datetime(2026, 10, 26, 19, 40), "Counselling duty line contacted", "open"),
+    Flag("F-01", "S-05", "Daniel Koh", datetime(2026, 10, 26, 19, 40), "Counselling duty line contacted", "open",
+         step_at=datetime(2026, 10, 26, 19, 25)),
     Flag("F-02", "S-10", "Priya Raman", datetime(2026, 10, 28, 20, 45), "Duty senior staff contacted", "acknowledged",
          acknowledged_by="Sam Lee", acknowledged_at=datetime(2026, 10, 29, 8, 30)),
     Flag("F-03", "S-03", "Daniel Koh", datetime(2026, 9, 18, 22, 0), "Counselling duty line contacted", "closed",

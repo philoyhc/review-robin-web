@@ -17,7 +17,7 @@
         <h2 id="flag-h">{% if in_set %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %} {{ flag_chip(f) }}</h2>
         <dl class="kv">
           <dt>Raised</dt><dd>{{ sample.when(f.raised_at) }}, by {{ f.raised_by }}</dd>
-          <dt>Escalation step</dt><dd>{{ f.step }}</dd>
+          <dt>Escalation step</dt><dd>{{ f.step }}, {{ sample.when(f.step_at or f.raised_at) }}</dd>
           {% if f.acknowledged_by %}<dt>Acknowledged</dt><dd>{{ sample.when(f.acknowledged_at) }}, by {{ f.acknowledged_by }}</dd>{% endif %}
           {% if f.status == "closed" %}<dt>Closed</dt><dd>{{ sample.when(f.closed_at) }}, by {{ f.closed_by }}: {{ f.outcome }}</dd>{% endif %}
         </dl>

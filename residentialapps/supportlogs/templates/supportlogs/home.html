@@ -8,7 +8,7 @@
   {{ recorded() }}
   {# The personal dashboard (UI spec screen 1; functional spec §10.1), in
      its order. #}
-  {{ flags_card(me) }}
+  {{ flags_card(me, closed=sample.holds(me, sample.RECIPIENT)) }}
   <a class="btn btn-primary btn-wide gap-below" href="{{ url('/log') }}{{ as_query }}">Log encounter</a>
   {% set urgent = sample.attention(me.name) %}
   {% set mine = sample.plans_of(me.name) %}
