@@ -4,61 +4,6 @@
 {% block content %}
   {{ title("Appeals", leave) }}
   <p class="sub">Appeals beyond entitlement are <strong>{{ leave.POLICY.appeals | lower }}</strong> on <a href="{{ url('/ra-leave/admin/policy') }}">Leave policy</a>. By invitation, an RA writes to the Master first; once the Master or the Master's admin delegate agrees in principle, they open an appeal for that RA here, and the RA can then send it. The Master still decides it. Controls are inert until RA Leave is wired.</p>
-  {% if leave.POLICY.appeals != "By invitation" %}
-    <div class="notice">Invitations take effect only while appeals are by invitation; {{ "every RA may appeal now" if leave.POLICY.appeals == "Open" else "appeals are off" }}.</div>
-  {% endif %}
-  <div class="split">
-    <div class="main stack">
-      <section class="card" aria-labelledby="inv-h">
-        <div class="card-head">
-          <h2 id="inv-h">Invitations <span class="count">· {{ leave.INVITATIONS | length }}</span></h2>
-          <p class="sub">Each lets one RA send one appeal, until it is sent or lapses.</p>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th scope="col">RA</th><th scope="col">Agreed by</th><th scope="col">Opened</th><th scope="col">Send by</th><th scope="col">Note</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
-            <tbody>
-              {% for i in leave.INVITATIONS %}
-                {% set status = leave.invitation_status(i) %}
-                <tr>
-                  <td class="strong nowrap">{{ i.ra }}</td>
-                  <td class="nowrap">{{ i.agreed_by }}</td>
-                  <td class="nowrap">{{ leave.short_date(i.opened) }}</td>
-                  <td class="nowrap">{{ leave.short_date(i.until) }}</td>
-                  <td>{{ i.note }}</td>
-                  <td class="nowrap">{% if i.used_by %}<a href="{{ url('/ra-leave/admin/applications/' ~ i.used_by) }}">{{ status }}</a>{% else %}<span class="chip {{ 'chip-info' if status == 'Open' else 'chip-mute' }}">{{ status }}</span>{% endif %}</td>
-                  <td class="end">{% if status == "Open" %}<button type="button" class="btn btn-secondary" aria-label="Withdraw {{ i.ra }}'s invitation" disabled>Withdraw</button>{% endif %}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <section class="card" aria-labelledby="open-h">
-        {% set open = leave.APPLICATIONS | selectattr("stage", "equalto", "Appeal to the Master") | list %}
-        <div class="card-head"><h2 id="open-h">Appeals with the Master <span class="count">· {{ open | length }}</span></h2></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th scope="col">Application</th><th scope="col">RA</th><th scope="col">Dates</th><th scope="col">Stage</th></tr></thead>
-            <tbody>{% for a in open %}<tr><td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td><td class="strong nowrap">{{ a.ra }}</td><td class="nowrap">{{ a.dates }}</td><td>{{ stage_chip(a.stage) }}</td></tr>{% else %}<tr><td colspan="4" class="subtle">None.</td></tr>{% endfor %}</tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-    <div class="side">
-      <section class="card card-pad" aria-labelledby="new-h">
-        <h2 id="new-h">Open an appeal for an RA</h2>
-        <p class="sub">After the Master or the Master's admin delegate has agreed in principle.</p>
-        <div class="field-wide"><label for="inv-ra">RA</label>
-          <input id="inv-ra" class="input" type="text" list="ra-names" placeholder="Start typing a name" disabled>
-          <datalist id="ra-names">{% for p in sample.RAS %}<option value="{{ p.name }}"></option>{% endfor %}</datalist></div>
-        <div class="field-wide"><label for="inv-by">Agreed by</label>
-          <select id="inv-by" class="input" disabled>{% for name in leave.APPEAL_AGREERS %}<option>{{ name }}</option>{% endfor %}</select></div>
-        <div class="field-wide"><label for="inv-until">Send by</label><input id="inv-until" class="input" type="date" disabled></div>
-        <div class="field-wide"><label for="inv-note">Note</label><textarea id="inv-note" class="input" rows="2" disabled></textarea></div>
-        <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Open the appeal</button></div>
-        <p class="subtle small gap-above-sm">The RA is told, and Request extra leave opens for them until they send it or the date passes. Every invitation is audited.</p>
-      </section>
-    </div>
-  </div>
+  {% set app_link, link_suffix, agreer = "/ra-leave/admin/applications/", "", "" %}
+  {% include "residentialops/leave/_appeals_body.html" %}
 {% endblock %}

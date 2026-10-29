@@ -1,0 +1,14 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, title, viewing, staff_switch with context %}
+{% block title %}Appeals{% endblock %}
+{% block content %}
+  {{ title("Appeals", leave, viewing(me)) }}
+  {{ staff_switch(me, leave, here) }}
+  {% if not allowed %}
+    <section class="card card-pad"><p class="sub">Only the Master and the Master's admin delegate open appeals for RAs.</p></section>
+  {% else %}
+  <p class="sub">Appeals beyond entitlement are <strong>{{ leave.POLICY.appeals | lower }}</strong>. By invitation, an RA writes to the Master first; once you agree in principle, open an appeal for them here, and they can then send it. The Master still decides it. Controls are inert until RA Leave is wired.</p>
+  {% set app_link, link_suffix, agreer = "/ra-leave/staff/decide/", as_query, me %}
+  {% include "residentialops/leave/_appeals_body.html" %}
+  {% endif %}
+{% endblock %}

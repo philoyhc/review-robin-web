@@ -35,8 +35,9 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
             assert 'aria-current="true">' in page.text
     tabs = c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
-        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct")
+        f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct", "appeals")
     ]
+    assert "/ra-leave/staff/appeals" not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
 
@@ -127,3 +128,15 @@ def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None
     rows = re.findall(r'<td class="strong nowrap">([^<]*)</td><td class="num">(\d+)</td><td class="num">(\d+)</td><td class="num">(\d+)</td>',
                       c.get(STAFF + "precinct" + SAM).text)
     assert ("Willow A 13-25", "4", "2", "0") in rows and len(rows) == 9
+
+
+def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages() -> None:
+    """Ruled 2026-10-29: as on the admin Appeals page, with the agreer
+    preset to the viewer and links into Decide."""
+    c = client()
+    for query, name in ((SAM, "Sam Lee"), (RACHEL, "Rachel Yeo")):
+        page = c.get(STAFF + "appeals" + query).text
+        assert f"<option selected>{name}</option>" in page and ">Open the appeal</button>" in page
+        assert f'href="/ra-leave/staff/decide/L-0105{query}">Sent: L-0105</a>' in page
+    assert "Only the Master and the Master's admin delegate" in c.get(STAFF + "appeals").text
+    assert ">Open the appeal</button>" not in c.get(STAFF + "appeals").text

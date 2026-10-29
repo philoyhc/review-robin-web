@@ -24,7 +24,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(as_query),
+        tabs=leave_staff_tabs(as_query, appeals=viewer in sample_leave.APPEAL_AGREERS),
         leave=sample_leave,
         sample=sample_data,
         me=viewer,
@@ -65,3 +65,11 @@ def decided(request: Request) -> Response:
 @router.get("/ra-leave/staff/precinct", name="residentialops_leave_staff_precinct")
 def precinct(request: Request) -> Response:
     return _page(request, "precinct.html")
+
+
+@router.get("/ra-leave/staff/appeals", name="residentialops_leave_staff_appeals")
+def appeals(request: Request) -> Response:
+    # The Master and the Master's admin delegate open appeals here as on
+    # the admin page (author, 2026-10-29); anyone else is told whose it is.
+    viewer = sample_leave.staff_viewer(request.query_params.get("as"))
+    return _page(request, "appeals.html", allowed=viewer in sample_leave.APPEAL_AGREERS)

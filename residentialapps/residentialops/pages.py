@@ -47,8 +47,9 @@ def leave_ra_tabs(appeals: bool) -> tuple[dict[str, str | None], ...]:
     )
 
 
-def leave_staff_tabs(query: str = "") -> tuple[dict[str, str | None], ...]:
-    """A staff member's tabs, carrying the sample viewer (`?as=`)."""
+def leave_staff_tabs(query: str = "", appeals: bool = False) -> tuple[dict[str, str | None], ...]:
+    """A staff member's tabs, carrying the sample viewer (`?as=`); Appeals
+    for the Master and the Master's admin delegate."""
     return tuple(
         {"label": label, "path": path, "query": query}
         for label, path in (
@@ -56,6 +57,7 @@ def leave_staff_tabs(query: str = "") -> tuple[dict[str, str | None], ...]:
             ("Awaiting", "/ra-leave/staff/decide"),
             ("Decided", "/ra-leave/staff/decided"),
             ("Precinct leave", "/ra-leave/staff/precinct"),
+            *((("Appeals", "/ra-leave/staff/appeals"),) if appeals else ()),
         )
     )
 
