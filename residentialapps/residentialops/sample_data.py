@@ -249,16 +249,36 @@ def every_slot_people(term: "Term") -> tuple[str, ...]:
     return tuple(p.name for p in STAFF if p.abbrev in chosen["appointments"] or p.name in chosen["names"])
 
 
-def oversight(name: str, term: "Term") -> str:
-    """A rostered staff member's oversight for a term, as the Staff roster
-    shows it: every slot, the slots they are in, or none (author,
-    2026-10-29)."""
+def coverage(neighborhoods: set[str]) -> tuple[str, ...]:
+    """Name a set of slots by the highest levels they make up, top first:
+    the Unit when they are every slot, a Wing or a Precinct when they are
+    all of it, else the slots themselves (author, 2026-10-29)."""
+    if neighborhoods >= {s.neighborhood for s in SLOTS}:
+        return (UNIT_NAME,)
+    names = []
+    for wing in dict.fromkeys(s.wing for s in SLOTS):
+        in_wing = [s for s in SLOTS if s.wing == wing]
+        if all(s.neighborhood in neighborhoods for s in in_wing):
+            names.append(wing)
+            continue
+        for precinct in dict.fromkeys(s.precinct for s in in_wing):
+            in_precinct = [s for s in in_wing if s.precinct == precinct]
+            if all(s.neighborhood in neighborhoods for s in in_precinct):
+                names.append(precinct)
+            else:
+                names += [s.neighborhood for s in in_precinct if s.neighborhood in neighborhoods]
+    return tuple(names)
+
+
+def oversight(name: str, term: "Term") -> tuple[str, ...]:
+    """What a rostered staff member oversees for a term, as the Staff roster
+    shows it: the Unit for those in every slot, else their slots named by
+    the levels they make up; empty for none (author, 2026-10-29)."""
     if term not in ASSIGNED_TERMS:
-        return "None"  # no assignments recorded for the term
+        return ()  # no assignments recorded for the term
     if name in every_slot_people(term):
-        return "Every slot"
-    held = len(slots_of(name))
-    return f"{held} slot{'s' if held != 1 else ''}" if held else "None"
+        return (UNIT_NAME,)
+    return coverage({s.neighborhood for s in SLOTS if name in s.staff})
 
 
 def unit_appointments() -> tuple[tuple[str, str], ...]:
