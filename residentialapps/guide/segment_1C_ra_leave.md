@@ -89,7 +89,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 
 ## Open questions
 
-- **Leave types and the day count** (§6, §9.1): the leave types are ruled (Leave policy, 2026-10-28; item 1 draws personal and official leave); whether weekends and public holidays count is open. The author decides before item 2; item 1 counts calendar days as a placeholder.
+- **Leave types and the day count** (§6, §9.1): the leave types are ruled (Leave policy, 2026-10-28; item 1 draws personal and official leave); whether weekends and public holidays count is a Leave policy setting (author, 2026-10-29), every day by default.
 - **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B or 1C closes, whichever is first.
 
 ## Out of scope

@@ -426,3 +426,21 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert sample_leave.invitation_status(future) == "From 2 Nov" and not sample_leave.invitation_for("Mira Sato")
     assert "<dd>By invitation, to the Master</dd>" in c.get(ADMIN).text
     assert "Appeal to the Master" in c.get(ADMIN).text  # appeals exist: the tile stays
+
+
+def test_leave_days_count_as_the_policy_says(monkeypatch) -> None:
+    """Ruled 2026-10-29: every day by default (RAs work weekends and public
+    holidays); optionally weekdays only, or working days."""
+    d = sample_leave.date
+    assert sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 4  # Fri to Mon, holiday Sun
+    page = client().get(ADMIN + "policy").text
+    assert re.findall(r'name="day-count" value="([^"]*)"( checked)?', page) == [
+        ("Every day", " checked"), ("Weekdays", ""), ("Working days", ""),
+    ]
+    assert 'aria-label="Public holiday 1: date" value="2026-11-08"' in page
+    assert "<dt>Days counted</dt><dd>Every day</dd>" in client().get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "day_count", "Weekdays")
+    assert sample_leave.leave_days(d(2026, 11, 6), d(2026, 11, 9)) == 2
+    assert sample_leave.by_id("L-0101").days == 1  # Chloe Lim, Fri 6 to Sun 8 Nov
+    monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
+    assert sample_leave.leave_days(d(2026, 12, 24), d(2027, 1, 1)) == 5  # less Christmas and New Year

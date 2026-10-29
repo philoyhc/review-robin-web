@@ -65,6 +65,32 @@
       </ul>
     </section>
 
+    {# Counting leave days (author, 2026-10-29). #}
+    <section class="card card-pad" aria-labelledby="count-h">
+      <h2 id="count-h">Counting leave days</h2>
+      <p class="sub">Which days in an application count against entitlement. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
+      {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free", "Working days": "Monday to Friday, less the public holidays below"}) }}
+      <div class="table-wrap">
+        <table class="rows">
+          <thead><tr><th scope="col">Public holiday</th><th scope="col">Date</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>
+          <tbody>
+            {% for day, name in leave.PUBLIC_HOLIDAYS %}
+              {% set n = loop.index %}
+              <tr>
+                <td><input class="input" type="text" aria-label="Public holiday {{ n }}: name" value="{{ name }}" disabled></td>
+                <td><input class="input" type="date" aria-label="Public holiday {{ n }}: date" value="{{ day.isoformat() }}" disabled></td>
+                <td><span class="row-actions">
+                  <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a public holiday below {{ name }}" title="Add a public holiday below this one" disabled>+</button>
+                  <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove {{ name }}" title="Remove this public holiday" disabled>X</button>
+                </span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="subtle small">Public holidays matter only when working days are counted.</p>
+    </section>
+
     {# 3. Blackouts by week, so they carry from one year to the next. #}
     <section class="card card-pad" aria-labelledby="blackout-h">
       <h2 id="blackout-h">Blackout periods</h2>
