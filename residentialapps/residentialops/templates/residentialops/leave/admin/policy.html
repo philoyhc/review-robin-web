@@ -68,7 +68,7 @@
     {# Counting leave days (author, 2026-10-29). #}
     <section class="card card-pad" aria-labelledby="count-h">
       <h2 id="count-h">Counting leave days</h2>
-      <p class="sub">Which days in an application count against entitlement. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
+      <p class="sub">Which days in an application count, against entitlement or as extra leave. RAs usually work weekends and public holidays, so every day counts unless set otherwise.</p>
       {{ choice("day-count", "An application counts", leave.DAY_COUNTS, leave.POLICY.day_count, {"Every day": "Every day from the first to the last, weekends and public holidays included", "Weekdays": "Monday to Friday only; weekends are free", "Working days": "Monday to Friday, less the public holidays below"}) }}
       <div class="table-wrap">
         <table class="rows">
@@ -88,7 +88,7 @@
           </tbody>
         </table>
       </div>
-      <p class="subtle small">Public holidays matter only when working days are counted.</p>
+      <p class="subtle small">Public holidays matter only when working days are counted. List the dates observed: a holiday on a Sunday is entered as its Monday in lieu.</p>
     </section>
 
     {# 3. Blackouts by week, so they carry from one year to the next. #}
