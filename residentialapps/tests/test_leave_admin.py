@@ -59,7 +59,7 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
     assert "<option selected>Pending first approval</option>" in first
     cover = c.get(ADMIN + "applications?cover=unconfirmed").text
     assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0109", "L-0114"]
-    assert "· 3 of 15" in cover
+    assert "· 3 of 17" in cover
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
@@ -310,14 +310,14 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Sam Lee", "Rachel Yeo"))
     assert {r.first for r in sample_leave.routes()} == {"None needed"}
     assert sample_leave.final_approvers() == ("Sam Lee", "Rachel Yeo")
-    steps = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0106"))]
+    steps = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0106"))]
     assert not any(s.startswith("First approval") for s in steps) and "Final approval by Sam Lee" in steps
     named = client().get(ADMIN + "policy").text
     assert 'value="Sam Lee, Rachel Yeo" disabled' in named
     assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
     dash = client().get(ADMIN).text
     assert "No first approval, then Sam Lee or Rachel Yeo" in dash and "No first approval is needed" in dash
-    rejected = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0110"))]
+    rejected = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0110"))]
     assert "Rejected by Sam Lee" in rejected
     assert client().get(ADMIN + "applications/L-0106").status_code == 200
     routing = client().get(ADMIN + "routing").text.split('id="delegates-h"')[1]
@@ -333,7 +333,7 @@ def test_approvals_edge_cases(monkeypatch) -> None:
     assert "then the Master or Admin" in client().get(ADMIN).text
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
-    assert "Final approval by the final approver" in [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0106"))]
+    assert "Final approval by the final approver" in [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0106"))]
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     routes = sample_leave.routes()
     assert all(r.gap and r.first == "No one" for r in routes)
@@ -390,7 +390,7 @@ def test_stage_names_and_titles_follow_the_policy(monkeypatch) -> None:
     assert card.split('aria-label="Delegate 1: acting for"')[1].split("</select>")[0].count("<option selected>Grace Ho</option>") == 1
     monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))
-    steps = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0103"))]
+    steps = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0103"))]
     assert "First approval by the first approver" in steps and not any("No one" in s for s in steps)
 
 
@@ -486,3 +486,23 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     assert "Kai Ng" in c.get(ADMIN + "appeals").text and "agreed by email" not in c.get(ADMIN + "appeals").text
     detail = c.get(ADMIN + "applications/L-0105").text
     assert "Personal leave · extra leave" in detail and 'href="/ra-leave/admin/applications" aria-current="true"' in detail
+
+
+def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
+    """The 2026-10-29 review: approved leave cancelled by an admin has its
+    own stage and releases its cover (spec §30); each decision shows its
+    date and remarks (spec §14, §15, §19)."""
+    c = client()
+    cancelled = sample_leave.by_id("L-0116")
+    assert cancelled.stage == "Cancelled" and cancelled.cover_status == "Cancelled"
+    assert '<option>Cancelled</option>' in c.get(ADMIN + "applications").text
+    steps = sample_leave.timeline(cancelled)
+    assert steps[-1] == ("20 Oct", "Cancelled by Rachel Yeo, Leave admin", sample_leave.DECISIONS["L-0116"]["cancelled"][1])
+    assert sample_leave.by_id("L-0111").cover_status == "Cancelled"  # withdrawn
+    kai = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Kai Ng" and r["type"] == "Personal leave")
+    assert kai["used"] == 0  # cancelled leave is not charged
+    # The final approver sees the first approver's date and remarks (§14).
+    decide = c.get("/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
+    assert "24 Oct</span> · First approval by" in decide and "the Precinct is fully staffed" in decide
+    # The Master sees the staff remarks on an appeal (§15).
+    assert "Remarks from Benjamin Chua, RF" in c.get("/ra-leave/staff/decide/L-0105?as=Sam%20Lee").text

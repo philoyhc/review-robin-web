@@ -33,7 +33,7 @@ def test_home_shows_balance_cover_asked_and_applications_in_progress() -> None:
     of the RA; applications in progress; the actions."""
     page = client().get(RA).text
     assert re.findall(r'<span class="tile-n">(\d+)</span><span class="tile-l">([^<]*)', page) == [
-        ("2", "Personal leave available"), ("2", "Official leave available"),
+        ("2", "Personal leave available"), ("1", "Official leave available"),
     ]
     assert "kept apart from your entitlement" in page
     ask = page.split('id="ask-h"')[1].split("</section>")[0]
@@ -107,7 +107,7 @@ def test_history_is_newest_first_and_unknown_ids_are_not_found(monkeypatch) -> N
                                      sample_leave.date(2026, 8, 20))
     monkeypatch.setattr(sample_leave, "APPLICATIONS", sample_leave.APPLICATIONS + (older,))
     history = client().get(RA + "history").text
-    assert re.findall(r'href="/ra-leave/applications/(L-\d+)"', history) == ["L-0101", "L-0901"]
+    assert re.findall(r'href="/ra-leave/applications/(L-\d+)"', history) == ["L-0101", "L-0117", "L-0901"]
     assert "sent 27 Oct" in history
     assert client().get(RA + "applications/L-9999").status_code == 404
 
@@ -143,3 +143,10 @@ def test_review_fixes_on_the_ra_side(monkeypatch) -> None:
     assert 'href="/ra-leave/history" aria-current="true"' in detail
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     assert "pending first approval" not in c.get(RA + "applications/L-0101").text
+
+
+def test_history_shows_decision_dates_and_remarks() -> None:
+    """Spec §19: each record shows its decision dates and remarks."""
+    history = client().get(RA + "history").text
+    assert "decided 16 Sept" in history or "decided 16 Sep" in history
+    assert "Good luck at the games." in history
