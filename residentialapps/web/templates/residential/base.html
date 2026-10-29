@@ -169,8 +169,7 @@
       .chips { display: flex; flex-wrap: wrap; gap: 4px; }
       /* A value another table owns, read-only here; plain text is this table's own. */
       .pills { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-      .gap-above-xs { margin-top: 4px; }
-      td.cell .pills { display: flex; }  /* under the cell's input, not beside it */
+      td.cell .pills { display: flex; margin-top: 4px; }  /* under the cell's input, not beside it */
       .pill-derived {
         display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 9999px; white-space: nowrap;
         font-size: 13px; color: var(--text-body); background: var(--surface-muted); border: 1px solid var(--border-subtle);

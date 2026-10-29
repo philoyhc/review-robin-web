@@ -344,7 +344,11 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     assert "in a Staff or RA cell, for AY2026-2027, Term 1." in chloe  # the term the pills are for
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
-    assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in sam
+    # The Master is in no Staff cell, but in every slot (ruled 2026-10-29).
+    assert '<span class="pill-derived">Every slot</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
+    hui = client.get(f"/rosters/people/{sample_data.person_id_of('huimin.goh@example.edu')}").text
+    assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in hui  # in no slot at all
+    assert sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == "None"  # a term with no assignments
 
 
 def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:

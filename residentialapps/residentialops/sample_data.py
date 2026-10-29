@@ -253,9 +253,11 @@ def oversight(name: str, term: "Term") -> str:
     """A rostered staff member's oversight for a term, as the Staff roster
     shows it: every slot, the slots they are in, or none (author,
     2026-10-29)."""
+    if term not in ASSIGNED_TERMS:
+        return "None"  # no assignments recorded for the term
     if name in every_slot_people(term):
         return "Every slot"
-    held = sum(1 for s in SLOTS if name in s.staff)
+    held = len(slots_of(name))
     return f"{held} slot{'s' if held != 1 else ''}" if held else "None"
 
 

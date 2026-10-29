@@ -17,7 +17,7 @@
   <section class="card" aria-labelledby="staff-h">
     <div class="card-head">
       <h2 id="staff-h">Staff roster {% if rosters_filled %}<span class="count">· {{ count[0] }} people, {{ count[1] }} linked</span>{% endif %}</h2>
-      <p class="sub">A row is a person and one staff appointment, with its dates. What each can do follows from their appointments and routing; Oversight, read from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }}, is every slot, the slots they are in, or none; sys admin, the one grant, is made on the <a href="{{ url('/sys-admin/') }}">Sys admin</a> page.</p>
+      <p class="sub">A row is a person and one staff appointment, with its dates. What each can do follows from their appointments and routing. Oversight comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }}: every slot, a count of their slots, or none. The one grant, sys admin, is made on the <a href="{{ url('/sys-admin/') }}">Sys admin</a> page.</p>
     </div>
     <div class="table-wrap">
       <table class="roster">
