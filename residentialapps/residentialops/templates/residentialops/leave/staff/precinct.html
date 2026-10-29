@@ -26,7 +26,7 @@
   {% set pending = apps | selectattr("stage", "in", leave.OPEN_STAGES) | list %}
   {% set clashes = leave.clashes(first, last) | selectattr(0, "in", precincts) | list %}
   <section class="tiles gap-above" aria-label="{{ label }}">
-    <a class="tile" href="#away-h"><span class="tile-n">{{ away | length }}</span><span class="tile-l">Away, {{ label | lower }}</span></a>
+    <a class="tile" href="#away-h"><span class="tile-n">{{ away | map(attribute="ra") | unique | list | length }}</span><span class="tile-l">Away, {{ label | lower }}</span></a>
     <a class="tile" href="#upcoming-h"><span class="tile-n">{{ pending | length }}</span><span class="tile-l">Pending</span></a>
     <a class="tile" href="#clash-h"><span class="tile-n">{{ clashes | length }}</span><span class="tile-l">Clashes</span></a>
   </section>

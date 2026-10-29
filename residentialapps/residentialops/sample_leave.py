@@ -459,9 +459,9 @@ def away_this_week() -> tuple[Application, ...]:
 
 
 # Precinct leave's period (spec §22, "for a selected period"; author,
-# 2026-10-29): a week from TODAY by default, the next, four weeks, or what
-# is left of the term.
-PERIODS = (("week", "This week"), ("next", "Next week"), ("four", "Next four weeks"), ("term", "Rest of term"))
+# 2026-10-29): a week from TODAY by default, the week after, four weeks
+# from TODAY, or what is left of the term.
+PERIODS = (("week", "This week"), ("next", "Next week"), ("four", "These four weeks"), ("term", "Rest of term"))
 
 
 def period(key: str | None = None) -> tuple[str, str, date, date]:
@@ -488,7 +488,7 @@ def clashes(start: date | None = None, end: date | None = None) -> tuple[tuple[s
         (a.precinct, (a.ra, b.ra))
         for a in live for b in live
         if a.id < b.id and a.ra != b.ra and a.precinct == b.precinct and a.start <= b.end and b.start <= a.end
-        and (start is None or max(a.start, b.start) <= end and min(a.end, b.end) >= start)
+        and (start is None or end is None or max(a.start, b.start) <= end and min(a.end, b.end) >= start)
     )
 
 
@@ -915,7 +915,7 @@ def by_precinct(viewer: str, start: date | None = None, end: date | None = None)
         {
             "precinct": p,
             "ras": sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p),
-            "away": sum(1 for a in away if a.precinct == p),
+            "away": len({a.ra for a in away if a.precinct == p}),  # RAs, not applications
             "pending": sum(1 for a in APPLICATIONS if a.precinct == p and a.stage in OPEN_STAGES),
         }
         for p in scope(viewer)

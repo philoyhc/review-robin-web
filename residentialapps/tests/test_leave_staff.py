@@ -331,3 +331,11 @@ def test_precinct_leave_shows_a_chosen_period() -> None:
     assert "Olivia Ng and Pranav Iyer" in week and "Olivia Ng and Pranav Iyer" not in nxt  # clashes follow
     _, _, start, end = sample_leave.period("next")
     assert sample_leave.clashes(start, end) == () and sample_leave.clashes()  # none next week, some in all
+    # The Precinct counts follow the period too, counting RAs.
+    def counts(key: str) -> dict[str, int]:
+        _, _, start, end = sample_leave.period(key)
+        return {r["precinct"]: r["away"] for r in sample_leave.by_precinct("Sam Lee", start, end)}
+    assert sum(counts("week").values()) == 3 and sum(counts("next").values()) == 0
+    assert sum(counts("term").values()) == 4
+    four = sample_leave.period("four")
+    assert (four[1], four[2], four[3].toordinal() - four[2].toordinal()) == ("These four weeks", sample_leave.TODAY, 27)
