@@ -577,6 +577,28 @@ def test_people_boxes_across_the_app() -> None:
         ("/ra-leave/admin/policy", "Staff who may open an appeal"),
     ):
         page = client.get(path).text
-        assert f'<div class="tokens" role="group" aria-label="{label}">' in page, (path, label)
+        assert f'<div class="tokens" role="group" aria-label="{label}"' in page, (path, label)
     assert 'aria-describedby="cover-what" class="token-input"' in client.get("/ra-leave/apply").text
     assert 'placeholder="Start typing a name"' not in client.get("/ra-leave/admin/policy").text
+    assert "comma separated" not in client.get("/ra-leave/admin/policy").text
+
+
+def test_appeals_body_imports_its_own_person_box(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The open-an-appeal card renders on the staff page too, not only where
+    the page itself imports the macro."""
+    from residentialapps.residentialops import sample_leave
+
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    page = TestClient(ops_app()).get("/ra-leave/staff/appeals", params={"as": "Sam Lee"}).text
+    assert 'id="inv-ra"' in page
+
+
+def test_a_filled_one_person_box_keeps_its_label_target() -> None:
+    """Once a one-person box holds someone, the typeahead goes; its id passes
+    to the remove button, so `<label for>` still names a control, and the
+    description moves with the group."""
+    box = pages.TEMPLATES.env.get_template("residentialops/_people.html").module.person_tokens
+    html = str(box("Covering RA", ("Chloe Lim",), "ra-names", "cover", single=True, describedby="cover-what"))
+    assert "token-input" not in html
+    assert 'id="cover" class="token-x"' in html
+    assert 'role="group" aria-label="Covering RA" aria-describedby="cover-what"' in html

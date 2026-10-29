@@ -304,7 +304,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     final = re.findall(r'name="final-types" value="(\w+)"( checked)?', page)
     assert final == [("Master", ""), ("Admin", " checked"), ("Exec", "")]
     assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
-    assert "No first approver needed" in page and "comma separated" in page
+    assert "No first approver needed" in page and "each added by name" in page
 
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
