@@ -1,0 +1,16 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, viewing, staff_switch, staff_item with context %}
+{% block title %}Awaiting my decision{% endblock %}
+{% block content %}
+  {{ title("Awaiting my decision", leave, viewing(me)) }}
+  {{ staff_switch(me, leave, here) }}
+  {% set mine = leave.queue(me) %}{% if cover_only %}{% set mine = mine | selectattr(0, "in", leave.cover_unconfirmed()) | list %}{% endif %}
+  <section class="card card-pad" aria-labelledby="queue-h">
+    <h2 id="queue-h">{{ "Waiting on cover" if cover_only else "To decide" }} <span class="count">· {{ mine | length }}</span></h2>
+    {% if cover_only %}<p class="sub"><a href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}">Show everything awaiting me</a></p>{% endif %}
+    <p class="sub">Oldest first. One waiting on its cover's confirmation can be opened but not approved until the cover confirms.</p>
+    {% if mine %}
+      <ul class="items">{% for a, role in mine %}{{ staff_item(a, leave, as_query, role) }}{% endfor %}</ul>
+    {% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
+  </section>
+{% endblock %}

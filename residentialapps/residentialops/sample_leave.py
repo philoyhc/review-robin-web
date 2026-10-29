@@ -258,7 +258,9 @@ def pending_by_stage() -> tuple[tuple[str, int], ...]:
 def cover_unconfirmed() -> tuple[Application, ...]:
     """Open applications whose cover has not confirmed (spec §25,
     outstanding cover confirmations)."""
-    return tuple(a for a in APPLICATIONS if a.stage in OPEN_STAGES and a.cover_status != "Confirmed")
+    return tuple(
+        a for a in APPLICATIONS if a.stage in OPEN_STAGES and a.cover_status != "Confirmed" and confirmation_needed(a)
+    )
 
 
 def away_this_week() -> tuple[Application, ...]:
@@ -533,3 +535,136 @@ def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
         name for s in sample_data.SLOTS for name in s.ras
         if name != ra and (level is None or getattr(s, level) == getattr(mine, level))
     )
+
+
+# The staff pages (`/ra-leave/staff/`) render for a sample viewer chosen on
+# the sample banner (`?as=`), one per role, until identity is wired.
+STAFF_VIEWERS = (
+    ("Daniel Koh", "RF, first approver for Cypress A 04-12"),
+    ("Rachel Yeo", "Residential Admin, final approver"),
+    ("Sam Lee", "Master, decides appeals"),
+)
+
+
+def staff_viewer(name: str | None) -> str:
+    names = [n for n, _ in STAFF_VIEWERS]
+    return name if name in names else names[0]
+
+
+def first_decider_of(application: Application) -> str:
+    """Who gave an application's first approval in the sample: the first
+    named by its Precinct's chain today (a wired record keeps who did)."""
+    return next(iter(routes_first(application)), "")
+
+
+def queue(viewer: str) -> tuple[tuple[Application, str], ...]:
+    """What awaits the viewer's decision, oldest first (spec §16, §24), with
+    the decision it needs."""
+    found = []
+    for a in APPLICATIONS:
+        if a.stage == "Pending first approval" and viewer in routes_first(a):
+            found.append((a, "First approval"))
+        elif a.stage == "Pending final approval" and viewer in final_approvers():
+            found.append((a, "Final approval"))
+        elif a.stage == "Appeal to the Master" and viewer == APPEAL_DECIDER:
+            found.append((a, "Appeal"))
+    return tuple(sorted(found, key=lambda pair: pair[0].submitted))
+
+
+def routes_first(application: Application) -> tuple[str, ...]:
+    """Everyone who may give an application's first approval today."""
+    route = next(r for r in routes() if r.precinct == application.precinct)
+    return () if route.gap or POLICY["first"] == "none" else tuple(route.first.split(" or "))
+
+
+def waiting_on_cover(application: Application) -> bool:
+    return application.cover_status != "Confirmed" and confirmation_needed(application)
+
+
+def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
+    """The viewer's own past decisions, newest application first, as
+    (application, decision, outcome)."""
+    found = []
+    for a in APPLICATIONS:
+        if a.appeal:
+            if viewer == APPEAL_DECIDER and a.stage in ("Approved", "Rejected"):
+                found.append((a, "Appeal", a.stage))
+            continue
+        if a.stage in ("Pending final approval", "Approved") and first_decider_of(a) == viewer:
+            found.append((a, "First approval", "Approved"))
+        if a.stage == "Rejected" and first_decider_of(a) == viewer:
+            found.append((a, "First approval", "Rejected"))
+        if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider() == viewer:
+            found.append((a, "Final approval", "Rejected"))
+        if a.stage == "Approved" and final_decider() == viewer:
+            found.append((a, "Final approval", "Approved"))
+    return tuple(sorted(found, key=lambda t: t[0].submitted, reverse=True))
+
+
+def scope(viewer: str) -> tuple[str, ...]:
+    """The Precincts a staff member's leave view covers (spec §22): an RF's
+    own, an RSLM's Wing's, everyone else's the whole Unit."""
+    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
+    held = [s for s in sample_data.SLOTS if viewer in s.staff]
+    rf = {s.precinct for s in held if abbrev == "RF"}
+    wing = {s.wing for s in held if abbrev == "RSLM"}
+    every = tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
+    if rf:
+        return tuple(p for p in every if p in rf)
+    if wing:
+        return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS if s.wing in wing))
+    return every
+
+
+def can_open(viewer: str, application: Application) -> bool:
+    """Decide opens an application in the viewer's Precinct-leave scope, or
+    one that is (or was) theirs to decide, wherever it is: a delegate's or a
+    named final approver's (spec §13-§15)."""
+    return (
+        application.precinct in scope(viewer)
+        or any(a.id == application.id for a, _ in queue(viewer))
+        or any(a.id == application.id for a, _, _ in decided(viewer))
+    )
+
+
+def other_leave(application: Application) -> tuple[Application, ...]:
+    """The applicant's other applications, for the decider (spec §15)."""
+    return tuple(a for a in APPLICATIONS if a.ra == application.ra and a.id != application.id)
+
+
+def by_precinct(viewer: str) -> tuple[dict, ...]:
+    """Numbers away and pending per Precinct in the viewer's scope (§22)."""
+    away = away_this_week()
+    return tuple(
+        {
+            "precinct": p,
+            "ras": sum(len(s.ras) for s in sample_data.SLOTS if s.precinct == p),
+            "away": sum(1 for a in away if a.precinct == p),
+            "pending": sum(1 for a in APPLICATIONS if a.precinct == p and a.stage in OPEN_STAGES),
+        }
+        for p in scope(viewer)
+    )
+
+
+def in_scope(viewer: str) -> tuple[Application, ...]:
+    precincts = scope(viewer)
+    return tuple(a for a in APPLICATIONS if a.precinct in precincts)
+
+
+def away_on(application: Application) -> tuple[Application, ...]:
+    """Others in the same Precinct away or asking to be away on overlapping
+    days: the Precinct context a decision needs (spec §13)."""
+    live = [a for a in APPLICATIONS if a.stage in ("Approved", *OPEN_STAGES)]
+    return tuple(
+        b for b in live
+        if b.id != application.id and b.ra != application.ra and b.precinct == application.precinct
+        and b.start <= application.end and application.start <= b.end
+    )
+
+
+def balance_of(application: Application) -> dict:
+    return next(r for r in entitlement_rows() if r["ra"] == application.ra and r["type"] == application.leave_type)
+
+
+def waiting_on_cover_count(viewer: str) -> int:
+    return sum(1 for a, _ in queue(viewer) if waiting_on_cover(a))

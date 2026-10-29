@@ -1,0 +1,22 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, viewing, staff_switch, staff_item with context %}
+{% block title %}Decided{% endblock %}
+{% block content %}
+  {{ title("Decided", leave, viewing(me)) }}
+  {{ staff_switch(me, leave, here) }}
+  {% set mine = leave.decided(me) %}
+  <section class="card card-pad" aria-labelledby="dec-h">
+    <h2 id="dec-h">My decisions <span class="count">· {{ mine | length }}</span></h2>
+    <p class="sub">Newest application first; each opens read-only.</p>
+    {% if mine %}
+      <ul class="items">
+        {% for a, role, outcome in mine %}
+          <li>
+            <div class="item-head"><a class="strong" href="{{ url('/ra-leave/staff/decide/' ~ a.id) }}{{ as_query }}">{{ a.ra }}</a><span class="chip {{ 'chip-ok' if outcome == 'Approved' else 'chip-mute' }}">{{ role }}: {{ outcome }}</span></div>
+            <div class="subtle">{{ a.dates }} · {{ a.days }} day{{ "s" if a.days != 1 }} · {{ a.leave_type }} · now {{ a.stage | lower }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}<p class="sub">None yet.</p>{% endif %}
+  </section>
+{% endblock %}

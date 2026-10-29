@@ -1,0 +1,71 @@
+{% extends "residential/base.html" %}
+{% from "residentialops/leave/_leave.html" import stage_chip, cover_chip, title, viewing, staff_switch, staff_item with context %}
+{% block title %}{{ app.ra }} · {{ app.dates }}{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}">‹ Awaiting my decision</a>
+  {{ title(app.ra, leave, viewing(me) ~ stage_chip(app.stage)) }}
+  {% set bal = leave.balance_of(app) %}
+  {% set cover_wait = leave.waiting_on_cover(app) %}
+  <div class="split">
+    <div class="main stack">
+      {% if role %}
+        <section class="card card-pad" aria-labelledby="act-h">
+          <h2 id="act-h">{{ "Decide the appeal" if role == "Appeal" else role }}</h2>
+          {% if cover_wait and role != "Appeal" %}
+            <p class="sub"><span class="chip chip-warn">Waiting on cover</span> {% if app.cover_status == "Declined" %}{{ app.cover }} has declined; the RA must name new cover before this can be approved, or you may reject it now.{% else %}{{ app.cover }} has not yet confirmed; this can be approved once they do, or rejected now.{% endif %}</p>
+          {% elif cover_wait %}
+            <p class="sub"><span class="chip chip-warn">Cover not confirmed</span> An appeal needs confirmed cover (spec §7.4). You may override that, on the record.</p>
+            <label class="check gap-below"><input type="checkbox" disabled> Decide without the cover's confirmation</label>
+          {% endif %}
+          <div class="field-wide"><label for="remarks">Remarks{% if role == "Appeal" %} (the reason for your decision){% else %} (optional){% endif %}</label><textarea id="remarks" class="input" rows="2" disabled></textarea></div>
+          <div class="btnrow">
+            <button type="button" class="btn btn-primary" disabled>Approve</button>
+            <button type="button" class="btn btn-secondary" disabled>Reject</button>
+          </div>
+        </section>
+      {% else %}
+        <section class="card card-pad muted"><p class="sub">{% if app.stage in leave.OPEN_STAGES %}This application does not await your decision.{% else %}Decided; shown read-only.{% endif %}</p></section>
+      {% endif %}
+      <section class="card card-pad" aria-labelledby="detail-h">
+        <h2 id="detail-h">Application</h2>
+        <dl class="kv">
+          <dt>RA</dt><dd>{{ app.ra }} · {{ app.slot.neighborhood }}, {{ app.precinct }}</dd>
+          <dt>Leave type</dt><dd>{{ app.leave_type }}{% if app.appeal %} · extra leave{% endif %}</dd>
+          <dt>Dates</dt><dd>{{ app.dates }} ({{ app.days }} day{{ "s" if app.days != 1 }})</dd>
+          <dt>Cover</dt><dd>{{ app.cover }} {{ cover_chip(app.cover_status) }}</dd>
+          {% if app.remarks %}<dt>{{ "Reason" if app.appeal else "RA's remarks" }}</dt><dd>{{ app.remarks }}</dd>{% endif %}
+          <dt>Waiting</dt><dd>{{ app.age }} day{{ "s" if app.age != 1 }}</dd>
+        </dl>
+      </section>
+      <section class="card card-pad" aria-labelledby="timeline-h">
+        <h2 id="timeline-h">Timeline</h2>
+        <ol class="plain">{% for when, what in steps %}<li>{% if when %}<span class="subtle">{{ when }}</span> · {% endif %}{{ what }}</li>{% endfor %}</ol>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad" aria-labelledby="ent-h">
+        <h2 id="ent-h">{{ app.leave_type }}, {{ leave.TERM.label }}</h2>
+        <dl class="kv">
+          <dt>Available</dt><dd>{{ bal.available }} day{{ "s" if bal.available != 1 }}</dd>
+          <dt>Entitlement</dt><dd>{{ bal.entitlement }}{% if bal.adjustment %} {{ "%+d" | format(bal.adjustment) }}{% endif %}</dd>
+          <dt>Used</dt><dd>{{ bal.used }}</dd>
+          <dt>Pending</dt><dd>{{ bal.pending }}</dd>
+          {% if app.appeal %}{% set beyond = [app.days - [bal.available, 0] | max, 0] | max %}<dt>Beyond entitlement</dt><dd>{{ beyond }} day{{ "s" if beyond != 1 }}</dd>{% endif %}
+        </dl>
+        {% if app.appeal %}<p class="subtle small gap-above-sm">Extra leave granted is kept apart from the entitlement (spec §7.5).</p>{% endif %}
+      </section>
+      <section class="card card-pad" aria-labelledby="own-h">
+        <h2 id="own-h">{{ app.ra }}'s other leave</h2>
+        {% set own = leave.other_leave(app) %}
+        {% if own %}<ul class="items">{% for b in own %}<li><div class="item-head"><span class="strong nowrap">{{ b.dates }}</span>{{ stage_chip(b.stage) }}</div><div class="subtle">{{ b.leave_type }}{% if b.appeal %} · extra leave{% endif %} · {{ b.days }} day{{ "s" if b.days != 1 }}</div></li>{% endfor %}</ul>
+        {% else %}<p class="sub">None this year.</p>{% endif %}
+      </section>
+      <section class="card card-pad" aria-labelledby="ctx-h">
+        <h2 id="ctx-h">{{ app.precinct }} on these days</h2>
+        {% set others = leave.away_on(app) %}
+        {% if others %}<ul class="items">{% for b in others %}<li><div class="item-head"><span class="strong">{{ b.ra }}</span>{{ stage_chip(b.stage) }}</div><div class="subtle">{{ b.dates }} · cover {{ b.cover }}</div></li>{% endfor %}</ul>
+        {% else %}<p class="sub">No one else in the Precinct is away or asking to be.</p>{% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}
