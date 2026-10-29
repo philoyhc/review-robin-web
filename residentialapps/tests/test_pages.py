@@ -345,10 +345,10 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
     # The Master is in no Staff cell, but in every slot (ruled 2026-10-29).
-    assert '<span class="pill-derived">Every slot</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
+    assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
     hui = client.get(f"/rosters/people/{sample_data.person_id_of('huimin.goh@example.edu')}").text
     assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in hui  # in no slot at all
-    assert sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == "None"  # a term with no assignments
+    assert sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == ()  # a term with no assignments
 
 
 def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:
@@ -494,8 +494,21 @@ def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None
     assert '<span class="pill-derived">Sam Lee</span><span class="pill-derived">Rachel Yeo</span>' in table
     assert "In every slot: </span>" not in client.get("/rosters/assignments?stage=slots").text
     roster = client.get("/rosters/staff").text
-    assert sample_data.oversight("Sam Lee", sample_data.CURRENT_TERM) == "Every slot"
-    assert sample_data.oversight("Daniel Koh", sample_data.CURRENT_TERM) == "3 slots"
-    assert sample_data.oversight("Hui Min Goh", sample_data.CURRENT_TERM) == "None"
-    assert '<span class="chip chip-mute">None</span>' in roster and '<span class="pill-derived">Every slot</span>' in roster
+    # Named by the levels the slots make up (ruled 2026-10-29): the Unit,
+    # a Wing, a Precinct, else the slots themselves.
+    term = sample_data.CURRENT_TERM
+    assert sample_data.oversight("Sam Lee", term) == (sample_data.UNIT_NAME,)
+    assert sample_data.oversight("Priya Raman", term) == ("Cypress",)
+    assert sample_data.oversight("Daniel Koh", term) == ("Cypress A 04-12",)
+    assert sample_data.oversight("Hui Min Goh", term) == ()
+    assert sample_data.coverage({"Cypress A 04-05-06", "Maple 03-04", "Maple 05-06", "Maple 07-08"}) == (
+        "Cypress A 04-05-06", "Maple 03-08",
+    )
+    every = {s.neighborhood for s in sample_data.SLOTS}
+    cypress = {s.neighborhood for s in sample_data.SLOTS if s.wing == "Cypress"}
+    assert sample_data.coverage(cypress | {"Maple 03-04"}) == ("Cypress", "Maple 03-04")  # a Wing and part of another
+    assert sample_data.coverage(every) == (sample_data.UNIT_NAME,)  # every slot by Staff cells
+    assert sample_data.coverage(set()) == ()
+    assert '<span class="chip chip-mute">None</span>' in roster
+    assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in roster and '<span class="pill-derived">Cypress</span>' in roster
     assert roster.count('<span class="chip chip-mute">None</span>') == 1  # Hui Min Goh alone
