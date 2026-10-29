@@ -6,8 +6,8 @@ Support Logs may not import Residential Operations
 (`residentialapps/spec/architecture.md`, "Import boundaries"), so the
 staff below are copied from the Staff roster's mock,
 `residentialapps/docs/sample_data/staff_roster.csv`; a test holds the copy
-to the file. Students and support content are invented and bland: nothing
-here reads as a real case."""
+to the file. Students and support content, as later rungs add them, are
+invented and bland: nothing here may read as a real case."""
 
 from __future__ import annotations
 
@@ -38,9 +38,11 @@ class Viewer:
     grants: frozenset[str]
 
 
-# One sample viewer per authorization type, plus the super-admin and a
-# rostered RF with no grant (the 403 page): access is a deliberate grant,
-# never an appointment (§3.5).
+# One sample viewer per authorization type; a frontline recipient (Priya
+# Raman, whose dashboard lists every active flag); someone reaching two
+# pages off the frontline (Nadia Hassan, whose Home lists them); the
+# super-admin; and a rostered RF with no grant (the 403 page): access is a
+# deliberate grant, never an appointment (§3.5).
 VIEWERS = (
     Viewer("Daniel Koh", "RF", frozenset({FRONTLINE})),
     Viewer("Priya Raman", "RSLM", frozenset({FRONTLINE, RECIPIENT})),
@@ -49,6 +51,7 @@ VIEWERS = (
     Viewer("Marcus Tan", "RSLM", frozenset({CONSULTATION})),
     Viewer("Kenneth Lau", "RF", frozenset({VIEW_AGGREGATE})),
     Viewer("Siti Rahman", "RF", frozenset({VIEW_IDENTIFIABLE})),
+    Viewer("Nadia Hassan", "RSLM", frozenset({CONSULTATION, VIEW_IDENTIFIABLE})),
     Viewer("Rachel Yeo", "Admin", frozenset({SYS_ADMIN})),
     Viewer("Platform super-admin", "", frozenset({SUPER_ADMIN})),
     Viewer("Wei Jie Ong", "RF", frozenset()),

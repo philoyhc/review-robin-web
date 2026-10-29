@@ -5,7 +5,9 @@
 > lifespan". Segment 1B item 1 is building the screens as placeholders
 > with sample data: the chrome, Rosters and setup (`/rosters/`, both
 > rosters and person detail), Sys admin (`/sys-admin/`) and a preview of
-> the not-registered page (`/not-registered`), and "URLs". The rest of "Pages" and the shared-code log
+> the not-registered page (`/not-registered`), and "URLs"; segments 1C
+> and 1D item 1 build RA Leave's and Support Logs' screens the same way.
+> The rest of "Pages" and the shared-code log
 > stamps (Residential's own `get_logger`) are the contract for 1B and
 > later.
 
@@ -124,10 +126,14 @@ appointment, and RAs never reach it:
 | Consultation check | `/consultation/` | Consultation check |
 | Sys admin | `/sys-admin/` (Access), `…/configuration`, `…/clusters`, `…/audit` | Support Logs sys admins: access over the Staff roster, configuration, the cluster list and the administrative audit log, with no support content or support-activity audit; the super-admin, for the same and to grant Support Logs sys admin |
 
-The main area's tabs follow the viewer's grants (Home; Log, Students and
-Plans for the frontline; Overview; Consultation check), in RA Leave's RA
-layout with no bottom bar; Sys admin is an area of its own (segment 1D,
-author, 2026-10-29). Placeholders until wired (1D item 1).
+The main area's tabs follow the viewer's grants (Log, Students and Plans
+for the frontline; Overview; Consultation check), in RA Leave's RA layout
+with no bottom bar; Home is a tab only where it is a page of its own, not
+where it would redirect; Sys admin is an area of its own (segment 1D,
+author, 2026-10-29). A detail page (a student, a plan, a safety flag) is
+built with its rung, after its list. A linked viewer at a page their
+grants do not reach gets the `403` page too. Placeholders until wired
+(1D item 1).
 
 Each application also has:
 
@@ -178,7 +184,7 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 
 A bare mount path answered `404` in 1A. Residential Operations' landing
 (`/residentialops/`) now answers on a local run while a placeholder, and
-`404` deployed; Support Logs' bare mount still answers `404`.
+`404` deployed; so does Support Logs' Home (`/supportlogs/`, segment 1D).
 
 A host whose deployment does not carry `residentialapps/` must name its
 applications in `CORDWARE_APPS`: unset, the host loads every factory and
@@ -215,7 +221,9 @@ Each application emits its paths under its mount the way RRW does
   `host_url('/')` for the host's landing page;
 - comparisons read `is_here()`.
 
-`residentialapps/tests/test_pages.py` holds both checks: the leak rule
-fails on a template link written out without a helper, and the GET crawl
-fails on a page that emits a path outside its mount (other than `/`, a
+`residentialapps/tests/test_pages.py` holds both checks, the leak rule
+over every template in the package and Residential Operations' GET crawl,
+and `residentialapps/tests/test_supportlogs.py` Support Logs' crawl: the
+leak rule fails on a template link written out without a helper, and a
+crawl fails on a page that emits a path outside its mount (other than `/`, a
 fragment or Easy Auth's `/.auth/`). The JSON health body emits no URL.

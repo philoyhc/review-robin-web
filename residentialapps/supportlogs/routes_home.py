@@ -13,20 +13,11 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import MAIN, forbidden, render, sys_admin_tabs, tabs_for
+from residentialapps.supportlogs.pages import MAIN, destinations, forbidden, home_flags, home_is_a_page, render, tabs_for
 from residentialapps.web.pages import placeholders_local_only
 from residentialapps.web.urls import url_path
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
-
-
-def destinations(me: sample.Viewer) -> list[dict[str, str]]:
-    """What a viewer off the frontline reaches from Home, each with what it
-    holds; Home itself is not one."""
-    found = [t for t in tabs_for(me) if t["path"] != "/"]
-    if sample.holds(me, *sample.ADMINISTRATION):
-        found.append(sys_admin_tabs(me)[0] | {"label": "Sys admin"})
-    return found
 
 
 @router.get("/", name="supportlogs_home")
@@ -34,16 +25,13 @@ def home(request: Request) -> Response:
     me = sample.viewer(request.query_params.get("as"))
     if not me.grants:
         return forbidden(request, me)
-    flags = sample.holds(me, sample.RECIPIENT)
     if sample.holds(me, sample.FRONTLINE):
+        flags = sample.holds(me, sample.RECIPIENT)
         return render(request, "supportlogs/home.html", me=me, area=MAIN, tabs=tabs_for(me), flags=flags)
-    # A recipient with Overview finds the flags there; one without lands on
-    # a Home holding them.
-    flags = flags and not sample.holds(me, sample.SENIOR, *sample.VIEW)
     places = destinations(me)
-    if len(places) == 1 and not flags:
+    if not home_is_a_page(me):
         return RedirectResponse(url_path(request, places[0]["path"]) + places[0]["query"], status_code=302)
-    return render(request, "supportlogs/home_list.html", me=me, area=MAIN, tabs=tabs_for(me), places=places, flags=flags)
+    return render(request, "supportlogs/home_list.html", me=me, area=MAIN, tabs=tabs_for(me), places=places, flags=home_flags(me))
 
 
 @router.get("/not-registered", name="supportlogs_not_registered")

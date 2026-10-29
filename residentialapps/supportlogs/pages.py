@@ -24,18 +24,45 @@ MAIN = "Support Logs"
 SYS_ADMIN_AREA = "Sys admin"
 
 
-def tabs_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
-    """The main area's tabs: Home, then each grant's own (author,
-    2026-10-29): the frontline's Log, Students and Plans; Overview for
-    senior staff and Other Staff view; Consultation check. No Safety flags
-    tab: flags list on Home and Overview."""
-    tabs = [("Home", "/")]
+def _grant_tabs(v: sample.Viewer) -> list[tuple[str, str]]:
+    """Each grant's own tabs (author, 2026-10-29): the frontline's Log,
+    Students and Plans; Overview for senior staff and Other Staff view;
+    Consultation check. No Safety flags tab: flags list on Home and
+    Overview."""
+    tabs = []
     if sample.holds(v, sample.FRONTLINE):
         tabs += [("Log", "/log"), ("Students", "/students/"), ("Plans", "/plans/")]
     if sample.holds(v, sample.SENIOR, *sample.VIEW):
         tabs.append(("Overview", "/overview/"))
     if sample.holds(v, sample.CONSULTATION):
         tabs.append(("Consultation check", "/consultation/"))
+    return tabs
+
+
+def home_flags(v: sample.Viewer) -> bool:
+    """A recipient off the frontline without Overview finds the flags on
+    Home; one with Overview finds them there."""
+    return sample.holds(v, sample.RECIPIENT) and not sample.holds(v, sample.FRONTLINE, sample.SENIOR, *sample.VIEW)
+
+
+def destinations(v: sample.Viewer) -> list[dict[str, str]]:
+    """Where Home sends a viewer off the frontline: each grant's tab, and
+    Sys admin."""
+    found = [{"label": label, "path": path, "query": sample.as_query(v)} for label, path in _grant_tabs(v)]
+    if sample.holds(v, *sample.ADMINISTRATION):
+        found.append({"label": SYS_ADMIN_AREA, "path": "/sys-admin/", "query": sample.as_query(v)})
+    return found
+
+
+def home_is_a_page(v: sample.Viewer) -> bool:
+    """Home is a page of its own for the frontline (the dashboard), for a
+    recipient it holds the flags for, and for a viewer reaching more than
+    one page; otherwise it redirects, and the tab bar has no Home."""
+    return sample.holds(v, sample.FRONTLINE) or home_flags(v) or len(destinations(v)) > 1
+
+
+def tabs_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
+    tabs = ([("Home", "/")] if home_is_a_page(v) else []) + _grant_tabs(v)
     return tuple({"label": label, "path": path, "query": sample.as_query(v)} for label, path in tabs)
 
 
@@ -104,10 +131,13 @@ def render(
 
 
 def forbidden(request: Request, me: sample.Viewer) -> Response:
-    """The `403` page: a linked viewer at a page their grants do not reach,
-    or with no grant at all (`residentialapps/spec/applications.md`)."""
-    tabs = tabs_for(me) if reaches_main(me) else ()
-    return render(request, "supportlogs/forbidden.html", me=me, area=MAIN, tabs=tabs, status_code=403)
+    """The `403` page: a linked viewer with no grant at all, or at a page
+    their grants do not reach (`residentialapps/spec/applications.md`)."""
+    if reaches_main(me):
+        return render(request, "supportlogs/forbidden.html", me=me, area=MAIN, tabs=tabs_for(me), status_code=403)
+    area = SYS_ADMIN_AREA if sample.holds(me, *sample.ADMINISTRATION) else MAIN
+    tabs = sys_admin_tabs(me) if area == SYS_ADMIN_AREA else ()
+    return render(request, "supportlogs/forbidden.html", me=me, area=area, tabs=tabs, status_code=403)
 
 
 def page(request: Request, *grants: str, area: str = MAIN, **context: Any) -> Response:

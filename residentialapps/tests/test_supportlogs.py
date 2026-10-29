@@ -77,9 +77,10 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
     """Author, 2026-10-29: the frontline's Home, Log, Students and Plans;
     senior staff and Other Staff view an Overview tab; no Safety flags tab."""
     assert tabs(client.get("/").text) == ["Home", "Log", "Students", "Plans"]
-    assert tabs(client.get(at("/overview/", "Sam Lee")).text) == ["Home", "Overview"]
-    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Home", "Overview"]
-    assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Home", "Consultation check"]
+    assert tabs(client.get(at("/overview/", "Sam Lee")).text) == ["Overview"]  # no Home: it would only come back here
+    assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Overview"]
+    assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Consultation check"]
+    assert tabs(client.get(at("/", "Nadia Hassan")).text) == ["Home", "Overview", "Consultation check"]
     assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Access", "Configuration", "Clusters", "Audit log"]
     for v in sample.VIEWERS:
         assert "Safety flags</a>" not in client.get(at("/", v.name)).text
@@ -94,6 +95,23 @@ def test_home_is_the_dashboard_or_goes_where_the_viewer_belongs(client: TestClie
                         ("Rachel Yeo", "/sys-admin/"), ("Platform super-admin", "/sys-admin/")]:
         page = client.get(at("/", name), follow_redirects=False)
         assert (page.status_code, page.headers["location"]) == (302, at(there, name)), name
+
+
+def test_home_lists_the_pages_of_a_viewer_reaching_more_than_one(client: TestClient) -> None:
+    page = client.get(at("/", "Nadia Hassan")).text
+    places = page.split('aria-label="Your pages"')[1].split("</ul>")[0]
+    assert re.findall(r'href="([^"]*)"><span class="app-name">([^<]*)', places) == [
+        (at("/overview/", "Nadia Hassan"), "Overview"), (at("/consultation/", "Nadia Hassan"), "Consultation check"),
+    ]
+    assert 'href="/?as=Nadia%20Hassan" aria-current="page">Home</a>' in page
+    assert "flags-h" not in page
+
+
+def test_the_403_page_names_an_area_the_viewer_has(client: TestClient) -> None:
+    page = client.get(at("/log", "Rachel Yeo"))
+    assert page.status_code == 403
+    assert 'aria-label="Switch area: Sys admin"' in page.text
+    assert tabs(page.text) == ["Access", "Configuration", "Clusters", "Audit log"]
 
 
 def test_a_recipient_with_nothing_else_lands_on_the_flags(client: TestClient) -> None:
@@ -160,9 +178,11 @@ def test_route_names_carry_the_application_s_prefix() -> None:
 def test_mounted_pages_stay_under_the_mount() -> None:
     host, _ = host_with(("supportlogs",))
     mounted = TestClient(host)
-    for path in ["/", "/not-registered", *(at(p.path, holder(*p.grants).name) for p in PLACEHOLDERS)]:
+    pages = ["/", "/not-registered", at("/", "Nadia Hassan"), at("/log", "Rachel Yeo"), at("/", "Wei Jie Ong"),
+             *(at(p.path, holder(*p.grants).name) for p in PLACEHOLDERS)]
+    for path in pages:
         page = mounted.get(MOUNT + path)
-        assert page.status_code == 200, path
+        assert page.status_code in (200, 403), path
         for link in LINK.findall(FAVICON.sub("", page.text)):
             assert link == "/" or link.startswith((f"{MOUNT}/", "#")), (path, link)
     redirect = mounted.get(MOUNT + at("/", "Rachel Yeo"), follow_redirects=False)
