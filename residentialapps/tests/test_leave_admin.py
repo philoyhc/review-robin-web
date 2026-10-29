@@ -155,7 +155,7 @@ def test_the_approval_chain_is_derived_from_assignments_and_the_policy() -> None
     assert [r.precinct for r in routes] == list(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
     assert sum(r.ras for r in routes) == len(sample_data.SLOTS)
     for r in routes:
-        assert r.first == ("Benjamin Chua" if r.rf == "Grace Ho" else r.rf)
+        assert r.first == ("Marcus Tan" if r.rf == "Grace Ho" else r.rf)
     assert page.count(">Delegate</span>") == 1 and "Grace Ho has not signed in yet" in page
 
 
@@ -263,7 +263,7 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
     # L-0105, made before appeals were turned off, stands and is decided.
-    assert ">Appeals</th>" in routing and "final approval and appeals are the same for the whole Unit" in routing
+    assert ">Appeals</th>" in routing and "final approval and appeals are given only by those holding a place in the RA's slot" in routing
 
 
 def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -> None:
@@ -273,15 +273,16 @@ def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -
     D = sample_leave.Delegate
     in_dec = sample_leave.date(2026, 12, 10)
     cypress = next(r for r in sample_leave.routes(in_dec) if r.rf == "Daniel Koh")
-    assert cypress.first == "Mei Ling Tan" and cypress.note == "Daniel Koh is on leave"
-    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Priya Raman", None, None, "is on leave"),))
+    assert cypress.first == "Priya Raman" and cypress.note == "Daniel Koh is on leave"
+    # The Master, in every slot, may stand in for an RSLM on all of theirs.
+    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Marcus Tan", "Sam Lee", None, None, "is on leave"),))
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
     maple = [r for r in sample_leave.routes() if r.wing == "Maple"]
-    assert len(maple) == 3 and all(r.first == "Priya Raman" and r.delegate for r in maple)  # every slot Marcus approves
+    assert len(maple) == 3 and all(r.first == "Sam Lee" and r.delegate for r in maple)  # every slot Marcus approves
     assert all(not r.delegate for r in sample_leave.routes() if r.wing != "Maple")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RF", "RSLM"))
     assert next(
-        r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Priya Raman"
+        r for r in sample_leave.routes() if r.precinct == "Maple 03-08").first == "Grace Ho or Sam Lee"
     page = client().get(ADMIN).text.split('id="gaps-h"')[1].split("</section>")[0]
     assert "A delegate stands in for 3 Precincts today." in page
     assert page.count("Marcus Tan is on leave; ") == 3
@@ -292,7 +293,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     RAs' slots (several = whichever approves first), or none needed; final
     approval by any Unit-level appointment, or by named staff."""
     assert sample_leave.slot_appointments() == (("Residential Fellow", "RF"), ("Residential Student Life Manager", "RSLM"))
-    assert sample_leave.unit_appointments() == (("Master", "Master"), ("Residential Admin", "Admin"))
+    assert sample_leave.unit_appointments() == (("Master", "Master"), ("Residential Admin", "Admin"), ("Residential Executive", "Exec"))
     page = client().get(ADMIN + "policy").text
     radios = re.findall(r'<input type="radio" id="(first|final)-(\w+)" name="\1" value="\2"( checked)?', page)
     assert [(g, v, bool(c)) for g, v, c in radios] == [
@@ -301,7 +302,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     first = re.findall(r'name="first-types" value="(\w+)"( checked)?', page)
     assert first == [("RF", " checked"), ("RSLM", "")]
     final = re.findall(r'name="final-types" value="(\w+)"( checked)?', page)
-    assert final == [("Master", ""), ("Admin", " checked")]
+    assert final == [("Master", ""), ("Admin", " checked"), ("Exec", "")]
     assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
     assert "No first approver needed" in page and "comma separated" in page
 
@@ -412,7 +413,7 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     policy = c.get(ADMIN + "policy").text
     assert "they open an appeal for that RA on Appeals" in policy and "once someone chosen below agrees" in policy
     inviters = re.findall(r'name="inviter-unit-types" value="(\w+)"( checked)?', policy)
-    assert inviters == [("Master", " checked"), ("Admin", " checked")]
+    assert inviters == [("Master", " checked"), ("Admin", " checked"), ("Exec", "")]
     assert 'name="inviters" value="unit" checked' in policy
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert sample_leave.appeals_on()
@@ -535,3 +536,24 @@ def test_an_application_counting_no_days_is_not_submitted(monkeypatch) -> None:
     assert "only on a weekend count no days, and cannot be submitted" in client().get("/ra-leave/apply").text
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
     assert "weekends or public holidays count no days" in client().get("/ra-leave/apply").text
+
+
+def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
+    """The cold read of the slot rule: inviters, the Master's appeals and a
+    delegate outside the slots each show as a gap, and say why."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Hui Min Goh",))
+    assert sample_leave.inviter_gaps() == sample_leave.precincts()
+    assert "names Hui Min Goh, but none holds a place in any RA's slot" in c.get(ADMIN + "appeals").text
+    routing = c.get(ADMIN + "routing").text
+    assert ">Opens appeals</th>" in routing
+    assert "9 Precincts where no one may open an appeal" in c.get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Admin",))
+    assert "9 Precincts whose appeals the Master cannot decide" in c.get(ADMIN).text
+    assert "those who oversee every RA (Rachel Yeo) hold one in every slot" in c.get(ADMIN + "routing").text
+    D = sample_leave.Delegate
+    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),))
+    assert "Delegate not in slots" in c.get(ADMIN + "routing").text
+    assert "1 Precinct with a delegate outside its slots" in c.get(ADMIN).text

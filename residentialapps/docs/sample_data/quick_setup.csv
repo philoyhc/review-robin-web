@@ -1,6 +1,7 @@
 Level1.Wing,Level2.Precinct,Level3.Neighborhood,Notes,Roster,Name,Email,Appointment,Abbrev,From,To,Enterprise name,Student ID
 ,,,,Staff,Sam Lee,sam.lee@example.edu,Master,Master,2026-08-01,,LEE SAM,
 ,,,,Staff,Rachel Yeo,rachel.yeo@example.edu,Residential Admin,Admin,2026-08-01,,YEO RACHEL,
+,,,,Staff,Hui Min Goh,huimin.goh@example.edu,Residential Executive,Exec,2026-08-01,,GOH HUI MIN,
 Cypress,Cypress A 04-12,Cypress A 04-05-06,"RC1A L4: 101, 102-105; Else: 101, 102",Staff,Daniel Koh,daniel.koh@example.edu,Residential Fellow,RF,2026-08-01,,KOH DANIEL,
 ,,Cypress A 04-05-06,,Staff,Priya Raman,priya.raman@example.edu,Residential Student Life Manager,RSLM,2026-08-01,,RAMAN PRIYA,
 ,,Cypress A 04-05-06,,RA,Chloe Lim,chloe.lim@example.edu,Residential Assistant,RA,2026-08-01,,LIM CHLOE,A0230000X

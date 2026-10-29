@@ -100,6 +100,9 @@ POLICY = {
     "final": "unit",  # or "named"
     "final_types": ("Admin",),
     "final_names": (),
+    # Who oversees every RA, as if in every slot (author, 2026-10-29): the
+    # Master and the designated admin, chosen as Unit-level appointments.
+    "overseers": ("Master", "Admin"),
 }
 
 
@@ -163,15 +166,51 @@ def unit_appointments() -> tuple[tuple[str, str], ...]:
 
 
 def final_approvers() -> tuple[str, ...]:
-    """Who may give final approval, whichever does first."""
+    """Whom the policy names for final approval, whichever does first; each
+    approves only where they hold a place in the RA's slot (`final_for`)."""
     if POLICY["final"] == "named":
         return tuple(POLICY["final_names"])
     return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["final_types"])
 
 
-def final_gap() -> bool:
-    """The policy names no one who may give final approval."""
-    return not final_approvers()
+def in_slots(person: str, precinct: str) -> bool:
+    """Whether a person holds a place in a Precinct's slots: on their Staff
+    cell, or as an overseer, in every slot. A Precinct's slots share their
+    Staff cell (Assignments; `routes` reads the first), so a place in the
+    Precinct is a place in each RA's slot. Only such a person approves,
+    first or final, decides or opens an appeal for its RAs (author,
+    2026-10-29)."""
+    return person in overseers() or any(person in s.staff for s in sample_data.SLOTS if s.precinct == precinct)
+
+
+def precincts() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
+
+
+def final_for(precinct: str) -> tuple[str, ...]:
+    """Who gives final approval for a Precinct's RAs: those the policy
+    names who hold a place in its slots."""
+    return tuple(n for n in final_approvers() if in_slots(n, precinct))
+
+
+def final_gap(precinct: str | None = None) -> bool:
+    """No one may give final approval for the Precinct, or, with none
+    given, for some Precinct."""
+    return not final_for(precinct) if precinct else any(not final_for(p) for p in precincts())
+
+
+def final_gaps() -> tuple[str, ...]:
+    return tuple(p for p in precincts() if not final_for(p))
+
+
+def final_precincts(person: str) -> tuple[str, ...]:
+    return tuple(p for p in precincts() if person in final_for(p))
+
+
+def decides_appeals(precinct: str) -> bool:
+    """The Master decides a Precinct's appeals while in its slots, as an
+    overseer is in every slot."""
+    return in_slots(APPEAL_DECIDER, precinct)
 
 
 def first_label() -> str:
@@ -182,10 +221,10 @@ def final_label() -> str:
     return " or ".join(POLICY["final_types"] if POLICY["final"] == "unit" else POLICY["final_names"])
 
 
-def final_decider() -> str:
+def final_decider(application: "Application") -> str:
     """The sample's final approver on a decided application: the first who
-    may give it."""
-    return next(iter(final_approvers()), "the final approver")
+    may give it for its Precinct."""
+    return next(iter(final_for(application.precinct)), "the final approver")
 
 # Cover is tracked beside the workflow, not as a stage of it: an
 # application whose cover is unconfirmed waits at first approval (spec §11).
@@ -546,6 +585,7 @@ class Route:
     delegate: bool
     note: str  # why a delegate stands in on this day, or why no one approves first
     gap: bool = False  # the policy's ticked appointments match no one on these slots
+    unfit: bool = False  # a delegate for its approver holds no place in these slots
 
 
 @dataclass(frozen=True)
@@ -574,10 +614,18 @@ class Delegate:
         return f"{short_date(self.start)} – {short_date(self.end)}"
 
 
+# A delegate holds a place in the slots they stand in for: here each
+# Wing's RSLM (author, 2026-10-29).
 DELEGATES = (
-    Delegate("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),
-    Delegate("Daniel Koh", "Mei Ling Tan", date(2026, 12, 7), date(2026, 12, 18), "is on leave"),
+    Delegate("Grace Ho", "Marcus Tan", None, None, "has not signed in yet"),
+    Delegate("Daniel Koh", "Priya Raman", date(2026, 12, 7), date(2026, 12, 18), "is on leave"),
 )
+
+
+def delegate_fits(d: Delegate) -> bool:
+    """Whether a delegate holds a place in every slot of the person they
+    stand in for; one who does not cannot approve there."""
+    return all(d.delegate in s.staff or d.delegate in overseers() for s in sample_data.SLOTS if d.acting_for in s.staff)
 
 
 def delegable() -> list[str]:
@@ -590,8 +638,9 @@ def delegable() -> list[str]:
 
 
 def acting(person: str, day: date | None = None) -> Delegate | None:
+    """The delegate standing in for a person on the day, if one fits."""
     day = day or TODAY
-    return next((d for d in DELEGATES if d.acting_for == person and d.active(day)), None)
+    return next((d for d in DELEGATES if d.acting_for == person and d.active(day) and delegate_fits(d)), None)
 
 
 def routes(day: date | None = None) -> tuple[Route, ...]:
@@ -610,14 +659,18 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
         named = [by_type[t] for t in POLICY["first_types"] if t in by_type] if POLICY["first"] == "slot" else []
         standing_in = [d for n in named if (d := acting(n, day))]
         first = " or ".join(d.delegate if (d := acting(n, day)) else n for n in named)
-        note = "; ".join(f"{d.acting_for} {d.reason}" for d in standing_in)
+        unfit = [d for n in named for d in DELEGATES if d.acting_for == n and d.active(day or TODAY) and not delegate_fits(d)]
+        note = "; ".join(
+            [f"{d.acting_for} {d.reason}" for d in standing_in]
+            + [f"{d.acting_for}'s delegate {d.delegate} is not in these slots" for d in unfit]
+        )
         gap = POLICY["first"] == "slot" and not named
         if POLICY["first"] == "none":
             first = "None needed"
         elif gap:
             first, note = "No one", f"no {first_label() or 'ticked appointment'} on its slots"
         found[slot.precinct] = Route(
-            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note, gap
+            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note, gap, bool(unfit)
         )
     return tuple(found.values())
 
@@ -634,7 +687,8 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     route = next(r for r in routes() if r.precinct == application.precinct)
     first = "the first approver" if route.gap else route.first.split(" or ")[0]
     if application.appeal:
-        steps.append(("", f"Sent to {APPEAL_DECIDER} as an extra-leave appeal", ""))
+        decider = APPEAL_DECIDER if decides_appeals(application.precinct) else "the Master (no one holds a place in these slots to decide it)"
+        steps.append(("", f"Sent to {decider} as an extra-leave appeal", ""))
         if "staff" in DECISIONS.get(application.id, {}):
             steps.append(_step(application, "staff", f"Remarks from {route.rf}, RF"))
         if application.stage in ("Approved", "Rejected"):
@@ -644,9 +698,9 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     if application.stage in ("Pending final approval", "Approved", "Cancelled") and POLICY["first"] == "slot":
         steps.append(_step(application, "first", f"First approval by {first}"))
     if application.stage in ("Approved", "Cancelled"):
-        steps.append(_step(application, "final", f"Final approval by {final_decider()}"))
+        steps.append(_step(application, "final", f"Final approval by {final_decider(application)}"))
     if application.stage == "Rejected":
-        who = first if POLICY["first"] == "slot" else final_decider()
+        who = first if POLICY["first"] == "slot" else final_decider(application)
         steps.append(_step(application, "rejected", f"Rejected by {who}"))
     if application.stage == "Withdrawn":
         steps.append(_step(application, "withdrawn", f"Withdrawn by {application.ra}"))
@@ -715,8 +769,10 @@ def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
 # the sample banner (`?as=`), one per role, until identity is wired.
 STAFF_VIEWERS = (
     ("Daniel Koh", "RF"),
+    ("Priya Raman", "RSLM"),
     ("Rachel Yeo", "Residential Admin"),
     ("Sam Lee", "Master"),
+    ("Hui Min Goh", "Residential Executive"),
 )
 
 
@@ -728,12 +784,15 @@ def staff_role(name: str) -> str:
     first = [r.precinct for r in routes() if not r.gap and name in r.first.split(" or ")]
     if first and POLICY["first"] == "slot":
         does.append("first approver for " + ", ".join(first))
-    if name in final_approvers():
-        does.append("final approver")
-    if name == APPEAL_DECIDER and appeals_decided():
+    if final_precincts(name):
+        mine = final_precincts(name)
+        does.append("final approver" + ("" if len(mine) == len(precincts()) else " for " + ", ".join(mine)))
+    if name == APPEAL_DECIDER and appeals_decided() and any(decides_appeals(p) for p in precincts()):
         does.append("decides appeals")
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
+    if not scope(name):
+        return f"{appointment}, oversees no RA, so RA Leave is not shown"
     return f"{appointment}, {', '.join(does)}" if does else f"{appointment}, no decisions under the policy"
 
 
@@ -755,9 +814,9 @@ def queue(viewer: str) -> tuple[tuple[Application, str], ...]:
     for a in APPLICATIONS:
         if a.stage == "Pending first approval" and viewer in routes_first(a):
             found.append((a, "First approval"))
-        elif a.stage == "Pending final approval" and viewer in final_approvers():
+        elif a.stage == "Pending final approval" and viewer in final_for(a.precinct):
             found.append((a, "Final approval"))
-        elif a.stage == "Appeal to the Master" and viewer == APPEAL_DECIDER:
+        elif a.stage == "Appeal to the Master" and viewer == APPEAL_DECIDER and decides_appeals(a.precinct):
             found.append((a, "Appeal"))
     return tuple(sorted(found, key=lambda pair: pair[0].submitted))
 
@@ -778,40 +837,46 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
     found = []
     for a in APPLICATIONS:
         if a.appeal:
-            if viewer == APPEAL_DECIDER and a.stage in ("Approved", "Rejected"):
+            if viewer == APPEAL_DECIDER and decides_appeals(a.precinct) and a.stage in ("Approved", "Rejected"):
                 found.append((a, "Appeal", a.stage))
             continue
         if a.stage in ("Pending final approval", "Approved", "Cancelled") and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Approved"))
         if a.stage == "Rejected" and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Rejected"))
-        if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider() == viewer:
+        if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider(a) == viewer:
             found.append((a, "Final approval", "Rejected"))
-        if a.stage in ("Approved", "Cancelled") and final_decider() == viewer:
+        if a.stage in ("Approved", "Cancelled") and final_decider(a) == viewer:
             found.append((a, "Final approval", "Approved"))
     return tuple(sorted(found, key=lambda t: t[0].submitted, reverse=True))
 
 
+def overseers() -> tuple[str, ...]:
+    """Who oversees every RA, as if in every slot: the staff holding the
+    policy's ticked Unit-level appointments (author, 2026-10-29)."""
+    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["overseers"])
+
+
 def scope(viewer: str) -> tuple[str, ...]:
-    """The Precincts a staff member's leave view covers (spec §22): an RF's
-    own, an RSLM's Wing's, everyone else's the whole Unit."""
+    """The Precincts whose RAs a staff member oversees (spec §22; author,
+    2026-10-29): the overseers every one, as if in every slot; an RF their
+    slots' Precincts, an RSLM their Wing's. Every decision is confined to
+    these (`in_slots`), so the approval chain never widens them. Staff with
+    none, such as Unit-level staff holding no slot, see no RA Leave."""
+    every = precincts()
+    if viewer in overseers():
+        return every
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
     held = [s for s in sample_data.SLOTS if viewer in s.staff]
-    rf = {s.precinct for s in held if abbrev == "RF"}
-    wing = {s.wing for s in held if abbrev == "RSLM"}
-    every = tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
-    if rf:
-        return tuple(p for p in every if p in rf)
-    if wing:
-        return tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS if s.wing in wing))
-    return every
+    wings = {s.wing for s in held if abbrev == "RSLM"}
+    found = {s.precinct for s in held} | {s.precinct for s in sample_data.SLOTS if s.wing in wings}
+    return tuple(p for p in every if p in found)
 
 
 def can_open(viewer: str, application: Application) -> bool:
-    """Decide opens an application in the viewer's Precinct-leave scope, or
-    one that is (or was) theirs to decide, wherever it is: a delegate's or a
-    named final approver's (spec §13-§15), or an RA's they may open an
-    appeal for."""
+    """Decide opens an application in the viewer's scope, or one that is
+    (or was) theirs to decide or open an appeal for; every such role is
+    confined to the slots the viewer holds a place in, so these agree."""
     return (
         application.precinct in scope(viewer)
         or application.ra in invitable_ras(viewer)
@@ -837,6 +902,12 @@ def by_precinct(viewer: str) -> tuple[dict, ...]:
         }
         for p in scope(viewer)
     )
+
+
+def ras_in_scope(viewer: str) -> tuple[str, ...]:
+    """The RAs a staff member oversees: those in the slots of their scope."""
+    precincts = scope(viewer)
+    return tuple(ra for s in sample_data.SLOTS if s.precinct in precincts for ra in s.ras)
 
 
 def in_scope(viewer: str) -> tuple[Application, ...]:
@@ -897,14 +968,36 @@ INVITATIONS = (
 
 
 def inviters_for(ra: str) -> tuple[str, ...]:
-    """Who may open an appeal for an RA, by the policy's inviter setting."""
+    """Who may open an appeal for an RA, by the policy's inviter setting,
+    and only among those holding a place in the RA's slot."""
+    slot = next((s for s in sample_data.SLOTS if ra in s.ras), None)
+    if slot is None:
+        return ()
     if POLICY["inviters"] == "named":
-        return tuple(POLICY["inviter_names"])
-    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
-    if POLICY["inviters"] == "slot":
-        slot = next((s for s in sample_data.SLOTS if ra in s.ras), None)
-        return tuple(n for n in (slot.staff if slot else ()) if abbrev[n] in POLICY["inviter_types"])
-    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
+        named = tuple(POLICY["inviter_names"])
+    elif POLICY["inviters"] == "slot":
+        abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
+        named = tuple(n for n in slot.staff if abbrev[n] in POLICY["inviter_types"])
+    else:
+        named = tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
+    return tuple(n for n in named if n in slot.staff or n in overseers())
+
+
+def inviters_in(precinct: str) -> tuple[str, ...]:
+    """Who may open an appeal for a Precinct's RAs."""
+    return tuple(dict.fromkeys(n for s in sample_data.SLOTS if s.precinct == precinct for ra in s.ras for n in inviters_for(ra)))
+
+
+def inviter_gaps() -> tuple[str, ...]:
+    """The Precincts whose RAs no one may open an appeal for, while appeals
+    are by invitation."""
+    return tuple(p for p in precincts() if not inviters_in(p)) if POLICY["appeals"] == "By invitation" else ()
+
+
+def appeal_gaps() -> tuple[str, ...]:
+    """The Precincts whose appeals the Master cannot decide, holding no
+    place in their slots, while the Master decides appeals."""
+    return tuple(p for p in precincts() if not decides_appeals(p)) if appeals_decided() else ()
 
 
 def all_inviters() -> tuple[str, ...]:

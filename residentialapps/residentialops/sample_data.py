@@ -98,6 +98,7 @@ ABBREV = {
     "Residential Admin": "Admin",
     "Residential Student Life Manager": "RSLM",
     "Residential Fellow": "RF",
+    "Residential Executive": "Exec",
     "Residential Assistant": "RA",
 }
 
@@ -201,6 +202,9 @@ STAFF: tuple[StaffMember, ...] = (
         for name in ("Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
                      "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong")
     ),
+    # Unit-level staff holding no slot and overseeing no RA: RA Leave is
+    # not shown to them (author, 2026-10-29).
+    _staff("Hui Min Goh", "Residential Executive"),
 )
 
 # Umairah Salleh's appointment starts after Term 1 does: her assignment
@@ -388,6 +392,8 @@ AUDIT_EVENTS = (
 LANDING_VIEWERS = (
     ("Chloe Lim", "RA"),
     ("Daniel Koh", "RF"),
+    ("Priya Raman", "RSLM"),
+    ("Hui Min Goh", "Residential Executive"),
     ("Rachel Yeo", "Residential Admin, sys admin"),
     ("Sam Lee", "Master, sys admin"),
 )

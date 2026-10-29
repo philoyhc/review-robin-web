@@ -62,6 +62,7 @@ def test_the_rosters_hold_the_unit_s_people() -> None:
         "Residential Admin": {"Admin"},
         "Residential Student Life Manager": {"RSLM"},
         "Residential Fellow": {"RF"},
+        "Residential Executive": {"Exec"},
     }  # one abbreviation per appointment, every row giving it
     assert held(ras) == {"Residential Assistant": {"RA"}}
     assert Counter(p["Appointment"] for p in staff) == {
@@ -69,6 +70,7 @@ def test_the_rosters_hold_the_unit_s_people() -> None:
         "Residential Admin": 1,
         "Residential Student Life Manager": 3,
         "Residential Fellow": 9,
+        "Residential Executive": 1,
     }
     assert len(ras) == 30
     emails = [p["Email"] for p in (*staff, *ras)]

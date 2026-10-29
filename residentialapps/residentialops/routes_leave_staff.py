@@ -20,11 +20,16 @@ router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 def _page(request: Request, template: str, **context: object) -> Response:
     viewer = sample_leave.staff_viewer(request.query_params.get("as"))
     as_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
+    # The same pages for every staff member who oversees RAs; one who
+    # oversees none is told so, and sees no leave (author, 2026-10-29).
+    oversees = bool(sample_leave.scope(viewer))
+    if not oversees:
+        template, context = "none.html", {}
     return render(
         request,
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
-        tabs=leave_staff_tabs(as_query, appeals=bool(sample_leave.invitable_ras(viewer))),
+        tabs=leave_staff_tabs(as_query, appeals=sample_leave.appeals_decided()) if oversees else (),
         areas=areas_for(viewer),
         leave=sample_leave,
         sample=sample_data,
@@ -60,7 +65,7 @@ def decide(request: Request, application_id: str) -> Response:
         back = ("/ra-leave/staff/decide", "Awaiting my decision")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
         back = ("/ra-leave/staff/decided", "Decided")
-    elif sample_leave.invitable_ras(viewer) and (found.appeal or found.ra in sample_leave.invitable_ras(viewer)):
+    elif sample_leave.appeals_decided() and (found.appeal or found.ra in sample_leave.invitable_ras(viewer)):
         back = ("/ra-leave/staff/appeals", "Appeals")
     else:
         back = ("/ra-leave/staff/", "Home")
@@ -82,8 +87,11 @@ def precinct(request: Request) -> Response:
 
 @router.get("/ra-leave/staff/appeals", name="residentialops_leave_staff_appeals")
 def appeals(request: Request) -> Response:
-    # Whoever the policy lets open appeals does so here as on the admin
-    # page (author, 2026-10-29), for the RAs they may; others are told.
+    # Every overseer sees the appeals and invitations of their own RAs;
+    # whoever the policy lets open appeals does so here, for the RAs they
+    # may (author, 2026-10-29).
     viewer = sample_leave.staff_viewer(request.query_params.get("as"))
     ras = sample_leave.invitable_ras(viewer)
-    return _page(request, "appeals.html", allowed=bool(ras), ra_choices=ras, agreers=(viewer,))
+    seen = tuple(dict.fromkeys((*sample_leave.ras_in_scope(viewer), *ras)))
+    may_open = bool(ras) and sample_leave.POLICY["appeals"] == "By invitation"
+    return _page(request, "appeals.html", may_open=may_open, ra_choices=ras, seen=seen, agreers=(viewer,) if may_open else ())

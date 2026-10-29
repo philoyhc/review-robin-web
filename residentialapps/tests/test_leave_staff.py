@@ -37,7 +37,8 @@ def test_every_staff_page_answers_for_each_sample_viewer() -> None:
     assert re.findall(r'<a href="([^"]*)"', tabs) == [
         f"/ra-leave/staff/{p}{RACHEL}" for p in ("", "decide", "decided", "precinct", "appeals")
     ]
-    assert "/ra-leave/staff/appeals" not in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    # Every overseer gets the same tabs, Appeals included while appeals are on.
+    assert "/ra-leave/staff/appeals" in c.get(STAFF).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert sample_leave.staff_viewer("Nobody") == "Daniel Koh"
 
 
@@ -98,7 +99,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
     import itertools
 
     c = client()
-    people = ("Daniel Koh", "Rachel Yeo", "Sam Lee", "Benjamin Chua", "Grace Ho", "Marcus Tan", "Mei Ling Tan")
+    people = ("Daniel Koh", "Rachel Yeo", "Sam Lee", "Benjamin Chua", "Grace Ho", "Marcus Tan", "Mei Ling Tan", "Priya Raman")
     settings = (
         {}, {"first_types": ("RF", "RSLM")}, {"first": "none"},
         {"final": "named", "final_names": ("Daniel Koh",)}, {"appeals": "Off"}, {"appeals": "By invitation"},
@@ -113,7 +114,7 @@ def test_whatever_a_viewer_may_decide_opens(monkeypatch) -> None:
                 for a in [a for a, _ in sample_leave.queue(person)] + [a for a, _, _ in sample_leave.decided(person)]:
                     assert sample_leave.can_open(person, a), (setting, day, person, a.id)
     assert c.get(STAFF + "decide/L-0103?as=Benjamin%20Chua").status_code == 404  # not a staff viewer: defaults to Daniel
-    assert sample_leave.can_open("Benjamin Chua", sample_leave.by_id("L-0103"))  # standing in for Grace Ho
+    assert sample_leave.can_open("Marcus Tan", sample_leave.by_id("L-0103"))  # standing in for Grace Ho
 
 
 def test_with_no_first_approval_rejections_belong_to_the_final_approver(monkeypatch) -> None:
@@ -130,10 +131,11 @@ def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None
     assert ("Willow A 13-25", "4", "2", "0") in rows and len(rows) == 9
 
 
-def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages() -> None:
+def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages(monkeypatch) -> None:
     """Ruled 2026-10-29: as on the admin Appeals page, with the agreer
     preset to the viewer and links into Decide."""
     c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")  # where appeals are opened
     for query, name in ((SAM, "Sam Lee"), (RACHEL, "Rachel Yeo")):
         page = c.get(STAFF + "appeals" + query).text
         assert f"<option selected>{name}</option>" in page and ">Open the appeal</button>" in page
@@ -148,6 +150,7 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
     """Ruled 2026-10-29: chosen as approvers are. The RA's slot's RF opens
     appeals for their own slots' RAs only; named staff for anyone."""
     c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")  # where appeals are opened
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF",))
     assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh",)
@@ -156,7 +159,7 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
     assert "3 RAs you may" in page and "<option selected>Daniel Koh</option>" in page
     pool = page.split('id="ra-names"')[1].split("</datalist>")[0]
     assert re.findall(r'value="([^"]*)"', pool) == ["Chloe Lim", "Ethan Wong", "Hana Ito"]
-    assert "Appeals" not in c.get(STAFF + SAM).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    assert "read-only for you" in c.get(STAFF + "appeals" + SAM).text  # Sam oversees, may not open
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Rachel Yeo",))
     assert sample_leave.all_inviters() == ("Rachel Yeo",)
@@ -166,6 +169,7 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
 
 def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")  # where appeals are opened
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Rachel Yeo",))
     rachel = c.get(STAFF + "appeals" + RACHEL).text
@@ -173,8 +177,6 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     assert '/ra-leave/staff/appeals' in c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ())
     assert sample_leave.inviter_label() == "" and sample_leave.all_inviters() == ()
-    for query in ("", RACHEL, SAM):
-        assert "/ra-leave/staff/appeals" not in c.get(STAFF + query).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert "Leave policy names no one to open appeals." in c.get(STAFF + "appeals" + SAM).text
     assert "No one may open an appeal: Leave policy names no one for it." in c.get("/ra-leave/admin/appeals").text
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
@@ -202,7 +204,8 @@ def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Daniel Koh",))
     page = c.get(STAFF + "appeals").text
-    assert "Gwen Ho" in page
+    # Named, he still opens appeals only for RAs in his slots (ruled 2026-10-29).
+    assert "Gwen Ho" not in page and sample_leave.invitable_ras("Daniel Koh") == ("Chloe Lim", "Ethan Wong", "Hana Ito")
     for link in re.findall(r'href="(/ra-leave/staff/decide/L-\d+)"', page):
         assert c.get(link).status_code == 200, link
     admin = c.get("/ra-leave/admin/appeals").text
@@ -239,3 +242,68 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     menu = c.get(STAFF + RACHEL).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
     assert 'href="/ra-leave/staff/?as=Rachel%20Yeo"' in menu and 'href="/sys-admin/"' in menu
     assert "/sys-admin/" not in c.get(STAFF).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
+
+
+def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
+    """Ruled 2026-10-29: the Master and the designated admin oversee every
+    RA, as if in every slot; an RF and an RSLM the RAs on their slots;
+    Unit-level staff holding no slot see no RA Leave. The pages are the
+    same for every overseer; actions follow the approval chain."""
+    c = client()
+    assert sample_leave.overseers() == ("Sam Lee", "Rachel Yeo")
+    assert len(sample_leave.scope("Priya Raman")) == 3  # an RSLM: the Cypress Wing
+    assert sample_leave.scope("Hui Min Goh") == ()
+    page = c.get(STAFF + "?as=Hui%20Min%20Goh").text
+    assert "You oversee no RA" in page and 'class="tabs-in"' not in page
+    assert "Hui Min Goh: Residential Executive, oversees no RA, so RA Leave is not shown" in page
+    assert c.get(STAFF + "decide/L-0101?as=Hui%20Min%20Goh").status_code == 404
+    landing = c.get("/?as=Hui%20Min%20Goh").text
+    assert "/ra-leave/" not in landing.split('<main class="page">')[1]
+    # An RSLM gets the same tabs as an RF, and decides nothing by default.
+    tabs = lambda q: re.findall(r'<a href="/ra-leave/staff/(\w*)', c.get(STAFF + q).text.split('class="tabs-in"')[1].split("</nav>")[0])  # noqa: E731
+    assert tabs("?as=Priya%20Raman") == tabs("") == tabs(SAM) == ["", "decide", "decided", "precinct", "appeals"]
+    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Priya%20Raman").text
+    # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
+    # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master",))
+    assert sample_leave.overseers() == ("Sam Lee",) and sample_leave.scope("Rachel Yeo") == ()
+    assert sample_leave.final_gaps() == sample_leave.precincts()
+    # Tick the Executive: Hui Min Goh oversees every RA, deciding nothing.
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
+    assert len(sample_leave.scope("Hui Min Goh")) == 9
+    assert "Nothing awaits you." in c.get(STAFF + "decide?as=Hui%20Min%20Goh").text
+
+
+def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
+    """Ruled 2026-10-29: staff approve, first or final, decide or open
+    appeals only for RAs in whose slots they hold a place; the overseers
+    hold one in every slot. A role given elsewhere is a gap, never a view."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ())
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    assert sample_leave.scope("Rachel Yeo") == () and sample_leave.all_inviters() == ()
+    assert "the fix is in Assignments or Leave policy" in c.get(STAFF + RACHEL).text
+    assert all(not sample_leave.decides_appeals(p) for p in sample_leave.precincts())
+    routing = c.get("/ra-leave/admin/routing").text
+    assert routing.count("none named holds a place in its slots") == len(sample_leave.precincts())
+    # A named final approver approves only in their own slots.
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin"))
+    monkeypatch.setitem(sample_leave.POLICY, "final", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Daniel Koh",))
+    assert sample_leave.final_for("Cypress A 04-12") == ("Daniel Koh",) and sample_leave.final_for("Maple 03-08") == ()
+    assert len(sample_leave.final_gaps()) == len(sample_leave.precincts()) - 1
+    # A delegate outside the slots they would stand in for does not stand in.
+    D = sample_leave.Delegate
+    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),))
+    maple = next(r for r in sample_leave.routes() if r.precinct == "Maple 03-08")
+    assert maple.first == "Grace Ho" and "Benjamin Chua is not in these slots" in maple.note
+    assert "Not in their slots" in c.get("/ra-leave/admin/routing").text
+    monkeypatch.setitem(sample_leave.POLICY, "final", "unit")
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    # Under Open, a non-inviter's Appeals page says no one opens appeals.
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    assert "every RA may send one, so none is opened for them" in c.get(STAFF + "appeals").text
+    # An appeal opened from Appeals goes back there, inviter or not.
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
+    page = c.get(STAFF + "decide/L-0105?as=Hui%20Min%20Goh").text
+    assert "‹ Appeals" in page
