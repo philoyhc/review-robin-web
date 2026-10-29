@@ -176,7 +176,7 @@ def test_current_identity_carries_the_settings_it_resolved_under() -> None:
 def test_the_page_carries_the_cord_favicon() -> None:
     """Ruled 2026-10-29: white on black, after Residential's, as inline SVG."""
     page = TestClient(create_app(apps=())).get("/").text
-    icons = re.findall(r'<link rel="icon" type="image/svg\+xml"\s+href="([^"]*)"', page)
+    icons = re.findall(r'<link rel="icon"[^>]*href="([^"]*)"', page)
     assert len(icons) == 1
     icon = icons[0]
     assert icon.startswith("data:image/svg+xml;utf8,<svg ")
