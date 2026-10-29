@@ -402,11 +402,16 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     assert 'href="/ra-leave/admin/appeals" aria-current="page"' in page
     rows = re.findall(r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page)
     assert rows[:2] == [("Gwen Ho", "Sam Lee"), ("Kai Ng", "Rachel Yeo")]
+    assert 'href="/ra-leave/admin/applications/L-0105">Sent: L-0105</a>' in page and "selected" not in page.split('id="inv-by"')[1].split("</select>")[0]
+    assert page.split('id="inv-by"')[1].split("</select>")[0].count("<option>") == 2  # the Unit's Master and Admin
     assert ">Sent: L-0105</a>" in page and 'aria-label="Withdraw Kai Ng\'s invitation"' in page
     assert '<span class="chip chip-mute">Lapsed</span>' in page and "Withdraw Nathan Yeo" not in page
     assert "Invitations take effect only while appeals are by invitation" in page
     policy = c.get(ADMIN + "policy").text
-    assert "they open an appeal for that RA on Appeals" in policy
+    assert "they open an appeal for that RA on Appeals" in policy and "once someone chosen below agrees" in policy
+    inviters = re.findall(r'name="inviter-unit-types" value="(\w+)"( checked)?', policy)
+    assert inviters == [("Master", " checked"), ("Admin", " checked")]
+    assert 'name="inviters" value="unit" checked' in policy
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert sample_leave.appeals_on()
     assert sample_leave.can_appeal("Kai Ng") and not sample_leave.can_appeal("Gwen Ho")  # hers is used

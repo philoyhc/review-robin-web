@@ -49,7 +49,8 @@ def routing(request: Request) -> Response:
 
 @router.get("/ra-leave/admin/appeals", name="residentialops_leave_admin_appeals")
 def appeals(request: Request) -> Response:
-    return _page(request, "appeals.html")
+    ras = tuple(p.name for p in sample_data.RAS)
+    return _page(request, "appeals.html", ra_choices=ras, agreers=sample_leave.all_inviters())
 
 
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")

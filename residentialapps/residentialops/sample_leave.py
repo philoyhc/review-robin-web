@@ -81,6 +81,12 @@ POLICY = {
     # open to every RA, by invitation once the Master or the Master's admin
     # delegate agrees in principle, or off.
     "appeals": "Open",  # one of APPEAL_MODES
+    # Who may open an appeal by invitation (author, 2026-10-29), chosen as
+    # approvers are: appointments on the RA's slot, Unit-level
+    # appointments, or named staff.
+    "inviters": "unit",  # "slot", "unit" or "named"
+    "inviter_types": ("Master", "Admin"),
+    "inviter_names": (),
     "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
     "cover_required": True,
     "cover_mode": "Named and confirmed",
@@ -698,7 +704,33 @@ INVITATIONS = (
     Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; the Master agreed by email"),
     Invitation("Nathan Yeo", "Sam Lee", date(2026, 9, 14), date(2026, 9, 28), "Conference abroad; not sent in time"),
 )
-APPEAL_AGREERS = ("Sam Lee", "Rachel Yeo")  # the Master and the Master's admin delegate
+
+
+def inviters_for(ra: str) -> tuple[str, ...]:
+    """Who may open an appeal for an RA, by the policy's inviter setting."""
+    if POLICY["inviters"] == "named":
+        return tuple(POLICY["inviter_names"])
+    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
+    if POLICY["inviters"] == "slot":
+        slot = next((s for s in sample_data.SLOTS if ra in s.ras), None)
+        return tuple(n for n in (slot.staff if slot else ()) if abbrev[n] in POLICY["inviter_types"])
+    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
+
+
+def all_inviters() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(n for ra in sample_data.RAS for n in inviters_for(ra.name)))
+
+
+def invitable_ras(viewer: str) -> tuple[str, ...]:
+    """The RAs a staff member may open an appeal for."""
+    return tuple(ra.name for ra in sample_data.RAS if viewer in inviters_for(ra.name))
+
+
+def inviter_label() -> str:
+    if POLICY["inviters"] == "named":
+        return " or ".join(POLICY["inviter_names"]) or "no one named"
+    whose = "the RA's slot's" if POLICY["inviters"] == "slot" else "the Unit's"
+    return f"{whose} {' or '.join(POLICY['inviter_types']) or 'no appointment ticked'}"
 
 
 def invitation_for(ra: str, day: date | None = None) -> Invitation | None:

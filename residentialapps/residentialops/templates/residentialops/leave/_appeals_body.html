@@ -44,12 +44,12 @@
     <div class="side">
       <section class="card card-pad" aria-labelledby="new-h">
         <h2 id="new-h">Open an appeal for an RA</h2>
-        <p class="sub">After the Master or the Master's admin delegate has agreed in principle.</p>
+        <p class="sub">After {{ leave.inviter_label() }} has agreed in principle (Leave policy).</p>
         <div class="field-wide"><label for="inv-ra">RA</label>
           <input id="inv-ra" class="input" type="text" list="ra-names" placeholder="Start typing a name" disabled>
-          <datalist id="ra-names">{% for p in sample.RAS %}<option value="{{ p.name }}"></option>{% endfor %}</datalist></div>
+          <datalist id="ra-names">{% for name in ra_choices %}<option value="{{ name }}"></option>{% endfor %}</datalist></div>
         <div class="field-wide"><label for="inv-by">Agreed by</label>
-          <select id="inv-by" class="input" disabled>{% for name in leave.APPEAL_AGREERS %}<option{% if name == agreer %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+          <select id="inv-by" class="input" disabled>{% for name in agreers %}<option{% if name == agreer %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
         <div class="field-wide"><label for="inv-until">Send by</label><input id="inv-until" class="input" type="date" disabled></div>
         <div class="field-wide"><label for="inv-note">Note</label><textarea id="inv-note" class="input" rows="2" disabled></textarea></div>
         <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Open the appeal</button></div>

@@ -138,5 +138,27 @@ def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages() -
         page = c.get(STAFF + "appeals" + query).text
         assert f"<option selected>{name}</option>" in page and ">Open the appeal</button>" in page
         assert f'href="/ra-leave/staff/decide/L-0105{query}">Sent: L-0105</a>' in page
-    assert "Only the Master and the Master's admin delegate" in c.get(STAFF + "appeals").text
-    assert ">Open the appeal</button>" not in c.get(STAFF + "appeals").text
+        assert c.get(f"/ra-leave/staff/decide/L-0105{query}").status_code == 200
+    for query in ("", "?as=Daniel%20Koh"):
+        page = c.get(STAFF + "appeals" + query).text
+        assert "you are not among them" in page and ">Open the appeal</button>" not in page
+
+
+def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
+    """Ruled 2026-10-29: chosen as approvers are. The RA's slot's RF opens
+    appeals for their own slots' RAs only; named staff for anyone."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF",))
+    assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh",)
+    assert sample_leave.invitable_ras("Daniel Koh") == ("Chloe Lim", "Ethan Wong", "Hana Ito")
+    page = c.get(STAFF + "appeals").text
+    assert "3 RAs you may" in page and "<option selected>Daniel Koh</option>" in page
+    pool = page.split('id="ra-names"')[1].split("</datalist>")[0]
+    assert re.findall(r'value="([^"]*)"', pool) == ["Chloe Lim", "Ethan Wong", "Hana Ito"]
+    assert "Appeals" not in c.get(STAFF + SAM).text.split('class="tabs-in"')[1].split("</nav>")[0]
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Rachel Yeo",))
+    assert sample_leave.all_inviters() == ("Rachel Yeo",)
+    assert "you are not among them" in c.get(STAFF + "appeals" + SAM).text
+
