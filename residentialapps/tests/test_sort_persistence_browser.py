@@ -110,3 +110,14 @@ def test_each_table_on_a_page_keeps_its_own_sort(page: Page) -> None:
     assert [tables.nth(i).locator("th[aria-sort]").count() for i in range(tables.count())] == [
         1 if i == 1 else 0 for i in range(tables.count())
     ]
+
+
+def test_none_sorts_last_either_way(page: Page) -> None:
+    """Ruled 2026-10-29: Oversight's None (Hui Min Goh) sorts last whether
+    the column sorts ascending or descending; so does any empty value."""
+    page.goto(f"{ORIGIN}/rosters/staff")
+    header = page.locator('#staff-table th[data-col="oversight"]')
+    for direction in ("ascending", "descending"):
+        header.locator(".sort-btn").click()
+        assert header.get_attribute("aria-sort") == direction
+        assert _names(page, "#staff-table")[-1] == "Hui Min Goh", direction
