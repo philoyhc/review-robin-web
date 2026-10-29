@@ -30,15 +30,34 @@ def plan_detail(request: Request, pid: str) -> Response:
         return gated(request, "supportlogs/plan.html", *READERS)  # the 403 page
     found = sample.plan(pid)
     oversees = sample.holds(me, sample.SENIOR, sample.VIEW_IDENTIFIABLE)
-    if found is None or not (oversees or found.staff == me.name):
+    if found is None or not (oversees or sample.may_read_plan(me.name, found)):
         raise HTTPException(status_code=404)
     owner = found.staff == me.name
     return gated(
         request, "supportlogs/plan.html", *READERS,
         p=found, owner=owner, senior=sample.holds(me, sample.SENIOR),
-        linked=owner and reaches_student(me, found.student),
-        current_tab="/plans/" if owner else "/overview/",
+        shared=not owner and not oversees,
+        linked=sample.holds(me, sample.FRONTLINE) and reaches_student(me, found.student),
+        current_tab="/plans/" if owner else "/students/" if not oversees else "/overview/",
     )
+
+
+def owns_records(me: sample.Viewer, sid: str) -> bool:
+    """The viewer has records of their own for the student to share."""
+    return any(s.id == sid for s, _, _ in sample.working_set(me.name))
+
+
+def share_choices(me: sample.Viewer, sid: str) -> list[str]:
+    """Frontline colleagues to share with: not the viewer, not someone who
+    already holds the grant, not a colleague who shared the student with
+    the viewer."""
+    taken = {g.viewer for g in sample.grants_by(me.name, sid)} | {g.grantor for g in sample.shared_with(me.name) if g.student == sid}
+    return [c for c in sample.FRONTLINE_COLLEAGUES if c != me.name and c not in taken]
+
+
+def _referable(me: sample.Viewer, sid: str) -> bool:
+    """Not on the viewer's formal assignment, and not flagged already."""
+    return not any(p.formal for p in sample.plans_of(me.name, sid)) and sample.referral(sid) is None
 
 
 def _student_for(request: Request, sid: str) -> tuple[sample.Viewer, sample.Student | None]:
@@ -54,8 +73,9 @@ def share(request: Request, sid: str) -> Response:
     """Share with a colleague (§11.1): the viewer's records for this
     student, with one frontline colleague."""
     me, found = _student_for(request, sid)
-    colleagues = [c for c in sample.FRONTLINE_COLLEAGUES
-                  if c != me.name and all(g.viewer != c for g in sample.grants_by(me.name, sid))]
+    if sample.holds(me, sample.FRONTLINE) and not owns_records(me, sid):
+        raise HTTPException(status_code=404)  # nothing of the viewer's own to share
+    colleagues = share_choices(me, sid)
     return gated(request, "supportlogs/share.html", sample.FRONTLINE, chosen=found, colleagues=colleagues,
                  current_tab="/students/")
 
@@ -64,7 +84,9 @@ def share(request: Request, sid: str) -> Response:
 def share_sent(request: Request, sid: str) -> Response:
     me, found = _student_for(request, sid)
     colleague = request.query_params.get("colleague")
-    if sample.holds(me, sample.FRONTLINE) and (colleague not in sample.FRONTLINE_COLLEAGUES or colleague == me.name):
+    if sample.holds(me, sample.FRONTLINE) and not owns_records(me, sid):
+        raise HTTPException(status_code=404)
+    if sample.holds(me, sample.FRONTLINE) and colleague not in share_choices(me, sid):
         return RedirectResponse(url_path(request, f"/students/{sid}/share") + query(me), status_code=303)
     return gated(request, "supportlogs/share_sent.html", sample.FRONTLINE, chosen=found, colleague=colleague,
                  current_tab="/students/")
@@ -75,12 +97,16 @@ def refer(request: Request, sid: str) -> Response:
     """Flag for formal assignment (§3.1): no reason asked, only a suggested
     cadence for senior staff to weigh (§7.5)."""
     me, found = _student_for(request, sid)
+    if sample.holds(me, sample.FRONTLINE) and not _referable(me, sid):
+        return RedirectResponse(url_path(request, f"/students/{sid}") + query(me), status_code=303)
     return gated(request, "supportlogs/refer.html", sample.FRONTLINE, chosen=found, current_tab="/students/")
 
 
 @router.get("/students/{sid}/refer/sent", name="supportlogs_refer_sent")
 def refer_sent(request: Request, sid: str) -> Response:
     me, found = _student_for(request, sid)
+    if sample.holds(me, sample.FRONTLINE) and not _referable(me, sid):
+        return RedirectResponse(url_path(request, f"/students/{sid}") + query(me), status_code=303)
     cadence = request.query_params.get("cadence", "")
     cadence = cadence if cadence in sample.ASSIGNMENT_CADENCES else ""
     return gated(request, "supportlogs/refer_sent.html", sample.FRONTLINE, chosen=found, cadence=cadence,

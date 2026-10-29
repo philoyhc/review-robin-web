@@ -69,7 +69,7 @@ def test_other_staff_identifiable_view_reads_plans_only(client: TestClient) -> N
 
 
 def test_who_reaches_a_plan(client: TestClient) -> None:
-    assert client.get("/plans/P-05").status_code == 404  # Priya's, not Daniel's
+    assert client.get("/plans/P-03?as=Priya%20Raman").status_code == 404  # Daniel's, never shared with her
     assert client.get("/plans/P-05?as=Priya%20Raman").status_code == 200
     assert client.get("/plans/P-99?as=Sam%20Lee").status_code == 404
     assert client.get("/plans/P-01?as=Kenneth%20Lau").status_code == 403  # aggregate view names no one
@@ -77,13 +77,30 @@ def test_who_reaches_a_plan(client: TestClient) -> None:
 
 
 def test_plan_chips_open_the_plan(client: TestClient) -> None:
-    assert 'href="/plans/P-01">Plan · Counselling</a>' in client.get("/plans/").text
-    assert 'href="/plans/P-03">Plan details</a>' in client.get("/students/S-01").text
+    assert 'href="/plans/P-01" aria-label="Plan · Counselling: Clara Tan">Plan · Counselling</a>' in client.get("/plans/").text
+    aiden = client.get("/students/S-01").text
+    assert 'href="/plans/P-03">Plan details</a>' in aiden and ">Stop following up</button>" in aiden
+
+
+def test_a_shared_student_shows_the_grantor_s_plans_read_only(client: TestClient) -> None:
+    """§11.1: the grantor's records for the student, plans included."""
+    hana = client.get("/students/S-08").text
+    assert 'href="/plans/P-05">Priya Raman</a>' in section(hana, "splan-h")
+    assert "You have no records of your own for Hana Rahim to share." in hana
+    plan = client.get("/plans/P-05").text
+    assert "Priya Raman has shared it with you: you see it read-only." in plan
+    assert "Save cadence" not in plan and "‹ Hana Rahim" in plan
+    assert client.get("/students/S-08/share").status_code == 404  # nothing of his own to share
+
+
+def test_the_grantor_sees_who_they_shared_with(client: TestClient) -> None:
+    shared = section(client.get("/students/S-08?as=Priya%20Raman").text, "shared-h")
+    assert '<span class="strong">Daniel Koh</span>' in shared and "Revoke" in shared
 
 
 def test_overview_lists_every_plan_and_the_flagged_students(client: TestClient) -> None:
     sam = client.get("/overview/?as=Sam%20Lee").text
-    assert re.findall(r'href="(/plans/P-\d+)[^"]*"', section(sam, "plans-h")) == ["/plans/P-01", "/plans/P-02", "/plans/P-03", "/plans/P-04", "/plans/P-05"]
+    assert re.findall(r'href="(/plans/P-\d+)\?as=Sam%20Lee"', section(sam, "plans-h")) == ["/plans/P-01", "/plans/P-02", "/plans/P-03", "/plans/P-04", "/plans/P-05"]
     refs = section(sam, "refs-h")
     assert "Elena Park" in refs and "Flagged 27 Oct by Daniel Koh · suggests weekly" in refs
     siti = client.get("/overview/?as=Siti%20Rahman").text
@@ -101,6 +118,10 @@ def test_flag_for_formal_assignment_asks_no_reason(client: TestClient) -> None:
     assert "Bao Nguyen is flagged for senior staff to review" in sent and "You suggested weekly check-ins." in sent
     elena = client.get("/students/S-05").text
     assert "Flagged for formal assignment on 27 Oct by Daniel Koh" in elena and "/students/S-05/refer" not in elena
+    for sid in ("S-05", "S-03"):  # flagged already; on his formal assignment
+        for path in (f"/students/{sid}/refer", f"/students/{sid}/refer/sent"):
+            again = client.get(path, follow_redirects=False)
+            assert (again.status_code, again.headers["location"]) == (303, f"/students/{sid}"), path
 
 
 def test_sharing_lists_grants_and_offers_colleagues(client: TestClient) -> None:
@@ -111,8 +132,11 @@ def test_sharing_lists_grants_and_offers_colleagues(client: TestClient) -> None:
     assert re.findall(r"<option>([^<]+)</option>", form) == ["Priya Raman", "Arjun Nair", "Grace Ho"]  # not himself, not Mei Ling again
     sent = client.get("/students/S-03/share/sent?colleague=Grace%20Ho").text
     assert "Grace Ho can see your records for Clara Tan" in sent
-    back = client.get("/students/S-03/share/sent?colleague=Nobody", follow_redirects=False)
-    assert (back.status_code, back.headers["location"]) == (303, "/students/S-03/share")
+    for colleague in ("Nobody", "Mei%20Ling%20Tan", "Daniel%20Koh"):  # unknown, already shared, himself
+        back = client.get(f"/students/S-03/share/sent?colleague={colleague}", follow_redirects=False)
+        assert (back.status_code, back.headers["location"]) == (303, "/students/S-03/share"), colleague
+    assert client.get("/students/S-09/share").status_code == 404
+    assert client.get("/students/S-09/refer").status_code == 404
 
 
 def test_records_shared_with_the_viewer_show_with_their_owner(client: TestClient) -> None:
@@ -139,3 +163,5 @@ def test_mounted_plan_pages_stay_under_the_mount() -> None:
         assert page.status_code == 200, path
         for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
             assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
+    back = mounted.get("/supportlogs/students/S-03/share/sent?colleague=Nobody", follow_redirects=False)
+    assert back.headers["location"] == "/supportlogs/students/S-03/share"

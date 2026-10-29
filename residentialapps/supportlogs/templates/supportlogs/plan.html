@@ -4,7 +4,8 @@
 {% block title %}Plan{% endblock %}
 {% block content %}
   {% set s = sample.student(p.student) %}
-  <a class="back" href="{{ url('/plans/' if owner else '/overview/') }}{{ as_query }}">‹ {{ "My plans" if owner else "Overview" }}</a>
+  {% set back = '/plans/' if owner else ('/students/' ~ p.student if shared else '/overview/') %}
+  <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "My plans" if owner else (sample.student(p.student).name if shared else "Overview") }}</a>
   {{ sample_title(("Formal assignment" if p.formal else "Follow-up") ~ ": " ~ s.name, me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
@@ -36,25 +37,32 @@
     </div>
     <div class="side">
       <section class="card card-pad muted" aria-labelledby="act-h">
-        <h2 id="act-h">{{ "Change it" if (owner and not p.formal) or senior else "Read only" }}</h2>
+        <h2 id="act-h">{{ "Change it" if (owner and not p.formal) or senior else ("Assigned" if owner else "Read only") }}</h2>
         {% if senior %}
           {% if not p.formal %}
             <p class="sub">Convert to a formal assignment, keeping its history (§8).</p>
             <div class="field-wide"><label for="cv-source">Source</label><select id="cv-source" class="input" disabled>{% for src in sample.ASSIGNMENT_SOURCES %}<option>{{ src }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="cv-cadence">Cadence</label><select id="cv-cadence" class="input" disabled>{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="cv-review">Review on</label><input id="cv-review" class="input" type="date" disabled></div>
-            <div class="field-wide"><label for="cv-instr">Instruction</label><input id="cv-instr" class="input" maxlength="160" disabled></div>
-            <label class="check"><input type="checkbox" disabled> Safety-plan support (Counselling only)</label>
+            <div class="field-wide"><label for="cv-cadence">Cadence</label><select id="cv-cadence" class="input" disabled>{% if p.cadence not in sample.ASSIGNMENT_CADENCES %}<option selected>Choose a cadence</option>{% endif %}{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="cv-review">Review on (optional)</label><input id="cv-review" class="input" type="date" disabled></div>
+            <div class="field-wide"><label for="cv-instr">Instruction (optional)</label><input id="cv-instr" class="input" maxlength="160" disabled aria-describedby="cv-instr-what">
+              <span id="cv-instr-what" class="subtle small">What to do, never why: "weekly check-in, review in four weeks" (§7.5).</span></div>
+            <label class="check"><input type="checkbox" disabled> Safety-plan support</label>
+            <p class="subtle small">Counselling only, and then a cadence and an instruction are required (§5.10).</p>
             <button type="button" class="btn btn-primary gap-above-sm" disabled>Convert to formal assignment</button>
           {% else %}
             <div class="field-wide"><label for="st">Status</label><select id="st" class="input" disabled>{% for st in sample.PLAN_STATUSES %}<option{% if st == p.status %} selected{% endif %}>{{ st }}</option>{% endfor %}</select></div>
-            <button type="button" class="btn btn-secondary" disabled>Save</button>
+            <div class="field-wide"><label for="fc">Cadence</label><select id="fc" class="input" disabled>{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="fr">Review on (optional)</label><input id="fr" class="input" type="date"{% if p.review %} value="{{ p.review.isoformat() }}"{% endif %} disabled></div>
+            <label class="check"><input type="checkbox"{% if p.safety_plan %} checked{% endif %} disabled> Safety-plan support</label>
+            <button type="button" class="btn btn-secondary gap-above-sm" disabled>Save</button>
           {% endif %}
         {% elif owner and not p.formal %}
           <div class="field-wide"><label for="cad">Cadence</label><select id="cad" class="input" disabled>{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
           <div class="btnrow"><button type="button" class="btn btn-secondary" disabled>Save cadence</button><button type="button" class="btn btn-secondary" disabled>Stop following up</button></div>
         {% elif owner %}
           <p class="sub">Assigned by {{ p.assigned_by }}; senior staff change or close it.</p>
+        {% elif shared %}
+          <p class="sub">{{ p.staff }} has shared it with you: you see it read-only.</p>
         {% else %}
           <p class="sub">You see it read-only (Other Staff view).</p>
         {% endif %}

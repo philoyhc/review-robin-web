@@ -23,7 +23,8 @@
 {%- endmacro %}
 
 {% macro kind_chips(p) -%}
-  <a class="chip {{ 'chip-accent' if p.formal else 'chip-mute' }}" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ "Plan · " ~ p.source if p.formal else "Following" }}</a>
+  {% set label = "Plan · " ~ p.source if p.formal else "Following" %}
+  <a class="chip {{ 'chip-accent' if p.formal else 'chip-mute' }}" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}" aria-label="{{ label }}: {{ sample.student(p.student).name }}">{{ label }}</a>
   {%- if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}
 {%- endmacro %}
 

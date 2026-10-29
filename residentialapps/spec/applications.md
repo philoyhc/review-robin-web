@@ -122,8 +122,8 @@ appointment, and RAs never reach it:
 | Log encounter | `/log`, `/log/saved` (the confirmation), `/log/safety` and `/log/safety/raised` (a safety concern and its confirmation) | Frontline authorization (RFs and RSLMs, by default) |
 | Students | `/students/`, `/students/{id}` (the student view, for the viewer's own students and those shared with them), `…/share` and `…/refer` (Share with a colleague; Flag for formal assignment) | Frontline |
 | A safety flag | `/flags/{id}` | Its raiser, and safety-flag recipients; the flags list on Home and Overview, with the unacknowledged count on that tab |
-| My plans | `/plans/`, `/plans/{id}` (a plan: its owner's; any for senior identifiable, who convert a follow-up, and for Other Staff identifiable view, read-only) | Frontline |
-| Overview | `/overview/` | Senior identifiable (the Master and the admin, by default); Other Staff with view, aggregate or identifiable as granted, read-only; safety-flag recipients' flags list here |
+| My plans | `/plans/`, `/plans/{id}` (a plan) | Frontline, their own and those shared with them, read-only; a plan, any, for senior identifiable, who convert a follow-up, and for Other Staff identifiable view, read-only |
+| Overview | `/overview/` | Senior identifiable (the Master and the admin, by default); Other Staff with view, aggregate or identifiable as granted, read-only; safety-flag recipients' flags list here, every plan for identifiable viewers, and the students flagged for formal assignment for senior staff |
 | Consultation check | `/consultation/` | Consultation check |
 | Sys admin | `/sys-admin/` (Access), `…/configuration`, `…/clusters`, `…/audit` | Support Logs sys admins: access over the Staff roster, configuration, the cluster list and the administrative audit log, with no support content or support-activity audit; the super-admin, for the same and to grant Support Logs sys admin |
 

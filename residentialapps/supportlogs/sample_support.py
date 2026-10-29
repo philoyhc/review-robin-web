@@ -454,6 +454,17 @@ def shared_with(staff: str) -> list[PeerGrant]:
     return [g for g in PEER_GRANTS if g.viewer == staff]
 
 
+def shared_plans(staff: str, sid: str) -> list[Plan]:
+    """A colleague's active plans for a student shared with the viewer."""
+    return [p for g in shared_with(staff) if g.student == sid for p in plans_of(g.grantor, sid)]
+
+
+def may_read_plan(staff: str, p: Plan) -> bool:
+    """A plan's owner, or a colleague its owner has shared the student's
+    records with (§11.1)."""
+    return p.staff == staff or any(g.grantor == p.staff and g.student == p.student for g in shared_with(staff))
+
+
 def shared_encounters(staff: str, sid: str) -> list[Encounter]:
     """A colleague's encounters with a student shared with the viewer,
     labelled with that colleague when shown (UI spec screen 5)."""
