@@ -809,20 +809,22 @@ def scope(viewer: str) -> tuple[str, ...]:
     """The Precincts whose RAs a staff member oversees (spec §22; author,
     2026-10-29): the overseers every one; an RF their slots' Precincts, an
     RSLM their Wing's; and wherever the approval chain gives them a
-    decision (a final approver or the Master every one, a delegate the
-    slots of whom they stand in for, an inviter their RAs'). Staff with
+    decision (a final approver, or the Master while appeals are decided,
+    every one; a delegate standing in, the slots of whom they stand in
+    for; an inviter, while appeals are by invitation, their RAs'). Staff with
     none, such as Unit-level staff holding no slot, see no RA Leave."""
     every = tuple(dict.fromkeys(s.precinct for s in sample_data.SLOTS))
-    if viewer in overseers() or viewer in final_approvers() or viewer == APPEAL_DECIDER:
+    if viewer in overseers() or viewer in final_approvers() or (viewer == APPEAL_DECIDER and appeals_decided()):
         return every
     abbrev = {p.name: p.abbrev for p in sample_data.STAFF}.get(viewer)
     held = [s for s in sample_data.SLOTS if viewer in s.staff]
     wings = {s.wing for s in held if abbrev == "RSLM"}
     found = {s.precinct for s in held} | {s.precinct for s in sample_data.SLOTS if s.wing in wings}
     for d in DELEGATES:
-        if d.delegate == viewer and d.active() and POLICY["first"] == "slot":
+        if d.delegate == viewer and d.active() and POLICY["first"] == "slot" and d.acting_for in delegable():
             found |= {s.precinct for s in sample_data.SLOTS if d.acting_for in s.staff}
-    found |= {s.precinct for s in sample_data.SLOTS if any(ra in s.ras for ra in invitable_ras(viewer))}
+    if POLICY["appeals"] == "By invitation":
+        found |= {s.precinct for s in sample_data.SLOTS if any(ra in s.ras for ra in invitable_ras(viewer))}
     return tuple(p for p in every if p in found)
 
 

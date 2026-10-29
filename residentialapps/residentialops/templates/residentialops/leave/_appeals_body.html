@@ -50,7 +50,7 @@
       {% if may_open is defined and not may_open %}
       <section class="card card-pad muted" aria-labelledby="new-h">
         <h2 id="new-h">Opening appeals</h2>
-        <p class="sub">{% if leave.all_inviters() %}Appeals are opened by {{ leave.inviter_label() }} (Leave policy); you are not among them, so this page is read-only for you.{% else %}Leave policy names no one to open appeals.{% endif %}</p>
+        <p class="sub">{% if leave.POLICY.appeals == "Open" %}Appeals are open: every RA may send one, so none is opened for them.{% elif leave.POLICY.appeals == "Off" %}Appeals are off: no new one can be opened; those already made are decided.{% elif leave.all_inviters() %}Appeals are opened by {{ leave.inviter_label() }} (Leave policy); you are not among them, so this page is read-only for you.{% else %}Leave policy names no one to open appeals.{% endif %}</p>
       </section>
       {% else %}
       <section class="card card-pad" aria-labelledby="new-h">

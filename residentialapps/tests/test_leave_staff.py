@@ -131,10 +131,11 @@ def test_decide_shows_the_applicant_s_other_leave_and_precinct_numbers() -> None
     assert ("Willow A 13-25", "4", "2", "0") in rows and len(rows) == 9
 
 
-def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages() -> None:
+def test_the_master_and_the_admin_delegate_open_appeals_from_the_staff_pages(monkeypatch) -> None:
     """Ruled 2026-10-29: as on the admin Appeals page, with the agreer
     preset to the viewer and links into Decide."""
     c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")  # where appeals are opened
     for query, name in ((SAM, "Sam Lee"), (RACHEL, "Rachel Yeo")):
         page = c.get(STAFF + "appeals" + query).text
         assert f"<option selected>{name}</option>" in page and ">Open the appeal</button>" in page
@@ -149,6 +150,7 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
     """Ruled 2026-10-29: chosen as approvers are. The RA's slot's RF opens
     appeals for their own slots' RAs only; named staff for anyone."""
     c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")  # where appeals are opened
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF",))
     assert sample_leave.inviters_for("Chloe Lim") == ("Daniel Koh",)
@@ -167,6 +169,7 @@ def test_who_may_open_an_appeal_follows_the_policy(monkeypatch) -> None:
 
 def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")  # where appeals are opened
     monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Rachel Yeo",))
     rachel = c.get(STAFF + "appeals" + RACHEL).text
@@ -266,3 +269,23 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
     assert len(sample_leave.scope("Hui Min Goh")) == 9
     assert "Nothing awaits you." in c.get(STAFF + "decide?as=Hui%20Min%20Goh").text
+
+
+def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
+    """The cold read of the 2026-10-29 ruling: unticking an overseer takes
+    their view away unless the chain still gives them a decision; an
+    inviter sees their RAs only while appeals are by invitation."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ())
+    monkeypatch.setitem(sample_leave.POLICY, "final_types", ("Master",))
+    assert sample_leave.scope("Rachel Yeo") == ()  # appeals open: inviting gives nothing
+    assert "the fix is in Assignments or Leave policy" in c.get(STAFF + RACHEL).text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    assert len(sample_leave.scope("Rachel Yeo")) == 9  # now she opens appeals for every RA
+    # Under Open, a non-inviter's Appeals page says no one opens appeals.
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    assert "every RA may send one, so none is opened for them" in c.get(STAFF + "appeals").text
+    # An appeal opened from Appeals goes back there, inviter or not.
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
+    page = c.get(STAFF + "decide/L-0105?as=Hui%20Min%20Goh").text
+    assert "‹ Appeals" in page

@@ -6,6 +6,6 @@
   {{ staff_switch(me, leave, here) }}
   <section class="card card-pad narrow">
     <h2>You oversee no RA</h2>
-    <p class="sub">RA Leave shows each staff member the RAs they oversee: the RAs on their slots in Assignments for {{ leave.TERM.label }}, or every RA for the Master and the designated admin (Leave policy). You hold no slot, so there is no leave to show you. If that is wrong, ask a sys admin to check Assignments.</p>
+    <p class="sub">RA Leave shows each staff member the RAs they oversee: the RAs on their slots in Assignments for {{ leave.TERM.label }}; every RA for the Unit-level appointments Leave policy names to oversee them ({{ leave.POLICY.overseers | join(", ") or "none ticked" }}); and the RAs the approval chain gives them a decision on. None of these is yours, so there is no leave to show you. If that is wrong, the fix is in Assignments or Leave policy.</p>
   </section>
 {% endblock %}
