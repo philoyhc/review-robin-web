@@ -536,3 +536,24 @@ def test_an_application_counting_no_days_is_not_submitted(monkeypatch) -> None:
     assert "only on a weekend count no days, and cannot be submitted" in client().get("/ra-leave/apply").text
     monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
     assert "weekends or public holidays count no days" in client().get("/ra-leave/apply").text
+
+
+def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
+    """The cold read of the slot rule: inviters, the Master's appeals and a
+    delegate outside the slots each show as a gap, and say why."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Hui Min Goh",))
+    assert sample_leave.inviter_gaps() == sample_leave.precincts()
+    assert "names Hui Min Goh, but none holds a place in any RA's slot" in c.get(ADMIN + "appeals").text
+    routing = c.get(ADMIN + "routing").text
+    assert ">Opens appeals</th>" in routing
+    assert "9 Precincts where no one may open an appeal" in c.get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Admin",))
+    assert "9 Precincts whose appeals the Master cannot decide" in c.get(ADMIN).text
+    assert "those who oversee every RA (Rachel Yeo) hold one in every slot" in c.get(ADMIN + "routing").text
+    D = sample_leave.Delegate
+    monkeypatch.setattr(sample_leave, "DELEGATES", (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),))
+    assert "Delegate not in slots" in c.get(ADMIN + "routing").text
+    assert "1 Precinct with a delegate outside its slots" in c.get(ADMIN).text

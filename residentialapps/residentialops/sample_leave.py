@@ -175,7 +175,9 @@ def final_approvers() -> tuple[str, ...]:
 
 def in_slots(person: str, precinct: str) -> bool:
     """Whether a person holds a place in a Precinct's slots: on their Staff
-    cell, or as an overseer, in every slot. Only such a person approves,
+    cell, or as an overseer, in every slot. A Precinct's slots share their
+    Staff cell (Assignments; `routes` reads the first), so a place in the
+    Precinct is a place in each RA's slot. Only such a person approves,
     first or final, decides or opens an appeal for its RAs (author,
     2026-10-29)."""
     return person in overseers() or any(person in s.staff for s in sample_data.SLOTS if s.precinct == precinct)
@@ -199,6 +201,10 @@ def final_gap(precinct: str | None = None) -> bool:
 
 def final_gaps() -> tuple[str, ...]:
     return tuple(p for p in precincts() if not final_for(p))
+
+
+def final_precincts(person: str) -> tuple[str, ...]:
+    return tuple(p for p in precincts() if person in final_for(p))
 
 
 def decides_appeals(precinct: str) -> bool:
@@ -579,6 +585,7 @@ class Route:
     delegate: bool
     note: str  # why a delegate stands in on this day, or why no one approves first
     gap: bool = False  # the policy's ticked appointments match no one on these slots
+    unfit: bool = False  # a delegate for its approver holds no place in these slots
 
 
 @dataclass(frozen=True)
@@ -663,7 +670,7 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
         elif gap:
             first, note = "No one", f"no {first_label() or 'ticked appointment'} on its slots"
         found[slot.precinct] = Route(
-            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note, gap
+            slot.precinct, slot.wing, len(slot.ras), rf, rslm, first, bool(standing_in), note, gap, bool(unfit)
         )
     return tuple(found.values())
 
@@ -680,7 +687,8 @@ def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
     route = next(r for r in routes() if r.precinct == application.precinct)
     first = "the first approver" if route.gap else route.first.split(" or ")[0]
     if application.appeal:
-        steps.append(("", f"Sent to {APPEAL_DECIDER} as an extra-leave appeal", ""))
+        decider = APPEAL_DECIDER if decides_appeals(application.precinct) else "the Master (no one holds a place in these slots to decide it)"
+        steps.append(("", f"Sent to {decider} as an extra-leave appeal", ""))
         if "staff" in DECISIONS.get(application.id, {}):
             steps.append(_step(application, "staff", f"Remarks from {route.rf}, RF"))
         if application.stage in ("Approved", "Rejected"):
@@ -776,8 +784,9 @@ def staff_role(name: str) -> str:
     first = [r.precinct for r in routes() if not r.gap and name in r.first.split(" or ")]
     if first and POLICY["first"] == "slot":
         does.append("first approver for " + ", ".join(first))
-    if any(name in final_for(p) for p in precincts()):
-        does.append("final approver")
+    if final_precincts(name):
+        mine = final_precincts(name)
+        does.append("final approver" + ("" if len(mine) == len(precincts()) else " for " + ", ".join(mine)))
     if name == APPEAL_DECIDER and appeals_decided() and any(decides_appeals(p) for p in precincts()):
         does.append("decides appeals")
     if POLICY["appeals"] == "By invitation" and invitable_ras(name):
@@ -865,10 +874,9 @@ def scope(viewer: str) -> tuple[str, ...]:
 
 
 def can_open(viewer: str, application: Application) -> bool:
-    """Decide opens an application in the viewer's Precinct-leave scope, or
-    one that is (or was) theirs to decide, wherever it is: a delegate's or a
-    named final approver's (spec §13-§15), or an RA's they may open an
-    appeal for."""
+    """Decide opens an application in the viewer's scope, or one that is
+    (or was) theirs to decide or open an appeal for; every such role is
+    confined to the slots the viewer holds a place in, so these agree."""
     return (
         application.precinct in scope(viewer)
         or application.ra in invitable_ras(viewer)
@@ -973,6 +981,23 @@ def inviters_for(ra: str) -> tuple[str, ...]:
     else:
         named = tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
     return tuple(n for n in named if n in slot.staff or n in overseers())
+
+
+def inviters_in(precinct: str) -> tuple[str, ...]:
+    """Who may open an appeal for a Precinct's RAs."""
+    return tuple(dict.fromkeys(n for s in sample_data.SLOTS if s.precinct == precinct for ra in s.ras for n in inviters_for(ra)))
+
+
+def inviter_gaps() -> tuple[str, ...]:
+    """The Precincts whose RAs no one may open an appeal for, while appeals
+    are by invitation."""
+    return tuple(p for p in precincts() if not inviters_in(p)) if POLICY["appeals"] == "By invitation" else ()
+
+
+def appeal_gaps() -> tuple[str, ...]:
+    """The Precincts whose appeals the Master cannot decide, holding no
+    place in their slots, while the Master decides appeals."""
+    return tuple(p for p in precincts() if not decides_appeals(p)) if appeals_decided() else ()
 
 
 def all_inviters() -> tuple[str, ...]:

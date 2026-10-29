@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ leave.final_label() or "no final approver set" }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} given only by those holding a place in the RA's slot: the Master and the designated admin hold one in every slot (Leave policy).</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ leave.final_label() or "no final approver set" }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} given only by those holding a place in the RA's slot; those who oversee every RA ({{ leave.overseers() | join(", ") or "no one, on Leave policy" }}) hold one in every slot.</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">
@@ -11,7 +11,7 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.appeals_decided() %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
+        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.appeals_decided() %}<th scope="col">Appeals</th>{% endif %}{% if leave.POLICY.appeals == "By invitation" %}<th scope="col">Opens appeals</th>{% endif %}</tr></thead>
         <tbody>
           {% for route in routes %}
             <tr>
@@ -20,9 +20,10 @@
               <td class="num">{{ route.ras }}</td>
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
-              <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
+              <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% elif route.unfit %} <span class="chip chip-warn">Delegate not in slots</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
               <td>{% if leave.final_gap(route.precinct) %}No one <span class="chip chip-warn">Gap</span><div class="subtle">{{ "no final approver is set on Policy" if not leave.final_approvers() else "none named holds a place in its slots" }}</div>{% else %}{{ leave.final_for(route.precinct) | join(" or ") }}{% endif %}</td>
               {% if leave.appeals_decided() %}<td class="nowrap">{% if leave.decides_appeals(route.precinct) %}{{ leave.APPEAL_DECIDER }}{% else %}No one <span class="chip chip-warn">Gap</span>{% endif %}</td>{% endif %}
+              {% if leave.POLICY.appeals == "By invitation" %}<td>{% set inv = leave.inviters_in(route.precinct) %}{% if inv %}{{ inv | join(" or ") }}{% else %}No one <span class="chip chip-warn">Gap</span>{% endif %}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>

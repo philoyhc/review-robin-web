@@ -50,12 +50,12 @@
       {% if may_open is defined and not may_open %}
       <section class="card card-pad muted" aria-labelledby="new-h">
         <h2 id="new-h">Opening appeals</h2>
-        <p class="sub">{% if leave.POLICY.appeals == "Open" %}Appeals are open: every RA may send one, so none is opened for them.{% elif leave.POLICY.appeals == "Off" %}Appeals are off: no new one can be opened; those already made are decided.{% elif leave.all_inviters() %}Appeals are opened by {{ leave.inviter_label() }} (Leave policy); you are not among them, so this page is read-only for you.{% else %}Leave policy names no one to open appeals.{% endif %}</p>
+        <p class="sub">{% if leave.POLICY.appeals == "Open" %}Appeals are open: every RA may send one, so none is opened for them.{% elif leave.POLICY.appeals == "Off" %}Appeals are off: no new one can be opened; those already made are decided.{% elif leave.all_inviters() %}Appeals are opened by {{ leave.inviter_label() }} (Leave policy); you are not among them, so this page is read-only for you.{% else %}{% if leave.inviter_label() %}Leave policy names {{ leave.inviter_label() }}, but none holds a place in any RA's slot, so no one may open an appeal.{% else %}Leave policy names no one to open appeals.{% endif %}{% endif %}</p>
       </section>
       {% else %}
       <section class="card card-pad" aria-labelledby="new-h">
         <h2 id="new-h">Open an appeal for an RA</h2>
-        {% if agreers %}<p class="sub">After {{ leave.inviter_label() }} has agreed in principle (Leave policy). Each may open appeals only for the RAs the policy gives them.</p>{% else %}<p class="sub">No one may open an appeal: Leave policy names no one for it.</p>{% endif %}
+        {% if agreers %}<p class="sub">After {{ leave.inviter_label() }} has agreed in principle (Leave policy). Each may open appeals only for the RAs the policy gives them.</p>{% else %}<p class="sub">{% if leave.inviter_label() %}No one may open an appeal: Leave policy names {{ leave.inviter_label() }}, but none holds a place in any RA's slot.{% else %}No one may open an appeal: Leave policy names no one for it.{% endif %}</p>{% endif %}
         <div class="field-wide"><label for="inv-ra">RA</label>
           <input id="inv-ra" class="input" type="text" list="ra-names" placeholder="Start typing a name" disabled>
           <datalist id="ra-names">{% for name in ra_choices %}<option value="{{ name }}"></option>{% endfor %}</datalist></div>
