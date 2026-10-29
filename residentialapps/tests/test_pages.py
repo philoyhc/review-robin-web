@@ -191,11 +191,11 @@ def test_the_staff_roster_shows_no_access() -> None:
     assert "<h1>Staff roster</h1>" in page.text
     assert "· 15 people, 14 linked" in page.text
     headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
-    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in"]
+    assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Oversight", "Sign-in"]
     assert "Not yet signed in</span>" in page.text
     assert "Support Logs" not in page.text and "Team Viewer" not in page.text
     assert '<a href="/sys-admin/">Sys admin</a> page' in page.text
-    assert 'colspan="7"' in TestClient(ops_app()).get("/rosters/staff?stage=slots").text
+    assert 'colspan="8"' in TestClient(ops_app()).get("/rosters/staff?stage=slots").text
     client = TestClient(ops_app())
     assert "Team Viewer" not in client.get("/sys-admin/").text  # no such grant to audit
     person = client.get(f"/rosters/people/{sample_data.person_id_of('grace.ho@example.edu')}").text
@@ -344,7 +344,11 @@ def test_an_ra_s_one_slot_and_no_slots_section_without_one() -> None:
     assert "in a Staff or RA cell, for AY2026-2027, Term 1." in chloe  # the term the pills are for
     assert "A0230000X" in chloe and "LIM CHLOE" in chloe  # her roster row
     sam = client.get(f"/rosters/people/{sample_data.person_id_of('sam.lee@example.edu')}").text
-    assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in sam
+    # The Master is in no Staff cell, but in every slot (ruled 2026-10-29).
+    assert '<span class="pill-derived">Every slot</span>' in sam and "In every slot for AY2026-2027, Term 1" in sam
+    hui = client.get(f"/rosters/people/{sample_data.person_id_of('huimin.goh@example.edu')}").text
+    assert "<h3 class=\"gap-above-sm\">Slots</h3>" not in hui  # in no slot at all
+    assert sample_data.oversight("Daniel Koh", sample_data.TERMS[0]) == "None"  # a term with no assignments
 
 
 def test_the_terms_page_is_a_detour_with_its_own_csv() -> None:
@@ -477,3 +481,21 @@ def test_assignments_sets_who_is_in_every_slot(monkeypatch) -> None:
     assert "Not open yet." in gated and "Sam Lee" not in gated and " checked" not in gated
     page = client.get("/rosters/assignments").text
     assert page.index("Warning:") < page.index('id="every-h"')  # page-level notices first
+
+
+def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None:
+    """Ruled 2026-10-29: the staff in every slot show as pills under each
+    slot's Staff cell; the Staff roster's Oversight column reads every
+    slot, the slots a person is in, or None."""
+    client = TestClient(ops_app())
+    page = client.get("/rosters/assignments").text
+    table = page.split('id="slots-h"')[1]
+    assert table.count('<span class="visually-hidden">In every slot: </span>') == len(sample_data.SLOTS)
+    assert '<span class="pill-derived">Sam Lee</span><span class="pill-derived">Rachel Yeo</span>' in table
+    assert "In every slot: </span>" not in client.get("/rosters/assignments?stage=slots").text
+    roster = client.get("/rosters/staff").text
+    assert sample_data.oversight("Sam Lee", sample_data.CURRENT_TERM) == "Every slot"
+    assert sample_data.oversight("Daniel Koh", sample_data.CURRENT_TERM) == "3 slots"
+    assert sample_data.oversight("Hui Min Goh", sample_data.CURRENT_TERM) == "None"
+    assert '<span class="chip chip-mute">None</span>' in roster and '<span class="pill-derived">Every slot</span>' in roster
+    assert roster.count('<span class="chip chip-mute">None</span>') == 1  # Hui Min Goh alone

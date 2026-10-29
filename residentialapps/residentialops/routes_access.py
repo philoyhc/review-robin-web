@@ -31,6 +31,7 @@ def person(request: Request, person_id: str) -> Response:
         tabs=ROSTER_TABS,
         person=found,
         term=sample_data.CURRENT_TERM,  # the slots shown are this term's
+        every_slot=sample_data.every_slot_people(sample_data.CURRENT_TERM),
         back=ROSTER_BACK[found.roster],
     )
 
