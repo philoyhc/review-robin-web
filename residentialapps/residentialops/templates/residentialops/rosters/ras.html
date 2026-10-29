@@ -20,12 +20,12 @@
     <div class="card-head">
       <h2 id="ra-h">RA roster {% if rosters_filled %}<span class="count">· {{ count[0] }} RAs, {{ count[1] }} linked</span>{% endif %}</h2>
       <p class="sub">A row is a student and one student appointment, with its dates. {{ level_name[3] }} comes from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }}: the slot each RA serves, or none.</p>
-      {% if rosters_filled %}{{ column_chips("ra-table", [("email", "Email"), ("appointment", "Appointment"), ("abbrev", "Abbrev"), ("dates", "From – to"), ("slot", level_name[3]), ("signin", "Sign-in")]) }}{% endif %}
+      {% if rosters_filled %}{{ column_chips("ra-table", [("email", "Email"), ("appointment", "Appointment"), ("abbrev", "Abbrev"), ("dates", "From – to"), ("neighborhood", level_name[3]), ("signin", "Sign-in")]) }}{% endif %}
     </div>
     <div class="table-wrap">
       <table class="roster" id="ra-table" data-col-store="residentialops-ra-table-columns">
         <thead>
-          <tr>{{ select_all('RAs') }}{{ sort_th("name", "Name") }}{{ sort_th("email", "Email") }}{{ sort_th("appointment", "Appointment") }}{{ sort_th("abbrev", "Abbrev") }}{{ sort_th("dates", "From – to") }}{{ sort_th("slot", level_name[3]) }}{{ sort_th("signin", "Sign-in") }}</tr>
+          <tr>{{ select_all('RAs') }}{{ sort_th("name", "Name") }}{{ sort_th("email", "Email") }}{{ sort_th("appointment", "Appointment") }}{{ sort_th("abbrev", "Abbrev") }}{{ sort_th("dates", "From – to") }}{{ sort_th("neighborhood", level_name[3]) }}{{ sort_th("signin", "Sign-in") }}</tr>
         </thead>
         <tbody>
           {% if not rosters_filled %}<tr><td colspan="8" class="subtle">No RAs yet. Add an RA, or upload the RA roster CSV below.</td></tr>{% endif %}
@@ -38,7 +38,7 @@
               <td data-col="abbrev">{{ ra.abbrev }}</td>
               <td class="nowrap" data-col="dates">{{ ra.dates }}</td>
               {% set held = sample.assignment(ra.name, sample.CURRENT_TERM) %}
-              <td data-col="slot" data-sort-value="{{ held | join('; ') }}">{% if held %}<span class="pills">{% for name in held %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="chip chip-mute">None</span>{% endif %}</td>
+              <td data-col="neighborhood" data-sort-value="{{ held | join('; ') }}">{% if held %}<span class="pills">{% for name in held %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="chip chip-mute">None</span>{% endif %}</td>
               <td data-col="signin">{% if ra.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
           {% endfor %}
