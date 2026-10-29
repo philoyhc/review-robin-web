@@ -70,10 +70,17 @@ def test_unset_mounts_rrw_and_both() -> None:
     assert order == sorted(order)
 
 
-@pytest.mark.parametrize("name", ["residentialops", "supportlogs"])
-def test_bare_mount_has_no_page_yet(name: str) -> None:
-    host, _ = host_with((name,))
-    assert TestClient(host).get(f"{REGISTRY[name].path}/").status_code == 404
+def test_bare_mount_has_no_page_yet() -> None:
+    host, _ = host_with(("supportlogs",))
+    assert TestClient(host).get(f"{REGISTRY['supportlogs'].path}/").status_code == 404
+
+
+def test_residential_operations_has_its_landing_at_the_mount() -> None:
+    """Segment 1C item 1: the landing chooses an application; a placeholder,
+    so it answers on a local run only, like the other screens."""
+    host, _ = host_with(("residentialops",))
+    page = TestClient(host).get(f"{REGISTRY['residentialops'].path}/")
+    assert page.status_code == 200 and "<h1>Residential Operations</h1>" in page.text
 
 
 def test_health_names_resolve_into_their_own_mount() -> None:

@@ -220,6 +220,13 @@
       .tile:hover { border-color: var(--accent); }
       .tile-n { font-size: 28px; font-weight: 700; line-height: 1.1; }
       .tile-l { font-size: 13px; color: var(--text-subtle); }
+      /* The landing's applications: one large target each, phone first. */
+      ul.apps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+      .app { display: flex; flex-direction: column; gap: 4px; min-height: 88px; padding: 16px 18px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-card); color: var(--text-body); text-decoration: none; }
+      a.app:hover { border-color: var(--accent); }
+      .app-name { font-size: 18px; font-weight: 700; }
+      .app-what { font-size: 14px; color: var(--text-subtle); }
+      .app-off { opacity: 0.6; }
       .field-wide { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 14px; }
       .field-wide textarea { width: 100%; max-width: 640px; font: inherit; }
       p.small { font-size: 12px; margin: 4px 0 0; }

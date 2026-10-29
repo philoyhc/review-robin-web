@@ -20,7 +20,7 @@ APP_NAME = "Residential Operations"
 
 # The switcher's areas; a path of None is an area not built yet.
 AREAS: tuple[dict[str, str | None], ...] = (
-    {"label": "Home", "path": None},
+    {"label": "Home", "path": "/"},
     {"label": "RA Leave", "path": "/ra-leave/admin/"},  # the admin pages first (1C item 1)
     {"label": "RA Events", "path": None},
     {"label": "Rosters", "path": "/rosters/"},
