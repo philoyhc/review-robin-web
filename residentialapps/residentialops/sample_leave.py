@@ -492,6 +492,41 @@ def clashes(start: date | None = None, end: date | None = None) -> tuple[tuple[s
     )
 
 
+@dataclass(frozen=True)
+class Email:
+    """An outbox row (spec §17.2): written first, then sent as the actor; a
+    failed send stays here, and the actor or a Leave admin resends it."""
+    application: str
+    sender: str  # the actor, whose account sends it
+    to: str
+    about: str
+    at: str
+    status: str  # Sent, Failed
+    why: str = ""
+
+
+OUTBOX: tuple[Email, ...] = (
+    Email("L-0101", "Chloe Lim", "Ethan Wong", "Cover asked", "27 Oct, 09:12", "Sent"),
+    Email("L-0101", "Ethan Wong", "Chloe Lim", "Cover confirmed", "27 Oct, 11:30", "Sent"),
+    Email("L-0101", "Chloe Lim", "Daniel Koh", "Application submitted", "27 Oct, 09:12", "Failed",
+          "Microsoft 365 did not accept the send: the sign-in had expired"),
+    Email("L-0115", "Daniel Koh", "Hana Ito", "First approval", "21 Oct, 18:40", "Failed",
+          "Microsoft 365 did not accept the send: the sign-in had expired"),
+    Email("L-0116", "Rachel Yeo", "Kai Ng", "Approved leave cancelled", "20 Oct, 14:03", "Failed",
+          "Microsoft 365 did not accept the send: no mailbox for the address"),
+    Email("L-0116", "Rachel Yeo", "Isaac Goh", "Cover released", "20 Oct, 14:03", "Sent"),
+)
+
+
+def emails_for(application: Application, sender: str | None = None) -> tuple[Email, ...]:
+    """An application's outbox rows, or only those one actor sent."""
+    return tuple(e for e in OUTBOX if e.application == application.id and sender in (None, e.sender))
+
+
+def failed_emails() -> tuple[Email, ...]:
+    return tuple(e for e in OUTBOX if e.status == "Failed")
+
+
 def cover_while_away() -> tuple[Application, ...]:
     """Applications whose cover is away themselves on overlapping dates."""
     live = [a for a in APPLICATIONS if a.stage in ("Approved", *OPEN_STAGES)]

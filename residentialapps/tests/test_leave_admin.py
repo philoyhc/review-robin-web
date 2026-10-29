@@ -558,3 +558,26 @@ def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
     monkeypatch.setattr(sample_leave, "DELEGATES", (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),))
     assert "Delegate not in slots" in c.get(ADMIN + "routing").text
     assert "1 Precinct with a delegate outside its slots" in c.get(ADMIN).text
+
+
+def test_failed_emails_stay_visible_and_can_be_resent() -> None:
+    """Spec §17.2 (author, 2026-10-29): a failed send stays in the outbox,
+    listed on the Leave dashboard and its application, and the actor or a
+    Leave admin resends it; nothing retries on its own."""
+    c = TestClient(ops_app())
+    failed = sample_leave.failed_emails()
+    assert {e.application for e in failed} == {"L-0101", "L-0115", "L-0116"}
+    board = c.get("/ra-leave/admin/").text.split('id="unsent-h"')[1].split("</section>")[0]
+    assert re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', board) == [e.application for e in failed]
+    assert board.count(">Resend</button>") == len(failed)
+    assert 'disabled aria-label="Resend L-0116 approved leave cancelled to Kai Ng">' in board
+    # The admin sees every email on the application, sent or not.
+    page = c.get("/ra-leave/admin/applications/L-0116").text.split('id="emails-h"')[1].split("</section>")[0]
+    assert page.count('<span class="chip chip-ok">Sent</span>') == 1  # Cover released
+    assert page.count('<span class="chip chip-warn">Not sent</span>') == 1
+    assert ">Resend to Kai Ng</button>" in page and "no mailbox for the address" in page
+    # An admin's resend goes from their own account, naming the original
+    # sender (ruled 2026-10-29).
+    assert "it goes from the admin's account, naming its original sender" in c.get("/ra-leave/admin/applications/L-0116").text
+    assert "from your own account, naming its original sender" in c.get("/ra-leave/admin/").text
+    assert 'id="emails-h"' not in c.get("/ra-leave/admin/applications/L-0102").text  # no emails, no card

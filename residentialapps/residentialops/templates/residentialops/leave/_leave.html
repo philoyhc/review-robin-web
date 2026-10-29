@@ -8,6 +8,20 @@
   <span class="chip {{ {'Confirmed': 'chip-ok', 'Declined': 'chip-warn'}.get(status, 'chip-mute') }}">{{ status }}</span>
 {%- endmacro %}
 
+{# An application's outbox rows (spec §17.2): each email with its status,
+   a failed one with why and Resend; there is no background retry. #}
+{% macro email_items(emails) -%}
+  <ul class="items">
+    {% for e in emails %}
+      <li>
+        <div class="item-head"><span class="strong">{{ e.about }} to {{ e.to }}</span><span class="chip {{ 'chip-ok' if e.status == 'Sent' else 'chip-warn' }}">{{ "Sent" if e.status == "Sent" else "Not sent" }}</span></div>
+        <div class="subtle">From {{ e.sender }}, {{ e.at }}{% if e.why %}. {{ e.why }}{% endif %}</div>
+        {% if e.status != "Sent" %}<button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Resend {{ e.about | lower }} to {{ e.to }}">Resend to {{ e.to }}</button>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{%- endmacro %}
+
 {# The sample banner's period line, on every RA Leave page; an RA page adds
    whom it is viewed as. #}
 {% macro title(heading, leave, extra="") -%}
