@@ -50,7 +50,7 @@ def test_each_viewer_s_queue_is_the_decision_theirs_to_make() -> None:
     assert ids(c.get(STAFF + "decide" + SAM).text, "queue-h") == ["L-0105"]
     home = c.get(STAFF).text
     tiles = re.findall(r'<span class="tile-n">(\d+)</span><span class="tile-l">([^<]*)', home)
-    assert tiles == [("3", "Awaiting my decision"), ("2", "Of those, waiting on cover"), ("1", "Decided")]
+    assert tiles == [("3", "Awaiting my decision"), ("2", "Of those, waiting on cover"), ("2", "Decided")]
     waiting = c.get(STAFF + "decide?cover=waiting").text
     assert ids(waiting, "queue-h") == ["L-0109", "L-0114"]
     assert 'href="/ra-leave/staff/decide?as=Sam%20Lee&amp;cover=waiting"' in c.get(STAFF + SAM).text
@@ -86,9 +86,9 @@ def test_a_staff_member_sees_only_their_scope() -> None:
 
 def test_decided_lists_the_viewer_s_own_decisions() -> None:
     c = client()
-    assert ids(c.get(STAFF + "decided").text, "dec-h") == ["L-0115"]
+    assert ids(c.get(STAFF + "decided").text, "dec-h") == ["L-0115", "L-0117"]
     rachel = c.get(STAFF + "decided" + RACHEL).text
-    assert len(ids(rachel, "dec-h")) == 6 and "Final approval: Approved" in rachel
+    assert len(ids(rachel, "dec-h")) == 8 and "Final approval: Approved" in rachel
     assert "None yet." in c.get(STAFF + "decided" + SAM).text
 
 

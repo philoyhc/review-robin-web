@@ -1,7 +1,7 @@
 {# RA Leave's shared pieces: a stage or cover status as a chip, never
    color alone (`residentialapps/spec/residentialops_ui.md` §3). #}
 {% macro stage_chip(stage) -%}
-  <span class="chip {{ {'Approved': 'chip-ok', 'Rejected': 'chip-mute', 'Withdrawn': 'chip-mute', 'Appeal to the Master': 'chip-accent'}.get(stage, 'chip-info') }}">{{ stage }}</span>
+  <span class="chip {{ {'Approved': 'chip-ok', 'Rejected': 'chip-mute', 'Withdrawn': 'chip-mute', 'Cancelled': 'chip-mute', 'Appeal to the Master': 'chip-accent'}.get(stage, 'chip-info') }}">{{ stage }}</span>
 {%- endmacro %}
 
 {% macro cover_chip(status) -%}
@@ -22,11 +22,18 @@
   <span class="chip chip-info">Viewing as {{ me }}</span>
 {%- endmacro %}
 
+{# An application's timeline steps: when, what, and the remarks given
+   (spec §14, §15, §19). #}
+{% macro timeline_items(steps) -%}
+  {% for when, what, remarks in steps %}<li>{% if when %}<span class="subtle">{{ when }}</span> · {% endif %}{{ what }}{% if remarks %}<div class="subtle">“{{ remarks }}”</div>{% endif %}</li>{% endfor %}
+{%- endmacro %}
+
 {# One application as a phone-width list item, linked to its detail. #}
 {% macro app_item(a, leave) -%}
   <li>
     <div class="item-head"><a class="strong" href="{{ url('/ra-leave/applications/' ~ a.id) }}">{{ a.dates }}</a>{{ stage_chip(a.stage) }}</div>
     <div class="subtle">{{ a.leave_type }}{% if a.appeal %} · extra leave{% endif %} · {{ a.days }} day{{ "s" if a.days != 1 }} · cover {{ a.cover }} {{ cover_chip(a.cover_status) }} · sent {{ leave.short_date(a.submitted) }}</div>
+    {% for when, what, remarks in leave.history_steps(a) %}<div class="subtle">{{ what }}{% if when %}, {{ when }}{% endif %}{% if remarks %}: “{{ remarks }}”{% endif %}</div>{% endfor %}
   </li>
 {%- endmacro %}
 

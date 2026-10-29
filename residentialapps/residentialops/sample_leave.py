@@ -186,6 +186,7 @@ STAGES = (
     "Approved",
     "Rejected",
     "Withdrawn",
+    "Cancelled",  # approved, then cancelled by an admin (spec §30, §21.4)
 )
 OPEN_STAGES = STAGES[:3]
 OVERDUE_DAYS = 3  # a pending application older than this is flagged
@@ -199,10 +200,16 @@ class Application:
     start: date
     end: date
     cover: str
-    cover_status: str  # Confirmed, Awaiting, Declined
+    cover_recorded: str  # Confirmed, Awaiting, Declined; `cover_status` reads it
     recorded: str  # the stage as recorded; `stage` reads it under today's policy
     submitted: date
     remarks: str = ""
+
+    @property
+    def cover_status(self) -> str:
+        """The cover's status, kept apart from the stage (spec §30): an
+        application withdrawn or cancelled releases its cover."""
+        return "Cancelled" if self.recorded in ("Withdrawn", "Cancelled") else self.cover_recorded
 
     @property
     def stage(self) -> str:
@@ -278,6 +285,9 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             # and has agreed to cover another.
             ("Ethan Wong", "Personal leave", _d("2026-12-04"), _d("2026-12-06"), "Chloe Lim", "Awaiting", "Pending first approval", _d("2026-10-27")),
             ("Hana Ito", "Personal leave", _d("2026-12-14"), _d("2026-12-15"), "Chloe Lim", "Confirmed", "Approved", _d("2026-10-20")),
+            ("Kai Ng", "Personal leave", _d("2026-11-04"), _d("2026-11-05"), "Isaac Goh", "Confirmed", "Cancelled", _d("2026-10-08")),
+            ("Chloe Lim", "Official leave", _d("2026-09-25"), _d("2026-09-25"), "Hana Ito", "Confirmed", "Approved", _d("2026-09-14"),
+             "Representing the hall at the inter-hall games."),
         ),
         start=101,
     )
@@ -285,6 +295,47 @@ APPLICATIONS: tuple[Application, ...] = tuple(
 
 
 GRANTED_APPEALS: frozenset[str] = frozenset()  # none granted yet in the sample
+
+# The sample's record of each decision: its date and remarks, by step
+# (spec §14, §15, §19). Who decided is read from today's chain in
+# `timeline`; a wired record keeps the person too.
+DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
+    "L-0103": {"first": (_d("2026-10-24"), "Cover agreed; the Precinct is fully staffed that weekend.")},
+    "L-0105": {"staff": (_d("2026-10-26"), "Gwen has taken extra duty nights this term; I support the appeal.")},
+    "L-0106": {"first": (_d("2026-10-13"), ""), "final": (_d("2026-10-14"), "")},
+    "L-0107": {"first": (_d("2026-10-15"), ""), "final": (_d("2026-10-16"), "")},
+    "L-0108": {"first": (_d("2026-10-16"), ""), "final": (_d("2026-10-19"), "Two of the Precinct are away on the 29th; cover is key.")},
+    "L-0110": {"rejected": (_d("2026-10-05"), "Clashes with the Precinct's orientation duties that weekend.")},
+    "L-0111": {"withdrawn": (_d("2026-10-09"), "")},
+    "L-0112": {"first": (_d("2026-08-06"), ""), "final": (_d("2026-08-07"), "")},
+    "L-0113": {"first": (_d("2026-09-11"), ""), "final": (_d("2026-09-14"), "")},
+    "L-0115": {"first": (_d("2026-10-21"), "Fine."), "final": (_d("2026-10-22"), "")},
+    "L-0116": {
+        "first": (_d("2026-10-09"), ""), "final": (_d("2026-10-12"), ""),
+        "cancelled": (_d("2026-10-20"), "Kai Ng is leading the Precinct's November event; cancelled at his request."),
+    },
+    "L-0117": {"first": (_d("2026-09-15"), "Good luck at the games."), "final": (_d("2026-09-16"), "")},
+}
+CANCELLED_BY = "Rachel Yeo"  # the sample's Leave admin
+
+
+def decision(application: "Application", step: str) -> tuple[str, str]:
+    """A recorded step's date, as shown, and remarks; blank when the sample
+    keeps no record of it."""
+    when, remarks = DECISIONS.get(application.id, {}).get(step, (None, ""))
+    return (short_date(when) if when else "", remarks)
+
+
+def _step(application: "Application", step: str, what: str) -> tuple[str, str, str]:
+    when, remarks = decision(application, step)
+    return (when, what, remarks)
+
+
+def history_steps(application: "Application") -> tuple[tuple[str, str, str], ...]:
+    """The decisions and closing actions on an application, as its timeline
+    shows them under today's policy, for a history item (spec §19): each
+    with its date and remarks."""
+    return tuple(s for s in timeline(application) if not s[1].startswith(("Submitted", "Cover ", "Sent to")))
 
 
 def by_id(application_id: str) -> Application | None:
@@ -505,30 +556,36 @@ def routes(day: date | None = None) -> tuple[Route, ...]:
     return tuple(found.values())
 
 
-def timeline(application: Application) -> tuple[tuple[str, str], ...]:
-    """The application's steps so far, as (when, what)."""
+def timeline(application: Application) -> tuple[tuple[str, str, str], ...]:
+    """The application's steps so far, as (when, what, remarks)."""
     submitted = short_date(application.submitted)
-    steps = [(submitted, f"Submitted by {application.ra}")]
-    if application.cover_status == "Confirmed":
-        steps.append((submitted, f"Cover confirmed by {application.cover}"))
-    elif application.cover_status == "Declined":
-        steps.append((submitted, f"Cover declined by {application.cover}"))
+    steps = [(submitted, f"Submitted by {application.ra}", "")]
+    if application.cover_recorded == "Confirmed":
+        steps.append((submitted, f"Cover confirmed by {application.cover}", ""))
+    elif application.cover_recorded == "Declined":
+        steps.append((submitted, f"Cover declined by {application.cover}", ""))
     # The sample reads today's chain; a wired timeline records who decided.
     route = next(r for r in routes() if r.precinct == application.precinct)
     first = "the first approver" if route.gap else route.first.split(" or ")[0]
     if application.appeal:
-        steps.append(("", f"Sent to {APPEAL_DECIDER} as an extra-leave appeal"))
-        if application.stage == "Approved":
-            steps.append(("", f"Granted by {APPEAL_DECIDER}"))
+        steps.append(("", f"Sent to {APPEAL_DECIDER} as an extra-leave appeal", ""))
+        if "staff" in DECISIONS.get(application.id, {}):
+            steps.append(_step(application, "staff", f"Remarks from {route.rf}, RF"))
+        if application.stage in ("Approved", "Rejected"):
+            verb = "Granted" if application.stage == "Approved" else "Rejected"
+            steps.append(_step(application, "appeal", f"{verb} by {APPEAL_DECIDER}"))
         return tuple(steps)
-    if application.stage in ("Pending final approval", "Approved") and POLICY["first"] == "slot":
-        steps.append(("", f"First approval by {first}"))
-    if application.stage == "Approved":
-        steps.append(("", f"Final approval by {final_decider()}"))
+    if application.stage in ("Pending final approval", "Approved", "Cancelled") and POLICY["first"] == "slot":
+        steps.append(_step(application, "first", f"First approval by {first}"))
+    if application.stage in ("Approved", "Cancelled"):
+        steps.append(_step(application, "final", f"Final approval by {final_decider()}"))
     if application.stage == "Rejected":
-        steps.append(("", f"Rejected by {first if POLICY['first'] == 'slot' else final_decider()}"))
+        who = first if POLICY["first"] == "slot" else final_decider()
+        steps.append(_step(application, "rejected", f"Rejected by {who}"))
     if application.stage == "Withdrawn":
-        steps.append(("", f"Withdrawn by {application.ra}"))
+        steps.append(_step(application, "withdrawn", f"Withdrawn by {application.ra}"))
+    if application.stage == "Cancelled":
+        steps.append(_step(application, "cancelled", f"Cancelled by {CANCELLED_BY}, Residential Admin"))
     return tuple(steps)
 
 
@@ -564,7 +621,7 @@ def confirmation_needed(application: Application) -> bool:
 def cover_asked(ra: str = VIEWER) -> dict[str, tuple[Application, ...]]:
     """Where an RA is named as cover (spec §23): to answer, covering now or
     to come (agreed, or named where no answer is owed), and the rest."""
-    named = [a for a in APPLICATIONS if a.cover == ra and a.stage not in ("Rejected", "Withdrawn")]
+    named = [a for a in APPLICATIONS if a.cover == ra and a.stage not in ("Rejected", "Withdrawn", "Cancelled")]
     answer = tuple(
         a for a in named if a.cover_status == "Awaiting" and a.stage in OPEN_STAGES and confirmation_needed(a)
     )
@@ -658,13 +715,13 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
             if viewer == APPEAL_DECIDER and a.stage in ("Approved", "Rejected"):
                 found.append((a, "Appeal", a.stage))
             continue
-        if a.stage in ("Pending final approval", "Approved") and first_decider_of(a) == viewer:
+        if a.stage in ("Pending final approval", "Approved", "Cancelled") and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Approved"))
         if a.stage == "Rejected" and first_decider_of(a) == viewer:
             found.append((a, "First approval", "Rejected"))
         if a.stage == "Rejected" and POLICY["first"] == "none" and final_decider() == viewer:
             found.append((a, "Final approval", "Rejected"))
-        if a.stage == "Approved" and final_decider() == viewer:
+        if a.stage in ("Approved", "Cancelled") and final_decider() == viewer:
             found.append((a, "Final approval", "Approved"))
     return tuple(sorted(found, key=lambda t: t[0].submitted, reverse=True))
 

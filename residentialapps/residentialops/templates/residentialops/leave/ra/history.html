@@ -3,7 +3,7 @@
 {% block title %}My history{% endblock %}
 {% block content %}
   {{ title("My history", leave, viewing(me)) }}
-  <p class="sub">Every application you have made, newest first, ordinary and extra leave alike (spec §19). Rejected and withdrawn ones stay, and never count against your entitlement.</p>
+  <p class="sub">Every application you have made, newest first, ordinary and extra leave alike (spec §19). Rejected, withdrawn and cancelled ones stay, and never count against your entitlement; each shows its decisions, their dates and the remarks given.</p>
   <section class="card card-pad" aria-labelledby="all-h">
     {% set mine = leave.my_applications(me) %}
     <h2 id="all-h">My applications <span class="count">· {{ mine | length }}</span></h2>
