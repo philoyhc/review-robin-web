@@ -28,7 +28,7 @@ Email and Teams are out of scope: v1 reminds in-app only (§17).
 - **Authorizations** (`residentialapps/docs/residentialapps_roles.md`): every Staff-roster member is eligible for every type, with no qualifying appointment (rule 9; §3.5 still says otherwise); Support Logs sys admin is granted by the super-admin only (rule 1), who administers and sees no content (§3.4); a sixth type, **Other Staff view**, aggregate or identifiable, read-only (rule 8); no self-action, a last-sys-admin floor (rule 6).
 - **Pages** (`residentialapps/spec/applications.md`): four areas, Encounter log, Plans, Dashboard and Sys admin; **Plans** are check-in plans, assigned (often by Counselling, a formal assignment, §7) or self-set (§10.1); the home at the bare mount lists what the viewer reaches or redirects; the not-registered page in its fixed wording (`residentialapps/docs/residentialapps_identity.md` §6); a `403` page for a linked viewer who reaches nothing.
 - **No neutral screens** (ruling 3): the UI spec's sign-in landing and switcher are dropped (UI §6, §9 Q5).
-- **Chrome** (`residentialapps/spec/residentialops_ui.md` §2, author 2026-10-26): one slim top bar at every width, no bottom bar, which would compete with a phone browser's toolbar; the favicon is already Support Logs' notepad on teal.
+- **Chrome: RA Leave's RA layout, no bottom bar** (author, 2026-10-29; `residentialapps/spec/residentialops_ui.md` §2, 2026-10-26): the slim top bar with the switcher, page tabs under it, phone lists (`ul.items`), the main action a full-width Primary on the page, and a form's Save at the form's end, as Apply's is, not in a fixed footer; the UI spec's bottom bar and fixed footer go. The favicon is already Support Logs' notepad on teal.
 - **Inherited from 1B and 1C:** placeholders local only, the sample viewer card, disabled not hidden, 44 px touch targets, kept sorts with None last, column chips, person tokens, derived pills, `url()`, gated steps.
 
 ## Semantics
@@ -66,7 +66,7 @@ Taken 2026-10-29 at `de0bf729`.
 
 **Item 1 — Screens and conventions.** Record the base SHA in rung 1's PR body.
 
-1. **Chrome and home.** The shared pieces moved to `residentialapps/web/`; the teal accent under `data-app="supportlogs"`; Support Logs' navigation (open question 1); the home at the bare mount, listing what the viewer reaches or redirecting; the `403` page; the sample module and the viewer card. Every other page a static placeholder.
+1. **Chrome and home.** The shared pieces moved to `residentialapps/web/`; the teal accent under `data-app="supportlogs"`; Support Logs' switcher and tabs (open question 1); the home at the bare mount, listing what the viewer reaches or redirecting; the `403` page; the sample module and the viewer card. Every other page a static placeholder.
 2. **Frontline, phone first.** Log encounter with its optional details and the after-save confirmation; Students; the student view; My follow-ups; the personal dashboard (UI screens 1–3, 5–7; §4–§6, §9, §10.1).
 3. **Safety.** Safety concern; safety flag detail; Safety flags for recipients, with the unacknowledged count in the navigation (UI screens 4, 8, 9; §5.10).
 4. **Plans and sharing.** Formal assignments with source, cadence and the safety-plan marker; conversion from a follow-up (§7, §8); Flag for formal assignment; peer-view grants (§11.1).
@@ -90,7 +90,7 @@ Taken 2026-10-29 at `de0bf729`.
 
 ## Open questions
 
-1. **Navigation and paths** (author, before rung 1): the UI spec's bottom bar (Home, Log, Students, Follow-ups) against the slim top bar Residential Operations ruled for every width; the page map's four areas against the UI spec's destinations. Proposed: the top bar and tabs, as ruled, its reason holding here too; the page map's areas, with tabs for the UI spec's screens (Encounter log: Log, Students; Plans: My plans, which is My follow-ups; Dashboard: mine, oversight; Safety flags and Opportunity review as areas for those who hold them); the UI spec revised to match.
+1. **Navigation** — answered: RA Leave's RA layout, no bottom bar (author, 2026-10-29; Decision). The frontline's tabs are the UI spec's four destinations, Home, Log, Students and Plans (My follow-ups); senior, review and admin viewers get their own tab sets, as RA Leave's staff and admin sides do. Paths are settled in rung 1 against the page map's areas, the page map revised to match.
 2. **Clusters** (§10.5): the core's Wings or Precincts, or a list of Support Logs' own (`residentialapps/docs/residentialapps_roster_structure.md` avoids the word for this reason). Proposed: the sample shows Precincts, labeled as clusters, until ruled.
 3. **UI §9's questions** (author, at the rung that first needs each): the Safety button role and the filled red Save and raise (rung 3); choice chips as styled radios and checkboxes (rung 2); sentence-case status labels (rung 2); Residential's customizer (out of item 1, below).
 4. **The crisis protocol** (§17 Q7) is placeholder text and numbers until the institution supplies it; the screen shows that it is.
