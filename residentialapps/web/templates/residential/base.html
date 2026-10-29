@@ -169,7 +169,26 @@
       .chips { display: flex; flex-wrap: wrap; gap: 4px; }
       /* A value another table owns, read-only here; plain text is this table's own. */
       .pills { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-      td.cell .pills { display: flex; margin-top: 4px; }  /* under the cell's input, not beside it */
+      td.cell .pills { display: flex; margin-top: 4px; }
+      /* A table's column chips, after RRW's roster pages: a filled chip is
+         a shown column, a plain one hidden; Name has none (author,
+         2026-10-29). */
+      .col-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 13px; color: var(--text-subtle); }
+      .col-chip {
+        min-height: 28px; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--accent);
+        background: transparent; color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
+      }
+      .col-chip[aria-pressed="true"] { background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-weight: 600; }
+      /* Each header sorts by its button: ascending, descending, then back
+         to the table's own order. */
+      th.sortable { white-space: nowrap; }
+      .sort-btn {
+        display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 0 4px;
+        min-width: 22px; min-height: 22px; border: 1px solid transparent; border-radius: 4px; background: transparent;
+        color: var(--text-subtle); font: inherit; cursor: pointer;
+      }
+      .sort-btn:hover { border-color: var(--border-default); }
+      th[aria-sort="ascending"] .sort-btn, th[aria-sort="descending"] .sort-btn { color: var(--text-body); font-weight: 700; }  /* under the cell's input, not beside it */
       .pill-derived {
         display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 9999px; white-space: nowrap;
         font-size: 13px; color: var(--text-body); background: var(--surface-muted); border: 1px solid var(--border-subtle);
@@ -425,6 +444,84 @@
           });
         });
         sync();
+      })();
+    </script>
+    <script>
+      // Column chips and header sorting for any table that opts in
+      // (author, 2026-10-29, after RRW's roster pages): a chip in a row
+      // `[data-col-toggles-for=<table id>]` with `data-col-toggle=<key>`
+      // shows or hides the table's cells marked `data-col=<key>`, kept per
+      // browser under the table's `data-col-store`; a `.sort-btn` in a
+      // `th.sortable` sorts the rows marked `data-row` by that column's
+      // `data-sort-value` (else its text), then back to the page's order.
+      (function () {
+        function cells(table, key) { return table.querySelectorAll('[data-col="' + key + '"]'); }
+        function show(table, chip, on) {
+          chip.setAttribute("aria-pressed", on ? "true" : "false");
+          Array.prototype.forEach.call(cells(table, chip.getAttribute("data-col-toggle")), function (c) { c.hidden = !on; });
+        }
+        function tableOf(chip) {
+          var row = chip.closest("[data-col-toggles-for]");
+          return row ? document.getElementById(row.getAttribute("data-col-toggles-for")) : null;
+        }
+        function save(table) {
+          var state = {};
+          var row = document.querySelector('[data-col-toggles-for="' + table.id + '"]');
+          Array.prototype.forEach.call(row.querySelectorAll("[data-col-toggle]"), function (c) {
+            state[c.getAttribute("data-col-toggle")] = c.getAttribute("aria-pressed") === "true";
+          });
+          try { localStorage.setItem(table.getAttribute("data-col-store"), JSON.stringify(state)); } catch (e) { /* ignore */ }
+        }
+        document.addEventListener("click", function (event) {
+          var chip = event.target.closest("[data-col-toggle]");
+          if (chip) {
+            var table = tableOf(chip);
+            if (!table) return;
+            show(table, chip, chip.getAttribute("aria-pressed") !== "true");
+            save(table);
+            return;
+          }
+          var btn = event.target.closest(".sort-btn");
+          if (btn) sortBy(btn.closest("th"));
+        });
+        Array.prototype.forEach.call(document.querySelectorAll("[data-col-toggles-for]"), function (row) {
+          var table = document.getElementById(row.getAttribute("data-col-toggles-for"));
+          if (!table) return;
+          var stored = null;
+          try { stored = JSON.parse(localStorage.getItem(table.getAttribute("data-col-store")) || "null"); } catch (e) { stored = null; }
+          Array.prototype.forEach.call(row.querySelectorAll("[data-col-toggle]"), function (chip) {
+            var key = chip.getAttribute("data-col-toggle");
+            show(table, chip, !(stored && stored[key] === false));
+          });
+        });
+        Array.prototype.forEach.call(document.querySelectorAll("tr[data-row]"), function (tr, i) { tr.setAttribute("data-order", i); });
+        function value(tr, key) {
+          var cell = tr.querySelector('[data-col="' + key + '"]');
+          if (!cell) return "";
+          return cell.hasAttribute("data-sort-value") ? cell.getAttribute("data-sort-value") : cell.textContent.trim();
+        }
+        function sortBy(th) {
+          var table = th.closest("table");
+          var key = th.getAttribute("data-col");
+          var next = { none: "ascending", ascending: "descending", descending: "none" }[th.getAttribute("aria-sort") || "none"];
+          Array.prototype.forEach.call(table.querySelectorAll("th.sortable"), function (h) {
+            h.setAttribute("aria-sort", "none");
+            h.querySelector(".sort-btn span").textContent = "\u2195";
+          });
+          th.setAttribute("aria-sort", next);
+          th.querySelector(".sort-btn span").textContent = { none: "\u2195", ascending: "\u2191", descending: "\u2193" }[next];
+          var body = table.tBodies[0];
+          var rows = Array.prototype.slice.call(body.querySelectorAll("tr[data-row]"));
+          rows.sort(function (a, b) {
+            if (next === "none") return a.getAttribute("data-order") - b.getAttribute("data-order");
+            var d = value(a, key).localeCompare(value(b, key), undefined, { numeric: true, sensitivity: "base" });
+            return next === "ascending" ? d : -d;
+          });
+          var expander = body.querySelector("tr.expander");
+          rows.forEach(function (tr) { body.appendChild(tr); });
+          var ticked = body.querySelectorAll("tr.selected");
+          if (expander && ticked.length) ticked[ticked.length - 1].insertAdjacentElement("afterend", expander);
+        }
       })();
     </script>
   </body>

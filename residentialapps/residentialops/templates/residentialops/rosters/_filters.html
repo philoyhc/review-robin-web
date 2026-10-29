@@ -44,6 +44,19 @@
   <td class="sel"><input type="checkbox" class="row-select" aria-label="Select {{ name }}"></td>
 {% endmacro %}
 
+{# A roster's column chips and sortable headers (author, 2026-10-29,
+   after RRW's roster pages): every column but Name may be hidden, and
+   every header sorts. `cols` is (key, label) per column after Name. #}
+{% macro column_chips(table_id, cols) %}
+  <p class="col-chips" data-col-toggles-for="{{ table_id }}"><span>Show columns:</span>
+    {% for key, label in cols %}<button type="button" class="col-chip" data-col-toggle="{{ key }}" aria-pressed="true">{{ label }}</button>{% endfor %}
+  </p>
+{% endmacro %}
+
+{% macro sort_th(key, label) %}
+  <th scope="col" class="sortable" data-col="{{ key }}" aria-sort="none">{{ label }}<button type="button" class="sort-btn" aria-label="Sort by {{ label }}"><span aria-hidden="true">↕</span></button></th>
+{% endmacro %}
+
 {# The CSV card's actions, under its sample. #}
 {% macro csv_actions() %}
   <div class="btnrow">

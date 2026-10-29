@@ -87,10 +87,10 @@ def test_a_roster_row_carries_its_appointment_and_abbreviation() -> None:
         roster = client.get(path).text
         assert "appointment types" not in roster.lower()
         assert "Save types" not in roster
-        headers = re.findall(r'<th scope="col">([^<]*)', roster.split("<tbody>")[0])
+        headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', roster.split("<tbody>")[0])
         assert headers[headers.index("Appointment") + 1] == "Abbrev"
         for person in people:
-            assert f"<td>{person.appointment}</td>\n              <td>{person.abbrev}</td>" in roster
+            assert f'<td data-col="appointment">{person.appointment}</td>\n              <td data-col="abbrev">{person.abbrev}</td>' in roster
         options = roster.split('id="appointment"')[1].split("</select>")[0]
         assert re.findall(r"<option>([^<]*)", options) == ["All", *(a for a, _ in appointments)]
         assert "removes no one" in roster  # an upload appends
@@ -190,7 +190,7 @@ def test_the_staff_roster_shows_no_access() -> None:
     assert page.status_code == 200
     assert "<h1>Staff roster</h1>" in page.text
     assert "· 15 people, 14 linked" in page.text
-    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
+    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="staff-h"')[1].split("<tbody>")[0])
     assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Oversight", "Sign-in"]
     assert "Not yet signed in</span>" in page.text
     assert "Support Logs" not in page.text and "Team Viewer" not in page.text
@@ -206,7 +206,7 @@ def test_the_ra_roster_holds_people_and_appointments_only() -> None:
     page = TestClient(ops_app()).get("/rosters/ras")
     assert page.status_code == 200
     assert "· 30 RAs, 29 linked" in page.text
-    headers = re.findall(r'<th scope="col">([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
+    headers = re.findall(r'<th scope="col"(?: class="sortable"[^>]*)?>([^<]*)', page.text.split('id="ra-h"')[1].split("<tbody>")[0])
     assert headers == ["Name", "Email", "Appointment", "Abbrev", "From – to", "Sign-in"]
 
 
@@ -512,3 +512,22 @@ def test_every_slot_shows_on_the_slots_and_the_staff_roster(monkeypatch) -> None
     assert '<span class="chip chip-mute">None</span>' in roster
     assert f'<span class="pill-derived">{sample_data.UNIT_NAME}</span>' in roster and '<span class="pill-derived">Cypress</span>' in roster
     assert roster.count('<span class="chip chip-mute">None</span>') == 1  # Hui Min Goh alone
+
+
+def test_the_rosters_have_column_chips_and_sortable_headers() -> None:
+    """Ruled 2026-10-29: each roster takes RRW's column chips, every column
+    but Name, and a sort button on every header."""
+    client = TestClient(ops_app())
+    for path, table, cols in (
+        ("/rosters/staff", "staff-table", ["email", "appointment", "abbrev", "dates", "oversight", "signin"]),
+        ("/rosters/ras", "ra-table", ["email", "appointment", "abbrev", "dates", "signin"]),
+    ):
+        page = client.get(path).text
+        chips = page.split(f'data-col-toggles-for="{table}"')[1].split("</p>")[0]
+        assert re.findall(r'data-col-toggle="(\w+)" aria-pressed="true"', chips) == cols  # Name has none
+        head = page.split(f'id="{table}"')[1].split("</thead>")[0]
+        assert re.findall(r'class="sortable" data-col="(\w+)"', head) == ["name", *cols]
+        assert head.count('class="sort-btn" aria-label="Sort by ') == len(cols) + 1
+        row = page.split("<tr data-row>")[1].split("</tr>")[0]
+        assert re.findall(r'data-col="(\w+)"', row) == ["name", *cols]  # each cell answers to its chip
+        assert f'data-col-toggles-for="{table}"' not in client.get(f"{path}?stage=slots").text  # no rows, no chips
