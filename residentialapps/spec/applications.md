@@ -66,12 +66,12 @@ Events has no spec yet, so its rows are provisional.
 | Landing | `/` | Choose an application the viewer reaches: RA Leave now, on the viewer's own side (RA or staff), RA Events later; RA Leave admin, Rosters and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
 | Not registered | any path | First sign-in not yet linked · mobile-critical | The same · mobile-critical |
 | **RA Leave, RAs** | `/ra-leave/` | — | — |
-| RA home | `/ra-leave/` | — | Balance, cover requests to answer, current applications, Apply (§8) · mobile-critical |
-| Apply for leave | `/ra-leave/apply` | — | Leave type, dates, covering RA (§9); dates counting no day under the policy are not submitted (author, 2026-10-29) · mobile-critical |
+| RA home | `/ra-leave/` | — | Balance, cover requests to answer, drafts, current applications, Apply (§8) · mobile-critical |
+| Apply for leave | `/ra-leave/apply` | — | Leave type, dates, covering RA (§9); dates counting no day under the policy are not submitted (author, 2026-10-29); Save draft keeps an application unsent, the RA's alone, asking or telling no one and using no days, reopened here (`?draft=`) to submit or discard (§11 Draft; author, 2026-10-29) · mobile-critical |
 | Request extra leave | `/ra-leave/appeal` | — | Reason, dates, cover (§7, §15); open to every RA, or by invitation only to an invited RA (not shown to the rest), never while off · mobile-critical |
 | Application detail | `/ra-leave/applications/{id}` | — | Status timeline with each decision's date and remarks; name new cover while open, which a declined cover requires where the policy asks cover to confirm, and the page urges otherwise (§12, scenario L); withdraw; the emails the RA's actions sent, one not sent with Resend (§17.2; author, 2026-10-29) · mobile-critical |
 | My cover | `/ra-leave/cover` | — | Acknowledge or decline being named as cover; notification links land here (§12, §23) · mobile-critical |
-| My history | `/ra-leave/history` | — | Own applications and leave, with decision dates and remarks (§19) · responsive |
+| My history | `/ra-leave/history` | — | Own drafts, then applications and leave, with decision dates and remarks (§19) · responsive |
 | **RA Leave, staff** | `/ra-leave/staff/` | — | — |
 | Staff home | `/ra-leave/staff/` | What awaits my decision; this week in my Precinct(s) (§24); the same pages for every overseer, and a staff member who oversees no RA is told so and sees no leave (author, 2026-10-29) · mobile-critical | — |
 | Awaiting my decision | `/ra-leave/staff/decide` | First approval, final approval (whoever the policy names, for the RAs in whose slots they hold a place), appeals (the Master: while appeals are on, and any already made), oldest first (§16, §24) · **mobile-critical** | — |

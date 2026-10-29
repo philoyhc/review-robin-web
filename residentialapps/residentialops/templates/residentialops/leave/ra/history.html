@@ -1,9 +1,17 @@
 {% extends "residential/base.html" %}
-{% from "residentialops/leave/_leave.html" import title, viewing, app_item with context %}
+{% from "residentialops/leave/_leave.html" import title, viewing, app_item, draft_item with context %}
 {% block title %}My history{% endblock %}
 {% block content %}
   {{ title("My history", leave, viewing(me)) }}
   <p class="sub">Every application you have made, newest first, ordinary and extra leave alike (spec §19). Rejected, withdrawn and cancelled ones stay, and never count against your entitlement; each shows its decisions, their dates and the remarks given.</p>
+  {% set drafts = leave.my_drafts(me) %}
+  {% if drafts %}
+  <section class="card card-pad gap-below" aria-labelledby="drafts-h">
+    <h2 id="drafts-h">Drafts <span class="count">· {{ drafts | length }}</span></h2>
+    <p class="sub">Saved, not submitted, so not yet applications.</p>
+    <ul class="items">{% for d in drafts %}{{ draft_item(d, leave) }}{% endfor %}</ul>
+  </section>
+  {% endif %}
   <section class="card card-pad" aria-labelledby="all-h">
     {% set mine = leave.my_applications(me) %}
     <h2 id="all-h">My applications <span class="count">· {{ mine | length }}</span></h2>

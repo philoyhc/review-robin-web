@@ -178,3 +178,28 @@ def test_the_ra_sees_the_emails_they_sent_and_resends_a_failed_one() -> None:
     assert "Cover asked to Ethan Wong</span>" in emails and ">Resend to Ethan Wong" not in emails  # sent
     assert "Cover confirmed" not in emails  # Ethan Wong's email, not the viewer's
     assert 'disabled aria-label="Resend application submitted to Daniel Koh">' in emails  # inert, named for its row
+def test_an_application_can_be_saved_as_a_draft_and_reopened() -> None:
+    """Spec §11's Draft (author, 2026-10-29): Save draft keeps it unsent and
+    the RA's alone; it reopens on Apply, filled in, to submit or discard,
+    and appears on the RA's home and history, nowhere else."""
+    c = TestClient(ops_app())
+    draft = sample_leave.my_drafts()[0]
+    assert ">Save draft</button>" in c.get("/ra-leave/apply").text
+    assert ">Save draft</button>" not in c.get("/ra-leave/appeal").text  # an appeal's draft waits for the wiring
+    assert "Discard draft" not in c.get("/ra-leave/apply").text
+    page = c.get(f"/ra-leave/apply?draft={draft.id}").text
+    assert "Draft saved 26 Oct." in page and ">Discard draft</button>" in page
+    assert f'value="{draft.start.isoformat()}"' in page and f'value="{draft.end.isoformat()}"' in page
+    assert f'<span class="token">{draft.cover}<button' in page and f">{draft.remarks}</textarea>" in page
+    assert '<option selected>Official leave</option>' in page
+    assert c.get("/ra-leave/apply?draft=D-9999").status_code == 404
+    assert c.get("/ra-leave/apply?draft=D-0002").status_code == 404  # Ethan Wong's, not Chloe Lim's
+    for path in ("/ra-leave/", "/ra-leave/history"):
+        listed = c.get(path).text.split('id="drafts-h"')[1].split("</section>")[0]
+        assert f'href="/ra-leave/apply?draft={draft.id}"' in listed and "not yet asked" in listed, path
+    # A draft is not an application: no staff or admin page, list or count
+    # sees it, not even its RA's own approver's.
+    for path in ("/ra-leave/admin/", "/ra-leave/admin/applications", "/ra-leave/staff/",
+                 "/ra-leave/staff/decide", "/ra-leave/staff/precinct?period=term"):
+        assert "18 Dec" not in c.get(path).text, path
+    assert all(a.id != draft.id for a in sample_leave.APPLICATIONS)
