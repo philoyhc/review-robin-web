@@ -1,0 +1,99 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded, flags_card, due_chip with context %}
+{% block title %}Overview{% endblock %}
+{% block content %}
+  {{ sample_title("Overview", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# How support is distributed across the team, where the hotspots are,
+     and where reallocation may be needed (§10.1, §10.2–10.6). Aggregate
+     view sees counts and staff, never a student's name (roles rule 8). #}
+  {% if named %}{{ recorded() }}{% else %}<p class="subtle small">Counts only: no student is named on your view.</p>{% endif %}
+  {% if sample.holds(me, sample.RECIPIENT) %}{{ flags_card(me, closed=true) }}{% endif %}
+  {% set t = sample.totals() %}
+  <section class="tiles gap-below" aria-label="The last {{ sample.PERIOD_DAYS }} days">
+    <div class="tile"><span class="tile-n">{{ t.formal }}</span><span class="tile-l">Formal assignments</span></div>
+    <div class="tile"><span class="tile-n">{{ t.informal }}</span><span class="tile-l">Follow-ups</span></div>
+    <div class="tile"><span class="tile-n">{{ t.students }}</span><span class="tile-l">Students contacted, {{ sample.PERIOD_DAYS }} days</span></div>
+    <div class="tile"><span class="tile-n">{{ t.encounters }}</span><span class="tile-l">Encounters, {{ sample.PERIOD_DAYS }} days</span></div>
+    <div class="tile"><span class="tile-n">{{ t.minutes }}</span><span class="tile-l">Support minutes, {{ sample.PERIOD_DAYS }} days</span></div>
+  </section>
+
+  <section class="card card-pad gap-below" aria-labelledby="load-h">
+    <h2 id="load-h">Team workload</h2>
+    <p class="sub">The last {{ sample.PERIOD_DAYS }} days. Load weighs each formal assignment by its cadence (monthly 1, fortnightly 2, weekly 4, twice weekly 8, 3+ weekly 12): an operational indicator, not a measure of anyone's performance (§10.3).</p>
+    <div class="table-wrap">
+      <table data-sort-auto id="load-table">
+        <thead><tr><th scope="col">Staff</th><th scope="col" class="num">Assigned</th><th scope="col" class="num">Following</th><th scope="col" class="num">Students</th><th scope="col" class="num">Encounters</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Load</th></tr></thead>
+        <tbody>{% for r in sample.workload() %}<tr><td class="strong">{{ r.staff }}</td><td class="num">{{ r.formal }}</td><td class="num">{{ r.informal }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.encounters }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.load }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="split">
+    <div class="main stack">
+      {% set hot = sample.hotspots() %}
+      <section class="card card-pad" aria-labelledby="hot-h">
+        <h2 id="hot-h">Hotspots</h2>
+        <p class="sub">Contacts in the last 14 days against the 14 before, staff involved, formal plans and active flags. Rising is a sharp increase on the student's own pattern, not a high but steady one; there is no score (§10.4, §15).</p>
+        {% if named %}
+          <div class="table-wrap">
+            <table data-sort-auto id="hot-table">
+              <thead><tr><th scope="col">Student</th><th scope="col" class="num">Contacts, 14 days</th><th scope="col" class="num">The 14 before</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Staff</th><th scope="col">Signals</th></tr></thead>
+              <tbody>{% for r in hot %}<tr>
+                <td class="strong">{% if senior %}<a href="{{ url('/overview/students/' ~ r.student.id) }}{{ as_query }}">{{ r.student.name }}</a>{% else %}{{ r.student.name }}{% endif %}</td>
+                <td class="num">{{ r.contacts }}</td><td class="num">{{ r.before }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.staff }}</td>
+                <td><span class="chips chip-wrap">{% if r.rising %}<span class="chip chip-warn">Rising</span>{% endif %}{% if r.flags %}<span class="chip chip-safety">Active flag</span>{% endif %}{% if r.formal %}<span class="chip chip-accent">Formal plan</span>{% endif %}</span></td>
+              </tr>{% endfor %}</tbody>
+            </table>
+          </div>
+        {% else %}
+          <dl class="kv"><dt>Students with recent support</dt><dd>{{ hot | length }}</dd><dt>Rising</dt><dd>{{ hot | selectattr("rising") | list | length }}</dd><dt>With an active flag</dt><dd>{{ hot | selectattr("flags") | list | length }}</dd></dl>
+        {% endif %}
+      </section>
+      <section class="card card-pad" aria-labelledby="cl-h">
+        <h2 id="cl-h">Clusters</h2>
+        <p class="sub">The last {{ sample.PERIOD_DAYS }} days by cluster, shown as Precincts until clusters are ruled (§10.5).</p>
+        <div class="table-wrap">
+          <table data-sort-auto id="cluster-table">
+            <thead><tr><th scope="col">Cluster</th><th scope="col" class="num">Students supported</th><th scope="col" class="num">Contacts</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Rising</th></tr></thead>
+            <tbody>{% for r in sample.clusters() %}<tr><td class="strong">{{ r.cluster }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.contacts }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.rising }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <div class="side">
+      {% set cov = sample.coverage() %}
+      <section class="card card-pad" aria-labelledby="cov-h">
+        <h2 id="cov-h">Coverage</h2>
+        <p class="sub">Formal check-ins overdue or due this week, and reviews within three weeks (§10.6).</p>
+        {% for key, label in (("overdue", "Overdue"), ("soon", "Due this week"), ("review", "Review soon")) %}
+          <h3 class="gap-above-sm">{{ label }} <span class="count">· {{ cov[key] | length }}</span></h3>
+          {% if named and cov[key] %}<ul class="items">{% for p in cov[key] %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ sample.student(p.student).name }}</a>{% if key == "review" %}<span class="chip chip-mute">Review {{ sample.short_date(p.review) }}</span>{% else %}{{ due_chip(p) }}{% endif %}</div><div class="subtle">{{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>{% endif %}
+        {% endfor %}
+      </section>
+      {% if senior %}
+        <section class="card card-pad muted" aria-labelledby="aud-h">
+          <h2 id="aud-h">Support-activity audit</h2>
+          <p class="sub">Who viewed or changed what, of whom. Reviewing it is recorded (§11.3).</p>
+          <a class="btn btn-secondary" href="{{ url('/overview/audit') }}{{ as_query }}">Open the audit</a>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if senior %}
+    <section class="card card-pad gap-above" aria-labelledby="refs-h">
+      <h2 id="refs-h">Flagged for formal assignment <span class="count">· {{ sample.REFERRALS | length }}</span></h2>
+      <p class="sub">Students frontline staff have flagged for review (§3.1); assigning one opens a plan.</p>
+      <ul class="items">{% for r in sample.REFERRALS %}{% set s = sample.student(r.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/overview/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><button type="button" class="btn btn-secondary" disabled aria-label="Assign a plan for {{ s.name }}">Assign</button></div><div class="subtle">Flagged {{ sample.short_date(r.flagged_on) }} by {{ r.flagged_by }}{% if r.cadence %} · suggests {{ r.cadence | lower }}{% endif %}</div></li>{% endfor %}</ul>
+    </section>
+  {% endif %}
+  {% if named %}
+    <section class="card card-pad gap-above" aria-labelledby="plans-h">
+      <h2 id="plans-h">Every plan <span class="count">· {{ sample.PLANS | length }}</span></h2>
+      <p class="sub">Formal assignments and follow-ups across the team{% if not senior %}, read-only{% endif %}.</p>
+      <ul class="items">{% for p in sample.PLANS | sort(attribute="formal", reverse=true) %}{% set s = sample.student(p.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ s.name }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.staff }} · {{ p.cadence }}</div></li>{% endfor %}</ul>
+    </section>
+  {% endif %}
+{% endblock %}

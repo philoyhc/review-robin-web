@@ -170,6 +170,11 @@ ENCOUNTERS = (
     Encounter("E-09", "S-08", "Priya Raman", datetime(2026, 10, 14, 17, 0), "15 min", "Check-in", ("Adjustment",), "Yes", "In person"),
     Encounter("E-10", "S-09", "Priya Raman", datetime(2026, 10, 25, 11, 0), "10 min", "Practical support", ("Residential / community",), "No", "Phone", "Room repair chased."),
     Encounter("E-11", "S-10", "Priya Raman", datetime(2026, 10, 28, 20, 0), "30 min", "Student-initiated conversation", ("Academic / career",), "", "In person"),
+    # Colleagues who are not sample viewers, so Overview has a team (rung 5).
+    Encounter("E-12", "S-07", "Mei Ling Tan", datetime(2026, 10, 17, 18, 0), "15 min", "Check-in", ("Adjustment",), "Yes", "In person"),
+    Encounter("E-13", "S-07", "Mei Ling Tan", datetime(2026, 10, 22, 19, 0), "30 min", "Welfare follow-up", ("Wellbeing",), "Yes", "In person"),
+    Encounter("E-14", "S-07", "Mei Ling Tan", datetime(2026, 10, 28, 21, 0), "30 min", "Student-initiated conversation", ("Wellbeing",), "Yes", "In person"),
+    Encounter("E-15", "S-08", "Arjun Nair", datetime(2026, 10, 21, 12, 0), "10 min", "Practical support", ("Residential / community",), "No", "In person"),
 )
 
 
@@ -200,6 +205,9 @@ PLANS = (
     Plan("P-03", "S-01", "Daniel Koh", False, date(2026, 10, 8), "Weekly"),
     Plan("P-04", "S-05", "Daniel Koh", False, date(2026, 10, 20), "No fixed cadence"),
     Plan("P-05", "S-08", "Priya Raman", False, date(2026, 10, 1), "Fortnightly"),
+    Plan("P-06", "S-07", "Mei Ling Tan", False, date(2026, 10, 17), "Weekly"),
+    Plan("P-07", "S-09", "Arjun Nair", True, date(2026, 10, 12), "Monthly", "Residential staff referral", "Sam Lee",
+         date(2026, 12, 14), "Monthly check-in on settling in."),
 )
 
 
@@ -397,6 +405,8 @@ PLAN_HISTORY = {
     "P-03": ((date(2026, 10, 8), "Daniel Koh began following up, weekly"),),
     "P-04": ((date(2026, 10, 20), "Daniel Koh began following up, no fixed cadence"),),
     "P-05": ((date(2026, 10, 1), "Priya Raman began following up, fortnightly"),),
+    "P-06": ((date(2026, 10, 17), "Mei Ling Tan began following up, weekly"),),
+    "P-07": ((date(2026, 10, 12), "Sam Lee assigned it: Residential staff referral, monthly"),),
 }
 
 
@@ -470,3 +480,134 @@ def shared_encounters(staff: str, sid: str) -> list[Encounter]:
     labelled with that colleague when shown (UI spec screen 5)."""
     found = [e for g in shared_with(staff) if g.student == sid for e in encounters_by(g.grantor, sid)]
     return sorted(found, key=lambda e: e.when, reverse=True)
+
+
+# --- Overview (rung 5, §10.2–10.6, §11.2–11.3). Clusters are shown as the
+# core's Precincts until ruled (the plan's open question 2), copied from the
+# Assignments mock; which cluster a student belongs to is Support Logs data,
+# set by senior staff (§10.5).
+
+CLUSTERS = ("Cypress A 04-12", "Cypress A 13-20", "Cypress B 03-14", "Maple 03-08")
+STUDENT_CLUSTER = {
+    "S-01": "Cypress A 04-12", "S-02": "Cypress A 04-12", "S-03": "Cypress A 04-12", "S-04": "Cypress A 13-20",
+    "S-05": "Cypress A 13-20", "S-06": "Cypress A 13-20", "S-07": "Maple 03-08", "S-08": "Cypress B 03-14",
+    "S-09": "Cypress B 03-14", "S-10": "Cypress B 03-14",
+}
+# Assignment load weighting (§10.3): an operational indicator, not a
+# measure of complexity or performance.
+WEIGHTS = {"Monthly": 1, "Fortnightly": 2, "Weekly": 4, "Twice weekly": 8, "3+ times weekly": 12}
+PERIOD_DAYS = 30
+REVIEW_SOON_DAYS = 21
+
+
+def in_period(e: Encounter, days: int = PERIOD_DAYS, offset: int = 0) -> bool:
+    """Whether an encounter falls in the `days` before TODAY, shifted back by
+    `offset` days."""
+    end = TODAY - timedelta(days=offset)
+    return end - timedelta(days=days - 1) <= e.when.date() <= end
+
+
+def workload() -> list[dict]:
+    """Team workload (§10.2–10.3) over the last 30 days, every frontline
+    colleague, heaviest load first."""
+    rows = []
+    for staff in FRONTLINE_COLLEAGUES:
+        plans = plans_of(staff)
+        recent = [e for e in encounters_by(staff) if in_period(e)]
+        rows.append({
+            "staff": staff,
+            "formal": sum(1 for p in plans if p.formal),
+            "informal": sum(1 for p in plans if not p.formal),
+            "students": len({e.student for e in recent}),
+            "encounters": len(recent),
+            "minutes": sum(MINUTES[e.duration] for e in recent),
+            "load": sum(WEIGHTS.get(p.cadence, 0) for p in plans if p.formal),
+        })
+    return sorted(rows, key=lambda r: (-r["load"], -r["encounters"], r["staff"]))
+
+
+def totals() -> dict:
+    recent = [e for e in ENCOUNTERS if in_period(e)]
+    active = [p for p in PLANS if p.status == "Active"]
+    return {
+        "formal": sum(1 for p in active if p.formal),
+        "informal": sum(1 for p in active if not p.formal),
+        "students": len({e.student for e in recent}),
+        "encounters": len(recent),
+        "minutes": sum(MINUTES[e.duration] for e in recent),
+    }
+
+
+def hotspots() -> list[dict]:
+    """Students by recent support (§10.4): contacts and minutes over the last
+    14 days against the 14 before, staff involved, a formal plan, active
+    flags. Rising is a sharp increase on the student's own baseline, not a
+    high but stable one. Never a score (§15)."""
+    rows = []
+    for s in STUDENTS:
+        mine = [e for e in ENCOUNTERS if e.student == s.id]
+        now = [e for e in mine if in_period(e, 14)]
+        before = [e for e in mine if in_period(e, 14, offset=14)]
+        flags_active = sum(1 for f in FLAGS if f.student == s.id and f.active)
+        if not now and not flags_active:
+            continue
+        rows.append({
+            "student": s,
+            "contacts": len(now),
+            "before": len(before),
+            "minutes": sum(MINUTES[e.duration] for e in now),
+            "staff": len({e.staff for e in mine if in_period(e)}),
+            "formal": any(p.formal for p in PLANS if p.student == s.id and p.status == "Active"),
+            "flags": flags_active,
+            "rising": len(now) >= 2 and len(now) > len(before),
+        })
+    return sorted(rows, key=lambda r: (-r["flags"], not r["rising"], -r["contacts"], r["student"].name))
+
+
+def coverage() -> dict:
+    """Coverage (§10.6): formal check-ins overdue and due soon, and
+    assignments whose review is within three weeks."""
+    formal = [p for p in PLANS if p.formal and p.status == "Active"]
+    return {
+        "overdue": [p for p in formal if due(p)[0] == "overdue"],
+        "soon": [p for p in formal if due(p)[0] in ("today", "week")],
+        "review": [p for p in formal if p.review and (p.review - TODAY).days <= REVIEW_SOON_DAYS],
+    }
+
+
+def clusters() -> list[dict]:
+    """Support by cluster (§10.5) over the last 30 days."""
+    rising = {r["student"].id for r in hotspots() if r["rising"]}
+    rows = []
+    for c in CLUSTERS:
+        ids = {sid for sid, cl in STUDENT_CLUSTER.items() if cl == c}
+        recent = [e for e in ENCOUNTERS if e.student in ids and in_period(e)]
+        supported = {p.student for p in PLANS if p.student in ids and p.status == "Active"} | {e.student for e in recent}
+        rows.append({"cluster": c, "students": len(supported), "contacts": len(recent),
+                     "minutes": sum(MINUTES[e.duration] for e in recent), "rising": len(ids & rising)})
+    return rows
+
+
+@dataclass(frozen=True)
+class AuditEvent:
+    """A support-activity audit event (§11.3): who did or saw what, of whom.
+    Reviewable only by senior staff with identifiable access, and reviewing
+    it is itself recorded."""
+
+    at: datetime
+    actor: str
+    action: str
+    student: str = ""
+
+
+AUDIT = (
+    AuditEvent(datetime(2026, 10, 29, 8, 30), "Sam Lee", "Acknowledged a safety flag", "S-10"),
+    AuditEvent(datetime(2026, 10, 29, 8, 25), "Sam Lee", "Viewed a safety flag", "S-10"),
+    AuditEvent(datetime(2026, 10, 28, 20, 45), "Priya Raman", "Raised a safety flag", "S-10"),
+    AuditEvent(datetime(2026, 10, 28, 20, 0), "Priya Raman", "Logged an encounter", "S-10"),
+    AuditEvent(datetime(2026, 10, 27, 13, 0), "Daniel Koh", "Logged an encounter", "S-06"),
+    AuditEvent(datetime(2026, 10, 27, 9, 10), "Daniel Koh", "Flagged for formal assignment", "S-05"),
+    AuditEvent(datetime(2026, 10, 26, 19, 40), "Daniel Koh", "Raised a safety flag", "S-05"),
+    AuditEvent(datetime(2026, 10, 20, 9, 0), "Priya Raman", "Shared records with Daniel Koh", "S-08"),
+    AuditEvent(datetime(2026, 10, 20, 8, 55), "Daniel Koh", "Viewed the student", "S-08"),
+)
