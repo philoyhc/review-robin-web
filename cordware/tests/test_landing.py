@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 
 import pytest
 from fastapi import FastAPI
@@ -170,3 +171,14 @@ def test_current_identity_carries_the_settings_it_resolved_under() -> None:
     assert identity is not None and identity.is_fake
     assert identity.resolved_with is settings
     assert current_identity(request, IdentitySettings(allow_fake_auth=False)) is None
+
+
+def test_the_page_carries_the_cord_favicon() -> None:
+    """Ruled 2026-10-29: white on black, after Residential's, as inline SVG."""
+    page = TestClient(create_app(apps=())).get("/").text
+    icons = re.findall(r'<link rel="icon" type="image/svg\+xml"\s+href="([^"]*)"', page)
+    assert len(icons) == 1
+    icon = icons[0]
+    assert icon.startswith("data:image/svg+xml;utf8,<svg ")
+    assert "fill='%23000'" in icon and "stroke='%23fff'" in icon
+    assert "#" not in icon  # every hash escaped, or the data URI ends early

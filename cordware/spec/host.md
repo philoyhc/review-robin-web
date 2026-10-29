@@ -97,7 +97,8 @@ shows nothing, so a deployment that mounts one application never shows
 them.
 
 The landing template carries its own inline style and extends nothing of
-RRW's.
+RRW's. Its favicon, inline SVG as Residential's are, is a white two-ply cord
+twisted into a ring on a black rounded square (author, 2026-10-29).
 
 ## `CORDWARE_APPS`
 
