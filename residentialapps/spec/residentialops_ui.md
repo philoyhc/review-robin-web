@@ -158,6 +158,9 @@ model (author, 2026-10-27):
   log, and Precinct leave sort only (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
+  On every sorted table an empty value (a None chip, an empty cell) sorts
+  last either way; a placeholder such as "—" or "No one" is text and
+  sorts as text (author, 2026-10-29).
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).

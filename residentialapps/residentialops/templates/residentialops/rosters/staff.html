@@ -36,7 +36,7 @@
               <td data-col="appointment">{{ person.appointment }}</td>
               <td data-col="abbrev">{{ person.abbrev }}</td>
               <td class="nowrap" data-col="dates">{{ person.dates }}</td>
-              <td data-col="oversight">{% set over = sample.oversight(person.name, sample.CURRENT_TERM) %}{% if over %}<span class="pills">{% for name in over %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="chip chip-mute">None</span>{% endif %}</td>
+              {% set over = sample.oversight(person.name, sample.CURRENT_TERM) %}<td data-col="oversight" data-sort-value="{{ over | join('; ') }}">{% if over %}<span class="pills">{% for name in over %}<span class="pill-derived">{{ name }}</span>{% endfor %}</span>{% else %}<span class="chip chip-mute">None</span>{% endif %}</td>
               <td data-col="signin">{% if person.linked %}<span class="chip chip-ok">Linked</span>{% else %}<span class="chip chip-mute">Not yet signed in</span>{% endif %}</td>
             </tr>
           {% endfor %}

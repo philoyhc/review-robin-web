@@ -477,7 +477,8 @@
       // shows or hides the table's cells marked `data-col=<key>`, kept per
       // browser under the table's `data-col-store`; a `.sort-btn` in a
       // `th.sortable` sorts the rows marked `data-row` by that column's
-      // `data-sort-value` (else its text), then back to the page's order.
+      // `data-sort-value` (else its text), an empty value last either way,
+      // then back to the page's order.
       // A table's sort is kept per browser too, by page path and table, so
       // it survives a reload or a change of term (author, 2026-10-29).
       (function () {
@@ -588,7 +589,11 @@
           var rows = Array.prototype.slice.call(body.querySelectorAll("tr[data-row]"));
           rows.sort(function (a, b) {
             if (next === "none") return a.getAttribute("data-order") - b.getAttribute("data-order");
-            var d = value(a, key).localeCompare(value(b, key), undefined, { numeric: true, sensitivity: "base" });
+            var va = value(a, key), vb = value(b, key);
+            // An empty value (a None chip's `data-sort-value=""`) sorts last
+            // either way (author, 2026-10-29).
+            if (!va !== !vb) return va ? -1 : 1;
+            var d = va.localeCompare(vb, undefined, { numeric: true, sensitivity: "base" });
             if (!d) return a.getAttribute("data-order") - b.getAttribute("data-order");  // ties keep the page's order
             return next === "ascending" ? d : -d;
           });
