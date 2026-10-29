@@ -475,8 +475,14 @@ def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
     assert "No one may give final approval" in dashboard and "then no one: no final approver is set" in dashboard
     monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
     assert "declined cover" not in c.get(ADMIN).text
+    assert "Every RA may send one, so no invitation is needed" in c.get(ADMIN + "appeals").text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ())
     assert "names no one who may open an appeal" in c.get(ADMIN + "appeals").text
+    monkeypatch.setitem(sample_leave.POLICY, "first", "slot")
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
+    assert "No first approver ticked" in c.get(ADMIN).text
+    assert "(no first approver ticked, no final approver set)" in c.get(ADMIN + "routing").text
     assert "Kai Ng" in c.get(ADMIN + "appeals").text and "agreed by email" not in c.get(ADMIN + "appeals").text
     detail = c.get(ADMIN + "applications/L-0105").text
     assert "Personal leave · extra leave" in detail and 'href="/ra-leave/admin/applications" aria-current="true"' in detail

@@ -18,7 +18,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
     return render(
         request,
         f"residentialops/leave/admin/{template}",
-        area="RA Leave",
+        area="RA Leave admin",
         tabs=LEAVE_ADMIN_TABS,
         leave=sample_leave,
         sample=sample_data,

@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() }}, {{ leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} the same for the whole Unit.</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ "no final approver set" if leave.final_gap() else leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} the same for the whole Unit.</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">

@@ -221,7 +221,14 @@ def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
     page = c.get(STAFF + "decide/" + past.id).text
     assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
     assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
+    # An appeal opened from Appeals goes back there, not to Precinct leave.
+    page = c.get(STAFF + "decide/L-0105" + RACHEL).text
+    assert "‹ Appeals" in page and 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="true"' in page
     assert "Daniel Koh: RF, first approver for" in c.get(STAFF).text
+    assert "opens appeals" not in c.get(STAFF).text  # appeals are open: no one opens them
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    assert "Sam Lee: Master, decides appeals, opens appeals" in c.get(STAFF).text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
     assert "Daniel Koh: RF, no decisions under the policy" in c.get(STAFF).text
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")

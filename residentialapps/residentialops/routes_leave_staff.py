@@ -60,10 +60,10 @@ def decide(request: Request, application_id: str) -> Response:
         back = ("/ra-leave/staff/decide", "Awaiting my decision")
     elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
         back = ("/ra-leave/staff/decided", "Decided")
-    elif found.precinct in sample_leave.scope(viewer):
-        back = ("/ra-leave/staff/precinct", "Precinct leave")
-    else:
+    elif sample_leave.invitable_ras(viewer) and (found.appeal or found.ra in sample_leave.invitable_ras(viewer)):
         back = ("/ra-leave/staff/appeals", "Appeals")
+    else:
+        back = ("/ra-leave/staff/", "Home")
     return _page(
         request, "decide.html", app=found, role=role, steps=sample_leave.timeline(found),
         back_path=back[0], back_label=back[1], current_tab=back[0],

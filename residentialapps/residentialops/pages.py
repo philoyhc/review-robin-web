@@ -23,7 +23,7 @@ APP_NAME = "Residential Operations"
 # area not built yet. A sample viewer's menu is `areas_for` theirs.
 AREAS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": "/"},
-    {"label": "RA Leave", "path": "/ra-leave/admin/"},  # the admin pages first (1C item 1)
+    {"label": "RA Leave admin", "path": "/ra-leave/admin/"},
     {"label": "RA Events", "path": None},
     {"label": "Rosters", "path": "/rosters/"},
     {"label": "Sys admin", "path": "/sys-admin/"},

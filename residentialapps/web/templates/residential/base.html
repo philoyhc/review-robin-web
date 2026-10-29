@@ -191,7 +191,7 @@
       .expander-body .btnrow { margin-left: auto; }
       .confirm { display: inline-flex; align-items: center; gap: 6px; }
       .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-      .back { display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; }
+      .back { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 4px; font-size: 15px; }
       .kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
       .kv dt { color: var(--text-subtle); }
       .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
@@ -212,7 +212,7 @@
       ul.items { list-style: none; margin: 0; padding: 0; font-size: 14px; }
       ul.items > li { padding: 12px 0; border-top: 1px solid var(--border-subtle); }
       ul.items > li:first-child { border-top: 0; padding-top: 4px; }
-      /* The link that opens an item is a 44 px target on a phone (§1). */
+      /* The link that opens an item is a 44 px target, as a back link is (the Residential Operations UI spec, §4). */
       .item-head > a { display: inline-flex; align-items: center; min-height: 44px; }
       .item-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-bottom: 2px; }
       th.num, td.num { text-align: right; white-space: nowrap; }
@@ -267,7 +267,7 @@
       }
       .btn-primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
       .btn-secondary { background: transparent; color: var(--text-body); border: 1px solid var(--border-default); }
-      .btn:disabled { cursor: not-allowed; opacity: 0.85; }  /* 0.85 keeps disabled text at 4.5:1 in light mode */
+      .btn:disabled { cursor: not-allowed; opacity: 0.85; }  /* 0.85 keeps disabled text at 4.5:1 or better */
       /* An action the selection rules out, apart from a placeholder's inert ones. */
       .btn.btn-unavailable { opacity: 0.4; }
       .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }

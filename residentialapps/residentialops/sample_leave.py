@@ -609,7 +609,7 @@ def staff_role(name: str) -> str:
         does.append("final approver")
     if name == APPEAL_DECIDER and appeals_decided():
         does.append("decides appeals")
-    if invitable_ras(name):
+    if POLICY["appeals"] == "By invitation" and invitable_ras(name):
         does.append("opens appeals")
     return f"{appointment}, {', '.join(does)}" if does else f"{appointment}, no decisions under the policy"
 

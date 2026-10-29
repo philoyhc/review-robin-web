@@ -135,7 +135,7 @@
         <div class="mode"><input type="radio" id="inv-unit" name="inviters" value="unit"{% if leave.POLICY.inviters == "unit" %} checked{% endif %} aria-describedby="inv-unit-what" disabled> <div><label for="inv-unit"><strong>The Unit's</strong></label> <span id="inv-unit-what" class="subtle">Tick one or more Unit-level appointments; each may open an appeal for any RA</span>
           {{ checks("inviter-unit-types", "Unit appointments that may open an appeal", leave.unit_appointments(), leave.POLICY.inviter_types if leave.POLICY.inviters == "unit" else ()) }}</div></div>
         <div class="mode"><input type="radio" id="inv-named" name="inviters" value="named"{% if leave.POLICY.inviters == "named" %} checked{% endif %} aria-describedby="inv-named-what" disabled> <div><label for="inv-named"><strong>Named staff</strong></label> <span id="inv-named-what" class="subtle">One or more from the Staff roster, comma separated</span>
-          <input class="input names" type="text" list="staff-names" aria-label="Staff who may open an appeal" placeholder="Start typing a name" value="{{ leave.POLICY.inviter_names | join(', ') }}" disabled></div></div>
+          <input class="input names" type="text" list="staff-names" aria-label="Staff who may open an appeal" placeholder="Start typing a name" value="{{ leave.POLICY.inviter_names | join(', ') if leave.POLICY.inviters == 'named' }}" disabled></div></div>
       </fieldset>
       <p class="subtle small">Used only while appeals are by invitation. The Master still decides every appeal.</p>
       <div class="field-wide">
