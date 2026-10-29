@@ -11,7 +11,7 @@
         <h2 id="detail-h">Application</h2>
         <dl class="kv">
           <dt>RA</dt><dd>{{ app.ra }} · {{ app.slot.neighborhood }}, {{ app.precinct }}</dd>
-          <dt>Leave type</dt><dd>{{ app.leave_type }}</dd>
+          <dt>Leave type</dt><dd>{{ app.leave_type }}{% if app.appeal %} · extra leave{% endif %}</dd>
           <dt>Dates</dt><dd>{{ app.dates }} ({{ app.days }} day{{ "s" if app.days != 1 }})</dd>
           <dt>Cover</dt><dd>{{ app.cover }} {{ cover_chip(app.cover_status) }}</dd>
           {% if app.remarks %}<dt>RA's remarks</dt><dd>{{ app.remarks }}</dd>{% endif %}

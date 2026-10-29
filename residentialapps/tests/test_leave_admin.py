@@ -262,7 +262,8 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     assert "Not available: an application beyond entitlement" in policy and "The Master (Sam Lee), personally" not in policy
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
-    assert ">Appeals</th>" not in routing and "final approval is the same for the whole Unit" in routing
+    # L-0105, made before appeals were turned off, stands and is decided.
+    assert ">Appeals</th>" in routing and "final approval and appeals are the same for the whole Unit" in routing
 
 
 def test_a_delegation_follows_its_person_and_the_policys_approver(monkeypatch) -> None:
@@ -336,7 +337,8 @@ def test_approvals_edge_cases(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ())
     routes = sample_leave.routes()
     assert all(r.gap and r.first == "No one" for r in routes)
-    assert client().get(ADMIN + "routing").text.count(">Gap</span>") == len(routes)
+    # A first-approval gap per Precinct, and the final one (no names set) on each row too.
+    assert client().get(ADMIN + "routing").text.count(">Gap</span>") == 2 * len(routes)
 
 
 def test_the_sample_keeps_its_own_policy() -> None:
@@ -453,3 +455,28 @@ def test_leave_days_count_as_the_policy_says(monkeypatch) -> None:
     chloe = ("Chloe Lim", sample_leave.by_id("L-0101").leave_type)
     # L-0101 charges 3 days rather than 1, so Chloe Lim's balance follows the setting.
     assert every[chloe]["available"] == weekdays[chloe]["available"] - 2
+
+
+def test_review_fixes_on_the_admin_side(monkeypatch) -> None:
+    """The 2026-10-29 review: gaps in final approval are flagged, a delegate
+    for someone no longer approving says so, copy follows the setting, and
+    a phone-width table keeps its hidden header inside its scroll box."""
+    c = client()
+    assert ".table-wrap { position: relative;" in c.get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
+    routing = c.get(ADMIN + "routing").text
+    assert "<option selected>Grace Ho</option>" in routing and "Not a first approver" in routing
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    assert 'value="RSLM" checked' not in c.get(ADMIN + "policy").text
+    assert "Pending first approval" not in c.get(ADMIN + "applications").text
+    monkeypatch.setitem(sample_leave.POLICY, "final", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "final_names", ())
+    dashboard = c.get(ADMIN).text
+    assert "No one may give final approval" in dashboard and "then no one: no final approver is set" in dashboard
+    monkeypatch.setitem(sample_leave.POLICY, "cover_mode", "Named only")
+    assert "declined cover" not in c.get(ADMIN).text
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ())
+    assert "names no one who may open an appeal" in c.get(ADMIN + "appeals").text
+    assert "Kai Ng" in c.get(ADMIN + "appeals").text and "agreed by email" not in c.get(ADMIN + "appeals").text
+    detail = c.get(ADMIN + "applications/L-0105").text
+    assert "Personal leave · extra leave" in detail and 'href="/ra-leave/admin/applications" aria-current="true"' in detail

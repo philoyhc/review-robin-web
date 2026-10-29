@@ -8,7 +8,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.residentialops import sample_data, sample_leave
-from residentialapps.residentialops.pages import leave_ra_tabs, placeholders_local_only, render
+from residentialapps.residentialops.pages import areas_for, leave_ra_tabs, placeholders_local_only, render
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
@@ -19,6 +19,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
         f"residentialops/leave/ra/{template}",
         area="RA Leave",
         tabs=leave_ra_tabs(sample_leave.can_appeal(sample_leave.VIEWER)),
+        areas=areas_for(sample_leave.VIEWER),
         leave=sample_leave,
         sample=sample_data,
         me=sample_leave.VIEWER,
@@ -51,7 +52,7 @@ def application(request: Request, application_id: str) -> Response:
     found = sample_leave.by_id(application_id)
     if found is None or found.ra != sample_leave.VIEWER:
         raise HTTPException(status_code=404)
-    return _page(request, "application.html", app=found, steps=sample_leave.timeline(found))
+    return _page(request, "application.html", app=found, steps=sample_leave.timeline(found), current_tab="/ra-leave/history")
 
 
 @router.get("/ra-leave/cover", name="residentialops_leave_cover")

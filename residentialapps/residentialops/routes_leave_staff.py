@@ -11,7 +11,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.residentialops import sample_data, sample_leave
-from residentialapps.residentialops.pages import leave_staff_tabs, placeholders_local_only, render
+from residentialapps.residentialops.pages import areas_for, leave_staff_tabs, placeholders_local_only, render
 from residentialapps.web.urls import app_path
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
@@ -25,6 +25,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
         f"residentialops/leave/staff/{template}",
         area="RA Leave",
         tabs=leave_staff_tabs(as_query, appeals=bool(sample_leave.invitable_ras(viewer))),
+        areas=areas_for(viewer),
         leave=sample_leave,
         sample=sample_data,
         me=viewer,
@@ -54,7 +55,19 @@ def decide(request: Request, application_id: str) -> Response:
     if found is None or not sample_leave.can_open(viewer, found):
         raise HTTPException(status_code=404)
     role = next((r for a, r in sample_leave.queue(viewer) if a.id == found.id), None)
-    return _page(request, "decide.html", app=found, role=role, steps=sample_leave.timeline(found))
+    # Back to the list it was most likely opened from, which its tab marks.
+    if role:
+        back = ("/ra-leave/staff/decide", "Awaiting my decision")
+    elif any(a.id == found.id for a, _, _ in sample_leave.decided(viewer)):
+        back = ("/ra-leave/staff/decided", "Decided")
+    elif found.precinct in sample_leave.scope(viewer):
+        back = ("/ra-leave/staff/precinct", "Precinct leave")
+    else:
+        back = ("/ra-leave/staff/appeals", "Appeals")
+    return _page(
+        request, "decide.html", app=found, role=role, steps=sample_leave.timeline(found),
+        back_path=back[0], back_label=back[1], current_tab=back[0],
+    )
 
 
 @router.get("/ra-leave/staff/decided", name="residentialops_leave_staff_decided")

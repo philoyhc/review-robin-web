@@ -36,11 +36,11 @@
   <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
-      {% for name, role in leave.STAFF_VIEWERS %}
-        <a class="chip {{ 'chip-info' if name == me else 'chip-mute' }}" href="{{ url(here) }}{{ '' if loop.first else '?as=' ~ (name | urlencode) }}"{% if name == me %} aria-current="true"{% endif %}>{{ name }}<span class="visually-hidden">, {{ role }}</span></a>
+      {% for name, _ in leave.STAFF_VIEWERS %}
+        <a class="chip {{ 'chip-info' if name == me else 'chip-mute' }}" href="{{ url(here) }}{{ '' if loop.first else '?as=' ~ (name | urlencode) }}"{% if name == me %} aria-current="true"{% endif %}>{{ name }}<span class="visually-hidden">, {{ leave.staff_role(name) }}</span></a>
       {% endfor %}
     </span>
-    <ul class="plain subtle small">{% for name, role in leave.STAFF_VIEWERS %}<li>{{ name }}: {{ role }}</li>{% endfor %}</ul>
+    <ul class="plain subtle small">{% for name, _ in leave.STAFF_VIEWERS %}<li>{{ name }}: {{ leave.staff_role(name) }}</li>{% endfor %}</ul>
   </nav>
 {%- endmacro %}
 
