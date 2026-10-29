@@ -98,3 +98,21 @@ def test_add_details_is_a_finger_sized_target(page: Page) -> None:
     page.goto(f"{ORIGIN}/log")
     box = page.locator("details.more > summary", has_text="Add details").bounding_box()
     assert box and box["height"] >= 44
+
+
+def test_the_follow_ups_follow_the_student_chosen(page: Page) -> None:
+    """Codex review, 2026-10-29: choosing a student on the form shows the
+    plan they are on, as opening the form for them does."""
+    page.goto(f"{ORIGIN}/log")
+    page.locator("details.more > summary", has_text="Add details").click()
+    assert page.locator("#add-follow").is_visible() and page.locator("#on-plan").is_hidden()
+    choose(page, "Student", "Aiden Chen")
+    assert page.locator("#on-plan").text_content() == "On your follow-ups: weekly."
+    assert page.locator("#add-follow").is_hidden()
+    assert page.locator("#cadence").input_value() == "Weekly"
+    choose(page, "Student", "Clara Tan")
+    assert page.locator("#on-plan").text_content() == "On your plans: weekly, set by Sam Lee."
+    assert page.locator("#cadence-field").is_hidden()
+    choose(page, "Student", "Bao Nguyen")
+    assert page.locator("#on-plan").is_hidden() and page.locator("#add-follow").is_visible()
+    assert page.locator("#cadence-field").is_visible() and page.locator("#cadence").input_value() == "No fixed cadence"

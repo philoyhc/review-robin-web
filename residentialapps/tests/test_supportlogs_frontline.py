@@ -78,7 +78,7 @@ def test_log_offers_the_viewer_s_students_or_the_one_chosen(client: TestClient) 
     offered = re.findall(r'name="student" value="([^"]+)"', client.get("/log").text)
     assert offered == [s.id for s, _, _ in sample.working_set("Daniel Koh")][:6]
     chosen = client.get("/log?student=S-03").text
-    assert '<input type="hidden" name="student" value="S-03">' in chosen
+    assert '<input type="hidden" name="student" value="S-03" data-plan=' in chosen
     assert '<span class="strong">Clara Tan</span><a href="/log">Change</a>' in chosen
     assert 'name="student" value="S-01"' not in chosen
     assert '<input type="hidden" name="as" value="Priya Raman">' in client.get("/log" + PRIYA).text
@@ -112,11 +112,15 @@ def test_the_confirmation_says_what_was_saved_and_offers_follow_up(client: TestC
 
 def test_log_shows_the_plan_a_chosen_student_is_on(client: TestClient) -> None:
     clara = client.get("/log?student=S-03").text
-    assert "On your plans: weekly, set by Sam Lee." in clara and 'name="follow"' not in clara
+    assert '<p id="on-plan" class="flush">On your plans: weekly, set by Sam Lee.</p>' in clara
+    assert 'id="add-follow" hidden' in clara and 'id="cadence-field" hidden' in clara
     aiden = client.get("/log?student=S-01").text
     assert "On your follow-ups: weekly." in aiden and "Keep or change the cadence" in aiden
     assert "<option selected>Weekly</option>" in aiden
-    assert 'name="follow"' in client.get("/log?student=S-02").text
+    bao = client.get("/log?student=S-02").text
+    assert '<p id="on-plan" class="flush" hidden>' in bao and 'id="add-follow">' in bao
+    chips = client.get("/log").text
+    assert 'value="S-01" data-plan="On your follow-ups: weekly." data-cadence="Weekly">' in chips
 
 
 def test_pages_naming_students_say_they_are_recorded(client: TestClient) -> None:

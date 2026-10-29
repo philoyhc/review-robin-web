@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import recorded with context %}
+{% from "supportlogs/_frontline.html" import recorded, plan_text, plan_data with context %}
 {% block title %}Log encounter{% endblock %}
 {% block content %}
   {{ sample_title("Log encounter", me.name) }}
@@ -21,14 +21,16 @@
       <legend>Student</legend>
       {% if chosen %}
         <div class="card card-pad muted">
-          <input type="hidden" name="student" value="{{ chosen.id }}">
+          {% set cp = sample.plans_of(me.name, chosen.id) %}
+          <input type="hidden" name="student" value="{{ chosen.id }}"{{ plan_data(cp[0] if cp else none) }}>
           <div class="item-head"><span class="strong">{{ chosen.name }}</span><a href="{{ url('/log') }}{{ as_query }}">Change</a></div>
           <div class="subtle">{{ chosen.email }}</div>
         </div>
       {% else %}
         <div class="choice-row">
           {% for s, reasons, seen in sample.working_set(me.name)[:6] %}
-            <label class="choice"><input type="radio" name="student" value="{{ s.id }}">{{ s.name }}</label>
+            {% set sp = sample.plans_of(me.name, s.id) %}
+            <label class="choice"><input type="radio" name="student" value="{{ s.id }}"{{ plan_data(sp[0] if sp else none) }}>{{ s.name }}</label>
           {% endfor %}
         </div>
         <div class="field-wide gap-above-sm"><label for="find">Or find a student</label>
@@ -64,13 +66,12 @@
       {% set plan = sample.plans_of(me.name, chosen.id)[0] if chosen and sample.plans_of(me.name, chosen.id) else none %}
       <fieldset class="choices">
         <legend>My follow-ups</legend>
-        {% if plan %}
-          <p class="flush">On your {{ "plans" if plan.formal else "follow-ups" }}: {{ plan.cadence | lower }}{% if plan.formal %}, set by {{ plan.assigned_by }}{% endif %}.</p>
-        {% else %}
-          <label class="choice"><input type="checkbox" name="follow" value="yes">Add to my follow-ups</label>
-        {% endif %}
-        {% if not (plan and plan.formal) %}<div class="field-wide"><label for="cadence">{{ "Keep or change the cadence" if plan else "Cadence" }}</label>
-          <select id="cadence" class="input">{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if plan and plan.cadence == c %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>{% endif %}
+        {# Drawn for the student chosen; the script redraws it when the
+           student choice changes (Codex review, 2026-10-29). #}
+        <p id="on-plan" class="flush"{% if not plan %} hidden{% endif %}>{% if plan %}{{ plan_text(plan) }}{% endif %}</p>
+        <label class="choice" id="add-follow"{% if plan %} hidden{% endif %}><input type="checkbox" name="follow" value="yes">Add to my follow-ups</label>
+        <div class="field-wide" id="cadence-field"{% if plan and plan.formal %} hidden{% endif %}><label for="cadence" id="cadence-label">{{ "Keep or change the cadence" if plan else "Cadence" }}</label>
+          <select id="cadence" class="input">{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if plan and plan.cadence == c %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
         <span class="subtle small">Needing follow-up does not mean you take it on (§6.2).</span>
       </fieldset>
       <fieldset class="choices">
@@ -100,6 +101,19 @@
       function chosen(name) {
         return !!form.querySelector('input[name="' + name + '"]:checked, input[type="hidden"][name="' + name + '"]');
       }
+      function followUps() {
+        var pick = form.querySelector('input[name="student"]:checked, input[type="hidden"][name="student"]');
+        var text = pick ? pick.getAttribute("data-plan") : null;
+        var onPlan = document.getElementById("on-plan");
+        var add = document.getElementById("add-follow");
+        onPlan.hidden = !text;
+        onPlan.textContent = text || "";
+        add.hidden = !!text;
+        if (text) add.querySelector("input").checked = false;
+        document.getElementById("cadence-field").hidden = !!(pick && pick.hasAttribute("data-formal"));
+        document.getElementById("cadence-label").textContent = text ? "Keep or change the cadence" : "Cadence";
+        document.getElementById("cadence").value = (text && pick.getAttribute("data-cadence")) || "No fixed cadence";
+      }
       function sync() {
         save.disabled = !(chosen("student") && chosen("duration") && chosen("type"));
         var kind = form.querySelector('input[name="type"]:checked');
@@ -118,7 +132,10 @@
           sync();
         });
       });
-      form.addEventListener("change", sync);
+      form.addEventListener("change", function (event) {
+        if (event.target.name === "student") followUps();
+        sync();
+      });
       form.addEventListener("input", sync);
       sync();
     })();

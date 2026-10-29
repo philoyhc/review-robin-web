@@ -276,6 +276,7 @@
       .choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
       .choice-row.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .choice { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--border-default); border-radius: 9999px; background: var(--surface-card); font-size: 15px; cursor: pointer; }
+      .choice[hidden], .field-wide[hidden] { display: none; }
       .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
       .choice:has(input:checked) { background: var(--accent-tint-strong); border-color: var(--accent); color: var(--text-body); font-weight: 600; }
       .choice:has(input:checked)::before { content: "\2713"; }

@@ -7,6 +7,16 @@
   <p class="subtle small">Pages that name students are recorded when opened.</p>
 {%- endmacro %}
 
+{# The plan a student is on, as Log encounter's follow-ups say it, and the
+   data its student choice carries so the section follows a change. #}
+{% macro plan_text(p) -%}
+  On your {{ "plans" if p.formal else "follow-ups" }}: {{ p.cadence | lower }}{% if p.formal %}, set by {{ p.assigned_by }}{% endif %}.
+{%- endmacro %}
+
+{% macro plan_data(p) -%}
+  {% if p %} data-plan="{{ plan_text(p) }}" data-cadence="{{ p.cadence }}"{% if p.formal %} data-formal{% endif %}{% endif %}
+{%- endmacro %}
+
 {% macro due_chip(p) -%}
   {% set state, label = sample.due(p) %}
   <span class="chip {{ {'overdue': 'chip-warn', 'today': 'chip-info'}.get(state, 'chip-mute') }}">{{ label }}</span>
