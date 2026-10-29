@@ -215,9 +215,10 @@ Until a screen is wired:
   navigation, and its upload-mode radios, so the Upload button's
   unavailable state can be seen (§7);
 - it answers only on a local run (`APP_ENV=local`), 404 elsewhere;
-- a page drawn for one person (RA Leave's RA pages) says so in a
-  **Viewing as** chip beside the Sample data chip, and RA Leave's staff
-  pages switch that person on the page (`?as=`, carried by the tabs);
+- a page drawn for one person (RA Leave's RA and staff pages, the
+  landing) says so in a **Viewing as** chip beside the Sample data chip;
+  the staff pages and the landing switch that person on the page
+  (`?as=`; the staff pages' tabs carry it);
 - Rosters and setup previews each setup state with `?stage=start`,
   `?stage=slots` or the default, `done` (§7), switched from the title row.
 

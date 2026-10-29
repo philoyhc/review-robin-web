@@ -63,7 +63,7 @@ Events has no spec yet, so its rows are provisional.
 
 | Page | Path | Staff | RA |
 |---|---|---|---|
-| Landing | `/` | Choose an application the viewer reaches: RA Leave now, RA Events later; Rosters and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
+| Landing | `/` | Choose an application the viewer reaches: RA Leave now, on the viewer's own side (RA or staff), RA Events later; RA Leave admin, Rosters and Sys admin for sys admins (author, 2026-10-28) · mobile-critical | The same · mobile-critical |
 | Not registered | any path | First sign-in not yet linked · mobile-critical | The same · mobile-critical |
 | **RA Leave, RAs** | `/ra-leave/` | — | — |
 | RA home | `/ra-leave/` | — | Balance, cover requests to answer, current applications, Apply (§8) · mobile-critical |
@@ -123,9 +123,10 @@ appointment, and RAs never reach it:
 
 Each application also has:
 
-- **a home** at its bare mount. Residential Operations' is the viewer's own
-  dashboard (page map above); Support Logs' lists the pages the viewer
-  reaches, or redirects when there is exactly one;
+- **a home** at its bare mount. Residential Operations' is the landing
+  (page map above), choosing an application the viewer reaches; Support
+  Logs' lists the pages the viewer reaches, or redirects when there is
+  exactly one;
 - **the not-registered page** (`residentialapps/docs/residentialapps_identity.md`),
   for a signed-in person Residential cannot link.
 
@@ -167,8 +168,9 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 | `residentialops,supportlogs` | Both; `/` lists both |
 | unset | RRW and both; `/` lists all three |
 
-A bare mount path (`/residentialops/`) answers `404` in 1A: the homes
-and pages above arrive in 1B and later segments.
+A bare mount path answered `404` in 1A. Residential Operations' landing
+(`/residentialops/`) now answers on a local run while a placeholder, and
+`404` deployed; Support Logs' bare mount still answers `404`.
 
 A host whose deployment does not carry `residentialapps/` must name its
 applications in `CORDWARE_APPS`: unset, the host loads every factory and

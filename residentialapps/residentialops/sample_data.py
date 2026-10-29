@@ -381,3 +381,13 @@ AUDIT_EVENTS = (
     ("2026-08-01 08:02", "Terms imported", "Terms", "Rachel Yeo", "AY2025-2026 and AY2026-2027: 6 terms"),
     ("2026-08-01 08:00", "Sys admin granted", "Access grants", SUPER_ADMIN, "Sam Lee, Rachel Yeo"),
 )
+
+
+# The landing (`/`) renders for a sample viewer chosen on the page (`?as=`)
+# until identity is wired: one person per kind of viewer.
+LANDING_VIEWERS = (
+    ("Chloe Lim", "RA"),
+    ("Daniel Koh", "RF"),
+    ("Rachel Yeo", "Residential Admin, sys admin"),
+    ("Sam Lee", "Master, sys admin"),
+)
