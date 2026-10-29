@@ -281,6 +281,15 @@ def oversight(name: str, term: "Term") -> tuple[str, ...]:
     return coverage({s.neighborhood for s in SLOTS if name in s.staff})
 
 
+def assignment(name: str, term: "Term") -> tuple[str, ...]:
+    """The slots an RA's cell names for a term, as the RA roster shows
+    them; empty for none (author, 2026-10-29). An RA's charge is a slot, so
+    its name stands rather than the levels it makes up."""
+    if term not in ASSIGNED_TERMS:
+        return ()  # no assignments recorded for the term
+    return tuple(s.neighborhood for s in SLOTS if name in s.ras)
+
+
 def unit_appointments() -> tuple[tuple[str, str], ...]:
     """The staff appointments that no slot's Staff cell holds: the Unit's
     own. By appointment, not person, so an RF between slots stays a slot
