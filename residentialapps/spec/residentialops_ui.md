@@ -91,7 +91,13 @@ RRW's roles (`spec/ui_elements.md` §6), under Residential's class names:
 | Glyph | `.btn-glyph` with a role above | one-character row actions (+, X) |
 
 A page action is at least 36 px tall; a back link, and the link that
-opens an item in a phone list, at least 44 px (author, 2026-10-29). A
+opens an item in a phone list, at least 44 px (author, 2026-10-29). On a
+phone, or under a finger (below 640 px, or a coarse pointer), every
+control is at least 44 px: buttons, fields, the display-mode toggle, a
+chip that is a link, a token's remove button and the token box, and a
+tick box by its label; a link inside a sentence keeps its line, and the
+desktop-oriented pages' row builders, column chips, sort buttons and
+table tick boxes keep their size (author, 2026-10-29). A
 control a placeholder cannot yet
 perform is `disabled`, not hidden.
 

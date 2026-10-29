@@ -172,7 +172,8 @@ Chromium is installed; run `python -m playwright install chromium`
 once to enable them locally. The SQLite CI job and the residential lane
 install Chromium and set `RRW_REQUIRE_BROWSER=1`, which turns that skip
 into a failure; the residential lane's is for
-`residentialapps/tests/test_sort_persistence_browser.py`.
+`residentialapps/tests/test_sort_persistence_browser.py` and
+`residentialapps/tests/test_touch_targets_browser.py`.
 `tests/integration/test_inline_scripts_parse.py` needs `node` on PATH
 and skips without it. CI's `ubuntu-latest` runners have `node`, but no
 switch turns that skip into a failure, so read the skip list rather than
