@@ -23,7 +23,8 @@
 {%- endmacro %}
 
 {% macro kind_chips(p) -%}
-  {% if p.formal %}<span class="chip chip-accent">Plan · {{ p.source }}</span>{% else %}<span class="chip chip-mute">Following</span>{% endif %}
+  {% set label = "Plan · " ~ p.source if p.formal else "Following" %}
+  <a class="chip {{ 'chip-accent' if p.formal else 'chip-mute' }}" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}" aria-label="{{ label }}: {{ sample.student(p.student).name }}">{{ label }}</a>
   {%- if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}
 {%- endmacro %}
 
@@ -46,6 +47,7 @@
     <div class="item-head">{% if with_student %}<a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}<span class="strong">{{ e.type }}</span>{% endif %}<span class="nowrap subtle">{{ sample.short_date(e.when.date()) }}</span></div>
     <div class="subtle">{% if with_student %}{{ e.type }} · {% endif %}{{ e.duration }}{% if e.concerns %} · {{ e.concerns | join(", ") }}{% endif %}{% if e.follow_up == "Yes" %} · follow-up needed{% endif %}</div>
     {% if e.note %}<div class="subtle">“{{ e.note }}”</div>{% endif %}
+    {% if e.staff != me.name %}<div><span class="chip chip-mute">Shared by {{ e.staff }}</span></div>{% endif %}
   </li>
 {%- endmacro %}
 

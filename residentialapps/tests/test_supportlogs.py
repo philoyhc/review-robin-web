@@ -201,3 +201,5 @@ def test_the_sample_staff_are_the_roster_s() -> None:
         if v.appointment:
             assert roster.get(v.name) == v.appointment, v.name
     assert sample.DEFAULT.grants == {sample.FRONTLINE}
+    for name in (*sample.FRONTLINE_COLLEAGUES, *(g.viewer for g in sample.PEER_GRANTS), *(g.grantor for g in sample.PEER_GRANTS)):
+        assert roster.get(name) in ("RF", "RSLM"), name

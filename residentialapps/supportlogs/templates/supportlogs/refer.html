@@ -1,0 +1,20 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
+{% block title %}Flag for formal assignment{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">‹ {{ chosen.name }}</a>
+  {{ sample_title("Flag for formal assignment", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  {# Flag for formal review or possible assignment (§3.1): senior staff
+     review it; no reason is recorded (§7.5). #}
+  <form class="card card-pad" action="{{ url('/students/' ~ chosen.id ~ '/refer/sent') }}" method="get" aria-labelledby="refer-h">
+    {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+    <h2 id="refer-h">{{ chosen.name }}</h2>
+    <p class="sub">Senior staff review it and may assign a plan, to you or a colleague. Say nothing of why here: talk to them.</p>
+    <div class="field-wide"><label for="cadence">Suggested cadence (optional)</label>
+      <select id="cadence" name="cadence" class="input"><option value="">No suggestion</option>{% for c in sample.ASSIGNMENT_CADENCES %}<option>{{ c }}</option>{% endfor %}</select></div>
+    <div class="btnrow gap-above-sm"><button type="submit" class="btn btn-primary">Flag for formal assignment</button><a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Cancel</a></div>
+  </form>
+{% endblock %}

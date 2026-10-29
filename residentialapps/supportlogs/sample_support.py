@@ -376,3 +376,97 @@ def unacknowledged(v: Viewer) -> int:
 
 def when(moment: datetime) -> str:
     return f"{moment.day} {moment:%b}, {moment:%H:%M}"
+
+
+# --- Plans and sharing (rung 4, §7, §8, §11.1).
+
+ASSIGNMENT_SOURCES = ("Counselling", "Dean's Office", "Master / residential leadership", "Residential staff referral", "Other")
+ASSIGNMENT_CADENCES = ("Monthly", "Fortnightly", "Weekly", "Twice weekly", "3+ times weekly", "Custom")
+PLAN_STATUSES = ("Active", "Paused", "Closed")
+# Frontline colleagues a record can be shared with (§11.1): RFs and RSLMs
+# holding frontline access, copied from the roster's mock with the sample
+# viewers who hold it.
+FRONTLINE_COLLEAGUES = ("Daniel Koh", "Priya Raman", "Mei Ling Tan", "Arjun Nair", "Grace Ho")
+
+# Each plan's history (§8): how it began and what changed, so a converted
+# follow-up keeps one record rather than a disconnected duplicate.
+PLAN_HISTORY = {
+    "P-01": ((date(2026, 9, 21), "Sam Lee assigned it: Counselling, weekly, with safety-plan support"),),
+    "P-02": ((date(2026, 9, 28), "Daniel Koh began following up, no fixed cadence"),
+             (date(2026, 10, 5), "Sam Lee converted it to a formal assignment: Dean's Office, fortnightly, review 7 Dec")),
+    "P-03": ((date(2026, 10, 8), "Daniel Koh began following up, weekly"),),
+    "P-04": ((date(2026, 10, 20), "Daniel Koh began following up, no fixed cadence"),),
+    "P-05": ((date(2026, 10, 1), "Priya Raman began following up, fortnightly"),),
+}
+
+
+@dataclass(frozen=True)
+class Referral:
+    """A student flagged for formal assignment by frontline staff (§3.1),
+    for senior staff to review: no reason recorded, only a suggestion."""
+
+    student: str
+    flagged_by: str
+    flagged_on: date
+    cadence: str = ""
+
+
+REFERRALS = (Referral("S-05", "Daniel Koh", date(2026, 10, 27), "Weekly"),)
+
+
+@dataclass(frozen=True)
+class PeerGrant:
+    """A peer-view grant (§11.1): the grantor's records for one student,
+    shared with one colleague; private by default, revocable."""
+
+    student: str
+    grantor: str
+    viewer: str
+    granted_on: date
+
+
+PEER_GRANTS = (
+    PeerGrant("S-03", "Daniel Koh", "Mei Ling Tan", date(2026, 10, 1)),
+    PeerGrant("S-08", "Priya Raman", "Daniel Koh", date(2026, 10, 20)),
+)
+
+
+def plan(pid: str | None) -> Plan | None:
+    return next((p for p in PLANS if p.id == pid), None)
+
+
+def contacts_since_start(p: Plan) -> int:
+    """Contacts in the plan's period (§7.7): its owner's encounters since it
+    began."""
+    return sum(1 for e in encounters_by(p.staff, p.student) if e.when.date() >= p.start)
+
+
+def referral(sid: str) -> Referral | None:
+    return next((r for r in REFERRALS if r.student == sid), None)
+
+
+def grants_by(staff: str, sid: str) -> list[PeerGrant]:
+    return [g for g in PEER_GRANTS if g.grantor == staff and g.student == sid]
+
+
+def shared_with(staff: str) -> list[PeerGrant]:
+    """Records colleagues have shared with a staff member."""
+    return [g for g in PEER_GRANTS if g.viewer == staff]
+
+
+def shared_plans(staff: str, sid: str) -> list[Plan]:
+    """A colleague's active plans for a student shared with the viewer."""
+    return [p for g in shared_with(staff) if g.student == sid for p in plans_of(g.grantor, sid)]
+
+
+def may_read_plan(staff: str, p: Plan) -> bool:
+    """A plan's owner, or a colleague its owner has shared the student's
+    records with (§11.1)."""
+    return p.staff == staff or any(g.grantor == p.staff and g.student == p.student for g in shared_with(staff))
+
+
+def shared_encounters(staff: str, sid: str) -> list[Encounter]:
+    """A colleague's encounters with a student shared with the viewer,
+    labelled with that colleague when shown (UI spec screen 5)."""
+    found = [e for g in shared_with(staff) if g.student == sid for e in encounters_by(g.grantor, sid)]
+    return sorted(found, key=lambda e: e.when, reverse=True)

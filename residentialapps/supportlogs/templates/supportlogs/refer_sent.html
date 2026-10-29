@@ -1,0 +1,14 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
+{% block title %}Flagged{% endblock %}
+{% block content %}
+  {{ sample_title("Flagged for formal assignment", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  <section class="card card-pad gap-below" aria-labelledby="sent-h" role="status">
+    <h2 id="sent-h">{{ chosen.name }} is flagged for senior staff to review</h2>
+    <p class="sub">{% if cadence %}You suggested {{ cadence | lower }} check-ins. {% endif %}Senior staff see it on Overview. A sample: nothing is stored.</p>
+  </section>
+  <a class="btn btn-primary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Back to {{ chosen.name }}</a>
+{% endblock %}

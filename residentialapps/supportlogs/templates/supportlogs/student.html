@@ -10,6 +10,7 @@
      student-centred view, not a case file, of what the viewer's
      authorizations cover (§11.1). #}
   <p class="sub">{{ chosen.email }}</p>
+  {% for g in sample.shared_with(me.name) if g.student == chosen.id %}<p class="notice" role="note">{{ g.grantor }} has shared their records for {{ chosen.name }} with you, since {{ sample.short_date(g.granted_on) }}.</p>{% endfor %}
   <p class="notice" role="note">Opening this view is recorded. It shows your own records for {{ chosen.name }}, any a colleague has shared with you, and the safety flags you may see.</p>
   {% set mine = sample.plans_of(me.name, chosen.id) %}
   {% set plan = mine[0] if mine else none %}
@@ -24,9 +25,10 @@
   <div class="split gap-above">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="enc-h">
-        <h2 id="enc-h">Encounters <span class="count">· {{ seen | length }}</span></h2>
-        <p class="sub">Yours with {{ chosen.name }}, the latest first.</p>
-        {% if seen %}<ul class="items">{% for e in seen %}{{ encounter_item(e, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
+        {% set all_seen = (seen + sample.shared_encounters(me.name, chosen.id)) | sort(attribute="when", reverse=true) %}
+        <h2 id="enc-h">Encounters <span class="count">· {{ all_seen | length }}</span></h2>
+        <p class="sub">Yours with {{ chosen.name }}, and any a colleague has shared with you, the latest first.</p>
+        {% if all_seen %}<ul class="items">{% for e in all_seen %}{{ encounter_item(e, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
         <button type="button" class="btn btn-secondary gap-above-sm" disabled>Full history</button>
       </section>
       {% set theirs = sample.flags_for(me, sid=chosen.id) %}
@@ -35,10 +37,12 @@
         <p class="sub">Flags for {{ chosen.name }} you may see, active first, then closed with their outcomes.</p>
         {% if theirs %}<ul class="items">{% for f in theirs %}{{ flag_item(f, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
       </section>
+      {% set mine_shared = sample.grants_by(me.name, chosen.id) %}
       <section class="card card-pad" aria-labelledby="shared-h">
         <h2 id="shared-h">Shared with</h2>
-        <p class="sub">Colleagues you have shared your records for {{ chosen.name }} with, each with Revoke (§11.1). Placeholder: rung 4.</p>
-        <button type="button" class="btn btn-secondary" disabled>Share with a colleague</button>
+        <p class="sub">Colleagues who can see your records for {{ chosen.name }} (§11.1). Private unless you share.</p>
+        {% if mine_shared %}<ul class="items">{% for g in mine_shared %}<li><div class="item-head"><span class="strong">{{ g.viewer }}</span><button type="button" class="btn btn-danger" disabled aria-label="Revoke {{ g.viewer }}'s view">Revoke</button></div><div class="subtle">Since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one.</p>{% endif %}
+        {% if sample.working_set(me.name) | selectattr("0.id", "equalto", chosen.id) | list %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/students/' ~ chosen.id ~ '/share') }}{{ as_query }}">Share with a colleague</a>{% else %}<p class="subtle small">You have no records of your own for {{ chosen.name }} to share.</p>{% endif %}
       </section>
     </div>
     <div class="side">
@@ -51,13 +55,28 @@
             {% if plan.formal %}<dt>Assigned by</dt><dd>{{ plan.assigned_by }}</dd>{% if plan.review %}<dt>Review</dt><dd>{{ sample.short_date(plan.review) }}</dd>{% endif %}{% endif %}
           </dl>
           {% if plan.instruction %}<p class="subtle small">{{ plan.instruction }}</p>{% endif %}
-          {% if not plan.formal %}<button type="button" class="btn btn-secondary gap-above-sm" disabled>Stop following up</button>{% endif %}
+          <div class="btnrow gap-above-sm">
+            <a class="btn btn-secondary" href="{{ url('/plans/' ~ plan.id) }}{{ as_query }}">Plan details</a>
+            {% if not plan.formal %}<button type="button" class="btn btn-secondary" disabled>Stop following up</button>{% endif %}
+          </div>
         {% else %}
           <p class="sub">Not on your follow-ups.</p>
           <button type="button" class="btn btn-secondary" disabled>Start following up</button>
         {% endif %}
-        {% if not (plan and plan.formal) %}<button type="button" class="btn btn-secondary gap-above-sm" disabled>Flag for formal assignment</button>{% endif %}
+        {% if not (plan and plan.formal) %}
+          {% set ref = sample.referral(chosen.id) %}
+          {% if ref and ref.flagged_by != me.name %}{% set ref = none %}{% endif %}
+          {% if ref %}<p class="subtle small gap-above-sm">Flagged for formal assignment on {{ sample.short_date(ref.flagged_on) }} by {{ ref.flagged_by }}, for senior staff to review.</p>
+          {% else %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/students/' ~ chosen.id ~ '/refer') }}{{ as_query }}">Flag for formal assignment</a>{% endif %}
+        {% endif %}
       </section>
+      {% set theirs = sample.shared_plans(me.name, chosen.id) %}
+      {% if theirs %}
+      <section class="card card-pad muted" aria-labelledby="splan-h">
+        <h2 id="splan-h">Shared plans</h2>
+        <ul class="items">{% for p in theirs %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.cadence }}</div><span class="chip chip-mute">Shared by {{ p.staff }}</span></li>{% endfor %}</ul>
+      </section>
+      {% endif %}
     </div>
   </div>
 {% endblock %}

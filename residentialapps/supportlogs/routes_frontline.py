@@ -12,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import gated
+from residentialapps.supportlogs.pages import gated, reaches_student
 from residentialapps.web.pages import placeholders_local_only
 from residentialapps.web.urls import url_path
 
@@ -66,13 +66,14 @@ def students(request: Request) -> Response:
 @router.get("/students/{sid}", name="supportlogs_student")
 def student_view(request: Request, sid: str) -> Response:
     """The student view (§9; UI spec screen 5). A student outside the
-    viewer's own working set is not found, as RA Leave's other RAs'
-    applications are: the view shows only what the viewer's records cover."""
+    viewer's own working set, and not shared with them by a colleague, is
+    not found, as RA Leave's other RAs' applications are: the view shows
+    only what the viewer's records and grants cover (§11.1)."""
     me = _me(request)
     if not sample.holds(me, FRONTLINE):
         return gated(request, "supportlogs/student.html", FRONTLINE)  # the 403 page, whatever the id
     found = sample.student(sid)
-    if found is None or all(s.id != sid for s, _, _ in sample.working_set(me.name)):
+    if found is None or not reaches_student(me, sid):
         raise HTTPException(status_code=404)
     return gated(request, "supportlogs/student.html", FRONTLINE, chosen=found, current_tab="/students/")
 

@@ -110,6 +110,14 @@ def areas_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
     return tuple(areas)
 
 
+def reaches_student(me: sample.Viewer, sid: str) -> bool:
+    """A frontline viewer reaches their own working set (§4.3) and what
+    colleagues have shared with them (§11.1)."""
+    return any(s.id == sid for s, _, _ in sample.working_set(me.name)) or any(
+        g.student == sid for g in sample.shared_with(me.name)
+    )
+
+
 def query(me: sample.Viewer, **params: str) -> str:
     """A query string carrying the sample viewer and ``params``, or empty."""
     pairs = ([("as", me.name)] if me != sample.DEFAULT else []) + [(k, v) for k, v in params.items() if v]
