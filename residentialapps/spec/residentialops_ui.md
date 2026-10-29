@@ -149,8 +149,7 @@ model (author, 2026-10-27):
   text in the light theme, the reverse in the dark) and a hidden one's a
   muted fill with body text, as RRW's chips, remembered per browser;
   each header's button sorts ascending, descending, then back to the
-  page's order, an empty value (a None chip) last either way, the sort
-  kept per browser by page and table (not by term
+  page's order, the sort kept per browser by page and table (not by term
   or sample viewer) across a reload, and dropped once its column is hidden
   or gone (author, 2026-10-29). Assignments' slots table sorts the same way, with a chip
   for Notes alone; sorted, each row names its levels and the grouping
@@ -159,6 +158,9 @@ model (author, 2026-10-27):
   log, and Precinct leave sort only (`data-sort-auto`). Policy's row
   builders, Terms, the dashboard's cards, Delegates and the appeals
   tables, short or edited in place, take neither (author, 2026-10-29).
+  On every sorted table an empty value (a None chip, an empty cell) sorts
+  last either way; a placeholder such as "—" or "No one" is text and
+  sorts as text (author, 2026-10-29).
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).

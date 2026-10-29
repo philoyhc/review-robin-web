@@ -477,7 +477,8 @@
       // shows or hides the table's cells marked `data-col=<key>`, kept per
       // browser under the table's `data-col-store`; a `.sort-btn` in a
       // `th.sortable` sorts the rows marked `data-row` by that column's
-      // `data-sort-value` (else its text), then back to the page's order.
+      // `data-sort-value` (else its text), an empty value last either way,
+      // then back to the page's order.
       // A table's sort is kept per browser too, by page path and table, so
       // it survives a reload or a change of term (author, 2026-10-29).
       (function () {
