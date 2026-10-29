@@ -1,0 +1,21 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
+{% block title %}Share with a colleague{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">‹ {{ chosen.name }}</a>
+  {{ sample_title("Share with a colleague", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  {# A peer-view grant (§11.1): private by default; the scope proposed is
+     the grantor's records for this one student (§17 Q10). #}
+  <form class="card card-pad" action="{{ url('/students/' ~ chosen.id ~ '/share/sent') }}" method="get" aria-labelledby="share-h">
+    {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+    <h2 id="share-h">Your records for {{ chosen.name }}</h2>
+    <p class="sub">The colleague sees your encounters, follow-ups and plans for {{ chosen.name }} only, labelled with your name, until you revoke it. The grant, its revocation and their views are recorded.</p>
+    <div class="field-wide"><label for="colleague">Colleague</label>
+      <select id="colleague" name="colleague" class="input" required><option value="">Choose a colleague</option>{% for c in colleagues %}<option>{{ c }}</option>{% endfor %}</select>
+      <span class="subtle small">RFs and RSLMs with frontline access.</span></div>
+    <div class="btnrow gap-above-sm"><button type="submit" class="btn btn-primary">Share</button><a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Cancel</a></div>
+  </form>
+{% endblock %}

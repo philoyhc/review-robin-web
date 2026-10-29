@@ -27,4 +27,12 @@
       {% endfor %}
     </ul>
   </section>
+  {% set shared = sample.shared_with(me.name) %}
+  {% if shared %}
+  <section class="card card-pad gap-above" aria-labelledby="shared-h">
+    <h2 id="shared-h">Shared with me <span class="count">· {{ shared | length }}</span></h2>
+    <p class="sub">Students a colleague has shared their records for with you (§11.1).</p>
+    <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chip chip-mute">Shared by {{ g.grantor }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
 {% endblock %}

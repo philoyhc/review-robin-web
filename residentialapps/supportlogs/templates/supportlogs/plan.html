@@ -1,0 +1,64 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import due_chip, recorded with context %}
+{% block title %}Plan{% endblock %}
+{% block content %}
+  {% set s = sample.student(p.student) %}
+  <a class="back" href="{{ url('/plans/' if owner else '/overview/') }}{{ as_query }}">‹ {{ "My plans" if owner else "Overview" }}</a>
+  {{ sample_title(("Formal assignment" if p.formal else "Follow-up") ~ ": " ~ s.name, me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  {# A plan (§7, §8; data model SupportRelationship): operational facts
+     only, never the reason behind it (§7.5). #}
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="plan-h">
+        <h2 id="plan-h">{% if linked %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %} {{ due_chip(p) }}{% if p.safety_plan %} <span class="chip chip-marker">Safety-plan support</span>{% endif %}</h2>
+        <dl class="kv">
+          {% if not owner %}<dt>With</dt><dd>{{ p.staff }}</dd>{% endif %}
+          <dt>Status</dt><dd>{{ p.status }}</dd>
+          {% if p.formal %}<dt>Source</dt><dd>{{ p.source }}</dd><dt>Assigned by</dt><dd>{{ p.assigned_by }}</dd>{% endif %}
+          <dt>Since</dt><dd>{{ sample.short_date(p.start) }}</dd>
+          <dt>Cadence</dt><dd>{{ p.cadence }}</dd>
+          {% if p.review %}<dt>Review</dt><dd>{{ sample.short_date(p.review) }}</dd>{% endif %}
+          {% set seen = sample.last_contact(p) %}{% set nd = sample.next_due(p) %}
+          <dt>Last contact</dt><dd>{{ sample.short_date(seen) if seen else "None yet" }}</dd>
+          <dt>Next expected</dt><dd>{{ sample.short_date(nd) if nd else "No fixed cadence" }}</dd>
+          <dt>Contacts since it began</dt><dd>{{ sample.contacts_since_start(p) }}</dd>
+        </dl>
+        {% if p.instruction %}<p class="gap-above-sm"><span class="strong">Instruction:</span> {{ p.instruction }}</p>{% endif %}
+      </section>
+      <section class="card card-pad" aria-labelledby="hist-h">
+        <h2 id="hist-h">History</h2>
+        <p class="sub">How it began and what changed: one record, converted or not (§8).</p>
+        <ul class="items">{% for on, what in sample.PLAN_HISTORY.get(p.id, ()) %}<li><span class="subtle">{{ sample.short_date(on) }}</span> · {{ what }}</li>{% endfor %}</ul>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="act-h">
+        <h2 id="act-h">{{ "Change it" if (owner and not p.formal) or senior else "Read only" }}</h2>
+        {% if senior %}
+          {% if not p.formal %}
+            <p class="sub">Convert to a formal assignment, keeping its history (§8).</p>
+            <div class="field-wide"><label for="cv-source">Source</label><select id="cv-source" class="input" disabled>{% for src in sample.ASSIGNMENT_SOURCES %}<option>{{ src }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="cv-cadence">Cadence</label><select id="cv-cadence" class="input" disabled>{% for c in sample.ASSIGNMENT_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="cv-review">Review on</label><input id="cv-review" class="input" type="date" disabled></div>
+            <div class="field-wide"><label for="cv-instr">Instruction</label><input id="cv-instr" class="input" maxlength="160" disabled></div>
+            <label class="check"><input type="checkbox" disabled> Safety-plan support (Counselling only)</label>
+            <button type="button" class="btn btn-primary gap-above-sm" disabled>Convert to formal assignment</button>
+          {% else %}
+            <div class="field-wide"><label for="st">Status</label><select id="st" class="input" disabled>{% for st in sample.PLAN_STATUSES %}<option{% if st == p.status %} selected{% endif %}>{{ st }}</option>{% endfor %}</select></div>
+            <button type="button" class="btn btn-secondary" disabled>Save</button>
+          {% endif %}
+        {% elif owner and not p.formal %}
+          <div class="field-wide"><label for="cad">Cadence</label><select id="cad" class="input" disabled>{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if c == p.cadence %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>
+          <div class="btnrow"><button type="button" class="btn btn-secondary" disabled>Save cadence</button><button type="button" class="btn btn-secondary" disabled>Stop following up</button></div>
+        {% elif owner %}
+          <p class="sub">Assigned by {{ p.assigned_by }}; senior staff change or close it.</p>
+        {% else %}
+          <p class="sub">You see it read-only (Other Staff view).</p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

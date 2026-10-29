@@ -34,7 +34,7 @@ PLACEHOLDERS = (
     Placeholder("/overview/", "overview", "Overview", (sample.SENIOR, *sample.VIEW), 5, (
         "Team workload with load weighting (§10.2–10.3)",
         "Hotspots and clusters (§10.4–10.5)",
-        "Due and overdue coverage (§10.6), and every plan",
+        "Due and overdue coverage (§10.6)",
         "Other Staff view: counts only when aggregate; named drill-downs and plans, read-only, when identifiable",
     )),
     Placeholder("/consultation/", "consultation", "Consultation check", (sample.CONSULTATION,), 6, (
@@ -66,8 +66,14 @@ def _route(p: Placeholder):
         # Overview lists the flags for a recipient (author, 2026-10-29), ahead
         # of the rest of the page in rung 5.
         me = sample.viewer(request.query_params.get("as"))
-        show_flags = p.path == "/overview/" and sample.holds(me, sample.RECIPIENT)
-        return page(request, *p.grants, area=p.area, placeholder=p, current_tab=p.tab, show_flags=show_flags)
+        overview = p.path == "/overview/"
+        show_flags = overview and sample.holds(me, sample.RECIPIENT)
+        # Every plan for identifiable viewers, and the students flagged for
+        # formal assignment for senior staff (rung 4), ahead of rung 5.
+        show_plans = overview and sample.holds(me, sample.SENIOR, sample.VIEW_IDENTIFIABLE)
+        show_referrals = overview and sample.holds(me, sample.SENIOR)
+        return page(request, *p.grants, area=p.area, placeholder=p, current_tab=p.tab,
+                    show_flags=show_flags, show_plans=show_plans, show_referrals=show_referrals)
 
     return show
 
