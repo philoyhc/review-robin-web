@@ -90,8 +90,11 @@
 
     <button id="save" type="submit" class="btn btn-primary btn-wide gap-above" aria-describedby="save-what">Save encounter</button>
     <p id="save-what" class="subtle small">Saves once a student, a duration and a type are chosen (§5.3).</p>
+    <hr class="gap-above">
+    {# Set apart at the end; it carries whatever is chosen so far into the
+       safety flow, which asks for the rest (UI spec screen 4). #}
+    <button type="submit" class="btn btn-danger" formaction="{{ url('/log/safety') }}" formnovalidate>Mark a safety concern</button>
   </form>
-  <p class="gap-above"><a class="btn btn-danger" href="{{ url('/log/safety') }}{{ as_query }}">Mark a safety concern</a></p>
   <script>
     (function () {
       var form = document.getElementById("log-form");

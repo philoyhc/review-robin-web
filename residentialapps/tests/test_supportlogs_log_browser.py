@@ -116,3 +116,20 @@ def test_the_follow_ups_follow_the_student_chosen(page: Page) -> None:
     choose(page, "Student", "Bao Nguyen")
     assert page.locator("#on-plan").is_hidden() and page.locator("#add-follow").is_visible()
     assert page.locator("#cadence-field").is_visible() and page.locator("#cadence").input_value() == "No fixed cadence"
+
+
+def test_marking_a_safety_concern_carries_the_choices(page: Page) -> None:
+    page.goto(f"{ORIGIN}/log")
+    choose(page, "Student", "Bao Nguyen")
+    choose(page, "Duration", "10 min")
+    page.get_by_role("button", name="Mark a safety concern").click()
+    page.wait_for_url("**/log/safety?**")
+    raise_ = page.locator("#raise")
+    assert raise_.is_disabled()
+    page.select_option("#ctx-type", "Check-in")
+    assert raise_.is_disabled()
+    choose(page, "Escalation step taken", "Duty senior staff contacted")
+    assert raise_.is_enabled()
+    raise_.click()
+    page.wait_for_url("**/log/safety/raised?**")
+    assert "A safety flag is raised for Bao Nguyen" in page.content()

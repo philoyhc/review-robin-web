@@ -1,6 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import due_chip, kind_chips, encounter_item with context %}
+{% from "supportlogs/_frontline.html" import due_chip, kind_chips, encounter_item, flag_item with context %}
 {% block title %}{{ chosen.name }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/students/') }}{{ as_query }}">‹ Students</a>
@@ -29,9 +29,11 @@
         {% if seen %}<ul class="items">{% for e in seen %}{{ encounter_item(e, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None yet.</p>{% endif %}
         <button type="button" class="btn btn-secondary gap-above-sm" disabled>Full history</button>
       </section>
+      {% set theirs = sample.flags_for(me, sid=chosen.id) %}
       <section class="card card-pad" aria-labelledby="flags-h">
-        <h2 id="flags-h">Safety flags</h2>
-        <p class="sub">Flags for {{ chosen.name }} you may see, active first, then closed with their outcomes (§5.10). Placeholder: rung 3.</p>
+        <h2 id="flags-h">Safety flags <span class="count">· {{ theirs | length }}</span></h2>
+        <p class="sub">Flags for {{ chosen.name }} you may see, active first, then closed with their outcomes.</p>
+        {% if theirs %}<ul class="items">{% for f in theirs %}{{ flag_item(f, with_student=false) }}{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="shared-h">
         <h2 id="shared-h">Shared with</h2>

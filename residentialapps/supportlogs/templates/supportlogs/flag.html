@@ -1,0 +1,46 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import flag_chip with context %}
+{% block title %}Safety flag{% endblock %}
+{% block content %}
+  {% set s = sample.student(f.student) %}
+  {% set recipient = sample.holds(me, sample.RECIPIENT) %}
+  <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "Home" if back == "/" else "Overview" }}</a>
+  {{ sample_title("Safety flag", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# A flag's detail (UI spec screen 8): every view, acknowledgement and
+     closure is audited (§11.3). #}
+  <p class="notice" role="note">Viewing this flag is recorded.</p>
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad safety" aria-labelledby="flag-h">
+        <h2 id="flag-h">{% if in_set %}<a href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %} {{ flag_chip(f) }}</h2>
+        <dl class="kv">
+          <dt>Raised</dt><dd>{{ sample.when(f.raised_at) }}, by {{ f.raised_by }}</dd>
+          <dt>Escalation step</dt><dd>{{ f.step }}</dd>
+          {% if f.acknowledged_by %}<dt>Acknowledged</dt><dd>{{ sample.when(f.acknowledged_at) }}, by {{ f.acknowledged_by }}</dd>{% endif %}
+          {% if f.status == "closed" %}<dt>Closed</dt><dd>{{ sample.when(f.closed_at) }}, by {{ f.closed_by }}: {{ f.outcome }}</dd>{% endif %}
+        </dl>
+      </section>
+    </div>
+    <div class="side">
+      <section class="card card-pad muted" aria-labelledby="act-h">
+        <h2 id="act-h">{{ "Act on it" if recipient else "Its state" }}</h2>
+        {% if not recipient %}
+          <p class="sub">You raised it: you see its state and outcome. Safety-flag recipients act on it.</p>
+        {% elif f.active %}
+          {% if f.status == "open" %}
+            <p class="sub">Acknowledging takes it on; it stays active until it is closed.</p>
+            <button type="button" class="btn btn-primary" disabled>Acknowledge</button>
+          {% endif %}
+          <div class="field-wide gap-above-sm"><label for="outcome">Outcome</label>
+            <select id="outcome" class="input" disabled><option value="">Choose an outcome</option>{% for o in sample.CLOSURE_OUTCOMES %}<option>{{ o }}</option>{% endfor %}</select></div>
+          <button type="button" class="btn btn-secondary" disabled>Close with outcome</button>
+          <p class="subtle small">Closing needs an outcome and takes it off the active lists.</p>
+        {% else %}
+          <p class="sub">Closed: {{ f.outcome }}.</p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+{% endblock %}

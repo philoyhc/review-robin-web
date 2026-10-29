@@ -71,7 +71,7 @@ def test_log_renders_the_configured_lists_as_choice_chips(client: TestClient) ->
     assert "<dt>Health and accessibility</dt><dd>medical matters" in page  # guidance without hover
     assert ' title="' not in page.split('id="log-form"')[1]
     assert page.index('id="log-h"') < page.index("Add details") < page.index('id="save"')  # details on the page
-    assert ">Mark a safety concern</a>" in page
+    assert 'formaction="/log/safety" formnovalidate>Mark a safety concern</button>' in page
 
 
 def test_log_offers_the_viewer_s_students_or_the_one_chosen(client: TestClient) -> None:

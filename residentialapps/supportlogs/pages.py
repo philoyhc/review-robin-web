@@ -62,9 +62,24 @@ def home_is_a_page(v: sample.Viewer) -> bool:
     return sample.holds(v, sample.FRONTLINE) or home_flags(v) or len(destinations(v)) > 1
 
 
+def flags_tab(v: sample.Viewer) -> str | None:
+    """Where a recipient's flags list: Home for the frontline and for a
+    recipient with nothing else, else Overview (author, 2026-10-29)."""
+    if not sample.holds(v, sample.RECIPIENT):
+        return None
+    return "/" if sample.holds(v, sample.FRONTLINE) or home_flags(v) else "/overview/"
+
+
 def tabs_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
+    """The main area's tabs, the flags' tab carrying the count of
+    unacknowledged flags (UI spec screen 9)."""
     tabs = ([("Home", "/")] if home_is_a_page(v) else []) + _grant_tabs(v)
-    return tuple({"label": label, "path": path, "query": sample.as_query(v)} for label, path in tabs)
+    count = sample.unacknowledged(v)
+    return tuple(
+        {"label": label, "path": path, "query": sample.as_query(v),
+         "badge": count if path == flags_tab(v) and count else 0}
+        for label, path in tabs
+    )
 
 
 SYS_ADMIN_TABS = (

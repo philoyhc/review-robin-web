@@ -1,0 +1,71 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
+{% block title %}Safety concern{% endblock %}
+{% block content %}
+  {# Safety concern (UI spec screen 4; functional spec §5.10): its own
+     color and heading; the calls first, which never wait on anything. #}
+  <header class="safety-head">
+    <a class="back" href="{{ url('/log') }}{{ qs(student=chosen.id if chosen else '') }}">‹ Back</a>
+    <h1>Safety concern</h1>
+  </header>
+  <p><span class="chip chip-warn">Sample data</span> <span class="chip chip-info">Viewing as {{ me.name }}</span></p>
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  <section class="card card-pad safety gap-below" aria-labelledby="call-h">
+    <h2 id="call-h">Call now if needed</h2>
+    <ul class="calls">
+      {% for who, number in sample.CRISIS_CONTACTS %}<li><a href="{{ url('tel:' ~ number) }}">{{ who }} <span class="nowrap">{{ number }}</span></a></li>{% endfor %}
+    </ul>
+    <p class="small gap-above-sm">Placeholder numbers: the institution's crisis protocol supplies them (§17).</p>
+  </section>
+
+  <form id="safety-form" class="card card-pad" action="{{ url('/log/safety/raised') }}" method="get" aria-labelledby="ctx-h">
+    {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+    <h2 id="ctx-h">The encounter</h2>
+    <p class="sub">What is not chosen yet, so the flag can be raised from here.</p>
+    {% if chosen %}<input type="hidden" name="student" value="{{ chosen.id }}"><p class="flush"><span class="strong">{{ chosen.name }}</span> <span class="subtle">{{ chosen.email }}</span></p>
+    {% else %}<div class="field-wide"><label for="ctx-student">Student</label>
+      <select id="ctx-student" name="student" class="input" required><option value="">Choose a student</option>{% for s, reasons, seen in sample.working_set(me.name) %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>{% endif %}
+    {% if duration %}<input type="hidden" name="duration" value="{{ duration }}"><p class="flush subtle">{{ duration }}</p>
+    {% else %}<div class="field-wide"><label for="ctx-duration">Duration</label>
+      <select id="ctx-duration" name="duration" class="input" required><option value="">Choose a duration</option>{% for d in sample.DURATIONS %}<option>{{ d }}</option>{% endfor %}</select></div>{% endif %}
+    {% if kind %}<input type="hidden" name="type" value="{{ kind }}"><p class="flush subtle">{{ kind }}</p>
+    {% else %}<div class="field-wide"><label for="ctx-type">Type</label>
+      <select id="ctx-type" name="type" class="input" required><option value="">Choose a type</option>{% for t in sample.ENCOUNTER_TYPES %}<option>{{ t }}</option>{% endfor %}</select></div>{% endif %}
+
+    <h2 class="gap-above">The crisis protocol</h2>
+    <ol class="plain">{% for step in sample.CRISIS_STEPS %}<li>{{ step }}</li>{% endfor %}</ol>
+    <p class="subtle small">Placeholder steps until the institution supplies its protocol (§17).</p>
+
+    <fieldset class="choices">
+      <legend>Escalation step taken</legend>
+      <div class="choice-row">{% for step in sample.ESCALATION_STEPS %}<label class="choice"><input type="radio" name="step" value="{{ step }}" required>{{ step }}</label>{% endfor %}</div>
+    </fieldset>
+    <div class="field-wide"><label for="step-at">When</label>
+      <input id="step-at" class="input" type="datetime-local" value="{{ sample.NOW.strftime('%Y-%m-%dT%H:%M') }}"></div>
+    <p class="notice" role="note">{{ sample.MINIMISE }}</p>
+    <div class="btnrow">
+      <button id="raise" type="submit" class="btn btn-primary btn-wide" aria-describedby="raise-what">Save and raise safety flag</button>
+      <a class="btn btn-secondary" href="{{ url('/log') }}{{ qs(student=chosen.id if chosen else '') }}">Cancel</a>
+    </div>
+    <p id="raise-what" class="subtle small">Raises once the student, duration, type and the escalation step are set. Every safety-flag recipient sees it at once; no alert is sent.</p>
+  </form>
+  <script>
+    (function () {
+      var form = document.getElementById("safety-form");
+      var raise = document.getElementById("raise");
+      function set(name) {
+        var field = form.querySelector('[name="' + name + '"]');
+        if (!field) return false;
+        if (field.type === "radio") return !!form.querySelector('input[name="' + name + '"]:checked');
+        return !!field.value;
+      }
+      function sync() {
+        raise.disabled = !(set("student") && set("duration") && set("type") && set("step"));
+      }
+      form.addEventListener("change", sync);
+      sync();
+    })();
+  </script>
+{% endblock %}

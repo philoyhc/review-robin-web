@@ -1,0 +1,18 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
+{% block title %}Safety flag raised{% endblock %}
+{% block content %}
+  {{ sample_title("Safety flag raised", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
+  <section class="card card-pad safety gap-below" aria-labelledby="raised-h" role="status">
+    <h2 id="raised-h">A safety flag is raised for {{ chosen.name }}</h2>
+    <p class="flush">{{ step }}. {{ kind }}, {{ duration }}.</p>
+    <p class="small gap-above-sm">Every safety-flag recipient sees it on their dashboard now, and it stays active until it is closed with an outcome. No alert is sent: the protocol's calls carry the urgency (§5.10). A sample: nothing is stored.</p>
+  </section>
+  <div class="btnrow">
+    <a class="btn btn-primary" href="{{ url('/') }}{{ as_query }}">Home</a>
+    {% if in_set %}<a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Open {{ chosen.name }}</a>{% endif %}
+  </div>
+{% endblock %}
