@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residentialops/leave/_leave.html" import title, viewing with context %}
+{% from "residentialops/_people.html" import person_tokens %}
 {% block title %}Request extra leave{% endblock %}
 {% block content %}
   {{ title("Request extra leave", leave, viewing(me)) }}
@@ -20,7 +21,7 @@
         {% if leave.zero_day_rule() %}<p class="subtle small">{{ leave.zero_day_rule() }}</p>{% endif %}
         <div class="field-wide"><label for="reason">Why you need it</label><textarea id="reason" class="input" rows="3" disabled></textarea></div>
         <div class="field-wide"><label for="cover">Covering RA</label>
-          <input id="cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" aria-describedby="cover-what" disabled>
+          {{ person_tokens("Covering RA", (), "cover-pool", "cover", single=true, describedby="cover-what") }}
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
           <span id="cover-what" class="subtle small">An appeal always needs your cover to confirm (spec §7.4).</span></div>
         <fieldset class="modes"><legend>The terms</legend>

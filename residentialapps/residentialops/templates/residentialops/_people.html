@@ -1,0 +1,13 @@
+{# A box of people (author, 2026-10-29): each person matched to a roster
+   is a pill, dark filled, with its remove button, then a typeahead to add
+   the next; unmatched text stays in the box until it matches. `single`
+   holds one person: once chosen, the typeahead goes and its id passes to
+   the remove button, so a label still names a control. The value is set
+   here, so these are tokens, not derived pills. #}
+{% macro person_tokens(label, names, list_id, input_id="", single=false, describedby="") %}
+  {% set full = single and names %}
+  <div class="tokens" role="group" aria-label="{{ label }}"{% if describedby %} aria-describedby="{{ describedby }}"{% endif %}>
+    {% for name in names %}<span class="token">{{ name }}<button type="button"{% if full and input_id %} id="{{ input_id }}"{% endif %} class="token-x" aria-label="Remove {{ name }} from {{ label }}" disabled>×</button></span>{% endfor %}
+    {% if not full %}<input{% if input_id %} id="{{ input_id }}"{% else %} aria-label="Add to {{ label }}"{% endif %}{% if describedby %} aria-describedby="{{ describedby }}"{% endif %} class="token-input" type="text" list="{{ list_id }}" placeholder="{{ 'Choose a name' if single else 'Add a name' }}" disabled>{% endif %}
+  </div>
+{% endmacro %}

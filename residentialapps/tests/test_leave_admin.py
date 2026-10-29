@@ -304,7 +304,7 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     final = re.findall(r'name="final-types" value="(\w+)"( checked)?', page)
     assert final == [("Master", ""), ("Admin", " checked"), ("Exec", "")]
     assert 'list="staff-names"' in page and page.count('<option value="') >= len(sample_data.STAFF)
-    assert "No first approver needed" in page and "comma separated" in page
+    assert "No first approver needed" in page and "each added by name" in page
 
     monkeypatch.setitem(sample_leave.POLICY, "first", "none")
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
@@ -314,7 +314,8 @@ def test_approvals_choose_slot_and_unit_appointments_or_none_or_named(monkeypatc
     steps = [s for _, s, _ in sample_leave.timeline(sample_leave.by_id("L-0106"))]
     assert not any(s.startswith("First approval") for s in steps) and "Final approval by Sam Lee" in steps
     named = client().get(ADMIN + "policy").text
-    assert 'value="Sam Lee, Rachel Yeo" disabled' in named
+    box = named.split('aria-label="Staff who may give final approval"')[1].split("</div>")[0]
+    assert re.findall(r'<span class="token">([^<]+)<button', box) == ["Sam Lee", "Rachel Yeo"]
     assert "<td>Sam Lee or Rachel Yeo</td>" in client().get(ADMIN + "routing").text
     dash = client().get(ADMIN).text
     assert "No first approval, then Sam Lee or Rachel Yeo" in dash and "No first approval is needed" in dash

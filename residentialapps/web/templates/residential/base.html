@@ -177,20 +177,23 @@
       }
       .token {
         display: inline-flex; align-items: center; gap: 2px; padding: 1px 2px 1px 8px; border-radius: 9999px;
-        background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-size: 13px; font-weight: 600; white-space: nowrap;
+        background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 600; white-space: nowrap;  /* a chosen person: filled, as a selected chip */
       }
       .token-x { border: 0; background: transparent; color: inherit; font: inherit; padding: 0 4px; min-width: 20px; cursor: pointer; }
       .token-x:disabled { cursor: not-allowed; }
+      .token-x:focus-visible { outline: 2px solid var(--on-accent); outline-offset: -2px; border-radius: 9999px; }  /* the accent ring would vanish on the token's fill */
       .token-input { flex: 1 1 80px; min-width: 80px; border: 0; background: transparent; color: var(--text-body); font: inherit; font-size: 14px; padding: 4px 2px; }
-      /* A table's column chips, after RRW's roster pages: a filled chip is
-         a shown column, a plain one hidden; Name has none (author,
-         2026-10-29). */
+      /* A table's column chips, after RRW's roster pages: one per column
+         but Name (author, 2026-10-29). */
       .col-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 0; font-size: 13px; color: var(--text-subtle); }
+      /* As RRW's chips: accent filled when selected (dark in the light
+         theme, light in the dark), a muted fill with body text when not
+         (author, 2026-10-29). */
       .col-chip {
         min-height: 28px; padding: 2px 10px; border-radius: 9999px; border: 1px solid var(--accent);
-        background: transparent; color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
+        background: var(--surface-muted); color: var(--text-body); font: inherit; font-size: 13px; cursor: pointer;
       }
-      .col-chip[aria-pressed="true"] { background: var(--accent-tint-strong); color: var(--accent-chip-fg); font-weight: 600; }
+      .col-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
       /* Each header sorts by its button: ascending, descending, then back
          to the table's own order. */
       th.sortable { white-space: nowrap; }
@@ -201,7 +204,7 @@
       }
       .sort-btn:hover { border-color: var(--border-default); }
       th[aria-sort="ascending"] .sort-btn, th[aria-sort="descending"] .sort-btn { color: var(--text-body); font-weight: 700; }
-      .sort-btn:focus-visible, .col-chip:focus-visible, .token-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+      .sort-btn:focus-visible, .col-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
       .pill-derived {
         display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 9999px; white-space: nowrap;
         font-size: 13px; color: var(--text-body); background: var(--surface-muted); border: 1px solid var(--border-subtle);
@@ -238,7 +241,7 @@
       /* Leave policy's approvers: a radio's checkboxes or names under it. */
       .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0 4px; }
       .check { display: inline-flex; gap: 6px; align-items: center; }
-      .mode .names { display: block; width: 100%; max-width: 420px; margin: 6px 0 4px; }
+      .mode .tokens { max-width: 420px; margin: 6px 0 4px; }
       code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
       ul.plain, ol.plain { margin: 0; padding-left: 18px; font-size: 14px; }
       ol.plain li + li { margin-top: 4px; }
