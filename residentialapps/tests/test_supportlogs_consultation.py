@@ -29,9 +29,19 @@ def check(client: TestClient, emails: str, purpose: str = "Overseas field trip",
 
 def rows(page: str) -> list[tuple[str, str]]:
     """(email, state) per result row, in order."""
+    return [(r[0], r[1]) for r in full_rows(page)]
+
+
+def full_rows(page: str) -> list[tuple[str, str, list[str], str, bool]]:
+    """(email, state, reasons, consult, has the Consultation select) per row."""
     body = page.split("<tbody>")[1].split("</tbody>")[0]
-    return [(re.search(r'<span class="subtle">([^<]+@[^<]+)</span>', r).group(1), re.search(r'class="chip [a-z-]+">([^<]+)<', r).group(1))
-            for r in re.findall(r"<tr>(.*?)</tr>", body, re.S)]
+    out = []
+    for r in re.findall(r"<tr>(.*?)</tr>", body, re.S):
+        tds = re.findall(r"<td>(.*?)</td>", r, re.S)
+        out.append((re.search(r'<span class="subtle">([^<]+@[^<]+)</span>', tds[0]).group(1),
+                    re.search(r'class="chip [a-z-]+">([^<]+)<', tds[1]).group(1),
+                    re.findall(r"<li>([^<]+)</li>", tds[2]), tds[3].strip(), "<select" in tds[4]))
+    return out
 
 
 def test_each_state_comes_from_named_reasons() -> None:
@@ -59,8 +69,14 @@ def test_the_result_lists_the_strongest_first_and_says_what_none_means(client: T
     assert states == sorted(states, key=sample.CONSULTATION_STATES.index)
     assert len(states) == len(sample.SAMPLE_EMAILS)
     assert sample.NONE_MEANS in page and "This check is recorded" in page
-    assert "No Support Logs record" in page and "score" not in page.split("<tbody>")[1].split("</tbody>")[0]
+    assert "Not matched to a student" in page
     assert "Overseas field trip · 6 students" in page
+    assert "<table data-sort" not in page  # a kept sort would contradict "the strongest first"
+    for email, state, reasons, consult, select in full_rows(page):
+        expected = sample.consultation(email)
+        assert (state, tuple(reasons), consult, select) == (
+            expected.state, expected.reasons, ", ".join(expected.consult), bool(expected.reasons)), email
+    assert "Overseas field trip · 1 student ·" in check(client, "farid.osman@u.example.edu").text
 
 
 def test_the_result_shows_no_note_and_no_encounter(client: TestClient) -> None:
@@ -72,30 +88,55 @@ def test_the_result_shows_no_note_and_no_encounter(client: TestClient) -> None:
 
 
 def test_a_pasted_list_is_split_and_deduplicated(client: TestClient) -> None:
-    assert sample.emails_in("a@x.edu, b@x.edu;A@x.edu\n  c@x.edu not-an-email") == ["a@x.edu", "b@x.edu", "c@x.edu"]
-    assert [email for email, _ in rows(check(client, "farid.osman@u.example.edu, FARID.OSMAN@u.example.edu").text)] == [
-        "farid.osman@u.example.edu"]
+    assert sample.emails_in("a@x.edu, b@x.edu;A@x.edu\n  c@x.edu\nnot-an-email") == (
+        ["a@x.edu", "b@x.edu", "c@x.edu"], ["not-an-email"])
+
+
+def test_an_address_is_read_from_inside_a_name_or_quotes(client: TestClient) -> None:
+    """An address the check fails to read must never show as No consultation
+    indicated (§10.7): Clara Tan's state is Required however she is pasted."""
+    for pasted in ("Clara Tan <clara.tan@u.example.edu>", "clara.tan@u.example.edu.", '"clara.tan@u.example.edu"',
+                   "mailto:clara.tan@u.example.edu"):
+        assert rows(check(client, pasted).text) == [("clara.tan@u.example.edu", sample.REQUIRED)], pasted
+    page = check(client, "farid.osman@u.example.edu\nClara Tan\nsomeone at example").text
+    unread = page.split('id="unread-h"')[1].split("</section>")[0]
+    assert re.findall(r"<li>([^<]+)</li>", unread) == ["Clara Tan", "someone at example"]
+
+
+def test_whoever_raised_an_active_flag_is_consulted() -> None:
+    elena = sample.consultation("elena.park@u.example.edu")
+    assert "Unresolved safety escalation" in elena.reasons and "Daniel Koh" in elena.consult
+    assert all(sample.consultation(s.email).consult for s in sample.STUDENTS if sample.consultation(s.email).reasons)
 
 
 def test_a_check_needs_a_purpose_and_a_list(client: TestClient) -> None:
-    for purpose, emails in (("", "farid.osman@u.example.edu"), ("Trip", ""), ("  ", "no emails here")):
-        back = check(client, emails, purpose, follow_redirects=False)
-        assert (back.status_code, back.headers["location"]) == (303, "/consultation/?as=Marcus%20Tan"), (purpose, emails)
+    back = check(client, "farid.osman@u.example.edu", "  ", follow_redirects=False)
+    assert (back.status_code, back.headers["location"]) == (
+        303, "/consultation/?as=Marcus%20Tan&emails=farid.osman%40u.example.edu")
+    form = client.get(back.headers["location"]).text
+    assert "Add a purpose." in form and ">farid.osman@u.example.edu</textarea>" in form
+    back = check(client, "no emails here", "Trip", follow_redirects=False)
+    assert back.headers["location"] == "/consultation/?as=Marcus%20Tan&purpose=Trip&emails=no%20emails%20here"
+    assert "No email address was found in the list." in client.get(back.headers["location"]).text
+    assert "Add a purpose." not in client.get("/consultation/?as=Marcus%20Tan").text
 
 
 def test_the_form_fills_with_the_sample_list(client: TestClient) -> None:
     form = client.get("/consultation/?as=Marcus%20Tan&sample=1").text
     assert all(email in form for email in sample.SAMPLE_EMAILS)
     assert 'href="/consultation/?as=Marcus%20Tan&amp;sample=1"' in client.get("/consultation/?as=Marcus%20Tan").text
-    past = form.split('id="runs-h"')[1]
-    assert all(r.purpose in past for r in sample.CHECK_RUNS)
+    for name in ("Marcus Tan", "Nadia Hassan"):  # each sees their own runs only
+        past = client.get(f"/consultation/?as={name.replace(' ', '%20')}").text.split('id="runs-h"')[1]
+        assert [r.purpose for r in sample.CHECK_RUNS if r.purpose in past] == [r.purpose for r in sample.CHECK_RUNS if r.by == name]
 
 
 def test_only_the_consultation_check_grant_reaches_it(client: TestClient) -> None:
-    for name in ("Daniel Koh", "Sam Lee", "Siti Rahman", "Rachel Yeo", "Hui Min Goh"):
+    for name in ("Daniel Koh", "Sam Lee", "Siti Rahman", "Kenneth Lau", "Rachel Yeo", "Hui Min Goh",
+                 "Platform super-admin", "Wei Jie Ong"):
         q = name.replace(" ", "%20")
         assert client.get(f"/consultation/?as={q}").status_code == 403, name
         assert check(client, "farid.osman@u.example.edu", who=name).status_code == 403, name
+        assert check(client, "", "", who=name, follow_redirects=False).status_code == 403, name  # gated before the form is read
     assert client.get("/consultation/?as=Nadia%20Hassan").status_code == 200
 
 

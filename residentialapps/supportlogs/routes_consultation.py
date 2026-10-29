@@ -12,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import gated, query
+from residentialapps.supportlogs.pages import forbidden, gated, query
 from residentialapps.web.pages import placeholders_local_only
 from residentialapps.web.urls import url_path
 
@@ -21,24 +21,32 @@ router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 @router.get("/consultation/", name="supportlogs_consultation")
 def consultation(request: Request) -> Response:
-    """The check's form and past runs. `?sample=1` fills the form with the
-    sample list."""
+    """The check's form, keeping what a returned check carried, and the
+    viewer's own past runs. `?sample=1` fills the form with the sample
+    list."""
+    q = request.query_params
+    filled = q.get("sample") == "1"
     return gated(request, "supportlogs/consultation.html", sample.CONSULTATION,
-                 filled=request.query_params.get("sample") == "1")
+                 purpose="Overseas field trip, Semester 2" if filled else q.get("purpose", ""),
+                 emails="\n".join(sample.SAMPLE_EMAILS) if filled else q.get("emails", ""),
+                 filled=filled)
 
 
 @router.get("/consultation/check", name="supportlogs_consultation_check")
 def check(request: Request) -> Response:
-    """A check's result, one row per distinct email, strongest state first.
-    A missing purpose or list goes back to the form."""
+    """A check's result, one row per distinct email, strongest state first,
+    and any entry it could not read. A missing purpose or no address goes
+    back to the form with what was typed."""
     me = sample.viewer(request.query_params.get("as"))
     if not sample.holds(me, sample.CONSULTATION):
-        return gated(request, "supportlogs/consultation_check.html", sample.CONSULTATION)  # the 403 page
+        return forbidden(request, me)
     purpose = request.query_params.get("purpose", "").strip()
-    emails = sample.emails_in(request.query_params.get("emails", ""))
+    text = request.query_params.get("emails", "")
+    emails, unread = sample.emails_in(text)
     if not purpose or not emails:
-        return RedirectResponse(url_path(request, "/consultation/") + query(me), status_code=303)
+        return RedirectResponse(url_path(request, "/consultation/") + query(me, purpose=purpose, emails=text.strip()),
+                                status_code=303)
     rank = {state: n for n, state in enumerate(sample.CONSULTATION_STATES)}
     results = sorted((sample.consultation(e) for e in emails), key=lambda r: rank[r.state])
     return gated(request, "supportlogs/consultation_check.html", sample.CONSULTATION,
-                 purpose=purpose, results=results, current_tab="/consultation/")
+                 purpose=purpose, results=results, unread=unread, current_tab="/consultation/")

@@ -11,6 +11,7 @@ invented and bland: nothing here may read as a real case."""
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from urllib.parse import quote
@@ -669,15 +670,32 @@ def consultation(email: str) -> Consultation:
     reasons = tuple(r for r, _ in CONSULTATION_REASONS if met[r])
     brought = {state for r, state in CONSULTATION_REASONS if r in reasons}
     state = next((st for st in CONSULTATION_STATES if st in brought), NONE_INDICATED)
-    consult = () if not reasons else tuple(dict.fromkeys([p.staff for p in plans] + [e.staff for e in recent]))
+    raisers = [f.raised_by for f in FLAGS if f.student == s.id and f.active]
+    consult = () if not reasons else tuple(dict.fromkeys([p.staff for p in plans] + raisers + [e.staff for e in recent]))
     return Consultation(email, s, state, reasons, consult)
 
 
-def emails_in(text: str) -> list[str]:
-    """The distinct emails in a pasted list, in order: separated by commas,
-    semicolons, spaces or new lines."""
-    found = [w.strip().lower() for w in text.replace(",", " ").replace(";", " ").split()]
-    return list(dict.fromkeys(w for w in found if "@" in w))
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+
+
+def emails_in(text: str) -> tuple[list[str], list[str]]:
+    """The distinct emails in a pasted list, in order, and the entries read
+    as none. Entries are separated by commas, semicolons or new lines; an
+    address is taken from inside a name, angle brackets, quotes or
+    `mailto:`. An entry with no address is never quietly dropped: a check
+    that cannot read an entry must not show it as No consultation indicated
+    (§10.7)."""
+    emails, unread = [], []
+    for entry in re.split(r"[,;\n]", text):
+        entry = entry.strip()
+        if not entry:
+            continue
+        found = EMAIL.findall(entry)
+        if found:
+            emails += [e.lower() for e in found]
+        else:
+            unread.append(entry)
+    return list(dict.fromkeys(emails)), list(dict.fromkeys(unread))
 
 
 @dataclass(frozen=True)
