@@ -68,6 +68,8 @@ def test_log_renders_the_configured_lists_as_choice_chips(client: TestClient) ->
     assert f'maxlength="{sample.NOTE_LIMIT}"' in page and sample.NOTE_GUIDANCE in page
     assert '<textarea id="note"' in page and 'name="note"' not in page  # a sample sends no note
     assert page.count('data-clear="') == 3  # the optional single choices clear
+    assert "<dt>Health and accessibility</dt><dd>medical matters" in page  # guidance without hover
+    assert ' title="' not in page.split('id="log-form"')[1]
     assert page.index('id="log-h"') < page.index("Add details") < page.index('id="save"')  # details on the page
     assert ">Mark a safety concern</a>" in page
 
@@ -101,6 +103,31 @@ def test_the_confirmation_says_what_was_saved_and_offers_follow_up(client: TestC
     added = client.get("/log/saved?student=S-02&duration=10%20min&type=Check-in&follow=yes").text
     assert "Added to your follow-ups." in added
     assert "nothing is stored" in bao
+    following = client.get("/log/saved?student=S-03&duration=15%20min&type=Check-in&follow=yes").text
+    assert "Added to your follow-ups." not in following  # on a plan already: nothing was added
+    assert ">Open Bao Nguyen</a>" in bao
+    stranger = client.get("/log/saved?student=S-09&duration=10%20min&type=Check-in").text
+    assert "Open Ivan Seet" not in stranger  # not one of Daniel's: the view would be not found
+
+
+def test_log_shows_the_plan_a_chosen_student_is_on(client: TestClient) -> None:
+    clara = client.get("/log?student=S-03").text
+    assert "On your plans: weekly, set by Sam Lee." in clara and 'name="follow"' not in clara
+    aiden = client.get("/log?student=S-01").text
+    assert "On your follow-ups: weekly." in aiden and "Keep or change the cadence" in aiden
+    assert "<option selected>Weekly</option>" in aiden
+    assert 'name="follow"' in client.get("/log?student=S-02").text
+
+
+def test_pages_naming_students_say_they_are_recorded(client: TestClient) -> None:
+    for path in ("/", "/log", "/students/", "/plans/", "/log/saved?student=S-02&duration=10%20min&type=Check-in"):
+        assert "Pages that name students are recorded when opened." in client.get(path).text, path
+    assert "Opening this view is recorded." in client.get("/students/S-03").text
+
+
+def test_a_custom_cadence_says_so() -> None:
+    plan = sample.Plan("P-99", "S-01", "Daniel Koh", False, sample.TODAY, "Custom")
+    assert sample.due(plan) == ("none", "Custom cadence")
 
 
 def test_an_incomplete_save_goes_back_to_the_form(client: TestClient) -> None:
@@ -155,12 +182,12 @@ def test_my_plans_lists_assignments_then_follow_ups_and_filters(client: TestClie
     assert names(section(overdue, "formal-h")) == ["Clara Tan"] and names(section(overdue, "informal-h")) == []
     week = client.get("/plans/?show=week").text
     assert names(section(week, "formal-h")) + names(section(week, "informal-h")) == ["Clara Tan", "Dev Menon", "Aiden Chen"]
-    assert 'href="/plans/?show=overdue" aria-current="true">Overdue</a>' in overdue
+    assert 'href="/plans/?show=overdue" aria-current="true">✓ Overdue</a>' in overdue
     assert 'href="/plans/?as=Priya%20Raman&amp;show=week"' in client.get("/plans/" + PRIYA).text
 
 
 def test_the_frontline_pages_are_the_frontline_s(client: TestClient) -> None:
-    for path in FRONTLINE_PAGES[1:]:
+    for path in (*FRONTLINE_PAGES[1:], "/students/S-99"):
         assert client.get(path + ("&" if "?" in path else "?") + "as=Sam%20Lee").status_code == 403, path
 
 

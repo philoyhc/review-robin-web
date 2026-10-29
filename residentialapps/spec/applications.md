@@ -119,8 +119,8 @@ appointment, and RAs never reach it:
 | Page | Path | Reached by |
 |---|---|---|
 | Home | `/` | Anyone with a grant: the frontline's dashboard; otherwise the pages the viewer reaches, or straight there when there is one; a safety-flag recipient with nothing else, the flags |
-| Log encounter | `/log`, `/log/safety` | Frontline authorization (RFs and RSLMs, by default) |
-| Students | `/students/` | Frontline |
+| Log encounter | `/log`, `/log/saved` (the confirmation), `/log/safety` | Frontline authorization (RFs and RSLMs, by default) |
+| Students | `/students/`, `/students/{id}` (the student view) | Frontline |
 | My plans | `/plans/` | Frontline |
 | Overview | `/overview/` | Senior identifiable (the Master and the admin, by default); Other Staff with view, aggregate or identifiable as granted, read-only; safety-flag recipients' flags list here |
 | Consultation check | `/consultation/` | Consultation check |

@@ -74,7 +74,7 @@ Taken 2026-10-29 at `de0bf729`.
 ## Status
 
 - **Rung 1, 2026-10-29** (author: "start rung 1"): the shared pieces in `residentialapps/web/` (`pages.py`, `_people.html`, `_tables.html`, the new `_sample.html`); the teal accent; Home, the `403` and not-registered pages, and the other pages as placeholders, at the paths in `residentialapps/spec/applications.md`, tabs by grant. Base SHA for the item's read: `d15502e0`.
-- **Rung 2, 2026-10-29** (author: "start rung 2"): the frontline pages on sample data — the dashboard, Log encounter with its details on the page and the confirmation after saving, Students, the student view (`/students/{id}`) and My plans; flags and sharing stay placeholders for rungs 3 and 4. Built on open question 3's proposals, for the author to confirm: choice chips as native radios and checkboxes styled as pills, and status chips in sentence case with words ("Overdue 2 days"); Mark a safety concern is outline red until rung 3 settles its role.
+- **Rung 2, 2026-10-29** (author: "start rung 2"): the frontline pages on sample data — the dashboard, Log encounter with its details on the page and the confirmation after saving, Students, the student view (`/students/{id}`) and My plans; flags and sharing stay placeholders for rungs 3 and 4. Built on open question 3's proposals, for the author to confirm: choice chips as native radios and checkboxes styled as pills, and status chips in sentence case with words ("Overdue 2 days"); Mark a safety concern is outline red until rung 3 settles its role. "This week" (UI spec screen 6) is read as the next seven days, so a Monday due date shows on a Thursday; the cold read asked for it to be recorded.
 
 ## PR ladder
 

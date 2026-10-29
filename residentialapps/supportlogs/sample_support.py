@@ -229,10 +229,11 @@ def next_due(p: Plan) -> date | None:
 
 def due(p: Plan) -> tuple[str, str]:
     """A plan's due state and its label, in words (UI spec §5): overdue,
-    today, this week, later, or none without a cadence."""
+    today, this week (the next seven days, the reading this rung takes of
+    UI spec screen 6's filter), later, or none without a fixed cadence."""
     when = next_due(p)
     if when is None:
-        return "none", "No fixed cadence"
+        return "none", "Custom cadence" if p.cadence == "Custom" else "No fixed cadence"
     days = (when - TODAY).days
     if days < 0:
         return "overdue", f"Overdue {-days} day{'s' if days != -1 else ''}"

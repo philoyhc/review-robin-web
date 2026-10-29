@@ -1,9 +1,11 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
 {% block title %}Students{% endblock %}
 {% block content %}
   {{ sample_title("Students", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
   {# The finder (UI spec screen 7): the same search as Log encounter's,
      then the viewer's own working set (§4.3). #}
   <section class="card card-pad gap-below" aria-labelledby="find-h">

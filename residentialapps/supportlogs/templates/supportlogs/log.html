@@ -1,9 +1,11 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "supportlogs/_frontline.html" import recorded with context %}
 {% block title %}Log encounter{% endblock %}
 {% block content %}
   {{ sample_title("Log encounter", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
   {# The routine path on one screen: student, duration, type, Save (UI
      spec screen 2; functional spec §5.1). The optional details sit on the
      same page, folded (author, 2026-10-29: no separate screen, no fixed
@@ -45,21 +47,30 @@
       <div class="choice-row two">{% for t in sample.ENCOUNTER_TYPES %}<label class="choice"><input type="radio" name="type" value="{{ t }}"{% if t in sample.SAYS_WHO %} data-says-who{% endif %}>{{ t }}</label>{% endfor %}</div>
     </fieldset>
 
-    <details class="gap-above-sm">
+    <details class="more gap-above-sm">
       <summary class="strong">Add details <span class="subtle">(optional)</span></summary>
       <fieldset class="choices">
         <legend>Concern areas</legend>
-        <div class="choice-row">{% for area, covers in sample.CONCERN_AREAS %}<label class="choice" title="{{ covers }}"><input type="checkbox" name="concern" value="{{ area }}">{{ area }}</label>{% endfor %}</div>
+        <div class="choice-row">{% for area, covers in sample.CONCERN_AREAS %}<label class="choice"><input type="checkbox" name="concern" value="{{ area }}">{{ area }}</label>{% endfor %}</div>
+        <details class="more">
+          <summary class="subtle small">What each area covers</summary>
+          <dl class="kv small">{% for area, covers in sample.CONCERN_AREAS %}<dt>{{ area }}</dt><dd>{{ covers }}</dd>{% endfor %}</dl>
+        </details>
       </fieldset>
       <fieldset class="choices">
         <legend>Follow-up needed?</legend>
         <div class="choice-row">{% for v in ("No", "Yes") %}<label class="choice"><input type="radio" name="needed" value="{{ v }}">{{ v }}</label>{% endfor %}<button type="button" class="btn btn-secondary" data-clear="needed">Clear</button></div>
       </fieldset>
+      {% set plan = sample.plans_of(me.name, chosen.id)[0] if chosen and sample.plans_of(me.name, chosen.id) else none %}
       <fieldset class="choices">
         <legend>My follow-ups</legend>
-        <label class="choice"><input type="checkbox" name="follow" value="yes">Add to my follow-ups</label>
-        <div class="field-wide"><label for="cadence">Cadence</label>
-          <select id="cadence" class="input">{% for c in sample.FOLLOW_UP_CADENCES %}<option>{{ c }}</option>{% endfor %}</select></div>
+        {% if plan %}
+          <p class="flush">On your {{ "plans" if plan.formal else "follow-ups" }}: {{ plan.cadence | lower }}{% if plan.formal %}, set by {{ plan.assigned_by }}{% endif %}.</p>
+        {% else %}
+          <label class="choice"><input type="checkbox" name="follow" value="yes">Add to my follow-ups</label>
+        {% endif %}
+        {% if not (plan and plan.formal) %}<div class="field-wide"><label for="cadence">{{ "Keep or change the cadence" if plan else "Cadence" }}</label>
+          <select id="cadence" class="input">{% for c in sample.FOLLOW_UP_CADENCES %}<option{% if plan and plan.cadence == c %} selected{% endif %}>{{ c }}</option>{% endfor %}</select></div>{% endif %}
         <span class="subtle small">Needing follow-up does not mean you take it on (§6.2).</span>
       </fieldset>
       <fieldset class="choices">
@@ -93,6 +104,10 @@
         save.disabled = !(chosen("student") && chosen("duration") && chosen("type"));
         var kind = form.querySelector('input[name="type"]:checked');
         who.hidden = !!(kind && kind.hasAttribute("data-says-who"));
+        if (who.hidden) {
+          // The type says who started it: a choice made before must not travel.
+          Array.prototype.forEach.call(who.querySelectorAll("input"), function (input) { input.checked = false; });
+        }
         document.getElementById("note-count").textContent = note.value.length + " / " + note.maxLength;
       }
       Array.prototype.forEach.call(form.querySelectorAll("[data-clear]"), function (button) {

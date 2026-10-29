@@ -1,15 +1,16 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import plan_item with context %}
+{% from "supportlogs/_frontline.html" import plan_item, recorded with context %}
 {% block title %}My plans{% endblock %}
 {% block content %}
   {{ sample_title("My plans", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
   {# My follow-ups (UI spec screen 6): formal assignments first, then
      informal follow-ups; Plans is the page map's name for both. #}
   <nav class="chips chip-wrap gap-below" aria-label="Show">
     {% for key, label in shows.items() %}
-      <a class="chip {{ 'chip-info' if key == show else 'chip-mute' }}" href="{{ url('/plans/') }}{{ qs(show=key if key != 'all' else '') }}"{% if key == show %} aria-current="true"{% endif %}>{{ label }}</a>
+      <a class="chip {{ 'chip-info' if key == show else 'chip-mute' }}" href="{{ url('/plans/') }}{{ qs(show=key if key != 'all' else '') }}"{% if key == show %} aria-current="true"{% endif %}>{% if key == show %}✓ {% endif %}{{ label }}</a>
     {% endfor %}
   </nav>
   {% set formal = mine | selectattr("formal") | list %}

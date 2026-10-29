@@ -1,6 +1,12 @@
 {# The frontline pages' pieces (segment 1D rung 2). Status is a chip with
    words, never color alone: overdue in warning, due today in info, the
    rest muted (UI spec §5, §6). #}
+{# Every page naming a student says the view is recorded (§11.3; the
+   plan's Semantics), as the real page will. #}
+{% macro recorded() -%}
+  <p class="subtle small">Pages that name students are recorded when opened.</p>
+{%- endmacro %}
+
 {% macro due_chip(p) -%}
   {% set state, label = sample.due(p) %}
   <span class="chip {{ {'overdue': 'chip-warn', 'today': 'chip-info'}.get(state, 'chip-mute') }}">{{ label }}</span>

@@ -44,10 +44,13 @@ def log_saved(request: Request) -> Response:
     if chosen is None or duration not in sample.DURATIONS or kind not in sample.ENCOUNTER_TYPES:
         return RedirectResponse(url_path(request, "/log") + sample.as_query(me), status_code=303)
     following = bool(sample.plans_of(me.name, chosen.id))
+    # The saved encounter makes the student one of the viewer's own (§4.3);
+    # a sample stores nothing, so the view is offered only if already so.
+    in_set = any(s.id == chosen.id for s, _, _ in sample.working_set(me.name))
     return gated(
         request, "supportlogs/log_saved.html", FRONTLINE,
-        chosen=chosen, duration=duration, kind=kind, following=following,
-        added=q.get("follow") == "yes", current_tab="/log",
+        chosen=chosen, duration=duration, kind=kind, following=following, in_set=in_set,
+        added=q.get("follow") == "yes" and not following, current_tab="/log",
     )
 
 
@@ -62,8 +65,10 @@ def student_view(request: Request, sid: str) -> Response:
     viewer's own working set is not found, as RA Leave's other RAs'
     applications are: the view shows only what the viewer's records cover."""
     me = _me(request)
+    if not sample.holds(me, FRONTLINE):
+        return gated(request, "supportlogs/student.html", FRONTLINE)  # the 403 page, whatever the id
     found = sample.student(sid)
-    if found is None or (sample.holds(me, FRONTLINE) and all(s.id != sid for s, _, _ in sample.working_set(me.name))):
+    if found is None or all(s.id != sid for s, _, _ in sample.working_set(me.name)):
         raise HTTPException(status_code=404)
     return gated(request, "supportlogs/student.html", FRONTLINE, chosen=found, current_tab="/students/")
 

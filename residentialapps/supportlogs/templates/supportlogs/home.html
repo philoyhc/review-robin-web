@@ -1,10 +1,11 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
-{% from "supportlogs/_frontline.html" import plan_item, encounter_item with context %}
+{% from "supportlogs/_frontline.html" import plan_item, encounter_item, recorded with context %}
 {% block title %}Home{% endblock %}
 {% block content %}
   {{ sample_title("Support Logs", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
+  {{ recorded() }}
   {# The personal dashboard (UI spec screen 1; functional spec §10.1), in
      its order. #}
   <section class="card card-pad gap-below" aria-labelledby="flags-h">
@@ -18,7 +19,7 @@
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="due-h">
         <h2 id="due-h">Due and overdue <span class="count">· {{ urgent | length }}</span></h2>
-        <p class="sub">Plans and follow-ups due this week or overdue, the most urgent first.</p>
+        <p class="sub">Plans and follow-ups overdue or due in the next seven days, the most urgent first.</p>
         {% if urgent %}<ul class="items">{% for p in urgent %}{{ plan_item(p, log=true) }}{% endfor %}</ul>{% else %}<p class="sub">Nothing due this week.</p>{% endif %}
       </section>
       <section class="card card-pad" aria-labelledby="following-h">
@@ -31,7 +32,7 @@
         {% set recent = sample.encounters_by(me.name) %}
         <h2 id="recent-h">Recent encounters</h2>
         {% if recent %}<ul class="items">{% for e in recent[:4] %}{{ encounter_item(e) }}{% endfor %}</ul>{% else %}<p class="sub">None logged yet.</p>{% endif %}
-        <a class="btn btn-secondary gap-above-sm" href="{{ url('/students/') }}{{ as_query }}">All my students</a>
+        <a class="btn btn-secondary gap-above-sm" href="{{ url('/students/') }}{{ as_query }}">My students</a>
       </section>
     </div>
     <div class="side">
