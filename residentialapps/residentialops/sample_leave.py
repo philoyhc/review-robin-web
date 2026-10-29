@@ -455,18 +455,40 @@ CORRECTIONS = (
 
 def away_this_week() -> tuple[Application, ...]:
     """Approved leave overlapping the seven days from TODAY."""
-    end = date.fromordinal(TODAY.toordinal() + 6)
-    return tuple(a for a in APPLICATIONS if a.stage == "Approved" and a.start <= end and a.end >= TODAY)
+    return away_between(*period()[2:])
 
 
-def clashes() -> tuple[tuple[str, tuple[str, str]], ...]:
+# Precinct leave's period (spec §22, "for a selected period"; author,
+# 2026-10-29): a week from TODAY by default, the next, four weeks, or what
+# is left of the term.
+PERIODS = (("week", "This week"), ("next", "Next week"), ("four", "Next four weeks"), ("term", "Rest of term"))
+
+
+def period(key: str | None = None) -> tuple[str, str, date, date]:
+    """A period's key, label and first and last days; an unknown key is
+    this week."""
+    key = key if key in dict(PERIODS) else "week"
+    first = TODAY.toordinal()
+    span = {"week": (0, 6), "next": (7, 13), "four": (0, 27)}.get(key)
+    start, end = (date.fromordinal(first + span[0]), date.fromordinal(first + span[1])) if span else (TODAY, TERM.end)
+    return key, dict(PERIODS)[key], start, end
+
+
+def away_between(start: date, end: date) -> tuple[Application, ...]:
+    """Approved leave overlapping the days from start to end."""
+    return tuple(a for a in APPLICATIONS if a.stage == "Approved" and a.start <= end and a.end >= start)
+
+
+def clashes(start: date | None = None, end: date | None = None) -> tuple[tuple[str, tuple[str, str]], ...]:
     """Each pair of RAs in one Precinct away on approved or pending leave on
-    overlapping days, one row per pair."""
+    overlapping days, one row per pair; given a period, only pairs whose
+    shared days fall in it."""
     live = [a for a in APPLICATIONS if a.stage in ("Approved", *OPEN_STAGES)]
     return tuple(
         (a.precinct, (a.ra, b.ra))
         for a in live for b in live
         if a.id < b.id and a.ra != b.ra and a.precinct == b.precinct and a.start <= b.end and b.start <= a.end
+        and (start is None or max(a.start, b.start) <= end and min(a.end, b.end) >= start)
     )
 
 
@@ -885,9 +907,10 @@ def other_leave(application: Application) -> tuple[Application, ...]:
     return tuple(a for a in APPLICATIONS if a.ra == application.ra and a.id != application.id)
 
 
-def by_precinct(viewer: str) -> tuple[dict, ...]:
-    """Numbers away and pending per Precinct in the viewer's scope (§22)."""
-    away = away_this_week()
+def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[dict, ...]:
+    """Numbers away (this week, or in the period given) and pending per
+    Precinct in the viewer's scope (§22)."""
+    away = away_between(start, end) if start else away_this_week()
     return tuple(
         {
             "precinct": p,
