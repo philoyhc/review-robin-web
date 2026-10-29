@@ -550,9 +550,9 @@ def test_roles_outside_the_slots_show_as_gaps(monkeypatch) -> None:
     routing = c.get(ADMIN + "routing").text
     assert ">Opens appeals</th>" in routing
     assert "9 Precincts where no one may open an appeal" in c.get(ADMIN).text
-    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Admin",))
+    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Admin",), "names": ()})
     assert "9 Precincts whose appeals the Master cannot decide" in c.get(ADMIN).text
-    assert "those who oversee every RA (Rachel Yeo) hold one in every slot" in c.get(ADMIN + "routing").text
+    assert "those in every slot on <a href=\"/rosters/assignments\">Assignments</a> (Rachel Yeo) hold one in each" in c.get(ADMIN + "routing").text
     D = sample_leave.Delegate
     monkeypatch.setattr(sample_leave, "DELEGATES", (D("Grace Ho", "Benjamin Chua", None, None, "has not signed in yet"),))
     assert "Delegate not in slots" in c.get(ADMIN + "routing").text

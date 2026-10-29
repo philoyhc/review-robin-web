@@ -265,11 +265,11 @@ def test_leave_shows_only_to_staff_who_oversee_ras(monkeypatch) -> None:
     assert "Nothing awaits you." in c.get(STAFF + "decide?as=Priya%20Raman").text
     # Untick the admin: Rachel Yeo holds no slot, so she sees no RA and
     # her final approval leaves every Precinct with a gap (ruled 2026-10-29).
-    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master",))
+    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Master",), "names": ()})
     assert sample_leave.overseers() == ("Sam Lee",) and sample_leave.scope("Rachel Yeo") == ()
     assert sample_leave.final_gaps() == sample_leave.precincts()
     # Tick the Executive: Hui Min Goh oversees every RA, deciding nothing.
-    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
+    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Master", "Admin", "Exec"), "names": ()})
     assert len(sample_leave.scope("Hui Min Goh")) == 9
     assert "Nothing awaits you." in c.get(STAFF + "decide?as=Hui%20Min%20Goh").text
 
@@ -279,15 +279,15 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
     appeals only for RAs in whose slots they hold a place; the overseers
     hold one in every slot. A role given elsewhere is a gap, never a view."""
     c = client()
-    monkeypatch.setitem(sample_leave.POLICY, "overseers", ())
+    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": (), "names": ()})
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     assert sample_leave.scope("Rachel Yeo") == () and sample_leave.all_inviters() == ()
-    assert "the fix is in Assignments or Leave policy" in c.get(STAFF + RACHEL).text
+    assert "the fix is in Assignments" in c.get(STAFF + RACHEL).text
     assert all(not sample_leave.decides_appeals(p) for p in sample_leave.precincts())
     routing = c.get("/ra-leave/admin/routing").text
     assert routing.count("none named holds a place in its slots") == len(sample_leave.precincts())
     # A named final approver approves only in their own slots.
-    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin"))
+    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Master", "Admin"), "names": ()})
     monkeypatch.setitem(sample_leave.POLICY, "final", "named")
     monkeypatch.setitem(sample_leave.POLICY, "final_names", ("Daniel Koh",))
     assert sample_leave.final_for("Cypress A 04-12") == ("Daniel Koh",) and sample_leave.final_for("Maple 03-08") == ()
@@ -304,6 +304,6 @@ def test_oversight_follows_the_policy_setting(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
     assert "every RA may send one, so none is opened for them" in c.get(STAFF + "appeals").text
     # An appeal opened from Appeals goes back there, inviter or not.
-    monkeypatch.setitem(sample_leave.POLICY, "overseers", ("Master", "Admin", "Exec"))
+    monkeypatch.setitem(sample_leave.sample_data.EVERY_SLOT, sample_leave.TERM.key, {"appointments": ("Master", "Admin", "Exec"), "names": ()})
     page = c.get(STAFF + "decide/L-0105?as=Hui%20Min%20Goh").text
     assert "‹ Appeals" in page

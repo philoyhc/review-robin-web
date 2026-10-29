@@ -161,7 +161,11 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
 - **Assignments** (`/rosters/assignments`) shows one term at a time,
   chosen in a term card above the slots table (`?term=AY2026-2027.1`),
   opening on the term today falls in, else the next. The card also holds
-  Copy from (an earlier term's assignments, to edit) and Set up terms. A
+  Copy from (an earlier term's assignments, to edit) and Set up terms.
+  Below it, full width above the slots table, the **Every slot** card
+  sets who is in every slot for the term, by Unit-level appointment, by
+  name, or both; they oversee every RA, and copying a term's assignments
+  copies its choices (author, 2026-10-29). A
   past term is read-only, under a notice and with no Copy from; a term
   before the slots stand lists none; a term without assignments says so
   and offers the copy. A partial-overlap warning, one notice per

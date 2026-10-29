@@ -100,9 +100,6 @@ POLICY = {
     "final": "unit",  # or "named"
     "final_types": ("Admin",),
     "final_names": (),
-    # Who oversees every RA, as if in every slot (author, 2026-10-29): the
-    # Master and the designated admin, chosen as Unit-level appointments.
-    "overseers": ("Master", "Admin"),
 }
 
 
@@ -158,11 +155,9 @@ def slot_appointments() -> tuple[tuple[str, str], ...]:
 
 
 def unit_appointments() -> tuple[tuple[str, str], ...]:
-    """The staff appointments that no slot's Staff cell holds: the Unit's
-    own. By appointment, not person, so an RF between slots stays a slot
-    appointment."""
-    on_slots = set(slot_appointments())
-    return tuple(a for a in sample_data.STAFF_APPOINTMENTS if a not in on_slots)
+    """The Unit's own appointments, on no slot's Staff cell
+    (`sample_data.unit_appointments`)."""
+    return sample_data.unit_appointments()
 
 
 def final_approvers() -> tuple[str, ...]:
@@ -852,9 +847,9 @@ def decided(viewer: str) -> tuple[tuple[Application, str, str], ...]:
 
 
 def overseers() -> tuple[str, ...]:
-    """Who oversees every RA, as if in every slot: the staff holding the
-    policy's ticked Unit-level appointments (author, 2026-10-29)."""
-    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["overseers"])
+    """Who oversees every RA: those in every slot for the term, set on
+    Assignments (author, 2026-10-29)."""
+    return sample_data.every_slot_people(TERM)
 
 
 def scope(viewer: str) -> tuple[str, ...]:

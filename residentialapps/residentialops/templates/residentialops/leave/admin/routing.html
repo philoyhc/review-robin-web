@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ leave.final_label() or "no final approver set" }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} given only by those holding a place in the RA's slot; those who oversee every RA ({{ leave.overseers() | join(", ") or "no one, on Leave policy" }}) hold one in every slot.</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ leave.final_label() or "no final approver set" }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} given only by those holding a place in the RA's slot; those in every slot on <a href="{{ url('/rosters/assignments') }}">Assignments</a> ({{ leave.overseers() | join(", ") or "no one" }}) hold one in each.</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">
