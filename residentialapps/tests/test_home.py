@@ -33,8 +33,13 @@ def test_each_viewer_sees_only_what_they_reach() -> None:
 
 
 def test_home_is_in_the_switcher() -> None:
+    """A sys admin's pages carry the sample Leave admin's switcher (audit,
+    2026-10-29): Home as Rachel Yeo, then RA Leave's staff side, and the
+    current area marked."""
     page = TestClient(ops_app()).get("/rosters/").text
-    assert re.search(r'<a href="/">Home', page)
+    assert re.search(r'<a href="/\?as=Rachel%20Yeo">Home', page)
+    assert 'href="/ra-leave/staff/?as=Rachel%20Yeo">RA Leave</a>' in page
+    assert '<a href="/rosters/" aria-current="page">Rosters and setup' in page
 
 
 def test_the_viewer_switch_links_each_person() -> None:

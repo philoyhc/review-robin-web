@@ -9,7 +9,7 @@
   <section class="card gap-below" aria-labelledby="grants-h">
     <div class="card-head">
       <h2 id="grants-h">Sys admins</h2>
-      <p class="sub">Only the super-admin grants and revokes. Sys admins run Rosters and read the audit log. The last sys admin cannot be revoked, and nobody acts on their own grant.{% if not (viewer and viewer.is_super_admin) %} You see this read-only.{% endif %}</p>
+      <p class="sub">Only the super-admin grants and revokes. Sys admins run Rosters and setup and read the audit log. The last sys admin cannot be revoked, and nobody acts on their own grant.{% if not (viewer and viewer.is_super_admin) %} You see this read-only.{% endif %}</p>
     </div>
     <div class="table-wrap">
       <table data-sort-auto>

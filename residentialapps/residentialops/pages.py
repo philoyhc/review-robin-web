@@ -19,15 +19,6 @@ TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
 
 APP_NAME = "Residential Operations"
 
-# The switcher's areas for a sys admin, the default; a path of None is an
-# area not built yet. A sample viewer's menu is `areas_for` theirs.
-AREAS: tuple[dict[str, str | None], ...] = (
-    {"label": "Home", "path": "/"},
-    {"label": "RA Leave admin", "path": "/ra-leave/admin/"},
-    {"label": "RA Events", "path": None},
-    {"label": "Rosters and setup", "path": "/rosters/"},
-    {"label": "Sys admin", "path": "/sys-admin/"},
-)
 
 def choices(viewer: str) -> list[dict[str, str]]:
     """The applications a sample viewer reaches, each at its own entry
@@ -127,7 +118,7 @@ def render(
     *,
     area: str,
     tabs: tuple[dict[str, str | None], ...] = (),
-    areas: tuple[dict[str, str | None], ...] = AREAS,
+    areas: tuple[dict[str, str | None], ...] | None = None,
     **context: Any,
 ) -> Response:
     viewer = current_identity(request)
@@ -139,7 +130,10 @@ def render(
             "app_name": APP_NAME,
             "unit_name": sample_data.UNIT_NAME,
             "area": area,
-            "areas": areas,
+            # A sys admin's pages default to the sample Leave admin's switcher
+            # (§2), as RA Leave admin's do; a path of None is an area not
+            # built yet.
+            "areas": areas_for(sample_leave.CANCELLED_BY) if areas is None else areas,
             "tabs": tabs,
             "viewer": viewer,
             "initials": _initials(viewer.display_label) if viewer else "?",

@@ -9,7 +9,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.residentialops import sample_data, sample_leave
-from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS, areas_for, placeholders_local_only, render
+from residentialapps.residentialops.pages import LEAVE_ADMIN_TABS, placeholders_local_only, render
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
@@ -20,7 +20,6 @@ def _page(request: Request, template: str, **context: object) -> Response:
         f"residentialops/leave/admin/{template}",
         area="RA Leave admin",
         tabs=LEAVE_ADMIN_TABS,
-        areas=areas_for(sample_leave.CANCELLED_BY),  # the sample Leave admin's switcher, staff side included
         leave=sample_leave,
         sample=sample_data,
         **context,
@@ -52,7 +51,7 @@ def appeals(request: Request) -> Response:
     ras = tuple(p.name for p in sample_data.RAS)
     # The form opens appeals only by invitation; open or off, the card says
     # why there is none to open, as on the staff page.
-    may_open = sample_leave.POLICY["appeals"] == "By invitation"
+    may_open = sample_leave.POLICY["appeals"] == "By invitation" and bool(sample_leave.all_inviters())
     return _page(request, "appeals.html", may_open=may_open, ra_choices=ras, agreers=sample_leave.all_inviters())
 
 

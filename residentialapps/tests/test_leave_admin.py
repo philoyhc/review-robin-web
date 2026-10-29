@@ -406,6 +406,9 @@ def test_appeals_by_invitation(monkeypatch) -> None:
     open_page = c.get(ADMIN + "appeals").text
     assert 'id="inv-ra"' not in open_page and "every RA may send one, so none is opened for them" in open_page
     assert "Invitations take effect only while appeals are by invitation" in open_page
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
+    off = c.get(ADMIN + "appeals").text
+    assert 'id="inv-ra"' not in off and "Appeals are off: no new one can be opened" in off
     monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
     page = c.get(ADMIN + "appeals").text
     assert 'href="/ra-leave/admin/appeals" aria-current="page"' in page

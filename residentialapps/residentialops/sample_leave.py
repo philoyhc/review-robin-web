@@ -688,6 +688,8 @@ def delegate_fits(d: Delegate) -> bool:
 def delegate_choices(person: str) -> list[str]:
     """Who may stand in for a person: staff holding a place in every slot
     they approve for (the overseers hold one in every slot)."""
+    if not any(person in s.staff for s in sample_data.SLOTS):
+        return []  # in no slot: no one stands in for them
     return [p.name for p in sample_data.STAFF if p.name != person and delegate_fits(Delegate(person, p.name, None, None, ""))]
 
 
@@ -985,8 +987,12 @@ def can_open(viewer: str, application: Application) -> bool:
 
 
 def other_leave(application: Application) -> tuple[Application, ...]:
-    """The applicant's other applications, for the decider (spec §15)."""
-    return tuple(a for a in APPLICATIONS if a.ra == application.ra and a.id != application.id)
+    """The applicant's other applications this term, for the decider (spec
+    §15): leave days go with their term."""
+    return tuple(
+        a for a in APPLICATIONS
+        if a.ra == application.ra and a.id != application.id and a.start <= TERM.end and a.end >= TERM.start
+    )
 
 
 def by_precinct(viewer: str, start: date | None = None, end: date | None = None) -> tuple[dict, ...]:
