@@ -159,6 +159,11 @@ def final_approvers() -> tuple[str, ...]:
     return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["final_types"])
 
 
+def final_gap() -> bool:
+    """The policy names no one who may give final approval."""
+    return not final_approvers()
+
+
 def first_label() -> str:
     return " or ".join(POLICY["first_types"]) if POLICY["first"] == "slot" else "none"
 
@@ -195,9 +200,18 @@ class Application:
     end: date
     cover: str
     cover_status: str  # Confirmed, Awaiting, Declined
-    stage: str
+    recorded: str  # the stage as recorded; `stage` reads it under today's policy
     submitted: date
     remarks: str = ""
+
+    @property
+    def stage(self) -> str:
+        """The stage under the policy: with no first approval needed, an
+        application recorded as awaiting it awaits final approval (a wired
+        policy change moves the records themselves)."""
+        if self.recorded == "Pending first approval" and POLICY["first"] == "none":
+            return "Pending final approval"
+        return self.recorded
 
     @property
     def appeal(self) -> bool:
@@ -282,8 +296,7 @@ def stages(open_only: bool = False) -> tuple[str, ...]:
     no first-approval stage when none is needed."""
     # Appeals off removes the route for new applications; an appeal already
     # made keeps its stage and is decided (author, 2026-10-28).
-    open_appeal = any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
-    skip = {"Appeal to the Master"} if not appeals_on() and not open_appeal else set()
+    skip = set() if appeals_decided() else {"Appeal to the Master"}
     if POLICY["first"] == "none":
         skip.add("Pending first approval")
     return tuple(s for s in (OPEN_STAGES if open_only else STAGES) if s not in skip)
@@ -578,10 +591,27 @@ def cover_choices(ra: str = VIEWER) -> tuple[str, ...]:
 # The staff pages (`/ra-leave/staff/`) render for a sample viewer chosen on
 # the sample banner (`?as=`), one per role, until identity is wired.
 STAFF_VIEWERS = (
-    ("Daniel Koh", "RF, first approver for Cypress A 04-12"),
-    ("Rachel Yeo", "Residential Admin, final approver"),
-    ("Sam Lee", "Master, decides appeals"),
+    ("Daniel Koh", "RF"),
+    ("Rachel Yeo", "Residential Admin"),
+    ("Sam Lee", "Master"),
 )
+
+
+def staff_role(name: str) -> str:
+    """A sample viewer's appointment and what the policy has them decide
+    today, so the switch never claims a role the policy has taken away."""
+    appointment = dict(STAFF_VIEWERS).get(name, "")
+    does = []
+    first = [r.precinct for r in routes() if not r.gap and name in r.first.split(" or ")]
+    if first and POLICY["first"] == "slot":
+        does.append("first approver for " + ", ".join(first))
+    if name in final_approvers():
+        does.append("final approver")
+    if name == APPEAL_DECIDER and appeals_decided():
+        does.append("decides appeals")
+    if POLICY["appeals"] == "By invitation" and invitable_ras(name):
+        does.append("opens appeals")
+    return f"{appointment}, {', '.join(does)}" if does else f"{appointment}, no decisions under the policy"
 
 
 def staff_viewer(name: str | None) -> str:
@@ -715,6 +745,13 @@ def appeals_on() -> bool:
     return POLICY["appeals"] != "Off"
 
 
+def appeals_decided() -> bool:
+    """Whether the Master still decides appeals: while they are on, or
+    while one made before they were turned off is open (author,
+    2026-10-28: existing appeals stand)."""
+    return appeals_on() or any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
+
+
 @dataclass(frozen=True)
 class Invitation:
     """By invitation, an RA may send an appeal once someone the policy lets
@@ -731,7 +768,7 @@ class Invitation:
 
 INVITATIONS = (
     Invitation("Gwen Ho", "Sam Lee", date(2026, 10, 24), date(2026, 11, 7), "Family wedding overseas; agreed in principle", "L-0105"),
-    Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; the Master agreed by email"),
+    Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; agreed in principle"),
     Invitation("Nathan Yeo", "Sam Lee", date(2026, 9, 14), date(2026, 9, 28), "Conference abroad; not sent in time"),
 )
 
@@ -757,10 +794,14 @@ def invitable_ras(viewer: str) -> tuple[str, ...]:
 
 
 def inviter_label() -> str:
+    """Who may open an appeal, as a phrase; empty when the policy names
+    no one."""
     if POLICY["inviters"] == "named":
-        return " or ".join(POLICY["inviter_names"]) or "no one named"
+        return " or ".join(POLICY["inviter_names"])
+    if not POLICY["inviter_types"]:
+        return ""
     whose = "the RA's slot's" if POLICY["inviters"] == "slot" else "the Unit's"
-    return f"{whose} {' or '.join(POLICY['inviter_types']) or 'no appointment ticked'}"
+    return f"{whose} {' or '.join(POLICY['inviter_types'])}"
 
 
 def invitation_for(ra: str, day: date | None = None) -> Invitation | None:

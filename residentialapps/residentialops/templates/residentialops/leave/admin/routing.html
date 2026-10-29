@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() }}, {{ leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_on() else ' is' }} the same for the whole Unit.</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() or "no first approver ticked" }}, {{ "no final approver set" if leave.final_gap() else leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_decided() else ' is' }} the same for the whole Unit.</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">
@@ -11,7 +11,7 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.appeals_on() %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
+        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.appeals_decided() %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
         <tbody>
           {% for route in routes %}
             <tr>
@@ -21,8 +21,8 @@
               <td class="nowrap"><span class="pill-derived">{{ route.rf }}</span></td>
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
               <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
-              <td>{{ leave.final_approvers() | join(" or ") }}</td>
-              {% if leave.appeals_on() %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
+              <td>{% if leave.final_gap() %}No one <span class="chip chip-warn">Gap</span><div class="subtle">no final approver is set on Policy</div>{% else %}{{ leave.final_approvers() | join(" or ") }}{% endif %}</td>
+              {% if leave.appeals_decided() %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>
@@ -40,12 +40,12 @@
           {% for d in leave.DELEGATES %}
             {% set n = loop.index %}
             <tr>
-              <td><select class="input" aria-label="Delegate {{ n }}: acting for" disabled>{% for p in delegable %}<option{% if p == d.acting_for %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
+              <td><select class="input" aria-label="Delegate {{ n }}: acting for" disabled>{% for p in delegable %}<option{% if p == d.acting_for %} selected{% endif %}>{{ p }}</option>{% endfor %}{% if d.acting_for not in delegable %}<option selected>{{ d.acting_for }}</option>{% endif %}</select></td>
               <td><select class="input" aria-label="Delegate {{ n }}: delegate" disabled>{% for p in staff %}<option{% if p == d.delegate %} selected{% endif %}>{{ p }}</option>{% endfor %}</select></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: from" value="{{ d.start.isoformat() if d.start }}" disabled></td>
               <td><input class="input" type="date" aria-label="Delegate {{ n }}: to" value="{{ d.end.isoformat() if d.end }}" disabled></td>
               <td><input class="input" type="text" aria-label="Delegate {{ n }}: why {{ d.acting_for }} cannot approve" value="{{ d.reason }}" disabled></td>
-              <td class="nowrap">{% if leave.POLICY.first == "none" %}<span class="chip chip-mute">No first approval</span>{% elif d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
+              <td class="nowrap">{% if leave.POLICY.first == "none" %}<span class="chip chip-mute">No first approval</span>{% elif d.acting_for not in delegable %}<span class="chip chip-mute">Not a first approver</span>{% elif d.active() %}<span class="chip chip-warn">Standing in</span>{% else %}<span class="chip chip-mute">{{ d.dates }}</span>{% endif %}</td>
               <td><span class="row-actions">
                 <button type="button" class="btn btn-secondary btn-glyph" aria-label="Add a delegate below the one for {{ d.acting_for }}, {{ d.dates }}" title="Add a delegate below this one" disabled>+</button>
                 <button type="button" class="btn btn-danger btn-glyph" aria-label="Remove the delegate for {{ d.acting_for }}, {{ d.dates }}" title="Remove this delegate" disabled>X</button>

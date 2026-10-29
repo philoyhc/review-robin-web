@@ -44,7 +44,8 @@ with the page.
 
 - **On the left, the switcher**: the Unit's name above the current area's
   name. Its menu lists the areas the viewer reaches (Home, RA Leave, RA
-  Events; Rosters and setup and Sys admin for sys admins), then one link,
+  Events; RA Leave admin, Rosters and setup and Sys admin for sys admins),
+  RA Leave at the viewer's own side, RA's or staff's, then one link,
   **All applications**, to the host's landing page, which lists what
   Cordware mounts (author, 2026-10-26). An application cannot see the
   host's mounts without importing `cordware.main`, which it may not, nor
@@ -59,8 +60,9 @@ with the page.
   roster and RA roster (§7); RA Leave's split by audience (`residentialapps/spec/applications.md`):
   an RA's under `/ra-leave/`, staff's under `/ra-leave/staff/`, and sys
   admins' under `/ra-leave/admin/` (Dashboard, Policy, Entitlements,
-  Approval chain, Applications), each set its own. A detail page adds a
-  back link instead of a breadcrumb.
+  Approval chain, Applications, Appeals), each set its own. A detail page
+  adds a back link instead of a breadcrumb, and marks the tab of the list
+  it belongs to (`aria-current="true"`; author, 2026-10-29).
 - **The favicon** is the accent behind a white glyph, as inline SVG: a
   house for Residential Operations, a lined notepad for Support Logs
   (author, 2026-10-27, from the design canvas). The shared chrome picks it
@@ -88,7 +90,9 @@ RRW's roles (`spec/ui_elements.md` §6), under Residential's class names:
 | Destructive | `.btn .btn-danger` | remove, revoke, delete, outline red |
 | Glyph | `.btn-glyph` with a role above | one-character row actions (+, X) |
 
-A page action is at least 36 px tall. A control a placeholder cannot yet
+A page action is at least 36 px tall; a back link, and the link that
+opens an item in a phone list, at least 44 px (author, 2026-10-29). A
+control a placeholder cannot yet
 perform is `disabled`, not hidden.
 
 ## 5. Row builders

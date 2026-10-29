@@ -18,7 +18,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
     return render(
         request,
         f"residentialops/leave/admin/{template}",
-        area="RA Leave",
+        area="RA Leave admin",
         tabs=LEAVE_ADMIN_TABS,
         leave=sample_leave,
         sample=sample_data,
@@ -71,4 +71,7 @@ def application(request: Request, application_id: str) -> Response:
     found = sample_leave.by_id(application_id)
     if found is None:
         raise HTTPException(status_code=404)
-    return _page(request, "application.html", app=found, steps=sample_leave.timeline(found))
+    return _page(
+        request, "application.html", app=found, steps=sample_leave.timeline(found),
+        current_tab="/ra-leave/admin/applications",
+    )

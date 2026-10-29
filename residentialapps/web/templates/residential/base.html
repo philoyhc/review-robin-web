@@ -159,7 +159,8 @@
       .card.muted { background: var(--surface-muted); }
       .card-pad { padding: 16px; }
       .card h2 { margin: 0 0 4px; font-size: 18px; }
-      .card .sub { margin: 0 0 12px; font-size: 14px; color: var(--text-subtle); }
+      .sub { font-size: 14px; color: var(--text-subtle); }
+      .card .sub { margin: 0 0 12px; }
       .chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
       .chip-info { background: var(--chip-info-bg); color: var(--chip-info-fg); }
       .chip-warn { background: var(--chip-warn-bg); color: var(--chip-warn-fg); }
@@ -190,7 +191,7 @@
       .expander-body .btnrow { margin-left: auto; }
       .confirm { display: inline-flex; align-items: center; gap: 6px; }
       .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-      .back { display: inline-block; margin-bottom: 8px; font-size: 15px; }
+      .back { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 4px; font-size: 15px; }
       .kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; font-size: 14px; }
       .kv dt { color: var(--text-subtle); }
       .kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
@@ -211,6 +212,8 @@
       ul.items { list-style: none; margin: 0; padding: 0; font-size: 14px; }
       ul.items > li { padding: 12px 0; border-top: 1px solid var(--border-subtle); }
       ul.items > li:first-child { border-top: 0; padding-top: 4px; }
+      /* The link that opens an item is a 44 px target, as a back link is (the Residential Operations UI spec, §4). */
+      .item-head > a { display: inline-flex; align-items: center; min-height: 44px; }
       .item-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; margin-bottom: 2px; }
       th.num, td.num { text-align: right; white-space: nowrap; }
       /* RA Leave admin: stat tiles, a count over its label, each a link to
@@ -229,7 +232,8 @@
       .app-off { border-style: dashed; background: var(--surface-page); }
       .field-wide { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 14px; }
       .field-wide textarea { width: 100%; max-width: 640px; font: inherit; }
-      p.small { font-size: 12px; margin: 4px 0 0; }
+      .small { font-size: 12px; }
+      p.small { margin: 4px 0 0; }
       .stack-btns { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
       ol.history { margin: 0; padding: 0; list-style: none; font-size: 14px; }
       ol.history li { padding: 8px 0; border-top: 1px solid var(--border-subtle); }
@@ -263,11 +267,11 @@
       }
       .btn-primary { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); }
       .btn-secondary { background: transparent; color: var(--text-body); border: 1px solid var(--border-default); }
-      .btn:disabled { cursor: not-allowed; opacity: 0.75; }
+      .btn:disabled { cursor: not-allowed; opacity: 0.85; }  /* 0.85 keeps disabled text at 4.5:1 or better */
       /* An action the selection rules out, apart from a placeholder's inert ones. */
       .btn.btn-unavailable { opacity: 0.4; }
       .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
-      .table-wrap { overflow-x: auto; }
+      .table-wrap { position: relative; overflow-x: auto; }  /* holds a visually hidden header inside the scroll box */
       table { width: 100%; border-collapse: collapse; }
       .table-wrap > table { min-width: 640px; }
       th { text-align: left; font-size: 12px; font-weight: 600; color: var(--text-subtle); padding: 8px 12px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
@@ -389,7 +393,7 @@
         <div class="tabs-in">
           {% for tab in tabs %}
             {% if tab.path %}
-              <a href="{{ url(tab.path) }}{{ tab.query or '' }}"{% if is_here(tab.path) %} aria-current="page"{% endif %}>{{ tab.label }}</a>
+              <a href="{{ url(tab.path) }}{{ tab.query or '' }}"{% if is_here(tab.path) %} aria-current="page"{% elif tab.path == current_tab %} aria-current="true"{% endif %}>{{ tab.label }}</a>
             {% else %}
               <span title="Not built yet">{{ tab.label }}</span>
             {% endif %}

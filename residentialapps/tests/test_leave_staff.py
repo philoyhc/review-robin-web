@@ -172,7 +172,7 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     assert f"{len(sample_leave.sample_data.RAS)} RAs you may" in rachel
     assert '/ra-leave/staff/appeals' in c.get(STAFF + RACHEL).text.split('class="tabs-in"')[1].split("</nav>")[0]
     monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ())
-    assert sample_leave.inviter_label() == "no one named" and sample_leave.all_inviters() == ()
+    assert sample_leave.inviter_label() == "" and sample_leave.all_inviters() == ()
     for query in ("", RACHEL, SAM):
         assert "/ra-leave/staff/appeals" not in c.get(STAFF + query).text.split('class="tabs-in"')[1].split("</nav>")[0]
     assert "Leave policy names no one to open appeals." in c.get(STAFF + "appeals" + SAM).text
@@ -207,3 +207,35 @@ def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
         assert c.get(link).status_code == 200, link
     admin = c.get("/ra-leave/admin/appeals").text
     assert "Invitations <span class=\"count\">· 3" in admin
+
+
+def test_review_fixes_on_the_staff_side(monkeypatch) -> None:
+    """The 2026-10-29 review: back links and tabs follow where a Decide page
+    was opened from, a decided application shows no wait, and the sample
+    viewers' roles follow the policy."""
+    c = client()
+    queued = sample_leave.queue("Daniel Koh")[0][0]
+    page = c.get(STAFF + "decide/" + queued.id).text
+    assert "‹ Awaiting my decision" in page and 'href="/ra-leave/staff/decide" aria-current="true"' in page
+    past = sample_leave.decided("Daniel Koh")[0][0]
+    page = c.get(STAFF + "decide/" + past.id).text
+    assert "‹ Decided" in page and "<dt>Waiting</dt>" not in page
+    assert 'href="/ra-leave/staff/decided" aria-current="true"' in page
+    # An appeal opened from Appeals goes back there, not to Precinct leave.
+    page = c.get(STAFF + "decide/L-0105" + RACHEL).text
+    assert "‹ Appeals" in page and 'href="/ra-leave/staff/appeals?as=Rachel%20Yeo" aria-current="true"' in page
+    assert "Daniel Koh: RF, first approver for" in c.get(STAFF).text
+    assert "opens appeals" not in c.get(STAFF).text  # appeals are open: no one opens them
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    assert "Sam Lee: Master, decides appeals, opens appeals" in c.get(STAFF).text
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Open")
+    monkeypatch.setitem(sample_leave.POLICY, "first_types", ("RSLM",))
+    assert "Daniel Koh: RF, no decisions under the policy" in c.get(STAFF).text
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    # Recorded as awaiting first approval, they now await final approval.
+    assert sample_leave.by_id("L-0101").stage == "Pending final approval"
+    assert "L-0101" in [a.id for a, _ in sample_leave.queue("Rachel Yeo")]
+    # The switcher lists what a staff viewer reaches, keeping `?as=`.
+    menu = c.get(STAFF + RACHEL).text.split('aria-label="Switch area"')[1].split("</nav>")[0]
+    assert 'href="/ra-leave/staff/?as=Rachel%20Yeo"' in menu and 'href="/sys-admin/"' in menu
+    assert "/sys-admin/" not in c.get(STAFF).text.split('aria-label="Switch area"')[1].split("</nav>")[0]

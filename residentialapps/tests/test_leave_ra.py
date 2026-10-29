@@ -129,3 +129,17 @@ def test_by_invitation_the_ra_is_not_offered_an_appeal_until_invited(monkeypatch
     assert "The Master has agreed to consider your appeal; send it by 4 Nov." in invited
     assert '>Request extra leave</a>' in c.get(RA).text
     assert "in an Appeal-only one it goes to the Master as an appeal" in c.get(RA + "apply").text
+
+
+def test_review_fixes_on_the_ra_side(monkeypatch) -> None:
+    """The 2026-10-29 review: the RA's menu holds only what an RA reaches,
+    a detail page marks its list's tab, and the next step follows the
+    policy."""
+    c = client()
+    page = c.get(RA).text
+    menu = page.split('aria-label="Switch area"')[1].split("</nav>")[0]
+    assert 'href="/ra-leave/"' in menu and "/sys-admin/" not in menu and "/rosters/" not in menu
+    detail = c.get(RA + "applications/L-0101").text
+    assert 'href="/ra-leave/history" aria-current="true"' in detail
+    monkeypatch.setitem(sample_leave.POLICY, "first", "none")
+    assert "pending first approval" not in c.get(RA + "applications/L-0101").text

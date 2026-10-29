@@ -32,13 +32,13 @@
             <thead><tr><th scope="col">Application</th><th scope="col">RA</th><th scope="col">Precinct</th><th scope="col">Stage</th><th scope="col">Why</th></tr></thead>
             <tbody>
               {% set away_cover = leave.cover_while_away() %}
-              {% for a in leave.APPLICATIONS if a.overdue or (a.stage in leave.OPEN_STAGES and a.cover_status == "Declined") or a in away_cover %}
+              {% for a in leave.APPLICATIONS if a.overdue or (a.stage in leave.OPEN_STAGES and a.cover_status == "Declined" and leave.confirmation_needed(a)) or a in away_cover %}
                 <tr>
                   <td class="nowrap"><a href="{{ url('/ra-leave/admin/applications/' ~ a.id) }}">{{ a.id }}</a></td>
                   <td class="strong nowrap">{{ a.ra }}</td>
                   <td class="nowrap">{{ a.precinct }}</td>
                   <td>{{ stage_chip(a.stage) }}</td>
-                  <td>{% set why = [] %}{% if a.overdue %}{% set _ = why.append("Pending " ~ a.age ~ " days") %}{% endif %}{% if a.cover_status == "Declined" %}{% set _ = why.append(a.cover ~ " declined cover") %}{% endif %}{% if a in away_cover %}{% set _ = why.append(a.cover ~ " is away too") %}{% endif %}{{ why | join("; ") }}</td>
+                  <td>{% set why = [] %}{% if a.overdue %}{% set _ = why.append("Pending " ~ a.age ~ " days") %}{% endif %}{% if a.stage in leave.OPEN_STAGES and a.cover_status == "Declined" and leave.confirmation_needed(a) %}{% set _ = why.append(a.cover ~ " declined cover") %}{% endif %}{% if a in away_cover %}{% set _ = why.append(a.cover ~ " is away too") %}{% endif %}{{ why | join("; ") }}</td>
                 </tr>
               {% endfor %}
               {% for precinct, names in leave.clashes() %}
@@ -84,7 +84,7 @@
           <dt>Blackouts</dt><dd>{{ leave.BLACKOUTS | length }} this year</dd>
           <dt>Appeals</dt><dd>{{ {"Open": "Open, to the Master", "By invitation": "By invitation, to the Master", "Off": "Off"}[leave.POLICY.appeals] }}</dd>
           <dt>Cover</dt><dd>{% if leave.POLICY.cover_required %}{{ leave.POLICY.cover_mode }}; {{ leave.POLICY.cover_pool }}{% else %}Not required{% endif %}</dd>
-          <dt>Approvers</dt><dd>{% if leave.POLICY.first == 'slot' %}The slot's {{ leave.first_label() }}{% else %}No first approval{% endif %}, then {{ 'the ' if leave.POLICY.final == 'unit' }}{{ leave.final_label() }}</dd>
+          <dt>Approvers</dt><dd>{% if leave.POLICY.first == 'slot' and leave.POLICY.first_types %}The slot's {{ leave.first_label() }}{% elif leave.POLICY.first == 'slot' %}No first approver ticked{% else %}No first approval{% endif %}, then {% if leave.final_gap() %}no one: no final approver is set{% else %}{{ 'the ' if leave.POLICY.final == 'unit' }}{{ leave.final_label() }}{% endif %}</dd>
         </dl>
         <a class="btn btn-secondary gap-above-sm" href="{{ url('/ra-leave/admin/policy') }}">Go to Policy</a>
       </section>
@@ -93,7 +93,7 @@
         {% set chain = leave.routes() %}
         {% set gaps = chain | selectattr("gap") | list %}
         {% set standing = chain | selectattr("delegate") | list %}
-        <p class="sub">{% if gaps %}{{ gaps | length }} Precinct{{ "s" if gaps | length != 1 }} without a first approver. {% endif %}{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% elif leave.POLICY.first == "none" %}No first approval is needed, so no delegate stands in.{% elif not gaps %}Every Precinct approves through its own approvers today.{% endif %}</p>
+        <p class="sub">{% if leave.final_gap() %}<span class="chip chip-warn">Gap</span> No one may give final approval, so no application can be approved. {% endif %}{% if gaps %}{{ gaps | length }} Precinct{{ "s" if gaps | length != 1 }} without a first approver. {% endif %}{% if standing %}A delegate stands in for {{ standing | length }} Precinct{{ "s" if standing | length != 1 }} today.{% elif leave.POLICY.first == "none" %}No first approval is needed, so no delegate stands in.{% elif not gaps and not leave.final_gap() %}Every Precinct approves through its own approvers today.{% endif %}</p>
         <ul class="plain">
           {% for route in gaps %}<li><strong>{{ route.precinct }}</strong>: <span class="chip chip-warn">Gap</span> {{ route.note }}.</li>{% endfor %}
           {% for route in standing %}<li><strong>{{ route.precinct }}</strong>: {{ route.note }}; {{ route.first }} approves first meanwhile.</li>{% endfor %}

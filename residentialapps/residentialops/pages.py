@@ -5,27 +5,62 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.responses import Response
 
 from cordware.identity import current_identity, is_local
-from residentialapps.residentialops import sample_data
+from residentialapps.residentialops import sample_data, sample_leave
 from residentialapps.web.urls import templates
 
 TEMPLATES = templates([Path(__file__).resolve().parent / "templates"])
 
 APP_NAME = "Residential Operations"
 
-# The switcher's areas; a path of None is an area not built yet.
+# The switcher's areas for a sys admin, the default; a path of None is an
+# area not built yet. A sample viewer's menu is `areas_for` theirs.
 AREAS: tuple[dict[str, str | None], ...] = (
     {"label": "Home", "path": "/"},
-    {"label": "RA Leave", "path": "/ra-leave/admin/"},  # the admin pages first (1C item 1)
+    {"label": "RA Leave admin", "path": "/ra-leave/admin/"},
     {"label": "RA Events", "path": None},
     {"label": "Rosters", "path": "/rosters/"},
     {"label": "Sys admin", "path": "/sys-admin/"},
 )
+
+def choices(viewer: str) -> list[dict[str, str]]:
+    """The applications a sample viewer reaches, each at its own entry
+    point: RA Leave's RA, staff or admin side by who they are; Rosters and
+    Sys admin for sys admins only (the landing's cards)."""
+    is_ra = any(ra.name == viewer for ra in sample_data.RAS)
+    is_staff = any(name == viewer for name, _ in sample_leave.STAFF_VIEWERS)
+    is_sys_admin = any(name == viewer for name, *_ in sample_data.SYS_ADMINS)
+    staff_query = "" if viewer == sample_leave.STAFF_VIEWERS[0][0] else f"?as={quote(viewer)}"
+    found = []
+    if is_ra:
+        found.append({"label": "RA Leave", "path": "/ra-leave/", "what": "Your balance, apply for leave, cover asked of you"})
+    elif is_staff:
+        found.append({"label": "RA Leave", "path": "/ra-leave/staff/" + staff_query, "what": "Decisions awaiting you and your Precinct's leave"})
+    found.append({"label": "RA Events", "path": "", "what": "Coming later"})
+    if is_sys_admin:
+        found += [
+            {"label": "RA Leave admin", "path": "/ra-leave/admin/", "what": "Policy, entitlements, approval chain, applications, appeals"},
+            {"label": "Rosters", "path": "/rosters/", "what": "Setup, rosters and assignments"},
+            {"label": "Sys admin", "path": "/sys-admin/", "what": "Audit log and sys admin grants"},
+        ]
+    return found
+
+
+def areas_for(viewer: str) -> tuple[dict[str, str | None], ...]:
+    """The switcher for a sample viewer (§2): the landing, then what they
+    reach, carrying a staff viewer's `?as=`."""
+    landing = "/" if viewer == sample_data.LANDING_VIEWERS[0][0] else f"/?as={quote(viewer)}"
+    return (
+        {"label": "Home", "path": landing},
+        *({"label": c["label"], "path": c["path"] or None} for c in choices(viewer)),
+    )
+
 
 LEAVE_ADMIN_TABS: tuple[dict[str, str | None], ...] = (
     {"label": "Dashboard", "path": "/ra-leave/admin/"},
