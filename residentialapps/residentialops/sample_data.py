@@ -255,6 +255,8 @@ def unit_appointments() -> tuple[tuple[str, str], ...]:
     appointment."""
     on_slots = {(p.appointment, p.abbrev) for p in STAFF if any(p.name in s.staff for s in SLOTS)}
     return tuple(a for a in STAFF_APPOINTMENTS if a not in on_slots)
+
+
 RA_APPOINTMENTS = appointments(RAS)
 
 # Excerpts of the mock files, shown on the pages' CSV cards.

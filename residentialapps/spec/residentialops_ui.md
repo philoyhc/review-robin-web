@@ -165,7 +165,9 @@ Rosters and setup runs in order, after RRW's Setup tabs (author,
   Below it, full width above the slots table, the **Every slot** card
   sets who is in every slot for the term, by Unit-level appointment, by
   name, or both; they oversee every RA, and copying a term's assignments
-  copies its choices (author, 2026-10-29). A
+  copies its choices (author, 2026-10-29). It opens with the Staff
+  cells; a past term, or one before the slots stand, has none. Its
+  choices are set on the card, not carried by the Assignments CSV. A
   past term is read-only, under a notice and with no Copy from; a term
   before the slots stand lists none; a term without assignments says so
   and offers the copy. A partial-overlap warning, one notice per
