@@ -147,7 +147,11 @@ model (author, 2026-10-27):
   each header's button sorts ascending, descending, then back to the
   page's order. Assignments' slots table sorts the same way, with a chip
   for Notes alone; sorted, each row names its levels and the grouping
-  rules go.
+  rules go. Leave admin's Applications takes chips for all but ID and RA;
+  Entitlements, Approval chain's Precincts, Sys admin's grants and audit
+  log, and Precinct leave sort only (`data-sort-auto`). Policy's row
+  builders, Terms, the dashboard's cards, Delegates and the appeals
+  tables, short or edited in place, take neither (author, 2026-10-29).
 - **A roster row carries its appointment and its abbreviation**, in
   their own columns; a roster's appointments are the pairs its rows hold,
   with no types table and no limit (author, 2026-10-28).
