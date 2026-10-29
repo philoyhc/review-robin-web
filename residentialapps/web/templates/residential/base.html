@@ -478,6 +478,8 @@
       // browser under the table's `data-col-store`; a `.sort-btn` in a
       // `th.sortable` sorts the rows marked `data-row` by that column's
       // `data-sort-value` (else its text), then back to the page's order.
+      // A table's sort is kept per browser too, by page path and table, so
+      // it survives a reload or a change of term (author, 2026-10-29).
       (function () {
         function cells(table, key) { return table.querySelectorAll('[data-col="' + key + '"]'); }
         function edges(table) {
@@ -559,10 +561,22 @@
           if (!cell) return "";
           return cell.hasAttribute("data-sort-value") ? cell.getAttribute("data-sort-value") : cell.textContent.trim();
         }
+        // A table is named by its id, else by its sortable headers' keys and
+        // labels, which outlast tables shown or not around it.
+        function sortKey(table) {
+          var name = table.id || Array.prototype.map.call(table.querySelectorAll("th.sortable"), function (h) {
+            return h.getAttribute("data-col") + "=" + h.textContent.replace(/[\u2191\u2193\u2195]/g, "").trim();
+          }).join("|");
+          return "residential-sort:" + location.pathname + ":" + name;
+        }
         function sortBy(th, to) {
           var table = th.closest("table");
           var key = th.getAttribute("data-col");
           var next = to || { none: "ascending", ascending: "descending", descending: "none" }[th.getAttribute("aria-sort") || "none"];
+          try {
+            if (next === "none") localStorage.removeItem(sortKey(table));
+            else localStorage.setItem(sortKey(table), JSON.stringify({ col: key, dir: next }));
+          } catch (e) { /* ignore */ }
           Array.prototype.forEach.call(table.querySelectorAll("th.sortable"), function (h) {
             h.removeAttribute("aria-sort");  // on the sorted header alone
             h.querySelector(".sort-btn span").textContent = "\u2195";
@@ -584,6 +598,22 @@
           var anchor = body.querySelector("tr[data-last-ticked]");
           if (expander && anchor) anchor.insertAdjacentElement("afterend", expander);
         }
+        // Each table's kept sort, once its rows have their page order; a
+        // kept column since hidden or gone is dropped.
+        Array.prototype.forEach.call(document.querySelectorAll("table"), function (table) {
+          if (!table.querySelector("th.sortable")) return;
+          var kept = null;
+          try { kept = JSON.parse(localStorage.getItem(sortKey(table)) || "null"); } catch (e) { kept = null; }
+          if (!kept || (kept.dir !== "ascending" && kept.dir !== "descending")) return;
+          var th = Array.prototype.filter.call(table.querySelectorAll("th.sortable"), function (h) {
+            return h.getAttribute("data-col") === kept.col;
+          })[0];
+          if (th && !th.hidden) {
+            sortBy(th, kept.dir);
+          } else {
+            try { localStorage.removeItem(sortKey(table)); } catch (e) { /* ignore */ }
+          }
+        });
       })();
     </script>
   </body>

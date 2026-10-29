@@ -99,7 +99,8 @@ jobs:
   residential:
     # A pull request touching only prose and residentialapps/: Residential's
     # tests, the host's (import boundaries, mounting) and the prose lane's,
-    # with lint. No Chromium: the browser tests serve RRW alone.
+    # with lint. Chromium for Residential's own browser tests, which fail
+    # rather than skip without one here, as RRW's do in the full lane.
     needs: changes
     if: ${{ needs.changes.outputs.lane == 'residential' }}
     runs-on: ubuntu-latest
@@ -118,10 +119,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev]
 
+      - name: Install Chromium for the browser tests
+        run: python -m playwright install --with-deps chromium
+
       - name: Lint
         run: ruff check .
 
       - name: Run the residential lane's tests
+        env:
+          RRW_REQUIRE_BROWSER: "1"
         run: |
           read -r -a targets <<< "$(python3 tools/ci_lanes.py --residential-tests)"
           pytest -n auto "${targets[@]}"

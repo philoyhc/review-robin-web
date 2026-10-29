@@ -147,7 +147,9 @@ model (author, 2026-10-27):
   text in the light theme, the reverse in the dark) and a hidden one's a
   muted fill with body text, as RRW's chips, remembered per browser;
   each header's button sorts ascending, descending, then back to the
-  page's order. Assignments' slots table sorts the same way, with a chip
+  page's order, the sort kept per browser by page and table (not by term
+  or sample viewer) across a reload, and dropped once its column is hidden
+  or gone (author, 2026-10-29). Assignments' slots table sorts the same way, with a chip
   for Notes alone; sorted, each row names its levels and the grouping
   rules go. Leave admin's Applications takes chips for all but ID and RA;
   Entitlements, Approval chain's Precincts, Sys admin's grants and audit

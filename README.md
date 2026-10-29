@@ -169,8 +169,10 @@ serve the app live with fake auth and drive it with Chromium through
 Python Playwright, a dev dependency pinned to the minor whose
 Chromium build the web sandbox ships. They skip, saying why, when no
 Chromium is installed; run `python -m playwright install chromium`
-once to enable them locally. The SQLite CI job installs Chromium and
-sets `RRW_REQUIRE_BROWSER=1`, which turns that skip into a failure.
+once to enable them locally. The SQLite CI job and the residential lane
+install Chromium and set `RRW_REQUIRE_BROWSER=1`, which turns that skip
+into a failure; the residential lane's is for
+`residentialapps/tests/test_sort_persistence_browser.py`.
 `tests/integration/test_inline_scripts_parse.py` needs `node` on PATH
 and skips without it. CI's `ubuntu-latest` runners have `node`, but no
 switch turns that skip into a failure, so read the skip list rather than

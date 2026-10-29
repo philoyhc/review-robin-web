@@ -83,8 +83,8 @@ depth and including literal dynamic imports.
   in `ci.yml`): a pull request whose every path is prose or under
   `residentialapps/` runs
   `residentialapps/tests`, `cordware/tests` (for the boundary file and
-  the host it mounts on) and the prose lane's tests,
-  and skips RRW's suite and its Postgres round-trip. A path anywhere else,
+  the host it mounts on) and the prose lane's tests, with Chromium for
+  Residential's browser test, and skips RRW's suite and its Postgres round-trip. A path anywhere else,
   `pyproject.toml` included, runs everything; every push to `main` runs
   everything. From 1B (contract, not built) the lane also round-trips
   Residential's two histories on Postgres.
