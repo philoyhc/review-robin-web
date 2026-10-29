@@ -3,7 +3,7 @@
 {% block title %}Applications{% endblock %}
 {% block content %}
   {{ title("Applications", leave) }}
-  <p class="sub">Every application in the Unit. Open one to correct it, cancel approved leave, or reassign an approval; external leave is recorded here too (spec §21.4). Every change is audited.</p>
+  <p class="sub">Every application in the Unit. Open one to correct it, cancel approved leave, or reassign an approval; external leave is recorded here too (spec §21.4). Every change is audited. Export downloads the rows the filter shows, as CSV, for reporting (spec §4.6).</p>
 
   <section class="card card-pad muted filters" aria-label="Filter and actions">
     <div class="filter-fields">
@@ -17,6 +17,7 @@
     </div>
     <div class="btnrow">
       <button type="button" class="btn btn-secondary" disabled>Clear</button>
+      <button type="button" class="btn btn-secondary" disabled>Export CSV</button>
       <button type="button" class="btn btn-primary" disabled>Record external leave</button>
     </div>
   </section>

@@ -59,7 +59,7 @@ def test_a_tile_opens_the_rows_it_counts() -> None:
     assert "<option selected>Pending first approval</option>" in first
     cover = c.get(ADMIN + "applications?cover=unconfirmed").text
     assert sorted(re.findall(r'href="/ra-leave/admin/applications/(L-\d+)"', cover)) == ["L-0102", "L-0109", "L-0114"]
-    assert "· 3 of 17" in cover
+    assert "· 3 of 19" in cover
 
 
 def test_policy_sets_leave_types_with_their_own_entitlement_rules() -> None:
@@ -506,3 +506,32 @@ def test_cancelled_leave_and_decision_records(monkeypatch) -> None:
     assert "24 Oct</span> · First approval by" in decide and "the Precinct is fully staffed" in decide
     # The Master sees the staff remarks on an appeal (§15).
     assert "Remarks from Benjamin Chua, RF" in c.get("/ra-leave/staff/decide/L-0105?as=Sam%20Lee").text
+
+
+def test_dashboard_reports_and_export(monkeypatch) -> None:
+    """The 2026-10-29 review, spec §25 and §4.6: upcoming leave, extra
+    leave granted by term, entitlement anomalies and recent corrections on
+    the dashboard; Applications exports what it shows."""
+    c = client()
+    dashboard = c.get(ADMIN).text
+    for heading in ("Upcoming leave", "Extra leave granted", "Entitlement anomalies", "Recent administrative corrections"):
+        assert f">{heading}" in dashboard, heading
+    assert "<dt>AY2026-2027, Term 1</dt><dd>3 days, 1 appeal</dd>" in dashboard
+    assert "Cancelled approved leave for Kai Ng" in dashboard and "no RA is over entitlement" in dashboard
+    assert [a.id for a in sample_leave.upcoming()] == ["L-0115"]
+    # Lucas Teo's appeal goes beyond a balance his earlier leave used.
+    lucas = next(r for r in sample_leave.entitlement_rows() if r["ra"] == "Lucas Teo" and r["type"] == "Personal leave")
+    assert lucas["available"] == 0 and "Beyond entitlement</dt><dd>3 days" in c.get("/ra-leave/staff/decide/L-0118?as=Sam%20Lee").text
+    assert "Export CSV" in c.get(ADMIN + "applications").text
+    monkeypatch.setitem(sample_leave.ADJUSTMENTS, ("Chloe Lim", "Personal leave"), (-9, ""))
+    assert "<strong>Chloe Lim</strong>, Personal leave: Over entitlement by 7 days, pending included." in c.get(ADMIN).text
+
+
+def test_an_application_counting_no_days_is_not_submitted(monkeypatch) -> None:
+    """Ruled 2026-10-29: under weekdays or working days, dates counting no
+    day cannot be submitted, and Apply says so."""
+    assert sample_leave.zero_day_rule() == ""
+    monkeypatch.setitem(sample_leave.POLICY, "day_count", "Weekdays")
+    assert "only on a weekend count no days, and cannot be submitted" in client().get("/ra-leave/apply").text
+    monkeypatch.setitem(sample_leave.POLICY, "day_count", "Working days")
+    assert "weekends or public holidays count no days" in client().get("/ra-leave/apply").text

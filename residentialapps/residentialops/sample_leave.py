@@ -128,6 +128,16 @@ def leave_days(first: date, last: date) -> int:
     return len(days)
 
 
+def zero_day_rule() -> str:
+    """Why an application may count no days, by the day count; empty when
+    every day counts. An application counting none is not submitted
+    (author, 2026-10-29)."""
+    return {
+        "Weekdays": "Dates falling only on a weekend count no days, and cannot be submitted.",
+        "Working days": "Dates falling only on weekends or public holidays count no days, and cannot be submitted.",
+    }.get(POLICY["day_count"], "")
+
+
 PERIOD_LABEL = "AY2026-2027"
 
 APPEAL_DECIDER = "Sam Lee"  # the Master
@@ -288,13 +298,17 @@ APPLICATIONS: tuple[Application, ...] = tuple(
             ("Kai Ng", "Personal leave", _d("2026-11-04"), _d("2026-11-05"), "Isaac Goh", "Confirmed", "Cancelled", _d("2026-10-08")),
             ("Chloe Lim", "Official leave", _d("2026-09-25"), _d("2026-09-25"), "Hana Ito", "Confirmed", "Approved", _d("2026-09-14"),
              "Representing the hall at the inter-hall games."),
+            ("Lucas Teo", "Personal leave", _d("2026-09-07"), _d("2026-09-09"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-28"),
+             "Balance used; grandmother's funeral abroad."),
+            # The leave that used Lucas Teo's balance before his appeal.
+            ("Lucas Teo", "Personal leave", _d("2026-08-24"), _d("2026-08-28"), "Maya Seah", "Confirmed", "Approved", _d("2026-08-17")),
         ),
         start=101,
     )
 )
 
 
-GRANTED_APPEALS: frozenset[str] = frozenset()  # none granted yet in the sample
+GRANTED_APPEALS: frozenset[str] = frozenset({"L-0118"})  # extra leave the Master granted
 
 # The sample's record of each decision: its date and remarks, by step
 # (spec §14, §15, §19). Who decided is read from today's chain in
@@ -315,6 +329,11 @@ DECISIONS: dict[str, dict[str, tuple[date, str]]] = {
         "cancelled": (_d("2026-10-20"), "Kai Ng is leading the Precinct's November event; cancelled at his request."),
     },
     "L-0117": {"first": (_d("2026-09-15"), "Good luck at the games."), "final": (_d("2026-09-16"), "")},
+    "L-0119": {"first": (_d("2026-08-18"), ""), "final": (_d("2026-08-19"), "")},
+    "L-0118": {
+        "staff": (_d("2026-08-29"), "Lucas has covered two extra weekends; I support it."),
+        "appeal": (_d("2026-08-31"), "Granted, on the extra duties agreed with Arjun Nair."),
+    },
 }
 CANCELLED_BY = "Rachel Yeo"  # the sample's Leave admin
 
@@ -363,6 +382,41 @@ def cover_unconfirmed() -> tuple[Application, ...]:
     return tuple(
         a for a in APPLICATIONS if a.stage in OPEN_STAGES and a.cover_status != "Confirmed" and confirmation_needed(a)
     )
+
+
+def upcoming() -> tuple[Application, ...]:
+    """Approved leave starting after this week, to the term's end (spec
+    §25, upcoming leave), soonest first."""
+    after = date.fromordinal(TODAY.toordinal() + 6)
+    return tuple(sorted((a for a in APPLICATIONS if a.stage == "Approved" and after < a.start <= TERM.end), key=lambda a: a.start))
+
+
+def extra_by_term() -> tuple[tuple[str, int, int], ...]:
+    """Extra leave the Master granted, per term of the year: (term,
+    appeals, days), kept apart from entitlement (spec §25, §7.5)."""
+    granted = [a for a in APPLICATIONS if a.appeal and a.stage == "Approved"]
+    return tuple(
+        (t.label, sum(1 for a in granted if t.start <= a.start <= t.end),
+         sum(a.days for a in granted if t.start <= a.start <= t.end))
+        for t in sample_data.TERMS if t.year == PERIOD_LABEL
+    )
+
+
+@dataclass(frozen=True)
+class Correction:
+    """An administrative correction, as the audit log keeps it (spec §26)."""
+
+    when: date
+    actor: str
+    what: str
+    reason: str
+    application: str = ""  # its application, if any
+
+
+CORRECTIONS = (
+    Correction(date(2026, 10, 20), "Rachel Yeo", "Cancelled approved leave for Kai Ng", "Leading the Precinct's November event; at his request", "L-0116"),
+    Correction(date(2026, 8, 3), "Rachel Yeo", "Adjusted Leon Chia's Personal leave by +2", "Days charged twice for one application"),
+)
 
 
 def away_this_week() -> tuple[Application, ...]:
@@ -445,6 +499,18 @@ def days_in_term(application: Application, term: sample_data.Term = TERM) -> int
     end is charged to each term for its own days."""
     first, last = max(application.start, term.start), min(application.end, term.end)
     return leave_days(first, last) if first <= last else 0
+
+
+def entitlement_anomalies() -> tuple[tuple[dict, str], ...]:
+    """Entitlement rows to look at (spec §25): over entitlement, or an adjustment
+    with no reason recorded."""
+    found = []
+    for r in entitlement_rows():
+        if r["available"] < 0:
+            found.append((r, f"Over entitlement by {-r['available']} day{'s' if r['available'] != -1 else ''}, pending included"))
+        elif r["adjustment"] and not r["reason"]:
+            found.append((r, "Adjusted with no reason recorded"))
+    return tuple(found)
 
 
 def entitlement_rows() -> tuple[dict, ...]:

@@ -17,6 +17,7 @@
           <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
         <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" disabled></div>
         <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
+        {% if leave.zero_day_rule() %}<p class="subtle small">{{ leave.zero_day_rule() }}</p>{% endif %}
         <div class="field-wide"><label for="reason">Why you need it</label><textarea id="reason" class="input" rows="3" disabled></textarea></div>
         <div class="field-wide"><label for="cover">Covering RA</label>
           <input id="cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" aria-describedby="cover-what" disabled>
