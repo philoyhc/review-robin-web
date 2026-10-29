@@ -73,10 +73,20 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
     return (first, last) if first <= last else None
 
 
+APPEAL_MODES = ("Open", "By invitation", "Off")
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 POLICY = {
-    "appeals": True,  # on or off for the whole system (author, 2026-10-28)
+    # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
+    # open to every RA, by invitation once someone the policy names agrees
+    # in principle, or off.
+    "appeals": "Open",  # one of APPEAL_MODES
+    # Who may open an appeal by invitation (author, 2026-10-29), chosen as
+    # approvers are: appointments on the RA's slot, Unit-level
+    # appointments, or named staff.
+    "inviters": "unit",  # "slot", "unit" or "named"
+    "inviter_types": ("Master", "Admin"),
+    "inviter_names": (),
     "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
     "cover_required": True,
     "cover_mode": "Named and confirmed",
@@ -245,7 +255,7 @@ def stages(open_only: bool = False) -> tuple[str, ...]:
     # Appeals off removes the route for new applications; an appeal already
     # made keeps its stage and is decided (author, 2026-10-28).
     open_appeal = any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
-    skip = {"Appeal to the Master"} if not POLICY["appeals"] and not open_appeal else set()
+    skip = {"Appeal to the Master"} if not appeals_on() and not open_appeal else set()
     if POLICY["first"] == "none":
         skip.add("Pending first approval")
     return tuple(s for s in (OPEN_STAGES if open_only else STAGES) if s not in skip)
@@ -619,9 +629,11 @@ def scope(viewer: str) -> tuple[str, ...]:
 def can_open(viewer: str, application: Application) -> bool:
     """Decide opens an application in the viewer's Precinct-leave scope, or
     one that is (or was) theirs to decide, wherever it is: a delegate's or a
-    named final approver's (spec §13-§15)."""
+    named final approver's (spec §13-§15), or an RA's they may open an
+    appeal for."""
     return (
         application.precinct in scope(viewer)
+        or application.ra in invitable_ras(viewer)
         or any(a.id == application.id for a, _ in queue(viewer))
         or any(a.id == application.id for a, _, _ in decided(viewer))
     )
@@ -668,3 +680,76 @@ def balance_of(application: Application) -> dict:
 
 def waiting_on_cover_count(viewer: str) -> int:
     return sum(1 for a, _ in queue(viewer) if waiting_on_cover(a))
+
+
+def appeals_on() -> bool:
+    """Whether the system has appeals at all: open, or by invitation."""
+    return POLICY["appeals"] != "Off"
+
+
+@dataclass(frozen=True)
+class Invitation:
+    """By invitation, an RA may send an appeal once someone the policy lets
+    open appeals, having heard from them, agrees in principle and opens it
+    for them on Appeals (author, 2026-10-29)."""
+
+    ra: str
+    agreed_by: str
+    opened: date
+    until: date
+    note: str
+    used_by: str = ""  # the appeal sent under it, once sent
+
+
+INVITATIONS = (
+    Invitation("Gwen Ho", "Sam Lee", date(2026, 10, 24), date(2026, 11, 7), "Family wedding overseas; agreed in principle", "L-0105"),
+    Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; the Master agreed by email"),
+    Invitation("Nathan Yeo", "Sam Lee", date(2026, 9, 14), date(2026, 9, 28), "Conference abroad; not sent in time"),
+)
+
+
+def inviters_for(ra: str) -> tuple[str, ...]:
+    """Who may open an appeal for an RA, by the policy's inviter setting."""
+    if POLICY["inviters"] == "named":
+        return tuple(POLICY["inviter_names"])
+    abbrev = {p.name: p.abbrev for p in sample_data.STAFF}
+    if POLICY["inviters"] == "slot":
+        slot = next((s for s in sample_data.SLOTS if ra in s.ras), None)
+        return tuple(n for n in (slot.staff if slot else ()) if abbrev[n] in POLICY["inviter_types"])
+    return tuple(p.name for p in sample_data.STAFF if p.abbrev in POLICY["inviter_types"])
+
+
+def all_inviters() -> tuple[str, ...]:
+    return tuple(dict.fromkeys(n for ra in sample_data.RAS for n in inviters_for(ra.name)))
+
+
+def invitable_ras(viewer: str) -> tuple[str, ...]:
+    """The RAs a staff member may open an appeal for."""
+    return tuple(ra.name for ra in sample_data.RAS if viewer in inviters_for(ra.name))
+
+
+def inviter_label() -> str:
+    if POLICY["inviters"] == "named":
+        return " or ".join(POLICY["inviter_names"]) or "no one named"
+    whose = "the RA's slot's" if POLICY["inviters"] == "slot" else "the Unit's"
+    return f"{whose} {' or '.join(POLICY['inviter_types']) or 'no appointment ticked'}"
+
+
+def invitation_for(ra: str, day: date | None = None) -> Invitation | None:
+    """An RA's unused invitation still in date."""
+    day = day or TODAY
+    return next((i for i in INVITATIONS if i.ra == ra and not i.used_by and i.opened <= day <= i.until), None)
+
+
+def invitation_status(invitation: Invitation) -> str:
+    if invitation.used_by:
+        return f"Sent: {invitation.used_by}"
+    if invitation.until < TODAY:
+        return "Lapsed"
+    return "Open" if invitation.opened <= TODAY else "From " + short_date(invitation.opened)
+
+
+def can_appeal(ra: str) -> bool:
+    """Whether an RA may send an appeal now: always while appeals are open,
+    with an invitation while they are by invitation, never while off."""
+    return POLICY["appeals"] == "Open" or (POLICY["appeals"] == "By invitation" and invitation_for(ra) is not None)

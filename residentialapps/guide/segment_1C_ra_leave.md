@@ -57,6 +57,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 
 - **Ladder reordered, 2026-10-28** (author): the admin pages (rung 4) are built first, the rest of RA Leave being downstream of their configuration; rungs 1–3 follow in order. Rung 4 lands first; the cumulative read moves to the item's last build rung.
 - **RA pages, 2026-10-28** (author: "RA pages next"): rung 2 lands with rung 1's RA home; the landing at `/` and the viewer switch wait for rung 1's remainder. The sample viewer is Chloe Lim; two applications were added naming her as cover.
+- **Appeals by invitation, 2026-10-29** (author): appeals are open, by invitation or off; by invitation adds the admin Appeals page, and a staff Appeals tab for whoever the policy lets open appeals (chosen as approvers are: slot appointments, Unit appointments or named staff; same day).
 - **Staff pages, 2026-10-29** (author: "yes" to the staff pages next): rung 3, with a sample viewer switch on the staff pages (`?as=`: Daniel Koh, Rachel Yeo, Sam Lee), the part of rung 1's switch they need.
 - **Iteration, 2026-10-28** (author): Leave policy reworked to the leave policy ruling (`residentialapps/guide/todo_master.md`): leave types with their own earning rule and cap, blackouts by week, appeals and their terms, cover required, named or confirmed. Entitlements follow the rules; its CSV carries adjustments only.
 
@@ -66,8 +67,8 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 
 1. **Landing and the phone shell.** ~~The Residential Operations home at `/` for an RA … and for an approver~~ (revised 2026-10-28) The landing at `/`, choosing an application; the RA home at `/ra-leave/` (balance, cover asked of you, my applications); the card columns that stack on a phone, the three audiences' tabs, the sample viewer switch; RA Leave live in the switcher.
 2. **RA pages.** Apply, Request extra leave, application detail (status timeline, withdraw), My cover, My history.
-3. **Staff pages** (`/ra-leave/staff/`). Staff home, Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, ~~Team leave~~ Precinct leave with its this-week summary.
-4. **Leave admin and conventions** (`/ra-leave/admin/`). ~~Cycles and entitlements, applications~~ Leave dashboard, Leave policy, Entitlements, Approval chain, Applications; `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
+3. **Staff pages** (`/ra-leave/staff/`). Staff home, Awaiting my decision, Decide (first approval, final approval and a Master appeal), Decided, ~~Team leave~~ Precinct leave with its this-week summary; Appeals for those who may open them (added 2026-10-29).
+4. **Leave admin and conventions** (`/ra-leave/admin/`). ~~Cycles and entitlements, applications~~ Leave dashboard, Leave policy, Entitlements, Approval chain, Applications, Appeals (added 2026-10-29); `residentialapps/spec/residentialops_ui.md` extended from rungs 1–4. Last build rung: cumulative read.
 5+. Iteration until approved, each with its own read.
 
 **Items 2–5** get their rungs when 1B closes, from what the core turned out to be.

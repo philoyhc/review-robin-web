@@ -3,9 +3,11 @@
 {% block title %}Request extra leave{% endblock %}
 {% block content %}
   {{ title("Request extra leave", leave, viewing(me)) }}
-  {% if not leave.POLICY.appeals %}
+  {% if not leave.appeals_on() %}
     <section class="card card-pad"><p class="sub">Extra leave is not offered: appeals are switched off on the Leave policy. Apply within your entitlement on <a href="{{ url('/ra-leave/apply') }}">Apply for leave</a>.</p></section>
   {% else %}
+  {% set invited = leave.invitation_for(me) %}
+  {% if invited and leave.POLICY.appeals == "By invitation" %}<div class="notice">The Master has agreed to consider your appeal; send it by {{ leave.short_date(invited.until) }}.</div>{% endif %}
   <p class="sub">For leave beyond your entitlement, or in an Appeal-only blackout. The Master decides personally; approval is discretionary, and extra leave is kept apart from your entitlement (spec §7). Controls are inert until RA Leave is wired.</p>
   <div class="split">
     <div class="main">

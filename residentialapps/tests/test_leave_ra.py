@@ -70,7 +70,7 @@ def test_an_ra_sees_only_their_own_applications() -> None:
 
 
 def test_appeals_off_removes_the_extra_leave_route(monkeypatch) -> None:
-    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     c = client()
     home = c.get(RA).text
     assert "/ra-leave/appeal" not in home and "kept apart from your entitlement" not in home
@@ -79,7 +79,7 @@ def test_appeals_off_removes_the_extra_leave_route(monkeypatch) -> None:
 
 
 def test_existing_extra_leave_shows_even_with_appeals_off(monkeypatch) -> None:
-    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     monkeypatch.setattr(sample_leave, "my_extra", lambda ra=None: {"granted": 0, "pending": 4})
     home = client().get(RA).text
     assert "kept apart from your entitlement" in home and "<dt>Pending</dt><dd>4</dd>" in home
@@ -110,3 +110,22 @@ def test_history_is_newest_first_and_unknown_ids_are_not_found(monkeypatch) -> N
     assert re.findall(r'href="/ra-leave/applications/(L-\d+)"', history) == ["L-0101", "L-0901"]
     assert "sent 27 Oct" in history
     assert client().get(RA + "applications/L-9999").status_code == 404
+
+
+def test_by_invitation_the_ra_is_not_offered_an_appeal_until_invited(monkeypatch) -> None:
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    c = client()
+    home = c.get(RA).text
+    # Not shown to an uninvited RA at all (author, 2026-10-29).
+    assert ">Request extra leave</a>" not in home and 'href="/ra-leave/appeal"' not in home  # no tab either
+    assert "Extra leave" not in home and "the Master" not in home
+    assert c.get(RA + "appeal").status_code == 404
+    apply = c.get(RA + "apply").text
+    assert "Leave in a blackout cannot be submitted." in apply and "Master" not in apply
+    monkeypatch.setattr(sample_leave, "INVITATIONS", sample_leave.INVITATIONS + (
+        sample_leave.Invitation("Chloe Lim", "Sam Lee", sample_leave.date(2026, 10, 28), sample_leave.date(2026, 11, 4), "Agreed"),))
+    monkeypatch.setattr(sample_leave, "VIEWER", "Chloe Lim")
+    invited = c.get(RA + "appeal").text
+    assert "The Master has agreed to consider your appeal; send it by 4 Nov." in invited
+    assert '>Request extra leave</a>' in c.get(RA).text
+    assert "in an Appeal-only one it goes to the Master as an appeal" in c.get(RA + "apply").text
