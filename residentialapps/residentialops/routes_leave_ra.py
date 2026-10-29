@@ -18,7 +18,7 @@ def _page(request: Request, template: str, **context: object) -> Response:
         request,
         f"residentialops/leave/ra/{template}",
         area="RA Leave",
-        tabs=leave_ra_tabs(bool(sample_leave.POLICY["appeals"])),
+        tabs=leave_ra_tabs(sample_leave.can_appeal(sample_leave.VIEWER)),
         leave=sample_leave,
         sample=sample_data,
         me=sample_leave.VIEWER,

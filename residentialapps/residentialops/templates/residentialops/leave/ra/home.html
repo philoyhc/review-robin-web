@@ -12,7 +12,7 @@
   </section>
   <div class="btnrow gap-above gap-below">
     <a class="btn btn-primary" href="{{ url('/ra-leave/apply') }}">Apply for leave</a>
-    {% if leave.POLICY.appeals %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}">Request extra leave</a>{% endif %}
+    {% if leave.can_appeal(me) %}<a class="btn btn-secondary" href="{{ url('/ra-leave/appeal') }}">Request extra leave</a>{% endif %}
   </div>
 
   <div class="split">
@@ -52,7 +52,7 @@
           </dl>
         {% endfor %}
         {% set extra = leave.my_extra(me) %}
-        {% if leave.POLICY.appeals or extra.granted or extra.pending %}
+        {% if leave.appeals_on() or extra.granted or extra.pending %}
           <h3 class="gap-above-sm">Extra leave</h3>
           <p class="subtle small">Granted by the Master on appeal, kept apart from your entitlement.</p>
           <dl class="kv"><dt>Granted</dt><dd>{{ extra.granted }}</dd><dt>Pending</dt><dd>{{ extra.pending }}</dd></dl>

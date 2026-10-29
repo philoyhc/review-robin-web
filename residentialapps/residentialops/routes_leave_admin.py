@@ -47,6 +47,11 @@ def routing(request: Request) -> Response:
     return _page(request, "routing.html", routes=sample_leave.routes(), staff=staff, delegable=sample_leave.delegable())
 
 
+@router.get("/ra-leave/admin/appeals", name="residentialops_leave_admin_appeals")
+def appeals(request: Request) -> Response:
+    return _page(request, "appeals.html")
+
+
 @router.get("/ra-leave/admin/applications", name="residentialops_leave_admin_applications")
 def applications(request: Request) -> Response:
     # The dashboard's tiles link here filtered (`?stage=`, `?cover=`); the

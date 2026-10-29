@@ -82,15 +82,15 @@
         </table>
       </div>
       <ul class="plain subtle gap-above-sm">
-        <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal; refused while appeals are off.</li>
+        <li><strong>Refused</strong>: an application touching these dates cannot be submitted. <strong>Appeal only</strong>: it can, but goes to the Master as an appeal (by invitation, once invited); refused while appeals are off.</li>
       </ul>
     </section>
 
     {# 4. Appeals beyond entitlement (spec §7). #}
     <section class="card card-pad" aria-labelledby="appeals-h">
       <h2 id="appeals-h">Appeals beyond entitlement</h2>
-      <p class="sub">When appeals are on, an RA with no entitlement left, or applying into an Appeal-only blackout, may ask the Master for extra leave. The Master decides personally; extra leave granted is kept apart from the entitlement (spec §7.5).</p>
-      {{ choice("appeals", "Appeals beyond entitlement are", ("On", "Off"), "On" if leave.POLICY.appeals else "Off", {"On": "Offered to an RA with no entitlement left or applying into an Appeal-only blackout, on the terms below", "Off": "Not offered anywhere: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
+      <p class="sub">An RA with no entitlement left, or applying into an Appeal-only blackout, may ask the Master for extra leave, as openly as this setting allows. The Master decides personally; extra leave granted is kept apart from the entitlement (spec §7.5).</p>
+      {{ choice("appeals", "Appeals beyond entitlement are", leave.APPEAL_MODES, leave.POLICY.appeals, {"Open": "Request extra leave is offered to every RA; sending it starts the appeal", "By invitation": "Not shown to RAs. An RA writes in first; once the Master or the Master's admin delegate agrees in principle, they open an appeal for that RA on Appeals, and the RA can then send it", "Off": "Not available: an application beyond entitlement cannot be submitted, and Appeal-only blackouts refuse leave"}) }}
       <div class="field-wide">
         <label for="appeal-terms">The terms shown to the RA when they appeal</label>
         <textarea id="appeal-terms" class="input" rows="2" disabled>{{ leave.POLICY.appeal_terms }}</textarea>
@@ -101,7 +101,7 @@
     {# 5. Cover (spec §12). #}
     <section class="card card-pad" aria-labelledby="cover-h">
       <h2 id="cover-h">Cover</h2>
-      <p class="sub">Whether an application must name a covering RA, whether that RA must confirm, and whom an RA may name. {% if leave.POLICY.appeals %}Appeals need confirmed cover unless the Master overrides it, on the record (spec §7.4).{% endif %}</p>
+      <p class="sub">Whether an application must name a covering RA, whether that RA must confirm, and whom an RA may name. {% if leave.appeals_on() %}Appeals need confirmed cover unless the Master overrides it, on the record (spec §7.4).{% endif %}</p>
       {{ choice("cover", "Cover for ordinary leave is", ("Required", "Not required"), "Required" if leave.POLICY.cover_required else "Not required") }}
       {{ choice("cover-mode", "When required, the covering RA is", leave.COVER_MODES, leave.POLICY.cover_mode, {"Named only": "Told, and need not confirm", "Named and confirmed": "Asked to confirm; the application waits at first approval until they do"}) }}
       {{ choice("pool", "An RA may name as cover", leave.COVER_POOLS, leave.POLICY.cover_pool, {"Any RA": "Anyone on the RA roster", "Same Precinct": "An RA in a slot under the same Precinct, this term", "Same Wing": "An RA in a slot under the same Wing, this term"}) }}
@@ -133,7 +133,7 @@
           <datalist id="staff-names">{% for p in sample.STAFF %}<option value="{{ p.name }}">{{ p.appointment }}</option>{% endfor %}</datalist></div></div>
       </fieldset>
       <dl class="kv">
-        <dt>Appeals</dt><dd>{% if leave.POLICY.appeals %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
+        <dt>Appeals</dt><dd>{% if leave.appeals_on() %}The Master ({{ leave.APPEAL_DECIDER }}), personally{% else %}Off{% endif %}</dd>
       </dl>
     </section>
     <div class="btnrow"><button type="button" class="btn btn-primary" disabled>Save policy</button></div>

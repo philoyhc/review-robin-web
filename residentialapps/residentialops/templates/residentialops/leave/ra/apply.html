@@ -12,7 +12,7 @@
           <select id="ltype" class="input" disabled>{% for lt in leave.LEAVE_TYPES %}<option>{{ lt.name }}</option>{% endfor %}</select></div>
         <div class="field-wide"><label for="first">First day</label><input id="first" class="input" type="date" disabled></div>
         <div class="field-wide"><label for="last">Last day</label><input id="last" class="input" type="date" disabled></div>
-        <p class="subtle small">The days are counted for you. {% if leave.POLICY.appeals %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% else %}Leave in any blackout cannot be submitted while appeals are off.{% endif %}</p>
+        <p class="subtle small">The days are counted for you. {% if leave.can_appeal(me) %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it goes to the Master as an appeal.{% elif leave.appeals_on() %}Leave in a Refused blackout cannot be submitted; in an Appeal-only one it needs the Master's invitation to appeal first.{% else %}Leave in any blackout cannot be submitted while appeals are off.{% endif %}</p>
         <div class="field-wide"><label for="cover">Covering RA{% if not leave.POLICY.cover_required %} (optional){% endif %}</label>
           <input id="cover" class="input" type="text" list="cover-pool" placeholder="Start typing a name" aria-describedby="cover-what" disabled>
           <datalist id="cover-pool">{% for name in leave.cover_choices(me) %}<option value="{{ name }}"></option>{% endfor %}</datalist>
@@ -25,7 +25,7 @@
       <section class="card card-pad muted" aria-labelledby="avail-h">
         <h2 id="avail-h">Available to you</h2>
         <dl class="kv">{% for r in leave.my_balances(me) %}<dt>{{ r.type }}</dt><dd>{{ r.available }} day{{ "s" if r.available != 1 }}</dd>{% endfor %}</dl>
-        {% if leave.POLICY.appeals %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}">Request extra leave</a> instead of a refusal.</p>{% endif %}
+        {% if leave.can_appeal(me) %}<p class="subtle small gap-above-sm">Not enough days? You will be offered <a href="{{ url('/ra-leave/appeal') }}">Request extra leave</a> instead of a refusal.</p>{% elif leave.appeals_on() %}<p class="subtle small gap-above-sm">Not enough days? Write to the Master; extra leave is by invitation.</p>{% endif %}
       </section>
     </div>
   </div>

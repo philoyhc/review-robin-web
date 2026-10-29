@@ -73,10 +73,14 @@ def week_dates(blackout: Blackout, year: str = "AY2026-2027") -> tuple[date, dat
     return (first, last) if first <= last else None
 
 
+APPEAL_MODES = ("Open", "By invitation", "Off")
 COVER_MODES = ("Named only", "Named and confirmed")
 COVER_POOLS = ("Any RA", "Same Precinct", "Same Wing")
 POLICY = {
-    "appeals": True,  # on or off for the whole system (author, 2026-10-28)
+    # Appeals beyond entitlement (author, 2026-10-28, refined 2026-10-29):
+    # open to every RA, by invitation once the Master or the Master's admin
+    # delegate agrees in principle, or off.
+    "appeals": "Open",  # one of APPEAL_MODES
     "appeal_terms": "Granted on the understanding that you take on extra duties, as agreed with your RF.",
     "cover_required": True,
     "cover_mode": "Named and confirmed",
@@ -245,7 +249,7 @@ def stages(open_only: bool = False) -> tuple[str, ...]:
     # Appeals off removes the route for new applications; an appeal already
     # made keeps its stage and is decided (author, 2026-10-28).
     open_appeal = any(a.stage == "Appeal to the Master" for a in APPLICATIONS)
-    skip = {"Appeal to the Master"} if not POLICY["appeals"] and not open_appeal else set()
+    skip = {"Appeal to the Master"} if not appeals_on() and not open_appeal else set()
     if POLICY["first"] == "none":
         skip.add("Pending first approval")
     return tuple(s for s in (OPEN_STAGES if open_only else STAGES) if s not in skip)
@@ -668,3 +672,47 @@ def balance_of(application: Application) -> dict:
 
 def waiting_on_cover_count(viewer: str) -> int:
     return sum(1 for a, _ in queue(viewer) if waiting_on_cover(a))
+
+
+def appeals_on() -> bool:
+    """Whether the system has appeals at all: open, or by invitation."""
+    return POLICY["appeals"] != "Off"
+
+
+@dataclass(frozen=True)
+class Invitation:
+    """By invitation, an RA may send an appeal once the Master or the
+    Master's admin delegate, having heard from them, agrees in principle and
+    opens it for them on Appeals (author, 2026-10-29)."""
+
+    ra: str
+    agreed_by: str
+    opened: date
+    until: date
+    note: str
+    used_by: str = ""  # the appeal sent under it, once sent
+
+
+INVITATIONS = (
+    Invitation("Gwen Ho", "Sam Lee", date(2026, 10, 24), date(2026, 11, 7), "Family wedding overseas; agreed in principle", "L-0105"),
+    Invitation("Kai Ng", "Rachel Yeo", date(2026, 10, 27), date(2026, 11, 10), "Sibling's graduation abroad; the Master agreed by email"),
+)
+APPEAL_AGREERS = ("Sam Lee", "Rachel Yeo")  # the Master and the Master's admin delegate
+
+
+def invitation_for(ra: str, day: date | None = None) -> Invitation | None:
+    """An RA's unused invitation still in date."""
+    day = day or TODAY
+    return next((i for i in INVITATIONS if i.ra == ra and not i.used_by and i.opened <= day <= i.until), None)
+
+
+def invitation_status(invitation: Invitation) -> str:
+    if invitation.used_by:
+        return f"Sent: {invitation.used_by}"
+    return "Open" if invitation.until >= TODAY else "Lapsed"
+
+
+def can_appeal(ra: str) -> bool:
+    """Whether an RA may send an appeal now: always while appeals are open,
+    with an invitation while they are by invitation, never while off."""
+    return POLICY["appeals"] == "Open" or (POLICY["appeals"] == "By invitation" and invitation_for(ra) is not None)

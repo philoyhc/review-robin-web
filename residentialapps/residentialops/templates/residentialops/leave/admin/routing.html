@@ -3,7 +3,7 @@
 {% block title %}Approval chain{% endblock %}
 {% block content %}
   {{ title("Approval chain", leave) }}
-  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() }}, {{ leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.POLICY.appeals else ' is' }} the same for the whole Unit.</p>
+  <p class="sub">Who approves for each Precinct, derived from <a href="{{ url('/rosters/assignments') }}">Assignments</a> for {{ sample.CURRENT_TERM.label }} and the policy's first and final approvers ({{ leave.first_label() }}, {{ leave.final_label() }}). A delegate approves first in a person's place while that person cannot; final approval{{ ' and appeals are' if leave.appeals_on() else ' is' }} the same for the whole Unit.</p>
 
   <section class="card" aria-labelledby="chain-h">
     <div class="card-head">
@@ -11,7 +11,7 @@
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.POLICY.appeals %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
+        <thead><tr><th scope="col">Wing</th><th scope="col">Precinct</th><th scope="col" class="num">RAs</th><th scope="col">RF</th><th scope="col">RSLM</th><th scope="col">First approval</th><th scope="col">Final</th>{% if leave.appeals_on() %}<th scope="col">Appeals</th>{% endif %}</tr></thead>
         <tbody>
           {% for route in routes %}
             <tr>
@@ -22,7 +22,7 @@
               <td class="nowrap"><span class="pill-derived">{{ route.rslm }}</span></td>
               <td>{{ route.first }}{% if route.delegate %} <span class="chip chip-warn" title="{{ route.note }}">Delegate</span><div class="subtle">{{ route.note }}</div>{% elif route.gap %} <span class="chip chip-warn">Gap</span><div class="subtle">{{ route.note }}</div>{% endif %}</td>
               <td>{{ leave.final_approvers() | join(" or ") }}</td>
-              {% if leave.POLICY.appeals %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
+              {% if leave.appeals_on() %}<td class="nowrap">{{ leave.APPEAL_DECIDER }}</td>{% endif %}
             </tr>
           {% endfor %}
         </tbody>
@@ -32,7 +32,7 @@
 
   <section class="card card-pad gap-above" aria-labelledby="delegates-h">
     <h2 id="delegates-h">Delegates <span class="count">· {{ leave.DELEGATES | length }}</span></h2>
-    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.POLICY.appeals else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
+    <p class="sub">{% if leave.POLICY.first == "none" %}The policy needs no first approval, so no delegate stands in until it does. {% endif %}A delegate approves first in a person's place on every slot that person approves for, between the dates given; leave both blank until removed. First approval only: final approval{{ " and appeals are" if leave.appeals_on() else " is" }} not delegable, and an application waiting on someone can be reassigned from <a href="{{ url('/ra-leave/admin/applications') }}">Applications</a>.</p>
     <div class="table-wrap">
       <table class="rows">
         <thead><tr><th scope="col">Acting for</th><th scope="col">Delegate</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Why</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Add or remove</span></th></tr></thead>

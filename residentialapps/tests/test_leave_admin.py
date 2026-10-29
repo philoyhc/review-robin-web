@@ -119,7 +119,7 @@ def test_policy_appeals_cover_and_approvals() -> None:
         assert [v for v, _ in radios] == list(options), name
         assert [v for v, c in radios if c] == [current], name
     on_off = re.findall(r'<input type="radio" id="appeals-\d" name="appeals" value="([^"]*)"( checked)?', page)
-    assert on_off == [("On", " checked" if sample_leave.POLICY["appeals"] else ""), ("Off", "" if sample_leave.POLICY["appeals"] else " checked")]
+    assert on_off == [(m, " checked" if m == sample_leave.POLICY["appeals"] else "") for m in sample_leave.APPEAL_MODES]
     assert "refused while appeals are off" in page  # system-wide switch (author, 2026-10-28)
     assert sample_leave.POLICY["appeal_terms"] in page
     assert "unless the Master overrides it" in page and "no built-in default" in page
@@ -254,12 +254,12 @@ def test_appeals_switched_off_leave_no_appeal_route(monkeypatch) -> None:
     (author, 2026-10-28): off, no page offers or names an appeal route."""
     c = client()
     on = c.get(ADMIN).text.split('id="policy-h"')[1].split("</section>")[0]
-    assert "<dt>Appeals</dt><dd>On, to the Master</dd>" in on
+    assert "<dt>Appeals</dt><dd>Open, to the Master</dd>" in on
     assert ">Appeals</th>" in c.get(ADMIN + "routing").text
-    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     policy = c.get(ADMIN + "policy").text
     assert 'name="appeals" value="Off" checked' in policy
-    assert "Not offered anywhere" in policy and "The Master (Sam Lee), personally" not in policy
+    assert "Not available: an application beyond entitlement" in policy and "The Master (Sam Lee), personally" not in policy
     assert "<dt>Appeals</dt><dd>Off</dd>" in c.get(ADMIN).text
     routing = c.get(ADMIN + "routing").text
     assert ">Appeals</th>" not in routing and "final approval is the same for the whole Unit" in routing
@@ -364,7 +364,7 @@ def test_the_admin_pages_follow_the_policy_switches(monkeypatch) -> None:
     assert '<span class="chip chip-mute">AY2026-2027</span>' in detail and "27 Oct</span> · Submitted by Chloe Lim" in detail
     assert sample_leave.delegable() == ["Daniel Koh", "Mei Ling Tan", "Arjun Nair", "Grace Ho", "Benjamin Chua",
                                         "Farah Aziz", "Kenneth Lau", "Siti Rahman", "Wei Jie Ong"]
-    monkeypatch.setitem(sample_leave.POLICY, "appeals", False)
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "Off")
     # An appeal already made stands (author, 2026-10-28): L-0105 keeps its tile and filter.
     assert "Appeal to the Master" in sample_leave.stages(open_only=True)
     no_appeals = tuple(a for a in sample_leave.APPLICATIONS if a.stage != "Appeal to the Master")
@@ -390,3 +390,27 @@ def test_stage_names_and_titles_follow_the_policy(monkeypatch) -> None:
     monkeypatch.setitem(sample_leave.POLICY, "first_types", ("Master",))
     steps = [s for _, s in sample_leave.timeline(sample_leave.by_id("L-0103"))]
     assert "First approval by the first approver" in steps and not any("No one" in s for s in steps)
+
+
+def test_appeals_by_invitation(monkeypatch) -> None:
+    """Ruled 2026-10-29: appeals open, by invitation, or off. By invitation,
+    an RA writes in, the Master or the Master's admin delegate agrees in
+    principle and opens an appeal for them on Appeals; until then the RA is
+    not offered one."""
+    c = client()
+    page = c.get(ADMIN + "appeals").text
+    assert 'href="/ra-leave/admin/appeals" aria-current="page"' in page
+    rows = re.findall(r'<td class="strong nowrap">([^<]*)</td>\s*<td class="nowrap">([^<]*)</td>', page)
+    assert rows[:2] == [("Gwen Ho", "Sam Lee"), ("Kai Ng", "Rachel Yeo")]
+    assert ">Sent: L-0105</a>" in page and 'aria-label="Withdraw Kai Ng\'s invitation"' in page
+    assert "Invitations take effect only while appeals are by invitation" in page
+    policy = c.get(ADMIN + "policy").text
+    assert "they open an appeal for that RA on Appeals" in policy
+    monkeypatch.setitem(sample_leave.POLICY, "appeals", "By invitation")
+    assert sample_leave.appeals_on()
+    assert sample_leave.can_appeal("Kai Ng") and not sample_leave.can_appeal("Gwen Ho")  # hers is used
+    assert not sample_leave.can_appeal("Chloe Lim")
+    assert not sample_leave.invitation_for("Kai Ng", sample_leave.date(2026, 11, 11))  # lapsed
+    assert "Invitations take effect" not in c.get(ADMIN + "appeals").text
+    assert "<dd>By invitation, to the Master</dd>" in c.get(ADMIN).text
+    assert "Appeal to the Master" in c.get(ADMIN).text  # appeals exist: the tile stays

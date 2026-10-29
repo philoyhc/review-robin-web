@@ -81,7 +81,7 @@
         <dl class="kv">
           <dt>Leave types</dt><dd>{{ leave.LEAVE_TYPES | map(attribute="name") | join(", ") }}</dd>
           <dt>Blackouts</dt><dd>{{ leave.BLACKOUTS | length }} this year</dd>
-          <dt>Appeals</dt><dd>{{ "On, to the Master" if leave.POLICY.appeals else "Off" }}</dd>
+          <dt>Appeals</dt><dd>{{ {"Open": "Open, to the Master", "By invitation": "By invitation, to the Master", "Off": "Off"}[leave.POLICY.appeals] }}</dd>
           <dt>Cover</dt><dd>{% if leave.POLICY.cover_required %}{{ leave.POLICY.cover_mode }}; {{ leave.POLICY.cover_pool }}{% else %}Not required{% endif %}</dd>
           <dt>Approvers</dt><dd>{% if leave.POLICY.first == 'slot' %}The slot's {{ leave.first_label() }}{% else %}No first approval{% endif %}, then {{ 'the ' if leave.POLICY.final == 'unit' }}{{ leave.final_label() }}</dd>
         </dl>
