@@ -629,9 +629,11 @@ def scope(viewer: str) -> tuple[str, ...]:
 def can_open(viewer: str, application: Application) -> bool:
     """Decide opens an application in the viewer's Precinct-leave scope, or
     one that is (or was) theirs to decide, wherever it is: a delegate's or a
-    named final approver's (spec §13-§15)."""
+    named final approver's (spec §13-§15), or an RA's they may open an
+    appeal for."""
     return (
         application.precinct in scope(viewer)
+        or application.ra in invitable_ras(viewer)
         or any(a.id == application.id for a, _ in queue(viewer))
         or any(a.id == application.id for a, _, _ in decided(viewer))
     )

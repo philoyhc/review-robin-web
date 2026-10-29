@@ -186,3 +186,24 @@ def test_inviter_settings_at_their_edges(monkeypatch) -> None:
     assert 'name="inviters" value="slot" checked' in policy
     agreed = c.get("/ra-leave/admin/appeals").text.split('id="inv-by"')[1].split("</select>")[0]
     assert agreed.count("<option>") == 9 + 3  # every RF and RSLM on a slot
+
+
+def test_a_staff_appeals_page_lists_only_the_viewer_s_ras(monkeypatch) -> None:
+    """Codex on #3344: the staff page's tables follow the RAs the viewer
+    may open appeals for; the admin page keeps every one, and every link
+    on either opens."""
+    c = client()
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "slot")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_types", ("RF",))
+    page = c.get(STAFF + "appeals").text  # Daniel Koh: Cypress A 04-12's RAs
+    assert "Gwen Ho" not in page and "L-0105" not in page and "Invitations <span class=\"count\">· 0" in page
+    benjamin = c.get(STAFF + "appeals?as=Benjamin%20Chua")
+    assert benjamin.status_code == 200  # not a sample viewer: Daniel Koh's page
+    monkeypatch.setitem(sample_leave.POLICY, "inviters", "named")
+    monkeypatch.setitem(sample_leave.POLICY, "inviter_names", ("Daniel Koh",))
+    page = c.get(STAFF + "appeals").text
+    assert "Gwen Ho" in page
+    for link in re.findall(r'href="(/ra-leave/staff/decide/L-\d+)"', page):
+        assert c.get(link).status_code == 200, link
+    admin = c.get("/ra-leave/admin/appeals").text
+    assert "Invitations <span class=\"count\">· 3" in admin
