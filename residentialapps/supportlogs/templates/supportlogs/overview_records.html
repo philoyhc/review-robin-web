@@ -1,5 +1,6 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% from "residential/_people.html" import token_filter %}
 {% block title %}Records across staff{% endblock %}
 {% block content %}
   <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
@@ -34,8 +35,8 @@
           <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
           <div class="filter-fields">
             <div class="filter"><label for="dl-what">Records</label><select id="dl-what" name="what" class="input">{% for key, (label, _) in sample.RECORD_KINDS.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
-            <div class="filter"><label for="dl-staff">Staff</label><select id="dl-staff" name="staff" class="input"><option value="">All staff</option>{% for n in sample.FRONTLINE_COLLEAGUES %}<option>{{ n }}</option>{% endfor %}</select></div>
-            <div class="filter"><label for="dl-student">Student</label><select id="dl-student" name="student" class="input"><option value="">All students</option>{% for s in sample.STUDENTS %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+            <div class="filter"><label for="dl-staff">Staff</label>{{ token_filter("Staff", "staff", sample.staff_choices(), "dl-staff-list", "dl-staff") }}</div>
+            <div class="filter"><label for="dl-student">Student</label>{{ token_filter("Student", "student", sample.student_choices(), "dl-student-list", "dl-student") }}</div>
             <div class="filter"><label for="dl-term">Term</label><select id="dl-term" name="term" class="input">{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if t == sample.CURRENT_TERM %} selected{% endif %}>{{ t.label }}</option>{% endfor %}<option value="all">All terms</option></select></div>
           </div>
           <button type="submit" class="btn btn-primary gap-above-sm">Download CSV</button>
@@ -55,8 +56,8 @@
           <form action="{{ url('/overview/records') }}" method="get">
             {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
             <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
-            <div class="field-wide"><label for="p-staff">Staff</label><select id="p-staff" name="staff" class="input"><option value="">All staff</option>{% if staff == "?" %}<option value="?" selected>Unknown staff</option>{% endif %}{% for n in sample.FRONTLINE_COLLEAGUES %}<option{% if n == staff %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% if student == "?" %}<option value="?" selected>Unknown student</option>{% endif %}{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if s.id == student %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="p-staff">Staff</label>{{ token_filter("Purged records: Staff", "staff", sample.staff_choices(), "p-staff-list", "p-staff", chosen=(("?", "Unknown staff") if staff == "?" else (staff, staff) if staff else none)) }}</div>
+            <div class="field-wide"><label for="p-student">Student</label>{{ token_filter("Purged records: Student", "student", sample.student_choices(), "p-student-list", "p-student", chosen=(("?", "Unknown student") if student == "?" else (student, sample.student(student).name) if student else none)) }}</div>
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>
           {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {% if student and student != "?" %}{{ p.about(student) }} {{ p.what | lower }} about {{ sample.student(student).name }}, of {{ p.count }}{% else %}{{ p.count }} {{ p.what | lower }}{% endif %}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
