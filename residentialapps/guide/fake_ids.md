@@ -421,6 +421,45 @@ uvicorn cordware.main:app --reload
 | Platform super-admin | Super-admin | Sys admin › Access, with Sys admin grants |
 | Wei Jie Ong | RF, no Support Logs access | the 403 page |
 
+### Feedback session: one laptop, testers' phones
+
+For a feedback session (`residentialapps/guide/1D_browser_checks.md` §0):
+the app runs on your laptop and each tester opens it on their own phone,
+on the same Wi-Fi. Nothing to install on theirs.
+
+- **Only Support Logs is served** (`CORDWARE_APPS = "supportlogs"`):
+  Review Robin and Residential Operations answer 404, so nothing but
+  sample data is on the network.
+- **The first time**, Windows Firewall asks whether to allow Python:
+  allow it on **private** networks only.
+- **The block prints the address** testers type, one line per network
+  your laptop is on; use the Wi-Fi one (often `192.168…` or `10…`). If
+  unsure, `ipconfig` lists it under "Wireless LAN adapter Wi-Fi", IPv4
+  Address.
+- **If phones cannot connect**, the Wi-Fi keeps devices apart, as campus
+  networks often do: put the laptop and the phones on your phone's
+  hotspot instead, and run the block again for the new address.
+- **Each tester picks who they are** on the page's **Sample viewer** card,
+  or opens the address with `?as=Daniel%20Koh` (frontline) or
+  `?as=Sam%20Lee` (senior) on the end. The name in the top bar stays
+  yours: it is the fake account, not the viewer.
+- **Stop with Ctrl+C when the session ends.** While it runs, anyone on
+  that network can open it.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "feedback@example.edu"
+$env:FAKE_AUTH_NAME = "Feedback session"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+$env:CORDWARE_APPS = "supportlogs"
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } | ForEach-Object { "Testers open: http://$($_.IPAddress):8000/supportlogs/   ($($_.InterfaceAlias))" }
+uvicorn cordware.main:app --host 0.0.0.0 --port 8000
+```
+
 ### Daniel Koh
 
 RF: Frontline. Lands on Home, the frontline dashboard.
@@ -624,5 +663,5 @@ uvicorn cordware.main:app --reload
 To go back to `.env`'s values in the same shell:
 
 ```powershell
-Remove-Item Env:APP_ENV, Env:ALLOW_FAKE_AUTH, Env:FAKE_AUTH_EMAIL, Env:FAKE_AUTH_NAME, Env:FAKE_AUTH_SUPER_ADMIN -ErrorAction SilentlyContinue
+Remove-Item Env:APP_ENV, Env:ALLOW_FAKE_AUTH, Env:FAKE_AUTH_EMAIL, Env:FAKE_AUTH_NAME, Env:FAKE_AUTH_SUPER_ADMIN, Env:CORDWARE_APPS -ErrorAction SilentlyContinue
 ```

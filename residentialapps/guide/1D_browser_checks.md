@@ -30,6 +30,9 @@ Delete this file when item 1 closes.
 
 ### Running a feedback session
 
+- **Where:** on your laptop, with each tester on their own phone over the
+  same Wi-Fi: start the app with `fake_ids.md`'s "Feedback session" block,
+  which serves Support Logs alone and prints the address to give them.
 - **Who:** two to four frontline staff (RFs and RSLMs) for Part A, about
   45 minutes; senior staff separately for Part B, about 30 minutes.
 - **How:** read out the task, not the screen. Let them drive, and say as
