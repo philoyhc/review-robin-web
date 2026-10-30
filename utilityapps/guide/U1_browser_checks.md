@@ -36,8 +36,10 @@ new `utilityapps` package. Stop with Ctrl+C; to clear the settings, use
 
 ## The pages
 
-Check each at desktop width and at a 390 px phone (F12, then the device
-toolbar), in light and dark (the system setting: these pages follow it).
+Check each at desktop width, in light and dark (the system setting:
+these pages follow it). Mobile is not a priority for this utility
+(author, 2026-10-30): a narrow window need only stay usable (spec §3),
+so one glance at a 390 px phone is enough.
 
 | # | Page | Address | Look for |
 |---|---|---|---|
