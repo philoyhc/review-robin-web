@@ -790,8 +790,10 @@ ADMIN_AUDIT = (
 SELF_GRANT_SENIOR = False
 # Every grant, Other Staff view by its scope, as Who holds access lists them.
 ACCESS_GRANTS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, VIEW_IDENTIFIABLE, VIEW_AGGREGATE, SYS_ADMIN)
-# A senior's identifiable reads in the support-activity audit (§11.3).
-READS = ("Viewed", "Reviewed", "Downloaded")
+# The reads only Senior identifiable makes (§11.2–11.3): a flag a senior
+# reads as its recipient, or their own student as frontline, is not one.
+SENIOR_READS = ("Viewed a student's history", "Reviewed the support-activity audit",
+                "Downloaded records across staff")
 
 
 def holders(grant: str) -> list[str]:
@@ -802,12 +804,12 @@ def holders(grant: str) -> list[str]:
 def senior_reads(days: int = PERIOD_DAYS) -> list[dict]:
     """Each senior's identifiable reads in the period: counts and the
     latest, never which student (author, 2026-10-30)."""
-    since = NOW - timedelta(days=days)
+    since = TODAY - timedelta(days=days - 1)  # as `in_period`
     rows = []
     for name in holders(SENIOR):
-        reads = [a for a in AUDIT if a.actor == name and a.at >= since and a.action.startswith(READS)]
+        reads = [a for a in AUDIT if a.actor == name and a.at.date() >= since and a.action in SENIOR_READS]
         rows.append({"staff": name, "reads": len(reads),
-                     "downloads": sum(a.action.startswith("Downloaded") for a in reads),
+                     "downloads": sum(a.action == "Downloaded records across staff" for a in reads),
                      "last": max((a.at for a in reads), default=None)})
     return rows
 

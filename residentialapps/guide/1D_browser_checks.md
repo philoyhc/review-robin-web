@@ -220,7 +220,7 @@ read right.
   Senior identifiable", unticked and disabled.
 - [ ] **No senior warning:** open Access with `&preview=no-senior` added to
   the address: an amber warning heads the page. Without it, none.
-- [ ] **Senior reads** on Audit log: Sam Lee, 4 reads, 1 download, and
+- [ ] **Senior reads** on Audit log: Sam Lee, 3 reads, 1 download, and
   his latest; no student named.
 - [ ] **Audit log:** administrative events only. The lapse row's actor is
   "Support Logs" and its reason names Residential Operations.

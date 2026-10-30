@@ -136,9 +136,10 @@ form's end, and the main action is a full-width Primary on the page
   - **Who holds access** (`/overview/access`, linked from Overview's card),
     for senior identifiable access: each grant's holders and the access
     changes, read-only.
-  - **Senior reads** on Sys admin's Audit log: each senior's identifiable
-    reads in the last 30 days and how many were downloads, never which
-    student.
+  - **Senior reads** on Sys admin's Audit log: each senior's reads with
+    Senior identifiable in the last 30 days (histories, the
+    support-activity audit, downloads across staff), how many were
+    downloads and the latest, never which student.
   - **Access warns** when no one holds Senior identifiable (the sample
     always has one; `?preview=no-senior` shows the warning).
   - **Configuration's Access card**: a sys admin may grant itself Senior

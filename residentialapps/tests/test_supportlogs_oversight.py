@@ -39,7 +39,7 @@ def test_senior_staff_see_who_holds_access(client: TestClient) -> None:
     access = [a for a in sample.ADMIN_AUDIT if a.kind == "Access"]
     shown = re.findall(r'<span class="strong">([^<]+)</span>', changes.replace("&#39;", "'"))
     assert shown == [a.action for a in access]
-    assert "<button" not in page.split("<main")[1].split('aria-label="Sample viewer"')[0]  # read-only
+    assert "<button" not in grants + changes  # read-only
 
 
 def test_who_holds_access_is_senior_only(client: TestClient) -> None:
@@ -52,7 +52,7 @@ def test_administrators_see_counts_of_senior_reads_never_whom(client: TestClient
     page = client.get("/sys-admin/audit" + RACHEL).text
     table = section(page, "reads-h")
     rows = re.findall(r"<tr><td[^>]*>([^<]+)</td><td[^>]*>(\d+)</td><td[^>]*>(\d+)</td>", table)
-    assert rows == [("Sam Lee", "4", "1")]  # a history, a flag, the audit and a download
+    assert rows == [("Sam Lee", "3", "1")]  # a history, the audit and a download; not the flag he read as recipient
     assert [r["staff"] for r in sample.senior_reads()] == sample.holders(sample.SENIOR)
     for s in sample.STUDENTS:
         assert s.name not in page and s.id not in page, s.name
