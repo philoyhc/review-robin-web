@@ -10,6 +10,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 
 **Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3, then per iteration rung) and was **approved by the author on 2026-10-28** after a review found it complete; item 1's gate is open. RA Leave's placeholder screens (1C item 1) remain next under ruling 13, then items 2–5, with rosters before assignments (ruled 2026-10-28). RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
 
+- **2026-10-30** (author: settle the Cordware change separately and first): item 3's rung 1 is carved out and landed ahead of item 2, since it needs no database. `cordware.identity.Identity` gains `tenant_id`, `upn` and `mail`, and fake auth `FAKE_AUTH_TENANT_ID`, `FAKE_AUTH_UPN` and `FAKE_AUTH_MAIL`. Which claims the deployment's tokens carry is confirmed on Azure (Cordware's private to-do) before item 3 builds on them.
 - **2026-10-30** (author: "record them"): the email identity-matching note's implications enter Semantics for item 3, and re-linking a bound Person goes out of scope. Item 3's Cordware rung widens from `tid` and UPN to `tenant_id`, `upn` and `mail`.
 - **Iteration rung 4, 2026-10-27** (author's browser check): the tree is approved; Level labels gain a *Used* flag per level, and the Appointments card becomes five editable slots of title, type and level (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Iteration rung 5, 2026-10-27** (author's browser check): levels and appointments become rows with **+** and **X** (no fixed count, no *Used* flag), after RRW's response-field rows; Appointments gains an *Abbrev* column; Admin is *Residential Admin*, and *Other Staff* joins the defaults; up to five levels and ten appointments (the same ruling, amended).
@@ -64,7 +65,8 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
   4. **No second binding:** two provisional People for two aliases of one account block the second automatic binding; an administrator resolves the duplicate. No merge tool in v1.
   5. **Correction is roster editing:** an unlinked Person's `roster_email` is editable; a linked Person's is locked, and the rosters show linked or "not yet signed in" per person (as RA Leave's approval chain does). Re-linking a bound Person is out of scope (below).
   6. **Imports** flag a duplicate roster email, keep `person_id` on a reliable reimport, and never merge on a similar name (item 5's identity-change warning).
-  7. **Tests:** the note's ten scenarios beside the spec's eleven, the new ones being primary email via Graph, a friendly alias only (no match), two aliases (second blocked) and Graph down with the user linked. Fake auth gains settable tenant, UPN and mail.
+  7. **Binding on the object ID, and fake personas apart:** bind on `tenant_id` and `principal_id` only when `principal_id` came from the principal header or an object-ID claim, never its `sub` fallback (`cordware/spec/identity.md`); `Identity` does not yet say which source gave it, so item 3 either adds that or rules the fallback out of reach for Entra. Every fake persona shares `FAKE_AUTH_PRINCIPAL_ID` and `FAKE_AUTH_TENANT_ID`, so item 3's `RES_` fake roles and `residentialapps/guide/fake_ids.md`'s blocks give each persona its own principal id, or the first one bound would capture the rest.
+  8. **Tests:** the note's ten scenarios beside the spec's eleven, the new ones being primary email via Graph, a friendly alias only (no match), two aliases (second blocked) and Graph down with the user linked. Fake auth gains settable tenant, UPN and mail.
 - **Databases per app:** `/residentialops` needs one URL, `/supportlogs` both (ruling 4). Runtime roles hold DML only.
 - ~~**Structure import:** the file is the Unit's complete tree. A missing node is end-dated, and a node with a current appointment blocks the import. Floor gaps and overlaps warn.~~ **Assignments import** (2026-10-28): a mode chosen per upload — New slots, Refresh a term, Add a term — each term checked on its own, past terms refused; a blank cell means what the mode makes it (ruling points 7 and 9).
 - ~~**Reporting** is derived from the tree; only dated backups are stored.~~ **Reporting** is a slot's RAs to its Staff, for a term; **the guard** qualifies an appointment covering the term, warns on part with the gap in days, refuses none (ruling point 6).
@@ -95,7 +97,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 **Item 2 — Databases.** 1. Settings, engines, both histories. 2. CI round-trip of both on Postgres. Last build rung.
 
-**Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
+**Item 3 — Identity.** ~~1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`.~~ (Carved out and landed ahead, 2026-10-30: `tenant_id`, `upn` and `mail`; Status.) 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
 
 ~~**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page.~~ **Item 4 — Terms and assignments** (revised 2026-10-28). 1. Models and migration: terms, levels, slots by term, assignments. 2. Terms CSV and page. 3. Assignments CSV with its modes, the guard, Copy from: parse, preview, commit, export. 4. Wire the Assignments page. Last build rung.
 
@@ -130,7 +132,7 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 
 ## Doc impact
 
-- `cordware/spec/identity.md` — tenant ID, UPN and mail on the identity, as separate fields (Item 3).
+- `cordware/spec/identity.md` — tenant ID, UPN and mail on the identity, as separate fields (done — Item 3, carved out ahead of it 2026-10-30).
 - `residentialapps/docs/residentialapps_identity.md` — revised to what shipped (Item 3).
 - `residentialapps/docs/residentialapps_roster_structure.md` — revised to rosters, terms and assignments: levels, slots by term and their assignments (Item 4).
 - `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the terms, levels, slots, rosters and assignments, their inter-table rules, upload modes and blank cells, written as items 4 and 5 ship (author, 2026-10-27; revised 2026-10-28).

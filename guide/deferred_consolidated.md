@@ -1170,7 +1170,9 @@ of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
   shared Person table. Whether RRW records the object ID and resolves by
   it is a separate decision. **What would move it on:** the first
   reviewee locked out by an alias, or Cordware's `Identity` gaining
-  `tenant_id`, `upn` and `mail` (Residential segment 1B item 3).
+  `tenant_id`, `upn` and `mail` (Residential segment 1B item 3). The
+  second happened 2026-10-30, so the fields RRW would read now exist;
+  RRW reading them is still the open decision.
 - **A shared Graph helper in `cordware/`** (author, 2026-10-30: filed
   until Graph is validated). Three users need Microsoft Graph through
   Easy Auth's token store, which the host owns: Residential's identity

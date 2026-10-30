@@ -8,7 +8,8 @@ from cordware.identity import app_env
 
 class Settings(BaseSettings):
     # `APP_ENV`, `ALLOW_FAKE_AUTH` and the fake identity's
-    # `FAKE_AUTH_PRINCIPAL_ID` / `_EMAIL` / `_NAME` are Cordware's
+    # `FAKE_AUTH_*` fields (principal id, email, name, tenant, UPN, mail)
+    # are Cordware's
     # (`cordware/settings.py`, segment 21C), read through
     # `cordware.identity`; the role switches below stay RRW's.
     app_version: str = "dev"
