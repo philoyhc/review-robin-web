@@ -64,8 +64,8 @@ leak, as the spec's §10 requires.
   - A 429's `Retry-After` is honored, with at most two retries.
   - The export still carries the rows that completed.
 - **Output columns:**
-  - The input's columns come first, in order. The spec's eleven columns
-    follow.
+  - The input's columns come first, in order. The spec's nine result
+    columns follow.
   - A name that collides with an input column takes a `check_` prefix.
   - A cell starting with `=`, `+`, `-`, `@`, a tab or a carriage return
     gets a leading `'` (spec §4).

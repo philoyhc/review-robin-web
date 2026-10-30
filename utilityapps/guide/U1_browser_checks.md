@@ -45,12 +45,12 @@ so one glance at a 390 px phone is enough.
 |---|---|---|---|
 | 1 | Utilities index | `/utilities/` | One card, *Email Address Checker*, linking to the checker; *All applications* returns to the host's list |
 | 2 | Upload | `/utilities/email-check/` | The purpose line; the file limits; the four "does and doesn't" lines read as true and enough |
-| 3 | Preview | `/utilities/email-check/preview` | The column choice (the sample file has no `email` column); the four counts; *Check addresses* and *Start over* |
+| 3 | Preview | Upload any CSV on page 2 | Your file's counts; with no `email` column, the column choice, then *Use this column*; a bad file returns to page 2 with one line saying why; *Check addresses* stays disabled until rung 5 |
 | 4 | Preview, no directory | `/utilities/email-check/preview?state=no-graph` | The amber message, and whether it tells an operator what to do |
 | 5 | Result | `/utilities/email-check/result` | The seven statuses with their meanings; the duplicate-account line; the alias caveat; *Download checked CSV* |
 
-The upload page links to 3–5 at its foot, as placeholder links that go
-when the pages are wired.
+The upload page links to a sample preview, 4 and 5 at its foot, as
+placeholder links that go when the pages are wired.
 
 ## Rulings to give while looking
 

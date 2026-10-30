@@ -3,13 +3,14 @@
 {% block content %}
   {% include "email_check/_head.html" %}
   <p class="sub">Check a list of addresses against the institution's directory. You get the same CSV back with each address's directory account, its primary email, and the addresses that belong to the same account.</p>
-  <form class="card" aria-labelledby="upload-h">
+  <form class="card" aria-labelledby="upload-h" method="post" action="{{ url('/email-check/preview') }}" enctype="multipart/form-data">
     <h2 id="upload-h">Upload a CSV</h2>
+    {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
     <label for="file">CSV file</label>
-    <input id="file" type="file" accept=".csv,text/csv" disabled>
+    <input id="file" name="file" type="file" accept=".csv,text/csv" required>
     <p class="note">UTF-8, one header row, up to 500 rows and 1 MiB. The addresses are read from the <code>email</code> column; if there isn't one, you choose the column next. Every other column comes back unchanged.</p>
     <div class="actions">
-      <button class="btn primary" type="submit" disabled>Preview</button>
+      <button class="btn primary" type="submit">Preview</button>
     </div>
   </form>
   <div class="card" aria-labelledby="what-h">
@@ -21,5 +22,5 @@
       <li>It doesn't tell you whether someone can sign in, or which address an application will see when they do.</li>
     </ul>
   </div>
-  <p class="note">Placeholder links: <a href="{{ url('/email-check/preview') }}">the preview</a> · <a href="{{ url('/email-check/preview?state=no-graph') }}">the preview without directory access</a> · <a href="{{ url('/email-check/result') }}">the result</a></p>
+  <p class="note">Placeholder links: <a href="{{ url('/email-check/preview') }}">a sample preview</a> · <a href="{{ url('/email-check/preview?state=no-graph') }}">the preview without directory access</a> · <a href="{{ url('/email-check/result') }}">the result</a></p>
 {% endblock %}
