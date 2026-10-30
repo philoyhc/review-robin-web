@@ -13,7 +13,9 @@ path, at mount time, so this module names no application package.
 from __future__ import annotations
 
 import importlib
+import ipaddress
 import logging
+import re
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -123,6 +125,16 @@ class PublicOrigin:
 
 
 _DEFAULT_PORTS = {"http": 80, "https": 443}
+_DNS_NAME = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*")
+
+
+def _valid_host(host: str) -> bool:
+    """An ASCII DNS name or an IP literal: nothing a `Host` header can't carry."""
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return _DNS_NAME.fullmatch(host) is not None
+    return True
 
 
 def parse_public_origin(raw: str | None, *, local: bool) -> PublicOrigin | None:
@@ -153,14 +165,20 @@ def parse_public_origin(raw: str | None, *, local: bool) -> PublicOrigin | None:
         port = parts.port
     except ValueError:
         raise refuse("has an invalid port") from None
-    if not parts.hostname:
+    host = parts.hostname
+    if not host:
         raise refuse("has no host")
-    return PublicOrigin(
-        scheme=scheme,
-        host=parts.hostname,
-        port=port or _DEFAULT_PORTS[scheme],
-        netloc=parts.netloc.lower(),
-    )
+    if not _valid_host(host):
+        raise refuse("host must be an ASCII DNS name or an IP address")
+    if port is not None and not 1 <= port <= 65535:
+        raise refuse("has an invalid port")
+    port = port or _DEFAULT_PORTS[scheme]
+    # Rebuilt rather than copied, so a default port is dropped and the
+    # header carries only what was checked.
+    netloc = f"[{host}]" if ":" in host else host
+    if port != _DEFAULT_PORTS[scheme]:
+        netloc += f":{port}"
+    return PublicOrigin(scheme=scheme, host=host, port=port, netloc=netloc)
 
 
 class PublicOriginMiddleware:

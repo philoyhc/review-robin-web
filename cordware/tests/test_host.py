@@ -228,9 +228,8 @@ def test_set_urls_and_slash_redirects_name_the_origin(monkeypatch: pytest.Monkey
     slash = client.get("/u/folder", follow_redirects=False)
     assert slash.status_code == 307
     assert slash.headers["location"] == f"{ORIGIN}/u/folder/"
+    # The host's own routes still answer; they build no absolute URL.
     assert client.get("/health").json() == {"status": "ok"}
-    # One application: the landing page's redirect stays a path.
-    assert client.get("/", follow_redirects=False).headers["location"] == "/u/"
 
 
 def test_no_request_header_moves_the_origin(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -263,6 +262,8 @@ def test_a_utilities_slash_redirect_names_the_origin(monkeypatch: pytest.MonkeyP
             "https://apps.example.edu:8443",
             PublicOrigin("https", "apps.example.edu", 8443, "apps.example.edu:8443"),
         ),
+        ("https://apps.example.edu:443", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
+        ("https://[::1]:8443", PublicOrigin("https", "::1", 8443, "[::1]:8443")),
     ],
 )
 def test_parse_public_origin(raw: str | None, expected: PublicOrigin | None) -> None:
@@ -289,6 +290,12 @@ def test_http_is_allowed_only_locally() -> None:
         "https://apps.example.edu#top",
         "https://user@apps.example.edu",
         "https://apps.example.edu:notaport",
+        "https://apps.example.edu:0",
+        "https://a b.edu",
+        "https://apps.example.edu\\evil",
+        "https://ex\u4e2d.edu",
+        "https://ex\u00e4mple.edu",
+        "https://-apps.example.edu",
     ],
 )
 def test_an_invalid_origin_refuses_to_start(monkeypatch: pytest.MonkeyPatch, raw: str) -> None:

@@ -127,8 +127,10 @@ TLS ended in front of it (segment 21E). Read once with `CORDWARE_APPS`.
 
 - **Unset or blank:** nothing changes. Every URL built from a request names
   the request's own scheme and host.
-- **Set:** the value is `https://host[:port]`. A trailing `/` is allowed;
-  a path, query, fragment or user info is not. `http://` is allowed only at
+- **Set:** the value is `https://host[:port]`. The host is an ASCII DNS
+  name (an internationalized one in its `xn--` form) or an IP address, the
+  port 1–65535; a default port is dropped. A trailing `/` is allowed; a
+  path, query, fragment or user info is not. `http://` is allowed only at
   `APP_ENV=local`. Anything else raises `ValueError` naming the setting,
   and the host does not start (`parse_public_origin`).
 - **What it rewrites.** `PublicOriginMiddleware` wraps the whole host,
