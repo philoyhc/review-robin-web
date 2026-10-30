@@ -449,7 +449,8 @@ deployed environments. Source: `app/config.py`, except `LOG_LEVEL` and
 `CORDWARE_APPS`, which are the host's (`cordware/main.py`), and the ten
 identity settings (`APP_ENV`, `ALLOW_FAKE_AUTH`, `FAKE_AUTH_PRINCIPAL_ID`,
 `FAKE_AUTH_EMAIL`, `FAKE_AUTH_NAME`, `FAKE_AUTH_TENANT_ID`, `FAKE_AUTH_UPN`,
-`FAKE_AUTH_MAIL`, `FAKE_AUTH_SUPER_ADMIN`, `SUPER_ADMIN_EMAILS`), which are Cordware's: `IdentitySettings` in
+`FAKE_AUTH_MAIL`, `FAKE_AUTH_SUPER_ADMIN`, `SUPER_ADMIN_EMAILS`), which are
+Cordware's: `IdentitySettings` in
 `cordware/settings.py`, read from the same root `.env` under the names and
 defaults below (contract: `cordware/spec/identity.md`). RRW reads them only
 through `cordware.identity`; `FAKE_AUTH_OPERATOR` and `FAKE_AUTH_SYS_ADMIN`

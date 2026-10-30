@@ -32,11 +32,17 @@ A frozen dataclass.
 | `resolved_with` | The `IdentitySettings` passed to `resolve_identity`, or `None`. Not part of equality or `repr`: two resolutions of one principal are the same identity. |
 
 `tenant_id`, `upn` and `mail` are for an application that matches a roster
-on first sign-in and then binds on (`tenant_id`, `principal_id`): Residential
-tries the UPN and the primary email as separate candidates, so neither may
-stand in for the other (`residentialapps/docs/residentialapps_email_identity_matching.md`).
-`email` is unchanged: the one address RRW and the super-admin list read,
-whichever of the email claims came first. All three default to `None`, so an
+on first sign-in and then binds on the tenant and the Entra object ID:
+Residential tries the UPN and the primary email as separate candidates, so
+neither may stand in for the other
+(`residentialapps/docs/residentialapps_email_identity_matching.md`).
+`principal_id` is the object ID whenever `X-MS-CLIENT-PRINCIPAL-ID` or an
+object-ID claim is present, which Easy Auth sends for Entra; its last
+fallback, `sub`, is a per-application identifier, not the object ID, so an
+application binding on it should hold out for one of the others.
+`email` is unchanged: the one address RRW and the super-admin list read, by
+its own order below, in which `preferred_username` (often the UPN) comes
+before the `email` claim. All three new fields default to `None`, so an
 `Identity` built without them is as before.
 
 Computed properties, never stored:
@@ -106,7 +112,7 @@ takes the first source that has a value:
 | `principal_id` | `X-MS-CLIENT-PRINCIPAL-ID`; then claim `http://schemas.microsoft.com/identity/claims/objectidentifier`, `oid`, `sub`; the header and each claim counting only when non-empty after strip |
 | `provider` | `X-MS-CLIENT-PRINCIPAL-IDP`; then the payload's `auth_typ`, then `identityProvider` |
 | `tenant_id` | claim `http://schemas.microsoft.com/identity/claims/tenantid`, `tid` |
-| `upn` | claim `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn`, `upn`, then `preferred_username` (Entra's v2 tokens carry the UPN there when no `upn` claim is issued) |
+| `upn` | claim `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn`, `upn`, then `preferred_username` (usually the UPN in Entra's v2 tokens when no `upn` claim is issued, though it may be another username; v1's `unique_name` is not read) |
 | `mail` | claim `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress`, `email`; never `preferred_username` or `X-MS-CLIENT-PRINCIPAL-NAME` |
 
 `tenant_id`, `upn` and `mail` come from `X-MS-CLIENT-PRINCIPAL` alone, each
@@ -128,7 +134,7 @@ in token order, `[]` when there are none. Both are for diagnostic pages.
 
 `principal_id`, `email` and `name` from `FAKE_AUTH_PRINCIPAL_ID`,
 `FAKE_AUTH_EMAIL` and `FAKE_AUTH_NAME`; `tenant_id` from
-`FAKE_AUTH_TENANT_ID`; `upn` and `mail` from `FAKE_AUTH_UPN` and
+`FAKE_AUTH_TENANT_ID` (`None` when blank); `upn` and `mail` from `FAKE_AUTH_UPN` and
 `FAKE_AUTH_MAIL`, each the fake email when blank, so one setting serves the
 usual case and either can be set apart to try an alias; `provider="fake"`;
 `is_fake=True`.

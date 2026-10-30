@@ -624,3 +624,39 @@ def test_the_fake_upn_and_mail_can_differ_to_try_an_alias() -> None:
     user = resolve_identity(_request(), settings)
     assert (user.tenant_id, user.upn, user.mail, user.email) == (
         "tenant-x", "e0123456@example.edu", "jane.tan@example.edu", "jane.tan@example.edu")
+
+
+def test_the_named_claim_wins_over_its_fallback_whatever_the_token_order() -> None:
+    """Distinct values, so the order is what is tested: the tenant URI over
+    `tid`, the `upn` claim over `preferred_username`, `emailaddress` over
+    `email`."""
+    claims = [
+        {"typ": "tid", "val": "tid-short"},
+        {"typ": _TID_URI, "val": "tid-uri"},
+        {"typ": "preferred_username", "val": "pref@example.edu"},
+        {"typ": _UPN_URI, "val": "upn@example.edu"},
+        {"typ": "email", "val": "plain@example.edu"},
+        {"typ": _EMAILADDRESS, "val": "primary@example.edu"},
+    ]
+    for order in (claims, list(reversed(claims))):
+        user = _rich(order)
+        assert (user.tenant_id, user.upn, user.mail) == ("tid-uri", "upn@example.edu", "primary@example.edu")
+
+
+def test_mail_never_comes_from_the_principal_name_header() -> None:
+    rich = _encode_principal({"auth_typ": "aad", "claims": [{"typ": "name", "val": "Al"}]})
+    user = resolve_identity(
+        _request({"X-MS-CLIENT-PRINCIPAL": rich, "X-MS-CLIENT-PRINCIPAL-NAME": "al@example.edu"}),
+        _settings(),
+    )
+    assert user.email == "al@example.edu" and user.mail is None and user.upn is None
+
+
+def test_a_malformed_principal_gives_no_tenant_upn_or_mail() -> None:
+    user = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": "not base64!"}), _settings())
+    assert (user.tenant_id, user.upn, user.mail) == (None, None, None)
+
+
+def test_a_blank_fake_tenant_is_no_tenant() -> None:
+    user = resolve_identity(_request(), IdentitySettings(allow_fake_auth=True, fake_auth_tenant_id="  "))
+    assert user.tenant_id is None

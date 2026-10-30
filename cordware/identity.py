@@ -221,9 +221,10 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 "tid",
                 blank_counts=False,
             )
-            # Entra's v2 `preferred_username` is the UPN when no `upn`
-            # claim is issued; it is not the primary email, so `mail`
-            # never falls back to it.
+            # Entra's v2 `preferred_username` is usually the UPN when no
+            # `upn` claim is issued, though it may be another username;
+            # it is never taken as the primary email, so `mail` does not
+            # fall back to it. v1's `unique_name` is not read.
             upn = _claim(
                 payload,
                 "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn",
@@ -278,7 +279,8 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
         name=settings.fake_auth_name,
         provider="fake",
         is_fake=True,
-        tenant_id=settings.fake_auth_tenant_id,
+        # A blank tenant is no tenant, as a blank claim is (P1/P3).
+        tenant_id=settings.fake_auth_tenant_id.strip() or None,
         # Blank means "the fake email", so one setting serves the usual
         # case and either can differ to try an alias.
         upn=settings.fake_auth_upn.strip() or settings.fake_auth_email,
