@@ -118,7 +118,7 @@ Taken 2026-10-29 at `de0bf729`.
 2. **Clusters** — answered: a cluster is the core's level-2 node, a group of Neighborhoods (Unit 1's Precinct), not a list of Support Logs' own (author, 2026-10-30). Nothing ties a student to a housing location, so the cluster view and anything else that needs a student's place is deferred (Out of scope); rung 9 takes it out of the screens.
 3. **UI §9's questions** (author, at the rung that first needs each): the Safety button role and the filled red Save and raise (rung 3); choice chips as styled radios and checkboxes (rung 2); sentence-case status labels (rung 2); Residential's customizer (out of item 1, below).
 4. **The crisis protocol** (§17 Q7) is placeholder text and numbers until the institution supplies it; the screen shows that it is.
-5. **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B, 1C or 1D closes.
+5. **The close check** — answered: `tools/close_check.py` finds Residential's plans and reads their `residentialapps/` paths (2026-10-30), so 1B, 1C and 1D close with the tool.
 
 ## Out of scope
 

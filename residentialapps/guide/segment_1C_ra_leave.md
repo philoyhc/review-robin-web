@@ -97,7 +97,7 @@ The mockups (the author's design canvas, 2026-10-26) cover RA home, Apply, Reque
 ## Open questions
 
 - **Leave types and the day count** (§6, §9.1): answered — leave types ruled 2026-10-28; the day count is a Leave policy setting, every day by default (author, 2026-10-29).
-- **The close check:** `tools/close_check.py` does not yet find Residential's plans (`residentialapps/guide/todo_master.md`, its stub). Due before 1B or 1C closes, whichever is first.
+- **The close check** — answered: `tools/close_check.py` finds Residential's plans (2026-10-30).
 
 ## Out of scope
 

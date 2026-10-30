@@ -26,6 +26,13 @@ whether it was *right*. That judgement is `spec-writer`'s at close.
 
 Stdlib + `git`. Exit **0** pass / **1** check failed / **2** usage.
 
+It finds a plan in RRW's `guide/` and `guide/archive/` and in each Cordware
+app folder's (`APP_DIRS`: `residentialapps/`, `utilityapps/`, as
+`ci_lanes.py`'s), so `python3 tools/close_check.py 1D` reads
+`residentialapps/guide/segment_1D_support_logs.md`. An app's `spec/`,
+`docs/` and `guide/` paths read as RRW's do, and its code as a root, like
+`app/`.
+
 ### The checks
 
 | | Checks | Fails? |

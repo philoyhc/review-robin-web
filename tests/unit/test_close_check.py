@@ -875,3 +875,50 @@ def test_a_manifest_added_after_a_rename_is_still_found(
         cc._ITEM_START_CACHE.clear()
         cc._COMMIT_CACHE.clear()
         cc._PRIOR_PATHS_CACHE.clear()
+
+
+# --------------------------------------------------------------------
+# an app's own plans and folders (2026-10-30)
+
+
+def test_an_app_s_spec_docs_and_guide_paths_are_read() -> None:
+    """Residential's plans commit to `residentialapps/spec/…`. Until
+    2026-10-30 none of those matched, so every bullet read as naming no
+    path and 1A closed by hand. Its `guide/` stays counted-not-verified,
+    exactly as RRW's does, and is never also a committed path."""
+    bullet = ("- `residentialapps/spec/a.md` — x; and `utilityapps/docs/b.md` "
+              "(Item 1).\n- `residentialapps/guide/todo_master.md` — y.")
+    assert _paths(bullet) == ["residentialapps/spec/a.md", "utilityapps/docs/b.md"]
+    assert _guide(bullet) == ["residentialapps/guide/todo_master.md"]
+
+
+def test_an_app_s_code_is_a_root_in_the_leading_position_only() -> None:
+    """As `app/` is: a leading `residentialapps/web/…` commits, an
+    after-dash one is a citation."""
+    assert _paths("- `residentialapps/web/pages.py` — the shared pieces.") == ["residentialapps/web/pages.py"]
+    assert _paths("- `residentialapps/spec/a.md` — what `residentialapps/web/` holds.") == ["residentialapps/spec/a.md"]
+
+
+def test_a_plan_resolves_in_an_app_s_guide_and_its_archive(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    live = tmp_path / "residentialapps" / "guide"
+    (live / "archive").mkdir(parents=True)
+    (tmp_path / "guide" / "archive").mkdir(parents=True)
+    (live / "segment_1D_support_logs.md").write_text("# 1D\n")
+    (live / "archive" / "segment_1A_package.md").write_text("# 1A\n")
+    monkeypatch.setattr(cc._shared, "REPO", tmp_path)
+    assert cc.resolve_plan("1D") == live / "segment_1D_support_logs.md"
+    assert cc.resolve_plan("1A") == live / "archive" / "segment_1A_package.md"
+    (tmp_path / "guide" / "segment_1D_other.md").write_text("# clash\n")
+    with pytest.raises(cc.Unresolvable, match="ambiguous"):
+        cc.resolve_plan("1D")
+
+
+def test_the_app_folders_are_ci_lanes_app_folders() -> None:
+    """One list of Cordware app folders, kept twice: here and in
+    `tools/ci_lanes.py`, whose own test fails on an unclassified folder."""
+    spec = importlib.util.spec_from_file_location("ci_lanes_for_close_check", REPO_ROOT / "tools" / "ci_lanes.py")
+    lanes = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lanes)
+    assert {d + "/" for d in cc.APP_DIRS} == set(lanes.APP_DIRS)
