@@ -147,6 +147,14 @@ read right.
   Overview, and the Overview tab stays marked.
 - [ ] **The audit** (Open the audit) says reviewing it is recorded, and
   its When column sorts by date.
+- [ ] **Records across staff** (as Sam, **Open records** on Overview):
+  - locked until the confirmation is ticked;
+  - Download: pick Encounters or Plans, a staff member or All staff, and a
+    term or All terms; the file names each row's staff member;
+  - the two templates lead with a Staff column; Upload is disabled;
+  - Purged records filter by staff and term with **Show**; **Delete
+    permanently** is outline red and disabled, and its note names the
+    staff and term it would cover.
 - [ ] **As Siti:** names show without history links. There are no flagged
   students and no audit card. Every plan is marked read-only.
 - [ ] **As Kenneth:** counts only, with no student's name anywhere on the

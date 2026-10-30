@@ -42,7 +42,7 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 ## Decide before Support Logs goes live
 
 - `supportlogs` retention, backup and export, and who may run them (`residentialapps/docs/resident_support_log_functional_spec_v0.3.md` §17 Q3, Q16). Built on sample data (1D rung 7, author, 2026-10-30): staff download their own records and purge them, which hides and keeps; only a Support Logs sys admin deletes purged records. Revise `residentialapps/docs/residentialapps_roles.md` rule 4 and spec §3.3–3.4 to match.
-- The policy questions in the same §17: Q4, Q8 and Q11, which bear on the authorization types.
+- The policy questions in the same §17: Q4, Q8 and Q11, which bear on the authorization types. Q4, who holds senior identifiable access, is a go-live policy decision (author, 2026-10-30); that access now also downloads, uploads and deletes records across staff (1D rung 8).
 - Core admin and Support Logs authorization admin both working.
 
 ## Reconcile in the first segment plan

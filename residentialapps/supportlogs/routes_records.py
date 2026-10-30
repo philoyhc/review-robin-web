@@ -17,7 +17,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import forbidden, query, records_unlocked
+from residentialapps.supportlogs.pages import forbidden, gated, query, records_unlocked
 from residentialapps.web.pages import placeholders_local_only
 from residentialapps.web.urls import url_path
 
@@ -81,3 +81,60 @@ def plans_csv(request: Request) -> Response:
 @router.get("/plans/records-template.csv", name="supportlogs_plans_template")
 def plans_template(request: Request) -> Response:
     return _download(request, "plans", template=True)
+
+
+# --- Records across staff (rung 8; author, 2026-10-30): senior
+# identifiable access only, behind the same lock.
+
+def _staff(request: Request) -> str | None:
+    """The chosen staff member, or None for all staff (an unknown name
+    reads as all)."""
+    name = request.query_params.get("staff", "")
+    return name if name in sample.FRONTLINE_COLLEAGUES else None
+
+
+def _term(request: Request) -> sample.Term | None:
+    key = request.query_params.get("term", "all")
+    return None if key == "all" else sample.term(key)
+
+
+def _what(request: Request) -> str:
+    what = request.query_params.get("what", "encounters")
+    return what if what in sample.RECORD_KINDS else "encounters"
+
+
+@router.get("/overview/records", name="supportlogs_overview_records")
+def staff_records(request: Request) -> Response:
+    """Records across staff: upload tagged to a staff member, download by
+    staff and term, delete purged records by staff and term. Each action
+    is a support-activity event (§11.3)."""
+    staff, chosen = _staff(request), _term(request)
+    return gated(request, "supportlogs/overview_records.html", sample.SENIOR, current_tab="/overview/",
+                 unlocked=records_unlocked(request), staff=staff, chosen=chosen,
+                 purged=sample.purges(staff, chosen))
+
+
+def _senior_download(request: Request, template: bool) -> Response:
+    me = sample.viewer(request.query_params.get("as"))
+    if not sample.holds(me, sample.SENIOR):
+        return forbidden(request, me)
+    if not records_unlocked(request):
+        return RedirectResponse(url_path(request, "/overview/records") + query(me), status_code=303)
+    what = _what(request)
+    if template:
+        return _csv(f"support-logs-{what}-staff-template.csv", ("Staff", *sample.RECORD_KINDS[what][1]), [])
+    staff, chosen = _staff(request), _term(request)
+    columns, rows = sample.staff_rows(what, staff, chosen)
+    who = "all-staff" if staff is None else staff.lower().replace(" ", "-")
+    scope = "all-terms" if chosen is None else chosen.key
+    return _csv(f"support-logs-{what}-{who}-{scope}.csv", columns, rows)
+
+
+@router.get("/overview/records.csv", name="supportlogs_overview_records_csv")
+def staff_records_csv(request: Request) -> Response:
+    return _senior_download(request, template=False)
+
+
+@router.get("/overview/records-template.csv", name="supportlogs_overview_records_template")
+def staff_records_template(request: Request) -> Response:
+    return _senior_download(request, template=True)

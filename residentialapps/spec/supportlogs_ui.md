@@ -110,8 +110,15 @@ form's end, and the main action is a full-width Primary on the page
   Unlocked, it downloads the holder's own encounters or plans as CSV, for a
   term of Rosters and setup's or all terms, and offers the template. The
   upload (follow-ups only, for plans) and Purge all are disabled until
-  wired. Leaving the page locks it again. A purge hides and keeps: only a
-  sys admin deletes, from Sys admin's Audit log.
+  wired. Leaving the page locks it again. A purge hides and keeps.
+  Purge all is Destructive, outline red (author, 2026-10-30).
+- **Records across staff** (`/overview/records`, author, 2026-10-30), for
+  senior identifiable access, behind the same lock: download any staff
+  member's records, or all staff's, by term or all, each row naming its
+  staff member; upload records tagged to a staff member (inert until
+  wired); and delete purged records, filtered by staff and term. Sys
+  admin's Audit log also lists purged records, as counts, with Delete
+  permanently.
 
 ## 5. Lists and tables
 

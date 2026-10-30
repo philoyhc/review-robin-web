@@ -881,4 +881,36 @@ class Purge:
     count: int
 
 
-PURGES = (Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6),)
+PURGES = (
+    Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6),
+    Purge("Arjun Nair", "Plans", date(2026, 5, 20), 2),
+)
+
+
+def term_of(d: date) -> Term | None:
+    return next((t for t in TERMS if t.start <= d <= t.end), None)
+
+
+# --- Records across staff (rung 8; author, 2026-10-30): senior
+# identifiable access uploads records tagged to a staff member, downloads
+# them by staff and term, and deletes purged records, every action
+# audited. A download names the staff member in its own column.
+
+RECORD_KINDS = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
+
+
+def staff_rows(what: str, staff: str | None, t: Term | None) -> tuple[tuple[str, ...], list[list[str]]]:
+    """Every staff member's records of a kind (one staff member's when
+    named) in a term or all terms, each row led by its staff member."""
+    columns = ("Staff", *RECORD_KINDS[what][1])
+    rows_of = encounter_rows if what == "encounters" else plan_rows
+    rows = []
+    for name in FRONTLINE_COLLEAGUES:
+        if staff and name != staff:
+            continue
+        rows += [[name, *r] for r in rows_of(name, t)]
+    return columns, rows
+
+
+def purges(staff: str | None = None, t: Term | None = None) -> list[Purge]:
+    return [p for p in PURGES if (not staff or p.by == staff) and (not t or term_of(p.on) == t)]

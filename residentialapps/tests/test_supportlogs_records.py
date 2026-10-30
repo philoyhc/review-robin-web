@@ -163,3 +163,72 @@ def test_mounted_records_stay_under_the_mount() -> None:
             assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
     back = mounted.get("/supportlogs/students/records.csv", follow_redirects=False)
     assert back.headers["location"] == "/supportlogs/students/"
+
+
+# --- Records across staff (rung 8): senior identifiable access.
+
+SAM = "as=Sam%20Lee"
+
+
+def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> None:
+    assert 'href="/overview/records?as=Sam%20Lee">Open records</a>' in client.get(f"/overview/?{SAM}").text
+    assert "/overview/records" not in client.get("/overview/?as=Siti%20Rahman").text
+    locked = client.get(f"/overview/records?{SAM}").text
+    assert ">Locked</span>" in locked and "records.csv" not in locked and 'value="yes" required' in locked
+    unlocked = client.get(f"/overview/records?{SAM}&{OPEN}").text
+    assert "/overview/records.csv" in unlocked and "Every upload, download and deletion here is recorded" in unlocked
+    for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Rachel Yeo", "Hui Min Goh"):
+        q = name.replace(" ", "%20")
+        for path in ("/overview/records", "/overview/records.csv", "/overview/records-template.csv"):
+            assert client.get(f"{path}?as={q}&{OPEN}").status_code == 403, (name, path)
+    back = client.get(f"/overview/records.csv?{SAM}", follow_redirects=False)
+    assert (back.status_code, back.headers["location"]) == (303, "/overview/records?as=Sam%20Lee")
+
+
+def test_downloads_by_staff_and_term(client: TestClient) -> None:
+    everyone = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=all")
+    assert everyone.headers["content-disposition"] == 'attachment; filename="support-logs-encounters-all-staff-all-terms.csv"'
+    got = rows(everyone.text)
+    assert tuple(got[0]) == ("Staff", *sample.ENCOUNTER_COLUMNS)
+    assert len(got) - 1 == sum(len(sample.encounters_by(n)) for n in sample.FRONTLINE_COLLEAGUES)
+    assert {r[0] for r in got[1:]} == {e.staff for e in sample.ENCOUNTERS}
+    arjun = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=plans&staff=Arjun%20Nair&term={sample.CURRENT_TERM.key}")
+    assert "plans-arjun-nair-AY2026-2027.1" in arjun.headers["content-disposition"]
+    assert [r[0] for r in rows(arjun.text)[1:]] == ["Arjun Nair"]
+    assert len(rows(client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=AY2025-2026.2").text)) == 1
+
+
+def test_the_staff_templates_name_the_staff_column(client: TestClient) -> None:
+    for what, columns in (("encounters", sample.ENCOUNTER_COLUMNS), ("plans", sample.PLAN_COLUMNS)):
+        template = rows(client.get(f"/overview/records-template.csv?{SAM}&{OPEN}&what={what}").text)
+        assert template == [["Staff", *columns]], what
+
+
+def test_purged_records_filter_by_staff_and_term(client: TestClient) -> None:
+    def shown(params: str) -> list[str]:
+        card = client.get(f"/overview/records?{SAM}&{OPEN}{params}").text.split('id="purged-h"')[1].split("</section>")[0]
+        return re.findall(r'<span class="strong">([^<]+)</span>', card)
+
+    assert shown("") == ["Grace Ho: 6 encounters", "Arjun Nair: 2 plans"]
+    assert shown("&staff=Arjun%20Nair") == ["Arjun Nair: 2 plans"]
+    assert shown(f"&term={sample.CURRENT_TERM.key}") == ["Grace Ho: 6 encounters"]
+    assert shown("&staff=Grace%20Ho&term=AY2025-2026.3") == []
+    card = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho").text.split('id="purged-h"')[1]
+    assert 'class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently the 1 purged records shown"' in card
+    assert "for Grace Ho and all terms" in card
+
+
+def test_purge_is_outline_red(client: TestClient) -> None:
+    """Purge all takes the Destructive role, outline red (author, 2026-10-30)."""
+    page = client.get(f"/students/?{OPEN}").text
+    assert '<button type="button" class="btn btn-danger" disabled aria-label="Purge all your encounters">Purge all</button>' in page
+
+
+def test_mounted_senior_records_stay_under_the_mount() -> None:
+    host, _ = host_with(("supportlogs",))
+    mounted = TestClient(host)
+    for path in (f"/overview/records?{SAM}", f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho"):
+        page = mounted.get("/supportlogs" + path)
+        assert page.status_code == 200, path
+        for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
+            assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
