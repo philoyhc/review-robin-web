@@ -1,7 +1,8 @@
 """Support Logs' Overview on sample data, segment 1D item 1 rung 5: team
 workload, hotspots and coverage for senior staff and Other Staff view (no
-cluster view: §10.5 is deferred), a student's history across staff and the support-activity audit for
-senior staff (functional spec §4.5, §10, §11.2–11.3)."""
+cluster view: §10.5 is deferred), a student's history across staff and
+the support-activity audit for senior staff (functional spec §4.5, §10,
+§11.2–11.3)."""
 
 from __future__ import annotations
 
@@ -104,6 +105,9 @@ def test_the_audit_is_senior_only_and_its_review_recorded(client: TestClient) ->
     rows = cells(section(page, "audit-h"))
     assert len(rows) == len(sample.AUDIT)
     for row, event in zip(rows, sample.AUDIT):
+        if not event.student:  # a read of no one student: the audit itself, or a download
+            assert row[3] == ""
+            continue
         assert f'<a href="/overview/students/{event.student}?as=Sam%20Lee">{sample.student(event.student).name}</a>' == row[3]
     assert 'href="/overview/audit?as=Sam%20Lee"' in client.get("/overview/?as=Sam%20Lee").text
     assert "/overview/audit" not in client.get("/overview/?as=Siti%20Rahman").text

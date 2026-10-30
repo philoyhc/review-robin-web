@@ -438,6 +438,7 @@ class PeerGrant:
     grantor: str
     viewer: str
     granted_on: date
+    by: str = ""  # senior staff who shared on the grantor's behalf (§17 Q11)
 
 
 PEER_GRANTS = (
@@ -586,13 +587,16 @@ class AuditEvent:
 
 
 AUDIT = (
+    AuditEvent(datetime(2026, 10, 29, 9, 0), "Sam Lee", "Viewed a student's history", "S-08"),
     AuditEvent(datetime(2026, 10, 29, 8, 30), "Sam Lee", "Acknowledged a safety flag", "S-10"),
     AuditEvent(datetime(2026, 10, 29, 8, 25), "Sam Lee", "Viewed a safety flag", "S-10"),
     AuditEvent(datetime(2026, 10, 28, 20, 45), "Priya Raman", "Raised a safety flag", "S-10"),
     AuditEvent(datetime(2026, 10, 28, 20, 0), "Priya Raman", "Logged an encounter", "S-10"),
+    AuditEvent(datetime(2026, 10, 28, 16, 0), "Sam Lee", "Reviewed the support-activity audit"),
     AuditEvent(datetime(2026, 10, 27, 13, 0), "Daniel Koh", "Logged an encounter", "S-06"),
     AuditEvent(datetime(2026, 10, 27, 9, 10), "Daniel Koh", "Flagged for formal assignment", "S-05"),
     AuditEvent(datetime(2026, 10, 26, 19, 40), "Daniel Koh", "Raised a safety flag", "S-05"),
+    AuditEvent(datetime(2026, 10, 24, 11, 0), "Sam Lee", "Downloaded records across staff"),
     AuditEvent(datetime(2026, 10, 20, 9, 0), "Priya Raman", "Shared records with Daniel Koh", "S-08"),
     AuditEvent(datetime(2026, 10, 20, 8, 55), "Daniel Koh", "Viewed the student", "S-08"),
 )
@@ -772,6 +776,42 @@ ADMIN_AUDIT = (
     AdminEvent(datetime(2026, 8, 1, 9, 0), "Platform super-admin", "Access", "Granted Sys admin to Rachel Yeo",
                "Support Logs set up for the term"),
 )
+
+
+# --- Administration and senior staff, each in view of the other (rung 10;
+# author, 2026-10-30). Administration decides who sees content but sees
+# none; senior staff see content but grant no access. So senior staff see
+# who holds each grant and when it changed, administrators see how many
+# identifiable reads each senior made and never of whom, and Access warns
+# when no one holds senior identifiable access.
+
+# Off by default: when on, a sys admin may grant itself Senior identifiable,
+# the one exception to "nobody changes their own access", and it is recorded.
+SELF_GRANT_SENIOR = False
+# Every grant, Other Staff view by its scope, as Who holds access lists them.
+ACCESS_GRANTS = (FRONTLINE, SENIOR, RECIPIENT, CONSULTATION, VIEW_IDENTIFIABLE, VIEW_AGGREGATE, SYS_ADMIN)
+# The reads only Senior identifiable makes (§11.2–11.3): a flag a senior
+# reads as its recipient, or their own student as frontline, is not one.
+SENIOR_READS = ("Viewed a student's history", "Reviewed the support-activity audit",
+                "Downloaded records across staff")
+
+
+def holders(grant: str) -> list[str]:
+    """Who holds a grant, in the Staff roster's order."""
+    return [name for name, _ in STAFF_ROSTER if grant in grants_of(name)]
+
+
+def senior_reads(days: int = PERIOD_DAYS) -> list[dict]:
+    """Each senior's identifiable reads in the period: counts and the
+    latest, never which student (author, 2026-10-30)."""
+    since = TODAY - timedelta(days=days - 1)  # as `in_period`
+    rows = []
+    for name in holders(SENIOR):
+        reads = [a for a in AUDIT if a.actor == name and a.at.date() >= since and a.action in SENIOR_READS]
+        rows.append({"staff": name, "reads": len(reads),
+                     "downloads": sum(a.action == "Downloaded records across staff" for a in reads),
+                     "last": max((a.at for a in reads), default=None)})
+    return rows
 
 
 # --- Your records (rung 7; author, 2026-10-30): a section at the end of

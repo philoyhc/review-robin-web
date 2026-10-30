@@ -51,6 +51,14 @@
           <dl class="kv"><dt>Students with recent support</dt><dd>{{ hot | length }}</dd><dt>Rising</dt><dd>{{ hot | selectattr("rising") | list | length }}</dd><dt>With an active flag</dt><dd>{{ hot | selectattr("flags") | list | length }}</dd></dl>
         {% endif %}
       </section>
+      {% if senior %}
+        <section class="card card-pad" aria-labelledby="who-h">
+          <h2 id="who-h">Who holds access</h2>
+          <p class="sub">Sys admins decide who sees support records; you see what they decided, read-only. Every grant and the latest changes are one click on.</p>
+          <dl class="kv">{% for g in (sample.SENIOR, sample.VIEW_IDENTIFIABLE) %}<dt>{{ g }}</dt><dd>{{ sample.holders(g) | join(", ") or "No one" }}</dd>{% endfor %}</dl>
+          <a class="btn btn-secondary gap-above-sm" href="{{ url('/overview/access') }}{{ as_query }}">See every grant</a>
+        </section>
+      {% endif %}
     </div>
     <div class="side">
       {% set cov = sample.coverage() %}

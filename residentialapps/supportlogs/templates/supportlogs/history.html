@@ -32,10 +32,20 @@
         <h2 id="plans-h">Plans <span class="count">· {{ plans | length }}</span></h2>
         {% if plans %}<ul class="items">{% for p in plans %}<li><div class="item-head"><a class="strong" href="{{ url('/plans/' ~ p.id) }}{{ as_query }}">{{ p.staff }}</a>{{ due_chip(p) }}</div><div class="subtle">{{ "Plan · " ~ p.source if p.formal else "Following" }} · {{ p.cadence }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">None.</p>{% endif %}
       </section>
+      {% set owners = (seen | map(attribute="staff") | list + plans | map(attribute="staff") | list) | unique | list %}
+      {% set grants = sample.PEER_GRANTS | selectattr("student", "equalto", chosen.id) | list %}
+      <section class="card card-pad" aria-labelledby="peer-h">
+        <h2 id="peer-h">Sharing <span class="count">· {{ grants | length }}</span></h2>
+        <p class="sub">Share a staff member's records for {{ chosen.name }} with a colleague, on their behalf (§17 Q11). Recorded with both names; the staff member sees it on their student page and can revoke it.</p>
+        {% if grants %}<ul class="items">{% for g in grants %}<li><div class="item-head"><span class="strong">{{ g.grantor }} → {{ g.viewer }}</span></div><div class="subtle">Since {{ sample.short_date(g.granted_on) }}{% if g.by %} · by {{ g.by }} on {{ g.grantor }}'s behalf{% endif %}</div></li>{% endfor %}</ul>{% endif %}
+        <div class="field-wide"><label for="peer-from">Whose records</label><select id="peer-from" class="input" disabled>{% for name in owners %}<option>{{ name }}</option>{% endfor %}</select></div>
+        <div class="field-wide"><label for="peer-to">With</label><select id="peer-to" class="input" disabled>{% for name in sample.FRONTLINE_COLLEAGUES %}<option>{{ name }}</option>{% endfor %}</select></div>
+        <button type="button" class="btn btn-secondary gap-above-sm" disabled>Share on their behalf</button>
+      </section>
       <section class="card card-pad muted" aria-labelledby="staff-h">
         <h2 id="staff-h">Staff involved</h2>
         <p class="sub">Whom to talk to about {{ chosen.name }} (§4.5).</p>
-        <ul class="plain">{% for name in (seen | map(attribute="staff") | list + plans | map(attribute="staff") | list) | unique %}<li>{{ name }}</li>{% endfor %}</ul>
+        <ul class="plain">{% for name in owners %}<li>{{ name }}</li>{% endfor %}</ul>
       </section>
     </div>
   </div>

@@ -16,17 +16,20 @@ from residentialapps.web.pages import placeholders_local_only
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
 
 
-def _page(request: Request, template: str) -> Response:
+def _page(request: Request, template: str, **context: object) -> Response:
     me = sample.viewer(request.query_params.get("as"))
     return gated(request, f"supportlogs/sys_admin/{template}", *sample.ADMINISTRATION, area=SYS_ADMIN_AREA,
-                 super_admin=sample.holds(me, sample.SUPER_ADMIN))
+                 super_admin=sample.holds(me, sample.SUPER_ADMIN), **context)
 
 
 @router.get("/sys-admin/", name="supportlogs_sys_admin")
 def access(request: Request) -> Response:
     """Access: every active Staff-roster member and the grants each holds,
-    lapsed grants first. The Sys admin column is the super-admin's alone."""
-    return _page(request, "access.html")
+    lapsed grants first. The Sys admin column is the super-admin's alone.
+    With no one holding Senior identifiable it warns (author, 2026-10-30);
+    `?preview=no-senior` shows the warning on the sample, which has one."""
+    none = request.query_params.get("preview") == "no-senior"
+    return _page(request, "access.html", seniors=[] if none else sample.holders(sample.SENIOR))
 
 
 @router.get("/sys-admin/configuration", name="supportlogs_sys_admin_configuration")
