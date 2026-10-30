@@ -1,0 +1,25 @@
+{% extends "utilities/base.html" %}
+{% block title %}Email Address Checker{% endblock %}
+{% block content %}
+  {% include "email_check/_head.html" %}
+  <p class="sub">Check a list of addresses against the institution's directory. You get the same CSV back with each address's directory account, its primary email, and the addresses that belong to the same account.</p>
+  <form class="card" aria-labelledby="upload-h">
+    <h2 id="upload-h">Upload a CSV</h2>
+    <label for="file">CSV file</label>
+    <input id="file" type="file" accept=".csv,text/csv" disabled>
+    <p class="note">UTF-8, one header row, up to 500 rows and 1 MiB. The addresses are read from the <code>email</code> column; if there isn't one, you choose the column next. Every other column comes back unchanged.</p>
+    <div class="actions">
+      <button class="btn primary" type="submit" disabled>Preview</button>
+    </div>
+  </form>
+  <div class="card" aria-labelledby="what-h">
+    <h2 id="what-h">What it does and doesn't do</h2>
+    <ul>
+      <li>It reads the directory only. Nothing in the directory, Review Robin or Residential Apps is changed; you make any corrections yourself.</li>
+      <li>Nothing you upload is kept: the result is a download, and the file is gone once you leave the page.</li>
+      <li>An address the directory doesn't find is not proof that it's wrong. A shared mailbox, a mailing list or an alias may not be found.</li>
+      <li>It doesn't tell you whether someone can sign in, or which address an application will see when they do.</li>
+    </ul>
+  </div>
+  <p class="note">Placeholder links: <a href="{{ url('/email-check/preview') }}">the preview</a> · <a href="{{ url('/email-check/preview?state=no-graph') }}">the preview without directory access</a> · <a href="{{ url('/email-check/result') }}">the result</a></p>
+{% endblock %}
