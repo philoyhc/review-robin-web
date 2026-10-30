@@ -139,8 +139,9 @@ def test_purge_hides_and_deletion_is_others(client: TestClient) -> None:
     card = client.get(f"/students/?{OPEN}").text.split('id="purge-h"')[1].split("</section>")[0]
     assert "Nothing is deleted" in card and "only senior staff with identifiable access can delete them" in card
     assert 'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
-    choices = re.findall(r"<option>([^<]+)</option>", card.split('id="purge-student"')[1].split("</select>")[0])
-    assert choices == ["All your students", *(st.name for st in sample.record_students("Daniel Koh", "students"))]  # a purge can take one student's
+    choices = re.findall(r'<option value="([^"@]+)" data-value', card.split('id="purge-student-list"')[1].split("</datalist>")[0])
+    assert choices == [st.name for st in sample.record_students("Daniel Koh", "students")]  # a purge can take one student's
+    assert 'id="purge-student" class="token-input" type="text" list="purge-student-list"' in card and "disabled" in card  # a purge can take one student's
     audit = client.get("/sys-admin/audit?as=Rachel%20Yeo").text.split('id="purged-h"')[1].split("</section>")[0]
     assert "Grace Ho: 6 encounters" in audit and "<button" not in audit  # only senior staff delete (author, 2026-10-30)
     assert f'<span class="count">· {sum(p.count for p in sample.PURGES)}</span>' in audit  # records, as on Overview
@@ -235,10 +236,10 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     assert 'aria-label="Delete permanently: 2 purged records"' in one
     assert "Deletes only Farid Osman's purged records; the rest of each purge stays." in one
     lost = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-99").text.split('id="purged-h"')[1]
-    assert '<option value="?" selected>Unknown student</option>' in lost  # Show again does not widen to everyone
+    assert '<span class="token">Unknown student<input type="hidden" name="student" value="?">' in lost  # Show again stays at none
     assert "Deletes nothing: the filter names no one." in lost
     nobody = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Nobody").text.split('id="purged-h"')[1]
-    assert '<option value="?" selected>Unknown staff</option>' in nobody  # Show again stays at none
+    assert '<span class="token">Unknown staff<input type="hidden" name="staff" value="?">' in nobody  # Show again stays at none
 
 
 def test_unknown_values_never_widen(client: TestClient) -> None:
@@ -269,7 +270,8 @@ def test_downloads_filter_by_student(client: TestClient) -> None:
     assert {r[2] for r in rows(mine.text)[1:]} == {"clara.tan@u.example.edu"}
     assert len(rows(mine.text)) - 1 == len(sample.encounters_by("Daniel Koh", "S-03"))
     def offered(page: str) -> list[str]:
-        return re.findall(r'<option value="(S-\d+)">', client.get(f"/{page}/?{OPEN}").text.split('id="dl-student"')[1].split("</select>")[0])
+        listed = client.get(f"/{page}/?{OPEN}").text.split('id="dl-student-list"')[1].split("</datalist>")[0]
+        return list(dict.fromkeys(re.findall(r'data-value="(S-\d+)"', listed)))
 
     assert offered("students") == [st.id for st in sample.record_students("Daniel Koh", "students")]
     assert set(offered("plans")) == {p.student for p in sample.PLANS if p.staff == "Daniel Koh"}  # only students with plans
@@ -299,3 +301,28 @@ def test_mounted_senior_records_stay_under_the_mount() -> None:
             assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
     back = mounted.get(f"/supportlogs/overview/records.csv?{SAM}", follow_redirects=False)
     assert back.headers["location"] == "/supportlogs/overview/records?as=Sam%20Lee"
+
+
+def test_filters_take_a_name_or_email_as_a_pill(client: TestClient) -> None:
+    """Records across staff's and Your records' filters are Assignments' box
+    of people, live: each person offered by name and by email."""
+    page = client.get(f"/overview/records?{SAM}&{OPEN}").text
+    staff = page.split('id="dl-staff-list"')[1].split("</datalist>")[0]
+    for name in sample.FRONTLINE_COLLEAGUES:
+        assert f'<option value="{name}" data-value="{name}">' in staff
+        assert f'<option value="{sample.STAFF_EMAILS[name]}" data-value="{name}" data-name="{name}">' in staff
+    students = page.split('id="dl-student-list"')[1].split("</datalist>")[0]
+    assert '<option value="clara.tan@u.example.edu" data-value="S-03" data-name="Clara Tan">' in students
+    chosen = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho&student=S-06").text.split('id="purged-h"')[1]
+    assert '<span class="token">Grace Ho<input type="hidden" name="staff" value="Grace Ho">' in chosen
+    assert 'aria-label="Remove Farid Osman from Student"' in chosen
+    assert 'id="p-staff" class="token-input" type="text" list="p-staff-list" placeholder="Name or email" autocomplete="off" hidden' in chosen
+
+
+def test_the_staff_emails_are_the_rosters() -> None:
+    roster = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "staff_roster.csv"
+    with roster.open(newline="") as f:
+        emails = {r["Name"]: r["Email"] for r in csv.DictReader(f)}
+    assert all(emails[n] == e for n, e in sample.STAFF_EMAILS.items())
+    assert set(sample.STAFF_EMAILS) == set(sample.FRONTLINE_COLLEAGUES)
+

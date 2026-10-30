@@ -511,6 +511,64 @@
       {% block content %}{% endblock %}
     </main>
     <script>
+      // A one-person filter (`token_filter` in residential/_people.html): a
+      // name or email that matches its list becomes a pill carrying the
+      // value; unmatched text blocks the form, so it never widens to all.
+      (function () {
+        Array.prototype.forEach.call(document.querySelectorAll("[data-token-filter]"), function (box) {
+          var input = box.querySelector(".token-input");
+          var list = document.getElementById(box.getAttribute("data-list"));
+          if (!input || !list) { return; }
+          function choose(opt) {
+            var name = opt.getAttribute("data-name") || opt.value;
+            var pill = document.createElement("span");
+            pill.className = "token";
+            pill.appendChild(document.createTextNode(name));
+            var kept = document.createElement("input");
+            kept.type = "hidden";
+            kept.name = box.getAttribute("data-field");
+            kept.value = opt.getAttribute("data-value");
+            var x = document.createElement("button");
+            x.type = "button";
+            x.className = "token-x";
+            x.setAttribute("aria-label", "Remove " + name + " from " + box.getAttribute("aria-label"));
+            x.textContent = "\u00d7";
+            pill.appendChild(kept);
+            pill.appendChild(x);
+            box.insertBefore(pill, input);
+            input.value = "";
+            input.setCustomValidity("");
+            input.hidden = true;
+            x.focus();
+          }
+          function match() {
+            var typed = input.value.trim().toLowerCase();
+            if (!typed) { input.setCustomValidity(""); return false; }
+            var found = Array.prototype.filter.call(list.options, function (o) { return o.value.toLowerCase() === typed; })[0];
+            if (found) { choose(found); return true; }
+            input.setCustomValidity("Choose a name from the list, or clear the box for everyone.");
+            return false;
+          }
+          input.addEventListener("input", function () { input.setCustomValidity(""); match(); });
+          input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && input.value.trim() && !match()) { e.preventDefault(); input.reportValidity(); }
+          });
+          box.addEventListener("click", function (e) {
+            if (!e.target.classList.contains("token-x") || e.target.disabled) { return; }
+            e.target.parentNode.remove();
+            input.hidden = false;
+            input.focus();
+          });
+          var form = box.closest("form");
+          if (form) {
+            form.addEventListener("submit", function (e) {
+              if (input.value.trim() && !match()) { e.preventDefault(); input.reportValidity(); }
+            });
+          }
+        });
+      })();
+    </script>
+    <script>
       (function () {
         var root = document.documentElement;
         var opts = document.querySelectorAll(".theme-toggle button");

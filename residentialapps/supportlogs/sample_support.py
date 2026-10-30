@@ -396,6 +396,10 @@ PLAN_STATUSES = ("Active", "Paused", "Closed")
 # holding frontline access, copied from the roster's mock with the sample
 # viewers who hold it.
 FRONTLINE_COLLEAGUES = ("Daniel Koh", "Priya Raman", "Mei Ling Tan", "Arjun Nair", "Grace Ho")
+# Their Staff-roster emails, so a filter matches a name or an email.
+STAFF_EMAILS = {"Daniel Koh": "daniel.koh@example.edu", "Priya Raman": "priya.raman@example.edu",
+                "Mei Ling Tan": "meiling.tan@example.edu", "Arjun Nair": "arjun.nair@example.edu",
+                "Grace Ho": "grace.ho@example.edu"}
 
 # Each plan's history (§8): how it began and what changed, so a converted
 # follow-up keeps one record rather than a disconnected duplicate.
@@ -943,3 +947,13 @@ def record_students(staff: str, page: str = "students") -> list[Student]:
     filter, by name."""
     ids = {e.student for e in encounters_by(staff)} if page == "students" else {p.student for p in PLANS if p.staff == staff}
     return sorted((s for s in STUDENTS if s.id in ids), key=lambda s: s.name)
+
+
+def staff_choices() -> list[tuple[str, str, str]]:
+    """(value, name, email) per frontline colleague, for a staff filter."""
+    return [(n, n, STAFF_EMAILS[n]) for n in FRONTLINE_COLLEAGUES]
+
+
+def student_choices(students=None) -> list[tuple[str, str, str]]:
+    """(id, name, email) per student, for a student filter."""
+    return [(s.id, s.name, s.email) for s in (STUDENTS if students is None else students)]

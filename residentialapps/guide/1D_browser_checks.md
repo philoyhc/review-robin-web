@@ -119,7 +119,7 @@ read right.
 - [ ] **Your records** (as Daniel), at the end of Students and of My plans:
   - locked at first, with Unlock refused until the confirmation is ticked;
   - unlocked: the term list opens on the current term, with All terms
-    last; a Student list offers your own students; **Download CSV** saves
+    last; a Student box takes one of your own students by name or email, as a pill; **Download CSV** saves
     a file named for the term (and the student's id, when one is picked);
   - the file opens in a spreadsheet with one row per own encounter (or
     plan), and no Hana Rahim, who is shared;
@@ -151,9 +151,11 @@ read right.
   its When column sorts by date.
 - [ ] **Records across staff** (as Sam, **Open records** on Overview):
   - locked until the confirmation is ticked;
-  - Download: pick Encounters or Plans, a staff member or All staff, a
-    student or All students, and a term or All terms; the file names each
-    row's staff member;
+  - Download: pick Encounters or Plans; type a staff member's and a
+    student's name or email, each becoming a pill (empty for everyone);
+    pick a term or All terms; the file names each row's staff member;
+  - a typo in a box (say "Daniel Kho") blocks Download CSV with a message,
+    rather than downloading for everyone; × on a pill brings the box back;
   - the two templates lead with a Staff column; Upload is disabled;
   - Purged records filter by staff and by student (no term) with
     **Show**; **Delete permanently** is outline red and disabled. With a

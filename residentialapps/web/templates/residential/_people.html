@@ -11,3 +11,19 @@
     {% if not full %}<input{% if input_id %} id="{{ input_id }}"{% else %} aria-label="Add to {{ label }}"{% endif %}{% if describedby %} aria-describedby="{{ describedby }}"{% endif %} class="token-input" type="text" list="{{ list_id }}" placeholder="{{ 'Choose a name' if single else 'Add a name' }}" disabled>{% endif %}
   </div>
 {% endmacro %}
+
+{# A filter that takes one person (author, 2026-10-30): the box of people
+   above, live. Typing a name, or an email where `choices` give one,
+   that matches a person turns it into a pill whose hidden input carries
+   `field`; its remove button brings the typeahead back. No pill sends no
+   value, which the page reads as everyone; unmatched text blocks the
+   submit, so a typo never widens a filter to everyone. `choices` is
+   (value, name, email) per person; `chosen` the (value, name) already
+   set. The behavior is the residential base's script. #}
+{% macro token_filter(label, field, choices, list_id, input_id, chosen=none, disabled=false, placeholder="Name or email") %}
+  <div class="tokens" role="group" aria-label="{{ label }}" data-token-filter data-field="{{ field }}" data-list="{{ list_id }}">
+    {% if chosen %}<span class="token">{{ chosen[1] }}<input type="hidden" name="{{ field }}" value="{{ chosen[0] }}"><button type="button" class="token-x" aria-label="Remove {{ chosen[1] }} from {{ label }}"{% if disabled %} disabled{% endif %}>×</button></span>{% endif %}
+    <input id="{{ input_id }}" class="token-input" type="text" list="{{ list_id }}" placeholder="{{ placeholder }}" autocomplete="off"{% if chosen %} hidden{% endif %}{% if disabled %} disabled{% endif %}>
+  </div>
+  <datalist id="{{ list_id }}">{% for value, name, email in choices %}<option value="{{ name }}" data-value="{{ value }}"></option>{% if email %}<option value="{{ email }}" data-value="{{ value }}" data-name="{{ name }}"></option>{% endif %}{% endfor %}</datalist>
+{% endmacro %}

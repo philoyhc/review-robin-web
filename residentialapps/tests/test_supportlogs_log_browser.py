@@ -1,7 +1,9 @@
 """Log encounter's script in a real Chromium (segment 1D rung 2): Save waits
 for the three required choices, Clear unsets an optional one, "Who started
 it?" hides and drops its choice when the type already says, and the note
-counts its characters. Served as the sort tests are; without a Chromium
+counts its characters; and a staff or student filter's box of people turns
+a match into a pill and blocks an unmatched name (rung 8). Served as the
+sort tests are; without a Chromium
 build the test skips, saying why, and `RRW_REQUIRE_BROWSER=1` fails it."""
 
 from __future__ import annotations
@@ -133,3 +135,41 @@ def test_marking_a_safety_concern_carries_the_choices(page: Page) -> None:
     raise_.click()
     page.wait_for_url("**/log/safety/raised?**")
     assert "A safety flag is raised for Bao Nguyen" in page.content()
+
+
+OPEN = "records=open&understood=yes"
+
+
+def test_a_filter_turns_a_matched_name_or_email_into_a_pill(page: Page) -> None:
+    """Records across staff's filters (rung 8), Assignments' box of people
+    made live: a match becomes a pill carrying the value, removing it brings
+    the typeahead back, and unmatched text blocks the download."""
+    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    staff = page.locator("#dl-staff")
+    staff.fill("grace.ho@example.edu")
+    pill = page.locator(".tokens[aria-label='Staff']").first.locator(".token")
+    assert pill.inner_text().startswith("Grace Ho")
+    assert pill.locator("input[type=hidden]").get_attribute("value") == "Grace Ho"
+    assert staff.is_hidden()
+    page.locator("button[aria-label='Remove Grace Ho from Staff']").first.click()
+    assert staff.is_visible() and page.locator(".tokens[aria-label='Staff']").first.locator(".token").count() == 0
+    student = page.locator("#dl-student")
+    student.fill("Clara Tan")
+    assert page.locator(".tokens[aria-label='Student']").first.locator("input[type=hidden]").get_attribute("value") == "S-03"
+    staff.fill("Daniel Kho")  # a typo: the download must not go out for all staff
+    requests: list[str] = []
+    page.on("request", lambda r: requests.append(r.url))
+    page.locator("#dl-h").locator("xpath=..").locator("button[type=submit]").click()
+    page.wait_for_timeout(300)
+    assert not [u for u in requests if "records.csv" in u]
+    assert staff.evaluate("el => el.validationMessage")
+
+
+def test_a_chosen_filter_downloads_for_that_person(page: Page) -> None:
+    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    page.locator("#dl-staff").fill("Priya Raman")
+    page.locator("#dl-student").fill("hana.rahim@u.example.edu")
+    with page.expect_request(lambda r: "records.csv" in r.url) as sent:
+        page.locator("#dl-h").locator("xpath=..").locator("button[type=submit]").click()
+    query = parse_qs(urlparse(sent.value.url).query)
+    assert query["staff"] == ["Priya Raman"] and query["student"] == ["S-08"]

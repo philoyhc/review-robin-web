@@ -91,6 +91,12 @@ form's end, and the main action is a full-width Primary on the page
 - **Call actions are `tel:` links** with visible numbers, first on the
   Safety concern screen. They are placeholders until the institution
   supplies its crisis protocol (§17 Q7).
+- **A staff or student filter is a box of people** (author, 2026-10-30),
+  Assignments' token box made live (`residentialapps/web/templates/residential/_people.html`,
+  `token_filter`): a typed name or email that matches becomes a pill
+  carrying the value, and its remove button brings the typeahead back.
+  An empty box means everyone; unmatched text blocks the form, so a typo
+  never widens a filter.
 - **A per-row grant** on Access is a native checkbox, as Residential
   Operations' per-row flags are. Other Staff view is a select of its
   scope.
