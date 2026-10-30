@@ -1,7 +1,6 @@
 # Cordware Utilities
 
-> **Built:** segment U1, rungs 1–5. The Email Address Checker's contract
-> is `utilityapps/spec/email_check.md`.
+The Email Address Checker's contract is `utilityapps/spec/email_check.md`.
 
 The contract of the Utilities application as the Cordware host sees it.
 The host's side is `cordware/spec/host.md`; this file states only what

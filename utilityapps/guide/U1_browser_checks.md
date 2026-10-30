@@ -1,11 +1,12 @@
 # U1 browser checks: the Email Address Checker
 
 A walk through the Utilities index and the checker, end to end against
-the fake directory (segment U1, rungs 1–5;
-`utilityapps/guide/segment_U1_email_checker.md`). The tests already check
+the fake directory (segment U1, closed 2026-10-30;
+`utilityapps/guide/archive/segment_U1_email_checker.md`). The tests already check
 what each page contains and every status; this is for copy, layout and
-the flow. A change becomes a follow-up commit; a ruling goes in the
-plan's open questions. Delete this file when U1 closes.
+the flow. A change becomes a follow-up PR; a ruling is recorded here
+beside its question. It outlived U1's close because the browser pass had
+not happened yet: delete it once the pass is done and R1–R3 are ruled.
 
 ## Start the app
 

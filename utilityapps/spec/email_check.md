@@ -1,8 +1,8 @@
 # Email Address Checker
 
-> **Built:** segment U1, rungs 3–5. The design it follows is
-> `utilityapps/docs/email_address_checker_functional_spec_v0.1.md`
-> ("the functional spec").
+The design it follows is
+`utilityapps/docs/email_address_checker_functional_spec_v0.1.md`
+("the functional spec").
 
 The checker's contract: what it reads, what it shows before checking, and
 what it writes. The pages and where they mount are
@@ -19,7 +19,7 @@ Every checker route is the platform super-admin's alone
 gets a `403` page that says the tool is not available, with no invitation
 to ask for access; nobody signed in gets the host's `401`. The Utilities
 index and `/utilities/health` are not gated. Every checker page is
-`Cache-Control: no-store`.
+`Cache-Control: no-store`, except the `403` page, which holds no data.
 
 ## Input
 
@@ -40,6 +40,7 @@ line saying why, rather than checked in part:
 | A header and no rows | the rows |
 | Over 500 rows (`MAX_ROWS`) | the count and the limit |
 | A row with more cells than the header | its line number |
+| The multipart body can't be read, or the carried copy isn't valid base64 | uploading again |
 
 - UTF-8 with or without a BOM; quoted cells may hold commas and line
   breaks.
@@ -69,14 +70,16 @@ and four counts:
 
 Nothing is looked up yet. *Check addresses* posts the carried file and
 the column to `/email-check/check`; it is disabled until a column is
-chosen. A step reached by its address (`GET /email-check/preview` or
+chosen, and after the `503` below. Posting `/check` with no column renders
+the preview again, checking nothing. A step reached by its address (`GET /email-check/preview` or
 `/check`) redirects to the upload page. **Nothing is kept between steps:** the preview
 page carries the file back as base64 in a hidden field, and choosing
 another column posts it again with the column's index. That form is
 URL-encoded, not multipart, so the carried copy is a field and never a
 file part: Starlette spools a file part past 1 MiB to a temporary file,
 which is why the upload's whole request is held under 1 MiB. A column
-that is not a plain index (`isdecimal`) is ignored.
+that is not a plain index (`isdecimal`), or is past the last header cell, is
+ignored and the detected column stands.
 
 ## Output
 
