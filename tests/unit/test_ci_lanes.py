@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -25,6 +27,8 @@ _spec.loader.exec_module(ci_lanes)
         "residentialapps/guide/todo_master.md",
         "residentialapps/spec/applications.md",
         "residentialapps/README.md",
+        "utilityapps/docs/email_address_checker_functional_spec_v0.1.md",
+        "utilityapps/README.md",
         "tools/README.md",
         "cordware/spec/README.md",
         "CLAUDE.md",
@@ -55,6 +59,8 @@ def test_prose_paths(path):
         "cordware/README.md",  # cordware/ ships
         "cordware/web/README.md",
         "residentialapps/core/README.md",  # Residential's code ships
+        "utilityapps/email_check/README.md",  # so will the Utilities' code
+        "utilityapps/NOTES.md",
         "tools/README.md.bak",
         "residentialapps/core/models.py",
         "app/web/static/guide/notes.md",
@@ -140,6 +146,28 @@ def test_the_prose_lane_runs_every_test_that_reads_prose():
     assert readers, "the scan found nothing; its pattern no longer matches the tree"
     undecided = readers - set(ci_lanes.PROSE_TESTS) - set(ci_lanes.NOT_PROSE_READERS)
     assert not undecided, f"add to PROSE_TESTS or NOT_PROSE_READERS: {sorted(undecided)}"
+
+
+def test_every_top_level_folder_is_classified():
+    """A new top-level folder, such as a new Cordware app, is a decision:
+    an app goes in APP_DIRS (its prose folders and README become prose),
+    anything else in OTHER_DIRS. Unclassified, its Markdown would run the
+    full lane without anyone having chosen that."""
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=REPO, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    folders = {p.split("/", 1)[0] + "/" for p in tracked if "/" in p}
+    known = set(ci_lanes.SHIPPED_DIRS) | set(ci_lanes.OTHER_DIRS)
+    assert folders - known == set(), "classify these in tools/ci_lanes.py"
+
+
+def test_every_registered_app_is_an_app_dir():
+    """An app the host registers (`cordware/main.py`), other than RRW's
+    own `app`, lives in an APP_DIRS folder."""
+    source = (REPO / "cordware" / "main.py").read_text(encoding="utf-8")
+    packages = set(re.findall(r'factory="([A-Za-z0-9_]+)\.', source)) - {"app"}
+    assert packages, "no factory found; the pattern no longer matches cordware/main.py"
+    assert {p + "/" for p in packages} <= set(ci_lanes.APP_DIRS)
 
 
 def test_every_ruled_non_reader_still_matches():
