@@ -24,6 +24,7 @@ line saying why, rather than checked in part:
 | Not UTF-8 | saving as CSV UTF-8 |
 | A NUL character | that it is not a CSV |
 | Malformed quoting | the parser's reason |
+| A cell over 131,072 characters, the `csv` module's limit, which is process-wide and left as RRW's importers rely on it | the limit |
 | No header row, or a header of blank cells | the header |
 | A header and no rows | the rows |
 | Over 500 rows (`MAX_ROWS`) | the count and the limit |

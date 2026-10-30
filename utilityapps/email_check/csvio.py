@@ -85,6 +85,13 @@ def parse(data: bytes) -> Upload:
     try:
         records = list(csv.reader(io.StringIO(text, newline=""), strict=True))
     except csv.Error as exc:
+        # The module's cell limit (131,072 characters) is process-wide and
+        # RRW's importers rely on it, so it is reported, not raised (Codex,
+        # `#3409`): a file under `MAX_BYTES` can still carry such a cell.
+        if "field larger than field limit" in str(exc):
+            raise CsvRejected(
+                f"A cell is longer than {csv.field_size_limit():,} characters."
+            ) from None
         raise CsvRejected(f"The file is not a well-formed CSV ({exc}).") from None
     # Blank lines around the file are dropped. Inside it a blank line is a
     # row: a one-column file writes a blank cell as one (spec §4: kept).

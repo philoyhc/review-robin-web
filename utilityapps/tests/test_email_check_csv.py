@@ -61,6 +61,16 @@ def test_a_file_that_cannot_be_checked_is_refused_whole(data: bytes, message: st
         parse(data)
 
 
+def test_a_cell_over_the_csv_modules_limit_is_named() -> None:
+    """The limit is process-wide and RRW relies on it, so it is reported
+    rather than raised; a cell just under it is kept whole."""
+    limit = csv.field_size_limit()
+    kept = parse(_csv("email,note", "a@x.edu," + "x" * limit))
+    assert kept.rows[0][1] == "x" * limit
+    with pytest.raises(CsvRejected, match=f"A cell is longer than {limit:,} characters"):
+        parse(_csv("email,note", "a@x.edu," + "x" * (limit + 1)))
+
+
 def test_the_row_limit_is_inclusive() -> None:
     assert len(parse(_csv("email", *["a@x.edu"] * csvio.MAX_ROWS)).rows) == csvio.MAX_ROWS
 
