@@ -8,7 +8,10 @@ Reads the changed paths, one per line, on stdin and prints ``lane=prose``,
     git diff --name-only --no-renames HEAD^1 HEAD | python3 tools/ci_lanes.py --event pull_request
 
 A change is ``prose`` only when every path is Markdown in a prose folder
-or at the root, or a README outside the shipped folders. It is
+or at the root, or a README outside the shipped folders. Each Cordware app
+folder beside RRW (``APP_DIRS``) brings its own ``docs/``, ``guide/`` and
+``spec/`` and its top README as prose; a new top-level folder fails
+``tests/unit/test_ci_lanes.py`` until it is classified here. It is
 ``residential`` when every path is prose or under ``residentialapps/``.
 Anything else, an empty list, any event but ``pull_request``, or any error
 is ``full``: the classifier fails toward running everything.
@@ -24,21 +27,29 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 
+# The Cordware apps developed here beside RRW, one top-level folder each.
+# Each ships (Cordware's import carries it once its allowlist names it),
+# but its prose folders and top README are prose. Add a new app's folder
+# here when it is created: `test_every_top_level_folder_is_classified`
+# fails until then, and a registered app's package must be here too.
+APP_DIRS = ("residentialapps/", "utilityapps/")
+APP_PROSE = ("docs/", "guide/", "spec/")
+
 PROSE_DIRS = (
     "spec/",
     "docs/",
     "guide/",
     "cordware/spec/",
-    "residentialapps/docs/",
-    "residentialapps/guide/",
-    "residentialapps/spec/",
+    *(app + sub for app in APP_DIRS for sub in APP_PROSE),
 )
 # A README anywhere is prose, except in what ships to the host: the deploy
 # artefact and Cordware's import carry these folders. Their prose folders
-# (``cordware/spec/``, Residential's ``docs/``, ``guide/`` and ``spec/``) stay prose.
+# (``cordware/spec/``, each app's ``docs/``, ``guide/`` and ``spec/``) stay prose.
 README = "README.md"
-PROSE_FILES = frozenset({"residentialapps/README.md"})
-SHIPPED_DIRS = ("app/", "alembic/", "cordware/", "residentialapps/")
+PROSE_FILES = frozenset(app + README for app in APP_DIRS)
+SHIPPED_DIRS = ("app/", "alembic/", "cordware/", *APP_DIRS)
+# Every other top-level folder, so a new one is a decision, not a default.
+OTHER_DIRS = ("docs/", "guide/", "spec/", "tests/", "tools/", ".claude/", ".devcontainer/", ".github/")
 
 # What the prose lane runs: every unit test (the doc gates live there), plus
 # each test file elsewhere that reads a prose path.
@@ -61,7 +72,7 @@ RESIDENTIAL_TESTS = ("residentialapps/tests", "cordware/tests")
 # Test files outside the unit tests are scanned for any string literal naming
 # a prose path. Each file that matches must be in PROSE_TESTS or here, with
 # the reason it reads no prose: a new match forces a decision, never a skip.
-TEST_ROOTS = ("tests", "cordware/tests", "residentialapps/tests")
+TEST_ROOTS = ("tests", "cordware/tests", *(app + "tests" for app in APP_DIRS))
 NOT_PROSE_READERS = {
     "tests/browser/test_builder_branching.py": "a docstring cites a guide plan",
     "tests/integration/test_guide_screencaps.py": "reads app/web/static/guide, not guide/",
@@ -72,7 +83,9 @@ NOT_PROSE_READERS = {
     "residentialapps/tests/test_supportlogs_records.py": "reads the terms mock CSV, not prose; the residential lane runs it",
 }
 PROSE_LITERAL = re.compile(
-    r"""["'](?:spec|docs|guide|cordware/spec|residentialapps/(?:docs|guide|spec)|residentialapps/README\.md)(?:/[^"'\n]*)?["']"""
+    r"""["'](?:spec|docs|guide|cordware/spec|(?:"""
+    + "|".join(app.rstrip("/") for app in APP_DIRS)
+    + r""")/(?:docs|guide|spec|README\.md))(?:/[^"'\n]*)?["']"""
     r"""|["'][A-Za-z0-9_-]+\.md["']"""
     r"""|["'](?:[A-Za-z0-9_.-]+/)+README\.md["']"""
 )
