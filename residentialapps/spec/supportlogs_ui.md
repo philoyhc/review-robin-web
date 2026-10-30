@@ -102,8 +102,9 @@ form's end, and the main action is a full-width Primary on the page
   Log encounter's Save, Safety concern's Save and raise, Share, Flag for
   formal assignment and the Consultation check's Check. Each submits to its
   confirmation page and stores nothing. Your records' Unlock and Download
-  CSV, and its template link, are live too: the download is the sample's
-  own records.
+  CSV, and its template link, are live too, as are Records across staff's
+  Unlock, Download CSV, template links and purge filter: the downloads
+  are the sample's own records.
 
 - **Your records** (author, 2026-10-30) ends Students and My plans: a
   section locked until its holder ticks a confirmation and unlocks it.
@@ -116,7 +117,8 @@ form's end, and the main action is a full-width Primary on the page
   senior identifiable access, behind the same lock: download any staff
   member's records, or all staff's, by term or all, each row naming its
   staff member; upload records tagged to a staff member (inert until
-  wired); and delete purged records, filtered by staff and term. Sys
+  wired); and delete purged records, filtered by staff and by the term
+  their records are dated in (Delete permanently inert until wired). Sys
   admin's Audit log also lists purged records, as counts, with Delete
   permanently.
 

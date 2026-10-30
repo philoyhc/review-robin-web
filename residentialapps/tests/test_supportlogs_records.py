@@ -135,9 +135,9 @@ def test_only_the_frontline_downloads(client: TestClient) -> None:
             assert client.get(f"{path}?as={q}&{OPEN}").status_code == 403, (name, path)
 
 
-def test_purge_hides_and_sys_admin_alone_deletes(client: TestClient) -> None:
+def test_purge_hides_and_deletion_is_others(client: TestClient) -> None:
     card = client.get(f"/students/?{OPEN}").text.split('id="purge-h"')[1].split("</section>")[0]
-    assert "Nothing is deleted" in card and "alone can delete" in card
+    assert "Nothing is deleted" in card and "only senior staff with identifiable access can delete them" in card
     assert 'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
     audit = client.get("/sys-admin/audit?as=Rachel%20Yeo").text.split('id="purged-h"')[1].split("</section>")[0]
     assert "Grace Ho: 6 encounters" in audit and 'aria-label="Delete permanently: Grace Ho\'s purged encounters"' in audit
@@ -177,8 +177,11 @@ def test_records_across_staff_is_senior_only_and_locked(client: TestClient) -> N
     assert ">Locked</span>" in locked and "records.csv" not in locked and 'value="yes" required' in locked
     unlocked = client.get(f"/overview/records?{SAM}&{OPEN}").text
     assert "/overview/records.csv" in unlocked and "Every upload, download and deletion here is recorded" in unlocked
-    for name in ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Rachel Yeo", "Hui Min Goh"):
-        q = name.replace(" ", "%20")
+    for v in sample.VIEWERS:
+        if sample.holds(v, sample.SENIOR):
+            continue
+        q = v.name.replace(" ", "%20")
+        name = v.name
         for path in ("/overview/records", "/overview/records.csv", "/overview/records-template.csv"):
             assert client.get(f"{path}?as={q}&{OPEN}").status_code == 403, (name, path)
     back = client.get(f"/overview/records.csv?{SAM}", follow_redirects=False)
@@ -199,9 +202,11 @@ def test_downloads_by_staff_and_term(client: TestClient) -> None:
 
 
 def test_the_staff_templates_name_the_staff_column(client: TestClient) -> None:
-    for what, columns in (("encounters", sample.ENCOUNTER_COLUMNS), ("plans", sample.PLAN_COLUMNS)):
+    for what in ("encounters", "plans"):
         template = rows(client.get(f"/overview/records-template.csv?{SAM}&{OPEN}&what={what}").text)
-        assert template == [["Staff", *columns]], what
+        assert template == [["Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]]], what
+    plans = sample.STAFF_TEMPLATE_COLUMNS["plans"]
+    assert "Kind" in plans and "Source" in plans and "Status" not in plans  # senior staff make formal assignments
 
 
 def test_purged_records_filter_by_staff_and_term(client: TestClient) -> None:
@@ -212,10 +217,39 @@ def test_purged_records_filter_by_staff_and_term(client: TestClient) -> None:
     assert shown("") == ["Grace Ho: 6 encounters", "Arjun Nair: 2 plans"]
     assert shown("&staff=Arjun%20Nair") == ["Arjun Nair: 2 plans"]
     assert shown(f"&term={sample.CURRENT_TERM.key}") == ["Grace Ho: 6 encounters"]
+    # A term finds the purges holding records dated in it, not the day of the purge:
+    # Arjun's plans (19 Jan – 18 May) fall in Sem 2 and the Summer break.
+    assert shown("&term=AY2025-2026.2") == ["Arjun Nair: 2 plans"]
+    assert shown("&term=AY2025-2026.3") == ["Arjun Nair: 2 plans"]
     assert shown("&staff=Grace%20Ho&term=AY2025-2026.3") == []
+    assert shown("&staff=Nobody") == []  # an unknown name matches no one, never all staff
     card = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho").text.split('id="purged-h"')[1]
-    assert 'class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently the 1 purged records shown"' in card
-    assert "for Grace Ho and all terms" in card
+    assert '<span class="count">· 6</span>' in card
+    assert 'disabled aria-label="Delete permanently: the 6 purged records shown"' in card
+    assert "of Grace Ho, dated in any term" in card
+    everyone = client.get(f"/overview/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
+    assert '<span class="count">· 8</span>' in everyone and "the 8 purged records shown" in everyone
+
+
+def test_unknown_values_never_widen(client: TestClient) -> None:
+    nobody = client.get(f"/overview/records.csv?{SAM}&{OPEN}&staff=Arjun%20Nar&term=all", follow_redirects=False)
+    assert (nobody.status_code, nobody.headers["location"]) == (303, "/overview/records?as=Sam%20Lee&records=open&understood=yes")
+    bogus = client.get(f"/overview/records.csv?{SAM}&{OPEN}&staff=Daniel%20Koh&term=bogus")
+    assert f"daniel-koh-{sample.CURRENT_TERM.key}" in bogus.headers["content-disposition"]
+    missing = client.get(f"/overview/records.csv?{SAM}&{OPEN}&staff=Daniel%20Koh")
+    assert f"daniel-koh-{sample.CURRENT_TERM.key}" in missing.headers["content-disposition"]  # as Your records defaults
+
+
+def test_a_term_picks_the_right_rows_for_a_staff_member(client: TestClient) -> None:
+    got = rows(client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&staff=Priya%20Raman"
+                          f"&term={sample.CURRENT_TERM.key}").text)
+    assert [r[0] for r in got[1:]] == ["Priya Raman"] * len(sample.encounters_by("Priya Raman"))
+    assert sorted(r[1] for r in got[1:]) == sorted(e.when.date().isoformat() for e in sample.encounters_by("Priya Raman"))
+
+
+def test_the_unlock_keeps_the_purge_filter(client: TestClient) -> None:
+    form = client.get(f"/overview/records?{SAM}&staff=Grace%20Ho&term=AY2026-2027.1").text.split('id="records-h"')[1].split("</form>")[0]
+    assert '<input type="hidden" name="staff" value="Grace Ho">' in form and '<input type="hidden" name="term" value="AY2026-2027.1">' in form
 
 
 def test_purge_is_outline_red(client: TestClient) -> None:
@@ -232,3 +266,5 @@ def test_mounted_senior_records_stay_under_the_mount() -> None:
         assert page.status_code == 200, path
         for link in re.findall(r'\b(?:href|action|formaction|src)="([^"]*)"', re.sub(r'<link rel="icon"[^>]*>', "", page.text)):
             assert link == "/" or link.startswith(("/supportlogs/", "#")), (path, link)
+    back = mounted.get(f"/supportlogs/overview/records.csv?{SAM}", follow_redirects=False)
+    assert back.headers["location"] == "/supportlogs/overview/records?as=Sam%20Lee"

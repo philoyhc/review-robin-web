@@ -1,9 +1,11 @@
-"""Support Logs' Your records downloads on sample data, segment 1D item 1
-rung 7 (author, 2026-10-30): the viewer's own encounters or plans as CSV,
-for one term or all, and an empty template to fill for an upload. Only a
-holder who has unlocked the section gets a file; anyone else goes back to
-the locked page. Uploads and purges wait on item 3; a purge only hides,
-and a sys admin alone deletes. A sample: the unlock rides in the address,
+"""Support Logs' record downloads on sample data, segment 1D item 1 (author,
+2026-10-30). Rung 7, Your records: the viewer's own encounters or plans
+as CSV, for one term or all, and an empty template to fill for an upload.
+Rung 8, Records across staff: senior identifiable access downloads staff
+members' records by staff and term, and filters purged records for
+deletion. Only a holder who has unlocked the section gets a file; anyone
+else goes back to the locked page. Uploads, purges and deletions wait on
+item 3; a purge only hides. A sample: the unlock rides in the address,
 so wired, the unlock is held server-side and the download is a POST, so
 no link or bookmark can start an audited export."""
 
@@ -86,16 +88,23 @@ def plans_template(request: Request) -> Response:
 # --- Records across staff (rung 8; author, 2026-10-30): senior
 # identifiable access only, behind the same lock.
 
+UNKNOWN = "?"  # a staff name that is no one's: never widened to all staff
+
+
 def _staff(request: Request) -> str | None:
-    """The chosen staff member, or None for all staff (an unknown name
-    reads as all)."""
+    """The chosen staff member; None for all staff, chosen as an empty
+    value; UNKNOWN for a name that is not a staff member's."""
     name = request.query_params.get("staff", "")
-    return name if name in sample.FRONTLINE_COLLEAGUES else None
+    if not name:
+        return None
+    return name if name in sample.FRONTLINE_COLLEAGUES else UNKNOWN
 
 
-def _term(request: Request) -> sample.Term | None:
-    key = request.query_params.get("term", "all")
-    return None if key == "all" else sample.term(key)
+def _term(request: Request, default: str) -> sample.Term | None:
+    """The chosen term; None for all terms, chosen as "all". A missing key
+    reads as `default`; an unknown one as the current term, never as all."""
+    key = request.query_params.get("term", default)
+    return None if key == "all" else sample.term(key) or sample.CURRENT_TERM
 
 
 def _what(request: Request) -> str:
@@ -108,10 +117,11 @@ def staff_records(request: Request) -> Response:
     """Records across staff: upload tagged to a staff member, download by
     staff and term, delete purged records by staff and term. Each action
     is a support-activity event (§11.3)."""
-    staff, chosen = _staff(request), _term(request)
+    staff, chosen = _staff(request), _term(request, "all")
+    purged = [] if staff == UNKNOWN else sample.purges(staff, chosen)  # an unknown name matches no one
     return gated(request, "supportlogs/overview_records.html", sample.SENIOR, current_tab="/overview/",
-                 unlocked=records_unlocked(request), staff=staff, chosen=chosen,
-                 purged=sample.purges(staff, chosen))
+                 unlocked=records_unlocked(request), staff=staff, chosen=chosen, purged=purged,
+                 purged_records=sum(p.count for p in purged))
 
 
 def _senior_download(request: Request, template: bool) -> Response:
@@ -122,8 +132,11 @@ def _senior_download(request: Request, template: bool) -> Response:
         return RedirectResponse(url_path(request, "/overview/records") + query(me), status_code=303)
     what = _what(request)
     if template:
-        return _csv(f"support-logs-{what}-staff-template.csv", ("Staff", *sample.RECORD_KINDS[what][1]), [])
-    staff, chosen = _staff(request), _term(request)
+        return _csv(f"support-logs-{what}-staff-template.csv", ("Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]), [])
+    staff, chosen = _staff(request), _term(request, sample.CURRENT_TERM.key)
+    if staff == UNKNOWN:  # a name that is no staff member's downloads nothing
+        return RedirectResponse(url_path(request, "/overview/records") + query(me, records="open", understood="yes"),
+                                status_code=303)
     columns, rows = sample.staff_rows(what, staff, chosen)
     who = "all-staff" if staff is None else staff.lower().replace(" ", "-")
     scope = "all-terms" if chosen is None else chosen.key

@@ -10,13 +10,14 @@
      records by staff and term. Each is a support-activity event (§11.3),
      behind the same lock as a staff member's Your records. #}
   <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member and term it covered.</p>
-  {% set keep = {"staff": staff or "", "term": chosen.key if chosen else ""} %}
+  {% set keep = {"staff": staff if staff and staff != "?" else "", "term": chosen.key if chosen else ""} %}
   {% if not unlocked %}
     <section class="card card-pad muted" aria-labelledby="records-h" id="records">
       <h2 id="records-h">Records across staff <span class="chip chip-mute">Locked</span></h2>
       <p class="sub">Locked, because a download holds named students and other staff's records.</p>
       <form action="{{ url('/overview/records') }}" method="get">
         {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+        {% for k, v in keep.items() if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <input type="hidden" name="records" value="open">
         <label class="check"><input type="checkbox" name="understood" value="yes" required> I understand that a download holds named students and other staff's records, and that every upload, download and deletion is recorded</label>
         <button type="submit" class="btn btn-secondary gap-above-sm">Unlock</button>
@@ -48,8 +49,8 @@
       </div>
       <div class="side">
         <section class="card card-pad" aria-labelledby="purged-h">
-          <h2 id="purged-h">Purged records <span class="count">· {{ purged | length }}</span></h2>
-          <p class="sub">Records their owner purged: hidden from every page and kept until deleted here.</p>
+          <h2 id="purged-h">Purged records <span class="count">· {{ purged_records }}</span></h2>
+          <p class="sub">Records their owner purged: hidden from every page and kept until deleted. A term finds the purges holding records dated in it.</p>
           <form action="{{ url('/overview/records') }}" method="get">
             {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
             <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
@@ -58,8 +59,8 @@
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>
           {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {{ p.count }} {{ p.what | lower }}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
-          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently the {{ purged | length }} purged records shown">Delete permanently</button>
-          <p class="subtle small">Deletes the purged records shown, for {{ staff or "all staff" }} and {{ chosen.label if chosen else "all terms" }}. It cannot be undone.</p>
+          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: the {{ purged_records }} purged record{{ '' if purged_records == 1 else 's' }} shown">Delete permanently</button>
+          <p class="subtle small">Deletes the purged records shown, of {{ staff if staff and staff != "?" else "all staff" }}, dated in {{ chosen.label if chosen else "any term" }}. It cannot be undone.</p>
         </section>
       </div>
     </div>

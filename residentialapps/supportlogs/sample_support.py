@@ -795,7 +795,8 @@ ADMIN_AUDIT = (
 # Students and My plans, locked until its holder confirms, to download
 # their own encounters or plans as CSV by term, upload a CSV to populate
 # them, or purge them all. A purge hides records from every page and keeps
-# them: only a sys admin deletes (§11.3).
+# them; senior identifiable access deletes them (rung 8), and so can Sys
+# admin until the author rules which keeps deletion.
 
 # Residential's terms (`residentialapps/docs/sample_data/terms.csv`,
 # copied: Support Logs may not import Residential Operations, which sets
@@ -872,18 +873,22 @@ def plan_rows(staff: str, t: Term | None) -> list[list[str]]:
 
 @dataclass(frozen=True)
 class Purge:
-    """A purge: the records hidden from every page, kept until a sys admin
-    deletes them. Sys admin sees the count, never the records."""
+    """A purge: the records hidden from every page and kept until deleted.
+    `first` and `last` date the records it holds, so a term filter finds
+    the purges holding records of that term. Sys admin sees the count,
+    never the records."""
 
     by: str
     what: str  # "Encounters" or "Plans"
     on: date
     count: int
+    first: date
+    last: date
 
 
 PURGES = (
-    Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6),
-    Purge("Arjun Nair", "Plans", date(2026, 5, 20), 2),
+    Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6, date(2026, 8, 20), date(2026, 10, 7)),
+    Purge("Arjun Nair", "Plans", date(2026, 5, 20), 2, date(2026, 1, 19), date(2026, 5, 18)),
 )
 
 
@@ -897,6 +902,10 @@ def term_of(d: date) -> Term | None:
 # audited. A download names the staff member in its own column.
 
 RECORD_KINDS = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
+# What a senior upload takes after its Staff column: a plan may be a formal
+# assignment (§7), and a new one is always Active, so no Status.
+STAFF_TEMPLATE_COLUMNS = {"encounters": ENCOUNTER_COLUMNS,
+                          "plans": tuple(c for c in PLAN_COLUMNS if c != "Status")}
 
 
 def staff_rows(what: str, staff: str | None, t: Term | None) -> tuple[tuple[str, ...], list[list[str]]]:
@@ -913,4 +922,6 @@ def staff_rows(what: str, staff: str | None, t: Term | None) -> tuple[tuple[str,
 
 
 def purges(staff: str | None = None, t: Term | None = None) -> list[Purge]:
-    return [p for p in PURGES if (not staff or p.by == staff) and (not t or term_of(p.on) == t)]
+    """Purges of a staff member's records (all staff when none) holding
+    records dated in a term (all terms when none)."""
+    return [p for p in PURGES if (not staff or p.by == staff) and (not t or (p.first <= t.end and p.last >= t.start))]
