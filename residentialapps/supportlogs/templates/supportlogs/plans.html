@@ -1,6 +1,7 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% from "supportlogs/_frontline.html" import plan_item, recorded with context %}
+{% from "supportlogs/_records.html" import records_card with context %}
 {% block title %}My plans{% endblock %}
 {% block content %}
   {{ sample_title("My plans", me.name) }}
@@ -26,4 +27,5 @@
     {% if informal %}<ul class="items">{% for p in informal %}{{ plan_item(p, log=true) }}{% endfor %}</ul>{% else %}<p class="sub">None{% if show != "all" %} {{ shows[show] | lower }}{% endif %}.</p>{% endif %}
     <button type="button" class="btn btn-secondary gap-above-sm" disabled>Add a student to follow up</button>
   </section>
+  {{ records_card("plans", "plans", unlocked, keep={"show": show if show != "all" else ""}) }}
 {% endblock %}

@@ -12,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
-from residentialapps.supportlogs.pages import gated, reaches_student
+from residentialapps.supportlogs.pages import gated, reaches_student, records_unlocked
 from residentialapps.web.pages import placeholders_local_only
 from residentialapps.web.urls import url_path
 
@@ -60,7 +60,7 @@ def log_saved(request: Request) -> Response:
 
 @router.get("/students/", name="supportlogs_students")
 def students(request: Request) -> Response:
-    return gated(request, "supportlogs/students.html", FRONTLINE)
+    return gated(request, "supportlogs/students.html", FRONTLINE, unlocked=records_unlocked(request))
 
 
 @router.get("/students/{sid}", name="supportlogs_student")
@@ -90,4 +90,5 @@ def plans(request: Request) -> Response:
     keep = {"all": None, "overdue": {"overdue"}, "week": {"overdue", "today", "week"}}[show]
     me = _me(request)
     mine = [p for p in sample.plans_of(me.name) if keep is None or sample.due(p)[0] in keep]
-    return gated(request, "supportlogs/plans.html", FRONTLINE, show=show, shows=SHOW, mine=mine)
+    return gated(request, "supportlogs/plans.html", FRONTLINE, show=show, shows=SHOW, mine=mine,
+                 unlocked=records_unlocked(request))

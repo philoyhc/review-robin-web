@@ -789,3 +789,83 @@ ADMIN_AUDIT = (
     AdminEvent(datetime(2026, 8, 1, 9, 0), "Platform super-admin", "Access", "Granted Sys admin to Rachel Yeo",
                "Support Logs set up for the term"),
 )
+
+
+# --- Your records (rung 7; author, 2026-10-30): a section at the end of
+# Students and My plans, locked until its holder confirms, to download
+# their own encounters or plans as CSV by term, upload a CSV to populate
+# them, or purge them all. A purge hides records from every page and keeps
+# them: only a sys admin deletes (§11.3).
+
+# Residential's terms (`residentialapps/docs/sample_data/terms.csv`,
+# copied: Support Logs may not import Residential Operations, which sets
+# them on /rosters/). A test holds the copy to the file.
+@dataclass(frozen=True)
+class Term:
+    key: str  # "AY2026-2027.1"
+    label: str  # "AY2026-2027, Term 1: Sem 1 + Winter break"
+    start: date
+    end: date
+
+
+TERMS = tuple(
+    Term(f"{y}.{n}", f"{y}, Term {n}: {name}", date.fromisoformat(s), date.fromisoformat(e))
+    for y, n, name, s, e in (
+        ("AY2025-2026", 1, "Sem 1 + Winter break", "2025-08-04", "2026-01-11"),
+        ("AY2025-2026", 2, "Sem 2", "2026-01-12", "2026-05-10"),
+        ("AY2025-2026", 3, "Summer break", "2026-05-11", "2026-08-02"),
+        ("AY2026-2027", 1, "Sem 1 + Winter break", "2026-08-03", "2027-01-10"),
+        ("AY2026-2027", 2, "Sem 2", "2027-01-11", "2027-05-09"),
+        ("AY2026-2027", 3, "Summer break", "2027-05-10", "2027-08-01"),
+    )
+)
+CURRENT_TERM = next(t for t in TERMS if t.start <= TODAY <= t.end)
+
+
+def term(key: str | None) -> Term | None:
+    return next((t for t in TERMS if t.key == key), None)
+
+
+ENCOUNTER_COLUMNS = ("Date", "Time", "Student email", "Student", "Duration", "Type", "Concern areas",
+                     "Follow-up needed", "How", "Note")
+PLAN_COLUMNS = ("Student email", "Student", "Kind", "Source", "Cadence", "Since", "Review", "Status")
+
+
+def encounter_rows(staff: str, t: Term | None) -> list[list[str]]:
+    """The staff member's own encounters in a term (all terms when none),
+    oldest first, never a colleague's shared records or a safety flag."""
+    rows = []
+    for e in sorted(encounters_by(staff), key=lambda e: e.when):
+        if t and not t.start <= e.when.date() <= t.end:
+            continue
+        s = student(e.student)
+        rows.append([e.when.date().isoformat(), e.when.strftime("%H:%M"), s.email, s.name, e.duration, e.type,
+                     "; ".join(e.concerns), e.follow_up, e.mode, e.note])
+    return rows
+
+
+def plan_rows(staff: str, t: Term | None) -> list[list[str]]:
+    """The staff member's own plans active at any point in a term (all
+    terms when none)."""
+    rows = []
+    for p in sorted(plans_of(staff), key=lambda p: p.start):
+        if t and p.start > t.end:
+            continue
+        s = student(p.student)
+        rows.append([s.email, s.name, "Formal assignment" if p.formal else "Follow-up", p.source, p.cadence,
+                     p.start.isoformat(), p.review.isoformat() if p.review else "", p.status])
+    return rows
+
+
+@dataclass(frozen=True)
+class Purge:
+    """A purge: the records hidden from every page, kept until a sys admin
+    deletes them. Sys admin sees the count, never the records."""
+
+    by: str
+    what: str  # "Encounters" or "Plans"
+    on: date
+    count: int
+
+
+PURGES = (Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6),)

@@ -11,6 +11,7 @@ from residentialapps.supportlogs.routes_health import router as health_router
 from residentialapps.supportlogs.routes_home import router as home_router
 from residentialapps.supportlogs.routes_overview import router as overview_router
 from residentialapps.supportlogs.routes_plans import router as plans_router
+from residentialapps.supportlogs.routes_records import router as records_router
 from residentialapps.supportlogs.routes_safety import router as safety_router
 from residentialapps.supportlogs.routes_sys_admin import router as sys_admin_router
 
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Support Logs", docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(health_router)
     app.include_router(home_router)
+    app.include_router(records_router)
     app.include_router(frontline_router)
     app.include_router(safety_router)
     app.include_router(plans_router)

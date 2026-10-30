@@ -120,6 +120,14 @@ form's end, and the main action is a full-width Primary on the page
   - the consultation rules.
 - **Configuration** shows each list as a card in a `.card-grid`.
 
+- **Your records** (author, 2026-10-30) ends Students and My plans: a
+  section locked until its holder ticks a confirmation and unlocks it.
+  Unlocked, it downloads the holder's own encounters or plans as CSV for a
+  term of Rosters and setup's, or all terms; offers the template and an
+  upload; and purges them all. Leaving the page locks it again. A purge
+  hides and keeps: Sys admin's Audit log lists purged records as counts,
+  and only a sys admin deletes them.
+
 ## 6. What the screens say about privacy
 
 - **A read is an action** (§11.3). Every page that names a student says

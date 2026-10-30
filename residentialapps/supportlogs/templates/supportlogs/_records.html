@@ -1,0 +1,55 @@
+{# Your records (author, 2026-10-30): the end of Students and My plans, a
+   section locked until its holder confirms. Unlocked, it downloads the
+   viewer's own records as CSV, for one term or all; offers a template and
+   an upload to populate them; and purges them all. A purge hides records
+   from every page and keeps them: only a sys admin deletes. `page` is
+   "students" (encounters) or "plans"; `keep` carries the page's own
+   query values through the unlock. #}
+{% macro records_card(page, what, unlocked, keep={}) %}
+  <section class="card card-pad gap-above{% if not unlocked %} muted{% endif %}" aria-labelledby="records-h" id="records">
+    <h2 id="records-h">Your {{ what }} <span class="chip {{ 'chip-warn' if unlocked else 'chip-mute' }}">{{ "Unlocked" if unlocked else "Locked" }}</span></h2>
+    {% if not unlocked %}
+      <p class="sub">Download your {{ what }} as CSV, upload a CSV to add them, or purge them all. Locked, because a download takes named students outside Support Logs.</p>
+      <form action="{{ url('/' ~ page ~ '/') }}#records" method="get">
+        {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+        {% for k, v in keep.items() if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <input type="hidden" name="records" value="open">
+        <label class="check"><input type="checkbox" name="understood" value="yes" required> I understand that a download holds named students, and that every download, upload and purge is recorded</label>
+        <button type="submit" class="btn btn-secondary gap-above-sm">Unlock</button>
+      </form>
+    {% else %}
+      <p class="sub">Only your own {{ what }}: never a colleague's shared records or a safety flag. Every download, upload and purge is recorded (§11.3). <a href="{{ url('/' ~ page ~ '/') }}{{ qs(**keep) }}">Lock again</a></p>
+      <div class="split gap-above-sm">
+        <div class="main stack">
+          <form class="card card-pad" action="{{ url('/' ~ page ~ '/records.csv') }}" method="get" aria-labelledby="dl-h">
+            <h3 id="dl-h">Download</h3>
+            {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+            <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
+            <div class="field-wide"><label for="dl-term">Term</label>
+              <select id="dl-term" name="term" class="input">
+                {% for t in sample.TERMS %}<option value="{{ t.key }}"{% if t == sample.CURRENT_TERM %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+                <option value="all">All terms</option>
+              </select>
+              <span class="subtle small">The terms set on Residential Operations' Rosters and setup.</span></div>
+            <button type="submit" class="btn btn-primary">Download CSV</button>
+          </form>
+          <section class="card card-pad" aria-labelledby="ul-h">
+            <h3 id="ul-h">Upload</h3>
+            <p class="sub">Add {{ what }} from a CSV in the template's columns. Each row is checked against the lists Sys admin configures, and you see a preview before anything is added.</p>
+            <a class="btn btn-secondary" href="{{ url('/' ~ page ~ '/records-template.csv') }}{{ qs(records='open', understood='yes') }}">Download the template</a>
+            <div class="field-wide gap-above-sm"><label for="ul-file">CSV file</label><input id="ul-file" class="input" type="file" accept=".csv,text/csv" disabled></div>
+            <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
+          </section>
+        </div>
+        <div class="side">
+          <section class="card card-pad" aria-labelledby="purge-h">
+            <h3 id="purge-h">Purge all</h3>
+            <p class="sub">Hides every one of your {{ what }} from Support Logs' pages, for you and for anyone you shared them with. Nothing is deleted: a sys admin keeps them and alone can delete them.</p>
+            <div class="field-wide"><label for="purge-confirm">Type PURGE to confirm</label><input id="purge-confirm" class="input" autocomplete="off" disabled></div>
+            <button type="button" class="btn btn-danger" disabled aria-label="Purge all your {{ what }}">Purge all</button>
+          </section>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+{% endmacro %}

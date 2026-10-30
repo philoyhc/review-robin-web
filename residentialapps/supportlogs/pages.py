@@ -179,3 +179,13 @@ def gated(request: Request, template: str, *grants: str, area: str = MAIN, **con
         return forbidden(request, me)
     tabs = sys_admin_tabs(me) if area == SYS_ADMIN_AREA else tabs_for(me)
     return render(request, template, me=me, area=area, tabs=tabs, **context)
+
+
+def records_unlocked(request: Request) -> bool:
+    """Your records, at the end of Students and My plans, opens only once
+    its holder has confirmed (author, 2026-10-30): the unlock form sends
+    `records=open` with the confirmation ticked. A sample: the state lives
+    in the address, so leaving the page locks it again."""
+    q = request.query_params
+    return q.get("records") == "open" and q.get("understood") == "yes"
+
