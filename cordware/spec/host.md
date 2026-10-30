@@ -47,7 +47,8 @@ point.
   `utilityapps/spec/utilities.md`.
 - An unset `CORDWARE_APPS` mounts all four, so a deployment that does not
   carry `residentialapps/` or `utilityapps/` names its applications: the host fails to start
-  on a factory it cannot import.
+  on a factory it cannot import. Cordware's production carries no
+  `residentialapps/` for now (2026-10-30), so it always sets the variable.
 - The mount path is a constant here, not a setting, so no configuration can
   move an application off its path.
 - The host imports an application only by loading its `factory` string at

@@ -3,9 +3,12 @@
 **Cordware Utilities** (package `utilityapps/`, mounted at `/utilities`):
 small, general-purpose institutional tools that belong to neither Review
 Robin nor Residential Apps. Its first tool, the Email Address Checker, is
-built (segment U1, closed 2026-10-30). Production does not carry it yet:
-Cordware's import rules exclude `utilityapps/` until the author enables
-it, and its real-tenant smoke test is Cordware's.
+built (segment U1, closed 2026-10-30). Production carries its runtime code
+from 2026-10-30: Cordware's import rules split `utilityapps/` and import
+everything but its prose and tests. `/utilities/health` is excluded from
+sign-in. The application stays switched off until its first release, which
+waits on Cordware's release deploy. The real-tenant smoke test is
+Cordware's, at that release.
 
 **Identity** (author, 2026-10-30): the name **Cordware Utilities**, mounted at
 `/utilities`. Its accent is **amber `#b45309`**; white on it is about 5:1.
