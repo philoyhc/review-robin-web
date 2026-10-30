@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · Cordware Utilities</title>
+  {# A wrench, white on slate, inline as the other applications' are. #}
+  <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23334155'/><path d='M19.5 7.5a5 5 0 0 0-4.6 6.9L8 21.3a2 2 0 0 0 2.8 2.8l6.9-6.9a5 5 0 0 0 6.6-6.1l-3 3-2.6-.8-.8-2.6 3-3a5 5 0 0 0-1.4-.2z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/></svg>">
+  {# The host landing page's tokens: one plain look until a tool needs more. #}
+  <style>
+    :root { color-scheme: light dark; --fg: #1f2328; --muted: #59636e; --bg: #ffffff; --line: #d1d9e0; --link: #0969da; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg: #f0f6fc; --muted: #9198a1; --bg: #0d1117; --line: #3d444d; --link: #4493f8; }
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+    .sub { color: var(--muted); margin: 0 0 1.5rem; }
+    .tools { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+    .tools li { border-bottom: 1px solid var(--line); padding: 0.75rem 0; }
+    .tool-name { font-weight: 600; }
+    .tools p { margin: 0.25rem 0 0; color: var(--muted); }
+    .soon { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+    a { color: var(--link); }
+    footer { margin-top: 2rem; font-size: 0.9rem; }
+    footer a { color: var(--muted); margin-right: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    {% block content %}{% endblock %}
+    <footer><a href="{{ host_url('/') }}">All applications</a><a href="/.auth/logout">Sign out</a></footer>
+  </main>
+</body>
+</html>

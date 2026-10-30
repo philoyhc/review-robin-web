@@ -18,9 +18,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # Package directory -> top-level packages it must never import.
 FORBIDDEN = {
-    "app": {"residentialapps"},
-    "residentialapps": {"app"},
-    "cordware": {"app", "residentialapps"},
+    "app": {"residentialapps", "utilityapps"},
+    "residentialapps": {"app", "utilityapps"},
+    "utilityapps": {"app", "residentialapps"},
+    "cordware": {"app", "residentialapps", "utilityapps"},
 }
 
 _DYNAMIC = {"import_module", "__import__"}
@@ -110,15 +111,15 @@ def imported_modules(source: str) -> set[str]:
 def test_no_application_imports_the_host_entry_point() -> None:
     """`cordware.main` builds the host when imported (segment 21C):
     applications import `cordware.identity`, never the entry point.
-    Residential's tests build the host on purpose, as RRW's root `tests/`
-    do (`residentialapps/spec/architecture.md`)."""
-    tests = ROOT / "residentialapps" / "tests"
+    Residential's and Utilities' tests build the host on purpose, as RRW's
+    root `tests/` do (`residentialapps/spec/architecture.md`)."""
+    tests = (ROOT / "residentialapps" / "tests", ROOT / "utilityapps" / "tests")
     found = [
         str(path.relative_to(ROOT))
-        for package in ("app", "residentialapps")
+        for package in ("app", "residentialapps", "utilityapps")
         if (ROOT / package).is_dir()
         for path in sorted((ROOT / package).rglob("*.py"))
-        if not path.is_relative_to(tests)
+        if not any(path.is_relative_to(t) for t in tests)
         and "cordware.main" in imported_modules(path.read_text())
     ]
     assert found == []

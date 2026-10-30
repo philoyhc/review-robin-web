@@ -33,18 +33,20 @@ point.
 | `logger` | Logger-name prefix the application logs under (see Logging). |
 | `title` | How the landing page names the application. Defaults to empty, and the page then shows the registry name. |
 
-- Three entries, in this order:
+- Four entries, in this order:
 
   | Name | `path` | `factory` | `logger` | `title` |
   |---|---|---|---|---|
   | `reviewrobin` | `/reviewrobin` | `app.main:create_app` | `app` | `Review Robin` |
   | `residentialops` | `/residentialops` | `residentialapps.residentialops.main:create_app` | `residentialapps.residentialops` | `Residential Operations` |
   | `supportlogs` | `/supportlogs` | `residentialapps.supportlogs.main:create_app` | `residentialapps.supportlogs` | `Support Logs` |
+  | `utilities` | `/utilities` | `utilityapps.main:create_app` | `utilityapps` | `Utilities` |
 
   The two Residential applications' own contract is
-  `residentialapps/spec/applications.md`.
-- An unset `CORDWARE_APPS` mounts all three, so a deployment that does not
-  carry `residentialapps/` names its applications: the host fails to start
+  `residentialapps/spec/applications.md`; Utilities' is
+  `utilityapps/spec/utilities.md`.
+- An unset `CORDWARE_APPS` mounts all four, so a deployment that does not
+  carry `residentialapps/` or `utilityapps/` names its applications: the host fails to start
   on a factory it cannot import.
 - The mount path is a constant here, not a setting, so no configuration can
   move an application off its path.
@@ -122,7 +124,8 @@ items are ignored. An unknown name, or a name written twice, raises
   `cordware_health`. It is registered before any mount, so it answers ahead of
   an application mounted at `/`. Easy Auth excludes this path from sign-in.
   RRW's own probe is `/reviewrobin/health`, inside the mount; Residential's
-  are `/residentialops/health` and `/supportlogs/health`.
+  are `/residentialops/health` and `/supportlogs/health`; Utilities' is
+  `/utilities/health`.
 - The name differs from RRW's own `health` route on purpose: inside a mounted
   application `url_for` resolves through the host's router first, and
   `url_for("health")` must not resolve to the host's route.
