@@ -1,12 +1,11 @@
-# U1 browser checks: the Email Address Checker's pages
+# U1 browser checks: the Email Address Checker
 
-A walk through the Utilities index and the checker's three pages, built
-as placeholders by segment U1 rung 2
-(`utilityapps/guide/segment_U1_email_checker.md`). Copy, layout and the
-flow are what to judge: every control is disabled and the counts are
-samples. The tests already check what each page contains. A change
-becomes a follow-up commit before rung 3; a ruling goes in the plan's
-open questions. Delete this file when U1 closes.
+A walk through the Utilities index and the checker, end to end against
+the fake directory (segment U1, rungs 1–5;
+`utilityapps/guide/segment_U1_email_checker.md`). The tests already check
+what each page contains and every status; this is for copy, layout and
+the flow. A change becomes a follow-up commit; a ruling goes in the
+plan's open questions. Delete this file when U1 closes.
 
 ## Start the app
 
@@ -34,23 +33,41 @@ The `pip install` line is needed once after this pull: it registers the
 new `utilityapps` package. Stop with Ctrl+C; to clear the settings, use
 `fake_ids.md`'s "Clearing the settings" block.
 
-## The pages
+## A file to check
+
+Save this as `sample.csv` (CSV UTF-8). Its addresses are the fake
+directory's invented accounts (`cordware/graph.py`, `FAKE_USERS`), one per
+status:
+
+```
+Name,Work email,Role
+Jane Tan,jane.tan@example.edu,Reviewer
+Jane Tan,e0123456@example.edu,Reviewer
+Lab,lab01@example.edu,Observer
+Office,office@example.edu,Reviewer
+Arun Kumar,ARUN.KUMAR@example.edu,Reviewer
+Arun Kumar,arun.kumar@example.edu,Observer
+Nobody,nobody@example.edu,Reviewer
+Busy,throttled@example.edu,Reviewer
+Blank,,Reviewer
+```
+
+## The steps
 
 Check each at desktop width, in light and dark (the system setting:
 these pages follow it). Mobile is not a priority for this utility
 (author, 2026-10-30): a narrow window need only stay usable (spec §3),
 so one glance at a 390 px phone is enough.
 
-| # | Page | Address | Look for |
-|---|---|---|---|
-| 1 | Utilities index | `/utilities/` | One card, *Email Address Checker*, linking to the checker; *All applications* returns to the host's list |
-| 2 | Upload | `/utilities/email-check/` | The purpose line; the file limits; the four "does and doesn't" lines read as true and enough |
-| 3 | Preview | Upload any CSV on page 2 | Your file's counts; with no `email` column, the column choice, then *Use this column*; a bad file returns to page 2 with one line saying why; *Check addresses* stays disabled until rung 5 |
-| 4 | Preview, no directory | `/utilities/email-check/preview?state=no-graph` | The amber message, and whether it tells an operator what to do |
-| 5 | Result | `/utilities/email-check/result` | The seven statuses with their meanings; the duplicate-account line; the alias caveat; *Download checked CSV* |
-
-The upload page links to a sample preview, 4 and 5 at its foot, as
-placeholder links that go when the pages are wired.
+| # | Step | Look for |
+|---|---|---|
+| 1 | `/utilities/` | One card, *Email Address Checker*; *All applications* returns to the host's list |
+| 2 | The upload page | The purpose line, the limits, the four "does and doesn't" lines |
+| 3 | Upload `sample.csv` | The preview: no `email` column, so *Choose a column…*; pick *Work email*, then *Use this column*: 9 rows, 8 to check, 1 blank, 1 repeat (Arun's two spellings); *Check addresses* now enabled |
+| 4 | *Check addresses* | Counts: `OK` 3, `USE_PRIMARY` 1, `FOUND_NO_PRIMARY` 1, `NOT_FOUND` 1, `AMBIGUOUS` 1, `INVALID_INPUT` 1, `ERROR` 1; one account under two addresses (Jane); the red line about the unfinished lookup |
+| 5 | *Download checked CSV* | Opens in Excel with the input's columns first, then the nine result columns; Jane's two rows share `duplicate_account_group` 1; Arun's two do not form a group |
+| 6 | A bad file (a `.txt` renamed `.csv`, or one with only a header) | Back on the upload page with one red line saying why |
+| 7 | Not a super-admin: restart with `$env:FAKE_AUTH_SUPER_ADMIN = "false"` | Every checker page says *Not available*; the index still lists the tool |
 
 ## Rulings to give while looking
 

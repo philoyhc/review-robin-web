@@ -2,17 +2,18 @@
 {% block title %}Preview · Email Address Checker{% endblock %}
 {% block content %}
   {% include "email_check/_head.html" %}
-  <form class="card" aria-labelledby="preview-h" method="post" action="{{ url('/email-check/preview') }}" enctype="multipart/form-data">
+  <form class="card" aria-labelledby="preview-h" method="post" action="{{ url('/email-check/preview') }}">
+    {# URL-encoded, not multipart: the carried file is a field, never a file part (routes.py). #}
     <h2 id="preview-h">Preview: <code>{{ filename or "your file" }}</code></h2>
     <input type="hidden" name="content" value="{{ content }}">
     <input type="hidden" name="filename" value="{{ filename }}">
     <label for="column">Address column</label>
     <div class="actions tight">
-      <select id="column" name="column"{% if sample %} disabled{% endif %}>
+      <select id="column" name="column">
         {% if column is none %}<option value="" selected>Choose a column…</option>{% endif %}
         {% for name in header %}<option value="{{ loop.index0 }}"{% if loop.index0 == column %} selected{% endif %}>{{ name or "(no name)" }}</option>{% endfor %}
       </select>
-      <button class="btn secondary" type="submit"{% if sample %} disabled{% endif %}>Use this column</button>
+      <button class="btn secondary" type="submit">Use this column</button>
     </div>
     {% if detected %}
       <p class="note">The addresses are read from the <code>email</code> column. Choose another if that's wrong.</p>
@@ -30,12 +31,11 @@
     {% endif %}
     {% if no_graph %}
       <div class="card alert" role="alert">
-        <p><strong>The directory can't be reached.</strong> Your sign-in doesn't carry directory access, so nothing can be checked. Sign out and in again; if that doesn't help, Cordware's directory access isn't set up yet.</p>
+        <p><strong>The directory can't be reached.</strong> Your sign-in doesn't carry directory access, so nothing was checked. Sign out and in again; if that doesn't help, Cordware's directory access isn't set up yet.</p>
       </div>
     {% endif %}
     <div class="actions">
-      {# Wired in rung 5. #}
-      <button class="btn primary" type="button" disabled>Check addresses</button>
+      <button class="btn primary" type="submit" formaction="{{ url('/email-check/check') }}"{% if column is none or no_graph %} disabled{% endif %}>Check addresses</button>
       <a class="btn secondary" href="{{ url('/email-check/') }}">Start over</a>
     </div>
   </form>

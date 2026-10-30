@@ -90,6 +90,8 @@ leak, as the spec's §10 requires.
 - 2026-10-30, rung 3: a cell over the `csv` module's 131,072-character limit is refused by name, not by raising the limit, which is process-wide and which RRW's importers rely on (Codex, `#3409`).
 - 2026-10-30, rung 4: requests go through `urllib`, not `httpx`, which is only a dev dependency; adding it would change the deploy manifest for one client.
 - 2026-10-30, rung 4: the fake directory follows fake auth (a local run with it on), so the helper adds no setting.
+- 2026-10-30, rung 5 (diff-reviewer): a 120 s budget for the whole check, a refused sign-in stopping the run, and request sizes refused on `Content-Length` before parsing, with the preview's carry URL-encoded so no file part is spooled to disk.
+- 2026-10-30, rung 5: the expired-token open question is answered by building the sign-in-again message after a `401`/`403`; whether the page should also call `/.auth/refresh` first stays with the real-tenant smoke test.
 
 ## Blast radius (measured)
 

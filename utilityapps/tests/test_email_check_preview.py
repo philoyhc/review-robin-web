@@ -1,5 +1,6 @@
-"""The upload and the wired preview (segment U1, rung 3): the file goes
-in, its counts come back, and it is carried in the page, never kept."""
+"""The upload and the preview (segment U1, rung 3; the check button rung
+5's): the file goes in, its counts come back, and it is carried in the
+page, never kept."""
 
 from __future__ import annotations
 
@@ -47,7 +48,7 @@ def test_without_an_email_column_the_operator_chooses(client: TestClient) -> Non
     assert '<option value="" selected>Choose a column' in first
     assert "Addresses to check" not in first
     chosen = client.post(
-        URL, files={"content": (None, base64.b64encode(data)), "filename": (None, "list.csv"), "column": (None, "1")}
+        URL, data={"content": base64.b64encode(data).decode(), "filename": "list.csv", "column": "1"}
     )
     assert chosen.status_code == 200
     assert '<option value="1" selected>Work address</option>' in chosen.text
@@ -57,7 +58,7 @@ def test_without_an_email_column_the_operator_chooses(client: TestClient) -> Non
 
 def test_a_column_out_of_range_is_ignored(client: TestClient) -> None:
     data = b"email\r\na@x.edu\r\n"
-    page = client.post(URL, files={"content": (None, base64.b64encode(data)), "column": (None, "9")})
+    page = client.post(URL, data={"content": base64.b64encode(data).decode(), "column": "9"})
     assert '<option value="0" selected>email</option>' in page.text
 
 
@@ -67,6 +68,7 @@ def test_a_column_out_of_range_is_ignored(client: TestClient) -> None:
         ({"file": ("", b"", "text/csv")}, "Choose a CSV file first."),
         ({"file": ("x.csv", b"email\r\n", "text/csv")}, "header but no rows"),
         ({"content": (None, "not base64!")}, "Upload it again."),
+        ({"content": (None, "x" * (2 * 1024 * 1024))}, "larger than 1024 KiB"),
     ],
 )
 def test_a_refused_file_returns_to_the_upload_page_with_why(
@@ -78,25 +80,49 @@ def test_a_refused_file_returns_to_the_upload_page_with_why(
     assert '<input id="file" name="file" type="file"' in page.text
 
 
-def test_a_file_at_the_byte_limit_round_trips_through_the_page(client: TestClient) -> None:
-    """The carried copy is a third larger than the file; the form's part
-    limit allows it."""
+def test_a_file_near_the_byte_limit_round_trips_through_the_page(client: TestClient) -> None:
+    """The upload's whole request is held to `MAX_BYTES`, the form's own
+    few hundred bytes included; the carried copy, a third larger, posts
+    URL-encoded under its own limit."""
     row = b"a@x.edu," + b"x" * 2500 + b"\r\n"
-    data = b"email,pad\r\n" + row * ((csvio.MAX_BYTES - 20) // len(row))
-    assert len(data) <= csvio.MAX_BYTES
+    data = b"email,pad\r\n" + row * ((csvio.MAX_BYTES - 4096) // len(row))
+    assert len(data) <= csvio.MAX_BYTES - 4096
     first = _upload(client, data)
     assert first.status_code == 200
-    again = client.post(URL, files={"content": (None, base64.b64encode(data)), "column": (None, "0")})
+    again = client.post(URL, data={"content": base64.b64encode(data).decode(), "column": "0"})
     assert again.status_code == 200 and _carried(again.text) == data
 
 
-def test_the_check_stays_disabled_until_rung_5(client: TestClient) -> None:
+def test_an_upload_over_the_limit_is_refused_before_it_is_read(client: TestClient) -> None:
+    page = _upload(client, b"email\r\n" + b"a@x.edu\r\n" * (csvio.MAX_BYTES // 9))
+    assert page.status_code == 400 and "larger than 1024 KiB" in page.text
+
+
+def test_an_upload_without_a_length_is_refused(client: TestClient) -> None:
+    # A streamed body goes chunked, with no `Content-Length`.
+    request = client.build_request(
+        "POST", URL, content=iter([b"x"]), headers={"content-type": "multipart/form-data; boundary=b"}
+    )
+    page = client.send(request)
+    assert page.status_code == 400 and "did not say its size" in page.text
+
+
+@pytest.mark.parametrize("column", ["²", "-1", " 1", "1.0"])
+def test_a_column_that_is_not_a_plain_index_is_ignored(client: TestClient, column: str) -> None:
+    data = b"email\r\na@x.edu\r\n"
+    page = client.post(URL, data={"content": base64.b64encode(data).decode(), "column": column})
+    assert page.status_code == 200 and '<option value="0" selected>email</option>' in page.text
+
+
+def test_the_check_posts_the_carried_file_to_the_check(client: TestClient) -> None:
     text = _upload(client, b"email\r\na@x.edu\r\n").text
-    assert re.search(r'<button class="btn primary" type="button" disabled>Check addresses', text)
+    assert re.search(
+        r'<button class="btn primary" type="submit" formaction="/utilities/email-check/check">Check addresses',
+        text,
+    )
+    assert "no-store" in _upload(client, b"email\r\na@x.edu\r\n").headers["cache-control"]
 
 
-def test_preview_is_404_deployed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    from utilityapps.email_check import routes
-
-    monkeypatch.setattr(routes, "is_local", lambda: False)
-    assert _upload(client, b"email\r\na@x.edu\r\n").status_code == 404
+def test_the_check_is_disabled_until_a_column_is_chosen(client: TestClient) -> None:
+    text = _upload(client, b"Name,Work\r\nA,a@x.edu\r\n").text
+    assert re.search(r'formaction="/utilities/email-check/check" disabled>Check addresses', text)
