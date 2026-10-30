@@ -244,6 +244,11 @@ Ships:
   "scheduled" immediately and polls the audit log for progress.
 - Operator UI: a progress affordance on Manage Invitations
   showing the in-flight batch.
+- Links built with no request: a worker has no request to build
+  invitation links from. The public address is the host's
+  `CORDWARE_PUBLIC_ORIGIN` (segment 21E), read today only by
+  `CordwareSettings`; the worker needs it moved where an application
+  can read it, or the link built at enqueue time.
 
 **Hard dependency:** Part A. Doesn't depend on B but pairs
 naturally with idempotent retry.

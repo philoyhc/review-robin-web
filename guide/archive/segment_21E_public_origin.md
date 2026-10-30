@@ -29,7 +29,7 @@ The deployment's choice (Cordware's private to-do, item 12) was a custom domain 
   - carries a path other than `/`, or a query, fragment or user info;
   - is `http` outside `APP_ENV=local`.
 
-  A trailing `/` is stripped. An empty value counts as unset. Lands in `cordware/spec/host.md`, "Public origin".
+  A trailing `/` is stripped. An empty value counts as unset. Lands in `cordware/spec/host.md`, "`CORDWARE_PUBLIC_ORIGIN`".
 - **What changes when set:**
   - `scope["scheme"]` becomes the origin's scheme;
   - `scope["server"]` becomes `(host, port)`, with the port defaulted from the scheme;
@@ -58,12 +58,24 @@ Taken 2026-10-30 at `3427ae4`.
 | Host middleware today | 0 | `grep -n "add_middleware" cordware/main.py` |
 | Tests pinning absolute URLs | 1 file (`tests/integration/test_mount_requirements.py`, requirement 4) | `grep -rln "Requirement 4" tests` |
 
+## Status
+
+Closed 2026-10-30. The ladder ran as written: plan `#3415`, build `#3416`, close (this rung).
+
+Decisions confirmed at build:
+- **Validation is stricter than planned** (cold read). The host must be an ASCII DNS name or an IP address, and the port 1–65535. The `Host` header is rebuilt from the checked parts, so a default port is dropped. Before this, a non-Latin-1 host passed startup and then failed every request.
+- **Websocket scopes pass through unrewritten.** None exist.
+- **Residential and Utilities need no change.** 14 of the 16 slash routes are theirs; a Utilities redirect is tested.
+- **Names follow `CORDWARE_APPS`.** The field is `cordware_public_origin`, and the host.md section is titled by the setting (plan wording corrected).
+
+Reads: one `diff-reviewer` read, at rung 2, on the cumulative diff. Nothing blocking. Three validation holes were fixed in that PR; one test that claimed more than it checked was narrowed. `spec-writer` at the close found nothing false in the three specs; it dropped one provenance tag from `cordware/spec/host.md`.
+
 ## PR ladder
 
 1. **This plan**, with its queue entry. Prose only.
 2. **The setting, the middleware and the tests.**
    - Lands in `cordware/main.py`:
-     - the `public_origin` field and its validation;
+     - the `cordware_public_origin` field and its validation;
      - the startup refusal;
      - the middleware, installed outermost when set.
    - Tests in `cordware/tests/test_host.py`:
@@ -106,7 +118,7 @@ Taken 2026-10-30 at `3427ae4`.
 
 ## Doc impact
 
-- `cordware/spec/host.md` — new "Public origin" section: the setting, its validation, what the middleware rewrites and what it leaves alone (rung 2).
+- `cordware/spec/host.md` — new "`CORDWARE_PUBLIC_ORIGIN`" section: the setting, its validation, what the middleware rewrites and what it leaves alone (rung 2).
 - `spec/settings_inventory.md` — `CORDWARE_PUBLIC_ORIGIN` in §8 beside `CORDWARE_APPS` (rung 2).
 - `spec/architecture.md` — absolute URLs come from the configured public origin when set, else the request's host (close).
 - `guide/deferred_consolidated.md` — the request-host entry, retired as built (close).

@@ -320,10 +320,13 @@ route or helper that redirects takes `request`.
   `fix_url`); templates add the prefix. A service never imports
   `app.web.urls`.
 - **Absolute links** (`request.url_for("reviewer_invite", …)`, the
-  invitation and reminder links) are built from the request's own scheme,
-  host and `root_path`, so they carry the prefix and are not routed through
-  these helpers. No setting names a public base URL. Without a request there
-  is no URL builder, and the scheduled invite trigger does nothing.
+  invitation and reminder links) are built from the request's scheme, host
+  and `root_path`, so they carry the prefix and are not routed through these
+  helpers. The scheme and host are the request's own, or the host's
+  `CORDWARE_PUBLIC_ORIGIN` when that is set: the host then rewrites every
+  request to it before RRW sees it (`cordware/spec/host.md`). RRW reads no
+  base-URL setting of its own. Without a request there is no URL builder,
+  and the scheduled invite trigger does nothing.
 - **A script's URL comes from the template.** A URL a route passes to an
   inline script through context still needs `url()` where the template
   emits it; the static rules cannot see that value, the crawl can.
