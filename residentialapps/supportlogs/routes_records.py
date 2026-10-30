@@ -3,7 +3,9 @@ rung 7 (author, 2026-10-30): the viewer's own encounters or plans as CSV,
 for one term or all, and an empty template to fill for an upload. Only a
 holder who has unlocked the section gets a file; anyone else goes back to
 the locked page. Uploads and purges wait on item 3; a purge only hides,
-and a sys admin alone deletes."""
+and a sys admin alone deletes. A sample: the unlock rides in the address,
+so wired, the unlock is held server-side and the download is a POST, so
+no link or bookmark can start an audited export."""
 
 from __future__ import annotations
 
@@ -25,11 +27,13 @@ KINDS = {
     "students": ("encounters", sample.ENCOUNTER_COLUMNS, sample.encounter_rows),
     "plans": ("plans", sample.PLAN_COLUMNS, sample.plan_rows),
 }
+TEMPLATES = {"students": sample.ENCOUNTER_COLUMNS, "plans": sample.PLAN_TEMPLATE_COLUMNS}
 
 
 def _cell(value: str) -> str:
     """A cell a spreadsheet will not run: text that opens like a formula
-    is kept as text."""
+    is kept as text, behind a leading apostrophe the upload (item 3) must
+    strip."""
     return "'" + value if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
 
 
@@ -50,7 +54,7 @@ def _download(request: Request, page: str, template: bool) -> Response:
         return RedirectResponse(url_path(request, f"/{page}/") + query(me), status_code=303)
     what, columns, rows_of = KINDS[page]
     if template:
-        return _csv(f"support-logs-{what}-template.csv", columns, [])
+        return _csv(f"support-logs-{what}-template.csv", TEMPLATES[page], [])
     key = request.query_params.get("term", sample.CURRENT_TERM.key)
     chosen = None if key == "all" else sample.term(key) or sample.CURRENT_TERM
     scope = "all-terms" if chosen is None else chosen.key

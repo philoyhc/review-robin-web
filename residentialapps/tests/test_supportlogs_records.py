@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -27,18 +28,15 @@ def client() -> TestClient:
     return TestClient(create_app())
 
 
-def section(page: str, heading_id: str) -> str:
-    return page.split(f'id="{heading_id}"')[1].split("</section>\n{% endblock")[0]
-
-
 def rows(body: str) -> list[list[str]]:
     return list(csv.reader(io.StringIO(body)))
 
 
 def test_the_terms_are_the_rosters(client: TestClient) -> None:
     with TERMS_CSV.open(newline="") as f:
-        terms = [(f"{r['Year']}.{r['Term']}", r["Start"], r["End"]) for r in csv.DictReader(f)]
-    assert [(t.key, t.start.isoformat(), t.end.isoformat()) for t in sample.TERMS] == terms
+        terms = [(f"{r['Year']}.{r['Term']}", r["Name"], r["Start"], r["End"]) for r in csv.DictReader(f)]
+    assert [(t.key, t.name, t.start.isoformat(), t.end.isoformat()) for t in sample.TERMS] == terms
+    assert sample.CURRENT_TERM.label == "AY2026-2027, Term 1 · Sem 1 + Winter break"  # as Rosters and setup shows it
     assert sample.CURRENT_TERM.key == "AY2026-2027.1"
 
 
@@ -73,6 +71,20 @@ def test_encounters_download_by_term_or_all(client: TestClient) -> None:
     assert len(rows(client.get(f"/students/records.csv?{OPEN}&term=AY2025-2026.2").text)) == 1  # the header only
     everything = client.get(f"/students/records.csv?{OPEN}&term=all")
     assert "all-terms" in everything.headers["content-disposition"] and len(rows(everything.text)) == len(got)
+    unknown = client.get(f"/students/records.csv?{OPEN}&term=no-such-term")
+    assert sample.CURRENT_TERM.key in unknown.headers["content-disposition"]  # an unknown term reads as the current one
+
+
+def test_a_term_bounds_both_ends() -> None:
+    """A part-term, the sample's encounters all falling in the current one:
+    its first and last days count, the days outside do not."""
+    part = sample.Term("x.1", "Part", date(2026, 10, 15), date(2026, 10, 22))
+    got = [r[0] for r in sample.encounter_rows("Daniel Koh", part)]
+    assert got == sorted(e.when.date().isoformat() for e in sample.encounters_by("Daniel Koh")
+                         if date(2026, 10, 15) <= e.when.date() <= date(2026, 10, 22))
+    assert got[0] == "2026-10-15" and got[-1] == "2026-10-22"
+    before = sample.Term("x.0", "Before", date(2026, 9, 1), date(2026, 10, 1))
+    assert [r[1] for r in sample.plan_rows("Daniel Koh", before)] == ["Clara Tan"]  # P-01 began 21 Sep
 
 
 def test_only_the_viewer_s_own_records(client: TestClient) -> None:
@@ -87,9 +99,19 @@ def test_plans_download_and_both_templates(client: TestClient) -> None:
     plans = rows(client.get(f"/plans/records.csv?{OPEN}&term=all").text)
     assert tuple(plans[0]) == sample.PLAN_COLUMNS and len(plans) - 1 == len(sample.plans_of("Daniel Koh"))
     assert {r[2] for r in plans[1:]} == {"Formal assignment", "Follow-up"}
-    for page, columns in (("students", sample.ENCOUNTER_COLUMNS), ("plans", sample.PLAN_COLUMNS)):
+    for page, columns in (("students", sample.ENCOUNTER_COLUMNS), ("plans", sample.PLAN_TEMPLATE_COLUMNS)):
         template = client.get(f"/{page}/records-template.csv?{OPEN}")
         assert rows(template.text) == [list(columns)] and "template" in template.headers["content-disposition"]
+    assert "Kind" not in sample.PLAN_TEMPLATE_COLUMNS  # an upload makes follow-ups, never a formal assignment
+    assert "never makes one" in client.get(f"/plans/?{OPEN}").text
+
+
+def test_the_forms_carry_the_viewer(client: TestClient) -> None:
+    locked = client.get("/students/?as=Priya%20Raman").text.split('id="records-h"')[1]
+    assert '<input type="hidden" name="as" value="Priya Raman">' in locked
+    unlocked = client.get(f"/students/?as=Priya%20Raman&{OPEN}").text.split('id="dl-h"')[1].split("</form>")[0]
+    assert '<input type="hidden" name="as" value="Priya Raman">' in unlocked
+    assert 'records-template.csv?as=Priya%20Raman&amp;records=open&amp;understood=yes' in client.get(f"/students/?as=Priya%20Raman&{OPEN}").text
 
 
 def test_a_download_without_the_unlock_goes_back(client: TestClient) -> None:
@@ -102,7 +124,8 @@ def test_a_download_without_the_unlock_goes_back(client: TestClient) -> None:
 def test_a_cell_that_opens_like_a_formula_stays_text() -> None:
     from residentialapps.supportlogs.routes_records import _cell
 
-    assert [_cell(v) for v in ("=SUM(A1)", "+1", "-2", "@x", "plain", "")] == ["'=SUM(A1)", "'+1", "'-2", "'@x", "plain", ""]
+    assert [_cell(v) for v in ("=SUM(A1)", "+1", "-2", "@x", "\tx", "\rx", "plain", "")] == [
+        "'=SUM(A1)", "'+1", "'-2", "'@x", "'\tx", "'\rx", "plain", ""]
 
 
 def test_only_the_frontline_downloads(client: TestClient) -> None:
@@ -117,7 +140,7 @@ def test_purge_hides_and_sys_admin_alone_deletes(client: TestClient) -> None:
     assert "Nothing is deleted" in card and "alone can delete" in card
     assert 'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
     audit = client.get("/sys-admin/audit?as=Rachel%20Yeo").text.split('id="purged-h"')[1].split("</section>")[0]
-    assert "Grace Ho: 6 encounters" in audit and "Delete permanently" in audit
+    assert "Grace Ho: 6 encounters" in audit and 'aria-label="Delete permanently: Grace Ho\'s purged encounters"' in audit
     assert not any(s.name in audit for s in sample.STUDENTS)
 
 

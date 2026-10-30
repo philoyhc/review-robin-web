@@ -101,7 +101,17 @@ form's end, and the main action is a full-width Primary on the page
 - **The forms that show their confirmation are live on sample data**:
   Log encounter's Save, Safety concern's Save and raise, Share, Flag for
   formal assignment and the Consultation check's Check. Each submits to its
-  confirmation page and stores nothing.
+  confirmation page and stores nothing. Your records' Unlock and Download
+  CSV, and its template link, are live too: the download is the sample's
+  own records.
+
+- **Your records** (author, 2026-10-30) ends Students and My plans: a
+  section locked until its holder ticks a confirmation and unlocks it.
+  Unlocked, it downloads the holder's own encounters or plans as CSV, for a
+  term of Rosters and setup's or all terms, and offers the template. The
+  upload (follow-ups only, for plans) and Purge all are disabled until
+  wired. Leaving the page locks it again. A purge hides and keeps: only a
+  sys admin deletes, from Sys admin's Audit log.
 
 ## 5. Lists and tables
 
@@ -119,14 +129,6 @@ form's end, and the main action is a full-width Primary on the page
   - the note limit;
   - the consultation rules.
 - **Configuration** shows each list as a card in a `.card-grid`.
-
-- **Your records** (author, 2026-10-30) ends Students and My plans: a
-  section locked until its holder ticks a confirmation and unlocks it.
-  Unlocked, it downloads the holder's own encounters or plans as CSV for a
-  term of Rosters and setup's, or all terms; offers the template and an
-  upload; and purges them all. Leaving the page locks it again. A purge
-  hides and keeps: Sys admin's Audit log lists purged records as counts,
-  and only a sys admin deletes them.
 
 ## 6. What the screens say about privacy
 
@@ -150,7 +152,7 @@ form's end, and the main action is a full-width Primary on the page
   says so, and an entry it could not read is listed as not read, never
   given a state.
 - **Administration sees no content.** Sys admin shows grants, lists,
-  cluster names and administrative events, never a student. The
+  cluster names, administrative events and purged records' counts, never a student. The
   support-activity audit is senior staff's, on Overview.
 - **Notes are short and say so**: a live count to the limit, and the
   minimization guidance beside the field.

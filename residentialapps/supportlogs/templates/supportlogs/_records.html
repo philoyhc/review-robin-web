@@ -35,7 +35,7 @@
           </form>
           <section class="card card-pad" aria-labelledby="ul-h">
             <h3 id="ul-h">Upload</h3>
-            <p class="sub">Add {{ what }} from a CSV in the template's columns. Each row is checked against the lists Sys admin configures, and you see a preview before anything is added.</p>
+            <p class="sub">Add {{ "follow-ups" if page == "plans" else what }} from a CSV in the template's columns. Each row is checked against the lists Sys admin configures, and you see a preview before anything is added.{% if page == "plans" %} Formal assignments are senior staff's, so an upload never makes one.{% endif %}</p>
             <a class="btn btn-secondary" href="{{ url('/' ~ page ~ '/records-template.csv') }}{{ qs(records='open', understood='yes') }}">Download the template</a>
             <div class="field-wide gap-above-sm"><label for="ul-file">CSV file</label><input id="ul-file" class="input" type="file" accept=".csv,text/csv" disabled></div>
             <button type="button" class="btn btn-primary" disabled>Upload and preview</button>

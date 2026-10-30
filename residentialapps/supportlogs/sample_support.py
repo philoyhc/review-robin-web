@@ -803,13 +803,21 @@ ADMIN_AUDIT = (
 @dataclass(frozen=True)
 class Term:
     key: str  # "AY2026-2027.1"
-    label: str  # "AY2026-2027, Term 1: Sem 1 + Winter break"
+    name: str  # "Sem 1 + Winter break"
     start: date
     end: date
 
+    @property
+    def label(self) -> str:
+        """As Rosters and setup shows it: "AY2026-2027, Term 1 · Sem 1 +
+        Winter break"."""
+        year, n = self.key.split(".")
+        return f"{year}, Term {n} · {self.name}"
+
+
 
 TERMS = tuple(
-    Term(f"{y}.{n}", f"{y}, Term {n}: {name}", date.fromisoformat(s), date.fromisoformat(e))
+    Term(f"{y}.{n}", name, date.fromisoformat(s), date.fromisoformat(e))
     for y, n, name, s, e in (
         ("AY2025-2026", 1, "Sem 1 + Winter break", "2025-08-04", "2026-01-11"),
         ("AY2025-2026", 2, "Sem 2", "2026-01-12", "2026-05-10"),
@@ -829,6 +837,9 @@ def term(key: str | None) -> Term | None:
 ENCOUNTER_COLUMNS = ("Date", "Time", "Student email", "Student", "Duration", "Type", "Concern areas",
                      "Follow-up needed", "How", "Note")
 PLAN_COLUMNS = ("Student email", "Student", "Kind", "Source", "Cadence", "Since", "Review", "Status")
+# An upload adds follow-ups only: formal assignments are senior staff's
+# (§7), so the plans template has no Kind or Source.
+PLAN_TEMPLATE_COLUMNS = ("Student email", "Student", "Cadence", "Since")
 
 
 def encounter_rows(staff: str, t: Term | None) -> list[list[str]]:
@@ -845,10 +856,12 @@ def encounter_rows(staff: str, t: Term | None) -> list[list[str]]:
 
 
 def plan_rows(staff: str, t: Term | None) -> list[list[str]]:
-    """The staff member's own plans active at any point in a term (all
-    terms when none)."""
+    """The staff member's own plans, closed ones included, begun on or
+    before the term's end (all terms when none). The sample's plans carry no
+    closing date, so a plan closed before a term still counts in it; wired,
+    a plan counts when its open span overlaps the term."""
     rows = []
-    for p in sorted(plans_of(staff), key=lambda p: p.start):
+    for p in sorted((p for p in PLANS if p.staff == staff), key=lambda p: p.start):
         if t and p.start > t.end:
             continue
         s = student(p.student)
