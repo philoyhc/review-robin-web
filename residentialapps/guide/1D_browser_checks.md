@@ -47,7 +47,8 @@ read right.
   - Recent encounters;
   - My last 14 days.
   
-  Clara Tan's row reads "Overdue 2 days".
+  Clara Tan's row reads "Overdue 2 days". *Ruling R1: sentence-case
+  status labels.*
 - [ ] **Priya's Home** lists every active flag, with Unacknowledged above
   Acknowledged.
 - [ ] **Hui Min's Home** holds only the flags, closed ones included.
@@ -56,7 +57,7 @@ read right.
 
 - [ ] **One screen.** As Daniel, open **Log**. Student, duration and type
   fit as choice pills. A selected pill shows a ✓ and bold text, not only a
-  color change.
+  color change. *Ruling R1: pills as styled radios and checkboxes.*
 - [ ] **Save stays disabled** until a student, a duration and a type are
   chosen.
 - [ ] **Add details** unfolds on the same page:
@@ -78,7 +79,7 @@ read right.
 
 - [ ] **Mark a safety concern** is outline red, set apart at the end of
   the Log form. Choose a student and a duration, then tap it: the Safety
-  screen keeps both choices.
+  screen keeps both choices. *Ruling R1: its outline red.*
 - [ ] **The Safety screen** has:
   - a red header;
   - the four call links first, each with its number, and all four
@@ -86,7 +87,8 @@ read right.
   - a "Placeholder numbers" note.
 - [ ] **Save and raise safety flag** stays disabled until the student,
   duration, type and escalation step are all set. It then shows the
-  confirmation with the step and time.
+  confirmation with the step and time. *Ruling R1: Primary on a red
+  frame.*
 - [ ] **A flag's page.** As Priya, open F-01 (Elena Park): she can
   **Acknowledge**, and **Close with outcome** asks for an outcome. As
   Daniel, the flag's raiser, open the same flag: he sees its state and no
@@ -107,7 +109,7 @@ read right.
   - Shared with, with Revoke;
   - Following up, with a Safety-plan marker in violet.
 - [ ] **Hana Rahim**, shared by Priya, says so at the top. Her encounters
-  are labelled "Shared by Priya Raman".
+  are labelled "Shared by Priya Raman". *Ruling R5: what a share shows.*
 - [ ] **My plans** with All, Overdue and This week. Formal assignments
   come first, with source and cadence.
 - [ ] **A plan** (P-01) shows its facts and history. As Sam, a follow-up
@@ -125,7 +127,8 @@ read right.
     plan), and no Hana Rahim, who is shared;
   - **Download the template** saves the columns only;
   - Upload and Purge all are disabled; Purge offers all your students or
-    one, and says nothing is deleted;
+    one, and says nothing is deleted. *Ruling R2: Purge all's outline
+    red.*
   - **Lock again**, or leaving the page, locks it.
 - [ ] **Purged records** on Sys admin › Audit log (as Rachel): Grace Ho's
   6 encounters, a count only, with no Delete: only senior staff delete.
@@ -162,9 +165,9 @@ read right.
     and the note says only that student's records go.
 - [ ] **As Siti:** names show without history links. There are no flagged
   students and no audit card. Every plan is marked read-only.
-- [ ] **As Kenneth:** counts only, with no student's name anywhere on the
-  page (search the page with Ctrl+F for "Clara"). The note says
-  "Counts only".
+- [ ] **As Kenneth** (*ruling R3: small counts*): counts only, with no
+  student's name anywhere on the page (search the page with Ctrl+F for
+  "Clara"). The note says "Counts only".
 - [ ] **At 390 px** the tables scroll sideways inside their cards. The
   page itself never scrolls sideways.
 
@@ -175,7 +178,7 @@ read right.
   - Purpose and emails fields;
   - **Fill with the sample list**;
   - Your past checks, which shows his run only. Nadia sees only hers.
-- [ ] **Check the sample list.**
+- [ ] **Check the sample list** (*ruling R4: formal assignments*).
   - The states run strongest first. Each row shows the named reasons, whom
     to consult, and a disabled Consultation select.
   - The statement that *No consultation indicated* never means well or
@@ -192,7 +195,7 @@ read right.
 
 ## 7. Sys admin (desktop first; check at 1280 px, then 390 px)
 
-- [ ] **Access, as Rachel:**
+- [ ] **Access, as Rachel** (*ruling R6: checkboxes or Toggle*):
   - Lapsed grants (Jason Teo) above the table, with Revoke;
   - one row per Staff-roster member;
   - appointments as derived pills ("Residential Fellow (RF)");
@@ -213,15 +216,24 @@ read right.
 
 ## 8. Rulings to give while looking
 
-Record them in the plan's open questions:
+Each is marked *Ruling Rn* at the row that shows it. Record each answer
+in the plan's open questions (`residentialapps/guide/segment_1D_support_logs.md`):
 
-1. **Button and label roles:**
-   - Mark a safety concern is outline red;
-   - Save and raise safety flag is Primary on a red frame;
-   - choice pills are styled radios and checkboxes;
-   - status labels are sentence case.
-2. **Small counts on aggregate view:** suppress a colleague with one
-   student?
-3. **Consultation check:** an active formal assignment suggests rather
-   than requires a consultation.
-4. **Access:** checkboxes, or the plan's Toggle?
+- **R1. Button and label roles** (open question 3; §1–§3):
+  - Mark a safety concern is outline red;
+  - Save and raise safety flag is Primary on a red frame;
+  - choice pills are styled radios and checkboxes;
+  - status labels are sentence case.
+- **R2. Purge all** (§4, Your records): outline red, though a purge hides
+  and keeps?
+- **R3. Small counts on aggregate view** (§5, as Kenneth): suppress a
+  colleague with one student?
+- **R4. Consultation check** (§6): an active formal assignment suggests
+  rather than requires a consultation.
+- **R5. Peer-view scope** (§4, Hana Rahim; spec §17 Q10): a share shows
+  the grantor's records for that student, encounters and plans, read-only.
+- **R6. Access** (§7): checkboxes, or the plan's Toggle?
+
+Not for the browser: the crisis protocol's real contents (the
+institution's), the close check, senior staff granting on others' behalf
+(§17 Q11), and CI's lane for `utilityapps/`.
