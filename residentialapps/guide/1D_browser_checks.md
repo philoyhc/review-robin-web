@@ -5,57 +5,20 @@ item 1 (`residentialapps/guide/segment_1D_support_logs.md`, rungs 1–6), for
 the author's review before item 1 is approved. The tests already check what
 each page contains. These steps check what only a browser shows: layout at
 phone and desktop widths, the scripts' behavior, and whether the screens
-read right. Tick a row once it is checked. A row that needs a change becomes
-a rung 7+ slice. Delete this file when item 1 closes.
+read right.
 
-## 0. Start the app (PowerShell)
+- Tick a row once it is checked.
+- A row that needs a change becomes a rung 7+ slice.
+- Delete this file when item 1 closes.
 
-From the repository root, with the virtualenv set up once as in
-`docs/local_setup.md` §G:
+## 0. Before you start
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-git pull
-pip install -e ".[dev]"            # only if dependencies changed
-
-# Fake auth for this shell only (overrides .env); the host refuses it
-# outside APP_ENV=local, and the sample pages answer only on a local run.
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "operator@example.edu"
-$env:FAKE_AUTH_NAME = "Local Operator"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue   # mount every application
-
-uvicorn cordware.main:app --reload
-```
-
-Open <http://127.0.0.1:8000/supportlogs/>. A block per sample viewer, ready to paste, is in
-`residentialapps/guide/fake_ids.md`.
-
-- The fake-auth account only gets you past sign-in. Who a page is drawn for
-  is the **sample viewer**, chosen on the **Sample viewer** card under each
-  title (`?as=` in the address bar).
-- To check a page at phone width, open DevTools (F12), toggle the device
-  toolbar (Ctrl+Shift+M) and pick a 390 px phone. Check 360 px too.
-- Check dark mode with the Light/Dark toggle at the top right.
-
-To stop the app, press Ctrl+C. To clear the fake-auth settings, close the
-shell or run
-`Remove-Item Env:ALLOW_FAKE_AUTH, Env:FAKE_AUTH_EMAIL, Env:FAKE_AUTH_NAME, Env:APP_ENV`.
-
-| Viewer | Holds | Lands on |
-|---|---|---|
-| Daniel Koh | Frontline | Home (dashboard) |
-| Priya Raman | Frontline, safety-flag recipient | Home, with every active flag |
-| Sam Lee | Senior identifiable, recipient | Overview |
-| Hui Min Goh | Recipient only | Home, flags only |
-| Marcus Tan | Consultation check | Consultation check |
-| Kenneth Lau | Other Staff view, aggregate | Overview, counts only |
-| Siti Rahman | Other Staff view, identifiable | Overview, read-only |
-| Nadia Hassan | Consultation check, identifiable view | Home listing both |
-| Rachel Yeo | Sys admin | Sys admin › Access |
-| Platform super-admin | Super-admin | Sys admin › Access |
-| Wei Jie Ong | No grant | the 403 page |
+- **Start the app** with a block from `residentialapps/guide/fake_ids.md`,
+  "Support Logs (1D)". Its table lists the eleven sample viewers and where
+  each lands. Every page switches viewer from its **Sample viewer** card.
+- **Widths:** the frontline's pages are phone first; check them at 390 px
+  and 360 px. Check Overview and the Consultation check at both widths, and
+  Sys admin at desktop width first.
 
 ## 1. Chrome and Home
 

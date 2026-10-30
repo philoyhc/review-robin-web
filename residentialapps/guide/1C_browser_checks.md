@@ -10,39 +10,18 @@ widths, the scripts' behavior, and whether the screens read right.
 - A row that needs a change becomes a follow-up slice.
 - Delete this file when item 1 closes.
 
-## 0. Start the app
+## 0. Before you start
 
-Paste a block from `residentialapps/guide/fake_ids.md` ("RA Leave") into a
-PowerShell window. Each block sets fake auth for that window, opens the
-browser on the viewer's page, and runs the app. Stop the app with Ctrl+C.
-
-- **Who a page is drawn for comes from the `?as=` part of the address**, not
-  the fake account. The RA pages and the staff pages each have their own
-  viewer chips under the title, so one running app serves every viewer.
+- **Start the app** with a block from `residentialapps/guide/fake_ids.md`,
+  "RA Leave (1C)". Its table lists the RA and staff viewers and what each
+  shows. The RA pages and the staff pages switch viewer with chips under
+  the title.
 - **RA Leave admin has no viewer switch.** It is drawn for a sys admin.
-- **Phone width:** open DevTools (F12), toggle the device toolbar
-  (Ctrl+Shift+M) and pick a 390 px phone. RA pages are phone first; check
-  them there first.
-- **Dark mode:** use the Light/Dark toggle at the top right.
 - **Appeal modes** are previewed from Policy's Appeals card (§5). A
   "Previewing appeals" chip by every RA Leave title shows when one is on.
   Choose **Open** to turn it off.
-
-| Viewer | Side | Shows |
-|---|---|---|
-| Chloe Lim | RA (default) | cover asked of her, a draft, an email not sent |
-| Hana Ito | RA | her cover was declined; name new cover |
-| Ethan Wong | RA | awaiting cover confirmation, a withdrawn application, a draft |
-| Gwen Ho | RA | an appeal with the Master |
-| Lucas Teo | RA | extra leave granted |
-| Faris Iskandar | RA | a rejected application |
-| Maya Seah | RA | an appeal the Master refused |
-| Kai Ng | RA | approved leave cancelled; invited to appeal (By invitation preview) |
-| Daniel Koh | staff (default) | RF, first approver for Cypress A 04-12 |
-| Priya Raman | staff | RSLM, no decisions under the policy |
-| Rachel Yeo | staff, admin | Residential Admin, final approver |
-| Sam Lee | staff, admin | Master, decides appeals |
-| Hui Min Goh | staff | oversees no RA, so RA Leave is not shown |
+- **Widths:** the RA pages are phone first; check them at 390 px first. Check
+  the staff and admin pages at desktop width, then at 390 px.
 
 ## 1. Chrome and the landing
 
