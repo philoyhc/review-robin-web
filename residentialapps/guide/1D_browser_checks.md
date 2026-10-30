@@ -116,6 +116,18 @@ read right.
 - [ ] **Share with a colleague** and **Flag for formal assignment** each
   go to their confirmation. The flag form asks for no reason.
 
+- [ ] **Your records** (as Daniel), at the end of Students and of My plans:
+  - locked at first, with Unlock refused until the confirmation is ticked;
+  - unlocked: the term list opens on the current term, with All terms
+    last; **Download CSV** saves a file named for the term;
+  - the file opens in a spreadsheet with one row per own encounter (or
+    plan), and no Hana Rahim, who is shared;
+  - **Download the template** saves the columns only;
+  - Upload and Purge all are disabled; Purge says nothing is deleted;
+  - **Lock again**, or leaving the page, locks it.
+- [ ] **Purged records** on Sys admin › Audit log (as Rachel): Grace Ho's
+  6 encounters, a count only, with Delete permanently disabled.
+
 ## 5. Overview
 
 - [ ] **As Sam:**

@@ -1,6 +1,7 @@
 {% extends "residential/base.html" %}
 {% from "residential/_sample.html" import sample_title, viewer_card with context %}
 {% from "supportlogs/_frontline.html" import recorded with context %}
+{% from "supportlogs/_records.html" import records_card with context %}
 {% block title %}Students{% endblock %}
 {% block content %}
   {{ sample_title("Students", me.name) }}
@@ -35,4 +36,5 @@
     <ul class="items">{% for g in shared %}{% set s = sample.student(g.student) %}<li><div class="item-head"><a class="strong" href="{{ url('/students/' ~ s.id) }}{{ as_query }}">{{ s.name }}</a><span class="chip chip-mute">Shared by {{ g.grantor }}</span></div><div class="subtle">{{ s.email }} · since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>
   </section>
   {% endif %}
+  {{ records_card("students", "encounters", unlocked) }}
 {% endblock %}
