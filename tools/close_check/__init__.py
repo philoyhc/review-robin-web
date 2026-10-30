@@ -133,6 +133,7 @@ import sys
 
 from ._archive import archived_report, manifest_levels
 from ._manifest import (
+    APP_DIRS,
     FAIL,
     NOTED,
     PASS,
@@ -149,6 +150,7 @@ from ._manifest import (
     item_heading_start,
     parse_bullets,
     parse_id,
+    plan_dirs,
     report,
     resolve_plan,
     run,
@@ -158,6 +160,7 @@ from ._shared import REPO, Unresolvable, _git
 from ._sweep import dated_sweeps, last_sweep_date, stale_report, sweep_scope
 
 __all__ = [
+    "APP_DIRS",
     "FAIL",
     "NOTED",
     "PASS",
@@ -182,6 +185,7 @@ __all__ = [
     "main",
     "parse_bullets",
     "parse_id",
+    "plan_dirs",
     "report",
     "resolve_plan",
     "run",

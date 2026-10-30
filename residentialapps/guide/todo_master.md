@@ -4,7 +4,7 @@
 
 ## Stubs
 
-- **`tools/close_check.py` learns Residential's plans** *(filed 2026-10-26, at 1A's close)*: it finds a plan only in RRW's `guide/` and `guide/archive/`, so 1A's close was checked by hand. Searching `residentialapps/guide/` and its `archive/` too lets 1B close with the tool. One `tools/` PR with tests, before 1B closes.
+None open.
 
 ## Rulings (author, 2026-10-25)
 

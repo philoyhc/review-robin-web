@@ -18,6 +18,7 @@ from ._manifest import (
     find_manifests,
     honoured,
     parse_bullets,
+    plan_dirs,
     window,
 )
 from . import _shared
@@ -52,7 +53,10 @@ def manifest_levels(found: dict) -> list[tuple[int, int, int | None]]:
 
 
 def archived_report(stream) -> None:
-    plans = sorted((_shared.REPO / "guide" / "archive").glob("segment_*.md"))
+    plans = sorted(
+        path for directory in plan_dirs() if directory.name == "archive"
+        for path in directory.glob("segment_*.md")
+    )
     total_paths = total_honoured = 0
     fully = considered = no_manifest = missing = 0
     noted_paths = noted_plans = 0

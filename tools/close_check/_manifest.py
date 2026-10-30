@@ -30,7 +30,21 @@ from ._shared import Unresolvable, _git
 # (`docs/setup.md §4c`, `spec/x.md#anchor`). Matched anywhere in the
 # bullet, because bullets legitimately commit to several specs in their
 # description ("Per-Part spec docs as the scope settles — A, B, C").
-COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
+#
+# A Cordware app developed beside RRW keeps its own `spec/`, `docs/` and
+# `guide/` under its folder (`residentialapps/spec/…`), and its plans write
+# their manifests against those, so each app folder may prefix the three.
+# Until 2026-10-30 they did not match at all: Residential's 1A closed by
+# hand, because every bullet of its manifest read as naming no path.
+# `APP_DIRS` mirrors `tools/ci_lanes.py`'s, which a test holds it to.
+APP_DIRS = ("residentialapps", "utilityapps")
+APP_PREFIX = "(?:(?:" + "|".join(APP_DIRS) + ")/)?"
+# The host's own `cordware/spec/` is a spec folder too (`ci_lanes.py`'s
+# prose folders), dropped the same way until 2026-10-30: 21A–21D's and
+# Residential 1A's bullets on `cordware/spec/host.md` read as no path.
+COMMITTED_PATH = re.compile(
+    r"`((?:" + APP_PREFIX + r"(?:spec|docs)|cordware/spec)/[A-Za-z0-9._/-]+\.md)[^`]*`"
+)
 
 # A `guide/` commitment. Counted and listed, never verified — which is a
 # decision about what this tool can honestly say, not an omission.
@@ -70,7 +84,7 @@ COMMITTED_PATH = re.compile(r"`((?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
 #
 # So the tool reports them and says it is not checking them. The reader
 # closes that loop, exactly as they already do for a C3 warning.
-GUIDE_PATH = re.compile(r"`(guide/[A-Za-z0-9._/-]+\.md)[^`]*`")
+GUIDE_PATH = re.compile(r"`(" + APP_PREFIX + r"guide/[A-Za-z0-9._/-]+\.md)[^`]*`")
 
 # A bare filename, matched **only in the bullet's leading position** —
 # before the em-dash that separates the path from its description.
@@ -121,8 +135,13 @@ COMMITTED_BARE = re.compile(r"`([A-Za-z0-9._-]+\.md)[^`]*`")
 # Found because the published count (16 paths, 3 leading, 13 citations) did
 # not reproduce against the shipped regex, which gave 20/3/17. The prose was
 # right and the code was wrong — the four extra were these.
+#
+# An app folder is a root too, for its code (`residentialapps/web/…`); its
+# `spec/`, `docs/` and `guide/` are left to the two patterns above, so a
+# `guide/` commitment stays counted-not-verified rather than checked twice.
 COMMITTED_ROOT = re.compile(
-    r"`((?:app|tests|tools|alembic|\.github|\.claude)/[A-Za-z0-9._/-]+)[^`]*`"
+    r"`((?:app|tests|tools|alembic|\.github|\.claude)/[A-Za-z0-9._/-]+"
+    r"|(?:" + "|".join(APP_DIRS) + r")/(?!(?:spec|docs|guide)/)[A-Za-z0-9._/-]+)[^`]*`"
 )
 
 # The em-dash (or en-dash) that ends a manifest bullet's path list.
@@ -192,22 +211,33 @@ NOTED = "noted"
 # resolution
 
 
+def plan_dirs() -> list[pathlib.Path]:
+    """Where plans live: RRW's `guide/`, then each app's, each live dir
+    then its archive."""
+    roots = [_shared.REPO, *(_shared.REPO / app for app in APP_DIRS)]
+    return [directory for root in roots for directory in (root / "guide", root / "guide" / "archive")]
+
+
 def resolve_plan(segment: str) -> pathlib.Path:
-    """`18R` -> guide/segment_18R_ux_refine.md (live dir, then archive).
+    """`18R` -> guide/segment_18R_ux_refine.md, `1D` ->
+    residentialapps/guide/segment_1D_support_logs.md (`plan_dirs()`).
 
     Matches `segment_<id>.md` and `segment_<id>_<slug>.md` exactly, so
     `04` does not resolve to `segment_04A.md`.
     """
     candidates = [
         path
-        for directory in (_shared.REPO / "guide", _shared.REPO / "guide" / "archive")
+        for directory in plan_dirs()
         for path in sorted(directory.glob(f"segment_{segment}*.md"))
         if path.stem == f"segment_{segment}"
         or path.stem.startswith(f"segment_{segment}_")
     ]
     if not candidates:
-        raise Unresolvable(f"no plan file for segment {segment!r} in guide/")
-    if len({p.name for p in candidates}) > 1:
+        raise Unresolvable(f"no plan file for segment {segment!r} in any guide/")
+    # A plan and its archived copy are one plan; the same name in RRW's
+    # guide and an app's is two, and ambiguous.
+    trees = {(p.parent.parent if p.parent.name == "archive" else p.parent, p.name) for p in candidates}
+    if len(trees) > 1:
         names = ", ".join(sorted(p.name for p in candidates))
         raise Unresolvable(f"segment {segment!r} is ambiguous: {names}")
     return candidates[0]
