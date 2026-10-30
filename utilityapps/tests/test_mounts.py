@@ -71,3 +71,15 @@ def test_log_records_are_stamped_utilities() -> None:
     record = logging.LogRecord("utilityapps.main", logging.INFO, __file__, 1, "x", None, None)
     assert handler.filter(record)
     assert record.application == "utilities"
+
+
+def test_favicon_is_the_amber_wrench_and_alerts_keep_the_status_hue() -> None:
+    """Author's ruling, 2026-10-30: the favicon is a white wrench on amber
+    `#b45309`, and an alert is never painted with the accent."""
+    page = TestClient(host_with(("utilities",))[0]).get("/utilities/").text
+    icon = page[page.index('<link rel="icon"') :]
+    icon = icon[: icon.index('</svg>">') + 8]
+    assert "fill='%23b45309'" in icon and "stroke='%23fff'" in icon
+    assert "translate(7 7) scale(0.75)" in icon and "stroke-width='3.2'" in icon
+    assert ".alert { border-color: var(--warn); }" in page
+    assert ".alert strong { color: var(--warn); }" in page

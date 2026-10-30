@@ -7,6 +7,23 @@ built (segment U1, closed 2026-10-30). Production does not carry it yet:
 Cordware's import rules exclude `utilityapps/` until the author enables
 it, and its real-tenant smoke test is Cordware's.
 
+**Identity** (author, 2026-10-30): the name **Cordware Utilities**, mounted at
+`/utilities`. Its accent is **amber `#b45309`**; white on it is about 5:1.
+It is distinct from Cordware's black, Review Robin's blue, Residential
+Operations' fuchsia and Support Logs' teal. The favicon is a white wrench on
+a 32×32 amber rounded square, `rx` 7. It follows Residential's pattern (a
+white glyph, an effective 2.4 stroke, round caps and joins), using Lucide's
+"wrench" scaled 0.75 from its 24-unit grid, inline in
+`templates/utilities/base.html`.
+
+Rejected:
+- Cordware's black cord, which would make the tab identical to the landing
+  page's.
+- The cord on a colored tile, which is unreadable at 16 px.
+
+Amber can read as "warning", so alerts use the status token `--warn`, never
+the accent.
+
 **Graph, 2026-10-30** (Cordware's private progress report): with a user's
 delegated token, a lookup by UPN works and a lookup by mail needs
 `$filter=mail eq '…'`; calls from application code are not yet proved.
