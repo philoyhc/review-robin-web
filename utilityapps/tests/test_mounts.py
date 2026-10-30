@@ -1,10 +1,12 @@
 """Utilities under the Cordware host: the registry entry, running alone
-and beside the others, the index, route names and log stamps
+and beside the others, the index, route names, log stamps and the app's
+favicon
 (`utilityapps/spec/utilities.md`; segment U1, rung 1)."""
 
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi.testclient import TestClient
 
@@ -74,12 +76,20 @@ def test_log_records_are_stamped_utilities() -> None:
 
 
 def test_favicon_is_the_amber_wrench_and_alerts_keep_the_status_hue() -> None:
-    """Author's ruling, 2026-10-30: the favicon is a white wrench on amber
-    `#b45309`, and an alert is never painted with the accent."""
+    """Author's ruling, 2026-10-30: the favicon is a white wrench on an
+    amber `#b45309` rounded tile, and nothing on the page is painted with
+    the accent, alerts least of all."""
     page = TestClient(host_with(("utilities",))[0]).get("/utilities/").text
     icon = page[page.index('<link rel="icon"') :]
     icon = icon[: icon.index('</svg>">') + 8]
-    assert "fill='%23b45309'" in icon and "stroke='%23fff'" in icon
-    assert "translate(7 7) scale(0.75)" in icon and "stroke-width='3.2'" in icon
-    assert ".alert { border-color: var(--warn); }" in page
-    assert ".alert strong { color: var(--warn); }" in page
+    for part in (
+        "viewBox='0 0 32 32'",
+        "rx='7' fill='%23b45309'",
+        "translate(7 7) scale(0.75)",
+        "stroke='%23fff' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'",
+    ):
+        assert part in icon, part
+    style = page[page.index("<style>") : page.index("</style>")]
+    assert "#b45309" not in style.lower()
+    assert re.search(r"\.alert\s*\{[^}]*border-color:\s*var\(--warn\)", style)
+    assert re.search(r"\.alert strong\s*\{[^}]*color:\s*var\(--warn\)", style)
