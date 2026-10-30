@@ -1,7 +1,8 @@
 # Cordware Utilities
 
 > **Built so far:** segment U1 rung 1 built the package, the mount, the
-> health probe and the index; rung 2 the checker's pages as placeholders. The Email Address
+> health probe and the index; rung 2 the checker's pages as placeholders;
+> rung 3 wired the upload and the preview (`utilityapps/spec/email_check.md`). The Email Address
 > Checker's contract is `utilityapps/spec/email_check.md`, written as its
 > rungs land.
 
@@ -41,7 +42,7 @@ Cordware's private deployment step.
 | Page | Path | Reached by |
 |---|---|---|
 | Index | `/` (the bare mount) | Anyone signed in: it names tools and holds nothing about anyone. Each tool gates its own routes. |
-| Email Address Checker: upload, preview, result | `/email-check/`, `/email-check/preview`, `/email-check/result` | Placeholders on sample counts, answering only on a local run (`APP_ENV=local`) and `404` deployed; super-admins only once wired (rung 5) |
+| Email Address Checker: upload, preview, result | `/email-check/`, `/email-check/preview` (`GET` a sample, `POST` the upload's preview), `/email-check/result` | Answering only on a local run (`APP_ENV=local`) and `404` deployed until rung 5 makes them super-admins only. The sample preview and the result are placeholders on sample counts until then. |
 
 The index lists one card per tool, linking to its first page. Until a
 tool's pages are built, its card names it, says *(not yet available)*
