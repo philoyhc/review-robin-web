@@ -12,22 +12,18 @@ modes, gated steps) and whether the screens read right.
 - A row that needs a change becomes a follow-up slice.
 - Delete this file when the screens are approved.
 
-## 0. Start the app
+## 0. Before you start
 
-Paste a block from `residentialapps/guide/fake_ids.md` ("Rosters and setup,
-Sys admin") into a PowerShell window. Each block opens the right page for
-you. Stop the app with Ctrl+C.
-
+- **Start the app** with a block from `residentialapps/guide/fake_ids.md`,
+  "Rosters and setup, Sys admin (1B)". Each block opens the right page.
 - **Rosters, setup and Sys admin have no viewer switch.** They are drawn for
-  a sys admin.
-- **The landing** switches viewer with its chips.
-- **The fake account matters in one place only:** Sys admin says "You see
-  this read-only" unless the account is the super-admin, so there are two
-  Sys admin blocks.
+  a sys admin. The landing switches viewer with its chips.
+- **Sys admin is checked twice**, as a sys admin and as the super-admin:
+  it is the one page the fake account changes.
 - **Setup states** are previewed from the title row of every Rosters page:
   **Preview: Not started · Slots saved · Set up**.
-- **These pages are desktop-oriented.** Check at 1280 px, then once at
-  390 px with DevTools' device toolbar (Ctrl+Shift+M).
+- **Widths:** these pages are desktop-oriented. Check at 1280 px, then once
+  at 390 px (§7).
 
 ## 1. The landing (`/residentialops/`)
 

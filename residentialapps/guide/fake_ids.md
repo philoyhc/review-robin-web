@@ -1,11 +1,16 @@
 # Fake identities: Residential Apps
 
 Copy-and-paste PowerShell blocks for running Residential Apps locally as
-each sample viewer. Use them with the browser walkthroughs:
-`residentialapps/guide/1B_browser_checks.md` (Rosters and setup, Sys admin),
-`residentialapps/guide/1C_browser_checks.md` (RA Leave) and
-`residentialapps/guide/1D_browser_checks.md` (Support Logs). Each block
-stands alone. It:
+each sample viewer. This file holds every command; the browser walkthroughs hold the checks
+and point here:
+
+| Walkthrough | Its blocks |
+|---|---|
+| `residentialapps/guide/1B_browser_checks.md` | Rosters and setup, Sys admin (1B) |
+| `residentialapps/guide/1C_browser_checks.md` | RA Leave (1C) |
+| `residentialapps/guide/1D_browser_checks.md` | Support Logs (1D) |
+
+Each block stands alone. It:
 
 1. activates the virtualenv;
 2. sets fake auth for that shell only;
@@ -31,25 +36,38 @@ stands alone. It:
 - Fake auth works only with `APP_ENV=local`, and the host refuses to start
   otherwise. Never set it on a deployment.
 
-## Support Logs (1D)
+## Once, after a pull
 
-| Viewer | Holds | Lands on |
-|---|---|---|
-| Daniel Koh | Frontline | Home, the frontline dashboard |
-| Priya Raman | Frontline, Safety-flag recipient | Home, with every active safety flag |
-| Sam Lee | Senior identifiable, Safety-flag recipient | Overview |
-| Hui Min Goh | Safety-flag recipient | Home, the flags only |
-| Marcus Tan | Consultation check | Consultation check |
-| Kenneth Lau | Other Staff view: aggregate | Overview, counts only |
-| Siti Rahman | Other Staff view: identifiable | Overview, read-only |
-| Nadia Hassan | Consultation check, Other Staff view: identifiable | Home, listing Overview and Consultation check |
-| Rachel Yeo | Sys admin | Sys admin › Access |
-| Platform super-admin | Super-admin | Sys admin › Access, with Sys admin grants |
-| Wei Jie Ong | RF, no Support Logs access | the 403 page |
+The virtualenv is set up once as in `docs/local_setup.md` §G. After pulling
+new work, refresh the dependencies only if they changed:
 
-### Daniel Koh
+```powershell
+Set-Location C:\GitHub\review-robin-web
+git pull
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+```
 
-RF: Frontline. Lands on Home, the frontline dashboard.
+## In the browser
+
+- **Phone width:** open DevTools (F12), toggle the device toolbar
+  (Ctrl+Shift+M) and pick a 390 px phone; set 360 px from the width box.
+- **Dark mode:** the Light/Dark toggle at the top right. The choice is kept
+  across the host's applications.
+- **A kept sort or column choice** lives in this browser's storage. To start
+  clean, open DevTools › Application › Local storage and clear the site.
+
+## Rosters and setup, Sys admin (1B)
+
+These pages have no viewer switch; they are drawn for a sys admin. The
+landing at `/residentialops/` switches viewer with its chips. Sys admin
+says "You see this read-only" unless the fake account is the super-admin.
+
+### The landing (Chloe Lim)
+
+The landing, whose chips switch between Chloe Lim, Daniel Koh, Priya
+Raman, Hui Min Goh, Rachel Yeo and Sam Lee.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
@@ -57,143 +75,15 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "daniel.koh@example.edu"
-$env:FAKE_AUTH_NAME = "Daniel Koh"
+$env:FAKE_AUTH_EMAIL = "chloe.lim@example.edu"
+$env:FAKE_AUTH_NAME = "Chloe Lim"
 $env:FAKE_AUTH_SUPER_ADMIN = "false"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/" } | Out-Null
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
-### Priya Raman
-
-RSLM: Frontline, Safety-flag recipient. Lands on Home, with every active safety flag.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "priya.raman@example.edu"
-$env:FAKE_AUTH_NAME = "Priya Raman"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Priya%20Raman" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Sam Lee
-
-Master: Senior identifiable, Safety-flag recipient. Lands on Overview.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "sam.lee@example.edu"
-$env:FAKE_AUTH_NAME = "Sam Lee"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Sam%20Lee" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Hui Min Goh
-
-Exec: Safety-flag recipient. Lands on Home, the flags only.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "huimin.goh@example.edu"
-$env:FAKE_AUTH_NAME = "Hui Min Goh"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Hui%20Min%20Goh" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Marcus Tan
-
-RSLM: Consultation check. Lands on Consultation check.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "marcus.tan@example.edu"
-$env:FAKE_AUTH_NAME = "Marcus Tan"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Marcus%20Tan" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Kenneth Lau
-
-RF: Other Staff view: aggregate. Lands on Overview, counts only.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "kenneth.lau@example.edu"
-$env:FAKE_AUTH_NAME = "Kenneth Lau"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Kenneth%20Lau" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Siti Rahman
-
-RF: Other Staff view: identifiable. Lands on Overview, read-only.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "siti.rahman@example.edu"
-$env:FAKE_AUTH_NAME = "Siti Rahman"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Siti%20Rahman" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Nadia Hassan
-
-RSLM: Consultation check, Other Staff view: identifiable. Lands on Home, listing Overview and Consultation check.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "nadia.hassan@example.edu"
-$env:FAKE_AUTH_NAME = "Nadia Hassan"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Nadia%20Hassan" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Rachel Yeo
-
-Admin: Sys admin. Lands on Sys admin › Access.
+### Rosters and setup (Rachel Yeo)
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
@@ -205,13 +95,27 @@ $env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
 $env:FAKE_AUTH_NAME = "Rachel Yeo"
 $env:FAKE_AUTH_SUPER_ADMIN = "false"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Rachel%20Yeo" } | Out-Null
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/rosters/" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
-### Platform super-admin
+### Sys admin as a sys admin (Rachel Yeo)
 
-Super-admin. Lands on Sys admin › Access, with Sys admin grants.
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
+$env:FAKE_AUTH_NAME = "Rachel Yeo"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/sys-admin/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Sys admin as the super-admin
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
@@ -223,25 +127,7 @@ $env:FAKE_AUTH_EMAIL = "operator@example.edu"
 $env:FAKE_AUTH_NAME = "Local Super-admin"
 $env:FAKE_AUTH_SUPER_ADMIN = "true"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Platform%20super-admin" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Wei Jie Ong
-
-RF, no Support Logs access. Lands on the 403 page.
-
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "weijie.ong@example.edu"
-$env:FAKE_AUTH_NAME = "Wei Jie Ong"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Wei%20Jie%20Ong" } | Out-Null
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/sys-admin/" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
@@ -519,16 +405,25 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residen
 uvicorn cordware.main:app --reload
 ```
 
-## Rosters and setup, Sys admin (1B)
+## Support Logs (1D)
 
-These pages have no viewer switch; they are drawn for a sys admin. The
-landing at `/residentialops/` switches viewer with its chips. Sys admin
-says "You see this read-only" unless the fake account is the super-admin.
+| Viewer | Holds | Lands on |
+|---|---|---|
+| Daniel Koh | Frontline | Home, the frontline dashboard |
+| Priya Raman | Frontline, Safety-flag recipient | Home, with every active safety flag |
+| Sam Lee | Senior identifiable, Safety-flag recipient | Overview |
+| Hui Min Goh | Safety-flag recipient | Home, the flags only |
+| Marcus Tan | Consultation check | Consultation check |
+| Kenneth Lau | Other Staff view: aggregate | Overview, counts only |
+| Siti Rahman | Other Staff view: identifiable | Overview, read-only |
+| Nadia Hassan | Consultation check, Other Staff view: identifiable | Home, listing Overview and Consultation check |
+| Rachel Yeo | Sys admin | Sys admin › Access |
+| Platform super-admin | Super-admin | Sys admin › Access, with Sys admin grants |
+| Wei Jie Ong | RF, no Support Logs access | the 403 page |
 
-### The landing (Chloe Lim)
+### Daniel Koh
 
-The landing, whose chips switch between Chloe Lim, Daniel Koh, Priya
-Raman, Hui Min Goh, Rachel Yeo and Sam Lee.
+RF: Frontline. Lands on Home, the frontline dashboard.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
@@ -536,15 +431,143 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "chloe.lim@example.edu"
-$env:FAKE_AUTH_NAME = "Chloe Lim"
+$env:FAKE_AUTH_EMAIL = "daniel.koh@example.edu"
+$env:FAKE_AUTH_NAME = "Daniel Koh"
 $env:FAKE_AUTH_SUPER_ADMIN = "false"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/" } | Out-Null
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
-### Rosters and setup (Rachel Yeo)
+### Priya Raman
+
+RSLM: Frontline, Safety-flag recipient. Lands on Home, with every active safety flag.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "priya.raman@example.edu"
+$env:FAKE_AUTH_NAME = "Priya Raman"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Priya%20Raman" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Sam Lee
+
+Master: Senior identifiable, Safety-flag recipient. Lands on Overview.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "sam.lee@example.edu"
+$env:FAKE_AUTH_NAME = "Sam Lee"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Sam%20Lee" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Hui Min Goh
+
+Exec: Safety-flag recipient. Lands on Home, the flags only.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "huimin.goh@example.edu"
+$env:FAKE_AUTH_NAME = "Hui Min Goh"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Hui%20Min%20Goh" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Marcus Tan
+
+RSLM: Consultation check. Lands on Consultation check.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "marcus.tan@example.edu"
+$env:FAKE_AUTH_NAME = "Marcus Tan"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Marcus%20Tan" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Kenneth Lau
+
+RF: Other Staff view: aggregate. Lands on Overview, counts only.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "kenneth.lau@example.edu"
+$env:FAKE_AUTH_NAME = "Kenneth Lau"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Kenneth%20Lau" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Siti Rahman
+
+RF: Other Staff view: identifiable. Lands on Overview, read-only.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "siti.rahman@example.edu"
+$env:FAKE_AUTH_NAME = "Siti Rahman"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Siti%20Rahman" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Nadia Hassan
+
+RSLM: Consultation check, Other Staff view: identifiable. Lands on Home, listing Overview and Consultation check.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "nadia.hassan@example.edu"
+$env:FAKE_AUTH_NAME = "Nadia Hassan"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Nadia%20Hassan" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Rachel Yeo
+
+Admin: Sys admin. Lands on Sys admin › Access.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
@@ -556,27 +579,13 @@ $env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
 $env:FAKE_AUTH_NAME = "Rachel Yeo"
 $env:FAKE_AUTH_SUPER_ADMIN = "false"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/rosters/" } | Out-Null
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Rachel%20Yeo" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
-### Sys admin as a sys admin (Rachel Yeo)
+### Platform super-admin
 
-```powershell
-Set-Location C:\GitHub\review-robin-web
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-.\.venv\Scripts\Activate.ps1
-$env:APP_ENV = "local"
-$env:ALLOW_FAKE_AUTH = "true"
-$env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
-$env:FAKE_AUTH_NAME = "Rachel Yeo"
-$env:FAKE_AUTH_SUPER_ADMIN = "false"
-Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/sys-admin/" } | Out-Null
-uvicorn cordware.main:app --reload
-```
-
-### Sys admin as the super-admin
+Super-admin. Lands on Sys admin › Access, with Sys admin grants.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
@@ -588,7 +597,25 @@ $env:FAKE_AUTH_EMAIL = "operator@example.edu"
 $env:FAKE_AUTH_NAME = "Local Super-admin"
 $env:FAKE_AUTH_SUPER_ADMIN = "true"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
-Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/sys-admin/" } | Out-Null
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Platform%20super-admin" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Wei Jie Ong
+
+RF, no Support Logs access. Lands on the 403 page.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "weijie.ong@example.edu"
+$env:FAKE_AUTH_NAME = "Wei Jie Ong"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Wei%20Jie%20Ong" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
