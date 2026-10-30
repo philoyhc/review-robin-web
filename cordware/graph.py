@@ -18,6 +18,7 @@ transport as a parameter, so tests never touch the network.
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import time
@@ -145,7 +146,9 @@ class GraphDirectory:
             last = attempt == self._retries
             try:
                 reply = self._transport(url, self._headers, self._timeout)
-            except OSError:
+            # `http.client.HTTPException` covers a body cut short
+            # (`IncompleteRead`), which is not an `OSError` (Codex, `#3410`).
+            except (OSError, http.client.HTTPException):
                 error, wait = GraphError("network"), 2.0**attempt
             else:
                 if 200 <= reply.status < 300:
@@ -181,6 +184,9 @@ def _logged(error: GraphError) -> GraphError:
 def _users(body: bytes) -> list[DirectoryUser]:
     try:
         values = json.loads(body)["value"]
+        # Only a real empty list is "nobody there" (Codex, `#3410`).
+        if not isinstance(values, list) or not all(isinstance(v, dict) and v.get("id") for v in values):
+            raise TypeError
         return [
             DirectoryUser(
                 id=str(v["id"]),

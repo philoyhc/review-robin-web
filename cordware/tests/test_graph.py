@@ -5,6 +5,7 @@ network: `GraphDirectory` takes its transport as a parameter."""
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 from urllib.parse import parse_qs, urlsplit
@@ -88,7 +89,12 @@ def test_throttling_past_the_longest_wait_is_raised_without_waiting() -> None:
 
 
 @pytest.mark.parametrize(
-    ("failure", "kind"), [(Response(503, {}, b""), "server"), (OSError("reset"), "network")]
+    ("failure", "kind"),
+    [
+        (Response(503, {}, b""), "server"),
+        (OSError("reset"), "network"),
+        (http.client.IncompleteRead(b"{", 10), "network"),
+    ],
 )
 def test_server_and_network_failures_back_off_then_give_up(failure, kind: str) -> None:
     sleeps: list[float] = []
@@ -104,7 +110,19 @@ def test_a_transient_failure_then_success_returns_the_users() -> None:
     assert len(directory(script).find_users("a@example.edu")) == 1
 
 
-@pytest.mark.parametrize("body", [b"not json", b"{}", b'{"value": [{"displayName": "no id"}]}'])
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"not json",
+        b"{}",
+        b'{"value": {}}',
+        b'{"value": ""}',
+        b'{"value": null}',
+        b'{"value": ["x"]}',
+        b'{"value": [{"displayName": "no id"}]}',
+        b'{"value": [{"id": ""}]}',
+    ],
+)
 def test_an_unreadable_answer_is_bad_response(body: bytes) -> None:
     with pytest.raises(GraphError, match="bad_response"):
         directory(Script(Response(200, {}, body))).find_users("a@example.edu")
