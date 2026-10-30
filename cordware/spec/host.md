@@ -123,7 +123,7 @@ items are ignored. An unknown name, or a name written twice, raises
 
 The address users reach the host at, when it differs from what reaches the
 app server: behind a gateway that sends the backend's own host name, or
-TLS ended in front of it (segment 21E). Read once with `CORDWARE_APPS`.
+TLS ended in front of it. Read once with `CORDWARE_APPS`.
 
 - **Unset or blank:** nothing changes. Every URL built from a request names
   the request's own scheme and host.

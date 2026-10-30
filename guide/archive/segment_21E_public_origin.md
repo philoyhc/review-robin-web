@@ -68,7 +68,7 @@ Decisions confirmed at build:
 - **Residential and Utilities need no change.** 14 of the 16 slash routes are theirs; a Utilities redirect is tested.
 - **Names follow `CORDWARE_APPS`.** The field is `cordware_public_origin`, and the host.md section is titled by the setting (plan wording corrected).
 
-Reads: one `diff-reviewer` read, at rung 2, on the cumulative diff. Nothing blocking. Three validation holes were fixed in that PR; one test that claimed more than it checked was narrowed.
+Reads: one `diff-reviewer` read, at rung 2, on the cumulative diff. Nothing blocking. Three validation holes were fixed in that PR; one test that claimed more than it checked was narrowed. `spec-writer` at the close found nothing false in the three specs; it dropped one provenance tag from `cordware/spec/host.md`.
 
 ## PR ladder
 
