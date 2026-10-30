@@ -1,5 +1,6 @@
-"""The upload and the wired preview (segment U1, rung 3): the file goes
-in, its counts come back, and it is carried in the page, never kept."""
+"""The upload and the preview (segment U1, rung 3; the check button rung
+5's): the file goes in, its counts come back, and it is carried in the
+page, never kept."""
 
 from __future__ import annotations
 
@@ -90,13 +91,15 @@ def test_a_file_at_the_byte_limit_round_trips_through_the_page(client: TestClien
     assert again.status_code == 200 and _carried(again.text) == data
 
 
-def test_the_check_stays_disabled_until_rung_5(client: TestClient) -> None:
+def test_the_check_posts_the_carried_file_to_the_check(client: TestClient) -> None:
     text = _upload(client, b"email\r\na@x.edu\r\n").text
-    assert re.search(r'<button class="btn primary" type="button" disabled>Check addresses', text)
+    assert re.search(
+        r'<button class="btn primary" type="submit" formaction="/utilities/email-check/check">Check addresses',
+        text,
+    )
+    assert "no-store" in _upload(client, b"email\r\na@x.edu\r\n").headers["cache-control"]
 
 
-def test_preview_is_404_deployed(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    from utilityapps.email_check import routes
-
-    monkeypatch.setattr(routes, "is_local", lambda: False)
-    assert _upload(client, b"email\r\na@x.edu\r\n").status_code == 404
+def test_the_check_is_disabled_until_a_column_is_chosen(client: TestClient) -> None:
+    text = _upload(client, b"Name,Work\r\nA,a@x.edu\r\n").text
+    assert re.search(r'formaction="/utilities/email-check/check" disabled>Check addresses', text)

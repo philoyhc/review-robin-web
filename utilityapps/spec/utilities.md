@@ -1,10 +1,7 @@
 # Cordware Utilities
 
-> **Built so far:** segment U1 rung 1 built the package, the mount, the
-> health probe and the index; rung 2 the checker's pages as placeholders;
-> rung 3 wired the upload and the preview (`utilityapps/spec/email_check.md`). The Email Address
-> Checker's contract is `utilityapps/spec/email_check.md`, written as its
-> rungs land.
+> **Built:** segment U1, rungs 1–5. The Email Address Checker's contract
+> is `utilityapps/spec/email_check.md`.
 
 The contract of the Utilities application as the Cordware host sees it.
 The host's side is `cordware/spec/host.md`; this file states only what
@@ -42,11 +39,9 @@ Cordware's private deployment step.
 | Page | Path | Reached by |
 |---|---|---|
 | Index | `/` (the bare mount) | Anyone signed in: it names tools and holds nothing about anyone. Each tool gates its own routes. |
-| Email Address Checker: upload, preview, result | `/email-check/`, `/email-check/preview` (`GET` a sample, `POST` the upload's preview), `/email-check/result` | Answering only on a local run (`APP_ENV=local`) and `404` deployed until rung 5 makes them super-admins only. The sample preview and the result are placeholders on sample counts until then. |
+| Email Address Checker | `/email-check/` and the steps it posts to | The platform super-admin only (`utilityapps/spec/email_check.md` "Access") |
 
-The index lists one card per tool, linking to its first page. Until a
-tool's pages are built, its card names it, says *(not yet available)*
-and links nowhere. Every page
+The index lists one card per tool, linking to its first page. Every page
 links back to the host's landing page (`/`) and to `/.auth/logout`.
 
 Templates write app paths through `url()` in `utilityapps/web.py`, which

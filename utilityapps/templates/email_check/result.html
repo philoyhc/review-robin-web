@@ -12,20 +12,28 @@
 {% block content %}
   {% include "email_check/_head.html" %}
   <div class="card" aria-labelledby="result-h">
-    <h2 id="result-h">Checked {{ total }} rows</h2>
+    <h2 id="result-h">Checked {{ result.rows }} rows</h2>
     <table aria-label="Rows by status">
       <thead><tr><th scope="col">Status</th><th scope="col">Meaning</th><th scope="col" class="n">Rows</th></tr></thead>
       <tbody>
-        {% for status, n in counts.items() %}
+        {% for status, n in result.counts.items() %}
           <tr><td><code class="status">{{ status | replace("_", "_<wbr>") | safe }}</code></td><td>{{ meaning[status] }}</td><td class="n">{{ n }}</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    <p><strong>{{ groups }}</strong> accounts appear under more than one address in this file; the CSV numbers each group in <code>duplicate_account_group</code>.</p>
+    {% if result.groups %}
+      <p><strong>{{ result.groups }}</strong> {{ "account appears" if result.groups == 1 else "accounts appear" }} under more than one address in this file; the CSV numbers each group in <code>duplicate_account_group</code>.</p>
+    {% else %}
+      <p>No account appears under more than one address in this file.</p>
+    {% endif %}
+    {% if result.counts.ERROR %}
+      <p class="error" role="alert">{{ result.counts.ERROR }} {{ "row's lookup" if result.counts.ERROR == 1 else "rows' lookups" }} didn't finish. They are marked <code>ERROR</code>, not <code>NOT_FOUND</code>; check the file again later.</p>
+    {% endif %}
     <p class="note">Aliases were not checked: an address that is only an alias shows as <code>NOT_FOUND</code> (<code>lookup_coverage</code> is <code>BASIC_ONLY</code>). <code>NOT_FOUND</code> is not a test of whether mail is delivered.</p>
     <div class="actions">
-      <button class="btn primary" type="button" disabled>Download checked CSV</button>
+      <a class="btn primary" href="{{ download }}" download="{{ download_name }}">Download checked CSV</a>
       <a class="btn secondary" href="{{ url('/email-check/') }}">Check another file</a>
     </div>
+    <p class="note">The file isn't kept: download it before you leave this page.</p>
   </div>
 {% endblock %}
