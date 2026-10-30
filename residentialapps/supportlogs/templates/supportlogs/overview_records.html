@@ -55,7 +55,7 @@
           <form action="{{ url('/overview/records') }}" method="get">
             {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
             <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
-            <div class="field-wide"><label for="p-staff">Staff</label><select id="p-staff" name="staff" class="input"><option value="">All staff</option>{% for n in sample.FRONTLINE_COLLEAGUES %}<option{% if n == staff %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="p-staff">Staff</label><select id="p-staff" name="staff" class="input"><option value="">All staff</option>{% if staff == "?" %}<option value="?" selected>Unknown staff</option>{% endif %}{% for n in sample.FRONTLINE_COLLEAGUES %}<option{% if n == staff %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
             <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% if student == "?" %}<option value="?" selected>Unknown student</option>{% endif %}{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if s.id == student %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>

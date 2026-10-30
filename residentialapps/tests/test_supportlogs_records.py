@@ -234,6 +234,8 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     lost = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-99").text.split('id="purged-h"')[1]
     assert '<option value="?" selected>Unknown student</option>' in lost  # Show again does not widen to everyone
     assert "(none: the filter names no one)" in lost
+    nobody = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Nobody").text.split('id="purged-h"')[1]
+    assert '<option value="?" selected>Unknown staff</option>' in nobody  # Show again stays at none
 
 
 def test_unknown_values_never_widen(client: TestClient) -> None:
