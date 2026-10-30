@@ -30,8 +30,8 @@ Utilities adds. The design it follows is
 
 `/utilities/health` answers `{"status": "ok"}` with no identity, no
 setting and no Graph call, so Easy Auth can exclude it from sign-in, as it
-does the other applications' probes. Adding it to the exclusions is
-Cordware's private deployment step.
+does the other applications' probes. Cordware's deployment excluded it on
+2026-10-30, ahead of the first release.
 
 ## Pages
 
