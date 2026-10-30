@@ -412,7 +412,13 @@ injects.*
   email is `emailaddress`, then `preferred_username`, then `email`; the
   object id is the `objectidentifier` URI, then `oid`, then `sub`; the
   name is `name`, then the `name` URI. A changed email reaches the same
-  `users` row through the object id (§5.5a). The parser is
+  `users` row through the object id (§5.5a). Beside them, `tenant_id`
+  (`tenantid`, `tid`), `upn` (the `upn` claims, then
+  `preferred_username`) and `mail` (`emailaddress`, `email`) are kept
+  apart for roster matching (`cordware/spec/identity.md`). On the
+  institutional deployment `emailaddress` is the mail address and
+  `preferred_username` the sign-in name, which differ, so `email` is the
+  mail address and every `*_EMAILS` list holds mail addresses. The parser is
   defensive: a malformed `X-MS-CLIENT-PRINCIPAL` falls back to the
   simple headers rather than raising.
 - **Fake auth** (local only): with `ALLOW_FAKE_AUTH=true`,
