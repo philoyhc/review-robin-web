@@ -7,7 +7,7 @@
   {{ viewer_card(viewer_choices, me.name) }}
   {# Senior identifiable access (author, 2026-10-30): upload records tagged
      to a staff member, download them by staff, student and term, and
-     delete purged records by staff and student, a whole purge at a time. Each is a support-activity event (§11.3),
+     delete purged records by staff, or only a student's. Each is a support-activity event (§11.3),
      behind the same lock as a staff member's Your records. #}
   <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member, student and term it covered.</p>
   {% set keep = {"staff": staff if staff and staff != "?" else "", "student": student if student and student != "?" else ""} %}
@@ -59,9 +59,9 @@
             <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% if student == "?" %}<option value="?" selected>Unknown student</option>{% endif %}{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if s.id == student %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>
-          {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {{ p.count }} {{ p.what | lower }}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
-          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: the {{ purged | length }} purge{{ '' if purged | length == 1 else 's' }} shown, {{ purged_records }} record{{ '' if purged_records == 1 else 's' }}">Delete permanently</button>
-          <p class="subtle small">Deletes the whole purges shown{% if staff == "?" or student == "?" %} (none: the filter names no one){% else %}, of {{ staff or "all staff" }}{% if student %}, holding records about {{ sample.student(student).name }}{% endif %}{% endif %}: every record in each, about any student. It cannot be undone.</p>
+          {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {% if student and student != "?" %}{{ p.about(student) }} {{ p.what | lower }} about {{ sample.student(student).name }}, of {{ p.count }}{% else %}{{ p.count }} {{ p.what | lower }}{% endif %}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
+          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: {{ purged_records }} purged record{{ '' if purged_records == 1 else 's' }}">Delete permanently</button>
+          <p class="subtle small">{% if staff == "?" or student == "?" %}Deletes nothing: the filter names no one.{% elif student %}Deletes only {{ sample.student(student).name }}'s purged records{% if staff %} of {{ staff }}{% endif %}; the rest of each purge stays.{% else %}Deletes the whole purges shown, of {{ staff or "all staff" }}.{% endif %} It cannot be undone.</p>
         </section>
       </div>
     </div>

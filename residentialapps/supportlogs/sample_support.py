@@ -795,8 +795,8 @@ ADMIN_AUDIT = (
 # Students and My plans, locked until its holder confirms, to download
 # their own encounters or plans as CSV by term, upload a CSV to populate
 # them, or purge them all. A purge hides records from every page and keeps
-# them; senior identifiable access alone deletes them, a whole purge at a
-# time (rung 8; author, 2026-10-30).
+# them; senior identifiable access alone deletes them, a whole purge or
+# one student's records in it (rung 8; author, 2026-10-30).
 
 # Residential's terms (`residentialapps/docs/sample_data/terms.csv`,
 # copied: Support Logs may not import Residential Operations, which sets
@@ -873,21 +873,30 @@ def plan_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[s
 
 @dataclass(frozen=True)
 class Purge:
-    """A purge: the records hidden from every page and kept until senior
-    identifiable access deletes it, whole. `students` are the ids its
-    records are about, so a student filter finds the purges holding them.
-    Sys admin sees the count, never the records."""
+    """A purge: a staff member's records hidden from every page in one go,
+    kept until senior identifiable access deletes them. Each record is
+    about one student; `held` counts them by student, so a delete by
+    student removes only that student's records and leaves the rest of the
+    purge (author, 2026-10-30). Sys admin sees the count, never the
+    records."""
 
     by: str
     what: str  # "Encounters" or "Plans"
     on: date
-    count: int
-    students: tuple[str, ...]
+    held: tuple[tuple[str, int], ...]  # (student id, records about them)
+
+    @property
+    def count(self) -> int:
+        return sum(n for _, n in self.held)
+
+    def about(self, sid: str | None) -> int:
+        """Its records about a student; all of them when none."""
+        return self.count if sid is None else sum(n for s, n in self.held if s == sid)
 
 
 PURGES = (
-    Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6, ("S-02", "S-06")),
-    Purge("Arjun Nair", "Plans", date(2026, 5, 20), 2, ("S-09",)),
+    Purge("Grace Ho", "Encounters", date(2026, 10, 9), (("S-02", 4), ("S-06", 2))),
+    Purge("Arjun Nair", "Plans", date(2026, 5, 20), (("S-09", 2),)),
 )
 
 
@@ -923,10 +932,9 @@ def staff_rows(what: str, staff: str | None, t: Term | None,
 
 def purges(staff: str | None = None, sid: str | None = None) -> list[Purge]:
     """Purges of a staff member's records (all staff when none) holding
-    records about a student (any student when none). No term filter: a
-    delete removes a whole purge, whatever its records' dates (author,
-    2026-10-30)."""
-    return [p for p in PURGES if (not staff or p.by == staff) and (not sid or sid in p.students)]
+    records about a student (any student when none). No term filter
+    (author, 2026-10-30)."""
+    return [p for p in PURGES if (not staff or p.by == staff) and p.about(sid)]
 
 
 def record_students(staff: str, page: str = "students") -> list[Student]:

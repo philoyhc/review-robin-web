@@ -3,7 +3,7 @@
 as CSV, for one term or all, and an empty template to fill for an upload.
 Rung 8, Records across staff: senior identifiable access downloads staff
 members' records by staff, student and term, and filters purged records by staff
-and student for deletion, which removes whole purges and is senior
+and student for deletion: senior
 staff's alone. Only a holder who has unlocked the section gets a file; anyone
 else goes back to the locked page. Uploads, purges and deletions wait on
 item 3; a purge only hides. A sample: the unlock rides in the address,
@@ -125,14 +125,14 @@ def _what(request: Request) -> str:
 @router.get("/overview/records", name="supportlogs_overview_records")
 def staff_records(request: Request) -> Response:
     """Records across staff: upload tagged to a staff member, download by
-    staff, student and term, delete purged records by staff and student, a
-    whole purge at a time. Each action is a support-activity event
+    staff, student and term, delete purged records by staff and student; by
+    student, only that student's records go. Each action is a support-activity event
     (§11.3)."""
     staff, student = _staff(request), _student(request)
     purged = [] if UNKNOWN in (staff, student) else sample.purges(staff, student)  # unknown matches no one
     return gated(request, "supportlogs/overview_records.html", sample.SENIOR, current_tab="/overview/",
                  unlocked=records_unlocked(request), staff=staff, student=student, purged=purged,
-                 purged_records=sum(p.count for p in purged))
+                 purged_records=sum(p.about(None if student in (None, UNKNOWN) else student) for p in purged))
 
 
 def _senior_download(request: Request, template: bool) -> Response:

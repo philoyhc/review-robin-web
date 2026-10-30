@@ -156,8 +156,9 @@ read right.
     row's staff member;
   - the two templates lead with a Staff column; Upload is disabled;
   - Purged records filter by staff and by student (no term) with
-    **Show**; **Delete permanently** is outline red and disabled, and its
-    note says it deletes the whole purges shown.
+    **Show**; **Delete permanently** is outline red and disabled. With a
+    student chosen, each purge shows that student's records of its total,
+    and the note says only that student's records go.
 - [ ] **As Siti:** names show without history links. There are no flagged
   students and no audit card. Every plan is marked read-only.
 - [ ] **As Kenneth:** counts only, with no student's name anywhere on the

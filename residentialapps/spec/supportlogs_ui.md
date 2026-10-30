@@ -118,8 +118,8 @@ form's end, and the main action is a full-width Primary on the page
   senior identifiable access, behind the same lock: download any staff
   member's records, or all staff's, by student and term or all, each row
   naming its staff member; upload records tagged to a staff member (inert until
-  wired); and delete purged records, filtered by staff and by student, a
-  whole purge at a time (Delete permanently inert until wired). Only
+  wired); and delete purged records, filtered by staff and by student;
+  by student, only that student's records go (Delete permanently inert until wired). Only
   senior identifiable access deletes; Sys admin's Audit log lists purged
   records as counts only (author, 2026-10-30).
 

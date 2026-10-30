@@ -219,21 +219,24 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
 
     assert shown("") == ["Grace Ho: 6 encounters", "Arjun Nair: 2 plans"]
     assert shown("&staff=Arjun%20Nair") == ["Arjun Nair: 2 plans"]
-    assert shown("&student=S-06") == ["Grace Ho: 6 encounters"]
-    assert shown("&student=S-02") == ["Grace Ho: 6 encounters"]  # the same purge, by its other student
-    assert shown("&student=S-09") == ["Arjun Nair: 2 plans"]
+    # Each record is about one student; a purge holds a staff member's records about several.
+    assert shown("&student=S-06") == ["Grace Ho: 2 encounters about Farid Osman, of 6"]
+    assert shown("&student=S-02") == ["Grace Ho: 4 encounters about Bao Nguyen, of 6"]
+    assert shown("&student=S-09") == ["Arjun Nair: 2 plans about Ivan Seet, of 2"]
     assert shown("&staff=Arjun%20Nair&student=S-06") == []
     assert shown("&staff=Nobody") == [] and shown("&student=S-99") == []  # unknown matches no one, never everyone
     card = client.get(f"/overview/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
     assert 'id="p-term"' not in card  # no delete by term (author, 2026-10-30)
     assert '<span class="count">· 8</span>' in card
-    assert 'disabled aria-label="Delete permanently: the 2 purges shown, 8 records"' in card
+    assert 'disabled aria-label="Delete permanently: 8 purged records"' in card
+    assert "Deletes the whole purges shown, of all staff." in card
     one = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-06").text.split('id="purged-h"')[1]
-    assert "Deletes the whole purges shown, of all staff, holding records about Farid Osman" in one
-    assert "every record in each, about any student" in one
+    assert '<span class="count">· 2</span>' in one  # only Farid's records count, and only they would go
+    assert 'aria-label="Delete permanently: 2 purged records"' in one
+    assert "Deletes only Farid Osman's purged records; the rest of each purge stays." in one
     lost = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-99").text.split('id="purged-h"')[1]
     assert '<option value="?" selected>Unknown student</option>' in lost  # Show again does not widen to everyone
-    assert "(none: the filter names no one)" in lost
+    assert "Deletes nothing: the filter names no one." in lost
     nobody = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Nobody").text.split('id="purged-h"')[1]
     assert '<option value="?" selected>Unknown staff</option>' in nobody  # Show again stays at none
 
