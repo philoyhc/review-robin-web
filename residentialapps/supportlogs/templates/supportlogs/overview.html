@@ -78,6 +78,11 @@
           <p class="sub">Who viewed or changed what, of whom. Reviewing it is recorded (§11.3).</p>
           <a class="btn btn-secondary" href="{{ url('/overview/audit') }}{{ as_query }}">Open the audit</a>
         </section>
+        <section class="card card-pad muted" aria-labelledby="rec-h">
+          <h2 id="rec-h">Records across staff</h2>
+          <p class="sub">Upload records tagged to a staff member, download them by staff, student and term, and delete purged records. Every action is recorded.</p>
+          <a class="btn btn-secondary" href="{{ url('/overview/records') }}{{ as_query }}">Open records</a>
+        </section>
       {% endif %}
     </div>
   </div>

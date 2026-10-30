@@ -1,0 +1,69 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Records across staff{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  {{ sample_title("Records across staff", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# Senior identifiable access (author, 2026-10-30): upload records tagged
+     to a staff member, download them by staff, student and term, and
+     delete purged records by staff, or only a student's. Each is a support-activity event (§11.3),
+     behind the same lock as a staff member's Your records. #}
+  <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member, student and term it covered.</p>
+  {% set keep = {"staff": staff if staff and staff != "?" else "", "student": student if student and student != "?" else ""} %}
+  {% if not unlocked %}
+    <section class="card card-pad muted" aria-labelledby="records-h" id="records">
+      <h2 id="records-h">Records across staff <span class="chip chip-mute">Locked</span></h2>
+      <p class="sub">Locked, because a download holds named students and other staff's records.</p>
+      <form action="{{ url('/overview/records') }}" method="get">
+        {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+        {% for k, v in keep.items() if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <input type="hidden" name="records" value="open">
+        <label class="check"><input type="checkbox" name="understood" value="yes" required> I understand that a download holds named students and other staff's records, and that every upload, download and deletion is recorded</label>
+        <button type="submit" class="btn btn-secondary gap-above-sm">Unlock</button>
+      </form>
+    </section>
+  {% else %}
+    <p class="sub"><span class="chip chip-warn">Unlocked</span> <a href="{{ url('/overview/records') }}{{ as_query }}">Lock again</a></p>
+    <div class="split">
+      <div class="main stack">
+        <form class="card card-pad" action="{{ url('/overview/records.csv') }}" method="get" aria-labelledby="dl-h">
+          <h2 id="dl-h">Download</h2>
+          <p class="sub">Each row names its staff member. Purged records are not included.</p>
+          {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+          <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
+          <div class="filter-fields">
+            <div class="filter"><label for="dl-what">Records</label><select id="dl-what" name="what" class="input">{% for key, (label, _) in sample.RECORD_KINDS.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+            <div class="filter"><label for="dl-staff">Staff</label><select id="dl-staff" name="staff" class="input"><option value="">All staff</option>{% for n in sample.FRONTLINE_COLLEAGUES %}<option>{{ n }}</option>{% endfor %}</select></div>
+            <div class="filter"><label for="dl-student">Student</label><select id="dl-student" name="student" class="input"><option value="">All students</option>{% for s in sample.STUDENTS %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+            <div class="filter"><label for="dl-term">Term</label><select id="dl-term" name="term" class="input">{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if t == sample.CURRENT_TERM %} selected{% endif %}>{{ t.label }}</option>{% endfor %}<option value="all">All terms</option></select></div>
+          </div>
+          <button type="submit" class="btn btn-primary gap-above-sm">Download CSV</button>
+        </form>
+        <section class="card card-pad" aria-labelledby="ul-h">
+          <h2 id="ul-h">Upload</h2>
+          <p class="sub">Add encounters or plans from a CSV, each row tagged to the staff member it belongs to in the template's Staff column. Rows are checked against the Staff roster and the lists Sys admin configures, and you see a preview before anything is added.</p>
+          <p class="btnrow">{% for key, (label, _) in sample.RECORD_KINDS.items() %}<a class="btn btn-secondary" href="{{ url('/overview/records-template.csv') }}{{ qs(what=key, records='open', understood='yes') }}">{{ label }} template</a>{% endfor %}</p>
+          <div class="field-wide gap-above-sm"><label for="ul-file">CSV file</label><input id="ul-file" class="input" type="file" accept=".csv,text/csv" disabled></div>
+          <button type="button" class="btn btn-primary" disabled>Upload and preview</button>
+        </section>
+      </div>
+      <div class="side">
+        <section class="card card-pad" aria-labelledby="purged-h">
+          <h2 id="purged-h">Purged records <span class="count">· {{ purged_records }}</span></h2>
+          <p class="sub">Records their owner purged: hidden from every page and kept until deleted here. A student finds the purges holding records about them.</p>
+          <form action="{{ url('/overview/records') }}" method="get">
+            {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
+            <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
+            <div class="field-wide"><label for="p-staff">Staff</label><select id="p-staff" name="staff" class="input"><option value="">All staff</option>{% if staff == "?" %}<option value="?" selected>Unknown staff</option>{% endif %}{% for n in sample.FRONTLINE_COLLEAGUES %}<option{% if n == staff %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% if student == "?" %}<option value="?" selected>Unknown student</option>{% endif %}{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if s.id == student %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+            <button type="submit" class="btn btn-secondary">Show</button>
+          </form>
+          {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {% if student and student != "?" %}{{ p.about(student) }} {{ p.what | lower }} about {{ sample.student(student).name }}, of {{ p.count }}{% else %}{{ p.count }} {{ p.what | lower }}{% endif %}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
+          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: {{ purged_records }} purged record{{ '' if purged_records == 1 else 's' }}">Delete permanently</button>
+          <p class="subtle small">{% if staff == "?" or student == "?" %}Deletes nothing: the filter names no one.{% elif student %}Deletes only {{ sample.student(student).name }}'s purged records{% if staff %} of {{ staff }}{% endif %}; the rest of each purge stays.{% else %}Deletes the whole purges shown, of {{ staff or "all staff" }}.{% endif %} It cannot be undone.</p>
+        </section>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

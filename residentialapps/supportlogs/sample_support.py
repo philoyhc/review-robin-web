@@ -795,7 +795,8 @@ ADMIN_AUDIT = (
 # Students and My plans, locked until its holder confirms, to download
 # their own encounters or plans as CSV by term, upload a CSV to populate
 # them, or purge them all. A purge hides records from every page and keeps
-# them: only a sys admin deletes (§11.3).
+# them; senior identifiable access alone deletes them, a whole purge or
+# one student's records in it (rung 8; author, 2026-10-30).
 
 # Residential's terms (`residentialapps/docs/sample_data/terms.csv`,
 # copied: Support Logs may not import Residential Operations, which sets
@@ -842,12 +843,12 @@ PLAN_COLUMNS = ("Student email", "Student", "Kind", "Source", "Cadence", "Since"
 PLAN_TEMPLATE_COLUMNS = ("Student email", "Student", "Cadence", "Since")
 
 
-def encounter_rows(staff: str, t: Term | None) -> list[list[str]]:
+def encounter_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[str]]:
     """The staff member's own encounters in a term (all terms when none),
     oldest first, never a colleague's shared records or a safety flag."""
     rows = []
     for e in sorted(encounters_by(staff), key=lambda e: e.when):
-        if t and not t.start <= e.when.date() <= t.end:
+        if (t and not t.start <= e.when.date() <= t.end) or (sid and e.student != sid):
             continue
         s = student(e.student)
         rows.append([e.when.date().isoformat(), e.when.strftime("%H:%M"), s.email, s.name, e.duration, e.type,
@@ -855,14 +856,14 @@ def encounter_rows(staff: str, t: Term | None) -> list[list[str]]:
     return rows
 
 
-def plan_rows(staff: str, t: Term | None) -> list[list[str]]:
+def plan_rows(staff: str, t: Term | None, sid: str | None = None) -> list[list[str]]:
     """The staff member's own plans, closed ones included, begun on or
     before the term's end (all terms when none). The sample's plans carry no
     closing date, so a plan closed before a term still counts in it; wired,
     a plan counts when its open span overlaps the term."""
     rows = []
     for p in sorted((p for p in PLANS if p.staff == staff), key=lambda p: p.start):
-        if t and p.start > t.end:
+        if (t and p.start > t.end) or (sid and p.student != sid):
             continue
         s = student(p.student)
         rows.append([s.email, s.name, "Formal assignment" if p.formal else "Follow-up", p.source, p.cadence,
@@ -872,13 +873,73 @@ def plan_rows(staff: str, t: Term | None) -> list[list[str]]:
 
 @dataclass(frozen=True)
 class Purge:
-    """A purge: the records hidden from every page, kept until a sys admin
-    deletes them. Sys admin sees the count, never the records."""
+    """A purge: a staff member's records hidden from every page in one go,
+    kept until senior identifiable access deletes them. Each record is
+    about one student; `held` counts them by student, so a delete by
+    student removes only that student's records and leaves the rest of the
+    purge (author, 2026-10-30). Sys admin sees the count, never the
+    records."""
 
     by: str
     what: str  # "Encounters" or "Plans"
     on: date
-    count: int
+    held: tuple[tuple[str, int], ...]  # (student id, records about them)
+
+    @property
+    def count(self) -> int:
+        return sum(n for _, n in self.held)
+
+    def about(self, sid: str | None) -> int:
+        """Its records about a student; all of them when none."""
+        return self.count if sid is None else sum(n for s, n in self.held if s == sid)
 
 
-PURGES = (Purge("Grace Ho", "Encounters", date(2026, 10, 9), 6),)
+PURGES = (
+    Purge("Grace Ho", "Encounters", date(2026, 10, 9), (("S-02", 4), ("S-06", 2))),
+    Purge("Arjun Nair", "Plans", date(2026, 5, 20), (("S-09", 2),)),
+)
+
+
+def term_of(d: date) -> Term | None:
+    return next((t for t in TERMS if t.start <= d <= t.end), None)
+
+
+# --- Records across staff (rung 8; author, 2026-10-30): senior
+# identifiable access uploads records tagged to a staff member, downloads
+# them by staff, student and term, and deletes purged records, every action
+# audited. A download names the staff member in its own column.
+
+RECORD_KINDS = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
+# What a senior upload takes after its Staff column: a plan may be a formal
+# assignment (§7), and a new one is always Active, so no Status.
+STAFF_TEMPLATE_COLUMNS = {"encounters": ENCOUNTER_COLUMNS,
+                          "plans": tuple(c for c in PLAN_COLUMNS if c != "Status")}
+
+
+def staff_rows(what: str, staff: str | None, t: Term | None,
+               sid: str | None = None) -> tuple[tuple[str, ...], list[list[str]]]:
+    """Every staff member's records of a kind (one staff member's when
+    named) in a term or all terms, each row led by its staff member."""
+    columns = ("Staff", *RECORD_KINDS[what][1])
+    rows_of = encounter_rows if what == "encounters" else plan_rows
+    rows = []
+    for name in FRONTLINE_COLLEAGUES:
+        if staff and name != staff:
+            continue
+        rows += [[name, *r] for r in rows_of(name, t, sid)]
+    return columns, rows
+
+
+def purges(staff: str | None = None, sid: str | None = None) -> list[Purge]:
+    """Purges of a staff member's records (all staff when none) holding
+    records about a student (any student when none). No term filter
+    (author, 2026-10-30)."""
+    return [p for p in PURGES if (not staff or p.by == staff) and p.about(sid)]
+
+
+def record_students(staff: str, page: str = "students") -> list[Student]:
+    """The students a staff member's own records of a page's kind are about
+    (encounters on Students, plans on My plans), for Your records' student
+    filter, by name."""
+    ids = {e.student for e in encounters_by(staff)} if page == "students" else {p.student for p in PLANS if p.staff == staff}
+    return sorted((s for s in STUDENTS if s.id in ids), key=lambda s: s.name)

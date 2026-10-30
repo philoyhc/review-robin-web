@@ -1,8 +1,9 @@
 {# Your records (author, 2026-10-30): the end of Students and My plans, a
    section locked until its holder confirms. Unlocked, it downloads the
-   viewer's own records as CSV, for one term or all; offers a template and
-   an upload to populate them; and purges them all. A purge hides records
-   from every page and keeps them: only a sys admin deletes. `page` is
+   viewer's own records as CSV, for a term or all and a student or all;
+   offers a template and an upload to populate them; and purges them, all
+   or one student's. A purge hides records from every page and keeps them;
+   senior identifiable access alone deletes them. `page` is
    "students" (encounters) or "plans"; `keep` carries the page's own
    query values through the unlock. #}
 {% macro records_card(page, what, unlocked, keep={}) %}
@@ -31,6 +32,9 @@
                 <option value="all">All terms</option>
               </select>
               <span class="subtle small">The terms set on Residential Operations' Rosters and setup.</span></div>
+            {% set mine = sample.record_students(me.name, page) %}
+            <div class="field-wide"><label for="dl-student">Student</label>
+              <select id="dl-student" name="student" class="input"><option value="">All your students</option>{% for s in mine %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
             <button type="submit" class="btn btn-primary">Download CSV</button>
           </form>
           <section class="card card-pad" aria-labelledby="ul-h">
@@ -44,7 +48,8 @@
         <div class="side">
           <section class="card card-pad" aria-labelledby="purge-h">
             <h3 id="purge-h">Purge all</h3>
-            <p class="sub">Hides every one of your {{ what }} from Support Logs' pages, for you and for anyone you shared them with. Nothing is deleted: a sys admin keeps them and alone can delete them.</p>
+            <p class="sub">Hides your {{ what }}, all of them or one student's, from Support Logs' pages, for you and for anyone you shared them with. Nothing is deleted: Support Logs keeps them, and only senior staff with identifiable access can delete them.</p>
+            <div class="field-wide"><label for="purge-student">Student</label><select id="purge-student" class="input" disabled><option>All your students</option>{% for s in sample.record_students(me.name, page) %}<option>{{ s.name }}</option>{% endfor %}</select></div>
             <div class="field-wide"><label for="purge-confirm">Type PURGE to confirm</label><input id="purge-confirm" class="input" autocomplete="off" disabled></div>
             <button type="button" class="btn btn-danger" disabled aria-label="Purge all your {{ what }}">Purge all</button>
           </section>
