@@ -50,13 +50,11 @@ def test_unset_mounts_it_last_on_the_landing_page() -> None:
     assert order == sorted(order)
 
 
-def test_index_lists_the_checker_inert() -> None:
+def test_index_links_the_checker() -> None:
     page = TestClient(host_with(("utilities",))[0]).get("/utilities/")
     assert page.status_code == 200
     assert "<h1>Cordware Utilities</h1>" in page.text
-    assert "Email Address Checker" in page.text
-    # No link to a page that is not built yet (rung 2 adds it).
-    assert "email-check" not in page.text
+    assert 'href="/utilities/email-check/">Email Address Checker</a>' in page.text
     assert 'href="/"' in page.text  # the host's landing, not the mount's
 
 

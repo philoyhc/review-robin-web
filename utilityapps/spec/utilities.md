@@ -1,7 +1,7 @@
 # Cordware Utilities
 
-> **Built so far:** segment U1 rung 1 built all of this file: the
-> package, the mount, the health probe and the index. The Email Address
+> **Built so far:** segment U1 rung 1 built the package, the mount, the
+> health probe and the index; rung 2 the checker's pages as placeholders. The Email Address
 > Checker's contract is `utilityapps/spec/email_check.md`, written as its
 > rungs land.
 
@@ -41,9 +41,11 @@ Cordware's private deployment step.
 | Page | Path | Reached by |
 |---|---|---|
 | Index | `/` (the bare mount) | Anyone signed in: it names tools and holds nothing about anyone. Each tool gates its own routes. |
+| Email Address Checker: upload, preview, result | `/email-check/`, `/email-check/preview`, `/email-check/result` | Placeholders on sample counts, answering only on a local run (`APP_ENV=local`) and `404` deployed; super-admins only once wired (rung 5) |
 
-The index lists one card per tool. Until a tool's pages are built, its
-card names it, says *(not yet available)* and links nowhere. Every page
+The index lists one card per tool, linking to its first page. Until a
+tool's pages are built, its card names it, says *(not yet available)*
+and links nowhere. Every page
 links back to the host's landing page (`/`) and to `/.auth/logout`.
 
 Templates write app paths through `url()` in `utilityapps/web.py`, which

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from utilityapps.email_check.routes import router as email_check_router
 from utilityapps.routes_health import router as health_router
 from utilityapps.routes_home import router as home_router
 
@@ -15,4 +16,5 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Cordware Utilities", docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(health_router)
     app.include_router(home_router)
+    app.include_router(email_check_router)
     return app

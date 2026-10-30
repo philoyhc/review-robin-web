@@ -1,0 +1,29 @@
+{% extends "utilities/base.html" %}
+{% block title %}Preview · Email Address Checker{% endblock %}
+{% block content %}
+  {% include "email_check/_head.html" %}
+  <form class="card" aria-labelledby="preview-h">
+    <h2 id="preview-h">Preview: <code>sample-roster.csv</code></h2>
+    <label for="column">Address column</label>
+    <select id="column" disabled>
+      {% for name in header %}<option{% if loop.index == 2 %} selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select>
+    <p class="note">This file has no <code>email</code> column, so choose the one that holds the addresses.</p>
+    <table aria-label="What the file holds">
+      <tr><th scope="row">Rows</th><td class="n">{{ counts.rows }}</td></tr>
+      <tr><th scope="row">Addresses to check</th><td class="n">{{ counts.valid }}</td></tr>
+      <tr><th scope="row">Blank or not an address: kept, not checked</th><td class="n">{{ counts.invalid }}</td></tr>
+      <tr><th scope="row">Repeats of an address already in the file: checked once</th><td class="n">{{ counts.repeated }}</td></tr>
+    </table>
+    <p class="note">Nothing has been looked up yet.</p>
+    {% if no_graph %}
+      <div class="card alert" role="alert">
+        <p><strong>The directory can't be reached.</strong> Your sign-in doesn't carry directory access, so nothing can be checked. Sign out and in again; if that doesn't help, Cordware's directory access isn't set up yet.</p>
+      </div>
+    {% endif %}
+    <div class="actions">
+      <button class="btn primary" type="submit" disabled>Check addresses</button>
+      <a class="btn secondary" href="{{ url('/email-check/') }}">Start over</a>
+    </div>
+  </form>
+{% endblock %}

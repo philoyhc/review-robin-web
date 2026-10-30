@@ -21,8 +21,28 @@
     .tools li { border-bottom: 1px solid var(--line); padding: 0.75rem 0; }
     .tool-name { font-weight: 600; }
     .tools p { margin: 0.25rem 0 0; color: var(--muted); }
-    .soon { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
     a { color: var(--link); }
+    h2 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+    .crumbs { font-size: 0.9rem; margin: 0 0 1rem; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 1rem; margin: 0 0 1rem; }
+    .card > :first-child { margin-top: 0; }
+    .card > :last-child { margin-bottom: 0; }
+    .note { color: var(--muted); font-size: 0.9rem; }
+    .alert { border-color: #b45309; }
+    .alert strong { color: #b45309; }
+    label { display: block; font-weight: 600; margin: 0 0 0.25rem; }
+    input[type=file], select { font: inherit; max-width: 100%; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 1rem; }
+    .btn { font: inherit; font-weight: 600; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid var(--link); text-decoration: none; display: inline-block; cursor: pointer; }
+    .btn.primary { background: var(--link); color: #fff; }
+    .btn.secondary { background: transparent; color: var(--link); }
+    .btn:disabled, .btn[aria-disabled=true] { opacity: 0.5; cursor: not-allowed; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td.n, th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    code { font-size: 0.9em; overflow-wrap: anywhere; }
+    code.status { overflow-wrap: normal; }
+    .sample { font-size: 0.85rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 0.25rem 0.5rem; display: inline-block; margin: 0 0 1rem; }
     footer { margin-top: 2rem; font-size: 0.9rem; }
     footer a { color: var(--muted); margin-right: 1rem; }
   </style>
