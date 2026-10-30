@@ -29,7 +29,9 @@ line saying why, rather than checked in part:
 | Refused when | Message names |
 |---|---|
 | No file was chosen | choosing one |
-| Over 1 MiB (`MAX_BYTES`) | the limit in KiB |
+| The request says no size (no `Content-Length`) | uploading again |
+| The request is over its limit, read from `Content-Length` before anything is parsed: the upload's whole multipart request over 1 MiB (`MAX_BYTES`), so a file a few hundred bytes under it is the largest taken; the preview's carried copy over 2 MiB | the limit in KiB |
+| Over 1 MiB (`MAX_BYTES`) once read | the limit in KiB |
 | Not UTF-8 | saving as CSV UTF-8 |
 | A NUL character | that it is not a CSV |
 | Malformed quoting | the parser's reason |
@@ -70,8 +72,11 @@ the column to `/email-check/check`; it is disabled until a column is
 chosen. A step reached by its address (`GET /email-check/preview` or
 `/check`) redirects to the upload page. **Nothing is kept between steps:** the preview
 page carries the file back as base64 in a hidden field, and choosing
-another column posts it again with the column's index. The form accepts a
-part up to twice `MAX_BYTES`, enough for the carried copy.
+another column posts it again with the column's index. That form is
+URL-encoded, not multipart, so the carried copy is a field and never a
+file part: Starlette spools a file part past 1 MiB to a temporary file,
+which is why the upload's whole request is held under 1 MiB. A column
+that is not a plain index (`isdecimal`) is ignored.
 
 ## Output
 
@@ -95,6 +100,14 @@ Each distinct key is looked up once, at most four at a time
 matching `mail` or `userPrincipalName`. With fake auth on a local run
 that is the fake directory. Alias lookup is not built, so every row's
 `lookup_coverage` is `BASIC_ONLY`.
+
+- **A time budget.** The check takes at most 120 s (`check.BUDGET`),
+  under App Service's front-end limit. A lookup not finished by then is
+  `ERROR` with kind `timeout`, and the rest still download.
+- **A refused sign-in stops the run.** The first `unauthorized` or
+  `forbidden` marks every lookup not yet started `ERROR` with the same
+  kind, rather than sending one doomed request per address; those rows'
+  `notes` say to sign out and in again.
 
 With no delegated token the check stops before any lookup: the preview
 returns with a `503` and says the directory can't be reached, and
@@ -125,8 +138,9 @@ in `duplicate_account_group`. Repeats of one key never make a group.
 ## Result
 
 The result page shows the row count, the count per status, the number of
-duplicate groups, a warning when any row is `ERROR`, and the alias
-caveat. The CSV is the page's download: a `data:` link holding it as
+duplicate groups, a warning when any row is `ERROR` (to sign out and in
+again after a refusal, to try later or in smaller parts after a
+timeout, else to try later), and the alias caveat. The CSV is the page's download: a `data:` link holding it as
 UTF-8 with a BOM, named `email-check-results-YYYYMMDD.csv`. The server
 keeps no copy.
 

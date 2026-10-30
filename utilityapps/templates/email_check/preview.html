@@ -2,7 +2,8 @@
 {% block title %}Preview · Email Address Checker{% endblock %}
 {% block content %}
   {% include "email_check/_head.html" %}
-  <form class="card" aria-labelledby="preview-h" method="post" action="{{ url('/email-check/preview') }}" enctype="multipart/form-data">
+  <form class="card" aria-labelledby="preview-h" method="post" action="{{ url('/email-check/preview') }}">
+    {# URL-encoded, not multipart: the carried file is a field, never a file part (routes.py). #}
     <h2 id="preview-h">Preview: <code>{{ filename or "your file" }}</code></h2>
     <input type="hidden" name="content" value="{{ content }}">
     <input type="hidden" name="filename" value="{{ filename }}">

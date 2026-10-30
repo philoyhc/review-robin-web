@@ -18,7 +18,7 @@ ROUTES = [
     ("post", "/utilities/email-check/check"),
     ("get", "/utilities/email-check/preview"),
 ]
-CSV = {"content": (None, base64.b64encode(b"email\r\njane.tan@example.edu\r\n"))}
+CSV = {"content": base64.b64encode(b"email\r\njane.tan@example.edu\r\n").decode()}
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def client() -> TestClient:
 
 def _call(client: TestClient, method: str, path: str):
     if method == "post":
-        return client.post(path, files=CSV, follow_redirects=False)
+        return client.post(path, data=CSV, follow_redirects=False)
     return client.get(path, follow_redirects=False)
 
 

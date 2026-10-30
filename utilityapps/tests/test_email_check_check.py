@@ -110,7 +110,7 @@ def test_two_addresses_for_one_account_form_a_group_and_repeats_do_not() -> None
     assert result.groups == 1
 
 
-@pytest.mark.parametrize("kind", ["unauthorized", "forbidden", "throttled", "server", "network", "bad_response"])
+@pytest.mark.parametrize("kind", ["throttled", "server", "network", "bad_response"])
 def test_a_failed_lookup_is_error_never_not_found(kind: str) -> None:
     directory = Recording({"a@example.edu": GraphError(kind), "b@example.edu": [JANE]})
     result = check.run(csvio.parse(b"email\r\na@example.edu\r\njane@x.edu\r\n"), 0, directory)
@@ -118,6 +118,51 @@ def test_a_failed_lookup_is_error_never_not_found(kind: str) -> None:
     assert rows[0]["status"] == "ERROR" and kind in rows[0]["notes"]
     assert rows[1]["status"] == "NOT_FOUND"
     assert result.error_kinds == (kind,)
+
+
+@pytest.mark.parametrize("kind", ["unauthorized", "forbidden"])
+def test_a_refused_sign_in_stops_the_lookups_not_yet_started(
+    kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each would fail the same way: one request, not one per address
+    (diff-reviewer, `#3411`)."""
+    monkeypatch.setattr(check, "WORKERS", 1)
+    directory = Recording({"a@example.edu": GraphError(kind)})
+    data = b"email\r\na@example.edu\r\nb@example.edu\r\nc@example.edu\r\n"
+    result = check.run(csvio.parse(data), 0, directory)
+    assert directory.asked == ["a@example.edu"]
+    rows = _rows(result.csv)
+    assert [r["status"] for r in rows] == ["ERROR"] * 3
+    assert all("sign out and in again" in r["notes"] for r in rows)
+    assert result.error_kinds == (kind,)
+
+
+def test_lookups_past_the_budget_are_error_and_the_rest_download() -> None:
+    import threading
+
+    release = threading.Event()
+
+    class Stuck:
+        def find_users(self, address: str) -> list[DirectoryUser]:
+            if address == "slow@example.edu":
+                release.wait(5)
+            return [JANE] if address == "jane.tan@example.edu" else []
+
+    try:
+        outcomes = check.look_up_all(Stuck(), ["jane.tan@example.edu", "slow@example.edu"], budget=0.2)
+    finally:
+        release.set()
+    assert outcomes["jane.tan@example.edu"].status == "OK"
+    assert outcomes["slow@example.edu"].status == "ERROR"
+    assert outcomes["slow@example.edu"].error_kind == "timeout"
+
+
+def test_the_result_page_says_to_sign_in_again_after_a_refusal(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(routes, "directory_for", lambda request: Recording({"a@x.edu": GraphError("unauthorized")}))
+    text = _post_check(client, b"email\r\na@x.edu\r\n").text
+    assert "sign out and in again" in text
 
 
 def test_lookups_run_at_most_four_at_once() -> None:
@@ -150,10 +195,10 @@ def client() -> TestClient:
 
 
 def _post_check(client: TestClient, data: bytes, column: str = "") -> object:
-    fields = {"content": (None, base64.b64encode(data)), "filename": (None, "list.csv")}
+    fields = {"content": base64.b64encode(data).decode(), "filename": "list.csv"}
     if column:
-        fields["column"] = (None, column)
-    return client.post("/utilities/email-check/check", files=fields)
+        fields["column"] = column
+    return client.post("/utilities/email-check/check", data=fields)
 
 
 def _download(text: str) -> tuple[str, str]:

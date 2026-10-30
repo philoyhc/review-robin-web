@@ -38,7 +38,7 @@ Cordware's private deployment step.
 
 | Page | Path | Reached by |
 |---|---|---|
-| Index | `/` (the bare mount) | Anyone signed in: it names tools and holds nothing about anyone. Each tool gates its own routes. |
+| Index | `/` (the bare mount) | Anyone Easy Auth lets in: the route checks no identity itself, since it names tools and holds nothing about anyone. Each tool gates its own routes. |
 | Email Address Checker | `/email-check/` and the steps it posts to | The platform super-admin only (`utilityapps/spec/email_check.md` "Access") |
 
 The index lists one card per tool, linking to its first page. Every page

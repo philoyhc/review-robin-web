@@ -17,6 +17,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.concurrency import run_in_threadpool
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.datastructures import FormData, UploadFile
 from starlette.requests import Request
 from starlette.responses import RedirectResponse, Response
@@ -28,9 +29,15 @@ from utilityapps.web import templates, url_path
 
 log = logging.getLogger(__name__)
 
-# The preview carries the upload back as base64, a third larger than the
-# file; Starlette's default part limit is 1 MiB.
-_FORM_PART_LIMIT = 2 * csvio.MAX_BYTES
+# Request sizes, refused on `Content-Length` before anything is parsed
+# (diff-reviewer, `#3411`). The upload is multipart, and a file part has
+# no size limit in Starlette: past 1 MiB it is spooled to a temporary
+# file. So the whole request is held to `MAX_BYTES`, which keeps the file
+# in memory and refuses it unread. The preview carries the file back
+# URL-encoded, as base64 a third larger, with no file part to spool.
+_UPLOAD_LIMIT = csvio.MAX_BYTES
+_CARRIED_LIMIT = 2 * csvio.MAX_BYTES
+_FORM_PART_LIMIT = _CARRIED_LIMIT
 # Results hold names and addresses: never cached anywhere (spec §10).
 _NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 
@@ -68,7 +75,17 @@ class _Posted:
 async def _read(request: Request) -> _Posted | Response:
     """The file a step posted: as `file` from the upload page, or carried
     as `content` (base64) with `filename` and `column` from the preview."""
-    form: FormData = await request.form(max_part_size=_FORM_PART_LIMIT)
+    length = request.headers.get("content-length", "")
+    multipart = request.headers.get("content-type", "").startswith("multipart/")
+    limit = _UPLOAD_LIMIT if multipart else _CARRIED_LIMIT
+    if not length.isdecimal():
+        return _upload_error(request, "The upload did not say its size. Upload the file again.")
+    if int(length) > limit:
+        return _upload_error(request, f"The file is larger than {csvio.MAX_BYTES // 1024} KiB.")
+    try:
+        form: FormData = await request.form(max_part_size=_FORM_PART_LIMIT)
+    except StarletteHTTPException:
+        return _upload_error(request, "The upload could not be read. Upload the file again.")
     file = form.get("file")
     if "file" in form and not (isinstance(file, UploadFile) and file.filename):
         # An untouched file input posts an empty-named part.
@@ -88,7 +105,8 @@ async def _read(request: Request) -> _Posted | Response:
         return _upload_error(request, str(exc))
     column = parsed.email_column
     chosen = str(form.get("column", ""))
-    if chosen.isdigit() and int(chosen) < len(parsed.header):
+    # `isdecimal`, not `isdigit`: "²" is a digit `int` refuses (diff-reviewer).
+    if chosen.isdecimal() and int(chosen) < len(parsed.header):
         column = int(chosen)
     return _Posted(data, filename, parsed, column)
 
