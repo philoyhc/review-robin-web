@@ -227,9 +227,51 @@ the later ones are counted, not logged. The running count is read by
 host's `host.stopping` line. The counter and the once-only check share a lock,
 because FastAPI runs a plain-function dependency on a worker thread.
 
+## Graph
+
+`cordware/graph.py`: Microsoft Graph as the signed-in user, with the
+delegated token Easy Auth's token store keeps for them. The host owns the
+token, so it owns the one client every application uses. Built for the
+Email Address Checker (Utilities segment U1, rung 4); directory lookups
+only.
+
+- **Which directory.** `directory_for(request, settings=None)` returns
+  `FakeDirectory` on a local run with fake auth on. Otherwise it returns
+  `GraphDirectory` with the token Easy Auth passes in
+  `X-MS-TOKEN-AAD-ACCESS-TOKEN`; with none (the token store off, or the
+  sign-in not asking for Graph) it raises `GraphError("no_token")`.
+- **`find_users(address)`** sends one `GET /v1.0/users` with
+  `$filter=mail eq '…' or userPrincipalName eq '…'` (an OData literal, a
+  quote doubled), `$select=id,displayName,mail,userPrincipalName` and
+  `$top=5`, and returns each match as a `DirectoryUser`; an empty `mail`
+  is `None`. More than one match is the caller's to judge.
+- **A failure is never an empty answer.** It is a `GraphError` whose
+  `kind` is `no_token`, `unauthorized` (`401`), `forbidden` (`403`),
+  `throttled` (`429`), `server` (`5xx`), `network` or `bad_response`. A
+  `429` waits its `Retry-After`, up to 30 s, and a `5xx` or network
+  failure waits 1 s then 2 s: at most two retries, then the error. `401`
+  and `403` are raised at once.
+- **The fake directory** is a fixed set of invented `example.edu`
+  accounts, one per case a caller must handle: a UPN that is not the
+  mail, an account with no mail, and an address that is one account's
+  mail and another's UPN. Three addresses fail on purpose
+  (`throttled@`, `outage@`, `denied@`). It is never real data.
+- **No dependency.** Requests go through the standard library;
+  `GraphDirectory` takes the transport as a parameter, so the tests never
+  touch the network.
+- **Logging.** Logger `cordware.graph`: `graph.request_failed`, a
+  warning carrying `kind` and `status` only, never the address, the
+  query or the token.
+
+Not yet proved from application code: a call through the Web App's
+egress, and the token's refresh once it expires (about an hour). Both
+are Cordware's private deployment checks.
+
 ## Tests
 
-`cordware/tests/test_identity.py` covers the parser, the fake identity, every
+`cordware/tests/test_graph.py` covers the Graph helper: the query, each
+failure and its retries, the log line, the fake directory and
+`directory_for`. `cordware/tests/test_identity.py` covers the parser, the fake identity, every
 switch set per run, the dependency's signature, the guard, the log events and
 the super-admin reads. RRW's suite keeps exercising the re-export
 (`tests/integration/test_setup_template_download.py` passes settings to

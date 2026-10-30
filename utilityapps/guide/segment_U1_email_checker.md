@@ -1,6 +1,6 @@
 # Segment U1 — Utilities: the Email Address Checker
 
-**Opened:** 2026-10-30 · **Theme:** the `utilityapps/` package mounted at `/utilities`, with the Email Address Checker built on fake Graph, ready for a real-tenant smoke test · **Related:** `utilityapps/docs/email_address_checker_functional_spec_v0.1.md` (the functional spec; "the spec" below), `guide/deferred_consolidated.md` (the shared Graph helper this segment builds)
+**Opened:** 2026-10-30 · **Theme:** the `utilityapps/` package mounted at `/utilities`, with the Email Address Checker built on fake Graph, ready for a real-tenant smoke test · **Related:** `utilityapps/docs/email_address_checker_functional_spec_v0.1.md` (the functional spec; "the spec" below), `cordware/spec/identity.md` "Graph" (the shared Graph helper this segment builds; its deferred entry retired at rung 4)
 
 ## Opportunity
 
@@ -87,6 +87,9 @@ leak, as the spec's §10 requires.
 - The landing page's Utilities link comes from the registry, as every mount's does; the landing page is not edited.
 - A utilities-only PR runs the `full` lane, which errs toward running more; a utilities lane can wait until a second tool exists.
 - The fake directory is a fixture of invented `example.edu` accounts, built in code and never read from a file of real data (spec §9).
+- 2026-10-30, rung 3: a cell over the `csv` module's 131,072-character limit is refused by name, not by raising the limit, which is process-wide and which RRW's importers rely on (Codex, `#3409`).
+- 2026-10-30, rung 4: requests go through `urllib`, not `httpx`, which is only a dev dependency; adding it would change the deploy manifest for one client.
+- 2026-10-30, rung 4: the fake directory follows fake auth (a local run with it on), so the helper adds no setting.
 
 ## Blast radius (measured)
 
