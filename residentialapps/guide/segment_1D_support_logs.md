@@ -13,7 +13,7 @@ Support Logs has a factory and a health route at `/supportlogs` and nothing else
 | Item | Lands | Waits on |
 |---|---|---|
 | 1. Screens and conventions | Every Support Logs page as a placeholder on sample data, the frontline phone first; the UI spec settled and written to `residentialapps/spec/` | — |
-| 2. Authorizations and configuration | The `supportlogs` models and first migration; authorization types over the Staff roster (§3.5), configured lists (§5.5–5.10), clusters (§10.5); Sys admin wired | 1B closed |
+| 2. Authorizations and configuration | The `supportlogs` models and first migration; authorization types over the Staff roster (§3.5), configured lists (§5.5–5.10), ~~clusters (§10.5)~~ (deferred, rung 9); Sys admin wired | 1B closed |
 | 3. Encounters and safety | Encounter logging, students and the local working set (§4), informal follow-up (§6), safety flags (§5.10); the frontline pages wired | Item 2 |
 | 4. Plans and sharing | Formal assignments and conversion (§7, §8), peer-view grants (§11.1), the student view and full history (§9) | Item 3 |
 | 5. Oversight and review | The senior dashboard (§10.2–10.6), consultation check (§10.7–10.8), the support-activity audit (§11.3) | Item 4 |
@@ -46,7 +46,7 @@ Email and Teams are out of scope: v1 reminds in-app only (§17).
 - **Names and tabs** (author, 2026-10-29):
   - **Consultation check**, not *opportunity review*: a list of students in, and whom to consult out, for any approved purpose (§10.7, §17 Q12). Its states are *No consultation indicated*, *Consultation suggested* and *Consultation required*; the first never means a student is well or suitable.
   - **No Safety flags tab**: flags are listed on Home for the frontline and on Overview for recipients, each opening its detail page; a recipient with neither frontline nor senior access lands on a Home holding only the flags.
-  - **Senior staff get an Overview tab**, beside the tabs their other grants give them, for workload, hotspots, clusters, coverage, every plan and the flags; not a separate set of pages.
+  - **Senior staff get an Overview tab**, beside the tabs their other grants give them, for workload, hotspots, clusters (deferred, rung 9), coverage, every plan and the flags; not a separate set of pages.
 - **Scope is the grant, not the slot.** A frontline user sees what §11.1 gives them; nothing is derived from who oversees whom in Assignments, which covers RAs only (`residentialapps/guide/todo_master.md`, 2026-10-29), without a ruling.
 - **Reads are actions** (§11.3): every placeholder that shows a named student says the view is recorded, as the real page will.
 - **Configured lists are never hard-coded in templates** (UI §3, "Configured lists"): the sample module holds the seeded defaults and the pages render from it.

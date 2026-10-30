@@ -14,8 +14,6 @@ from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
 from residentialapps.tests._host import host_with
 
-
-
 # Identifiable and aggregate view, frontline, frontline and recipient, recipient only.
 NOT_SENIOR = ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Priya Raman", "Hui Min Goh")
 
@@ -83,7 +81,8 @@ def test_no_cluster_view_until_students_have_a_location(client: TestClient) -> N
     view is deferred (author, 2026-10-30): no card, and no student's
     cluster on their history."""
     for path in ("/overview/?as=Sam%20Lee", "/overview/?as=Kenneth%20Lau", "/overview/students/S-08?as=Sam%20Lee"):
-        assert "cluster" not in client.get(path).text.lower(), path
+        page = client.get(path)
+        assert page.status_code == 200 and "cluster" not in page.text.lower(), path
 
 
 def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient) -> None:

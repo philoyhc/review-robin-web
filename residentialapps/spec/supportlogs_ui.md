@@ -2,7 +2,7 @@
 
 > **Built so far:** segment 1D item 1 built every Support Logs screen on
 > sample data (`residentialapps/guide/segment_1D_support_logs.md`, rungs
-> 1–6). Items 2–5 wire them. This file settles the draft UI spec,
+> 1–9). Items 2–5 wire them. This file settles the draft UI spec,
 > `residentialapps/docs/support_logs_ui_spec_v0.1.md`, which is history
 > from here; its open questions are answered in §8 or carried there.
 
