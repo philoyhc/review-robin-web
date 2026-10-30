@@ -1183,23 +1183,6 @@ of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
   the institution's IT) or Cordware trusting `X-Original-Host`, which is
   a change in `cordware/` not yet asked for. **What would move it on:**
   the app-host decision in Cordware's private to-do.
-- **A shared Graph helper in `cordware/`** (author, 2026-10-30: filed
-  until Graph is validated). Three users need Microsoft Graph through
-  Easy Auth's token store, which the host owns: Residential's identity
-  matching (a user's `mail` and `userPrincipalName` by object ID,
-  `residentialapps/docs/residentialapps_email_identity_matching.md` §4),
-  RA Leave's sending as the actor (`Mail.Send`), and the Email Address
-  Checker (`utilityapps/docs/email_address_checker_functional_spec_v0.1.md`).
-  One helper in the host, not a copy per application, with
-  `cordware/spec/identity.md` naming it. Until then identity matching
-  runs on the sign-in claims alone, as the note requires. **What would
-  move it on:** Cordware's private deployment confirming live token
-  acquisition and a Graph call, or the first of the three users being
-  built. **Partly met 2026-10-30** (Cordware's private progress report):
-  tokens are issued and delegated calls work from Cloud Shell (`/me`, a
-  user by UPN, `sendMail`; a user by mail needs `$filter=mail eq`); a call
-  from application code through the Web App's egress, and token refresh,
-  are not yet proved.
 - **First-time-user creation auditing.** First sign-in creates
   a `User` row without writing an audit event. Decide whether
   first-sign-in deserves its own audit event, or whether the
