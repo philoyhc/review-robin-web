@@ -890,6 +890,7 @@ def test_an_app_s_spec_docs_and_guide_paths_are_read() -> None:
               "(Item 1).\n- `residentialapps/guide/todo_master.md` — y.")
     assert _paths(bullet) == ["residentialapps/spec/a.md", "utilityapps/docs/b.md"]
     assert _guide(bullet) == ["residentialapps/guide/todo_master.md"]
+    assert _paths("- `cordware/spec/host.md` — the host's spec.") == ["cordware/spec/host.md"]
 
 
 def test_an_app_s_code_is_a_root_in_the_leading_position_only() -> None:
@@ -911,6 +912,10 @@ def test_a_plan_resolves_in_an_app_s_guide_and_its_archive(
     assert cc.resolve_plan("1D") == live / "segment_1D_support_logs.md"
     assert cc.resolve_plan("1A") == live / "archive" / "segment_1A_package.md"
     (tmp_path / "guide" / "segment_1D_other.md").write_text("# clash\n")
+    with pytest.raises(cc.Unresolvable, match="ambiguous"):
+        cc.resolve_plan("1D")
+    (tmp_path / "guide" / "segment_1D_other.md").unlink()
+    (tmp_path / "guide" / "segment_1D_support_logs.md").write_text("# same name, other tree\n")
     with pytest.raises(cc.Unresolvable, match="ambiguous"):
         cc.resolve_plan("1D")
 

@@ -39,7 +39,12 @@ from ._shared import Unresolvable, _git
 # `APP_DIRS` mirrors `tools/ci_lanes.py`'s, which a test holds it to.
 APP_DIRS = ("residentialapps", "utilityapps")
 APP_PREFIX = "(?:(?:" + "|".join(APP_DIRS) + ")/)?"
-COMMITTED_PATH = re.compile(r"`(" + APP_PREFIX + r"(?:spec|docs)/[A-Za-z0-9._/-]+\.md)[^`]*`")
+# The host's own `cordware/spec/` is a spec folder too (`ci_lanes.py`'s
+# prose folders), dropped the same way until 2026-10-30: 21A–21D's and
+# Residential 1A's bullets on `cordware/spec/host.md` read as no path.
+COMMITTED_PATH = re.compile(
+    r"`((?:" + APP_PREFIX + r"(?:spec|docs)|cordware/spec)/[A-Za-z0-9._/-]+\.md)[^`]*`"
+)
 
 # A `guide/` commitment. Counted and listed, never verified — which is a
 # decision about what this tool can honestly say, not an omission.
@@ -229,7 +234,10 @@ def resolve_plan(segment: str) -> pathlib.Path:
     ]
     if not candidates:
         raise Unresolvable(f"no plan file for segment {segment!r} in any guide/")
-    if len({p.name for p in candidates}) > 1:
+    # A plan and its archived copy are one plan; the same name in RRW's
+    # guide and an app's is two, and ambiguous.
+    trees = {(p.parent.parent if p.parent.name == "archive" else p.parent, p.name) for p in candidates}
+    if len(trees) > 1:
         names = ", ".join(sorted(p.name for p in candidates))
         raise Unresolvable(f"segment {segment!r} is ambiguous: {names}")
     return candidates[0]

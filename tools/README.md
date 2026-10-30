@@ -30,8 +30,10 @@ It finds a plan in RRW's `guide/` and `guide/archive/` and in each Cordware
 app folder's (`APP_DIRS`: `residentialapps/`, `utilityapps/`, as
 `ci_lanes.py`'s), so `python3 tools/close_check.py 1D` reads
 `residentialapps/guide/segment_1D_support_logs.md`. An app's `spec/`,
-`docs/` and `guide/` paths read as RRW's do, and its code as a root, like
-`app/`.
+`docs/` and `guide/` paths, written in full, read as RRW's do, and its code
+as a root, like `app/`; a bare filename still resolves against RRW's root,
+`spec/` and `docs/` only. `cordware/spec/` paths are committed too. The
+same plan name in RRW's guide and an app's is ambiguous.
 
 ### The checks
 
