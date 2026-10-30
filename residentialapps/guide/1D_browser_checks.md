@@ -120,7 +120,7 @@ read right.
   - locked at first, with Unlock refused until the confirmation is ticked;
   - unlocked: the term list opens on the current term, with All terms
     last; a Student list offers your own students; **Download CSV** saves
-    a file named for the term (and the student, when one is picked);
+    a file named for the term (and the student's id, when one is picked);
   - the file opens in a spreadsheet with one row per own encounter (or
     plan), and no Hana Rahim, who is shared;
   - **Download the template** saves the columns only;

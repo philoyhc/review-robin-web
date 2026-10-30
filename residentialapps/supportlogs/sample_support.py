@@ -897,7 +897,7 @@ def term_of(d: date) -> Term | None:
 
 # --- Records across staff (rung 8; author, 2026-10-30): senior
 # identifiable access uploads records tagged to a staff member, downloads
-# them by staff and term, and deletes purged records, every action
+# them by staff, student and term, and deletes purged records, every action
 # audited. A download names the staff member in its own column.
 
 RECORD_KINDS = {"encounters": ("Encounters", ENCOUNTER_COLUMNS), "plans": ("Plans", PLAN_COLUMNS)}
@@ -929,8 +929,9 @@ def purges(staff: str | None = None, sid: str | None = None) -> list[Purge]:
     return [p for p in PURGES if (not staff or p.by == staff) and (not sid or sid in p.students)]
 
 
-def record_students(staff: str) -> list[Student]:
-    """The students a staff member's own records are about, for Your
-    records' student filter, by name."""
-    ids = {e.student for e in encounters_by(staff)} | {p.student for p in PLANS if p.staff == staff}
+def record_students(staff: str, page: str = "students") -> list[Student]:
+    """The students a staff member's own records of a page's kind are about
+    (encounters on Students, plans on My plans), for Your records' student
+    filter, by name."""
+    ids = {e.student for e in encounters_by(staff)} if page == "students" else {p.student for p in PLANS if p.staff == staff}
     return sorted((s for s in STUDENTS if s.id in ids), key=lambda s: s.name)

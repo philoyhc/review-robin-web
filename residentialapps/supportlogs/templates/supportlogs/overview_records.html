@@ -6,11 +6,11 @@
   {{ sample_title("Records across staff", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
   {# Senior identifiable access (author, 2026-10-30): upload records tagged
-     to a staff member, download them by staff and term, and delete purged
-     records by staff and term. Each is a support-activity event (§11.3),
+     to a staff member, download them by staff, student and term, and
+     delete purged records by staff and student, a whole purge at a time. Each is a support-activity event (§11.3),
      behind the same lock as a staff member's Your records. #}
-  <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member and term it covered.</p>
-  {% set keep = {"staff": staff if staff and staff != "?" else "", "student": student.id if student else ""} %}
+  <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member, student and term it covered.</p>
+  {% set keep = {"staff": staff if staff and staff != "?" else "", "student": student if student and student != "?" else ""} %}
   {% if not unlocked %}
     <section class="card card-pad muted" aria-labelledby="records-h" id="records">
       <h2 id="records-h">Records across staff <span class="chip chip-mute">Locked</span></h2>
@@ -56,12 +56,12 @@
             {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
             <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
             <div class="field-wide"><label for="p-staff">Staff</label><select id="p-staff" name="staff" class="input"><option value="">All staff</option>{% for n in sample.FRONTLINE_COLLEAGUES %}<option{% if n == staff %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if student and s.id == student.id %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% if student == "?" %}<option value="?" selected>Unknown student</option>{% endif %}{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if s.id == student %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>
           {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {{ p.count }} {{ p.what | lower }}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
           <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: the {{ purged | length }} purge{{ '' if purged | length == 1 else 's' }} shown, {{ purged_records }} record{{ '' if purged_records == 1 else 's' }}">Delete permanently</button>
-          <p class="subtle small">Deletes the whole purges shown, of {{ staff if staff and staff != "?" else "all staff" }}{% if student %}, holding records about {{ student.name }}{% endif %}: every record in each, about any student. It cannot be undone.</p>
+          <p class="subtle small">Deletes the whole purges shown{% if staff == "?" or student == "?" %} (none: the filter names no one){% else %}, of {{ staff or "all staff" }}{% if student %}, holding records about {{ sample.student(student).name }}{% endif %}{% endif %}: every record in each, about any student. It cannot be undone.</p>
         </section>
       </div>
     </div>

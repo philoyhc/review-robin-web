@@ -2,7 +2,7 @@
 (author, 2026-10-30): a section at the end of Students and My plans,
 locked until confirmed, to download the viewer's own encounters or plans
 as CSV by term or all, upload a CSV, or purge them all; a purge hides and
-keeps, and only a sys admin deletes."""
+keeps, and only senior identifiable access deletes, a whole purge at a time."""
 
 from __future__ import annotations
 
@@ -140,9 +140,10 @@ def test_purge_hides_and_deletion_is_others(client: TestClient) -> None:
     assert "Nothing is deleted" in card and "only senior staff with identifiable access can delete them" in card
     assert 'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
     choices = re.findall(r"<option>([^<]+)</option>", card.split('id="purge-student"')[1].split("</select>")[0])
-    assert choices == ["All your students", *(st.name for st in sample.record_students("Daniel Koh"))]  # a purge can take one student's
+    assert choices == ["All your students", *(st.name for st in sample.record_students("Daniel Koh", "students"))]  # a purge can take one student's
     audit = client.get("/sys-admin/audit?as=Rachel%20Yeo").text.split('id="purged-h"')[1].split("</section>")[0]
-    assert "Grace Ho: 6 encounters" in audit and "Delete permanently" not in audit  # only senior staff delete (author, 2026-10-30)
+    assert "Grace Ho: 6 encounters" in audit and "<button" not in audit  # only senior staff delete (author, 2026-10-30)
+    assert f'<span class="count">· {sum(p.count for p in sample.PURGES)}</span>' in audit  # records, as on Overview
     assert not any(s.name in audit for s in sample.STUDENTS)
 
 
@@ -219,6 +220,8 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     assert shown("") == ["Grace Ho: 6 encounters", "Arjun Nair: 2 plans"]
     assert shown("&staff=Arjun%20Nair") == ["Arjun Nair: 2 plans"]
     assert shown("&student=S-06") == ["Grace Ho: 6 encounters"]
+    assert shown("&student=S-02") == ["Grace Ho: 6 encounters"]  # the same purge, by its other student
+    assert shown("&student=S-09") == ["Arjun Nair: 2 plans"]
     assert shown("&staff=Arjun%20Nair&student=S-06") == []
     assert shown("&staff=Nobody") == [] and shown("&student=S-99") == []  # unknown matches no one, never everyone
     card = client.get(f"/overview/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
@@ -228,6 +231,9 @@ def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     one = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-06").text.split('id="purged-h"')[1]
     assert "Deletes the whole purges shown, of all staff, holding records about Farid Osman" in one
     assert "every record in each, about any student" in one
+    lost = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-99").text.split('id="purged-h"')[1]
+    assert '<option value="?" selected>Unknown student</option>' in lost  # Show again does not widen to everyone
+    assert "(none: the filter names no one)" in lost
 
 
 def test_unknown_values_never_widen(client: TestClient) -> None:
@@ -257,8 +263,12 @@ def test_downloads_filter_by_student(client: TestClient) -> None:
     assert "all-terms-S-03" in mine.headers["content-disposition"]
     assert {r[2] for r in rows(mine.text)[1:]} == {"clara.tan@u.example.edu"}
     assert len(rows(mine.text)) - 1 == len(sample.encounters_by("Daniel Koh", "S-03"))
-    choices = re.findall(r'<option value="(S-\d+)">', client.get(f"/students/?{OPEN}").text.split('id="dl-student"')[1].split("</select>")[0])
-    assert choices == [st.id for st in sample.record_students("Daniel Koh")]
+    def offered(page: str) -> list[str]:
+        return re.findall(r'<option value="(S-\d+)">', client.get(f"/{page}/?{OPEN}").text.split('id="dl-student"')[1].split("</select>")[0])
+
+    assert offered("students") == [st.id for st in sample.record_students("Daniel Koh", "students")]
+    assert set(offered("plans")) == {p.student for p in sample.PLANS if p.staff == "Daniel Koh"}  # only students with plans
+    assert "S-06" in offered("students") and "S-06" not in offered("plans")
     plans = rows(client.get(f"/plans/records.csv?{OPEN}&term=all&student=S-01").text)
     assert [r[1] for r in plans[1:]] == ["Aiden Chen"]
     senior = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=all&student=S-08")

@@ -20,7 +20,7 @@
     </div>
   </section>
   <section class="card card-pad gap-above" aria-labelledby="purged-h">
-    <h2 id="purged-h">Purged records <span class="count">· {{ sample.PURGES | length }}</span></h2>
+    <h2 id="purged-h">Purged records <span class="count">· {{ sample.PURGES | sum(attribute="count") }}</span></h2>
     <p class="sub">Records their owner purged from Your records: hidden from every page and kept until senior staff with identifiable access delete them, on Overview's Records across staff. Counts only; the records are never shown.</p>
     <ul class="items">{% for p in sample.PURGES %}<li><div class="item-head"><span class="strong">{{ p.by }}: {{ p.count }} {{ p.what | lower }}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>
   </section>
