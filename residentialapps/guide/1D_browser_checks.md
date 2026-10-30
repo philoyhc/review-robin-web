@@ -236,4 +236,4 @@ in the plan's open questions (`residentialapps/guide/segment_1D_support_logs.md`
 
 Not for the browser: the crisis protocol's real contents (the
 institution's), the close check, senior staff granting on others' behalf
-(§17 Q11), and CI's lane for `utilityapps/`.
+(§17 Q11).

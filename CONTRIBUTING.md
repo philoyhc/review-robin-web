@@ -47,8 +47,8 @@ request (`tools/ci_lanes.py`, `guide/archive/segment_22A_ci_lanes.md`): one that
 changes only Markdown in `spec/`, `docs/`, `guide/`, `cordware/spec/`,
 each Cordware app's `docs/`, `guide/` and `spec/` (`APP_DIRS`:
 `residentialapps/`, `utilityapps/`), or at the root, or a `README.md`
-outside what ships (`app/`, `alembic/`, `cordware/`, an app folder below
-its top), runs the `prose` job
+outside what ships or will (`app/`, `alembic/`, `cordware/`, an app
+folder below its top), runs the `prose` job
 alone, the unit tests plus the tests that read prose, and shows `test` and
 `postgres` as skipped. One that changes only prose and `residentialapps/`
 runs the `residential` job instead (`ruff check .`, Residential's tests,
