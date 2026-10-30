@@ -117,8 +117,12 @@ takes the first source that has a value:
 
 `tenant_id`, `upn` and `mail` come from `X-MS-CLIENT-PRINCIPAL` alone, each
 claim counting only when non-empty after strip. With the simple headers only,
-all three are `None`. Which of these claims a deployment's tokens actually
-carry is confirmed on the deployment, not here.
+all three are `None`. Which claims a deployment's tokens carry is a fact of
+the deployment. On the institutional one (2026-10-30, Cordware's private
+progress report): `emailaddress` carries the mail and `preferred_username`
+the sign-in name, which differ there; `tenantid` is present; there is no
+`upn` claim. So `email` and `mail` are the mail address, `upn` is the sign-in
+name, and `tenant_id` is set.
 
 A malformed `X-MS-CLIENT-PRINCIPAL` with none of the simple headers still
 counts as headers present: the result is an `Identity` with every field
@@ -200,7 +204,7 @@ applications import identity and never the entry point (`cordware/spec/host.md`
 | `FAKE_AUTH_UPN` | empty | The fake identity's `upn`; blank is `FAKE_AUTH_EMAIL`. |
 | `FAKE_AUTH_MAIL` | empty | The fake identity's `mail`; blank is `FAKE_AUTH_EMAIL`. |
 | `FAKE_AUTH_SUPER_ADMIN` | `true` | Whether the fake email joins the effective super-admin list while fake auth is on. |
-| `SUPER_ADMIN_EMAILS` | empty | Comma-separated emails (not JSON), trimmed, empty items dropped. Set only by the deployer. |
+| `SUPER_ADMIN_EMAILS` | empty | Comma-separated emails (not JSON), trimmed, empty items dropped. Set only by the deployer. Compared with `email`, so list each account's mail address, not its sign-in name where the two differ. |
 
 Every setting can be set per run (`$env:NAME=…` or `export NAME=…`) over
 `.env`. The inventory entry for each is `spec/settings_inventory.md` §8.

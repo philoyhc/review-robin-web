@@ -1173,6 +1173,16 @@ of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
   `tenant_id`, `upn` and `mail` (Residential segment 1B item 3). The
   second happened 2026-10-30, so the fields RRW would read now exist;
   RRW reading them is still the open decision.
+- **The request host behind the institutional gateway** (2026-10-30,
+  from Cordware's private to-do, item 12). The
+  gateway sends applications the App Service's own host name; only Easy
+  Auth reads the original host from `X-Original-Host`. Anything that
+  builds an absolute URL from the request (RRW's invitation links,
+  segment 21D's check) would name the wrong host. Before the first
+  release, either a custom domain on the App Service (a DNS record from
+  the institution's IT) or Cordware trusting `X-Original-Host`, which is
+  a change in `cordware/` not yet asked for. **What would move it on:**
+  the app-host decision in Cordware's private to-do.
 - **A shared Graph helper in `cordware/`** (author, 2026-10-30: filed
   until Graph is validated). Three users need Microsoft Graph through
   Easy Auth's token store, which the host owns: Residential's identity
@@ -1184,8 +1194,12 @@ of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
   `cordware/spec/identity.md` naming it. Until then identity matching
   runs on the sign-in claims alone, as the note requires. **What would
   move it on:** Cordware's private deployment confirming live token
-  acquisition and a Graph call (the managed-identity wiring still open
-  there on 2026-10-29), or the first of the three users being built.
+  acquisition and a Graph call, or the first of the three users being
+  built. **Partly met 2026-10-30** (Cordware's private progress report):
+  tokens are issued and delegated calls work from Cloud Shell (`/me`, a
+  user by UPN, `sendMail`; a user by mail needs `$filter=mail eq`); a call
+  from application code through the Web App's egress, and token refresh,
+  are not yet proved.
 - **First-time-user creation auditing.** First sign-in creates
   a `User` row without writing an audit event. Decide whether
   first-sign-in deserves its own audit event, or whether the

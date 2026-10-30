@@ -18,7 +18,7 @@ Ruling 13 puts RA Leave first among Residential's three pillars: it is the best 
 | 4. Decisions | First and final approval, Master appeals, withdrawal; the queue, Decide and Decided wired | Item 3 |
 | 5. Team and records | Team leave, My history, Leave admin applications; the audit events | Item 4 |
 
-Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prerequisite not yet in place (§17.1). Items 3–4 write the outbox rows (§17.2), so sending can be added without reshaping them.
+Email (§17) is out of scope: delegated Graph `Mail.Send` is a deployment prerequisite (§17.1), consented and proved with a user's token from Cloud Shell on 2026-10-30 but not yet from application code (Cordware's private progress report). Items 3–4 write the outbox rows (§17.2), so sending can be added without reshaping them.
 
 **Rejected: folding RA Leave into 1B.** A different pillar, spec and data; 1B's close would be held to RA Leave's, and the plan would pass its budget.
 
