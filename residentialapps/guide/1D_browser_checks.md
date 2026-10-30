@@ -163,6 +163,13 @@ read right.
     **Show**; **Delete permanently** is outline red and disabled. With a
     student chosen, each purge shows that student's records of its total,
     and the note says only that student's records go.
+- [ ] **Who holds access** (as Sam): a card under Hotspots names who holds
+  Senior identifiable and identifiable view; **See every grant** lists
+  every grant's holders and the access changes, with no button anywhere.
+  As Siti there is no card, and the page is refused.
+- [ ] **Sharing** on a hotspot's history (as Sam, Hana Rahim): Priya Raman
+  → Daniel Koh, and Whose records / With / **Share on their behalf**,
+  disabled.
 - [ ] **As Siti:** names show without history links. There are no flagged
   students and no audit card. Every plan is marked read-only.
 - [ ] **As Kenneth** (*ruling R3: small counts*): counts only, with no
@@ -209,6 +216,12 @@ read right.
   Identifiable, with None last.
 - [ ] **Configuration:** a grid of list cards, one column at 390 px, each
   with a disabled Edit.
+- [ ] **Configuration's Access card:** "A sys admin may grant itself
+  Senior identifiable", unticked and disabled.
+- [ ] **No senior warning:** open Access with `&preview=no-senior` added to
+  the address: an amber warning heads the page. Without it, none.
+- [ ] **Senior reads** on Audit log: Sam Lee, 4 reads, 1 download, and
+  his latest; no student named.
 - [ ] **Audit log:** administrative events only. The lapse row's actor is
   "Support Logs" and its reason names Residential Operations.
 - [ ] **No student anywhere** in Sys admin (Ctrl+F for "Clara" or

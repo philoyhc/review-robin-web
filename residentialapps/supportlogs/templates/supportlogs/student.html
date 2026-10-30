@@ -41,7 +41,7 @@
       <section class="card card-pad" aria-labelledby="shared-h">
         <h2 id="shared-h">Shared with</h2>
         <p class="sub">Colleagues who can see your records for {{ chosen.name }} (§11.1). Private unless you share.</p>
-        {% if mine_shared %}<ul class="items">{% for g in mine_shared %}<li><div class="item-head"><span class="strong">{{ g.viewer }}</span><button type="button" class="btn btn-danger" disabled aria-label="Revoke {{ g.viewer }}'s view">Revoke</button></div><div class="subtle">Since {{ sample.short_date(g.granted_on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one.</p>{% endif %}
+        {% if mine_shared %}<ul class="items">{% for g in mine_shared %}<li><div class="item-head"><span class="strong">{{ g.viewer }}</span><button type="button" class="btn btn-danger" disabled aria-label="Revoke {{ g.viewer }}'s view">Revoke</button></div><div class="subtle">Since {{ sample.short_date(g.granted_on) }}{% if g.by %} · shared by {{ g.by }} on your behalf{% endif %}</div></li>{% endfor %}</ul>{% else %}<p class="sub">No one.</p>{% endif %}
         {% if sample.working_set(me.name) | selectattr("0.id", "equalto", chosen.id) | list %}<a class="btn btn-secondary gap-above-sm" href="{{ url('/students/' ~ chosen.id ~ '/share') }}{{ as_query }}">Share with a colleague</a>{% else %}<p class="subtle small">You have no records of your own for {{ chosen.name }} to share.</p>{% endif %}
       </section>
     </div>

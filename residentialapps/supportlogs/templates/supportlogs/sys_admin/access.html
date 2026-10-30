@@ -8,7 +8,10 @@
      eligibility list, read from Residential Operations and never written;
      the grants are Support Logs' own (roles rule 9). Every member is
      eligible for every type; an appointment grants nothing (§3.5). #}
-  <p class="sub">Every active Staff-roster member, from Residential Operations. Grants are made here and shown nowhere else.</p>
+  <p class="sub">Every active Staff-roster member, from Residential Operations. Grants are made here; senior staff see who holds them, read-only.</p>
+  {% if not seniors %}
+    <p class="notice" role="alert" id="no-senior">No one holds Senior identifiable. Nobody can review the support-activity audit, manage formal assignments or delete purged records until someone is granted it.</p>
+  {% endif %}
   {% if sample.LAPSED %}
     <section class="card card-pad gap-below" aria-labelledby="lapsed-h">
       <h2 id="lapsed-h">Lapsed grants <span class="count">· {{ sample.LAPSED | length }}</span></h2>
@@ -19,7 +22,7 @@
   <section class="card gap-below" aria-labelledby="access-h">
     <div class="card-head">
       <h2 id="access-h">Staff and their access</h2>
-      <p class="sub">A grant or a revocation asks for a reason and, for a senior grant, the request it answers; each is recorded. Nobody changes their own access, and the last sys admin cannot be revoked. {% if super_admin %}You grant and revoke Sys admin.{% else %}Sys admin is the super-admin's to grant: you see it read-only.{% endif %}</p>
+      <p class="sub">A grant or a revocation asks for a reason and, for a senior grant, the request it answers; each is recorded. Nobody changes their own access{% if sample.SELF_GRANT_SENIOR %}, except a sys admin granting itself Senior identifiable, which Configuration allows{% endif %}, and the last sys admin cannot be revoked. {% if super_admin %}You grant and revoke Sys admin.{% else %}Sys admin is the super-admin's to grant: you see it read-only.{% endif %}</p>
     </div>
     <div class="filters inset">
       <div class="filter-fields">

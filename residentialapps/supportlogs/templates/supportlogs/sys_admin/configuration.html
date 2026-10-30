@@ -34,6 +34,12 @@
       <button type="button" class="btn btn-secondary gap-above-sm" disabled aria-label="Edit notes">Edit</button>
       <p class="subtle small flush">§5.8</p>
     </section>
+    <section class="card card-pad" aria-labelledby="self-h">
+      <h2 id="self-h">Access</h2>
+      <label class="check"><input type="checkbox"{% if sample.SELF_GRANT_SENIOR %} checked{% endif %} disabled> A sys admin may grant itself Senior identifiable</label>
+      <p class="sub">Off by default. For a small team: the one exception to nobody changing their own access, and recorded like any grant.</p>
+      <p class="subtle small flush">Author, 2026-10-30</p>
+    </section>
     <section class="card card-pad" aria-labelledby="rules-h">
       <h2 id="rules-h">Consultation rules</h2>
       <dl class="kv">{% for reason, state in sample.CONSULTATION_REASONS %}<dt>{{ reason }}</dt><dd>{{ state }}</dd>{% endfor %}</dl>

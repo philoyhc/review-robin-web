@@ -1,0 +1,27 @@
+{% extends "residential/base.html" %}
+{% from "residential/_sample.html" import sample_title, viewer_card with context %}
+{% block title %}Who holds access{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
+  {{ sample_title("Who holds access", me.name) }}
+  {{ viewer_card(viewer_choices, me.name) }}
+  {# Administration decides who sees content but sees none, so senior
+     staff see what it decided (author, 2026-10-30): each grant's holders
+     and the access changes, read-only. Granting stays on Sys admin. #}
+  <p class="sub">Who holds each Support Logs grant, and the latest changes to them. Read-only: sys admins grant and revoke on Sys admin › Access.</p>
+  <div class="split">
+    <div class="main stack">
+      <section class="card card-pad" aria-labelledby="grants-h">
+        <h2 id="grants-h">Grants</h2>
+        <dl class="kv">{% for g in sample.ACCESS_GRANTS %}<dt>{{ g }}</dt><dd>{{ sample.holders(g) | join(", ") or "No one" }}</dd>{% endfor %}</dl>
+      </section>
+    </div>
+    <div class="side">
+      {% set changes = sample.ADMIN_AUDIT | selectattr("kind", "equalto", "Access") | list %}
+      <section class="card card-pad muted" aria-labelledby="changes-h">
+        <h2 id="changes-h">Changes <span class="count">· {{ changes | length }}</span></h2>
+        <ul class="items">{% for a in changes %}<li><div class="item-head"><span class="strong">{{ a.action }}</span><span class="nowrap subtle">{{ sample.short_date(a.at.date()) }}</span></div><div class="subtle">{{ a.actor }}{% if a.reason %} · {{ a.reason }}{% endif %}</div></li>{% endfor %}</ul>
+      </section>
+    </div>
+  </div>
+{% endblock %}

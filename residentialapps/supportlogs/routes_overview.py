@@ -49,3 +49,11 @@ def audit(request: Request) -> Response:
     """The support-activity audit (§11.3): who did or saw what, of whom; for
     senior identifiable access only, and reviewing it is recorded."""
     return gated(request, "supportlogs/audit.html", sample.SENIOR, current_tab="/overview/")
+
+
+@router.get("/overview/access", name="supportlogs_overview_access")
+def access(request: Request) -> Response:
+    """Who holds each Support Logs grant and the access changes, read-only,
+    for senior identifiable access (author, 2026-10-30): administration
+    decides who sees content, and senior staff see what it decided."""
+    return gated(request, "supportlogs/overview_access.html", sample.SENIOR, current_tab="/overview/")

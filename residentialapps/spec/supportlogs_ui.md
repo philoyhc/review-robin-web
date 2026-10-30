@@ -130,6 +130,24 @@ form's end, and the main action is a full-width Primary on the page
   by student, only that student's records go (Delete permanently inert until wired). Only
   senior identifiable access deletes; Sys admin's Audit log lists purged
   records as counts only (author, 2026-10-30).
+- **Administration and senior staff, each in view of the other** (author,
+  2026-10-30). Administration decides who sees content but sees none;
+  senior staff see content but grant no access:
+  - **Who holds access** (`/overview/access`, linked from Overview's card),
+    for senior identifiable access: each grant's holders and the access
+    changes, read-only.
+  - **Senior reads** on Sys admin's Audit log: each senior's identifiable
+    reads in the last 30 days and how many were downloads, never which
+    student.
+  - **Access warns** when no one holds Senior identifiable (the sample
+    always has one; `?preview=no-senior` shows the warning).
+  - **Configuration's Access card**: a sys admin may grant itself Senior
+    identifiable, off by default and recorded.
+  - **Sharing on a student's history**: senior staff share a staff
+    member's records for the student with a colleague on that staff
+    member's behalf (§17 Q11, inert until wired); the grant shows both
+    names, and the staff member sees "shared by … on your behalf".
+  - Senior staff read others' log records and never write into one.
 
 ## 5. Lists and tables
 
@@ -174,7 +192,8 @@ form's end, and the main action is a full-width Primary on the page
   says so, and an entry it could not read is listed as not read, never
   given a state.
 - **Administration sees no content.** Sys admin shows grants, lists,
-  administrative events and purged records' counts, never a student. The
+  administrative events, purged records' counts and senior reads' counts,
+  never a student. The
   support-activity audit is senior staff's, on Overview.
 - **Notes are short and say so**: a live count to the limit, and the
   minimization guidance beside the field.
