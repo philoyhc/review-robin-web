@@ -1173,16 +1173,6 @@ of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
   `tenant_id`, `upn` and `mail` (Residential segment 1B item 3). The
   second happened 2026-10-30, so the fields RRW would read now exist;
   RRW reading them is still the open decision.
-- **The request host behind the institutional gateway** (2026-10-30,
-  from Cordware's private to-do, item 12). The
-  gateway sends applications the App Service's own host name; only Easy
-  Auth reads the original host from `X-Original-Host`. Anything that
-  builds an absolute URL from the request (RRW's invitation links,
-  segment 21D's check) would name the wrong host. Before the first
-  release, either a custom domain on the App Service (a DNS record from
-  the institution's IT) or Cordware trusting `X-Original-Host`, which is
-  a change in `cordware/` not yet asked for. **What would move it on:**
-  the app-host decision in Cordware's private to-do.
 - **First-time-user creation auditing.** First sign-in creates
   a `User` row without writing an audit event. Decide whether
   first-sign-in deserves its own audit event, or whether the
