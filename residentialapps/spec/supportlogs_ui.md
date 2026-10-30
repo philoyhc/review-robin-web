@@ -45,7 +45,7 @@ form's end, and the main action is a full-width Primary on the page
   - Log, Students and Plans for the frontline;
   - Overview for senior staff and Other Staff view;
   - Consultation check for its grant;
-  - Access, Configuration, Clusters and Audit log in Sys admin.
+  - Access, Configuration and Audit log in Sys admin.
 - **Home is a tab only when it is a page of its own**: the frontline's
   dashboard, a recipient's flags, or a list of what a viewer with more
   than one destination reaches. Otherwise the bare mount redirects to the
@@ -134,7 +134,7 @@ form's end, and the main action is a full-width Primary on the page
 ## 5. Lists and tables
 
 - **Phone lists** (`ul.items`) carry the frontline's rows.
-- **Tables carry Overview's workload, hotspots and clusters, the
+- **Tables carry Overview's workload and hotspots, the
   Consultation check's result, Access and both audits**; their other cards
   are lists. Each table is sortable (`data-sort-auto`), with `data-sort-value` on cells whose text
   is not their value. The exception is a table whose order is its
@@ -161,6 +161,10 @@ form's end, and the main action is a full-width Primary on the page
   - a consultation check.
 - **Aggregate view names no one.** Other Staff with aggregate view see
   counts only, with no student's name, id or link.
+- **A student is known only as a student** (author, 2026-10-30): nothing
+  ties one to a housing location, so no screen groups students by place.
+  The cluster view (§10.5) is deferred, a cluster being the core's
+  Precinct when it comes, and Sys admin keeps no cluster list.
 - **No score anywhere** (§15):
   - a hotspot's rise is a "Rising" chip on the student's own pattern;
   - a consultation state comes from named reasons;
@@ -170,7 +174,7 @@ form's end, and the main action is a full-width Primary on the page
   says so, and an entry it could not read is listed as not read, never
   given a state.
 - **Administration sees no content.** Sys admin shows grants, lists,
-  cluster names, administrative events and purged records' counts, never a student. The
+  administrative events and purged records' counts, never a student. The
   support-activity audit is senior staff's, on Overview.
 - **Notes are short and say so**: a live count to the limit, and the
   minimization guidance beside the field.
@@ -203,7 +207,6 @@ The draft's §9:
 Items 1–4 stand for the author to confirm at item 1's approval
 (`residentialapps/guide/segment_1D_support_logs.md`, open question 3).
 That plan also holds the questions this build raised:
-- clusters (open question 2);
 - small counts on aggregate view;
 - formal assignments in the consultation rules;
 - checkboxes for the plan's Toggle.

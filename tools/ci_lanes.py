@@ -68,7 +68,6 @@ NOT_PROSE_READERS = {
     "tests/integration/test_url_crawl.py": '"guide" is the in-app /guide URL',
     "residentialapps/tests/test_sample_data.py": "reads the mock CSVs, not prose; the residential lane runs it",
     "residentialapps/tests/test_supportlogs.py": "reads the Staff roster mock CSV, not prose; the residential lane runs it",
-    "residentialapps/tests/test_supportlogs_overview.py": "reads the assignments mock CSV, not prose; the residential lane runs it",
     "residentialapps/tests/test_supportlogs_sys_admin.py": "reads the Staff roster mock CSV, not prose; the residential lane runs it",
     "residentialapps/tests/test_supportlogs_records.py": "reads the terms mock CSV, not prose; the residential lane runs it",
 }

@@ -487,17 +487,10 @@ def shared_encounters(staff: str, sid: str) -> list[Encounter]:
     return sorted(found, key=lambda e: e.when, reverse=True)
 
 
-# --- Overview (rung 5, §10.2–10.6, §11.2–11.3). Clusters are shown as the
-# core's Precincts until ruled (the plan's open question 2), copied from the
-# Assignments mock; which cluster a student belongs to is Support Logs data,
-# set by senior staff (§10.5).
+# --- Overview (rung 5, §10.2–10.6, §11.2–11.3). No cluster view (§10.5):
+# nothing ties a student to a housing location, so a student's Precinct is
+# deferred (author, 2026-10-30; plan, Out of scope).
 
-CLUSTERS = ("Cypress A 04-12", "Cypress A 13-20", "Cypress B 03-14", "Maple 03-08")
-STUDENT_CLUSTER = {
-    "S-01": "Cypress A 04-12", "S-02": "Cypress A 04-12", "S-03": "Cypress A 04-12", "S-04": "Cypress A 13-20",
-    "S-05": "Cypress A 13-20", "S-06": "Cypress A 13-20", "S-07": "Maple 03-08", "S-08": "Cypress B 03-14",
-    "S-09": "Cypress B 03-14", "S-10": "Cypress B 03-14",
-}
 # Assignment load weighting (§10.3): an operational indicator, not a
 # measure of complexity or performance.
 WEIGHTS = {"Monthly": 1, "Fortnightly": 2, "Weekly": 4, "Twice weekly": 8, "3+ times weekly": 12}
@@ -578,19 +571,6 @@ def coverage() -> dict:
         "soon": [p for p in formal if due(p)[0] in ("today", "week")],
         "review": [p for p in formal if p.review and (p.review - TODAY).days <= REVIEW_SOON_DAYS],
     }
-
-
-def clusters() -> list[dict]:
-    """Support by cluster (§10.5) over the last 30 days."""
-    rising = {r["student"].id for r in hotspots() if r["rising"]}
-    rows = []
-    for c in CLUSTERS:
-        ids = {sid for sid, cl in STUDENT_CLUSTER.items() if cl == c}
-        recent = [e for e in ENCOUNTERS if e.student in ids and in_period(e)]
-        supported = {p.student for p in PLANS if p.student in ids and p.status == "Active"} | {e.student for e in recent}
-        rows.append({"cluster": c, "students": len(supported), "contacts": len(recent),
-                     "minutes": sum(MINUTES[e.duration] for e in recent), "rising": len(ids & rising)})
-    return rows
 
 
 @dataclass(frozen=True)
@@ -776,7 +756,7 @@ class AdminEvent:
 
     at: datetime
     actor: str
-    kind: str  # "Access", "Configuration" or "Clusters"
+    kind: str  # "Access" or "Configuration"
     action: str
     reason: str = ""
 
@@ -789,7 +769,6 @@ ADMIN_AUDIT = (
                "Covering the Master's oversight, as the Master asked"),
     AdminEvent(datetime(2026, 9, 30, 0, 0), "Support Logs", "Access", "Jason Teo's Frontline lapsed",
                "Residential Operations: Jason Teo's RF appointment ended"),
-    AdminEvent(datetime(2026, 8, 3, 9, 15), "Rachel Yeo", "Clusters", "Added the cluster Maple 03-08"),
     AdminEvent(datetime(2026, 8, 1, 9, 0), "Platform super-admin", "Access", "Granted Sys admin to Rachel Yeo",
                "Support Logs set up for the term"),
 )
@@ -818,7 +797,6 @@ class Term:
         Winter break"."""
         year, n = self.key.split(".")
         return f"{year}, Term {n} · {self.name}"
-
 
 
 TERMS = tuple(

@@ -145,6 +145,7 @@ Ruled 2026-10-25: `residentialapps/docs/residentialapps_roles.md`.
 
 On hold, not scheduled; each needs the author's rulings before it is planned.
 
+- **A student's housing location** *(deferred 2026-10-30)*: nothing in the app ties a student to where they live, so a student is known only as a student. Every capability that needs it waits on a source for it: Support Logs' cluster view by Precinct (spec §10.5; a cluster is the core's level-2 node), a student's Precinct and the RF responsible for them, and any view of students by place.
 - **Quick setup** *(held 2026-10-28)*: one CSV that loads the rosters and the assignments at once, for a first setup or a normal cycle's few changes. Its 2026-10-27 shape (one row per person per slot, a person's details and a slot's levels given once) predates terms and upload modes; how it meets them is unruled. Its mock, `residentialapps/docs/sample_data/quick_setup.csv`, is kept as that shape.
 
 ## Revise at each spec's next version

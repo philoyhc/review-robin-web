@@ -32,7 +32,7 @@ read right.
   - Sam: Overview alone, with a red badge **1**.
   - Hui Min: Home alone.
   - Nadia: Home, Overview, Consultation check.
-  - Rachel: Access, Configuration, Clusters, Audit log.
+  - Rachel: Access, Configuration, Audit log.
 - [ ] **The switcher** (top left) lists only *Support Logs* for Daniel,
   only *Sys admin* for Rachel, and *All applications* at the foot.
 - [ ] **Wei Jie Ong** sees "You do not have access to this page." with no
@@ -137,7 +137,6 @@ read right.
   - Team workload, sortable, with a load note saying it is not a measure
     of performance;
   - Hotspots with a **Rising** chip on Gwyneth Low and no score anywhere;
-  - Clusters;
   - Coverage;
   - Flagged for formal assignment, with Assign disabled;
   - Every plan;
@@ -207,7 +206,6 @@ read right.
   Identifiable, with None last.
 - [ ] **Configuration:** a grid of list cards, one column at 390 px, each
   with a disabled Edit.
-- [ ] **Clusters:** names only, with Rename, Retire and Add disabled.
 - [ ] **Audit log:** administrative events only. The lapse row's actor is
   "Support Logs" and its reason names Residential Operations.
 - [ ] **No student anywhere** in Sys admin (Ctrl+F for "Clara" or
@@ -222,10 +220,8 @@ Record them in the plan's open questions:
    - Save and raise safety flag is Primary on a red frame;
    - choice pills are styled radios and checkboxes;
    - status labels are sentence case.
-2. **Clusters:** Precincts for now. Should Clusters' Add, Rename and Retire
-   stay?
-3. **Small counts on aggregate view:** suppress a cluster or colleague with
-   one student?
-4. **Consultation check:** an active formal assignment suggests rather
+2. **Small counts on aggregate view:** suppress a colleague with one
+   student?
+3. **Consultation check:** an active formal assignment suggests rather
    than requires a consultation.
-5. **Access:** checkboxes, or the plan's Toggle?
+4. **Access:** checkboxes, or the plan's Toggle?

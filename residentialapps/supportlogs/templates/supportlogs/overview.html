@@ -51,16 +51,6 @@
           <dl class="kv"><dt>Students with recent support</dt><dd>{{ hot | length }}</dd><dt>Rising</dt><dd>{{ hot | selectattr("rising") | list | length }}</dd><dt>With an active flag</dt><dd>{{ hot | selectattr("flags") | list | length }}</dd></dl>
         {% endif %}
       </section>
-      <section class="card card-pad" aria-labelledby="cl-h">
-        <h2 id="cl-h">Clusters</h2>
-        <p class="sub">The last {{ sample.PERIOD_DAYS }} days by cluster, shown as Precincts until clusters are ruled (§10.5).</p>
-        <div class="table-wrap">
-          <table data-sort-auto id="cluster-table">
-            <thead><tr><th scope="col">Cluster</th><th scope="col" class="num">Students supported</th><th scope="col" class="num">Contacts</th><th scope="col" class="num">Minutes</th><th scope="col" class="num">Rising</th></tr></thead>
-            <tbody>{% for r in sample.clusters() %}<tr><td class="strong">{{ r.cluster }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.contacts }}</td><td class="num">{{ r.minutes }}</td><td class="num">{{ r.rising }}</td></tr>{% endfor %}</tbody>
-          </table>
-        </div>
-      </section>
     </div>
     <div class="side">
       {% set cov = sample.coverage() %}

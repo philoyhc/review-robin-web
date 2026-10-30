@@ -4,13 +4,13 @@
 {% block content %}
   {{ sample_title("Audit log", me.name) }}
   {{ viewer_card(viewer_choices, me.name) }}
-  {# Administrative events only (§11.3): grants, configuration and the
-     cluster list. Support activity names students, so it is senior
-     staff's, on Overview. #}
+  {# Administrative events only (§11.3): grants and configuration.
+     Support activity names students, so it is senior staff's, on
+     Overview. #}
   <section class="card" aria-labelledby="audit-h">
     <div class="card-head">
       <h2 id="audit-h">Administrative events <span class="count">· {{ sample.ADMIN_AUDIT | length }}</span></h2>
-      <p class="sub">Access, configuration and clusters, the latest first. Support activity is not here: it names students, so senior staff review it.</p>
+      <p class="sub">Access and configuration, the latest first. Support activity is not here: it names students, so senior staff review it.</p>
     </div>
     <div class="table-wrap">
       <table data-sort-auto id="admin-audit-table">

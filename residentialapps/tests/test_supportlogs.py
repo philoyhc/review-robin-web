@@ -49,7 +49,6 @@ PAGES = (
     ("/consultation/", "Consultation check", (sample.CONSULTATION,)),
     ("/sys-admin/", "Access", sample.ADMINISTRATION),
     ("/sys-admin/configuration", "Configuration", sample.ADMINISTRATION),
-    ("/sys-admin/clusters", "Clusters", sample.ADMINISTRATION),
     ("/sys-admin/audit", "Audit log", sample.ADMINISTRATION),
 )
 
@@ -95,7 +94,7 @@ def test_each_grant_gives_its_tabs(client: TestClient) -> None:
     assert tabs(client.get(at("/overview/", "Kenneth Lau")).text) == ["Overview"]
     assert tabs(client.get(at("/consultation/", "Marcus Tan")).text) == ["Consultation check"]
     assert tabs(client.get(at("/", "Nadia Hassan")).text) == ["Home", "Overview", "Consultation check"]
-    assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Access", "Configuration", "Clusters", "Audit log"]
+    assert tabs(client.get(at("/sys-admin/", "Rachel Yeo")).text) == ["Access", "Configuration", "Audit log"]
     for v in sample.VIEWERS:
         assert "Safety flags</a>" not in client.get(at("/", v.name)).text
 
@@ -125,7 +124,7 @@ def test_the_403_page_names_an_area_the_viewer_has(client: TestClient) -> None:
     page = client.get(at("/log", "Rachel Yeo"))
     assert page.status_code == 403
     assert 'aria-label="Switch area: Sys admin"' in page.text
-    assert tabs(page.text) == ["Access", "Configuration", "Clusters", "Audit log"]
+    assert tabs(page.text) == ["Access", "Configuration", "Audit log"]
 
 
 def test_a_recipient_with_nothing_else_lands_on_the_flags(client: TestClient) -> None:
@@ -149,7 +148,7 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
     """Every link carries `?as=`, a form its hidden `as`; the viewer switch
     names each person; only the host's landing page goes without."""
     pages = [("Priya Raman", "/"), ("Priya Raman", "/log"), ("Priya Raman", "/students/S-08"),
-             ("Priya Raman", "/plans/?show=week"), ("Rachel Yeo", "/sys-admin/clusters")]
+             ("Priya Raman", "/plans/?show=week"), ("Rachel Yeo", "/sys-admin/configuration")]
     for name, path in pages:
         page = client.get(path + ("&" if "?" in path else "?") + "as=" + quote(name)).text
         card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]

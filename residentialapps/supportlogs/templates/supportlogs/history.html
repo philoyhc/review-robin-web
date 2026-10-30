@@ -8,7 +8,7 @@
   {{ viewer_card(viewer_choices, me.name) }}
   {# A student's history across staff (§4.5, §11.2): a student-centred view,
      not a case file; an audited read for senior identifiable access. #}
-  <p class="sub">{{ chosen.email }} · {{ sample.STUDENT_CLUSTER.get(chosen.id, "No cluster") }}</p>
+  <p class="sub">{{ chosen.email }}</p>
   <p class="notice" role="note">Opening this history is recorded, as a senior-level read across staff.</p>
   {% set seen = sample.ENCOUNTERS | selectattr("student", "equalto", chosen.id) | sort(attribute="when", reverse=true) | list %}
   {% set plans = sample.PLANS | selectattr("student", "equalto", chosen.id) | list %}

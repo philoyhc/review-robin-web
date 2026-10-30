@@ -1,9 +1,10 @@
 """Support Logs' Overview on sample data, segment 1D item 1 rung 5: senior
 staff's and Other Staff view's tab (author, 2026-10-29), with team
-workload and load weighting, coverage, hotspots, clusters, every plan and
-the flagged students (§10.2–10.6); a senior's student history (§11.2) and
-the support-activity audit (§11.3). Aggregate view sees counts only, never
-a student's name (roles rule 8)."""
+workload and load weighting, coverage, hotspots, every plan and the
+flagged students (§10.2–10.4, §10.6; the cluster view, §10.5, is
+deferred); a senior's student history (§11.2) and the support-activity
+audit (§11.3). Aggregate view sees counts only, never a student's name
+(roles rule 8)."""
 
 from __future__ import annotations
 

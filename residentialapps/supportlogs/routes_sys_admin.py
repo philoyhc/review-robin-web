@@ -1,8 +1,7 @@
 """Support Logs' Sys admin on sample data, segment 1D item 1 rung 6: Access
-over the Staff roster, the configured lists, the cluster list and the
-administrative audit (functional spec §3.3, §11.3; roles rules 1, 6, 8,
-9). Administration sees no support content. Nothing is stored: changes
-wait on item 2."""
+over the Staff roster, the configured lists and the administrative audit
+(functional spec §3.3, §11.3; roles rules 1, 6, 8, 9). Administration
+sees no support content. Nothing is stored: changes wait on item 2."""
 
 from __future__ import annotations
 
@@ -35,12 +34,6 @@ def configuration(request: Request) -> Response:
     """The lists staff choose from (§5.5–5.10, §6.4, §7.3–7.4) and the
     consultation rules (§10.8)."""
     return _page(request, "configuration.html")
-
-
-@router.get("/sys-admin/clusters", name="supportlogs_sys_admin_clusters")
-def clusters(request: Request) -> Response:
-    """The cluster list; which students belong is senior staff's (§10.5)."""
-    return _page(request, "clusters.html")
 
 
 @router.get("/sys-admin/audit", name="supportlogs_sys_admin_audit")

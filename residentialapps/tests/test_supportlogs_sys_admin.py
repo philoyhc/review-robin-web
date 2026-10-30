@@ -1,6 +1,6 @@
 """Support Logs' Sys admin on sample data, segment 1D item 1 rung 6: Access
-over the Staff roster, the configured lists, the cluster list and the
-administrative audit; no support content (functional spec §3.3, §3.4,
+over the Staff roster, the configured lists and the administrative
+audit; no support content (functional spec §3.3, §3.4,
 §11.3; roles rules 1, 6, 8, 9)."""
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
 
 ROSTER = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "staff_roster.csv"
-SYS_ADMIN_PAGES = ("/sys-admin/", "/sys-admin/configuration", "/sys-admin/clusters", "/sys-admin/audit")
+SYS_ADMIN_PAGES = ("/sys-admin/", "/sys-admin/configuration", "/sys-admin/audit")
 RACHEL, SUPER = "?as=Rachel%20Yeo", "?as=Platform%20super-admin"
 
 
@@ -96,15 +96,16 @@ def test_configuration_renders_the_seeded_lists(client: TestClient) -> None:
     assert all(reason in section(page, "rules-h") for reason, _ in sample.CONSULTATION_REASONS)
 
 
-def test_clusters_list_names_only(client: TestClient) -> None:
-    page = section(client.get("/sys-admin/clusters" + RACHEL).text, "cl-h")
-    assert re.findall(r'<span class="strong">([^<]+)</span>', page) == list(sample.CLUSTERS)
+def test_no_clusters_page(client: TestClient) -> None:
+    """Clusters are the core's Precincts, not a list Support Logs keeps
+    (author, 2026-10-30), so Sys admin has no Clusters page."""
+    assert client.get("/sys-admin/clusters" + RACHEL).status_code == 404
 
 
 def test_the_audit_log_is_administrative_only(client: TestClient) -> None:
     table = section(client.get("/sys-admin/audit" + RACHEL).text, "audit-h")
     kinds = re.findall(r'<td><span class="chip chip-mute">([^<]+)</span></td>', table)
-    assert kinds == [a.kind for a in sample.ADMIN_AUDIT] and set(kinds) <= {"Access", "Configuration", "Clusters"}
+    assert kinds == [a.kind for a in sample.ADMIN_AUDIT] and set(kinds) <= {"Access", "Configuration"}
     lapse = next(a for a in sample.ADMIN_AUDIT if "lapsed" in a.action)
     assert lapse.actor == "Support Logs" and lapse.reason.startswith("Residential Operations")  # a causal pair (§11.3)
 
