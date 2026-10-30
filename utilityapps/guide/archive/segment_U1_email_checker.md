@@ -2,6 +2,22 @@
 
 **Opened:** 2026-10-30 · **Theme:** the `utilityapps/` package mounted at `/utilities`, with the Email Address Checker built on fake Graph, ready for a real-tenant smoke test · **Related:** `utilityapps/docs/email_address_checker_functional_spec_v0.1.md` (the functional spec; "the spec" below), `cordware/spec/identity.md` "Graph" (the shared Graph helper this segment builds; its deferred entry retired at rung 4)
 
+## Status
+
+**Closed 2026-10-30, as planned, in six PRs:** plan `#3406`, rungs 1–5 `#3407`–`#3411`, and this close. Base SHA `9e80b21`.
+
+Divergences from the ladder:
+- Rung 2's sample pages stayed until rung 5 replaced them with the real flow, so the sample preview and result were never wired.
+- Rung 5 took the super-admin gate in place of rung 2's local-only one.
+- The Graph helper uses `urllib`, not `httpx` (judgment calls).
+- No setting was added, so `spec/settings_inventory.md` is waived.
+
+Reads: one `diff-reviewer` read of `9e80b21..9710eb6` at rung 5. It found five issues, all fixed in `#3411`: no time budget, the size limit applied after the upload was received (and spooled to disk), a token refusal retrying per address, a Unicode-digit `500`, and the index's gating overstated. Codex found four issues, each fixed or answered on its PR: the `csv` cell limit (`#3409`), a truncated reply and a malformed collection (`#3410`). The close's `spec-writer` pass aligned three specs (`utilities.md`, `email_check.md`, `cordware/spec/identity.md` "Graph"). It left one divergence on purpose: the `403` page is not `no-store`, as it holds no data.
+
+Still owed outside the close:
+- the author's browser pass, `utilityapps/guide/U1_browser_checks.md`, with rulings R1–R3;
+- Cordware's deployment: import rules, app selection, the health exclusion, and the real-tenant smoke test.
+
 ## Opportunity
 
 Lists of institutional addresses mix a person's sign-in name, primary mail
@@ -161,7 +177,7 @@ Cordware's side follows separately, on the author's word:
 
 ## Open questions
 
-- **An expired token:** Easy Auth's access token lasts about an hour, and only the browser can call `/.auth/refresh`. Should the check page call it before posting, or just show "sign in again" on a `401`? The real-tenant smoke test decides; until then the `401` message is built.
+- **An expired token:** answered at build: a `401`/`403` stops the run and says to sign in again (rung 5). Whether the page should also call `/.auth/refresh` first stays with the real-tenant smoke test.
 - **Alias lookup (spec §15.1):** Cordware's phase 0 probe decides it; U1 builds none of it.
 - **Operator scope (spec §15.2):** super-admin only, as the spec proposes. Reopens only on demonstrated need.
 
@@ -181,4 +197,4 @@ Cordware's side follows separately, on the author's word:
 - `cordware/spec/host.md` — the `utilities` registry entry and its health path (rung 1).
 - `cordware/spec/identity.md` — the Graph helper: token source, errors, the fake directory (rung 4).
 - `guide/deferred_consolidated.md` — the shared Graph helper entry, retired as built (rung 4).
-- `spec/settings_inventory.md` — any setting the helper or the checker adds (rungs 4–5).
+- `spec/settings_inventory.md` — any setting the helper or the checker adds (rungs 4–5). <!-- doc-impact-waived: none added; the fake directory follows fake auth (judgment call, rung 4) -->

@@ -2,9 +2,31 @@
 
 **Functional specification:** v0.1 (proposed)  
 **Date:** 30 October 2026  
-**Status:** Design proposal; no code or repository changes authorized by this document  
+**Status:** Built as phase 1 by segment U1 (2026-10-30); the contract as built is `utilityapps/spec/email_check.md`, which governs where the two differ. Decisions taken at build are listed under "Revisions at build" below.  
 **Suggested source location:** `utilityapps/docs/email_address_checker_functional_spec_v0.1.md` in `philoyhc/review-robin-web`  
 **Primary audience:** Codex/implementation agents, Cordware administrators and reviewers
+
+## Revisions at build (segment U1, 2026-10-30)
+
+Kept here so this proposal and the built contract can be read together
+(`utilityapps/guide/archive/segment_U1_email_checker.md`, "Judgment calls"):
+
+- **CSRF** (§4, §10): RRW's posture, Easy Auth plus `SameSite=Lax`
+  cookies (`docs/security_posture.md` "CSRF posture"), not per-form tokens.
+- **One query** (§5 steps 1–2): `mail eq '…' or userPrincipalName eq '…'`
+  per address, through the host's shared Graph helper
+  (`cordware/spec/identity.md` "Graph"). The real-tenant smoke test
+  confirms the combined form; splitting it is a one-function change.
+- **No server state** (§3, §10): the preview carries the file back in the
+  page, and the result page carries the CSV as a `data:` download; the
+  server holds neither between requests.
+- **Limits** (§4, §10): request sizes are refused on `Content-Length`
+  before parsing; the whole check has a 120 s budget, after which
+  unfinished lookups are `ERROR` and the rest still download; a refused
+  sign-in stops the remaining lookups.
+- **Not built:** alias lookup (§5 step 3, phase 2), so every run is
+  `BASIC_ONLY`. A cell over the `csv` module's 131,072-character limit is
+  refused by name.
 
 ## 1. Decision: a cluster for small applications
 
@@ -74,7 +96,7 @@ If the operator is authenticated but not authorized, respond with a normal **403
 - **Duplicates:** Preserve every input row, including duplicate addresses; look up each normalized unique address at most once per run.
 - **Invalid/empty values:** Mark `INVALID_INPUT`, retain the row and do not send a Graph request.
 - **Initial limits:** Maximum 500 data rows and 1 MiB per file, configurable after real-world testing. Show a clear rejection if exceeded rather than partially processing without notice.
-- **Security:** Reject non-CSV uploads and malformed input; enforce request-size limits, CSRF protection, safe CSV parsing, bounded memory and request timeouts. Prevent CSV formula injection in exported cells that Excel may interpret as formulas, while retaining the source data faithfully in a safe form.
+- **Security:** Reject non-CSV uploads and malformed input; enforce request-size limits, CSRF protection (as built: Easy Auth plus `SameSite=Lax`, "Revisions at build"), safe CSV parsing, bounded memory and request timeouts. Prevent CSV formula injection in exported cells that Excel may interpret as formulas, while retaining the source data faithfully in a safe form.
 
 The app should not treat an email address as authenticated evidence of account ownership. The CSV is merely a collection of addresses for investigation.
 

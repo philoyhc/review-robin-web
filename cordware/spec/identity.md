@@ -232,8 +232,7 @@ because FastAPI runs a plain-function dependency on a worker thread.
 `cordware/graph.py`: Microsoft Graph as the signed-in user, with the
 delegated token Easy Auth's token store keeps for them. The host owns the
 token, so it owns the one client every application uses. Built for the
-Email Address Checker (Utilities segment U1, rung 4); directory lookups
-only.
+Email Address Checker; directory lookups only.
 
 - **Which directory.** `directory_for(request, settings=None)` returns
   `FakeDirectory` on a local run with fake auth on. Otherwise it returns
@@ -247,15 +246,18 @@ only.
   is `None`. More than one match is the caller's to judge.
 - **A failure is never an empty answer.** It is a `GraphError` whose
   `kind` is `no_token`, `unauthorized` (`401`), `forbidden` (`403`),
-  `throttled` (`429`), `server` (`5xx`), `network` or `bad_response`. A
-  `429` waits its `Retry-After`, up to 30 s, and a `5xx` or network
-  failure waits 1 s then 2 s: at most two retries, then the error. `401`
-  and `403` are raised at once.
+  `throttled` (`429`), `server` (`5xx`), `network` or `bad_response` (any
+  other non-`2xx`, or a body that is not a `value` list of objects with an
+  `id`). A `429` waits its `Retry-After`, up to 30 s (a longer one is
+  raised at once), and a `5xx` or network failure waits 1 s then 2 s: at
+  most two retries, then the error. `401` and `403` are raised at once.
+  Each request times out at 10 s.
 - **The fake directory** is a fixed set of invented `example.edu`
   accounts, one per case a caller must handle: a UPN that is not the
   mail, an account with no mail, and an address that is one account's
   mail and another's UPN. Three addresses fail on purpose
-  (`throttled@`, `outage@`, `denied@`). It is never real data.
+  (`throttled@`, `outage@`, `denied@`, each `@example.edu`), at once, with
+  no retry. It is never real data.
 - **No dependency.** Requests go through the standard library;
   `GraphDirectory` takes the transport as a parameter, so the tests never
   touch the network.
