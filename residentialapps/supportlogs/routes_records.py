@@ -2,8 +2,9 @@
 2026-10-30). Rung 7, Your records: the viewer's own encounters or plans
 as CSV, for one term or all, and an empty template to fill for an upload.
 Rung 8, Records across staff: senior identifiable access downloads staff
-members' records by staff and term, and filters purged records for
-deletion. Only a holder who has unlocked the section gets a file; anyone
+members' records by staff and term, and filters purged records by staff
+and student for deletion, which removes whole purges and is senior
+staff's alone. Only a holder who has unlocked the section gets a file; anyone
 else goes back to the locked page. Uploads, purges and deletions wait on
 item 3; a purge only hides. A sample: the unlock rides in the address,
 so wired, the unlock is held server-side and the download is a POST, so
@@ -24,6 +25,8 @@ from residentialapps.web.pages import placeholders_local_only
 from residentialapps.web.urls import url_path
 
 router = APIRouter(dependencies=[Depends(placeholders_local_only)])
+
+UNKNOWN = "?"  # a staff name or student id that is no one's: never widened to all
 
 KINDS = {
     "students": ("encounters", sample.ENCOUNTER_COLUMNS, sample.encounter_rows),
@@ -48,19 +51,29 @@ def _csv(name: str, columns: tuple[str, ...], rows: list[list[str]]) -> Response
                     headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
+def _student(request: Request) -> str | None:
+    """The chosen student's id; None for every student, chosen as an empty
+    value; UNKNOWN for an id that is no student's."""
+    key = request.query_params.get("student", "")
+    if not key:
+        return None
+    return key if sample.student(key) else UNKNOWN
+
+
 def _download(request: Request, page: str, template: bool) -> Response:
     me = sample.viewer(request.query_params.get("as"))
     if not sample.holds(me, sample.FRONTLINE):
         return forbidden(request, me)
-    if not records_unlocked(request):
+    sid = _student(request)
+    if not records_unlocked(request) or sid == UNKNOWN:
         return RedirectResponse(url_path(request, f"/{page}/") + query(me), status_code=303)
     what, columns, rows_of = KINDS[page]
     if template:
         return _csv(f"support-logs-{what}-template.csv", TEMPLATES[page], [])
     key = request.query_params.get("term", sample.CURRENT_TERM.key)
     chosen = None if key == "all" else sample.term(key) or sample.CURRENT_TERM
-    scope = "all-terms" if chosen is None else chosen.key
-    return _csv(f"support-logs-{what}-{scope}.csv", columns, rows_of(me.name, chosen))
+    scope = ("all-terms" if chosen is None else chosen.key) + (f"-{sid}" if sid else "")
+    return _csv(f"support-logs-{what}-{scope}.csv", columns, rows_of(me.name, chosen, sid))
 
 
 @router.get("/students/records.csv", name="supportlogs_students_records")
@@ -88,9 +101,6 @@ def plans_template(request: Request) -> Response:
 # --- Records across staff (rung 8; author, 2026-10-30): senior
 # identifiable access only, behind the same lock.
 
-UNKNOWN = "?"  # a staff name that is no one's: never widened to all staff
-
-
 def _staff(request: Request) -> str | None:
     """The chosen staff member; None for all staff, chosen as an empty
     value; UNKNOWN for a name that is not a staff member's."""
@@ -117,10 +127,13 @@ def staff_records(request: Request) -> Response:
     """Records across staff: upload tagged to a staff member, download by
     staff and term, delete purged records by staff and term. Each action
     is a support-activity event (§11.3)."""
-    staff, chosen = _staff(request), _term(request, "all")
-    purged = [] if staff == UNKNOWN else sample.purges(staff, chosen)  # an unknown name matches no one
+    staff = _staff(request)
+    key = request.query_params.get("student", "")
+    student = sample.student(key) if key else None
+    unknown = staff == UNKNOWN or (key and student is None)  # an unknown name or id matches no one
+    purged = [] if unknown else sample.purges(staff, student.id if student else None)
     return gated(request, "supportlogs/overview_records.html", sample.SENIOR, current_tab="/overview/",
-                 unlocked=records_unlocked(request), staff=staff, chosen=chosen, purged=purged,
+                 unlocked=records_unlocked(request), staff=staff, student=student, purged=purged,
                  purged_records=sum(p.count for p in purged))
 
 
@@ -133,13 +146,13 @@ def _senior_download(request: Request, template: bool) -> Response:
     what = _what(request)
     if template:
         return _csv(f"support-logs-{what}-staff-template.csv", ("Staff", *sample.STAFF_TEMPLATE_COLUMNS[what]), [])
-    staff, chosen = _staff(request), _term(request, sample.CURRENT_TERM.key)
-    if staff == UNKNOWN:  # a name that is no staff member's downloads nothing
+    staff, chosen, sid = _staff(request), _term(request, sample.CURRENT_TERM.key), _student(request)
+    if UNKNOWN in (staff, sid):  # a name or id that is no one's downloads nothing
         return RedirectResponse(url_path(request, "/overview/records") + query(me, records="open", understood="yes"),
                                 status_code=303)
-    columns, rows = sample.staff_rows(what, staff, chosen)
+    columns, rows = sample.staff_rows(what, staff, chosen, sid)
     who = "all-staff" if staff is None else staff.lower().replace(" ", "-")
-    scope = "all-terms" if chosen is None else chosen.key
+    scope = ("all-terms" if chosen is None else chosen.key) + (f"-{sid}" if sid else "")
     return _csv(f"support-logs-{what}-{who}-{scope}.csv", columns, rows)
 
 

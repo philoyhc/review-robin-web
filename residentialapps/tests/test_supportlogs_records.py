@@ -139,8 +139,10 @@ def test_purge_hides_and_deletion_is_others(client: TestClient) -> None:
     card = client.get(f"/students/?{OPEN}").text.split('id="purge-h"')[1].split("</section>")[0]
     assert "Nothing is deleted" in card and "only senior staff with identifiable access can delete them" in card
     assert 'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
+    choices = re.findall(r"<option>([^<]+)</option>", card.split('id="purge-student"')[1].split("</select>")[0])
+    assert choices == ["All your students", *(st.name for st in sample.record_students("Daniel Koh"))]  # a purge can take one student's
     audit = client.get("/sys-admin/audit?as=Rachel%20Yeo").text.split('id="purged-h"')[1].split("</section>")[0]
-    assert "Grace Ho: 6 encounters" in audit and 'aria-label="Delete permanently: Grace Ho\'s purged encounters"' in audit
+    assert "Grace Ho: 6 encounters" in audit and "Delete permanently" not in audit  # only senior staff delete (author, 2026-10-30)
     assert not any(s.name in audit for s in sample.STUDENTS)
 
 
@@ -209,26 +211,23 @@ def test_the_staff_templates_name_the_staff_column(client: TestClient) -> None:
     assert "Kind" in plans and "Source" in plans and "Status" not in plans  # senior staff make formal assignments
 
 
-def test_purged_records_filter_by_staff_and_term(client: TestClient) -> None:
+def test_purged_records_filter_by_staff_and_student(client: TestClient) -> None:
     def shown(params: str) -> list[str]:
         card = client.get(f"/overview/records?{SAM}&{OPEN}{params}").text.split('id="purged-h"')[1].split("</section>")[0]
         return re.findall(r'<span class="strong">([^<]+)</span>', card)
 
     assert shown("") == ["Grace Ho: 6 encounters", "Arjun Nair: 2 plans"]
     assert shown("&staff=Arjun%20Nair") == ["Arjun Nair: 2 plans"]
-    assert shown(f"&term={sample.CURRENT_TERM.key}") == ["Grace Ho: 6 encounters"]
-    # A term finds the purges holding records dated in it, not the day of the purge:
-    # Arjun's plans (19 Jan – 18 May) fall in Sem 2 and the Summer break.
-    assert shown("&term=AY2025-2026.2") == ["Arjun Nair: 2 plans"]
-    assert shown("&term=AY2025-2026.3") == ["Arjun Nair: 2 plans"]
-    assert shown("&staff=Grace%20Ho&term=AY2025-2026.3") == []
-    assert shown("&staff=Nobody") == []  # an unknown name matches no one, never all staff
-    card = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho").text.split('id="purged-h"')[1]
-    assert '<span class="count">· 6</span>' in card
-    assert 'disabled aria-label="Delete permanently: the 6 purged records shown"' in card
-    assert "of Grace Ho, dated in any term" in card
-    everyone = client.get(f"/overview/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
-    assert '<span class="count">· 8</span>' in everyone and "the 8 purged records shown" in everyone
+    assert shown("&student=S-06") == ["Grace Ho: 6 encounters"]
+    assert shown("&staff=Arjun%20Nair&student=S-06") == []
+    assert shown("&staff=Nobody") == [] and shown("&student=S-99") == []  # unknown matches no one, never everyone
+    card = client.get(f"/overview/records?{SAM}&{OPEN}").text.split('id="purged-h"')[1]
+    assert 'id="p-term"' not in card  # no delete by term (author, 2026-10-30)
+    assert '<span class="count">· 8</span>' in card
+    assert 'disabled aria-label="Delete permanently: the 2 purges shown, 8 records"' in card
+    one = client.get(f"/overview/records?{SAM}&{OPEN}&student=S-06").text.split('id="purged-h"')[1]
+    assert "Deletes the whole purges shown, of all staff, holding records about Farid Osman" in one
+    assert "every record in each, about any student" in one
 
 
 def test_unknown_values_never_widen(client: TestClient) -> None:
@@ -248,8 +247,25 @@ def test_a_term_picks_the_right_rows_for_a_staff_member(client: TestClient) -> N
 
 
 def test_the_unlock_keeps_the_purge_filter(client: TestClient) -> None:
-    form = client.get(f"/overview/records?{SAM}&staff=Grace%20Ho&term=AY2026-2027.1").text.split('id="records-h"')[1].split("</form>")[0]
-    assert '<input type="hidden" name="staff" value="Grace Ho">' in form and '<input type="hidden" name="term" value="AY2026-2027.1">' in form
+    form = client.get(f"/overview/records?{SAM}&staff=Grace%20Ho&student=S-06").text.split('id="records-h"')[1].split("</form>")[0]
+    assert '<input type="hidden" name="staff" value="Grace Ho">' in form and '<input type="hidden" name="student" value="S-06">' in form
+
+
+def test_downloads_filter_by_student(client: TestClient) -> None:
+    """Staff's own and senior staff's downloads both take a student."""
+    mine = client.get(f"/students/records.csv?{OPEN}&term=all&student=S-03")
+    assert "all-terms-S-03" in mine.headers["content-disposition"]
+    assert {r[2] for r in rows(mine.text)[1:]} == {"clara.tan@u.example.edu"}
+    assert len(rows(mine.text)) - 1 == len(sample.encounters_by("Daniel Koh", "S-03"))
+    choices = re.findall(r'<option value="(S-\d+)">', client.get(f"/students/?{OPEN}").text.split('id="dl-student"')[1].split("</select>")[0])
+    assert choices == [st.id for st in sample.record_students("Daniel Koh")]
+    plans = rows(client.get(f"/plans/records.csv?{OPEN}&term=all&student=S-01").text)
+    assert [r[1] for r in plans[1:]] == ["Aiden Chen"]
+    senior = client.get(f"/overview/records.csv?{SAM}&{OPEN}&what=encounters&term=all&student=S-08")
+    assert "all-staff-all-terms-S-08" in senior.headers["content-disposition"]
+    assert sorted(r[0] for r in rows(senior.text)[1:]) == sorted(e.staff for e in sample.ENCOUNTERS if e.student == "S-08")
+    for path in (f"/students/records.csv?{OPEN}&student=S-99", f"/overview/records.csv?{SAM}&{OPEN}&student=nope"):
+        assert client.get(path, follow_redirects=False).status_code == 303, path  # an unknown student downloads nothing
 
 
 def test_purge_is_outline_red(client: TestClient) -> None:

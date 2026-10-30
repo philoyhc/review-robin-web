@@ -109,18 +109,19 @@ form's end, and the main action is a full-width Primary on the page
 - **Your records** (author, 2026-10-30) ends Students and My plans: a
   section locked until its holder ticks a confirmation and unlocks it.
   Unlocked, it downloads the holder's own encounters or plans as CSV, for a
-  term of Rosters and setup's or all terms, and offers the template. The
-  upload (follow-ups only, for plans) and Purge all are disabled until
+  term of Rosters and setup's or all terms and one of their students or
+  all, and offers the template. The upload (follow-ups only, for plans)
+  and Purge all, of every record or one student's, are disabled until
   wired. Leaving the page locks it again. A purge hides and keeps.
   Purge all is Destructive, outline red (author, 2026-10-30).
 - **Records across staff** (`/overview/records`, author, 2026-10-30), for
   senior identifiable access, behind the same lock: download any staff
-  member's records, or all staff's, by term or all, each row naming its
-  staff member; upload records tagged to a staff member (inert until
-  wired); and delete purged records, filtered by staff and by the term
-  their records are dated in (Delete permanently inert until wired). Sys
-  admin's Audit log also lists purged records, as counts, with Delete
-  permanently.
+  member's records, or all staff's, by student and term or all, each row
+  naming its staff member; upload records tagged to a staff member (inert until
+  wired); and delete purged records, filtered by staff and by student, a
+  whole purge at a time (Delete permanently inert until wired). Only
+  senior identifiable access deletes; Sys admin's Audit log lists purged
+  records as counts only (author, 2026-10-30).
 
 ## 5. Lists and tables
 

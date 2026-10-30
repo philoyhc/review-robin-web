@@ -119,14 +119,16 @@ read right.
 - [ ] **Your records** (as Daniel), at the end of Students and of My plans:
   - locked at first, with Unlock refused until the confirmation is ticked;
   - unlocked: the term list opens on the current term, with All terms
-    last; **Download CSV** saves a file named for the term;
+    last; a Student list offers your own students; **Download CSV** saves
+    a file named for the term (and the student, when one is picked);
   - the file opens in a spreadsheet with one row per own encounter (or
     plan), and no Hana Rahim, who is shared;
   - **Download the template** saves the columns only;
-  - Upload and Purge all are disabled; Purge says nothing is deleted;
+  - Upload and Purge all are disabled; Purge offers all your students or
+    one, and says nothing is deleted;
   - **Lock again**, or leaving the page, locks it.
 - [ ] **Purged records** on Sys admin › Audit log (as Rachel): Grace Ho's
-  6 encounters, a count only, with Delete permanently disabled.
+  6 encounters, a count only, with no Delete: only senior staff delete.
 
 ## 5. Overview
 
@@ -149,12 +151,13 @@ read right.
   its When column sorts by date.
 - [ ] **Records across staff** (as Sam, **Open records** on Overview):
   - locked until the confirmation is ticked;
-  - Download: pick Encounters or Plans, a staff member or All staff, and a
-    term or All terms; the file names each row's staff member;
+  - Download: pick Encounters or Plans, a staff member or All staff, a
+    student or All students, and a term or All terms; the file names each
+    row's staff member;
   - the two templates lead with a Staff column; Upload is disabled;
-  - Purged records filter by staff and term with **Show**; **Delete
-    permanently** is outline red and disabled, and its note names the
-    staff and term it would cover.
+  - Purged records filter by staff and by student (no term) with
+    **Show**; **Delete permanently** is outline red and disabled, and its
+    note says it deletes the whole purges shown.
 - [ ] **As Siti:** names show without history links. There are no flagged
   students and no audit card. Every plan is marked read-only.
 - [ ] **As Kenneth:** counts only, with no student's name anywhere on the

@@ -10,7 +10,7 @@
      records by staff and term. Each is a support-activity event (§11.3),
      behind the same lock as a staff member's Your records. #}
   <p class="notice" role="note">Every upload, download and deletion here is recorded, with the staff member and term it covered.</p>
-  {% set keep = {"staff": staff if staff and staff != "?" else "", "term": chosen.key if chosen else ""} %}
+  {% set keep = {"staff": staff if staff and staff != "?" else "", "student": student.id if student else ""} %}
   {% if not unlocked %}
     <section class="card card-pad muted" aria-labelledby="records-h" id="records">
       <h2 id="records-h">Records across staff <span class="chip chip-mute">Locked</span></h2>
@@ -35,6 +35,7 @@
           <div class="filter-fields">
             <div class="filter"><label for="dl-what">Records</label><select id="dl-what" name="what" class="input">{% for key, (label, _) in sample.RECORD_KINDS.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
             <div class="filter"><label for="dl-staff">Staff</label><select id="dl-staff" name="staff" class="input"><option value="">All staff</option>{% for n in sample.FRONTLINE_COLLEAGUES %}<option>{{ n }}</option>{% endfor %}</select></div>
+            <div class="filter"><label for="dl-student">Student</label><select id="dl-student" name="student" class="input"><option value="">All students</option>{% for s in sample.STUDENTS %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
             <div class="filter"><label for="dl-term">Term</label><select id="dl-term" name="term" class="input">{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if t == sample.CURRENT_TERM %} selected{% endif %}>{{ t.label }}</option>{% endfor %}<option value="all">All terms</option></select></div>
           </div>
           <button type="submit" class="btn btn-primary gap-above-sm">Download CSV</button>
@@ -50,17 +51,17 @@
       <div class="side">
         <section class="card card-pad" aria-labelledby="purged-h">
           <h2 id="purged-h">Purged records <span class="count">· {{ purged_records }}</span></h2>
-          <p class="sub">Records their owner purged: hidden from every page and kept until deleted. A term finds the purges holding records dated in it.</p>
+          <p class="sub">Records their owner purged: hidden from every page and kept until deleted here. A student finds the purges holding records about them.</p>
           <form action="{{ url('/overview/records') }}" method="get">
             {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
             <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
             <div class="field-wide"><label for="p-staff">Staff</label><select id="p-staff" name="staff" class="input"><option value="">All staff</option>{% for n in sample.FRONTLINE_COLLEAGUES %}<option{% if n == staff %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
-            <div class="field-wide"><label for="p-term">Term</label><select id="p-term" name="term" class="input"><option value="all">All terms</option>{% for t in sample.TERMS %}<option value="{{ t.key }}"{% if t == chosen %} selected{% endif %}>{{ t.label }}</option>{% endfor %}</select></div>
+            <div class="field-wide"><label for="p-student">Student</label><select id="p-student" name="student" class="input"><option value="">Any student</option>{% for s in sample.STUDENTS %}<option value="{{ s.id }}"{% if student and s.id == student.id %} selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>
           {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {{ p.count }} {{ p.what | lower }}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}
-          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: the {{ purged_records }} purged record{{ '' if purged_records == 1 else 's' }} shown">Delete permanently</button>
-          <p class="subtle small">Deletes the purged records shown, of {{ staff if staff and staff != "?" else "all staff" }}, dated in {{ chosen.label if chosen else "any term" }}. It cannot be undone.</p>
+          <button type="button" class="btn btn-danger gap-above-sm" disabled aria-label="Delete permanently: the {{ purged | length }} purge{{ '' if purged | length == 1 else 's' }} shown, {{ purged_records }} record{{ '' if purged_records == 1 else 's' }}">Delete permanently</button>
+          <p class="subtle small">Deletes the whole purges shown, of {{ staff if staff and staff != "?" else "all staff" }}{% if student %}, holding records about {{ student.name }}{% endif %}: every record in each, about any student. It cannot be undone.</p>
         </section>
       </div>
     </div>
