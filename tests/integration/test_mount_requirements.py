@@ -8,7 +8,9 @@ RRW answers at `/reviewrobin`. These pin what the move must keep:
 - **Requirement 3, request handling.** RRW's error handlers run inside
   the mounted application: its own 404, 403 and 422 pages.
 - **Requirement 4, absolute URLs.** An invitation link carries the
-  request's host and the mount, never another name for the backend.
+  request's host and the mount, never another name for the backend;
+  with `CORDWARE_PUBLIC_ORIGIN` set, it carries that origin whatever
+  host the request names (segment 21E).
 
 Requirement 1 (a deep link through sign-in) is Easy Auth's redirect, not
 RRW's, so it is checked live, on the institutional deployment's first
@@ -26,7 +28,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from _mounted import MOUNT, mounted_rrw
+from _mounted import MOUNT, host_with, mounted_rrw
 from app.auth.identity import AuthenticatedUser
 from app.config import settings
 from app.db.models import EmailOutbox, Invitation, ReviewSession
@@ -143,6 +145,32 @@ def test_an_invitation_link_carries_the_requests_host_and_the_mount(
     never built from the App Service's own name. ``mounted_client`` signs
     alice in; this client shares its overrides, on another host."""
     client = TestClient(mounted_rrw(), base_url="http://reviews.example.edu")
+    links = _invitation_links(client, db)
+    assert all(
+        link.startswith(f"http://reviews.example.edu{MOUNT}/me/invite/") for link in links
+    ), links
+
+
+def test_an_invitation_link_carries_the_public_origin_when_set(
+    mounted_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With `CORDWARE_PUBLIC_ORIGIN` set, the backend's own name in the
+    request never reaches the link (segment 21E)."""
+    monkeypatch.setenv("CORDWARE_PUBLIC_ORIGIN", "https://reviews.example.edu")
+    host = host_with("_rrw_app:rrw_app")
+    client = TestClient(host, base_url="http://backend.internal")
+    links = _invitation_links(client, db, headers={"x-original-host": "evil.example"})
+    assert all(
+        link.startswith(f"https://reviews.example.edu{MOUNT}/me/invite/") for link in links
+    ), links
+
+
+def _invitation_links(
+    client: TestClient, db: Session, headers: dict[str, str] | None = None
+) -> list[str]:
+    """Create, import, prepare and activate a session through ``client``,
+    send its first invitation, and return the invite links in the mail."""
+    client.headers.update(headers or {})
     base = f"{MOUNT}/operator/sessions"
     client.post(base, data={"name": "Public", "code": "public"}, follow_redirects=False)
     review_session = db.execute(
@@ -172,6 +200,4 @@ def test_an_invitation_link_carries_the_requests_host_and_the_mount(
     ).scalar_one()
     links = re.findall(r"https?://[^\s\"'<>]+/invite/[\w-]+", outbox.body)
     assert links, outbox.body
-    assert all(
-        link.startswith(f"http://reviews.example.edu{MOUNT}/me/invite/") for link in links
-    ), links
+    return links

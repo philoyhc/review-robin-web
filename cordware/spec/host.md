@@ -119,6 +119,34 @@ Names are comma-separated, trimmed and matched exactly (case kept); empty
 items are ignored. An unknown name, or a name written twice, raises
 `ValueError` naming the value, and the host does not start.
 
+## `CORDWARE_PUBLIC_ORIGIN`
+
+The address users reach the host at, when it differs from what reaches the
+app server: behind a gateway that sends the backend's own host name, or
+TLS ended in front of it (segment 21E). Read once with `CORDWARE_APPS`.
+
+- **Unset or blank:** nothing changes. Every URL built from a request names
+  the request's own scheme and host.
+- **Set:** the value is `https://host[:port]`. The host is an ASCII DNS
+  name (an internationalized one in its `xn--` form) or an IP address, the
+  port 1–65535; a default port is dropped. A trailing `/` is allowed; a
+  path, query, fragment or user info is not. `http://` is allowed only at
+  `APP_ENV=local`. Anything else raises `ValueError` naming the setting,
+  and the host does not start (`parse_public_origin`).
+- **What it rewrites.** `PublicOriginMiddleware` wraps the whole host,
+  outermost, and runs only when the setting is set. On every HTTP request it
+  sets the scope's `scheme`, its `server` (host and port, the port defaulted
+  from the scheme) and the `Host` header to the origin. The landing page,
+  `/health` and every mount see the origin, so `request.url`, `url_for` and
+  the framework's trailing-slash redirects name it.
+- **What it leaves alone.** The path, `root_path` and every other header
+  pass through as sent. No forwarded header (`X-Original-Host`,
+  `X-Forwarded-Host`, `X-Forwarded-Proto`) is read, so no request can move
+  the origin. Lifespan events pass through.
+
+A link built with no request has no origin to read; segment 14B's worker
+owns that when it lands.
+
 ## `/health`
 
 - The host's own route: `GET /health` returns `{"status": "ok"}`, route name

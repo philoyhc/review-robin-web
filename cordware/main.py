@@ -13,15 +13,18 @@ path, at mount time, so this module names no application package.
 from __future__ import annotations
 
 import importlib
+import ipaddress
 import logging
+import re
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cordware.identity import is_local, missing_header_count, super_admin_configured
 from cordware.logging import configure_logging
@@ -84,6 +87,7 @@ class CordwareSettings(BaseSettings):
     shell value overrides the file (v0.8 §3)."""
 
     cordware_apps: str | None = None
+    cordware_public_origin: str | None = None
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -108,6 +112,98 @@ def parse_apps(raw: str | None, registry: Mapping[str, AppEntry]) -> tuple[str, 
     if repeated:
         raise ValueError(f"CORDWARE_APPS repeats {', '.join(repeated)}")
     return tuple(names)
+
+
+@dataclass(frozen=True)
+class PublicOrigin:
+    """The address users reach the host at: `scheme://netloc`."""
+
+    scheme: str
+    host: str
+    port: int
+    netloc: str
+
+
+_DEFAULT_PORTS = {"http": 80, "https": 443}
+_DNS_NAME = re.compile(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*")
+
+
+def _valid_host(host: str) -> bool:
+    """An ASCII DNS name or an IP literal: nothing a `Host` header can't carry."""
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return _DNS_NAME.fullmatch(host) is not None
+    return True
+
+
+def parse_public_origin(raw: str | None, *, local: bool) -> PublicOrigin | None:
+    """The origin a `CORDWARE_PUBLIC_ORIGIN` value names (segment 21E).
+
+    Unset or blank is ``None``. Otherwise the value must be
+    ``http(s)://host[:port]``, with nothing after the host but an
+    optional ``/``; ``http`` only at `APP_ENV=local`. Anything else
+    raises `ValueError` naming the setting."""
+    if raw is None or not raw.strip():
+        return None
+    value = raw.strip()
+
+    def refuse(reason: str) -> ValueError:
+        return ValueError(f"CORDWARE_PUBLIC_ORIGIN={value!r}: {reason}")
+
+    parts = urlsplit(value)
+    scheme = parts.scheme.lower()
+    if scheme not in _DEFAULT_PORTS:
+        raise refuse("must start with https:// (or http:// at APP_ENV=local)")
+    if scheme == "http" and not local:
+        raise refuse("http is allowed only at APP_ENV=local")
+    if parts.username is not None or parts.password is not None:
+        raise refuse("must not carry user info")
+    if parts.path not in ("", "/") or parts.query or parts.fragment or value.endswith(("?", "#")):
+        raise refuse("must be an origin alone, with no path, query or fragment")
+    try:
+        port = parts.port
+    except ValueError:
+        raise refuse("has an invalid port") from None
+    host = parts.hostname
+    if not host:
+        raise refuse("has no host")
+    if not _valid_host(host):
+        raise refuse("host must be an ASCII DNS name or an IP address")
+    if port is not None and not 1 <= port <= 65535:
+        raise refuse("has an invalid port")
+    port = port or _DEFAULT_PORTS[scheme]
+    # Rebuilt rather than copied, so a default port is dropped and the
+    # header carries only what was checked.
+    netloc = f"[{host}]" if ":" in host else host
+    if port != _DEFAULT_PORTS[scheme]:
+        netloc += f":{port}"
+    return PublicOrigin(scheme=scheme, host=host, port=port, netloc=netloc)
+
+
+class PublicOriginMiddleware:
+    """Rewrites each HTTP request's scheme, server and `Host` header to
+    the public origin, so every URL built from the request names it
+    (segment 21E). No forwarded header is read; every other header, path
+    and `root_path` pass through as sent."""
+
+    def __init__(self, app: ASGIApp, origin: PublicOrigin) -> None:
+        self.app = app
+        self.origin = origin
+        self.host_header = (b"host", origin.netloc.encode("latin-1"))
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            scope = {
+                **scope,
+                "scheme": self.origin.scheme,
+                "server": (self.origin.host, self.origin.port),
+                "headers": [
+                    *(item for item in scope["headers"] if item[0] != b"host"),
+                    self.host_header,
+                ],
+            }
+        await self.app(scope, receive, send)
 
 
 def _load_factory(path: str) -> Callable[[], ASGIApp]:
@@ -187,6 +283,9 @@ def create_app(
     )
     check_fake_auth(identity_settings)
     warn_if_no_super_admin(identity_settings)
+    origin = parse_public_origin(
+        settings.cordware_public_origin, local=is_local(identity_settings)
+    )
     names = parse_apps(settings.cordware_apps if apps is None else ",".join(apps), registry)
     mounted = [(registry[name], _build(name, registry[name])) for name in names]
 
@@ -256,6 +355,9 @@ def create_app(
 
     for entry, sub_app in mounted:
         host.mount(entry.path, sub_app)
+    # Outermost, and only when set: unset, the host is as it was.
+    if origin is not None:
+        host.add_middleware(PublicOriginMiddleware, origin=origin)
     return host
 
 

@@ -13,7 +13,7 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from cordware.main import REGISTRY, AppEntry, create_app, parse_apps
+from cordware.main import REGISTRY, AppEntry, PublicOrigin, create_app, parse_apps, parse_public_origin
 
 # Lifespan calls recorded by the stub applications below.
 EVENTS: list[str] = []
@@ -177,3 +177,130 @@ def test_rrw_startup_validation_failure_fails_the_host(monkeypatch: pytest.Monke
     monkeypatch.setattr(settings, "sys_admin_emails", [])
     with pytest.raises(ConfigurationError):
         create_app(apps=("reviewrobin",))
+
+
+# --- `CORDWARE_PUBLIC_ORIGIN` (segment 21E) ---
+
+ORIGIN = "https://apps.example.edu"
+
+
+def stub_urls() -> FastAPI:
+    stub = FastAPI()
+
+    @stub.get("/where", name="where")
+    def where(request: Request) -> dict[str, str]:
+        return {"url": str(request.url), "built": str(request.url_for("where"))}
+
+    @stub.get("/folder/")
+    def folder() -> dict[str, str]:
+        return {"ok": "yes"}
+
+    return stub
+
+
+URL_STUB = {"u": AppEntry(path="/u", factory=f"{__name__}:stub_urls", logger="stub_u")}
+
+
+def _origin_host(monkeypatch: pytest.MonkeyPatch, origin: str | None) -> TestClient:
+    if origin is None:
+        monkeypatch.delenv("CORDWARE_PUBLIC_ORIGIN", raising=False)
+    else:
+        monkeypatch.setenv("CORDWARE_PUBLIC_ORIGIN", origin)
+    return TestClient(create_app(apps=("u",), registry=URL_STUB), base_url="http://backend.internal")
+
+
+def test_unset_urls_follow_the_request(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _origin_host(monkeypatch, None)
+    assert client.get("/u/where").json() == {
+        "url": "http://backend.internal/u/where",
+        "built": "http://backend.internal/u/where",
+    }
+    slash = client.get("/u/folder", follow_redirects=False)
+    assert slash.headers["location"] == "http://backend.internal/u/folder/"
+
+
+def test_set_urls_and_slash_redirects_name_the_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _origin_host(monkeypatch, ORIGIN + "/")
+    assert client.get("/u/where").json() == {
+        "url": f"{ORIGIN}/u/where",
+        "built": f"{ORIGIN}/u/where",
+    }
+    slash = client.get("/u/folder", follow_redirects=False)
+    assert slash.status_code == 307
+    assert slash.headers["location"] == f"{ORIGIN}/u/folder/"
+    # The host's own routes still answer; they build no absolute URL.
+    assert client.get("/health").json() == {"status": "ok"}
+
+
+def test_no_request_header_moves_the_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _origin_host(monkeypatch, ORIGIN)
+    forged = {
+        "host": "evil.example",
+        "x-original-host": "evil.example",
+        "x-forwarded-host": "evil.example",
+        "x-forwarded-proto": "http",
+    }
+    assert client.get("/u/where", headers=forged).json()["built"] == f"{ORIGIN}/u/where"
+
+
+def test_a_utilities_slash_redirect_names_the_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORDWARE_PUBLIC_ORIGIN", ORIGIN)
+    client = TestClient(create_app(apps=("utilities",)), base_url="http://backend.internal")
+    slash = client.get("/utilities/email-check", follow_redirects=False)
+    assert slash.headers["location"] == f"{ORIGIN}/utilities/email-check/"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("  ", None),
+        ("https://Apps.Example.edu", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
+        ("https://apps.example.edu/", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
+        (
+            "https://apps.example.edu:8443",
+            PublicOrigin("https", "apps.example.edu", 8443, "apps.example.edu:8443"),
+        ),
+        ("https://apps.example.edu:443", PublicOrigin("https", "apps.example.edu", 443, "apps.example.edu")),
+        ("https://[::1]:8443", PublicOrigin("https", "::1", 8443, "[::1]:8443")),
+    ],
+)
+def test_parse_public_origin(raw: str | None, expected: PublicOrigin | None) -> None:
+    assert parse_public_origin(raw, local=False) == expected
+
+
+def test_http_is_allowed_only_locally() -> None:
+    assert parse_public_origin("http://127.0.0.1:8000", local=True) == PublicOrigin(
+        "http", "127.0.0.1", 8000, "127.0.0.1:8000"
+    )
+    with pytest.raises(ValueError, match="http is allowed only at APP_ENV=local"):
+        parse_public_origin("http://apps.example.edu", local=False)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "apps.example.edu",
+        "ftp://apps.example.edu",
+        "https://",
+        "https://apps.example.edu/reviewrobin",
+        "https://apps.example.edu?x=1",
+        "https://apps.example.edu/?",
+        "https://apps.example.edu#top",
+        "https://user@apps.example.edu",
+        "https://apps.example.edu:notaport",
+        "https://apps.example.edu:0",
+        "https://a b.edu",
+        "https://apps.example.edu\\evil",
+        "https://ex\u4e2d.edu",
+        "https://ex\u00e4mple.edu",
+        "https://-apps.example.edu",
+    ],
+)
+def test_an_invalid_origin_refuses_to_start(monkeypatch: pytest.MonkeyPatch, raw: str) -> None:
+    with pytest.raises(ValueError, match="CORDWARE_PUBLIC_ORIGIN"):
+        parse_public_origin(raw, local=True)
+    monkeypatch.setenv("CORDWARE_PUBLIC_ORIGIN", raw)
+    with pytest.raises(ValueError, match="CORDWARE_PUBLIC_ORIGIN"):
+        create_app(apps=("u",), registry=URL_STUB)
