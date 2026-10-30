@@ -1160,6 +1160,30 @@ and need their own careful pass.
 (Extracting `base.html`'s stylesheet is not tracked here: it is option 3
 of `guide/post_azure_todo_checklist.md` item 4, pending a measurement.)
 
+- **Email aliases and identity in RRW** (2026-10-30, from
+  `residentialapps/docs/residentialapps_email_identity_matching.md`). RRW
+  finds a user and a reviewee by email (`get_or_create_user`, the
+  reviewee results gate), so a roster entry under one alias and a sign-in
+  under another lock a reviewee out of their results. Residential binds
+  on the Entra (tenant, object ID) after a first exact match; the note
+  applies the principle to every Cordware application but requires no
+  shared Person table. Whether RRW records the object ID and resolves by
+  it is a separate decision. **What would move it on:** the first
+  reviewee locked out by an alias, or Cordware's `Identity` gaining
+  `tenant_id`, `upn` and `mail` (Residential segment 1B item 3).
+- **A shared Graph helper in `cordware/`** (author, 2026-10-30: filed
+  until Graph is validated). Three users need Microsoft Graph through
+  Easy Auth's token store, which the host owns: Residential's identity
+  matching (a user's `mail` and `userPrincipalName` by object ID,
+  `residentialapps/docs/residentialapps_email_identity_matching.md` §4),
+  RA Leave's sending as the actor (`Mail.Send`), and the Email Address
+  Checker (`utilityapps/docs/email_address_checker_functional_spec_v0.1.md`).
+  One helper in the host, not a copy per application, with
+  `cordware/spec/identity.md` naming it. Until then identity matching
+  runs on the sign-in claims alone, as the note requires. **What would
+  move it on:** Cordware's private deployment confirming live token
+  acquisition and a Graph call (the managed-identity wiring still open
+  there on 2026-10-29), or the first of the three users being built.
 - **First-time-user creation auditing.** First sign-in creates
   a `User` row without writing an audit event. Decide whether
   first-sign-in deserves its own audit event, or whether the
