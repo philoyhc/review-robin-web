@@ -28,6 +28,11 @@ class IdentitySettings(BaseSettings):
     fake_auth_principal_id: str = "local-dev"
     fake_auth_email: str = "operator@example.edu"
     fake_auth_name: str = "Local Operator"
+    # The fake account's tenant, UPN and primary email; a blank UPN or mail
+    # is the fake email. Set one apart to test an alias locally.
+    fake_auth_tenant_id: str = "local-tenant"
+    fake_auth_upn: str = ""
+    fake_auth_mail: str = ""
 
     # The platform super-admin (v0.8 §3): a comma-separated email list,
     # set only by the deployer. `NoDecode` keeps pydantic-settings from

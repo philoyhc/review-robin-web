@@ -45,6 +45,15 @@ class Identity:
     name: str | None
     provider: str | None = None
     is_fake: bool = False
+    # The account's tenant, UPN and primary email as Entra gives them,
+    # each its own field: an application matching a roster on first sign-in
+    # tries the UPN and the email separately, and binds on (tenant,
+    # principal_id) after (`residentialapps/docs/
+    # residentialapps_email_identity_matching.md`). `email` above stays the
+    # one address RRW and the super-admin list read.
+    tenant_id: str | None = None
+    upn: str | None = None
+    mail: str | None = None
     # The settings a caller passed to `resolve_identity` (tests), so the
     # role properties read the configuration the identity was resolved
     # under. None, as from the dependency, reads the host's. Not part of
@@ -175,6 +184,9 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
         return None
     email: str | None = None
     name: str | None = None
+    tenant_id: str | None = None
+    upn: str | None = None
+    mail: str | None = None
     # A whitespace-only id is no id, as for the email claim (P3): it
     # would hide the principal header's object id.
     principal_id: str | None = simple_id if simple_id and simple_id.strip() else None
@@ -202,6 +214,28 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
                 payload,
                 "name",
                 "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+            )
+            tenant_id = _claim(
+                payload,
+                "http://schemas.microsoft.com/identity/claims/tenantid",
+                "tid",
+                blank_counts=False,
+            )
+            # Entra's v2 `preferred_username` is the UPN when no `upn`
+            # claim is issued; it is not the primary email, so `mail`
+            # never falls back to it.
+            upn = _claim(
+                payload,
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn",
+                "upn",
+                "preferred_username",
+                blank_counts=False,
+            )
+            mail = _claim(
+                payload,
+                "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+                "email",
+                blank_counts=False,
             )
             principal_id = principal_id or _claim(
                 payload,
@@ -231,6 +265,9 @@ def _identity_from_easy_auth_headers(request: Request) -> Identity | None:
         email=email,
         name=name,
         provider=provider,
+        tenant_id=tenant_id,
+        upn=upn,
+        mail=mail,
     )
 
 
@@ -241,6 +278,11 @@ def _fake_identity(settings: IdentitySettings) -> Identity:
         name=settings.fake_auth_name,
         provider="fake",
         is_fake=True,
+        tenant_id=settings.fake_auth_tenant_id,
+        # Blank means "the fake email", so one setting serves the usual
+        # case and either can differ to try an alias.
+        upn=settings.fake_auth_upn.strip() or settings.fake_auth_email,
+        mail=settings.fake_auth_mail.strip() or settings.fake_auth_email,
     )
 
 

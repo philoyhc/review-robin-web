@@ -10,6 +10,7 @@ After 1A both applications mount and answer `health`, and nothing else exists. S
 
 **Paused after item 1** (author, 2026-10-27, `residentialapps/guide/todo_master.md` ruling 13). Item 1, the screens, is built (`#3289`, `#3290`, `#3291`; read once, at rung 3, then per iteration rung) and was **approved by the author on 2026-10-28** after a review found it complete; item 1's gate is open. RA Leave's placeholder screens (1C item 1) remain next under ruling 13, then items 2–5, with rosters before assignments (ruled 2026-10-28). RA Leave's placeholder screens come next, to firm up the UX conventions; items 2–5 resume after them, as the core RA Leave is built on.
 
+- **2026-10-30** (author: settle the Cordware change separately and first): item 3's rung 1 is carved out and landed ahead of item 2, since it needs no database. `cordware.identity.Identity` gains `tenant_id`, `upn` and `mail`, and fake auth `FAKE_AUTH_TENANT_ID`, `FAKE_AUTH_UPN` and `FAKE_AUTH_MAIL`. Which claims the deployment's tokens carry is confirmed on Azure (Cordware's private to-do) before item 3 builds on them.
 - **2026-10-30** (author: "record them"): the email identity-matching note's implications enter Semantics for item 3, and re-linking a bound Person goes out of scope. Item 3's Cordware rung widens from `tid` and UPN to `tenant_id`, `upn` and `mail`.
 - **Iteration rung 4, 2026-10-27** (author's browser check): the tree is approved; Level labels gain a *Used* flag per level, and the Appointments card becomes five editable slots of title, type and level (`residentialapps/guide/todo_master.md`, organization levels, amended).
 - **Iteration rung 5, 2026-10-27** (author's browser check): levels and appointments become rows with **+** and **X** (no fixed count, no *Used* flag), after RRW's response-field rows; Appointments gains an *Abbrev* column; Admin is *Residential Admin*, and *Other Staff* joins the defaults; up to five levels and ten appointments (the same ruling, amended).
@@ -95,7 +96,7 @@ Taken 2026-10-26 at `b63604f`; 1A's files are counted when 1A closes.
 
 **Item 2 — Databases.** 1. Settings, engines, both histories. 2. CI round-trip of both on Postgres. Last build rung.
 
-**Item 3 — Identity.** 1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`. 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
+**Item 3 — Identity.** ~~1. Cordware: `tid` and UPN on `Identity`, tests in `cordware/tests`.~~ (Carved out and landed ahead, 2026-10-30: `tenant_id`, `upn` and `mail`; Status.) 2. Person and institutional-identity models, binding service, audit events. 3. Sign-in flow and `RES_` fake roles; wire not-registered and person detail. 4. sys admin grant and revoke; wire its page. Last build rung.
 
 ~~**Item 4 — Organization.** 1. Models and migration. 2. Setup CSVs, appointment types then structure: parse, preview, commit, export. 3. Wire the organization page.~~ **Item 4 — Terms and assignments** (revised 2026-10-28). 1. Models and migration: terms, levels, slots by term, assignments. 2. Terms CSV and page. 3. Assignments CSV with its modes, the guard, Copy from: parse, preview, commit, export. 4. Wire the Assignments page. Last build rung.
 
@@ -130,7 +131,7 @@ Where Residential's specs live was ruled with 1A's drafts: `residentialapps/spec
 
 ## Doc impact
 
-- `cordware/spec/identity.md` — tenant ID, UPN and mail on the identity, as separate fields (Item 3).
+- `cordware/spec/identity.md` — tenant ID, UPN and mail on the identity, as separate fields (done — Item 3, carved out ahead of it 2026-10-30).
 - `residentialapps/docs/residentialapps_identity.md` — revised to what shipped (Item 3).
 - `residentialapps/docs/residentialapps_roster_structure.md` — revised to rosters, terms and assignments: levels, slots by term and their assignments (Item 4).
 - `residentialapps/spec/organization_and_rosters.md` — new: the whole contract for the terms, levels, slots, rosters and assignments, their inter-table rules, upload modes and blank cells, written as items 4 and 5 ship (author, 2026-10-27; revised 2026-10-28).

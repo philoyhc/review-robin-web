@@ -342,6 +342,9 @@ def test_get_identity_reads_the_shared_settings(monkeypatch: pytest.MonkeyPatch)
         ("FAKE_AUTH_PRINCIPAL_ID", "pid-9", "fake_auth_principal_id", "pid-9"),
         ("FAKE_AUTH_EMAIL", "tester@example.edu", "fake_auth_email", "tester@example.edu"),
         ("FAKE_AUTH_NAME", "Test Er", "fake_auth_name", "Test Er"),
+        ("FAKE_AUTH_TENANT_ID", "tenant-9", "fake_auth_tenant_id", "tenant-9"),
+        ("FAKE_AUTH_UPN", "e0123456@example.edu", "fake_auth_upn", "e0123456@example.edu"),
+        ("FAKE_AUTH_MAIL", "jane@example.edu", "fake_auth_mail", "jane@example.edu"),
         (
             "SUPER_ADMIN_EMAILS",
             " boss@example.edu, ,Root@Example.edu ",
@@ -550,3 +553,74 @@ def test_only_a_string_names_the_provider() -> None:
     rich = _encode_principal({"auth_typ": {"a": 1}, "identityProvider": "aad", "claims": []})
     identity = resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
     assert identity.provider == "aad"
+
+
+# --------------------------------------------------------------------
+# tenant, UPN and primary email (Residential's identity matching, 2026-10-30)
+
+_TID_URI = "http://schemas.microsoft.com/identity/claims/tenantid"
+_UPN_URI = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn"
+
+
+def _rich(claims: list[dict[str, str]]) -> Identity:
+    rich = _encode_principal({"auth_typ": "aad", "claims": claims})
+    return resolve_identity(_request({"X-MS-CLIENT-PRINCIPAL": rich}), _settings())
+
+
+def test_tenant_upn_and_mail_are_separate_fields() -> None:
+    """A roster may hold either the UPN or the primary email, so an
+    application tries each; one `email` field could carry only one."""
+    user = _rich([
+        {"typ": _TID_URI, "val": "tenant-1"},
+        {"typ": _UPN_URI, "val": "e0123456@example.edu"},
+        {"typ": _EMAILADDRESS, "val": "jane.tan@example.edu"},
+        {"typ": "preferred_username", "val": "e0123456@example.edu"},
+    ])
+    assert (user.tenant_id, user.upn, user.mail) == ("tenant-1", "e0123456@example.edu", "jane.tan@example.edu")
+    assert user.email == "jane.tan@example.edu"  # unchanged for RRW and the super-admin list
+
+
+def test_upn_falls_back_to_preferred_username_and_mail_never_does() -> None:
+    """Entra v2 tokens carry `preferred_username` (the UPN) and `tid`, often
+    with no `upn` or email claim: then the UPN is known and the primary
+    email is not, rather than guessed."""
+    user = _rich([
+        {"typ": "tid", "val": "tenant-2"},
+        {"typ": "preferred_username", "val": "e7654321@example.edu"},
+    ])
+    assert (user.tenant_id, user.upn, user.mail) == ("tenant-2", "e7654321@example.edu", None)
+
+
+def test_blank_tenant_upn_and_mail_claims_yield_to_the_next() -> None:
+    user = _rich([
+        {"typ": _TID_URI, "val": "  "},
+        {"typ": "tid", "val": "tenant-3"},
+        {"typ": _UPN_URI, "val": " "},
+        {"typ": "upn", "val": "u@example.edu"},
+        {"typ": _EMAILADDRESS, "val": ""},
+        {"typ": "email", "val": "m@example.edu"},
+    ])
+    assert (user.tenant_id, user.upn, user.mail) == ("tenant-3", "u@example.edu", "m@example.edu")
+
+
+def test_simple_headers_alone_give_no_tenant_upn_or_mail() -> None:
+    user = resolve_identity(
+        _request({"X-MS-CLIENT-PRINCIPAL-NAME": "alice@example.edu", "X-MS-CLIENT-PRINCIPAL-ID": "p"}),
+        _settings(),
+    )
+    assert (user.tenant_id, user.upn, user.mail) == (None, None, None)
+
+
+def test_the_fake_identity_carries_a_tenant_and_its_email_as_upn_and_mail() -> None:
+    user = resolve_identity(_request(), _settings(allow_fake_auth=True))
+    assert (user.tenant_id, user.upn, user.mail) == ("local-tenant", "operator@example.edu", "operator@example.edu")
+
+
+def test_the_fake_upn_and_mail_can_differ_to_try_an_alias() -> None:
+    settings = IdentitySettings(
+        allow_fake_auth=True, fake_auth_email="jane.tan@example.edu",
+        fake_auth_upn="e0123456@example.edu", fake_auth_tenant_id="tenant-x",
+    )
+    user = resolve_identity(_request(), settings)
+    assert (user.tenant_id, user.upn, user.mail, user.email) == (
+        "tenant-x", "e0123456@example.edu", "jane.tan@example.edu", "jane.tan@example.edu")
