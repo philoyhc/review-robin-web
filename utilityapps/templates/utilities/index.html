@@ -1,0 +1,13 @@
+{% extends "utilities/base.html" %}
+{% block title %}Utilities{% endblock %}
+{% block content %}
+  <h1>Cordware Utilities</h1>
+  <p class="sub">Small tools for administrators.</p>
+  <ul class="tools" aria-label="Tools">
+    {# Inert until the checker's pages land (segment U1, rung 2). #}
+    <li>
+      <span class="tool-name">Email Address Checker</span> <span class="soon">(not yet available)</span>
+      <p>Upload a CSV of addresses; get it back with each address checked against the directory, its primary email, and the addresses that belong to the same account.</p>
+    </li>
+  </ul>
+{% endblock %}

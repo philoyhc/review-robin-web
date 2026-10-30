@@ -171,6 +171,7 @@ Cordware's side follows separately, on the author's word:
 
 - `utilityapps/spec/email_check.md` — new: the input, lookup, classification and output contract, from the spec's §§4–7 as built (rungs 1–5).
 - `utilityapps/docs/email_address_checker_functional_spec_v0.1.md` — revised to say what was decided: CSRF posture, the single query, no server state (at close).
+- `utilityapps/spec/utilities.md` — new: the mount, health, index and import boundaries (rung 1).
 - `utilityapps/README.md` — the package layout and the mount (rung 1).
 - `cordware/spec/host.md` — the `utilities` registry entry and its health path (rung 1).
 - `cordware/spec/identity.md` — the Graph helper: token source, errors, the fake directory (rung 4).

@@ -57,6 +57,7 @@ jobs:
             app/
             cordware/
             residentialapps/
+            utilityapps/
             alembic/
             alembic.ini
             requirements.txt
