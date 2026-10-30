@@ -367,7 +367,8 @@ you would act on?*
 - [ ] **No senior warning**: Access with `&preview=no-senior` added shows
   an amber warning at the top; without it, none.
 - [ ] **Configuration**: list cards, one column at 390 px, each with a
-  disabled Edit; the Access card's self-grant setting unticked.
+  disabled Edit; the Access card's self-grant setting unticked (*ruling
+  R7: its default*).
 - [ ] **Audit log**: administrative events only (the lapse row's actor is
   "Support Logs", its reason names Residential Operations); **Senior
   reads** shows Sam Lee, 3 reads, 1 download and his latest; Purged
@@ -393,6 +394,16 @@ the plan's open questions (`residentialapps/guide/segment_1D_support_logs.md`):
 - **R5. Peer-view scope** (A9; spec §17 Q10): a share shows the grantor's
   records for that student, encounters and plans, read-only.
 - **R6. Access** (C3): checkboxes, or the plan's Toggle?
+- **R7. The self-grant setting's default** (C3, Configuration's Access
+  card): built off; the ruling of 2026-10-30 asked for the option but
+  not its default.
+
+The frontline sessions can also answer four of the functional spec's
+§17 questions (`residentialapps/docs/resident_support_log_functional_spec_v0.3.md`):
+Q2, which encounter types (A2); Q5, whether staff see only their own
+encounters when a colleague is also formally assigned (A7); Q6, when a
+formal assignment is due soon or overdue (A8); Q15, whether "planned vs
+incidental" earns a field (A3). Record their answers beside the rulings.
 
 Not for the browser: the crisis protocol's real contents (the
 institution's).
