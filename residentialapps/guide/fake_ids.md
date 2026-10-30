@@ -9,6 +9,12 @@ the app.
 
 - **Run from the repository root.** The first line moves there. Change
   `C:\GitHub\review-robin-web` if your clone lives elsewhere.
+- **The `Set-ExecutionPolicy` line** lets this window run `Activate.ps1`,
+  which Windows PowerShell blocks by default ("running scripts is
+  disabled on this system"). It lasts until the window closes and needs no
+  admin rights. To lift the block for good instead, run
+  `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
+  once (`docs/local_setup.md`, "Windows-specific gotchas").
 - **Stop with Ctrl+C**, then paste the next block. Closing the shell drops
   the settings, which never touch `.env`.
 - **Who a page is drawn for is the `?as=` in the address**, not the fake
@@ -39,6 +45,7 @@ RF: Frontline. Lands on Home, the frontline dashboard.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -56,6 +63,7 @@ RSLM: Frontline, Safety-flag recipient. Lands on Home, with every active safety 
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -73,6 +81,7 @@ Master: Senior identifiable, Safety-flag recipient. Lands on Overview.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -90,6 +99,7 @@ Exec: Safety-flag recipient. Lands on Home, the flags only.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -107,6 +117,7 @@ RSLM: Consultation check. Lands on Consultation check.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -124,6 +135,7 @@ RF: Other Staff view: aggregate. Lands on Overview, counts only.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -141,6 +153,7 @@ RF: Other Staff view: identifiable. Lands on Overview, read-only.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -158,6 +171,7 @@ RSLM: Consultation check, Other Staff view: identifiable. Lands on Home, listing
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -175,6 +189,7 @@ Admin: Sys admin. Lands on Sys admin › Access.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -192,6 +207,7 @@ Super-admin. Lands on Sys admin › Access, with Sys admin grants.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
@@ -209,6 +225,7 @@ RF, no Support Logs access. Lands on the 403 page.
 
 ```powershell
 Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 .\.venv\Scripts\Activate.ps1
 $env:APP_ENV = "local"
 $env:ALLOW_FAKE_AUTH = "true"
