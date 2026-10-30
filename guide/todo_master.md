@@ -57,7 +57,16 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **19X — Refinements from browser runs** (not gated on Azure). A
+3. **21E — The public origin** (not gated on Azure; due before the
+   institutional host's first release). A host setting,
+   `CORDWARE_PUBLIC_ORIGIN`. When set, the host rewrites every request's
+   scheme and host to it, so invitation links and the framework's
+   slash redirects name the public address, not the gateway's backend.
+   Ruled 2026-10-30 in place of a custom domain or trusting
+   `X-Original-Host`.
+   **Plan:** `guide/segment_21E_public_origin.md`.
+
+4. **19X — Refinements from browser runs** (not gated on Azure). A
    standing segment for small follow-ups from the author's browser
    runs, one item each. Items 1–3 closed 2026-10-19, Items 4–9 on
    2026-10-20 and Items 10–13 on 2026-10-22. None open; add one per
