@@ -21,8 +21,10 @@ Residential Apps: one package, mounted under Cordware as two applications, **Res
 | `guide/archive/segment_1A_package_and_mounts.md` | Segment 1A, closed 2026-10-26 (`#3274`→`#3281`): the package, both mounts with health paths, and the `residential` CI lane. **Read `Status`** for the restructures and what the reads caught |
 | `guide/segment_1B_rosters_and_organization.md` | Segment 1B plan: the shared core's admin screens scaffolded, then databases, identity, organization and rosters wired to them (paused after item 1 for RA Leave's screens, ruling 13) |
 | `guide/segment_1C_ra_leave.md` | Segment 1C plan: RA Leave's screens, phone first, settling Residential's UX conventions (item 1, next); then wired on 1B's core (items 2–5) |
+| `guide/1B_browser_checks.md` | Segment 1B item 1's browser walkthrough: the landing, Rosters and setup, a person's page and Sys admin, step by step; deleted when the screens are approved |
+| `guide/1C_browser_checks.md` | Segment 1C item 1's browser walkthrough: RA Leave's RA, staff and admin screens and the appeal-mode previews, step by step; deleted when item 1 closes |
 | `guide/1D_browser_checks.md` | Segment 1D item 1's browser walkthrough: every Support Logs screen, step by step, with the PowerShell fake-auth commands; deleted when item 1 closes |
-| `guide/fake_ids.md` | Copy-and-paste PowerShell blocks that run Support Logs locally as each sample viewer, fake auth set for the shell only |
+| `guide/fake_ids.md` | Copy-and-paste PowerShell blocks that run Residential Apps locally as each sample viewer (Support Logs, RA Leave, Rosters and setup, Sys admin), fake auth set for the shell only |
 | `guide/todo_master.md` | Rulings, dependencies, open decisions and pending revisions |
 
 Shared UX guidance for every Cordware application is RRW's `docs/cordware_mobile_to_desktop.md`.

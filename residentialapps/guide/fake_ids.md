@@ -1,11 +1,17 @@
-# Fake identities: Support Logs
+# Fake identities: Residential Apps
 
-Copy-and-paste PowerShell blocks for running Support Logs locally as each
-sample viewer of segment 1D item 1. Use them with
-`residentialapps/guide/1D_browser_checks.md`. Each block stands alone: it
-activates the virtualenv, sets fake auth for that shell only, opens the
-browser on the viewer's page a few seconds after the app starts, and runs
-the app.
+Copy-and-paste PowerShell blocks for running Residential Apps locally as
+each sample viewer. Use them with the browser walkthroughs:
+`residentialapps/guide/1B_browser_checks.md` (Rosters and setup, Sys admin),
+`residentialapps/guide/1C_browser_checks.md` (RA Leave) and
+`residentialapps/guide/1D_browser_checks.md` (Support Logs). Each block
+stands alone. It:
+
+1. activates the virtualenv;
+2. sets fake auth for that shell only;
+3. opens the browser on the viewer's page a few seconds after the app
+   starts;
+4. runs the app.
 
 - **Run from the repository root.** The first line moves there. Change
   `C:\GitHub\review-robin-web` if your clone lives elsewhere.
@@ -19,11 +25,13 @@ the app.
   the settings, which never touch `.env`.
 - **Who a page is drawn for is the `?as=` in the address**, not the fake
   account. The account gives the top bar its name and gets you past
-  sign-in. So one running app serves every viewer: the **Sample viewer**
-  card switches between them without a restart. A block per viewer sets
-  both, so the name in the top bar matches the viewer.
+  sign-in. So one running app serves every viewer: each page's viewer
+  chips or card switch between them without a restart. A block per viewer
+  sets both, so the name in the top bar matches the viewer.
 - Fake auth works only with `APP_ENV=local`, and the host refuses to start
   otherwise. Never set it on a deployment.
+
+## Support Logs (1D)
 
 | Viewer | Holds | Lands on |
 |---|---|---|
@@ -39,7 +47,7 @@ the app.
 | Platform super-admin | Super-admin | Sys admin › Access, with Sys admin grants |
 | Wei Jie Ong | RF, no Support Logs access | the 403 page |
 
-## Daniel Koh
+### Daniel Koh
 
 RF: Frontline. Lands on Home, the frontline dashboard.
 
@@ -57,7 +65,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Priya Raman
+### Priya Raman
 
 RSLM: Frontline, Safety-flag recipient. Lands on Home, with every active safety flag.
 
@@ -75,7 +83,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Sam Lee
+### Sam Lee
 
 Master: Senior identifiable, Safety-flag recipient. Lands on Overview.
 
@@ -93,7 +101,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Hui Min Goh
+### Hui Min Goh
 
 Exec: Safety-flag recipient. Lands on Home, the flags only.
 
@@ -111,7 +119,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Marcus Tan
+### Marcus Tan
 
 RSLM: Consultation check. Lands on Consultation check.
 
@@ -129,7 +137,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Kenneth Lau
+### Kenneth Lau
 
 RF: Other Staff view: aggregate. Lands on Overview, counts only.
 
@@ -147,7 +155,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Siti Rahman
+### Siti Rahman
 
 RF: Other Staff view: identifiable. Lands on Overview, read-only.
 
@@ -165,7 +173,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Nadia Hassan
+### Nadia Hassan
 
 RSLM: Consultation check, Other Staff view: identifiable. Lands on Home, listing Overview and Consultation check.
 
@@ -183,7 +191,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Rachel Yeo
+### Rachel Yeo
 
 Admin: Sys admin. Lands on Sys admin › Access.
 
@@ -201,7 +209,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Platform super-admin
+### Platform super-admin
 
 Super-admin. Lands on Sys admin › Access, with Sys admin grants.
 
@@ -219,7 +227,7 @@ Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/support
 uvicorn cordware.main:app --reload
 ```
 
-## Wei Jie Ong
+### Wei Jie Ong
 
 RF, no Support Logs access. Lands on the 403 page.
 
@@ -234,6 +242,353 @@ $env:FAKE_AUTH_NAME = "Wei Jie Ong"
 $env:FAKE_AUTH_SUPER_ADMIN = "false"
 Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
 Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/supportlogs/?as=Wei%20Jie%20Ong" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+## RA Leave (1C)
+
+The RA pages and the staff pages each switch viewer with chips under the
+title. RA Leave admin has no switch; reach it from Rachel Yeo's or Sam Lee's
+landing card.
+
+| Viewer | Side | Shows |
+|---|---|---|
+| Chloe Lim | RA | cover asked of her, a draft, an email not sent |
+| Hana Ito | RA | her cover declined: name new cover |
+| Ethan Wong | RA | awaiting cover confirmation; a withdrawn application; a draft |
+| Gwen Ho | RA | an appeal with the Master |
+| Lucas Teo | RA | extra leave granted |
+| Faris Iskandar | RA | a rejected application |
+| Maya Seah | RA | an appeal the Master refused |
+| Kai Ng | RA | approved leave cancelled; invited to appeal (preview appeals by invitation) |
+| Daniel Koh | staff | RF, first approver for Cypress A 04-12 |
+| Priya Raman | staff | RSLM, no decisions under the policy |
+| Rachel Yeo | staff | Residential Admin, final approver |
+| Sam Lee | staff | Master, decides appeals |
+| Hui Min Goh | staff | Residential Executive, oversees no RA |
+
+### Chloe Lim (RA)
+
+Cover asked of her, a draft, an email not sent.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "chloe.lim@example.edu"
+$env:FAKE_AUTH_NAME = "Chloe Lim"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Hana Ito (RA)
+
+Her cover declined: name new cover.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "hana.ito@example.edu"
+$env:FAKE_AUTH_NAME = "Hana Ito"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Hana%20Ito" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Ethan Wong (RA)
+
+Awaiting cover confirmation; a withdrawn application; a draft.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "ethan.wong@example.edu"
+$env:FAKE_AUTH_NAME = "Ethan Wong"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Ethan%20Wong" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Gwen Ho (RA)
+
+An appeal with the Master.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "gwen.ho@example.edu"
+$env:FAKE_AUTH_NAME = "Gwen Ho"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Gwen%20Ho" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Lucas Teo (RA)
+
+Extra leave granted.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "lucas.teo@example.edu"
+$env:FAKE_AUTH_NAME = "Lucas Teo"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Lucas%20Teo" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Faris Iskandar (RA)
+
+A rejected application.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "faris.iskandar@example.edu"
+$env:FAKE_AUTH_NAME = "Faris Iskandar"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Faris%20Iskandar" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Maya Seah (RA)
+
+An appeal the Master refused.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "maya.seah@example.edu"
+$env:FAKE_AUTH_NAME = "Maya Seah"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Maya%20Seah" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Kai Ng (RA)
+
+Approved leave cancelled; invited to appeal (preview appeals by invitation).
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "kai.ng@example.edu"
+$env:FAKE_AUTH_NAME = "Kai Ng"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/?as=Kai%20Ng" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Daniel Koh (staff)
+
+RF, first approver for Cypress A 04-12.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "daniel.koh@example.edu"
+$env:FAKE_AUTH_NAME = "Daniel Koh"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/staff/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Priya Raman (staff)
+
+RSLM, no decisions under the policy.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "priya.raman@example.edu"
+$env:FAKE_AUTH_NAME = "Priya Raman"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/staff/?as=Priya%20Raman" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Rachel Yeo (staff)
+
+Residential Admin, final approver.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
+$env:FAKE_AUTH_NAME = "Rachel Yeo"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/staff/?as=Rachel%20Yeo" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Sam Lee (staff)
+
+Master, decides appeals.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "sam.lee@example.edu"
+$env:FAKE_AUTH_NAME = "Sam Lee"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/staff/?as=Sam%20Lee" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Hui Min Goh (staff)
+
+Residential Executive, oversees no RA.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "huimin.goh@example.edu"
+$env:FAKE_AUTH_NAME = "Hui Min Goh"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/staff/?as=Hui%20Min%20Goh" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### RA Leave admin (Rachel Yeo)
+
+The admin pages, drawn for a sys admin.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
+$env:FAKE_AUTH_NAME = "Rachel Yeo"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/ra-leave/admin/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+## Rosters and setup, Sys admin (1B)
+
+These pages have no viewer switch; they are drawn for a sys admin. The
+landing at `/residentialops/` switches viewer with its chips. Sys admin
+says "You see this read-only" unless the fake account is the super-admin.
+
+### The landing (Chloe Lim)
+
+The landing, whose chips switch between Chloe Lim, Daniel Koh, Priya
+Raman, Hui Min Goh, Rachel Yeo and Sam Lee.
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "chloe.lim@example.edu"
+$env:FAKE_AUTH_NAME = "Chloe Lim"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Rosters and setup (Rachel Yeo)
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
+$env:FAKE_AUTH_NAME = "Rachel Yeo"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/rosters/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Sys admin as a sys admin (Rachel Yeo)
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "rachel.yeo@example.edu"
+$env:FAKE_AUTH_NAME = "Rachel Yeo"
+$env:FAKE_AUTH_SUPER_ADMIN = "false"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/sys-admin/" } | Out-Null
+uvicorn cordware.main:app --reload
+```
+
+### Sys admin as the super-admin
+
+```powershell
+Set-Location C:\GitHub\review-robin-web
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+.\.venv\Scripts\Activate.ps1
+$env:APP_ENV = "local"
+$env:ALLOW_FAKE_AUTH = "true"
+$env:FAKE_AUTH_EMAIL = "operator@example.edu"
+$env:FAKE_AUTH_NAME = "Local Super-admin"
+$env:FAKE_AUTH_SUPER_ADMIN = "true"
+Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue
+Start-Job { Start-Sleep -Seconds 4; Start-Process "http://127.0.0.1:8000/residentialops/sys-admin/" } | Out-Null
 uvicorn cordware.main:app --reload
 ```
 
