@@ -56,8 +56,8 @@
           <form action="{{ url('/overview/records') }}" method="get">
             {% if me != sample.DEFAULT %}<input type="hidden" name="as" value="{{ me.name }}">{% endif %}
             <input type="hidden" name="records" value="open"><input type="hidden" name="understood" value="yes">
-            <div class="field-wide"><label for="p-staff">Staff</label>{{ token_filter("Staff", "staff", sample.staff_choices(), "p-staff-list", "p-staff", chosen=(("?", "Unknown staff") if staff == "?" else (staff, staff) if staff else none)) }}</div>
-            <div class="field-wide"><label for="p-student">Student</label>{{ token_filter("Student", "student", sample.student_choices(), "p-student-list", "p-student", chosen=(("?", "Unknown student") if student == "?" else (student, sample.student(student).name) if student else none)) }}</div>
+            <div class="field-wide"><label for="p-staff">Staff</label>{{ token_filter("Purged records: Staff", "staff", sample.staff_choices(), "p-staff-list", "p-staff", chosen=(("?", "Unknown staff") if staff == "?" else (staff, staff) if staff else none)) }}</div>
+            <div class="field-wide"><label for="p-student">Student</label>{{ token_filter("Purged records: Student", "student", sample.student_choices(), "p-student-list", "p-student", chosen=(("?", "Unknown student") if student == "?" else (student, sample.student(student).name) if student else none)) }}</div>
             <button type="submit" class="btn btn-secondary">Show</button>
           </form>
           {% if purged %}<ul class="items gap-above-sm">{% for p in purged %}<li><div class="item-head"><span class="strong">{{ p.by }}: {% if student and student != "?" %}{{ p.about(student) }} {{ p.what | lower }} about {{ sample.student(student).name }}, of {{ p.count }}{% else %}{{ p.count }} {{ p.what | lower }}{% endif %}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>{% else %}<p class="sub gap-above-sm">None.</p>{% endif %}

@@ -514,11 +514,18 @@
       // A one-person filter (`token_filter` in residential/_people.html): a
       // name or email that matches its list becomes a pill carrying the
       // value; unmatched text blocks the form, so it never widens to all.
+      // A match is made on a pick from the list, on Enter, on leaving the
+      // box and on submit, never mid-typing, so a name that begins another
+      // is not taken early; focus stays in the box, so Enter cannot remove
+      // the pill just made.
       (function () {
+        var TYPO = "Choose a name from the list, or clear the box for everyone.";
+        var TWO = "Two people have this name: type their email instead.";
         Array.prototype.forEach.call(document.querySelectorAll("[data-token-filter]"), function (box) {
           var input = box.querySelector(".token-input");
           var list = document.getElementById(box.getAttribute("data-list"));
           if (!input || !list) { return; }
+          box.tabIndex = -1;
           function choose(opt) {
             var name = opt.getAttribute("data-name") || opt.value;
             var pill = document.createElement("span");
@@ -533,28 +540,37 @@
             x.className = "token-x";
             x.setAttribute("aria-label", "Remove " + name + " from " + box.getAttribute("aria-label"));
             x.textContent = "\u00d7";
+            if (input.id) { x.id = input.id; input.removeAttribute("id"); }  // the label names the pill's control
             pill.appendChild(kept);
             pill.appendChild(x);
             box.insertBefore(pill, input);
             input.value = "";
             input.setCustomValidity("");
             input.hidden = true;
-            x.focus();
+            box.focus();
           }
           function match() {
             var typed = input.value.trim().toLowerCase();
-            if (!typed) { input.setCustomValidity(""); return false; }
-            var found = Array.prototype.filter.call(list.options, function (o) { return o.value.toLowerCase() === typed; })[0];
-            if (found) { choose(found); return true; }
-            input.setCustomValidity("Choose a name from the list, or clear the box for everyone.");
+            if (!typed) { input.setCustomValidity(""); return true; }
+            var found = Array.prototype.filter.call(list.options, function (o) { return o.value.toLowerCase() === typed; });
+            var people = found.map(function (o) { return o.getAttribute("data-value"); }).filter(function (v, i, all) { return all.indexOf(v) === i; });
+            if (people.length === 1) { choose(found[0]); return true; }
+            input.setCustomValidity(people.length > 1 ? TWO : TYPO);
             return false;
           }
-          input.addEventListener("input", function () { input.setCustomValidity(""); match(); });
+          input.addEventListener("input", function (e) {
+            input.setCustomValidity("");
+            if (!e.inputType || e.inputType === "insertReplacementText") { match(); }  // a pick from the list
+          });
+          input.addEventListener("change", function () { if (input.value.trim()) { match(); } });
           input.addEventListener("keydown", function (e) {
-            if (e.key === "Enter" && input.value.trim() && !match()) { e.preventDefault(); input.reportValidity(); }
+            if (e.key !== "Enter" || !input.value.trim()) { return; }
+            e.preventDefault();
+            if (!match()) { input.reportValidity(); }
           });
           box.addEventListener("click", function (e) {
             if (!e.target.classList.contains("token-x") || e.target.disabled) { return; }
+            if (e.target.id) { input.id = e.target.id; }
             e.target.parentNode.remove();
             input.hidden = false;
             input.focus();
@@ -562,7 +578,7 @@
           var form = box.closest("form");
           if (form) {
             form.addEventListener("submit", function (e) {
-              if (input.value.trim() && !match()) { e.preventDefault(); input.reportValidity(); }
+              if (!input.hidden && input.value.trim() && !match()) { e.preventDefault(); input.reportValidity(); }
             });
           }
         });

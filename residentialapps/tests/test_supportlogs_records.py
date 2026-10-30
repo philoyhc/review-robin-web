@@ -141,7 +141,7 @@ def test_purge_hides_and_deletion_is_others(client: TestClient) -> None:
     assert 'aria-label="Purge all your encounters">Purge all</button>' in card and "disabled" in card
     choices = re.findall(r'<option value="([^"@]+)" data-value', card.split('id="purge-student-list"')[1].split("</datalist>")[0])
     assert choices == [st.name for st in sample.record_students("Daniel Koh", "students")]  # a purge can take one student's
-    assert 'id="purge-student" class="token-input" type="text" list="purge-student-list"' in card and "disabled" in card  # a purge can take one student's
+    assert re.search(r'<input id="purge-student" class="token-input"[^>]* disabled>', card)  # a purge can take one student's
     audit = client.get("/sys-admin/audit?as=Rachel%20Yeo").text.split('id="purged-h"')[1].split("</section>")[0]
     assert "Grace Ho: 6 encounters" in audit and "<button" not in audit  # only senior staff delete (author, 2026-10-30)
     assert f'<span class="count">· {sum(p.count for p in sample.PURGES)}</span>' in audit  # records, as on Overview
@@ -315,8 +315,9 @@ def test_filters_take_a_name_or_email_as_a_pill(client: TestClient) -> None:
     assert '<option value="clara.tan@u.example.edu" data-value="S-03" data-name="Clara Tan">' in students
     chosen = client.get(f"/overview/records?{SAM}&{OPEN}&staff=Grace%20Ho&student=S-06").text.split('id="purged-h"')[1]
     assert '<span class="token">Grace Ho<input type="hidden" name="staff" value="Grace Ho">' in chosen
-    assert 'aria-label="Remove Farid Osman from Student"' in chosen
-    assert 'id="p-staff" class="token-input" type="text" list="p-staff-list" placeholder="Name or email" autocomplete="off" hidden' in chosen
+    assert 'aria-label="Remove Farid Osman from Purged records: Student"' in chosen
+    assert '<button type="button" id="p-staff" class="token-x" aria-label="Remove Grace Ho from Purged records: Staff">' in chosen
+    assert re.search(r'<input class="token-input" type="text" list="p-staff-list"[^>]* hidden>', chosen)  # the label names the pill
 
 
 def test_the_staff_emails_are_the_rosters() -> None:
@@ -325,4 +326,11 @@ def test_the_staff_emails_are_the_rosters() -> None:
         emails = {r["Name"]: r["Email"] for r in csv.DictReader(f)}
     assert all(emails[n] == e for n, e in sample.STAFF_EMAILS.items())
     assert set(sample.STAFF_EMAILS) == set(sample.FRONTLINE_COLLEAGUES)
+
+
+def test_residential_operations_boxes_stay_inert() -> None:
+    from residentialapps.residentialops.main import create_app as residentialops
+
+    page = TestClient(residentialops()).get("/rosters/assignments").text
+    assert "data-token-filter" not in page.split("</main>")[0] and 'class="token-input"' in page
 

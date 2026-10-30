@@ -140,35 +140,82 @@ def test_marking_a_safety_concern_carries_the_choices(page: Page) -> None:
 OPEN = "records=open&understood=yes"
 
 
+def download(page: Page):
+    return page.locator("#dl-h").locator("xpath=..").locator("button[type=submit]")
+
+
+def staff_box(page: Page):
+    return page.locator(".tokens[aria-label='Staff']")
+
+
 def test_a_filter_turns_a_matched_name_or_email_into_a_pill(page: Page) -> None:
     """Records across staff's filters (rung 8), Assignments' box of people
-    made live: a match becomes a pill carrying the value, removing it brings
-    the typeahead back, and unmatched text blocks the download."""
+    made live: a match becomes a pill carrying the value, its remove button
+    takes the label's id, removing it brings the typeahead back, and case
+    and spaces do not matter."""
     page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
-    staff = page.locator("#dl-staff")
-    staff.fill("grace.ho@example.edu")
-    pill = page.locator(".tokens[aria-label='Staff']").first.locator(".token")
+    page.locator("#dl-staff").fill("  GRACE.HO@EXAMPLE.EDU ")
+    page.locator("#dl-staff").press("Enter")
+    pill = staff_box(page).locator(".token")
     assert pill.inner_text().startswith("Grace Ho")
     assert pill.locator("input[type=hidden]").get_attribute("value") == "Grace Ho"
-    assert staff.is_hidden()
-    page.locator("button[aria-label='Remove Grace Ho from Staff']").first.click()
-    assert staff.is_visible() and page.locator(".tokens[aria-label='Staff']").first.locator(".token").count() == 0
-    student = page.locator("#dl-student")
-    student.fill("Clara Tan")
-    assert page.locator(".tokens[aria-label='Student']").first.locator("input[type=hidden]").get_attribute("value") == "S-03"
-    staff.fill("Daniel Kho")  # a typo: the download must not go out for all staff
+    assert page.locator("#dl-staff").get_attribute("aria-label") == "Remove Grace Ho from Staff"  # the label names it
+    assert staff_box(page).locator(".token-input").is_hidden()
+    page.locator("#dl-staff").click()
+    assert staff_box(page).locator(".token").count() == 0
+    assert page.locator("#dl-staff").evaluate("el => el.classList.contains('token-input') && document.activeElement === el")
+
+
+def test_typing_a_name_then_enter_keeps_the_pill(page: Page) -> None:
+    """Key by key, then Enter twice: the pill stays, and the download goes
+    out for that staff member, never for everyone."""
+    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
+    page.locator("#dl-staff").press_sequentially("Grace Ho")
+    assert staff_box(page).locator(".token").count() == 0  # never taken mid-typing
+    page.keyboard.press("Enter")
+    assert staff_box(page).locator(".token input[type=hidden]").get_attribute("value") == "Grace Ho"
+    page.keyboard.press("Enter")  # focus stayed on the box, not the pill's remove button
+    assert staff_box(page).locator(".token").count() == 1
+    with page.expect_request(lambda r: "records.csv" in r.url) as sent:
+        download(page).click()
+    assert parse_qs(urlparse(sent.value.url).query)["staff"] == ["Grace Ho"]
+
+
+def test_an_unmatched_name_blocks_the_download(page: Page) -> None:
+    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
     requests: list[str] = []
     page.on("request", lambda r: requests.append(r.url))
-    page.locator("#dl-h").locator("xpath=..").locator("button[type=submit]").click()
+    page.locator("#dl-staff").press_sequentially("Daniel Kho")
+    page.keyboard.press("Enter")
+    assert page.locator("#dl-staff").evaluate("el => el.validationMessage").startswith("Choose a name")
+    download(page).click()
     page.wait_for_timeout(300)
     assert not [u for u in requests if "records.csv" in u]
-    assert staff.evaluate("el => el.validationMessage")
+
+
+def test_a_chosen_pill_from_the_server_can_be_removed(page: Page) -> None:
+    page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}&staff=Grace%20Ho")
+    box = page.locator(".tokens[aria-label='Purged records: Staff']")
+    assert box.locator(".token-input").is_hidden()
+    page.locator("#p-staff").click()  # the remove button holds the field's id
+    assert box.locator(".token").count() == 0 and page.locator("#p-staff").is_visible()
+
+
+def test_your_records_student_box_is_live(page: Page) -> None:
+    page.goto(f"{ORIGIN}/students/?{OPEN}")
+    page.locator("#dl-student").fill("Clara Tan")
+    page.locator("#dl-student").press("Enter")
+    box = page.locator(".tokens[aria-label='Student']")
+    assert box.locator("input[type=hidden]").get_attribute("value") == "S-03"
+    assert page.locator("#purge-student").is_disabled()
 
 
 def test_a_chosen_filter_downloads_for_that_person(page: Page) -> None:
     page.goto(f"{ORIGIN}/overview/records?as=Sam%20Lee&{OPEN}")
     page.locator("#dl-staff").fill("Priya Raman")
+    page.locator("#dl-staff").press("Enter")
     page.locator("#dl-student").fill("hana.rahim@u.example.edu")
+    page.locator("#dl-student").press("Enter")
     with page.expect_request(lambda r: "records.csv" in r.url) as sent:
         page.locator("#dl-h").locator("xpath=..").locator("button[type=submit]").click()
     query = parse_qs(urlparse(sent.value.url).query)

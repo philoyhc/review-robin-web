@@ -96,7 +96,9 @@ form's end, and the main action is a full-width Primary on the page
   `token_filter`): a typed name or email that matches becomes a pill
   carrying the value, and its remove button brings the typeahead back.
   An empty box means everyone; unmatched text blocks the form, so a typo
-  never widens a filter.
+  never widens a filter, and a name two people share asks for an email.
+  A match is made on a pick, Enter, leaving the box or submit, never
+  mid-typing; focus stays in the box, so Enter cannot undo it.
 - **A per-row grant** on Access is a native checkbox, as Residential
   Operations' per-row flags are. Other Staff view is a select of its
   scope.
