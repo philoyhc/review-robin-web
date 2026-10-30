@@ -1,13 +1,11 @@
 """Support Logs' Overview on sample data, segment 1D item 1 rung 5: team
-workload, hotspots, coverage and clusters for senior staff and Other Staff
-view, a student's history across staff and the support-activity audit for
+workload, hotspots and coverage for senior staff and Other Staff view (no
+cluster view: §10.5 is deferred), a student's history across staff and the support-activity audit for
 senior staff (functional spec §4.5, §10, §11.2–11.3)."""
 
 from __future__ import annotations
 
-import csv
 import re
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,9 +13,6 @@ from fastapi.testclient import TestClient
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.main import create_app
 from residentialapps.tests._host import host_with
-
-ASSIGNMENTS = Path(__file__).resolve().parents[1] / "docs" / "sample_data" / "assignments.csv"
-
 
 # Identifiable and aggregate view, frontline, frontline and recipient, recipient only.
 NOT_SENIOR = ("Siti Rahman", "Kenneth Lau", "Daniel Koh", "Priya Raman", "Hui Min Goh")
@@ -68,7 +63,7 @@ def test_the_aggregate_view_names_no_student(client: TestClient) -> None:
     page = client.get("/overview/?as=Kenneth%20Lau").text
     for s in sample.STUDENTS:
         assert s.name not in page and s.id not in page, s.name
-    for heading in ("load-h", "hot-h", "cov-h", "cl-h"):
+    for heading in ("load-h", "hot-h", "cov-h"):
         assert f'id="{heading}"' in page, heading
     assert "Counts only" in page and "Opening this" not in page
 
@@ -81,14 +76,13 @@ def test_coverage_lists_overdue_due_and_review(client: TestClient) -> None:
     assert "Overdue <span class=\"count\">· 1</span>" in aggregate and "<a " not in aggregate
 
 
-def test_clusters_are_the_precincts_of_the_assignments_file(client: TestClient) -> None:
-    with ASSIGNMENTS.open(newline="") as f:
-        precincts = {row["Level2.Precinct"] for row in csv.DictReader(f)}
-    assert set(sample.CLUSTERS) <= precincts
-    assert set(sample.STUDENT_CLUSTER) == {s.id for s in sample.STUDENTS}
-    rows = cells(section(client.get("/overview/?as=Kenneth%20Lau").text, "cl-h"))
-    assert [[plain(c) for c in r] for r in rows] == [
-        [r["cluster"], *(str(r[k]) for k in ("students", "contacts", "minutes", "rising"))] for r in sample.clusters()]
+def test_no_cluster_view_until_students_have_a_location(client: TestClient) -> None:
+    """Nothing ties a student to a housing location, so §10.5's cluster
+    view is deferred (author, 2026-10-30): no card, and no student's
+    cluster on their history."""
+    for path in ("/overview/?as=Sam%20Lee", "/overview/?as=Kenneth%20Lau", "/overview/students/S-08?as=Sam%20Lee"):
+        page = client.get(path)
+        assert page.status_code == 200 and "cluster" not in page.text.lower(), path
 
 
 def test_history_is_senior_only_and_spans_every_staff_member(client: TestClient) -> None:

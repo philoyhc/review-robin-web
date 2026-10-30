@@ -85,7 +85,6 @@ def tabs_for(v: sample.Viewer) -> tuple[dict[str, str], ...]:
 SYS_ADMIN_TABS = (
     ("Access", "/sys-admin/"),
     ("Configuration", "/sys-admin/configuration"),
-    ("Clusters", "/sys-admin/clusters"),
     ("Audit log", "/sys-admin/audit"),
 )
 
