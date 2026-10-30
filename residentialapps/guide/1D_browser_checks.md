@@ -29,7 +29,8 @@ Remove-Item Env:CORDWARE_APPS -ErrorAction SilentlyContinue   # mount every appl
 uvicorn cordware.main:app --reload
 ```
 
-Open <http://127.0.0.1:8000/supportlogs/>.
+Open <http://127.0.0.1:8000/supportlogs/>. A block per sample viewer, ready to paste, is in
+`residentialapps/guide/fake_ids.md`.
 
 - The fake-auth account only gets you past sign-in. Who a page is drawn for
   is the **sample viewer**, chosen on the **Sample viewer** card under each
