@@ -235,5 +235,4 @@ in the plan's open questions (`residentialapps/guide/segment_1D_support_logs.md`
 - **R6. Access** (§7): checkboxes, or the plan's Toggle?
 
 Not for the browser: the crisis protocol's real contents (the
-institution's), the close check, senior staff granting on others' behalf
-(§17 Q11).
+institution's) and the close check.
