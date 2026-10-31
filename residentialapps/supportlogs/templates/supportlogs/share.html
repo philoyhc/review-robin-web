@@ -5,7 +5,6 @@
 {% block content %}
   <a class="back" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">‹ {{ chosen.name }}</a>
   {{ sample_title("Share with a colleague", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# A peer-view grant (§11.1): private by default; the scope proposed is
      the grantor's records for this one student (§17 Q10). #}
@@ -19,3 +18,4 @@
     <div class="btnrow gap-above-sm"><button type="submit" class="btn btn-primary">Share</button><a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Cancel</a></div>
   </form>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

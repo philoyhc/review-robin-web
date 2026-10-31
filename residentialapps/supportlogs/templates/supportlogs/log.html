@@ -4,7 +4,6 @@
 {% block title %}Log encounter{% endblock %}
 {% block content %}
   {{ sample_title("Log encounter", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# The routine path on one screen: student, duration, type, Save (UI
      spec screen 2; functional spec §5.1). The optional details sit on the
@@ -144,3 +143,4 @@
     })();
   </script>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

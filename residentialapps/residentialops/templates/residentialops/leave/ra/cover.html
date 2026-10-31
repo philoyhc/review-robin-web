@@ -3,7 +3,6 @@
 {% block title %}My cover{% endblock %}
 {% block content %}
   {{ title("My cover", leave, viewing(me)) }}
-  {{ ra_switch(me, leave, here) }}
   <p class="sub">Where another RA has named you as their cover (spec §23). Notification links land here.</p>
   <div class="stack">
     <section class="card card-pad" aria-labelledby="answer-h">
@@ -42,3 +41,4 @@
     </section>
   </div>
 {% endblock %}
+{% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}

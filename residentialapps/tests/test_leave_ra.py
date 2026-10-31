@@ -118,7 +118,7 @@ def test_by_invitation_the_ra_is_not_offered_an_appeal_until_invited(monkeypatch
     c = client()
 
     def page(path: str) -> str:  # the page less its sample viewer switch, which names every RA's state
-        return re.sub(r'<nav class="card card-pad muted gap-below" aria-label="Sample viewer">.*?</nav>', "", c.get(path).text, flags=re.S)
+        return re.sub(r'<nav [^>]*aria-label="Sample viewer">.*?</nav>', "", c.get(path).text, flags=re.S)
 
     home = page(RA)
     # Not shown to an uninvited RA at all (author, 2026-10-29).
@@ -240,7 +240,7 @@ def test_the_ra_pages_switch_sample_viewer() -> None:
     for path in ("", "apply", "appeal", "cover", "history", "applications/L-0109"):
         page = c.get(f"/ra-leave/{path}?as=Hana%20Ito").text
         assert '\\"' not in page, path
-        page = re.sub(r'<nav class="card card-pad muted gap-below" aria-label="Sample viewer">.*?</nav>', "", page, flags=re.S)
+        page = re.sub(r'<nav [^>]*aria-label="Sample viewer">.*?</nav>', "", page, flags=re.S)
         links = re.findall(r'href="(/ra-leave/(?!staff|admin)[^"#]*)"', page)
         assert links and all("as=Hana%20Ito" in href for href in links), (path, [h for h in links if "as=Hana" not in h])
 

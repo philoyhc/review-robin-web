@@ -3,7 +3,6 @@
 {% block title %}Awaiting my decision{% endblock %}
 {% block content %}
   {{ title("Awaiting my decision", leave, viewing(me)) }}
-  {{ staff_switch(me, leave, here) }}
   {% set mine = leave.queue(me) %}{% if cover_only %}{% set mine = mine | selectattr(0, "in", leave.cover_unconfirmed()) | list %}{% endif %}
   <section class="card card-pad" aria-labelledby="queue-h">
     <h2 id="queue-h">{{ "Waiting on cover" if cover_only else "To decide" }} <span class="count">· {{ mine | length }}</span></h2>
@@ -14,3 +13,4 @@
     {% else %}<p class="sub">Nothing awaits you.</p>{% endif %}
   </section>
 {% endblock %}
+{% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

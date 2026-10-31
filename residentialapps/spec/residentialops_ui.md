@@ -265,9 +265,14 @@ Until a screen is wired:
   unavailable state can be seen (§7);
 - it answers anyone on a local run (`APP_ENV=local`) and, deployed, only a previewer, 404 to anyone else (`residentialapps/spec/applications.md`, "The preview gate");
 - a page drawn for one person (RA Leave's RA and staff pages, the
-  landing) says so in a **Viewing as** chip beside the Sample data chip;
-  the RA pages, the staff pages and the landing switch that person on
-  the page (`?as=`; the RA and staff pages' tabs and links carry it),
+  landing) says so in a **Viewing as** chip beside the Sample data chip,
+  naming them with the line their switch gives them ("Viewing as Daniel
+  Koh, RF"); the RA pages, the staff pages and the landing switch that
+  person on the page (`?as=`; the RA and staff pages' tabs and links carry
+  it), from a sample viewer card that comes **last on the page**, after
+  everything the page shows, which the chip links down to
+  (`#sample-viewer`, author 2026-10-31); a page with no card (staff
+  Decide) keeps the chip unlinked;
   the RA pages' viewers each reaching states the others do not (audit,
   2026-10-29);
 - RA Leave previews each appeal mode (`Open`, `By invitation`, `Off`) in

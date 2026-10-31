@@ -4,7 +4,6 @@
 {% block title %}Safety flag raised{% endblock %}
 {% block content %}
   {{ sample_title("Safety flag raised", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   <section class="card card-pad safety gap-below" aria-labelledby="raised-h" role="status">
     <h2 id="raised-h">A safety flag is raised for {{ chosen.name }}</h2>
@@ -16,3 +15,4 @@
     {% if in_set %}<a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Open {{ chosen.name }}</a>{% endif %}
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

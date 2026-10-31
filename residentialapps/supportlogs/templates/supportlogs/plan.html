@@ -7,7 +7,6 @@
   {% set back = '/plans/' if owner else ('/students/' ~ p.student if shared else '/overview/') %}
   <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "My plans" if owner else (sample.student(p.student).name if shared else "Overview") }}</a>
   {{ sample_title(("Formal assignment" if p.formal else "Follow-up") ~ ": " ~ s.name, me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# A plan (§7, §8; data model SupportRelationship): operational facts
      only, never the reason behind it (§7.5). #}
@@ -70,3 +69,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

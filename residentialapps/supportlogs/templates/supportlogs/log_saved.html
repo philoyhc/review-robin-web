@@ -4,7 +4,6 @@
 {% block title %}Encounter saved{% endblock %}
 {% block content %}
   {{ sample_title("Encounter saved", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# After saving (UI spec §3): what was saved, and Add to my follow-ups for
      a student not on them, so the routine path can end here. #}
@@ -24,3 +23,4 @@
     <a class="btn btn-secondary" href="{{ url('/') }}{{ as_query }}">Home</a>
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

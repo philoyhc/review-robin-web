@@ -3,7 +3,6 @@
 {% block title %}Configuration{% endblock %}
 {% block content %}
   {{ sample_title("Configuration", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# The lists staff choose from, seeded from the functional spec and
      rendered from one place, never hard-coded in a page (UI spec §3). A
      change is recorded; a retired value stays on the records that hold it. #}
@@ -48,3 +47,4 @@
     </section>
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

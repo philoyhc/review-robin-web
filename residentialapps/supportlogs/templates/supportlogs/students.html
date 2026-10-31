@@ -5,7 +5,6 @@
 {% block title %}Students{% endblock %}
 {% block content %}
   {{ sample_title("Students", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# The finder (UI spec screen 7): the same search as Log encounter's,
      then the viewer's own working set (§4.3). #}
@@ -38,3 +37,4 @@
   {% endif %}
   {{ records_card("students", "encounters", unlocked) }}
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

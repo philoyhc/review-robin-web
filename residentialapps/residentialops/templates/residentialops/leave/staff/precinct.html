@@ -4,7 +4,6 @@
 {% block content %}
   {% set precincts = leave.scope(me) %}
   {{ title("Precinct leave", leave, viewing(me)) }}
-  {{ staff_switch(me, leave, here) }}
   <p class="sub">Read-only, scoped by Assignments for {{ leave.TERM.label }}: {{ precincts | join(", ") if precincts | length < 4 else "the whole Unit (" ~ precincts | length ~ " Precincts)" }} (spec §22).</p>
   {% set key, label, first, last = period %}
   {# The period is navigation, so choosing one is live (author, 2026-10-29). #}
@@ -59,3 +58,4 @@
     </section>
   </div>
 {% endblock %}
+{% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

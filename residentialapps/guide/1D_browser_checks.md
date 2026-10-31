@@ -18,7 +18,8 @@ Delete this file when item 1 closes.
 
 - **Start the app** with a block from `residentialapps/guide/fake_ids.md`,
   "Support Logs (1D)". Its table lists the eleven sample viewers and where
-  each lands. Every page switches viewer from its **Sample viewer** card.
+  each lands. Every page switches viewer from its **Sample viewer** card,
+  at the end of the page; the **Viewing as** chip at the top jumps to it.
 - **Everything is sample data.** No real student is named, nothing is
   saved, and a disabled button is one that is wired later. Say so at the
   start of a session, so nobody hunts for a bug in a placeholder.

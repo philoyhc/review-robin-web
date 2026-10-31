@@ -208,8 +208,10 @@ As `residentialops_ui.md` §9:
 - disabled controls, except the live forms of §4.
 
 A **Sample viewer** card on every sample page (not the not-registered
-page) switches the viewer (`?as=`), and a **Viewing as** chip by the
-title names them. The viewers are one per authorization type, a viewer
+page) switches the viewer (`?as=`). It comes **last on the page**, after
+everything the page shows, and a **Viewing as** chip by the title names
+the viewer with their line from the card ("Viewing as Daniel Koh, RF:
+Frontline") and links down to it (`#sample-viewer`, author 2026-10-31). The viewers are one per authorization type, a viewer
 reaching two pages, the
 super-admin and a rostered RF with no grant (the `403` page). Every link
 carries the viewer.

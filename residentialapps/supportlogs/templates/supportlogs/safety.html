@@ -1,5 +1,5 @@
 {% extends "residential/base.html" %}
-{% from "residential/_sample.html" import viewer_card with context %}
+{% from "residential/_sample.html" import viewer_card, viewing_chip, what_of with context %}
 {% from "supportlogs/_frontline.html" import recorded with context %}
 {% block title %}Safety concern{% endblock %}
 {% block content %}
@@ -18,8 +18,7 @@
   </section>
   {# The calls come first, above the fold on a phone; the sample's chrome
      after them. #}
-  <p><span class="chip chip-warn">Sample data</span> <span class="chip chip-info">Viewing as {{ me.name }}</span></p>
-  {{ viewer_card(viewer_choices, me.name) }}
+  <p><span class="chip chip-warn">Sample data</span> {{ viewing_chip(me.name, what_of(viewer_choices, me.name)) }}</p>
   {{ recorded() }}
 
   <form id="safety-form" class="card card-pad" action="{{ url('/log/safety/raised') }}" method="get" aria-labelledby="ctx-h">
@@ -76,3 +75,4 @@
     })();
   </script>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

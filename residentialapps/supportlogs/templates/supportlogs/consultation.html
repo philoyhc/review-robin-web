@@ -3,7 +3,6 @@
 {% block title %}Consultation check{% endblock %}
 {% block content %}
   {{ sample_title("Consultation check", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# Students in, whom to consult out, for an approved purpose (§10.7). The
      check is an audited action (§11.3) and decides nothing. A sample: the
      list travels in the query string here; wired, it is posted, so no email
@@ -29,3 +28,4 @@
     <ul class="items">{% for r in mine %}<li><div class="item-head"><span class="strong">{{ r.purpose }}</span><span class="nowrap subtle">{{ sample.short_date(r.on) }}</span></div><div class="subtle">{{ r.by }} · {{ r.checked }} students · {{ r.flagged }} to consult about</div></li>{% endfor %}</ul>
   </section>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

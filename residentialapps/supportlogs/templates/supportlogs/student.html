@@ -5,7 +5,6 @@
 {% block content %}
   <a class="back" href="{{ url('/students/') }}{{ as_query }}">‹ Students</a>
   {{ sample_title(chosen.name, me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# The student view (UI spec screen 5; functional spec §9): a
      student-centred view, not a case file, of what the viewer's
      authorizations cover (§11.1). #}
@@ -80,3 +79,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

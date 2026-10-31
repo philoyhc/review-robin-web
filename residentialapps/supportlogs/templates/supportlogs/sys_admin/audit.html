@@ -3,7 +3,6 @@
 {% block title %}Audit log{% endblock %}
 {% block content %}
   {{ sample_title("Audit log", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# Administrative events only (§11.3): grants and configuration.
      Support activity names students, so it is senior staff's, on
      Overview. #}
@@ -37,3 +36,4 @@
     <ul class="items">{% for p in sample.PURGES %}<li><div class="item-head"><span class="strong">{{ p.by }}: {{ p.count }} {{ p.what | lower }}</span></div><div class="subtle">Purged {{ sample.short_date(p.on) }}</div></li>{% endfor %}</ul>
   </section>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -5,7 +5,6 @@
 {% block title %}My plans{% endblock %}
 {% block content %}
   {{ sample_title("My plans", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# My follow-ups (UI spec screen 6): formal assignments first, then
      informal follow-ups; Plans is the page map's name for both. #}
@@ -29,3 +28,4 @@
   </section>
   {{ records_card("plans", "plans", unlocked, keep={"show": show if show != "all" else ""}) }}
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -4,7 +4,6 @@
 {% block title %}Apply for leave{% endblock %}
 {% block content %}
   {{ title("Apply for leave", leave, viewing(me)) }}
-  {{ ra_switch(me, leave, here) }}
   <p class="sub">Your approvers, from your slot: {{ leave.approvers_for(me) }}. You name your cover. Controls are inert until RA Leave is wired.</p>
   {% if draft %}<div class="gate-note gap-below" role="note"><strong>Draft saved {{ leave.short_date(draft.saved) }}.</strong> It is yours alone: no one is asked or told, and it uses no days, until you submit it.{% set short = leave.draft_short(draft) %}{% if short %} It asks {{ short }} day{{ "s" if short != 1 }} more {{ draft.leave_type }} than you have: {% if leave.can_appeal(me) %}submitting it offers Request extra leave instead.{% else %}shorten it before you submit.{% endif %}{% endif %}</div>{% endif %}
   <div class="split">
@@ -35,3 +34,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}
