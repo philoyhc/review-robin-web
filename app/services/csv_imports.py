@@ -1144,7 +1144,12 @@ def _merge_rows(
     roster already holding two. A matched row takes every non-blank
     cell, Status only when the file has the column, and keeps its
     address; an unbound row whose own address resolved is bound. Each
-    updated row writes its ``*.updated`` event. Any other row is added."""
+    updated row writes its ``*.updated`` event. Any other row is added.
+
+    A name change on a row matched by account is checked against the
+    other rosters at the row's **kept** address, which the route's check
+    over the file's addresses cannot see; a conflict refuses the merge
+    (`AppendConflict`) before any row is touched (Codex, #3440)."""
     spec = _IDENTITY_ROSTERS[kind]
     by_address: dict[str, Any] = {}
     by_account: dict[str, Any] = {}
@@ -1154,7 +1159,9 @@ def _merge_rows(
             by_account.setdefault(normalize_object_id(held.directory_object_id), held)
     added = updated = unchanged = 0
     changed_fields: set[str] = set()
-    for row in rows:
+    planned: list[tuple[Any, dict[str, Any], Any]] = []
+    issues: list[ValidationIssue] = []
+    for index, row in enumerate(rows, start=1):
         kwargs = to_kwargs(row, session.id)
         address = kwargs.get(spec["model_attr"])
         account = (
@@ -1165,6 +1172,32 @@ def _merge_rows(
         held = by_address.get(normalize_email(address))
         if held is None and account is not None:
             held = by_account.get(normalize_object_id(account.object_id))
+            new_name = kwargs.get(spec["name_attr"])
+            kept = getattr(held, spec["model_attr"]) if held is not None else None
+            if held is not None and new_name is not None:
+                conflict = cross_table_identity_conflict(
+                    db, session_id=session.id, kind=kind, identifier=kept, name=new_name
+                )
+                if conflict is not None:
+                    holder_label, holder_name = conflict
+                    issues.append(
+                        ValidationIssue(
+                            severity=Severity.error,
+                            source=kind,
+                            row_number=index,
+                            field=spec["field"],
+                            message=(
+                                f"{spec['field']} '{address}' is {kept}, used by "
+                                f"{holder_label} '{holder_name}' in this session; "
+                                "names must match."
+                            ),
+                            problem=f"{spec['field']} is used under a different name in another roster",
+                        )
+                    )
+        planned.append((held, kwargs, account))
+    if issues:
+        raise AppendConflict(issues)
+    for held, kwargs, account in planned:
         if held is None:
             if directory is not None:
                 kwargs.update(directory_accounts.columns(account))
@@ -1545,6 +1578,13 @@ def save_reviewers(
             merge=merge,
             columns=columns,
         )
+        if merge:
+            # A merge can bind a reviewer to the account a reviewee holds
+            # under another address, which makes their pair a self-review
+            # (Codex, #3440).
+            from app.services.assignments import recompute_self_review_classification
+
+            recompute_self_review_classification(db, session_id=session.id)
         # Segment 19C Item 1 — reconcile reviewer friendly labels from
         # the roster header (upsert present, clear absent). ``None`` = a
         # caller that isn't an import; skip untouched.

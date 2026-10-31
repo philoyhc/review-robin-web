@@ -187,3 +187,44 @@ def test_a_reviewee_merge_that_redraws_an_answered_group_asks_first(db: Session,
     merge(acknowledged_loss=3)
     assert _reviewee(db, session.id, "Ann").tag_1 == "blue"
     assert _responses(db) == 1
+
+
+def test_a_rename_through_an_account_match_is_checked_at_the_kept_address(db: Session) -> None:
+    """Jane is a reviewer and a reviewee at `jane.tan@`. A merge naming the
+    reviewer "Different" through her UPN matches her bound row by account
+    and keeps `jane.tan@`, so the name is checked there and the reviewee's
+    disagrees (Codex, #3440)."""
+    review_session, owner = _session(db, "mrg-rename")
+    db.add(Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.add(Reviewee(session_id=review_session.id, name="Jane", email_or_identifier="jane.tan@example.edu"))
+    db.commit()
+    directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
+    with pytest.raises(AppendConflict) as refused:
+        _merge_reviewers(db, review_session, owner,
+                         [ReviewerImportRow(name="Different", email="e0123456@example.edu")], directory=directory)
+    assert refused.value.issues[0].row_number == 1
+    db.rollback()
+    assert _reviewer(db, review_session.id, "jane.tan@example.edu").name == "Jane"
+
+
+def test_a_merge_that_binds_a_reviewer_recomputes_self_review(db: Session) -> None:
+    """The reviewer row at Jane's UPN is unbound and her reviewee row (by
+    mail) is bound: their assignment is not a self-review until a merge
+    binds the reviewer, which must recompute it (Codex, #3440)."""
+    from app.db.models import Assignment
+    from app.services.instruments import ensure_default_instrument
+
+    review_session, owner = _session(db, "mrg-selfrev")
+    jane_r = Reviewer(session_id=review_session.id, name="Jane", email="e0123456@example.edu")
+    jane_e = Reviewee(session_id=review_session.id, name="Jane", email_or_identifier="jane.tan@example.edu", directory_object_id=JANE_OID)
+    db.add_all([jane_r, jane_e])
+    db.flush()
+    instrument = ensure_default_instrument(db, review_session)
+    row = Assignment(session_id=review_session.id, reviewer_id=jane_r.id, reviewee_id=jane_e.id, instrument_id=instrument.id, is_self_review=False)
+    db.add(row)
+    db.commit()
+    directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
+    _merge_reviewers(db, review_session, owner,
+                     [ReviewerImportRow(name="Jane", email="e0123456@example.edu")], directory=directory)
+    db.expire_all()
+    assert db.get(Assignment, row.id).is_self_review is True
