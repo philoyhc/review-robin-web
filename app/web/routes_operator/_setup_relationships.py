@@ -32,6 +32,7 @@ from app.services import assignments
 from app.services import relationships as relationships_service
 from app.services import responses as responses_service
 from app.services import session_lifecycle as lifecycle
+from app.services.csv_imports import AppendConflict
 from app.services.relationships import RelationshipOperationError
 from app.web import breadcrumbs, views
 from app.web.deps import (
@@ -113,6 +114,8 @@ async def relationships_import_submit(
     file: UploadFile | None = File(default=None),
     held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
+    # Segment 19Z: the card's append tick, beside the replace tick.
+    append: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
@@ -134,6 +137,8 @@ async def relationships_import_submit(
     )
 
     existing = relationships_service.existing_count(db, review_session.id)
+    # An append onto an empty roster is just the roster (19Z).
+    appending = append == "true" and existing > 0
     # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. A
     # refused file's problems render inside the upload card, which is
     # inside the Unlock panel, and a 400
@@ -172,7 +177,10 @@ async def relationships_import_submit(
             panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
-    if existing > 0 and confirm_replace != "true":
+    # Segment 19Z: replace and append are the card's two ticks. Both
+    # (no script, or a direct POST) ask to choose; neither asks as the
+    # replace tick alone did.
+    if existing > 0 and (appending == (confirm_replace == "true")):
         return _render_relationships_page(
             request=request,
             review_session=review_session,
@@ -180,11 +188,36 @@ async def relationships_import_submit(
             db=db,
             issues=result.issues,
             filename=upload.filename,
-            missing_confirm=True,
+            missing_confirm=not appending,
+            both_ticks=appending,
             held_upload=ask(),
             panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
         )
+
+    def refuse(issues: list) -> HTMLResponse:
+        release_hold(
+            db, token=upload.token, user=user, review_session=review_session
+        )
+        return _render_relationships_page(
+            request=request,
+            review_session=review_session,
+            user=user,
+            db=db,
+            issues=[*result.issues, *issues],
+            filename=upload.filename,
+            panel_open=True,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # An append refuses a pair already a relationship as the file's
+    # problems; the save checks again under the session lock.
+    if appending:
+        conflicts = relationships_service.relationship_append_conflicts(
+            db, session_id=review_session.id, rows=result.rows
+        )
+        if conflicts:
+            return refuse(conflicts)
 
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
@@ -199,20 +232,26 @@ async def relationships_import_submit(
             correlation_id=request_correlation_id(),
             field_labels_captured=result.field_labels,
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
+            append=appending,
         )
+    except AppendConflict as refused:
+        db.rollback()
+        return refuse(refused.issues)
     except responses_service.GroupAnswersWouldClear as exc:
         # The replace rolled back in its own unit; the upload card offers
         # the count and a tick inside its banner. Roll back before the
         # hold commits, so nothing of the refused replace rides with it.
-        # The replace tick was ticked to get here, so it stays ticked
-        # (author, 2026-10-19).
+        # The tick that got here (replace, or append since 19Z) stays
+        # ticked (author, 2026-10-19).
         db.rollback()
         held = ask()
         return _refuse_group_clear(
             request, review_session, user, db, exc,
             surface="import", panel_open=True,
             issues=result.issues, filename=upload.filename,
-            held_upload=held, confirm_replace_checked=held is not None,
+            held_upload=held,
+            confirm_replace_checked=held is not None and not appending,
+            append_checked=held is not None and appending,
         )
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
@@ -715,6 +754,10 @@ def _render_relationships_page(
     held_upload: dict[str, str] | None = None,
     held_upload_lost: bool = False,
     confirm_replace_checked: bool = False,
+    # Segment 19Z: the append tick re-ticked after a group-clear ask, and
+    # the both-ticks ask.
+    append_checked: bool = False,
+    both_ticks: bool = False,
     selected_ids: set[int] | None = None,
     # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
     # open. Server state, not a second source of truth for the JS
@@ -990,13 +1033,17 @@ def _render_relationships_page(
             "col_readouts": column_state.readouts,
             "panel_open": panel_open,
             "upload_problems": views.upload_problems(
-                "relationships", issues, missing_confirm=missing_confirm
+                "relationships",
+                issues,
+                missing_confirm=missing_confirm,
+                both_ticks=both_ticks,
             ),
             "missing_confirm": missing_confirm,
             "filename": filename,
             "held_upload": held_upload,
             "held_upload_lost": held_upload_lost,
             "confirm_replace_checked": confirm_replace_checked,
+            "append_checked": append_checked,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Relationships"
             ),

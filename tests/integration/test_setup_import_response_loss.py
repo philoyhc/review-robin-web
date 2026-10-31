@@ -301,5 +301,5 @@ def test_a_missing_tick_is_reported_before_a_missing_acknowledgment(
     )
 
     assert response.status_code == 400
-    assert "Tick the replacement-confirmation box just above Upload" in response.text
+    assert "Tick replace or append just above Upload" in response.text
     assert "This session now holds reviewer responses" not in response.text

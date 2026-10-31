@@ -123,6 +123,8 @@ def _render_observers_page(
     held_upload: dict[str, str] | None = None,
     held_upload_lost: bool = False,
     confirm_replace_checked: bool = False,
+    append_checked: bool = False,
+    both_ticks: bool = False,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
     """Render the Observers Setup page.
@@ -321,13 +323,18 @@ def _render_observers_page(
             "existing_count": existing_count,
             "directory_check": views.last_directory_check(db, review_session, "observers"),
             "upload_problems": views.upload_problems(
-                "observers", issues, missing_confirm=missing_confirm
+                "observers",
+                issues,
+                missing_confirm=missing_confirm,
+                both_ticks=both_ticks,
             ),
             "filename": filename,
             # Segment 19W: the file an ask holds, and a hold that lapsed.
             "held_upload": held_upload,
             "held_upload_lost": held_upload_lost,
             "confirm_replace_checked": confirm_replace_checked,
+            # Segment 19Z: the append tick, re-ticked on an ask's render.
+            "append_checked": append_checked,
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
@@ -900,6 +907,8 @@ async def observers_import_submit(
     file: UploadFile | None = File(default=None),
     held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
+    # Segment 19Z: the card's append tick, beside the replace tick.
+    append: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -937,11 +946,14 @@ async def observers_import_submit(
             )
         )
     existing = csv_imports.existing_observer_count(db, review_session.id)
+    # An append onto an empty roster is just the roster (19Z).
+    appending = append == "true" and existing > 0
 
     def render(
         status_code: int = status.HTTP_200_OK,
         *,
         missing_confirm: bool = False,
+        both_ticks: bool = False,
         held_upload: dict[str, str] | None = None,
     ) -> HTMLResponse:
         # `panel_open=True`: this path re-renders the page in place and
@@ -964,10 +976,22 @@ async def observers_import_submit(
             panel_open=True,
             issues=result.issues,
             missing_confirm=missing_confirm,
+            both_ticks=both_ticks,
             filename=upload.filename,
             held_upload=held_upload,
             held_upload_lost=upload.lost,
+            # Neither tick comes back on the both-ticks ask (19Z).
+            confirm_replace_checked=(
+                held_upload is not None and confirm_replace == "true" and not both_ticks
+            ),
+            append_checked=held_upload is not None and appending and not both_ticks,
             http_status=status_code,
+        )
+
+    def ask() -> dict[str, str] | None:
+        return hold_for_ask(
+            db, upload=upload, user=user, review_session=review_session,
+            slot="observers",
         )
 
     if result.is_blocked:
@@ -976,16 +1000,18 @@ async def observers_import_submit(
         )
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
-    if existing > 0 and confirm_replace != "true":
+    if existing > 0 and appending and confirm_replace == "true":
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST, both_ticks=True, held_upload=ask()
+        )
+
+    if existing > 0 and not appending and confirm_replace != "true":
         # An ask: hold the file so the tick is all the answer needs
         # (segment 19W).
         return render(
             status_code=status.HTTP_400_BAD_REQUEST,
             missing_confirm=True,
-            held_upload=hold_for_ask(
-                db, upload=upload, user=user, review_session=review_session,
-                slot="observers",
-            ),
+            held_upload=ask(),
         )
 
     # No response-loss gate here (Segment 19I Item 5), for the same
@@ -1001,18 +1027,43 @@ async def observers_import_submit(
         directory_or_none(request),
         [row.email for row in result.rows],
     )
+    # Segment 19Z: an append refuses a row already on the roster, or on
+    # a directory account already there; the save checks again under
+    # the session lock.
+    if appending:
+        result.issues.extend(
+            csv_imports.append_conflicts(
+                db,
+                session_id=review_session.id,
+                kind="observers",
+                rows=result.rows,
+                directory=directory_check,
+            )
+        )
+        if result.is_blocked:
+            release_hold(
+                db, token=upload.token, user=user, review_session=review_session
+            )
+            return render(status_code=status.HTTP_400_BAD_REQUEST)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    await run_in_threadpool(
-        csv_imports.save_observers,
-        db,
-        session=review_session,
-        user=user,
-        rows=result.rows,
-        filename=upload.filename or "",
-        correlation_id=request_correlation_id(),
-        directory=directory_check,
-    )
+    try:
+        await run_in_threadpool(
+            csv_imports.save_observers,
+            db,
+            session=review_session,
+            user=user,
+            rows=result.rows,
+            filename=upload.filename or "",
+            correlation_id=request_correlation_id(),
+            directory=directory_check,
+            append=appending,
+        )
+    except csv_imports.AppendConflict as refused:
+        db.rollback()
+        result.issues.extend(refused.issues)
+        release_hold(db, token=upload.token, user=user, review_session=review_session)
+        return render(status_code=status.HTTP_400_BAD_REQUEST)
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # Open, like the failure path above and like `delete-all`: one rule
     # about the panel rather than three about its controls. A Save does

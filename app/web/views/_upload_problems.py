@@ -62,11 +62,19 @@ class UploadProblems:
     lines: list[str]
 
 
-#: The sentence when a clean file would replace a populated roster but
-#: the replace box was not ticked. Quick Setup's twin names its Submit.
+#: The sentence when a clean file would go onto a populated roster but
+#: neither the replace nor the append tick was ticked (segment 19Z):
+#: either answers it. Quick Setup's twin names its Submit.
 NEEDS_CONFIRM_SENTENCE = (
-    "Tick the replacement-confirmation box just above Upload, then "
-    "upload again."
+    "Tick replace or append just above Upload, then upload again."
+)
+
+
+#: The sentence when both the replace and the append tick arrive (no
+#: script on the page to untick one, or a direct POST): they ask for
+#: opposite things, so neither is guessed (segment 19Z).
+BOTH_TICKS_SENTENCE = (
+    "Tick replace or append, not both, then upload again."
 )
 
 
@@ -88,6 +96,7 @@ def upload_problems(
     *,
     missing_confirm: bool = False,
     missing_response_ack: bool = False,
+    both_ticks: bool = False,
 ) -> UploadProblems | None:
     """The upload card's banner, or ``None`` on a plain render.
 
@@ -102,6 +111,8 @@ def upload_problems(
     lines = problem_kinds(issues or [])
     if lines:
         return UploadProblems(message=problems_sentence(noun), lines=lines)
+    if both_ticks:
+        return UploadProblems(message=BOTH_TICKS_SENTENCE, lines=[])
     if missing_confirm:
         return UploadProblems(message=NEEDS_CONFIRM_SENTENCE, lines=[])
     if missing_response_ack:

@@ -3534,7 +3534,6 @@
       body.ui-v2 .upload-mode .confirm-label + .confirm-label {
         margin-top: var(--space-2);
       }
-      body.ui-v2 .upload-mode input:disabled + span { color: var(--text-subtle); }
 
       body.ui-v2 .session-expander-body {
         display: flex;
@@ -6128,8 +6127,20 @@
           var key = cb.getAttribute("data-delete-confirm");
           var btn = document.querySelector('[data-delete-btn="' + key + '"]');
           if (!btn) return;
-          btn.disabled = !cb.checked;
-          if (cb.checked) {
+          /* Open while ANY box carrying the key is ticked, not just the
+             one that changed (segment 19Z): an Upload card's replace and
+             append ticks share one key, so either opens Upload. Judged
+             per box, the load pass would let whichever box came last
+             decide, closing Upload over a re-ticked replace. A key on one
+             box reads exactly as before. */
+          var on = Array.prototype.some.call(
+            document.querySelectorAll("[data-delete-confirm]"),
+            function (box) {
+              return box.checked && box.getAttribute("data-delete-confirm") === key;
+            }
+          );
+          btn.disabled = !on;
+          if (on) {
             btn.removeAttribute("aria-disabled");
           } else {
             btn.setAttribute("aria-disabled", "true");
@@ -6199,6 +6210,31 @@
         Array.prototype.forEach.call(
           document.querySelectorAll("[data-delete-confirm]"), sync
         );
+      })();
+    </script>
+    {# Mutually exclusive ticks (segment 19Z): ticking a box carrying
+       ``data-exclusive-tick="{group}"`` unticks the others in its group
+       within the same form; unticking leaves them all unticked, which
+       is allowed. Delegated and capture-bound like the pairing above,
+       and registered after it, so the pairing has already seen the
+       tick and a box left ticked keeps its button open. No dispatch is
+       needed for the boxes it unticks: the pairing judges every box
+       carrying a key, not just the one that changed. #}
+    <script>
+      (function () {
+        document.addEventListener("change", function (event) {
+          var cb = event.target;
+          if (!cb || !cb.getAttribute || !cb.checked) return;
+          var group = cb.getAttribute("data-exclusive-tick");
+          if (!group) return;
+          var scope = cb.form || document;
+          Array.prototype.forEach.call(
+            scope.querySelectorAll('[data-exclusive-tick="' + group + '"]'),
+            function (other) {
+              if (other !== cb) other.checked = false;
+            }
+          );
+        }, true);
       })();
     </script>
     {# Light/dark toggle (W6) — browser-local. The no-FOUC head script already

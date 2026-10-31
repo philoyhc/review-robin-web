@@ -1011,6 +1011,7 @@ async def _handle_import(
     existing_count_fn,
     parse_fn,
     save_fn,
+    append: str | None = None,
 ) -> HTMLResponse | RedirectResponse:
     """Shared Reviewers / Reviewees CSV-import handler.
 
@@ -1020,9 +1021,14 @@ async def _handle_import(
     upload card's banner; on success it saves and 303s back to the
     page.
 
-    An ask (the replace tick missing, or the response-loss ack) holds
-    the file, so the next submit answers it with no file chosen
-    (segment 19W); a save or a plain refusal ends the hold."""
+    An ask (no tick, both ticks, or the response-loss ack) holds the
+    file, so the next submit answers it with no file chosen (segment
+    19W); a save or a plain refusal ends the hold.
+
+    ``append`` is the card's append tick (segment 19Z): the file's rows
+    are added and nothing is replaced, so no response-loss ack applies.
+    A row already on the roster, or on a directory account already
+    there, refuses the file as its problems."""
     _require_editable(review_session)
     upload = await read_upload(
         db,
@@ -1056,11 +1062,17 @@ async def _handle_import(
         list_key = "reviewees"
         list_items = assignments.list_reviewees(db, review_session.id)
 
+    # An append onto an empty roster is just the roster (plan,
+    # Decision): only a direct POST can send one, as the card shows no
+    # ticks there.
+    appending = append == "true" and existing > 0
+
     def render(
         status_code: int = status.HTTP_200_OK,
         *,
         missing_confirm: bool = False,
         missing_response_ack: bool = False,
+        both_ticks: bool = False,
         held_upload: dict[str, str] | None = None,
     ) -> HTMLResponse:
         context: dict[str, object] = {
@@ -1116,6 +1128,7 @@ async def _handle_import(
                 result.issues,
                 missing_confirm=missing_confirm,
                 missing_response_ack=missing_response_ack,
+                both_ticks=both_ticks,
             ),
             "filename": upload.filename,
             # Segment 19W: the file an ask holds, named in the card in
@@ -1125,8 +1138,11 @@ async def _handle_import(
             "held_upload": held_upload,
             "held_upload_lost": upload.lost,
             "confirm_replace_checked": (
-                held_upload is not None and confirm_replace == "true"
+                held_upload is not None and confirm_replace == "true" and not both_ticks
             ),
+            # Segment 19Z: the append tick, likewise. Neither comes back
+            # on the both-ticks ask, which asks the operator to choose.
+            "append_checked": held_upload is not None and appending and not both_ticks,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, crumb_label
             ),
@@ -1256,7 +1272,14 @@ async def _handle_import(
         )
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
-    if existing > 0 and confirm_replace != "true":
+    if existing > 0 and appending and confirm_replace == "true":
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            both_ticks=True,
+            held_upload=ask(),
+        )
+
+    if existing > 0 and not appending and confirm_replace != "true":
         return render(
             status_code=status.HTTP_400_BAD_REQUEST,
             missing_confirm=True,
@@ -1271,6 +1294,7 @@ async def _handle_import(
     # POST; the re-render names them and carries the field.
     if (
         existing > 0
+        and not appending
         and acknowledge_response_loss != "true"
         and lifecycle.session_has_responses(db, review_session)
     ):
@@ -1288,19 +1312,44 @@ async def _handle_import(
         directory_or_none(request),
         [roster_address(row) for row in result.rows],
     )
+    # Segment 19Z: an append refuses a row already on the roster, or on
+    # a directory account already there, as the file's problems. The
+    # save checks again under the session lock.
+    if appending:
+        result.issues.extend(
+            csv_imports.append_conflicts(
+                db,
+                session_id=review_session.id,
+                kind=kind,
+                rows=result.rows,
+                directory=directory_check,
+            )
+        )
+        if result.is_blocked:
+            release_hold(
+                db, token=upload.token, user=user, review_session=review_session
+            )
+            return render(status_code=status.HTTP_400_BAD_REQUEST)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
-    await run_in_threadpool(
-        save_fn,
-        db,
-        session=review_session,
-        user=user,
-        rows=result.rows,
-        filename=upload.filename or "",
-        correlation_id=request_correlation_id(),
-        field_labels_captured=result.field_labels,
-        directory=directory_check,
-    )
+    try:
+        await run_in_threadpool(
+            save_fn,
+            db,
+            session=review_session,
+            user=user,
+            rows=result.rows,
+            filename=upload.filename or "",
+            correlation_id=request_correlation_id(),
+            field_labels_captured=result.field_labels,
+            directory=directory_check,
+            append=appending,
+        )
+    except csv_imports.AppendConflict as refused:
+        db.rollback()
+        result.issues.extend(refused.issues)
+        release_hold(db, token=upload.token, user=user, review_session=review_session)
+        return render(status_code=status.HTTP_400_BAD_REQUEST)
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.1 rung 3c — a successful import lands back with the panel still
     # open, matching the two controls that moved before it (the labels
