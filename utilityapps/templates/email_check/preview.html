@@ -70,6 +70,7 @@
         form.removeAttribute("action");
         form.action = {{ url('/email-check/preview') | tojson }};
         button.disabled = false;
+        if (column) { column.disabled = false; column.value = previewed; }
         counter.textContent = String(JSON.parse(keysNode.textContent).length);
       });
 
@@ -80,6 +81,9 @@
         var stop = document.getElementById("check-stopped");
         stop.value = stopped;
         stop.disabled = false;
+        // The outcomes are the previewed column's: post that column,
+        // whatever the select shows (a disabled select would not post).
+        if (column) { column.disabled = false; column.value = previewed; }
         form.action = checkUrl;
         form.submit();
       }
@@ -97,6 +101,8 @@
         var stopped = "";
         var done = false;
         button.disabled = true;
+        // The column is fixed for the run: its keys are being looked up.
+        if (column) { column.disabled = true; }
         note.textContent = "Checking…";
 
         function end(why) {

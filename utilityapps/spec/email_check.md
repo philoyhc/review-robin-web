@@ -151,7 +151,8 @@ by one.
   if one came first. A `503` that is not the endpoint's own `no_graph`
   counts as a failed request.
 - **A column chosen but not yet previewed** goes the plain way: the
-  page's keys are the previewed column's.
+  page's keys are the previewed column's. While the page checks, the
+  column select is fixed, and the previewed column is the one posted.
 - **Without the script,** *Check addresses* posts to `/check` as above,
   under the whole-check budget. The carried request's limit is 3 MiB, to
   hold the outcomes beside the file.
