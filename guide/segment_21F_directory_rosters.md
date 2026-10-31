@@ -74,6 +74,14 @@ Taken 2026-10-31 at `2bb3e01`.
 | Held-upload routes | 4 setup modules | `grep -rln "HeldUpload\|held_upload" app/web/routes_operator --include=*.py` |
 | Models touched | 3 (`reviewer`, `reviewee`, `observer`) | `ls app/db/models/{reviewer,reviewee,observer}.py` |
 
+## Status
+
+Open. Plan `#3424`, rung 2 `#3425`, rung 3 `#3427`.
+
+Rung 4 split at build (2026-10-31): a roster import has no preview step; it saves on submit and redirects. So:
+- **4a** resolves addresses at the import's save, the single add and the edit, with no UI. It stores the account, sends mail to the directory's mail, and records the counts in the import's audit event (`directory_*`).
+- **4b** shows those counts on the Setup page, read from the latest import's event. The wording is settled on the page first.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -108,10 +116,8 @@ Taken 2026-10-31 at `2bb3e01`.
 
 ## Open questions
 
-1. **Where do invitations go for a row resolved by UPN?** For the author.
-   - *Recommended:* the directory's mail, since a UPN may not take mail.
-   - *Otherwise:* the address as written, as today.
-2. **Should the preview offer to rewrite UPN cells to the mail before saving?** For the author. *Recommended: no.* The binding makes it unnecessary, and the Setup page keeps what the operator uploaded.
+- ~~Invitations for a row resolved by UPN~~ go to the directory's mail (author, 2026-10-31).
+- ~~Offer to rewrite UPN cells at upload~~: no (author, 2026-10-31).
 
 ## Out of scope
 

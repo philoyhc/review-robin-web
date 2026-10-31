@@ -37,6 +37,7 @@ from app.web.deps import (
     require_session_operator,
 )
 from app.web.routes_operator._shared import (
+    account_resolver,
     _setup_row_window,
     _handle_import,
     dismiss_held_upload,
@@ -429,6 +430,7 @@ def reviewers_create(
             status=status_value,
             user=user,
             correlation_id=request_correlation_id(),
+            resolve_account=account_resolver(request),
         )
     except ReviewerOperationError as exc:
         return _render_reviewers_page(
@@ -507,6 +509,7 @@ def reviewers_update(
             status=status_value,
             user=user,
             correlation_id=request_correlation_id(),
+            resolve_account=account_resolver(request),
         )
     except ReviewerOperationError as exc:
         return _render_reviewers_page(

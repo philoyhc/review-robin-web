@@ -33,6 +33,8 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from typing import Any
 
 from pydantic import ValidationError
@@ -42,6 +44,7 @@ from sqlalchemy.orm import Session
 from app.db.models import Observer, ReviewSession, User
 from app.schemas.observer_cohort_rule import CohortRuleSet
 from app.services import audit, csv_imports
+from app.services import directory_accounts
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -199,6 +202,7 @@ def create_observer(
     cohort_rule: dict[str, Any] | None = None,
     user: User,
     correlation_id: str | None = None,
+    resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
 ) -> Observer:
     """Insert a new Observer row. Rejects duplicate emails within
     the session. Returns the persisted row.
@@ -260,6 +264,10 @@ def create_observer(
         status=clean_status,
         tag_1=clean_tag_1,
         cohort_rule=rule,
+        # Segment 21F: the account the address resolves to, if any.
+        **directory_accounts.columns(
+            resolve_account(clean_email) if resolve_account is not None else None
+        ),
     )
     db.add(observer)
     db.flush()
@@ -301,6 +309,7 @@ def update_observer(
     cohort_rule: dict[str, Any] | None | object = _UNSET,
     user: User,
     correlation_id: str | None = None,
+    resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update. Only emits ``observer.updated`` if at
     least one field actually changed; the changes envelope carries
@@ -382,6 +391,14 @@ def update_observer(
         )
         for field, (_, new_value) in changes.items():
             setattr(observer, field, new_value)
+        # Segment 21F: a changed address rebinds, or loses its binding.
+        if "email" in changes:
+            directory_accounts.rebind(
+                observer,
+                old=changes["email"][0],  # type: ignore[arg-type]
+                new=changes["email"][1],  # type: ignore[arg-type]
+                resolve=resolve_account,
+            )
         db.flush()
         audit.write_event(
             db,

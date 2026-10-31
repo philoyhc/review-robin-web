@@ -21,6 +21,8 @@ Audit events registered in ``EVENT_SCHEMAS``:
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -28,6 +30,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Reviewee, ReviewSession, User
 from app.services import audit, csv_imports
+from app.services import directory_accounts
 from app.services import session_lifecycle as lifecycle
 from app.services.email_identity import looks_like_email, normalize_email
 from app.services.roster_bulk import bulk_delete, bulk_set_status
@@ -151,6 +154,7 @@ def create_reviewee(
     status: str = "active",
     user: User,
     correlation_id: str | None = None,
+    resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
 ) -> Reviewee:
     """Insert a new Reviewee row. Rejects a duplicate
     email-or-identifier within the session. Returns the persisted
@@ -215,6 +219,10 @@ def create_reviewee(
         tag_1=clean_tag_1,
         tag_2=clean_tag_2,
         tag_3=clean_tag_3,
+        # Segment 21F: the account the address resolves to, if any.
+        **directory_accounts.columns(
+            resolve_account(clean_identifier) if resolve_account is not None else None
+        ),
     )
     db.add(reviewee)
     db.flush()
@@ -271,6 +279,7 @@ def update_reviewee(
     status: str | object = _UNSET,
     user: User,
     correlation_id: str | None = None,
+    resolve_account: Callable[[str], directory_accounts.Account | None] | None = None,
     acknowledged_loss: int | None = None,
 ) -> dict[str, list[object]]:
     """Field-level update. Only emits ``reviewee.updated`` if at
@@ -382,6 +391,14 @@ def update_reviewee(
 
     for field, (_, new_value) in changes.items():
         setattr(reviewee, field, new_value)
+    # Segment 21F: a changed address rebinds, or loses its binding.
+    if "email_or_identifier" in changes:
+        directory_accounts.rebind(
+            reviewee,
+            old=changes["email_or_identifier"][0],  # type: ignore[arg-type]
+            new=changes["email_or_identifier"][1],  # type: ignore[arg-type]
+            resolve=resolve_account,
+        )
     db.flush()
 
     defuncted = responses_service.clear_changed_groups(

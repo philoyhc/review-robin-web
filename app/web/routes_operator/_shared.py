@@ -27,6 +27,8 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from cordware.graph import Directory, GraphError, directory_for
+
 from app.config import settings
 from app.db.models import (
     Instrument,
@@ -36,7 +38,7 @@ from app.db.models import (
     User,
 )
 from app.db.session import get_db
-from app.services import assignments, csv_imports, date_formatting
+from app.services import assignments, csv_imports, date_formatting, directory_accounts
 from app.services import field_labels as field_labels_service
 from app.services import instruments as instruments_service
 from app.services import (
@@ -974,6 +976,27 @@ def dismiss_held_upload(
     )
 
 
+def directory_or_none(request: Request) -> Directory | None:
+    """The directory as the signed-in operator sees it (segment 21F), or
+    ``None`` without a delegated token, which checks nothing."""
+    try:
+        return directory_for(request)
+    except GraphError:
+        return None
+
+
+def account_resolver(request: Request):
+    """The single-row add and edit's lookup (segment 21F): one address
+    resolved on demand, through the operator's directory if there is one."""
+    return directory_accounts.resolver(directory_or_none(request))
+
+
+def roster_address(row: object) -> str | None:
+    """A parsed roster row's address: a reviewer's or observer's email,
+    a reviewee's email or identifier."""
+    return getattr(row, "email", None) or getattr(row, "email_or_identifier", None)
+
+
 async def _handle_import(
     *,
     request: Request,
@@ -1256,6 +1279,14 @@ async def _handle_import(
             held_upload=ask(),
         )
 
+    # Segment 21F: each address resolved through the directory on the
+    # operator's token, at the save and not at an ask, so a held file is
+    # looked up once. Off the event loop, as the lookups block.
+    directory_check = await run_in_threadpool(
+        csv_imports.directory_check,
+        directory_or_none(request),
+        [roster_address(row) for row in result.rows],
+    )
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
     await run_in_threadpool(
@@ -1267,6 +1298,7 @@ async def _handle_import(
         filename=upload.filename or "",
         correlation_id=request_correlation_id(),
         field_labels_captured=result.field_labels,
+        directory=directory_check,
     )
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.1 rung 3c — a successful import lands back with the panel still
