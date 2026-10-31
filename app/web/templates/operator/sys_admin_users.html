@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "operator/partials/_roster_address.html" import account_address %}
+{% from "operator/partials/_roster_address.html" import account_address, account_name %}
 
 {% block title %}Accounts Management — Admin{% endblock %}
 {% block body_class %}ui-v2{% endblock %}
@@ -337,7 +337,7 @@
               {% endif %}
             </td>
             <td>{{ account_address(row.verified, row.email) }}</td>
-            <td>{{ row.display_name or "—" }}</td>
+            <td>{{ account_name(row.verified, row.display_name) }}</td>
             <td>{{ row.created_at | format_date }}</td>
             <td>
               {% if row.is_operator %}

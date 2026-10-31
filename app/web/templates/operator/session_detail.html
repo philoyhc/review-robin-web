@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "operator/partials/_roster_address.html" import account_address %}
+{% from "operator/partials/_roster_address.html" import account_address, account_name %}
 {% from "operator/partials/_datetime_field.html" import datetime_field %}
 
 {% block title %}{{ session.name }} — Review Robin Web{% endblock %}
@@ -598,7 +598,7 @@
             {% set is_self = owner.email | lower == user.email | lower %}
             <tr>
               <td>{{ account_address(owner.verified, owner.email) }}</td>
-              <td>{{ owner.display_name or "—" }}</td>
+              <td>{{ account_name(owner.verified, owner.display_name) }}</td>
               <td>{{ owner.role }}</td>
               <td>{{ owner.joined_at | format_date }}</td>
               <td class="col-shrink">

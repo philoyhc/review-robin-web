@@ -32,12 +32,26 @@ def test_the_accounts_table_pills_a_verified_account(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email=CREATOR)
     client.get("/operator/sys-admin/users")  # signs the admin in
-    db.add_all([User(email="Bound@Example.edu", is_operator=True), User(email="plain@example.edu", is_operator=True)])
+    db.add_all([User(email="Bound@Example.edu", display_name="Bea Bound", is_operator=True),
+                User(email="plain@example.edu", display_name="Pat Plain", is_operator=True),
+                User(email="nameless@example.edu", is_operator=True),
+                User(email="bound.nameless@example.edu", is_operator=True)])
     db.commit()
     _bind(db, "Bound@Example.edu")
+    db.execute(select(User).where(User.email == "bound.nameless@example.edu")).scalar_one().external_principal_id = (
+        "88888888-8888-4888-8888-888888888888"
+    )
+    db.commit()
     page = client.get("/operator/sys-admin/users?show=operators&show=unused").text
     assert "Bound@Example.edu" in PILL.findall(page)  # case kept
     assert "<code>plain@example.edu</code>" in page
+    # The name too (author, 2026-10-31): the pill for a verified account.
+    assert '<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>Bea Bound</span>' in page
+    assert "<td>Pat Plain</td>" in page
+    nameless = page[page.index("nameless@example.edu</code>"):]
+    assert nameless.split("<td>", 2)[1].startswith("—</td>")
+    bound_nameless = page[page.index("bound.nameless@example.edu</code>"):]
+    assert bound_nameless.split("<td>", 2)[1].startswith("—</td>")  # verified, no name: a plain dash
 
 
 def test_the_owners_card_pills_a_verified_owner(client: TestClient, db: Session) -> None:
@@ -46,6 +60,12 @@ def test_the_owners_card_pills_a_verified_owner(client: TestClient, db: Session)
     _bind(db, "bob@example.edu")
     page = _home(client, review_session)
     assert "bob@example.edu" in PILL.findall(page)
+    # The name too (author, 2026-10-31).
+    bob = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
+    bob.display_name = "Bob Bound"
+    db.commit()
+    page = _home(client, review_session)
+    assert '<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>Bob Bound</span>' in page
 
 
 def test_the_new_session_picker_marks_a_verified_candidate(client: TestClient, db: Session) -> None:
