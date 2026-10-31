@@ -37,6 +37,7 @@ class LandingLink:
 
     title: str
     path: str
+    icon: str = ""
 
     @property
     def href(self) -> str:
@@ -60,7 +61,7 @@ def add_landing_page(host: FastAPI, links: Sequence[LandingLink]) -> None:
             request,
             "landing.html",
             {
-                "links": [(link.title, f"{root}{link.href}") for link in links],
+                "links": [(link.title, f"{root}{link.href}", link.icon) for link in links],
                 "identity": identity,
                 "claims": extract_claims(request) if show_claims else [],
             },

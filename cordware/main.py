@@ -19,7 +19,7 @@ import re
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from typing import Any
 from contextlib import AsyncExitStack, asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI
@@ -29,6 +29,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from cordware.identity import is_local, missing_header_count, super_admin_configured
 from cordware.logging import configure_logging
 from cordware.settings import IdentitySettings, identity_settings
+from cordware import app_icons
 from cordware.web.landing import LandingLink, add_landing_page
 
 log = logging.getLogger("cordware")
@@ -43,12 +44,16 @@ class AppEntry:
     callable returning a complete ASGI application. Records from
     ``logger`` and its children are stamped with the application's
     name. ``title`` is how the host's landing page names it; empty, the
-    page uses the registry name."""
+    page uses the registry name. ``icon`` is the favicon the landing page
+    draws before that name (`cordware/app_icons.py`); empty, none. It is
+    presentation, not identity, so two entries differing only in it are
+    equal."""
 
     path: str
     factory: str
     logger: str
     title: str = ""
+    icon: str = field(default="", compare=False)
 
 
 # RRW mounts at `/reviewrobin` (segment 21D; v0.8 §3), the two Residential
@@ -60,24 +65,28 @@ REGISTRY: Mapping[str, AppEntry] = {
         factory="app.main:create_app",
         logger="app",
         title="Review Robin",
+        icon=app_icons.REVIEW_ROBIN,
     ),
     "residentialops": AppEntry(
         path="/residentialops",
         factory="residentialapps.residentialops.main:create_app",
         logger="residentialapps.residentialops",
         title="Residential Operations",
+        icon=app_icons.RESIDENTIAL_OPERATIONS,
     ),
     "supportlogs": AppEntry(
         path="/supportlogs",
         factory="residentialapps.supportlogs.main:create_app",
         logger="residentialapps.supportlogs",
         title="Support Logs",
+        icon=app_icons.SUPPORT_LOGS,
     ),
     "utilities": AppEntry(
         path="/utilities",
         factory="utilityapps.main:create_app",
         logger="utilityapps",
         title="Utilities",
+        icon=app_icons.UTILITIES,
     ),
 }
 
@@ -348,7 +357,7 @@ def create_app(
     add_landing_page(
         host,
         [
-            LandingLink(title=entry.title or name, path=entry.path)
+            LandingLink(title=entry.title or name, path=entry.path, icon=entry.icon)
             for name, (entry, _) in zip(names, mounted, strict=True)
         ],
     )
