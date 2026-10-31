@@ -79,7 +79,7 @@ def test_a_missing_replace_tick_holds_the_file_for_the_next_submit(
 
     asked = _upload(client, url, REVIEWERS_2)
     assert asked.status_code == 400
-    assert "Tick replace or append just above Upload" in asked.text
+    assert "Tick replace, append or merge just above Upload" in asked.text
     assert "Holding <strong>roster.csv</strong>" in asked.text
     # A missing-replace ask leaves the replace tick for the operator.
     assert re.search(r'name="confirm_replace"[^>]*\bchecked\b', asked.text) is None

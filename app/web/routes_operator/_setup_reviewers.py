@@ -78,8 +78,11 @@ async def reviewers_import_submit(
     file: UploadFile | None = File(default=None),
     held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
-    # Segment 19Z: the card's append tick, beside the replace tick.
+    # Segment 19Z: the card's append and merge ticks, beside the replace
+    # tick, and a merge's group-clear answer (Reviewees).
     append: str | None = Form(default=None),
+    merge: str | None = Form(default=None),
+    acknowledge_group_clear: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_session_operator),
     user: User = Depends(get_or_create_user),
@@ -91,6 +94,8 @@ async def reviewers_import_submit(
         held_token=held_token,
         confirm_replace=confirm_replace,
         append=append,
+        merge=merge,
+        acknowledge_group_clear=acknowledge_group_clear,
         acknowledge_response_loss=acknowledge_response_loss,
         review_session=review_session,
         user=user,

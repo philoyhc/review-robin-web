@@ -100,6 +100,16 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 - **Tests added:** a Relationships append that meets the group-clear ask; an append looks up only the file's addresses.
 - **Specs the build touched beyond Doc impact:** `spec/ui_elements.md`, `spec/operator_button_audit.md`, `spec/extract_data.md`. Bullets added.
 
+Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#3439`, rungs 9–10 `#3440`. The one `diff-reviewer` read of `a384197c..bae148ed` found nothing that deletes or cascades on a merge. Codex (`#3440`) and the read found these, all handled in `#3440`:
+- **A rename through an account match** is checked at the row's kept address, before any row is touched. The route's check covers only the file's addresses.
+- **A reviewer merge recomputes self-review**, since a binding it adds can make a pair one person.
+- **Status is per cell, not per column.** A blank Status cell keeps the stored status (`*ImportRow.status_given`). The column test alone wrote `active` over `inactive`.
+- **Two file rows landing on one existing row** (one by address, one by account) refuse the merge.
+- **The cohort rule** is compared with `same_cohort_rule`, as the row editor does. It is still logged in `observer.updated`, not in `observer.cohort_rule_assigned`.
+- Recorded, not changed:
+  - Two rows at one address in one roster: a merge updates the lower one, and Validate's `duplicate_email` already flags the pair.
+  - A bound row matched by address whose address now resolves to another account keeps its binding, where replace would rebind it.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -153,5 +163,6 @@ The one `diff-reviewer` read of `02636177..3f540f2` found nothing that deletes, 
 - `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`).
 - `spec/extract_data.md` — the pairing's unique-key note, which a shared Upload key now qualifies.
 - `spec/validate_page.md` — the three `*.duplicate_account` soft rules (upsert amendment).
+- `spec/architecture.md` — "Audit-event detail schema": the `*.imported` counts `new` / `kept` (append) and `new` / `updated` / `unchanged` (upsert) with `context.mode`, and the per-row `*.updated` events a merge writes.
 - `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": its Validate half shipped; the entry narrows to refusing at upload (at close).
 - `guide/todo_master.md` — the queue entry, deleted at close.

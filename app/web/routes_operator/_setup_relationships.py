@@ -114,8 +114,10 @@ async def relationships_import_submit(
     file: UploadFile | None = File(default=None),
     held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
-    # Segment 19Z: the card's append tick, beside the replace tick.
+    # Segment 19Z: the card's append and merge ticks, beside the replace
+    # tick.
     append: str | None = Form(default=None),
+    merge: str | None = Form(default=None),
     acknowledge_response_loss: str | None = Form(default=None),
     review_session: ReviewSession = Depends(require_relationships_enabled_session),
     user: User = Depends(get_or_create_user),
@@ -139,6 +141,8 @@ async def relationships_import_submit(
     existing = relationships_service.existing_count(db, review_session.id)
     # An append onto an empty roster is just the roster (19Z).
     appending = append == "true" and existing > 0
+    merging = merge == "true" and existing > 0
+    ticked = (confirm_replace == "true") + appending + merging
     # 19P.3 rung 4 — `panel_open=True` on BOTH in-place 400 paths. A
     # refused file's problems render inside the upload card, which is
     # inside the Unlock panel, and a 400
@@ -180,7 +184,7 @@ async def relationships_import_submit(
     # Segment 19Z: replace and append are the card's two ticks. Both
     # (no script, or a direct POST) ask to choose; neither asks as the
     # replace tick alone did.
-    if existing > 0 and (appending == (confirm_replace == "true")):
+    if existing > 0 and ticked != 1:
         return _render_relationships_page(
             request=request,
             review_session=review_session,
@@ -188,8 +192,8 @@ async def relationships_import_submit(
             db=db,
             issues=result.issues,
             filename=upload.filename,
-            missing_confirm=not appending,
-            both_ticks=appending,
+            missing_confirm=ticked == 0,
+            both_ticks=ticked > 1,
             held_upload=ask(),
             panel_open=True,
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -233,6 +237,8 @@ async def relationships_import_submit(
             field_labels_captured=result.field_labels,
             acknowledged_loss=acknowledged_loss(acknowledge_response_loss),
             append=appending,
+            merge=merging,
+            columns=result.columns,
         )
     except AppendConflict as refused:
         db.rollback()
@@ -250,8 +256,9 @@ async def relationships_import_submit(
             surface="import", panel_open=True,
             issues=result.issues, filename=upload.filename,
             held_upload=held,
-            confirm_replace_checked=held is not None and not appending,
+            confirm_replace_checked=held is not None and not (appending or merging),
             append_checked=held is not None and appending,
+            merge_checked=held is not None and merging,
         )
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.3 rung 4 — `?unlocked=1#roster-card`. This control lives INSIDE
@@ -757,6 +764,7 @@ def _render_relationships_page(
     # Segment 19Z: the append tick re-ticked after a group-clear ask, and
     # the both-ticks ask.
     append_checked: bool = False,
+    merge_checked: bool = False,
     both_ticks: bool = False,
     selected_ids: set[int] | None = None,
     # 19P.3 rung 4 — whether the page ARRIVES with the Unlock panel
@@ -1044,6 +1052,7 @@ def _render_relationships_page(
             "held_upload_lost": held_upload_lost,
             "confirm_replace_checked": confirm_replace_checked,
             "append_checked": append_checked,
+            "merge_checked": merge_checked,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, "Relationships"
             ),

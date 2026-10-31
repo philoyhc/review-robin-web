@@ -63,18 +63,19 @@ class UploadProblems:
 
 
 #: The sentence when a clean file would go onto a populated roster but
-#: neither the replace nor the append tick was ticked (segment 19Z):
-#: either answers it. Quick Setup's twin names its Submit.
+#: none of the replace, append or merge ticks was ticked (segment 19Z):
+#: any one answers it. Quick Setup's twin names its Submit.
 NEEDS_CONFIRM_SENTENCE = (
-    "Tick replace or append just above Upload, then upload again."
+    "Tick replace, append or merge just above Upload, then upload again."
 )
 
 
-#: The sentence when both the replace and the append tick arrive (no
-#: script on the page to untick one, or a direct POST): they ask for
-#: opposite things, so neither is guessed (segment 19Z).
+#: The sentence when more than one of the replace, append and merge
+#: ticks arrives (no script on the page to untick the others, or a
+#: direct POST): they ask for different things, so none is guessed
+#: (segment 19Z).
 BOTH_TICKS_SENTENCE = (
-    "Tick replace or append, not both, then upload again."
+    "Tick only one of replace, append or merge, then upload again."
 )
 
 

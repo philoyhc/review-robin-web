@@ -320,13 +320,14 @@
                   {# 19Z upsert amendment: append and merge share one line (author,
                      2026-10-31). A div, not a label, since the line holds two ticks;
                      one span after the first tick keeps the rest one flex item.
-                     Merge is drawn, not wired: disabled until rung 10. #}
+                     All three ticks share one exclusive group and one delete-confirm key,
+                     so Upload opens on any one (`base.html`). #}
                   <div class="confirm-label upload-mode-line">
                     <input type="checkbox" id="reviewees-upload-append" name="append" value="true"{% if append_checked %} checked{% endif %}
                            data-exclusive-tick="upload-mode" data-delete-confirm="replace-roster">
                     <span><label for="reviewees-upload-append">Yes, append to,</label>
-                    <input type="checkbox" id="reviewees-upload-merge" name="merge" value="true" disabled
-                           data-exclusive-tick="upload-mode">
+                    <input type="checkbox" id="reviewees-upload-merge" name="merge" value="true"{% if merge_checked %} checked{% endif %}
+                           data-exclusive-tick="upload-mode" data-delete-confirm="replace-roster">
                     <label for="reviewees-upload-merge">merge with the existing roster.</label></span>
                   </div>
                 </fieldset>
@@ -341,6 +342,33 @@
                     <input type="hidden" id="reviewees-import-ack"
                            name="acknowledge_response_loss" value="true">
                   {% endif %}
+              {% endif %}
+
+              {# A merge refused for clearing group answers (segment 19Z):
+                 the count and the tick that answers it inside the banner,
+                 as on the Relationships card. Its own field,
+                 `acknowledge_group_clear`, as the hidden ack above already
+                 carries `true` for a replace. The file is held. #}
+              {% if group_clear and group_clear.surface == "import" %}
+                <div class="banner banner-error" role="alert"
+                     data-group-clear-banner>
+                  <p class="banner-lead">{{ group_clear.message }}</p>
+                  <label class="confirm-label">
+                    <input type="checkbox" name="acknowledge_group_clear"
+                           value="{{ group_clear.count }}">
+                    <span>Yes, clear them</span>
+                  </label>
+                  <div class="banner-actions">
+                    {% if held_upload %}
+                      <button type="submit" class="btn secondary"
+                              formaction="{{ url(reviewees_base_url) }}/import/dismiss"
+                              formnovalidate>Dismiss</button>
+                    {% else %}
+                      <a class="btn secondary"
+                         href="{{ url(reviewees_base_url) }}?unlocked=1#upload-csv">Dismiss</a>
+                    {% endif %}
+                  </div>
+                </div>
               {% endif %}
 
               <div class="unlock-col-actions">
