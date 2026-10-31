@@ -37,10 +37,12 @@ Graph from application code is proved (Cordware's first release, 2026-10-31). Th
   - With fake auth on, the lookup uses `FakeDirectory`.
   - The lookup runs within the preview request under a time budget, as the checker's plain post does. Whatever is not finished is *not checked*.
 - **Matching** applies to the reviewer, reviewee and observer gates, the reviewer dashboard, invitation acceptance and `participants.disclosable_roles`:
-  - with an object ID: `row.directory_object_id == user.external_principal_id`, compared case-insensitively;
+  - with an object ID: `row.directory_object_id` equals the **current request's authenticated principal ID** (`get_current_user().principal_id`, the Entra object ID Easy Auth supplies), compared case-insensitively;
   - without one: mail, as today.
 
-  The principal ID is the Entra object ID that Easy Auth supplies. It is already stored on `users`, and the fake user never has one that matches (`users.find_signed_in_user`).
+  The comparison is never with the persisted `users.external_principal_id`. `users.find_signed_in_user` can return a row by email whose stored principal ID belongs to an earlier holder of that address, and a bound row must not follow the address to a new account (Codex, `#3424`). A request with no principal ID, or the fake user's, binds to nothing.
+
+  Gates that receive only a `User` row also take the authenticated identity, so the principal ID reaches every comparison.
 - **Unchanged:**
   - the address as written, which is what the Setup pages show;
   - the allowlists, which have no upload step: `OPERATOR_EMAILS`, `SYS_ADMIN_EMAILS` and `SUPER_ADMIN_EMAILS` stay mail-only;
@@ -78,13 +80,14 @@ Taken 2026-10-31 at `2bb3e01`.
      - storing the account on save;
      - the single-add forms.
    - Must not change any gate.
-5. **Matching by account.** The 14 sites and 3 SQL filters prefer the object ID, then fall back to mail. Tests include `FAKE_USERS`' `office@` collision as a negative case: the account whose UPN is the roster's mail is not admitted. Last build rung, so `diff-reviewer` reads 2–5.
+5. **Matching by account.** The 14 sites and 3 SQL filters prefer the object ID, then fall back to mail. Tests include two negative cases: `FAKE_USERS`' `office@` collision, where the account whose UPN is the roster's mail is not admitted; and a persisted principal ID that differs from the token's, which binds nothing. Last build rung, so `diff-reviewer` reads 2–5.
 6. **Close.** `spec-writer` on the doc-impact specs, then the author's browser check of a UPN roster on the real tenant.
 
 ## Definition of done
 
 - A roster row given by UPN that resolves admits its account after sign-in. A row given by mail still does (tests).
 - The `office@` collision admits neither the wrong account by UPN nor anyone by an `AMBIGUOUS` binding (test).
+- A user row whose stored principal ID belongs to an earlier holder of its email does not admit a new account to rows bound to the earlier one (test).
 - An unresolved, external or anonymous row matches exactly as before (tests).
 - With no token, the upload proceeds unchecked and says so (test).
 - The new columns survive `alembic downgrade base` and `upgrade head` on Postgres (CI).
