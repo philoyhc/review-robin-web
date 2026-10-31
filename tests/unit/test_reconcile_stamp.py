@@ -227,6 +227,14 @@ def _roster_cases() -> list[tuple[str, Callable[[Inputs], Undo]]]:
         ("reviewer tag_3", lambda i: _set(i.reviewers[0], "tag_3", "x")),
         ("reviewer status", lambda i: _set(i.reviewers[0], "status", "removed")),
         (
+            "reviewer directory account",
+            lambda i: _set(i.reviewers[0], "directory_object_id", "11111111-1111-4111-8111-111111111111"),
+        ),
+        (
+            "reviewee directory account",
+            lambda i: _set(i.reviewees[0], "directory_object_id", "11111111-1111-4111-8111-111111111111"),
+        ),
+        (
             "reviewee identifier",
             lambda i: _set(
                 i.reviewees[0], "email_or_identifier", "moved@example.edu"
