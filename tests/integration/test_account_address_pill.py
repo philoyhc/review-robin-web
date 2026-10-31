@@ -32,12 +32,19 @@ def test_the_accounts_table_pills_a_verified_account(
 ) -> None:
     _bootstrap_sys_admin(monkeypatch, email=CREATOR)
     client.get("/operator/sys-admin/users")  # signs the admin in
-    db.add_all([User(email="Bound@Example.edu", is_operator=True), User(email="plain@example.edu", is_operator=True)])
+    db.add_all([User(email="Bound@Example.edu", display_name="Bea Bound", is_operator=True),
+                User(email="plain@example.edu", display_name="Pat Plain", is_operator=True),
+                User(email="nameless@example.edu", is_operator=True)])
     db.commit()
     _bind(db, "Bound@Example.edu")
     page = client.get("/operator/sys-admin/users?show=operators&show=unused").text
     assert "Bound@Example.edu" in PILL.findall(page)  # case kept
     assert "<code>plain@example.edu</code>" in page
+    # The name too (author, 2026-10-31): the pill for a verified account.
+    assert '<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>Bea Bound</span>' in page
+    assert "<td>Pat Plain</td>" in page
+    nameless = page[page.index("nameless@example.edu</code>"):]
+    assert nameless.split("<td>", 2)[1].startswith("—</td>")
 
 
 def test_the_owners_card_pills_a_verified_owner(client: TestClient, db: Session) -> None:
