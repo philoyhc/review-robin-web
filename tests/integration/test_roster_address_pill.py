@@ -84,16 +84,20 @@ def test_the_relationships_invitations_and_responses_tables_pill_bound_addresses
 
 
 @pytest.mark.parametrize(
-    ("path", "bound"),
+    ("path", "address", "bound"),
     [
-        ("invitations/reviewers/{bound_r}", True),
-        ("invitations/reviewers/{plain_r}", False),
-        ("responses/{bound_e}/detail", True),
-        ("responses/{plain_e}/detail", False),
+        ("invitations/reviewers/{bound_r}", "e0123456@example.edu", True),
+        ("invitations/reviewers/{plain_r}", "pat@example.edu", False),
+        ("responses/{bound_e}/detail", "Jane.Tan@example.edu", True),
+        ("responses/{plain_e}/detail", "STU-0001", False),
     ],
 )
-def test_the_drill_in_headers_pill_a_bound_address(client: TestClient, db: Session, path: str, bound: bool) -> None:
+def test_the_drill_in_headers_pill_a_bound_address(
+    client: TestClient, db: Session, path: str, address: str, bound: bool
+) -> None:
     s = _seed(client, db, f"pill-d-{path.split('/')[0]}-{bound}")
     response = client.get(f"/operator/sessions/{s.public_id}/" + path.format(**s.ids))
     assert response.status_code == 200
-    assert bool(PILL.findall(response.text)) is bound
+    assert PILL.findall(response.text) == ([address] if bound else [])
+    if not bound:
+        assert f"<code>{address}</code>" in response.text
