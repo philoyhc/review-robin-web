@@ -13,10 +13,10 @@ from starlette.responses import RedirectResponse, Response
 
 from residentialapps.supportlogs import sample_support as sample
 from residentialapps.supportlogs.pages import flags_tab, gated, query
-from residentialapps.web.pages import placeholders_local_only
+from residentialapps.web.pages import placeholders_previewers_only
 from residentialapps.web.urls import url_path
 
-router = APIRouter(dependencies=[Depends(placeholders_local_only)])
+router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 
 def _context(request: Request) -> dict:

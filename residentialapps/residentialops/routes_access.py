@@ -9,14 +9,14 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from residentialapps.residentialops import sample_data
-from residentialapps.residentialops.pages import ROSTER_TABS, placeholders_local_only, render
+from residentialapps.residentialops.pages import ROSTER_TABS, placeholders_previewers_only, render
 
 ROSTER_BACK = {
     "staff": {"label": "Staff roster", "path": "/rosters/staff"},
     "ra": {"label": "RA roster", "path": "/rosters/ras"},
 }
 
-router = APIRouter(dependencies=[Depends(placeholders_local_only)])
+router = APIRouter(dependencies=[Depends(placeholders_previewers_only)])
 
 
 @router.get("/rosters/people/{person_id}", name="residentialops_person")

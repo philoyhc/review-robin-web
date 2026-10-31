@@ -178,7 +178,7 @@ def test_not_registered_shows_the_message_and_nobody_else(client: TestClient) ->
     assert "example.edu" not in page and "Example College" not in page
 
 
-def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_placeholders_are_404_deployed_to_someone_not_previewing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
     local = TestClient(create_app())
     for path in ["/", "/not-registered", *(path for path, _, _ in PAGES)]:

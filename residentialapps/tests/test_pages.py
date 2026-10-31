@@ -287,8 +287,9 @@ def test_not_registered_shows_the_message_and_nobody_else() -> None:
     assert "signed in as" not in page
 
 
-def test_placeholders_answer_only_on_a_local_run(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sample data, no gates yet: deployed, every placeholder is 404."""
+def test_placeholders_are_404_deployed_to_someone_not_previewing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sample data, no roster gates yet: deployed, every placeholder is
+    404 to a request no preview list admits (`test_preview_gate.py`)."""
     monkeypatch.setattr(web_pages, "is_local", lambda: False)
     client = TestClient(ops_app())
     for path in [*page_routes(), f"/rosters/people/{CHLOE}"]:

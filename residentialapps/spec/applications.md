@@ -40,8 +40,8 @@ states only what Residential adds.
 
 Ruled by the author, 2026-10-26. Rosters and setup, Sys admin and the
 not-registered page stand as placeholders on sample data (1B item 1),
-answering only on a local run (`APP_ENV=local`) until items 3–5 wire
-them; the rest is the contract for 1B and later. Each page shows what the
+answering anyone on a local run (`APP_ENV=local`) and, deployed, only
+a previewer, until items 3–5 wire them ("The preview gate", below); the rest is the contract for 1B and later. Each page shows what the
 viewer's role allows; the table says only who reaches it. *Sys admin* is the system
 role and *admin* the appointment (`residentialapps/docs/residentialapps_roles.md`,
 "Terms"). Paths are under each mount, hyphenated as RRW's are.
@@ -184,8 +184,29 @@ Every combination starts and answers both health paths it mounts (ruling 5):
 | unset | RRW and both; `/` lists all three |
 
 A bare mount path answered `404` in 1A. Residential Operations' landing
-(`/residentialops/`) now answers on a local run while a placeholder, and
-`404` deployed; so does Support Logs' Home (`/supportlogs/`, segment 1D).
+(`/residentialops/`) now answers as its placeholders do, behind the
+preview gate; so does Support Logs' Home (`/supportlogs/`, segment 1D).
+
+### The preview gate
+
+While the screens are placeholders on sample data (author, 2026-10-31),
+every placeholder router depends on `placeholders_previewers_only`
+(`residentialapps/web/pages.py`). A local run (`APP_ENV=local`) answers
+anyone. Deployed, a placeholder answers only a **previewer**: the
+platform super-admin, or an account whose mail, sign-in name (UPN) or
+address the preview list names, compared folded; anyone else, signed in
+or not, gets `404`. `/health` is never gated.
+
+- **The list** is `residential_preview.md`, beside the `residentialapps/`
+  package. A deployment's build puts it there; the file names real people,
+  so it is never committed to this repository (`.gitignore` keeps a local
+  copy out), and the deployment keeps it.
+- **Its format:** Markdown; a list item (`-`, `*` or `+`, at any depth)
+  whose first word is an address, backticked or not, names that address;
+  the rest of the item, and every other line, is free prose.
+- **Read once per process**, so a change to the list ships with a
+  deployment. No file names nobody.
+- **Retired** when the rosters gate the screens (1B items 3–5).
 
 A host whose deployment does not carry `residentialapps/` must name its
 applications in `CORDWARE_APPS`: unset, the host loads every factory and
