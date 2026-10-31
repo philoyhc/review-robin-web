@@ -59,14 +59,14 @@ line saying why, rather than checked in part:
 ## Preview
 
 Posting the file renders the preview: the file's name, the column choice,
-and four counts:
+and four counts, in this order, so they read as a subtraction:
 
 | Count | Is |
 |---|---|
 | Rows | every data row |
-| Addresses to check | rows with a key |
-| Blank or not an address | rows without one |
+| Blank or not an address | rows without a key |
 | Repeats | rows whose key an earlier row already has; each key is looked up once |
+| Addresses to check | the distinct keys: rows less blanks less repeats, one lookup each |
 
 Nothing is looked up yet. *Check addresses* posts the carried file and
 the column to `/email-check/check`; it is disabled until a column is

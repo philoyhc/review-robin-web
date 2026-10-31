@@ -22,10 +22,11 @@
     {% endif %}
     {% if counts %}
       <table aria-label="What the file holds">
+        {# Read as a subtraction: rows, less blanks, less repeats, leaves the lookups (segment U2). #}
         <tr><th scope="row">Rows</th><td class="n">{{ counts.rows }}</td></tr>
-        <tr><th scope="row">Addresses to check</th><td class="n">{{ counts.valid }}</td></tr>
         <tr><th scope="row">Blank or not an address: kept, not checked</th><td class="n">{{ counts.invalid }}</td></tr>
         <tr><th scope="row">Repeats of an address already in the file: checked once</th><td class="n">{{ counts.repeated }}</td></tr>
+        <tr><th scope="row">Addresses to check</th><td class="n">{{ counts.distinct }}</td></tr>
       </table>
       <p class="note">Nothing has been looked up yet.</p>
     {% endif %}
