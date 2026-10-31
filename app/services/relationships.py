@@ -42,6 +42,7 @@ from app.schemas.validation import Severity, ValidationIssue
 from app.services import audit, field_labels, session_lifecycle as lifecycle
 from app.services import unit_of_work
 from app.services.csv_imports import (
+    AppendConflict,
     ParseResult,
     _cell,
     _missing_columns_issues,
@@ -376,6 +377,34 @@ def pair_context_lookup(
     }
 
 
+def relationship_append_conflicts(
+    db: Session, *, session_id: int, rows: Sequence[RelationshipImportRow]
+) -> list[ValidationIssue]:
+    """The rows an append to the relationships refuses (segment 19Z;
+    author, 2026-10-31): a pair already a relationship, compared on the
+    resolved ``(reviewer_id, reviewee_id)`` as the within-file rule is.
+    Rows are numbered as the parser numbers them, from 1."""
+    held = set(
+        db.execute(
+            select(Relationship.reviewer_id, Relationship.reviewee_id).where(
+                Relationship.session_id == session_id
+            )
+        ).tuples()
+    )
+    return [
+        ValidationIssue(
+            severity=Severity.error,
+            source="relationships",
+            row_number=index,
+            field="ReviewerEmail",
+            message="This reviewer and reviewee are already a relationship.",
+            problem="The pair is already a relationship",
+        )
+        for index, row in enumerate(rows, start=1)
+        if (row.reviewer_id, row.reviewee_id) in held
+    ]
+
+
 def save_relationships(
     db: Session,
     *,
@@ -386,6 +415,7 @@ def save_relationships(
     correlation_id: str,
     field_labels_captured: dict[tuple[str, str], str] | None = None,
     acknowledged_loss: int | None = None,
+    append: bool = False,
 ) -> tuple[int, int]:
     """Wipe-and-replace the session's relationships table from the
     parsed rows. Returns ``(replaced, new)``.
@@ -395,12 +425,23 @@ def save_relationships(
     deletes existing rows, inserts the new ones, emits the
     ``relationships.imported`` audit event, reconciles the header's
     friendly labels, and commits once (``unit_of_work.atomic``).
+
+    With ``append`` (segment 19Z) the existing pairs stay and the rows
+    are added; a pair already a relationship refuses the whole file
+    (`AppendConflict`), checked under the session lock before anything
+    is written. The header's labels are upserted and none cleared.
     """
     # One commit for the replace, its display fields and its labels, so
     # the label reconcile's gate can't refuse after a committed replace
     # (findings Bc4; Codex on #2882).
     with unit_of_work.atomic(db):
         lifecycle.require_editable(db, session)
+        if append:
+            conflicts = relationship_append_conflicts(
+                db, session_id=session.id, rows=rows
+            )
+            if conflicts:
+                raise AppendConflict(conflicts)
         lifecycle.invalidate_if_validated(
             db,
             review_session=session,
@@ -415,15 +456,20 @@ def save_relationships(
             ).scalars()
         )
         before = pair_context_groups_before(db, session_id=session.id)
-        replaced = len(existing_rows)
-        for row in existing_rows:
-            db.delete(row)
-        db.flush()
+        if append:
+            replaced, kept = 0, len(existing_rows)
+        else:
+            replaced, kept = len(existing_rows), 0
+            for row in existing_rows:
+                db.delete(row)
+            db.flush()
 
         for row in rows:
             db.add(_relationship_to_orm(row, session.id))
         db.flush()
         context = {"filename": filename} if filename else {}
+        if append:
+            context["mode"] = "append"
         context.update(
             clear_redrawn_groups(
                 db,
@@ -438,10 +484,16 @@ def save_relationships(
         audit.write_event(
             db,
             event_type="relationships.imported",
-            summary=f"Imported {len(rows)} relationships (replaced {replaced})",
+            summary=(
+                f"Appended {len(rows)} relationships (kept {kept})"
+                if append
+                else f"Imported {len(rows)} relationships (replaced {replaced})"
+            ),
             actor_user_id=user.id,
             session=session,
-            payload=audit.counts(new=len(rows), replaced=replaced),
+            payload=audit.counts(
+                new=len(rows), **({"kept": kept} if append else {"replaced": replaced})
+            ),
             context=context or None,
             correlation_id=correlation_id,
         )
@@ -464,6 +516,7 @@ def save_relationships(
                 captured=field_labels_captured,
                 user=user,
                 correlation_id=correlation_id,
+                clear_absent=not append,
             )
     return replaced, len(rows)
 
@@ -974,6 +1027,7 @@ __all__ = [
     "list_for_session",
     "pair_context_lookup",
     "parse_relationship_csv",
+    "relationship_append_conflicts",
     "save_relationships",
     "update_relationship",
 ]
