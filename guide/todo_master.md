@@ -58,11 +58,13 @@ concluding** (decision 2026-09-05) and independent of each other.
    address the stub below introduces.
    **Plan:** `guide/segment_20_operator_polish_and_documentation.md`.
 
-3. **21F — A roster entry matches the mail or the sign-in name** (not
-   gated on Azure). Rosters and admin lists match a signed-in person's
-   mail or UPN, both already in the token; `users.upn` caches the UPN.
-   Upload-time canonicalization through Graph is stage two, deferred.
-   **Plan:** `guide/segment_21F_upn_or_mail.md`.
+3. **21F — Roster addresses resolved through the directory** (not gated
+   on Azure). At upload each roster address is looked up through Graph;
+   a resolved row stores the account and matches its person by object
+   ID, so rosters given by sign-in name work. Ruled 2026-10-31 over
+   matching mail-or-UPN at sign-in, which one account's mail being
+   another's UPN makes unsafe.
+   **Plan:** `guide/segment_21F_directory_rosters.md`.
 
 4. **19X — Refinements from browser runs** (not gated on Azure). A
    standing segment for small follow-ups from the author's browser
