@@ -32,8 +32,9 @@ _ADDRESS = re.compile(r"[^@\s<>()\[\]]+@[^@\s<>()\[\]]+\.[^@\s<>()\[\]]+")
 _COMMENT = re.compile(r"<!--.*?(?:-->|\Z)", re.DOTALL)
 # A fence opens on three or more backticks or tildes, at any indentation,
 # and closes only on a run of the same character at least as long, alone
-# on its line. Reading more as fenced only ever reads fewer addresses.
-_FENCE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
+# on its line, indented no deeper than the opener (three spaces for one
+# at the margin). Reading more as fenced only ever reads fewer addresses.
+_FENCE = re.compile(r"^( *)(`{3,}|~{3,})(.*)$")
 
 
 def _first_address(line: str) -> str | None:
@@ -52,20 +53,22 @@ def parse_preview_list(text: str) -> frozenset[str]:
     item whose first word is an address. Indented lines, comments and
     fenced code are not read."""
     addresses: set[str] = set()
-    fence: str | None = None
-    for line in _COMMENT.sub("", text).splitlines():
+    fence: tuple[str, int] | None = None  # the opener's marker and indent
+    for line in _COMMENT.sub("", text).expandtabs(4).splitlines():
         match = _FENCE.match(line)
         if fence is not None:
+            marker, indent = fence
             if (
                 match
-                and match.group(1)[0] == fence[0]
-                and len(match.group(1)) >= len(fence)
-                and not match.group(2).strip()
+                and len(match.group(1)) <= max(3, indent)
+                and match.group(2)[0] == marker[0]
+                and len(match.group(2)) >= len(marker)
+                and not match.group(3).strip()
             ):
                 fence = None
             continue
-        if match and not (match.group(1)[0] == "`" and "`" in match.group(2)):
-            fence = match.group(1)
+        if match and not (match.group(2)[0] == "`" and "`" in match.group(3)):
+            fence = (match.group(2), len(match.group(1)))
         elif address := _first_address(line):
             addresses.add(address)
     return frozenset(addresses)

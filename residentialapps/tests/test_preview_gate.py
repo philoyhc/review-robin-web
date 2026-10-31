@@ -172,3 +172,18 @@ def test_indented_lines_never_name_anyone() -> None:
 - top.level@example.edu
 """
     assert web_pages.parse_preview_list(text) == frozenset({"top.level@example.edu"})
+
+
+def test_an_over_indented_marker_does_not_close_a_fence() -> None:
+    text = """```
+    ```
+- inside.still@example.edu
+```
+    ~~~
+    - nested.opened@example.edu
+      ~~~
+- also.inside@example.edu
+    ~~~
+- after@example.edu
+"""
+    assert web_pages.parse_preview_list(text) == frozenset({"after@example.edu"})
