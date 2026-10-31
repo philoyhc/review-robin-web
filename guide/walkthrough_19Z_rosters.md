@@ -30,6 +30,7 @@ Start from a fresh session (Add new session, no files). The directory is `FakeDi
 - [ ] Upload Reviewers: Jane by mail, Arun, Lab, `office@`, `throttled@`, and two not-found rows. The Setup page's line reads 2 matched by mail (Jane, Arun), 1 by sign-in name (Lab, an account with no mail), 2 not found, 1 ambiguous, 1 not checked. Checked against `cordware/graph.py` on 2026-10-31.
 - [ ] Upload Reviewees the same way, plus an anonymous identifier (`STU-0001`). The identifier is not counted.
 - [ ] With a roster present, the card shows both lines; with an empty roster (a new session), neither.
+- [ ] Matched addresses read as pills (case kept, tooltip "Matched to a directory account"): Jane, Arun and Lab on Reviewers; not-found, ambiguous, not-checked rows and `STU-0001` stay plain. The same holds on Relationships, Assignments, Invitations, Responses and the two drill-ins.
 
 ### A2. The ticks
 
@@ -122,6 +123,7 @@ Needs a group instrument grouped by a reviewee tag, with saved answers.
 Repeat A1, A3 and A4 with the B1 files. In addition:
 
 - [ ] After R0, the Setup line's counts match the checker's classification of R0 (by mail = M rows, by sign-in name = U rows, not found = N + X).
+- [ ] The pills on Reviewers count M + U; the N and X rows stay plain.
 - [ ] `R1_append_acct.csv` is refused as a directory account already on the roster.
 - [ ] `R2_merge_acct.csv` updates the P person's UPN row; it still reads the UPN.
 - [ ] Validate after adding a P person's mail by the Add form, while R0 holds their UPN: one duplicate-account warning.
