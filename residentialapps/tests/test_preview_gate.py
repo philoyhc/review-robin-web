@@ -187,3 +187,25 @@ def test_an_over_indented_marker_does_not_close_a_fence() -> None:
 - after@example.edu
 """
     assert web_pages.parse_preview_list(text) == frozenset({"after@example.edu"})
+
+
+def test_comments_are_literal_inside_a_fence_and_only_ever_remove() -> None:
+    text = """```
+``` <!-- still code -->
+- in.fence@example.edu
+```
+<!-- c -->- made.by.stripping@example.edu
+- before.comment@example.edu <!-- a note -->
+<!-- opens
+- hidden@example.edu
+--> - on.the.closing.line@example.edu
+<!-- a --> <!-- b
+- hidden.too@example.edu
+-->
+<!--
+```
+- fence.inside.comment@example.edu
+-->
+- after@example.edu
+"""
+    assert web_pages.parse_preview_list(text) == frozenset({"before.comment@example.edu", "after@example.edu"})
