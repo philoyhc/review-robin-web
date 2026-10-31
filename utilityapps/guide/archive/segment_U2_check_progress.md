@@ -70,7 +70,7 @@ Reads:
 - **Codex**, two findings, both fixed in `#3421`: the column could change mid-run, and the `no_graph` fallback did not post the column.
 - **`spec-writer`** at the close: two refusals added to the spec's lists. One flag left on purpose: over-limit messages name the file's 1024 KiB limit even when the carried request, which also holds the outcomes, is what was too large. The file's own limit is what a user can act on.
 
-Still owed: the author sees the countdown move on a real file. Easy Auth's answer to a `fetch` after the session has expired can only be seen in production.
+Seen in production on 2026-10-31 (author): the countdown works on the real tenant, after Cordware imported and deployed it. Still unseen: Easy Auth's answer to a `fetch` once the session has expired.
 
 ## PR ladder
 
