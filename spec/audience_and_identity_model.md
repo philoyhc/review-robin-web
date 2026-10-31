@@ -402,7 +402,7 @@ fake identity, which it refuses outside `APP_ENV=local`
   elevated role — sign in via institutional SSO (MS365 in current
   deployments). No operator content is reachable without auth.
 - **Reviewees** and **observers** sign in the same way and are
-  matched to their roster row by **Identity match** (below).
+  matched to their roster row by **Identity match** (above).
 - **Reviewers** sign in via institutional SSO by default; magic
   links are an enhancement supporting cases where SSO is unavailable
   (e.g., external reviewers from outside the institution). The
