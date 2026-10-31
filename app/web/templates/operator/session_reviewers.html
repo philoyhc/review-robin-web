@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_roster_address.html" import roster_address %}
 {% from "_partials/profile_value.html" import profile_value with context %}
 {% import "operator/partials/_page_guidance.html" as page_guidance %}
 {% from "operator/partials/_field_label_header.html" import field_label_header, field_label_canonical_subtext %}
@@ -1049,7 +1050,7 @@
                 {% endif %}
               </td>
               <td data-sort-value="{{ reviewer.name }}">{{ reviewer.name }}</td>
-              <td data-sort-value="{{ reviewer.email }}"><code>{{ reviewer.email }}</code></td>
+              <td data-sort-value="{{ reviewer.email }}">{{ roster_address(reviewer, reviewer.email) }}</td>
               {% if show_profile_link %}
                 <td class="profile-col">
                   {{ profile_value(reviewer.profile_link, "link", new_tab=True) }}

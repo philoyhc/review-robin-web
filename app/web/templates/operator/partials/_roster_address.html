@@ -1,0 +1,8 @@
+{# A roster row's address, as the roster and Assignments tables show it
+   (segment 19Z, author 2026-10-31). A row bound to a directory account
+   (segment 21F: its address resolved at upload) reads as a plain display
+   pill, its case kept; any other address stays plain code, matching by
+   the address as written. #}
+{% macro roster_address(row, address) -%}
+<code{% if row.directory_object_id %} class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched{% endif %}>{{ address }}</code>
+{%- endmacro %}

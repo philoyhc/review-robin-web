@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "operator/partials/_roster_address.html" import roster_address %}
 {% from "operator/partials/_field_label_header.html" import field_label_header, field_label_canonical_subtext %}
 
 {% block title %}Assignments — {{ session.name }}{% endblock %}
@@ -458,14 +459,14 @@
             {% endif %}
             <td data-sort-value="{{ assignment.reviewer.name }}">
               {{ assignment.reviewer.name }} &middot;
-              <code>{{ assignment.reviewer.email }}</code>
+              {{ roster_address(assignment.reviewer, assignment.reviewer.email) }}
             </td>
             {% if col_data["rt1"] %}<td class="assignment-col col-rt1" data-sort-value="{{ assignment.reviewer.tag_1 or '' }}">{{ assignment.reviewer.tag_1 or "" }}</td>{% endif %}
             {% if col_data["rt2"] %}<td class="assignment-col col-rt2" data-sort-value="{{ assignment.reviewer.tag_2 or '' }}">{{ assignment.reviewer.tag_2 or "" }}</td>{% endif %}
             {% if col_data["rt3"] %}<td class="assignment-col col-rt3" data-sort-value="{{ assignment.reviewer.tag_3 or '' }}">{{ assignment.reviewer.tag_3 or "" }}</td>{% endif %}
             <td data-sort-value="{{ assignment.reviewee.name }}">
               {{ assignment.reviewee.name }} &middot;
-              <code>{{ assignment.reviewee.email_or_identifier }}</code>
+              {{ roster_address(assignment.reviewee, assignment.reviewee.email_or_identifier) }}
             </td>
             {% if col_data["et1"] %}<td class="assignment-col col-et1" data-sort-value="{{ assignment.reviewee.tag_1 or '' }}">{{ assignment.reviewee.tag_1 or "" }}</td>{% endif %}
             {% if col_data["et2"] %}<td class="assignment-col col-et2" data-sort-value="{{ assignment.reviewee.tag_2 or '' }}">{{ assignment.reviewee.tag_2 or "" }}</td>{% endif %}

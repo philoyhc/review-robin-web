@@ -4002,6 +4002,14 @@
       body.ui-v2 table.vp-grid:has(.vp-identity-pill:not([hidden])) th.vp-col-audience { width: 20%; }
       body.ui-v2 table.vp-grid:has(.vp-identity-pill:not([hidden])) th.vp-col-ongoing { width: 28%; }
       body.ui-v2 table.vp-grid:has(.vp-identity-pill:not([hidden])) th.vp-col-released { width: 52%; }
+      /* A roster address bound to a directory account (segment 19Z):
+         the plain display pill on its `<code>`, keeping the address's
+         case and the code face, sized as the plain addresses beside it. */
+      body.ui-v2 .pill.pill-address {
+        text-transform: none;
+        font-size: inherit;
+        margin-right: 0;
+      }
       body.ui-v2 .pill-count,
       body.ui-v2 .pill.pill-info {
         background: var(--status-info-bg);
