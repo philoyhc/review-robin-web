@@ -47,6 +47,9 @@ Graph from application code is proved (Cordware's first release, 2026-10-31). Th
   - the address as written, which is what the Setup pages show;
   - the allowlists, which have no upload step: `OPERATOR_EMAILS`, `SYS_ADMIN_EMAILS` and `SUPER_ADMIN_EMAILS` stay mail-only;
   - Residential's matching, which has its own plan.
+- **One person across rosters.** Wherever two roster rows are asked whether they are the same person, two rows bound to the same object ID are the same person. Otherwise the address decides, as today. Without this, Jane listed as a reviewer by UPN and as a reviewee by mail would review herself as a peer (Codex, `#3424`). One helper (`participants.same_person`) decides, and every such comparison uses it:
+  - self-review: `assignments/_self_review.py` and `rules/engine.py._is_self_review`, including group membership;
+  - the cross-table identity checks: `csv_imports._identity_holders` and `cross_table_identity_conflict`, and `validation._identity_holders_by_email`.
 - **Copying a session** carries the stored account fields.
 - **The single-row add forms** resolve their one address the same way.
 - **An address edit rebinds.** `update_reviewer`, `update_reviewee` and `update_observer` resolve the new address the same way. Without a lookup (no token, or not found) the old binding is cleared, never kept: a row edited from Alice's address to Bob's must not stay bound to Alice (Codex, `#3424`). An edit that leaves the address unchanged, folded, keeps the binding.
@@ -66,6 +69,7 @@ Taken 2026-10-31 at `2bb3e01`.
 | SQL roster filters on one address | 3 in `services/participants.py` | `grep -n "func.lower(func.trim(" app/services/participants.py` |
 | Roster CSV parsers | 3 (`parse_reviewer_csv`, `parse_reviewee_csv`, `parse_observer_csv`) | `grep -n "^def parse_.*_csv" app/services/csv_imports.py` |
 | Roster row constructors | 6 (3 single-add services, 3 in `session_clone.py`) | `grep -rn "Reviewer(\|Observer(\|Reviewee(" app/services --include=*.py` |
+| Same-person comparisons across rosters | 5 functions in 4 files (`assignments/_self_review.py`, `rules/engine.py`, `csv_imports.py`, `validation.py`) | `grep -rn "def is_self_review\|def _is_self_review\|def cross_table_identity_conflict\|def _identity_holders" app --include=*.py` |
 | Roster address edits | 3 (`update_reviewer`, `update_reviewee`, `update_observer`) | `grep -rn "def update_reviewer\|def update_reviewee\|def update_observer" app/services` |
 | Held-upload routes | 4 setup modules | `grep -rln "HeldUpload\|held_upload" app/web/routes_operator --include=*.py` |
 | Models touched | 3 (`reviewer`, `reviewee`, `observer`) | `ls app/db/models/{reviewer,reviewee,observer}.py` |
@@ -83,7 +87,7 @@ Taken 2026-10-31 at `2bb3e01`.
      - the single-add forms;
      - address edits rebinding, or clearing the binding.
    - Must not change any gate.
-5. **Matching by account.** The 14 sites and 3 SQL filters prefer the object ID, then fall back to mail. Tests include two negative cases: `FAKE_USERS`' `office@` collision, where the account whose UPN is the roster's mail is not admitted; and a persisted principal ID that differs from the token's, which binds nothing. Last build rung, so `diff-reviewer` reads 2–5.
+5. **Matching by account.** The 14 sites and 3 SQL filters prefer the object ID, then fall back to mail. The same-person comparisons move to `participants.same_person`. Tests include two negative cases: `FAKE_USERS`' `office@` collision, where the account whose UPN is the roster's mail is not admitted; and a persisted principal ID that differs from the token's, which binds nothing. Last build rung, so `diff-reviewer` reads 2–5.
 6. **Close.** `spec-writer` on the doc-impact specs, then the author's browser check of a UPN roster on the real tenant.
 
 ## Definition of done
@@ -92,6 +96,7 @@ Taken 2026-10-31 at `2bb3e01`.
 - The `office@` collision admits neither the wrong account by UPN nor anyone by an `AMBIGUOUS` binding (test).
 - A user row whose stored principal ID belongs to an earlier holder of its email does not admit a new account to rows bound to the earlier one (test).
 - An unresolved, external or anonymous row matches exactly as before (tests).
+- A reviewer row by UPN and a reviewee row by mail for one account are a self-review, both in assignments and in the rules engine, groups included. The cross-table identity checks treat them as one person (tests).
 - Editing a bound row's address rebinds it, or clears the binding when the new address doesn't resolve. The old account loses access and the new one gains it, for all three roster types (tests).
 - With no token, the upload proceeds unchecked and says so (test).
 - The new columns survive `alembic downgrade base` and `upgrade head` on Postgres (CI).
