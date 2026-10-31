@@ -37,9 +37,23 @@ def test_a_file_with_an_email_column_previews_its_counts(client: TestClient) -> 
     assert "Placeholder" not in text
     assert "Preview: <code>list.csv</code>" in text
     assert '<option value="1" selected>Email</option>' in text
-    for label, n in [("Rows", 3), ("Addresses to check", 2), ("kept, not checked", 1), ("checked once", 1)]:
-        assert re.search(label + r"[^<]*</th><td class=\"n\">" + str(n) + "<", text), label
+    for label, n in [("Rows", 3), ("kept, not checked", 1), ("checked once", 1), ("Addresses to check", 1)]:
+        assert re.search(label + r"[^<]*</th><td class=\"n\"[^>]*>" + str(n) + "<", text), label
     assert _carried(text) == data
+
+
+def test_the_counts_read_as_a_subtraction(client: TestClient) -> None:
+    """Rows, less blanks, less repeats, leaves the lookups: listed in that
+    order, the last the distinct addresses (segment U2)."""
+    data = b"email\r\na@x.edu\r\nnot an address\r\nB@x.edu\r\nA@x.edu\r\nb@x.edu\r\nc@x.edu\r\n"
+    text = _upload(client, data).text
+    labels = ["Rows", "kept, not checked", "checked once", "Addresses to check"]
+    numbers = [
+        int(re.search(label + r"[^<]*</th><td class=\"n\"[^>]*>(\d+)<", text).group(1)) for label in labels
+    ]
+    assert numbers == [6, 1, 2, 3]
+    assert numbers[0] - numbers[1] - numbers[2] == numbers[3]
+    assert [text.index(label) for label in labels] == sorted(text.index(label) for label in labels)
 
 
 def test_without_an_email_column_the_operator_chooses(client: TestClient) -> None:
@@ -52,7 +66,7 @@ def test_without_an_email_column_the_operator_chooses(client: TestClient) -> Non
     )
     assert chosen.status_code == 200
     assert '<option value="1" selected>Work address</option>' in chosen.text
-    assert re.search(r"Addresses to check</th><td class=\"n\">1<", chosen.text)
+    assert re.search(r"Addresses to check</th><td class=\"n\"[^>]*>1<", chosen.text)
     assert _carried(chosen.text) == data
 
 
@@ -117,7 +131,7 @@ def test_a_column_that_is_not_a_plain_index_is_ignored(client: TestClient, colum
 def test_the_check_posts_the_carried_file_to_the_check(client: TestClient) -> None:
     text = _upload(client, b"email\r\na@x.edu\r\n").text
     assert re.search(
-        r'<button class="btn primary" type="submit" formaction="/utilities/email-check/check">Check addresses',
+        r'<button class="btn primary" type="submit" id="check-button" formaction="/utilities/email-check/check">Check addresses',
         text,
     )
     assert "no-store" in _upload(client, b"email\r\na@x.edu\r\n").headers["cache-control"]

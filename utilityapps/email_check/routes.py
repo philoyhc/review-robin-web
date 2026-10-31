@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import json
 import logging
 from dataclasses import dataclass
 from datetime import date
@@ -20,7 +21,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.datastructures import FormData, UploadFile
 from starlette.requests import Request
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from cordware.graph import GraphError, directory_for
 from cordware.identity import resolve_identity
@@ -34,9 +35,12 @@ log = logging.getLogger(__name__)
 # no size limit in Starlette: past 1 MiB it is spooled to a temporary
 # file. So the whole request is held to `MAX_BYTES`, which keeps the file
 # in memory and refuses it unread. The preview carries the file back
-# URL-encoded, as base64 a third larger, with no file part to spool.
+# URL-encoded, as base64 a third larger, with no file part to spool, and
+# from segment U2 with the outcomes the page's batches collected.
 _UPLOAD_LIMIT = csvio.MAX_BYTES
-_CARRIED_LIMIT = 2 * csvio.MAX_BYTES
+_CARRIED_LIMIT = 3 * csvio.MAX_BYTES
+# One batch of keys from the page (segment U2).
+_LOOKUP_LIMIT = 16 * 1024
 _FORM_PART_LIMIT = _CARRIED_LIMIT
 # Results hold names and addresses: never cached anywhere (spec §10).
 _NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
@@ -70,6 +74,10 @@ class _Posted:
     filename: str
     upload: csvio.Upload
     column: int | None
+    #: The page's collected outcomes and why its batches stopped, if they
+    #: did (segment U2): absent when the page posted without its script.
+    outcomes: str | None = None
+    stopped: str = ""
 
 
 async def _read(request: Request) -> _Posted | Response:
@@ -108,7 +116,15 @@ async def _read(request: Request) -> _Posted | Response:
     # `isdecimal`, not `isdigit`: "²" is a digit `int` refuses (diff-reviewer).
     if chosen.isdecimal() and int(chosen) < len(parsed.header):
         column = int(chosen)
-    return _Posted(data, filename, parsed, column)
+    outcomes = form.get("outcomes")
+    return _Posted(
+        data,
+        filename,
+        parsed,
+        column,
+        outcomes=outcomes if isinstance(outcomes, str) else None,
+        stopped=str(form.get("stopped", "")),
+    )
 
 
 def _preview(request: Request, posted: _Posted, *, no_graph: bool = False) -> Response:
@@ -142,12 +158,21 @@ async def run_check(request: Request) -> Response:
         return posted
     if posted.column is None:
         return _preview(request, posted)
-    try:
-        directory = directory_for(request)
-    except GraphError:
-        # No delegated token: say so, and check nothing (spec §3).
-        return _preview(request, posted, no_graph=True)
-    result = await run_in_threadpool(check.run, posted.upload, posted.column, directory)
+    if posted.outcomes is not None:
+        # The page's batches already looked every key up (segment U2).
+        keys = csvio.preview(posted.upload, posted.column).keys
+        try:
+            carried = check.outcomes_from_json(json.loads(posted.outcomes), keys)
+        except (ValueError, RecursionError):
+            return _upload_error(request, "The check's results could not be read. Upload the file again.")
+        result = check.run(posted.upload, posted.column, None, carried=carried, stopped=posted.stopped)
+    else:
+        try:
+            directory = directory_for(request)
+        except GraphError:
+            # No delegated token: say so, and check nothing (spec §3).
+            return _preview(request, posted, no_graph=True)
+        result = await run_in_threadpool(check.run, posted.upload, posted.column, directory)
     # Counts and failure kinds only: never an address, a name or an id.
     log.info(
         "email check completed",
@@ -169,6 +194,43 @@ async def run_check(request: Request) -> Response:
             + base64.b64encode(("﻿" + result.csv).encode("utf-8")).decode("ascii"),
             "download_name": f"email-check-results-{date.today():%Y%m%d}.csv",
         },
+    )
+
+
+def _lookup_error(status: int, error: str) -> JSONResponse:
+    return JSONResponse({"error": error}, status_code=status, headers=_NO_STORE)
+
+
+@router.post("/lookup", name="utilities_email_check_lookup")
+async def lookup(request: Request) -> Response:
+    """One batch of the page's check (segment U2): ``{"keys": [...]}`` in,
+    ``{"outcomes": {key: outcome}}`` out. JSON only, so a cross-site form
+    cannot post it without a preflight."""
+    if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
+        return _lookup_error(415, "json_required")
+    length = request.headers.get("content-length", "")
+    if not length.isdecimal() or int(length) > _LOOKUP_LIMIT:
+        return _lookup_error(413, "too_large")
+    try:
+        body = json.loads(await request.body())
+    except (ValueError, RecursionError):
+        return _lookup_error(400, "bad_json")
+    keys = body.get("keys") if isinstance(body, dict) else None
+    if (
+        not isinstance(keys, list)
+        or not 1 <= len(keys) <= check.BATCH_MAX
+        or not all(isinstance(k, str) and csvio.lookup_key(k) == k for k in keys)
+    ):
+        return _lookup_error(400, "bad_keys")
+    try:
+        directory = directory_for(request)
+    except GraphError:
+        return _lookup_error(503, "no_graph")
+    outcomes = await run_in_threadpool(
+        check.look_up_all, directory, keys, budget=check.BATCH_BUDGET
+    )
+    return JSONResponse(
+        {"outcomes": {k: check.outcome_json(o) for k, o in outcomes.items()}}, headers=_NO_STORE
     )
 
 

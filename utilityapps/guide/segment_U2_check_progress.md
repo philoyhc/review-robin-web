@@ -44,9 +44,9 @@ The checker's first real-tenant run went through on 2026-10-31, the day of Cordw
 
 ## Judgment calls — decided
 
-- **Batches run one at a time, five keys each** (`BATCH_MAX` 25 caps a request). That is close to today's four in flight, so Graph sees the same load.
+- **Batches run one at a time, five keys each** (`BATCH_MAX` 25 caps a request). That is close to today's four in flight, so Graph sees the same load. *Changed at build (2026-10-31):* one key per request, four in flight, so the count drops by one per address as asked, with the same load on Graph.
 - **The script lives inline in `preview.html`,** as RRW's progressive-enhancement scripts do. No asset pipeline.
-- **The batch budget is 60 s,** far above a five-key batch. It bounds a stuck request well under the front end's limit.
+- **The batch budget is 60 s,** far above a single-key request. It bounds a stuck request well under the front end's limit.
 
 ## Blast radius (measured)
 
@@ -59,6 +59,10 @@ Taken 2026-10-31 at `92f4ed2`.
 | Checker test files | 4 | `ls utilityapps/tests/test_email_check_*.py` |
 | Spec sections touched | 3 ("Preview", "Check", "Result") | `grep -n "^## " utilityapps/spec/email_check.md` |
 
+## Status
+
+Open. Plan `#3420`. Rungs 2 and 3 landed together in `#3421`, since rung 3 was built while rung 2 waited on CI. One `diff-reviewer` read covers both, on `1a6cafd..HEAD`. The decision changed at build: one key per request, four in flight (Judgment calls). The read found nothing blocking and nine points, fixed in `#3421` unless noted: a column changed but not previewed now takes the plain path; a network error keeps a refused sign-in's kind; only the endpoint's own `no_graph` 503 falls back; carried error kinds are allowlisted (`check.ERROR_KINDS`); the `incomplete` note reads plainly; a page restored from the back/forward cache resets; plan and spec wording. Kept as specified: one failed request stops the page.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -69,7 +73,7 @@ Taken 2026-10-31 at `92f4ed2`.
 ## Definition of done
 
 - The preview lists the four counts in the order above, and *Addresses to check* = rows − blanks − repeats (test).
-- With the script, a check of N distinct addresses makes ⌈N / 5⌉ `/lookup` requests and one `/check`. The result equals the no-script path's for the same directory (test).
+- With the script, a check of N distinct addresses makes N `/lookup` requests and one `/check` (read from the script; the browser check confirms). The result built from the collected outcomes equals the no-script path's for the same directory (test).
 - `/lookup` refuses a non-super-admin, a non-JSON body, an empty or oversized batch, and a key that isn't a lookup key (tests).
 - `/check` refuses outcomes that don't fit the file, and marks missing keys `ERROR` (`incomplete`) (tests).
 - The author sees the countdown move on a real file.

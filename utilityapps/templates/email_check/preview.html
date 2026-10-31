@@ -22,12 +22,14 @@
     {% endif %}
     {% if counts %}
       <table aria-label="What the file holds">
+        {# Read as a subtraction: rows, less blanks, less repeats, leaves the lookups (segment U2). #}
         <tr><th scope="row">Rows</th><td class="n">{{ counts.rows }}</td></tr>
-        <tr><th scope="row">Addresses to check</th><td class="n">{{ counts.valid }}</td></tr>
         <tr><th scope="row">Blank or not an address: kept, not checked</th><td class="n">{{ counts.invalid }}</td></tr>
         <tr><th scope="row">Repeats of an address already in the file: checked once</th><td class="n">{{ counts.repeated }}</td></tr>
+        <tr><th scope="row">Addresses to check</th><td class="n" id="to-check">{{ counts.distinct }}</td></tr>
       </table>
-      <p class="note">Nothing has been looked up yet.</p>
+      <p class="note" id="check-note" aria-live="polite">Nothing has been looked up yet.</p>
+      <script type="application/json" id="check-keys">{{ counts.keys | list | tojson }}</script>
     {% endif %}
     {% if no_graph %}
       <div class="card alert" role="alert">
@@ -35,8 +37,139 @@
       </div>
     {% endif %}
     <div class="actions">
-      <button class="btn primary" type="submit" formaction="{{ url('/email-check/check') }}"{% if column is none or no_graph %} disabled{% endif %}>Check addresses</button>
+      <button class="btn primary" type="submit" id="check-button" formaction="{{ url('/email-check/check') }}"{% if column is none or no_graph %} disabled{% endif %}>Check addresses</button>
       <a class="btn secondary" href="{{ url('/email-check/') }}">Start over</a>
     </div>
+    <input type="hidden" name="outcomes" id="check-outcomes" disabled>
+    <input type="hidden" name="stopped" id="check-stopped" disabled>
   </form>
+  {% if counts and not no_graph %}
+  <script>
+    // Segment U2: check in batches from the page, counting down. Without
+    // this script the button posts the whole check to /check, as before.
+    (function () {
+      var button = document.getElementById("check-button");
+      var keysNode = document.getElementById("check-keys");
+      if (!button || !keysNode || !window.fetch) { return; }
+      var lookupUrl = {{ url('/email-check/lookup') | tojson }};
+      var checkUrl = {{ url('/email-check/check') | tojson }};
+      var workers = 4;
+      var signInKinds = ["unauthorized", "forbidden"];
+      var form = button.form;
+      var counter = document.getElementById("to-check");
+      var note = document.getElementById("check-note");
+      var column = form.elements.column;
+      var previewed = column ? column.value : "";
+
+      // A page restored from the back/forward cache keeps what the script
+      // set: put the form back as it was rendered.
+      window.addEventListener("pageshow", function (event) {
+        if (!event.persisted) { return; }
+        document.getElementById("check-outcomes").disabled = true;
+        document.getElementById("check-stopped").disabled = true;
+        form.removeAttribute("action");
+        form.action = {{ url('/email-check/preview') | tojson }};
+        button.disabled = false;
+        if (column) { column.disabled = false; column.value = previewed; }
+        counter.textContent = String(JSON.parse(keysNode.textContent).length);
+      });
+
+      function finish(outcomes, stopped) {
+        var field = document.getElementById("check-outcomes");
+        field.value = JSON.stringify(outcomes);
+        field.disabled = false;
+        var stop = document.getElementById("check-stopped");
+        stop.value = stopped;
+        stop.disabled = false;
+        // The outcomes are the previewed column's: post that column,
+        // whatever the select shows (a disabled select would not post).
+        if (column) { column.disabled = false; column.value = previewed; }
+        form.action = checkUrl;
+        form.submit();
+      }
+
+      button.addEventListener("click", function (event) {
+        // The keys are the previewed column's: a column chosen since, and
+        // not yet previewed, goes the plain way, which reads the new one.
+        if (column && column.value !== previewed) { return; }
+        event.preventDefault();
+        var keys = JSON.parse(keysNode.textContent);
+        var outcomes = {};
+        var left = keys.length;
+        var nextIndex = 0;
+        var running = 0;
+        var stopped = "";
+        var done = false;
+        button.disabled = true;
+        // The column is fixed for the run: its keys are being looked up.
+        if (column) { column.disabled = true; }
+        note.textContent = "Checking…";
+
+        function end(why) {
+          if (done) { return; }
+          done = true;
+          finish(outcomes, why);
+        }
+
+        // One address per request, four in flight, as the server's own
+        // pool does: the count drops by one as each comes back.
+        function pump() {
+          if (done) { return; }
+          if (stopped || (nextIndex >= keys.length && running === 0)) {
+            if (running === 0) { end(stopped); }
+            return;
+          }
+          while (!stopped && running < workers && nextIndex < keys.length) {
+            send(keys[nextIndex]);
+            nextIndex += 1;
+          }
+        }
+
+        function send(key) {
+          running += 1;
+          fetch(lookupUrl, {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "Accept": "application/json"},
+            body: JSON.stringify({keys: [key]}),
+            credentials: "same-origin"
+          }).then(function (response) {
+            if (!response.ok) {
+              return response.json().catch(function () { return {}; }).then(function (body) {
+                if (response.status === 503 && body.error === "no_graph" && !done) {
+                  // No directory access: the plain post shows the preview's alert.
+                  done = true;
+                  if (column) { column.disabled = false; column.value = previewed; }
+                  form.action = checkUrl;
+                  form.submit();
+                  return null;
+                }
+                throw new Error("lookup " + response.status);
+              });
+            }
+            return response.json();
+          }).then(function (body) {
+            running -= 1;
+            if (body === null || done) { return; }
+            var outcome = body.outcomes[key];
+            if (outcome) {
+              outcomes[key] = outcome;
+              if (outcome.status === "ERROR" && signInKinds.indexOf(outcome.error_kind) !== -1) {
+                stopped = outcome.error_kind;
+              }
+            }
+            left -= 1;
+            counter.textContent = String(left);
+            pump();
+          }).catch(function () {
+            // What was looked up is kept; the rest download as ERROR, with
+            // a refused sign-in's kind when one stopped the run.
+            running -= 1;
+            end(stopped);
+          });
+        }
+        pump();
+      });
+    })();
+  </script>
+  {% endif %}
 {% endblock %}
