@@ -320,7 +320,9 @@ does not close it.
 **Do, after the cutover.** Choose the trigger the deployment supports
 and run `observe_scheduled_events` from it for every session with a
 pending anchor. **Pass `build_invite_url`**, built from the deployment's
-base URL: without it the invite and reminder triggers return early
+base URL, which is the host's `CORDWARE_PUBLIC_ORIGIN` (segment 21E; today
+only `CordwareSettings` reads it, so the worker needs it moved where an
+application can, `guide/segment_14B_email_infrastructure.md` Part C): without it the invite and reminder triggers return early
 (`_invites.py`, `_reminders.py`) and only activation runs. A page view
 gets that URL from its request; a clock does not. Keep the page-view
 sweep as a backstop. `spec/lifecycle.md` §8.3, the minimum-lead-time
