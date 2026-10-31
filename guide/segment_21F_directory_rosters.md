@@ -88,6 +88,15 @@ Rung 5, decided at build (2026-10-31):
 - **Self-review** (assignments, including group membership, and the rules engine) treats two rows bound to one account as one person.
 - **The cross-table name check stays address-based.** It guards two names on one address, and an import's rows aren't resolved until after it runs. A person entered by UPN and by mail under two names is not flagged; self-review and matching still treat them as one.
 
+Rung 5's `diff-reviewer` read of the cumulative diff (`ddb61b2..HEAD`) found no authorization hole. It found 11 items, all handled in `#3430`:
+- **Self-review by account, everywhere.** The instrument preview's group lookup and the Full Matrix count still keyed on the address. Both now read `email_identity.same_identity`, as do both self-review tests and `participants.same_person`, its row form.
+- **Quick Setup and rehydrate resolve too.** Both saved rosters unbound, and a rehydrate dropped every binding. The plan named only the Setup pages; the ruling "at upload" covers every upload path.
+- **Bindings are audited.** `*.created` snapshots `directory_object_id`, and an edit that moves it records it in `changes`.
+- **`/me/debug` stamps the principal**, so its back link works for a bound row.
+- **One account can hold two rows in one roster** (Jane by mail and by UPN). The gates now take the lowest id, so the choice holds across requests. Refusing such duplicates is an open question.
+- Tests added: the reviewer gate, and an edit that moves access from one account to the other.
+- Two items are recorded, not changed. The fake user binds nothing, so locally only the unbound path can be exercised; the bound path needs the real tenant. And `cordware/identity.py` reads the email from `preferred_username` when the email claim is absent, so the `office@` protection depends on the tenant issuing that claim.
+
 ## PR ladder
 
 1. **This plan.** Prose only.
@@ -124,6 +133,7 @@ Rung 5, decided at build (2026-10-31):
 
 - ~~Invitations for a row resolved by UPN~~ go to the directory's mail (author, 2026-10-31).
 - ~~Offer to rewrite UPN cells at upload~~: no (author, 2026-10-31).
+- Should an upload refuse, or Validate flag, two rows in one roster bound to the same account? The gates pick the lowest id until this is ruled. The author decides.
 
 ## Out of scope
 
@@ -139,4 +149,5 @@ Rung 5, decided at build (2026-10-31):
 - `spec/csv_contracts.md` — the preview's directory outcomes and the stored account fields (rung 4).
 - `spec/audience_and_identity_model.md` — the identity-match rule: account first, then mail (rung 5).
 - `spec/participant_model.md` — the reviewee and observer gates' match (rung 5).
+- `spec/architecture.md` — "Identity is Cordware's": RRW's direct `cordware.graph` imports (`app/services/directory_accounts.py`, `app/web/routes_operator/_shared.py`) (rung 5).
 - `guide/todo_master.md` — the queue entry, deleted at close.

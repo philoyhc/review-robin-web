@@ -26,7 +26,7 @@ from app.db.models import (
 )
 from app.services import audit
 from app.services import session_lifecycle as lifecycle
-from app.services.email_identity import normalize_email, normalize_object_id
+from app.services.email_identity import normalize_email, normalize_object_id, same_identity
 from app.services.instruments import _instrument_label
 from app.services.roster_status import is_active, status_is_active
 
@@ -59,12 +59,11 @@ def _is_self_review_pair(
     # exactly when the accounts are one, whatever addresses they were
     # written with (Jane's UPN on the reviewer roster, her mail on the
     # reviewee roster).
-    if reviewer_object_id and reviewee_object_id:
-        return normalize_object_id(reviewer_object_id) == normalize_object_id(reviewee_object_id)
-    if "@" not in reviewee_identifier:
+    both_bound = bool(reviewer_object_id and reviewee_object_id)
+    if not both_bound and "@" not in reviewee_identifier:
         return False
-    return normalize_email(reviewer_email) == normalize_email(
-        reviewee_identifier
+    return same_identity(
+        reviewer_object_id, reviewer_email, reviewee_object_id, reviewee_identifier
     )
 
 

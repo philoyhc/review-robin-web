@@ -54,7 +54,7 @@ from app.web.deps import (
     get_or_create_user,
     request_correlation_id,
 )
-from app.web.routes_operator._shared import _templates
+from app.web.routes_operator._shared import _templates, directory_or_none
 from app.web.downloads import content_disposition
 
 router = APIRouter()
@@ -232,6 +232,7 @@ def rehydrate_commit(
             files=files,
             user=user,
             correlation_id=request_correlation_id(),
+            directory=directory_or_none(request),
         )
     except RehydrateError as exc:
         # The service has already rolled back and removed the partial

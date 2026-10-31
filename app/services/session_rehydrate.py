@@ -531,6 +531,7 @@ def rehydrate_session(
     user: User,
     correlation_id: str | None = None,
     today: _dt.date | None = None,
+    directory: Any = None,
 ) -> RehydrateOutcome:
     """Rebuild a live session from a complete extract file set.
 
@@ -545,6 +546,10 @@ def rehydrate_session(
 
     Assumes the caller has already run :func:`analyze_rehydrate_set` on the
     same set and got a clean verdict; the parsers here still fail safe.
+
+    ``directory`` is the operator's (segment 21F): each roster's addresses
+    are resolved through it as an import's are, since an extract carries
+    no binding. ``None`` checks nothing, and every row matches by mail.
     """
     from app.schemas.sessions import SessionCreate
     from app.services import audit, csv_imports, relationships, sessions
@@ -621,6 +626,9 @@ def rehydrate_session(
             filename="reviewers.csv",
             correlation_id=correlation_id or "",
             field_labels_captured=reviewers_parse.field_labels,
+            directory=csv_imports.directory_check(
+                directory, [row.email for row in reviewers_parse.rows]
+            ),
         )
 
         reviewees_parse = csv_imports.parse_reviewee_csv(resolved["reviewees"])
@@ -634,6 +642,9 @@ def rehydrate_session(
             filename="reviewees.csv",
             correlation_id=correlation_id or "",
             field_labels_captured=reviewees_parse.field_labels,
+            directory=csv_imports.directory_check(
+                directory, [row.email_or_identifier for row in reviewees_parse.rows]
+            ),
         )
 
         if "observers" in resolved:
@@ -647,6 +658,9 @@ def rehydrate_session(
                 rows=observers_parse.rows,
                 filename="observers.csv",
                 correlation_id=correlation_id or "",
+                directory=csv_imports.directory_check(
+                    directory, [row.email for row in observers_parse.rows]
+                ),
             )
 
         # 3. Relationships — resolve against the just-imported rosters.

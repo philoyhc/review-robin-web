@@ -106,6 +106,66 @@ def test_the_count_equals_the_walk(
     assert counted.self_reviews_excluded == (6 if override else 0)
 
 
+JANE_OID = "11111111-1111-4111-8111-111111111111"
+PAT_OID = "22222222-2222-4222-8222-222222222222"
+
+
+def test_the_count_equals_the_walk_on_bound_rows(db: Session) -> None:
+    """Segment 21F: Jane is a reviewer by UPN and a reviewee by mail, both
+    bound to her account, so one self-review; Pat's bound reviewer row and
+    a reviewee row at the same address bound to another account are two
+    people, while an unbound reviewee at Pat's address falls back to the
+    address."""
+    user = User(email="op-fp-bound@example.edu")
+    db.add(user)
+    db.flush()
+    review_session = ReviewSession(name="Fast", code="fp-bound", created_by_user_id=user.id)
+    db.add(review_session)
+    db.flush()
+    sid = review_session.id
+    db.add_all(
+        [
+            Reviewer(session_id=sid, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID),
+            Reviewer(session_id=sid, name="Pat", email="pat@example.edu", directory_object_id=PAT_OID),
+            Reviewer(session_id=sid, name="Lee", email="lee@example.edu"),
+            Reviewee(
+                session_id=sid, name="Jane", email_or_identifier="jane.tan@example.edu",
+                directory_object_id=JANE_OID.upper(),
+            ),
+            Reviewee(
+                session_id=sid, name="Not Pat", email_or_identifier="pat@example.edu",
+                directory_object_id="33333333-3333-4333-8333-333333333333",
+            ),
+            Reviewee(session_id=sid, name="Pat unbound", email_or_identifier="PAT@example.edu"),
+            Reviewee(
+                session_id=sid, name="Lee bound", email_or_identifier="lee@example.edu",
+                directory_object_id="44444444-4444-4444-8444-444444444444",
+            ),
+        ]
+    )
+    db.flush()
+    instrument = ensure_default_instrument(db, review_session)
+    inputs = _generate._load_reconcile_inputs(db, review_session, None)
+    walked = _generate._diff_one_instrument(
+        db,
+        review_session=review_session,
+        instrument=instrument,
+        session_rule_set=None,
+        reviewers=inputs.reviewers,
+        reviewees=inputs.reviewees,
+        pair_context_lookup=inputs.pair_context_lookup,
+        override_exclude_self_reviews=True,
+    )
+    counted = _generate._full_matrix_never_generated_state(
+        inputs.reviewers, inputs.reviewees, override_exclude_self_reviews=True
+    )
+    assert counted.eligible == walked.pairs_count
+    assert counted.self_reviews_excluded == walked.excluded_counts.get("self_review", 0)
+    # Jane by account, Pat against the unbound row, Lee against the bound
+    # row at his address (one side unbound: the address decides).
+    assert counted.self_reviews_excluded == 3
+
+
 def test_a_never_generated_full_matrix_instrument_is_not_walked(
     db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:

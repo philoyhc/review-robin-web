@@ -92,6 +92,32 @@ def test_an_import_binds_each_resolved_address_and_counts_the_check(
     }
 
 
+def test_a_quick_setup_upload_binds_too(
+    client: TestClient, db: Session, directory: FakeDirectory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.web.routes_operator import _quick_setup
+
+    monkeypatch.setattr(_quick_setup, "directory_or_none", lambda request: directory)
+    session = _session(client, db, "dir-quick")
+    for roster, csv in (
+        ("reviewers", "ReviewerName,ReviewerEmail\nJane,e0123456@example.edu\n"),
+        ("reviewees", "RevieweeName,RevieweeEmail\nJane,jane.tan@example.edu\n"),
+        ("observers", "ObserverName,ObserverEmail\nJane,e0123456@example.edu\n"),
+    ):
+        response = client.post(
+            f"/operator/sessions/{session.public_id}/quick-setup/{roster}",
+            files={"file": (f"{roster}.csv", csv.encode(), "text/csv")},
+            follow_redirects=False,
+        )
+        assert response.status_code in (200, 303), response.text[:300]
+    for model in (Reviewer, Reviewee, Observer):
+        assert _bound(_row(db, model, session.id)) == JANE
+    event = db.execute(
+        select(AuditEvent).where(AuditEvent.event_type == "reviewers.imported")
+    ).scalar_one()
+    assert event.detail["counts"]["directory_by_upn"] == 1
+
+
 def test_anonymous_reviewee_identifiers_are_neither_looked_up_nor_counted(
     client: TestClient, db: Session, directory: FakeDirectory
 ) -> None:

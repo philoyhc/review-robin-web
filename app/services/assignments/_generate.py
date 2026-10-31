@@ -892,29 +892,40 @@ def _full_matrix_never_generated_state(
     the self-review pairs only when ``override_exclude_self_reviews`` is
     true; and the per-instrument exclusion needs a pinned rule set, so it
     never applies here. A self-review pair is the engine's own test,
-    ``rules.engine._is_self_review``: both normalized addresses non-empty
-    and equal. No rows means not stale. ``tests/integration/
+    ``rules.engine._is_self_review``: two rows bound to directory
+    accounts when the accounts are one, else both normalized addresses
+    non-empty and equal (``email_identity.same_identity``, segment 21F).
+    No rows means not stale. ``tests/integration/
     test_assignments_staleness_fast_path.py`` holds this to the walk.
     """
     from collections import Counter
 
-    from app.services.email_identity import normalize_email
+    from app.services.email_identity import normalize_email, normalize_object_id
 
     total = len(reviewers) * len(reviewees)
     excluded = 0
     if override_exclude_self_reviews:
-        identifiers = Counter(
-            key
-            for key in (
-                normalize_email(r.email_or_identifier) for r in reviewees
-            )
-            if key
+        # A bound reviewer is one person with the reviewees bound to the
+        # same account and with the unbound ones at its address; an
+        # unbound reviewer, with every reviewee at its address.
+        by_address = Counter(normalize_email(e.email_or_identifier) for e in reviewees)
+        unbound_by_address = Counter(
+            normalize_email(e.email_or_identifier)
+            for e in reviewees
+            if not e.directory_object_id
         )
-        excluded = sum(
-            identifiers[key]
-            for key in (normalize_email(r.email) for r in reviewers)
-            if key
+        by_account = Counter(
+            normalize_object_id(e.directory_object_id)
+            for e in reviewees
+            if e.directory_object_id
         )
+        for r in reviewers:
+            address = normalize_email(r.email)
+            if r.directory_object_id:
+                excluded += by_account[normalize_object_id(r.directory_object_id)]
+                excluded += unbound_by_address[address] if address else 0
+            elif address:
+                excluded += by_address[address]
     return InstrumentReconcileState(
         stale=False,
         eligible=total - excluded,

@@ -228,6 +228,7 @@ def create_reviewer(
         payload=audit.snapshot(
             {
                 "reviewer_id": reviewer.id,
+                "directory_object_id": reviewer.directory_object_id,
                 "name": clean_name,
                 "email": clean_email,
                 "profile_link": clean_profile_link,
@@ -344,12 +345,14 @@ def update_reviewer(
         setattr(reviewer, field, new_value)
     # Segment 21F: a changed address rebinds, or loses its binding.
     if "email" in changes:
-        directory_accounts.rebind(
+        moved = directory_accounts.rebind(
             reviewer,
             old=changes["email"][0],  # type: ignore[arg-type]
             new=changes["email"][1],  # type: ignore[arg-type]
             resolve=resolve_account,
         )
+        if moved is not None:
+            changes["directory_object_id"] = moved
     db.flush()
 
     # ``Assignment.is_self_review`` is keyed off ``reviewer.email``

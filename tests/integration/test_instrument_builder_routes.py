@@ -8301,6 +8301,27 @@ def test_preview_sample_exclusion_drops_the_whole_group(
     )
 
 
+def test_preview_sample_exclusion_finds_the_group_by_account(
+    client: TestClient, db: Session
+) -> None:
+    """Segment 21F: Sam is a reviewer by one address and a reviewee by
+    another, both bound to one directory account. The preview finds his
+    group by the account, as Generate does, so Zoe is not offered."""
+    review_session, instrument, rule_set = _preview_session_with_self_pair(
+        client, db, "prev-self-account"
+    )
+    sam_r = db.query(Reviewer).filter_by(session_id=review_session.id).one()
+    sam_r.email = "e0123456@example.edu"
+    sam_r.directory_object_id = "11111111-1111-4111-8111-111111111111"
+    sam_e = db.query(Reviewee).filter_by(session_id=review_session.id, name="Sam").one()
+    sam_e.directory_object_id = "11111111-1111-4111-8111-111111111111"
+    instrument.group_kind = "r1"
+    rule_set.exclude_self_reviews = True
+    db.commit()
+
+    assert _sample(db, instrument) is None
+
+
 def test_preview_sample_exclusion_follows_the_live_link3_pill(
     client: TestClient, db: Session
 ) -> None:

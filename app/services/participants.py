@@ -23,7 +23,12 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Observer, Reviewee, Reviewer, ReviewSession
 from app.services import visibility_policies
-from app.services.email_identity import looks_like_email, normalize_email, normalize_object_id
+from app.services.email_identity import (
+    looks_like_email,
+    normalize_email,
+    normalize_object_id,
+    same_identity,
+)
 from app.services.session_lifecycle import SessionStatus
 
 _ARCHIVED = SessionStatus.archived.value
@@ -82,15 +87,11 @@ class Viewer:
 
 
 def same_person(a: Any, a_address: str | None, b: Any, b_address: str | None) -> bool:
-    """Whether two roster rows name one person (segment 21F): bound to the
-    same directory account, or else the same address, folded. A bound row
-    and an unbound one fall back to the address."""
-    a_bound = normalize_object_id(getattr(a, "directory_object_id", None))
-    b_bound = normalize_object_id(getattr(b, "directory_object_id", None))
-    if a_bound and b_bound:
-        return a_bound == b_bound
-    a_key = normalize_email(a_address)
-    return bool(a_key) and a_key == normalize_email(b_address)
+    """Whether two roster rows name one person: `email_identity.same_identity`
+    on their accounts and addresses (segment 21F)."""
+    return same_identity(
+        getattr(a, "directory_object_id", None), a_address, getattr(b, "directory_object_id", None), b_address
+    )
 
 
 def is_email_identified(reviewee: Reviewee) -> bool:

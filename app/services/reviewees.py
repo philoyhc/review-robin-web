@@ -249,6 +249,7 @@ def create_reviewee(
             {
                 "reviewee_id": reviewee.id,
                 "name": clean_name,
+                "directory_object_id": reviewee.directory_object_id,
                 "email_or_identifier": clean_identifier,
                 "profile_link": clean_profile_link,
                 "status": clean_status,
@@ -393,12 +394,14 @@ def update_reviewee(
         setattr(reviewee, field, new_value)
     # Segment 21F: a changed address rebinds, or loses its binding.
     if "email_or_identifier" in changes:
-        directory_accounts.rebind(
+        moved = directory_accounts.rebind(
             reviewee,
             old=changes["email_or_identifier"][0],  # type: ignore[arg-type]
             new=changes["email_or_identifier"][1],  # type: ignore[arg-type]
             resolve=resolve_account,
         )
+        if moved is not None:
+            changes["directory_object_id"] = moved
     db.flush()
 
     defuncted = responses_service.clear_changed_groups(

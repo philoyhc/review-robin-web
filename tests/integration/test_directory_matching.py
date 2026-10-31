@@ -19,8 +19,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.auth.identity import AuthenticatedUser
-from app.db.models import Assignment, Observer, Reviewee, Reviewer, ReviewSession, User
-from app.services import assignments
+from sqlalchemy import select
+
+from cordware.graph import FakeDirectory
+from app.db.models import Assignment, AuditEvent, Observer, Reviewee, Reviewer, ReviewSession, User
+from app.services import assignments, directory_accounts, observers
 from app.services.assignments._self_review import is_self_review
 from app.services.instruments import ensure_default_instrument
 from app.services.participants import Viewer, disclosable_roles, same_person
@@ -30,6 +33,7 @@ from .conftest import _make_client
 
 JANE_OID = "11111111-1111-4111-8111-111111111111"
 OFFICE_DESK_OID = "55555555-5555-4555-8555-555555555555"
+ARUN_OID = "22222222-2222-4222-8222-222222222222"
 
 
 def _identity(email: str, principal_id: str | None) -> AuthenticatedUser:
@@ -97,6 +101,38 @@ def test_a_row_given_by_upn_admits_its_account_through_the_gates(db: Session, as
     db.commit()
     jane = as_user("jane.tan@example.edu", JANE_OID)
     assert jane.get(f"/me/sessions/{session.public_id}/collation").status_code == 200
+
+
+def test_the_reviewer_gate_admits_a_row_given_by_upn_by_account(db: Session, as_user) -> None:
+    session = _open_session(db, "match-reviewer")
+    db.add(Reviewer(session_id=session.id, name="Jane", email="e0123456@example.edu", directory_object_id=JANE_OID))
+    db.commit()
+    path = f"/me/sessions/{session.public_id}/summary"
+    assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 200
+    # The UPN as a sign-in's mail, on another account, is not Jane.
+    assert as_user("e0123456@example.edu", OFFICE_DESK_OID).get(path).status_code == 404
+
+
+def test_an_address_edit_moves_access_to_the_new_account(db: Session, as_user) -> None:
+    """Alice to Bob: after the edit the old account is out, the new one
+    in, and the audit's changes say which account the row now admits."""
+    session = _open_session(db, "match-edit")
+    operator = db.get(User, session.created_by_user_id)
+    resolve = directory_accounts.resolver(FakeDirectory())
+    row = observers.create_observer(
+        db, review_session=session, email="e0123456@example.edu", user=operator, resolve_account=resolve
+    )
+    path = f"/me/sessions/{session.public_id}/collation"
+    assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 200
+
+    changes = observers.update_observer(
+        db, observer=row, email="arun.kumar@example.edu", user=operator, resolve_account=resolve
+    )
+    assert changes["directory_object_id"] == [JANE_OID, ARUN_OID]
+    assert as_user("jane.tan@example.edu", JANE_OID).get(path).status_code == 404
+    assert as_user("arun.kumar@example.edu", ARUN_OID).get(path).status_code == 200
+    created = db.execute(select(AuditEvent).where(AuditEvent.event_type == "observer.created")).scalar_one()
+    assert created.detail["snapshot"]["directory_object_id"] == JANE_OID
 
 
 def test_a_stored_principal_from_an_earlier_holder_binds_nothing(db: Session, as_user) -> None:

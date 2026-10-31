@@ -125,7 +125,7 @@ def find_user(
     return users.find_signed_in_user(db, current_user, move_email=move_email)
 
 
-def _stamp_principal(user: User, current_user: AuthenticatedUser) -> None:
+def stamp_principal(user: User, current_user: AuthenticatedUser) -> None:
     """Carry **this request's** principal ID on the row for the roster
     matchers (segment 21F; ``participants.Viewer``). Never the stored
     ``external_principal_id``: a row found by email can hold an earlier
@@ -148,7 +148,7 @@ def get_or_create_user(
 
     user = find_user(db, current_user)
     if user is not None:
-        _stamp_principal(user, current_user)
+        stamp_principal(user, current_user)
         _reassert_super_admin(db, user)
         _stash_display_timezone(request, user)
         _stash_guide_visibility(request, db, user)
@@ -193,7 +193,7 @@ def get_or_create_user(
     db.add(user)
     db.commit()
     db.refresh(user)
-    _stamp_principal(user, current_user)
+    stamp_principal(user, current_user)
     _stash_display_timezone(request, user)
     _stash_guide_visibility(request, db, user)
     return user
@@ -395,6 +395,10 @@ def require_reviewer_in_session(
             Reviewer.session_id == review_session.id,
             Reviewer.status == "active",
         )
+        # Lowest id first: since segment 21F one account can hold two
+        # rows (Jane by mail and by UPN), and the gate must pick the
+        # same one on every request.
+        .order_by(Reviewer.id)
     ).scalars()
     viewer = participants.Viewer.of(user)
     matched: Reviewer | None = None
@@ -446,6 +450,10 @@ def require_reviewee_in_session(
             Reviewee.session_id == review_session.id,
             Reviewee.status == "active",
         )
+        # Lowest id first: since segment 21F one account can hold two
+        # rows (Jane by mail and by UPN), and the gate must pick the
+        # same one on every request.
+        .order_by(Reviewee.id)
     ).scalars()
     matched: Reviewee | None = None
     for r in candidates:
@@ -541,6 +549,10 @@ def require_observer_in_session(
             Observer.session_id == review_session.id,
             Observer.status == "active",
         )
+        # Lowest id first: since segment 21F one account can hold two
+        # rows (Jane by mail and by UPN), and the gate must pick the
+        # same one on every request.
+        .order_by(Observer.id)
     ).scalars()
     matched: Observer | None = None
     for o in candidates:
