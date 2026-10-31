@@ -58,6 +58,20 @@
       var form = button.form;
       var counter = document.getElementById("to-check");
       var note = document.getElementById("check-note");
+      var column = form.elements.column;
+      var previewed = column ? column.value : "";
+
+      // A page restored from the back/forward cache keeps what the script
+      // set: put the form back as it was rendered.
+      window.addEventListener("pageshow", function (event) {
+        if (!event.persisted) { return; }
+        document.getElementById("check-outcomes").disabled = true;
+        document.getElementById("check-stopped").disabled = true;
+        form.removeAttribute("action");
+        form.action = {{ url('/email-check/preview') | tojson }};
+        button.disabled = false;
+        counter.textContent = String(JSON.parse(keysNode.textContent).length);
+      });
 
       function finish(outcomes, stopped) {
         var field = document.getElementById("check-outcomes");
@@ -71,6 +85,9 @@
       }
 
       button.addEventListener("click", function (event) {
+        // The keys are the previewed column's: a column chosen since, and
+        // not yet previewed, goes the plain way, which reads the new one.
+        if (column && column.value !== previewed) { return; }
         event.preventDefault();
         var keys = JSON.parse(keysNode.textContent);
         var outcomes = {};
@@ -110,14 +127,18 @@
             body: JSON.stringify({keys: [key]}),
             credentials: "same-origin"
           }).then(function (response) {
-            if (response.status === 503) {
-              // No directory access: the plain post shows the preview's alert.
-              done = true;
-              form.action = checkUrl;
-              form.submit();
-              return null;
+            if (!response.ok) {
+              return response.json().catch(function () { return {}; }).then(function (body) {
+                if (response.status === 503 && body.error === "no_graph" && !done) {
+                  // No directory access: the plain post shows the preview's alert.
+                  done = true;
+                  form.action = checkUrl;
+                  form.submit();
+                  return null;
+                }
+                throw new Error("lookup " + response.status);
+              });
             }
-            if (!response.ok) { throw new Error("lookup " + response.status); }
             return response.json();
           }).then(function (body) {
             running -= 1;
@@ -133,9 +154,10 @@
             counter.textContent = String(left);
             pump();
           }).catch(function () {
-            // What was looked up is kept; the rest download as ERROR (incomplete).
+            // What was looked up is kept; the rest download as ERROR, with
+            // a refused sign-in's kind when one stopped the run.
             running -= 1;
-            end("");
+            end(stopped);
           });
         }
         pump();

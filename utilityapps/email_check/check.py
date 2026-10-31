@@ -38,6 +38,10 @@ BATCH_MAX = 25
 BATCH_BUDGET = 60.0
 #: What the outcomes a page carries back may hold (segment U2).
 MATCH_TYPES = frozenset({"PRIMARY_MAIL", "UPN", "NONE", "MULTIPLE"})
+#: An `ERROR`'s kinds: the directory's, the budget's, and a page that
+#: stopped before every key was sent (segment U2). The log carries these
+#: and nothing else.
+ERROR_KINDS = frozenset({*GraphError.KINDS, "timeout", "incomplete"})
 _FIELD_MAX = 512
 
 
@@ -85,6 +89,9 @@ def classify(key: str, users: list[DirectoryUser]) -> Outcome:
 
 def _error(kind: str) -> Outcome:
     advice = "sign out and in again" if kind in SIGN_IN_KINDS else "try again later"
+    if kind == "incomplete":
+        # The page stopped before sending this key (segment U2).
+        return Outcome("ERROR", "NONE", note=f"Not looked up: the check stopped first; {advice}", error_kind=kind)
     return Outcome("ERROR", "NONE", note=f"Lookup incomplete ({kind}); {advice}", error_kind=kind)
 
 
@@ -181,9 +188,10 @@ def outcomes_from_json(data: object, keys: Iterable[str]) -> dict[str, Outcome]:
             )
         if (status in RESOLVED) != (user is not None):
             raise OutcomesRejected("an outcome's account does not fit its status")
-        outcomes[key] = Outcome(
-            status, match_type, user, _text(raw.get("note", "")), _text(raw.get("error_kind", ""))
-        )
+        error_kind = _text(raw.get("error_kind", ""))
+        if (status == "ERROR") != (error_kind in ERROR_KINDS):
+            raise OutcomesRejected("an outcome's error kind does not fit its status")
+        outcomes[key] = Outcome(status, match_type, user, _text(raw.get("note", "")), error_kind)
     return outcomes
 
 

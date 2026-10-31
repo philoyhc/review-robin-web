@@ -104,7 +104,7 @@ matching `mail` or `userPrincipalName`. With fake auth on a local run
 that is the fake directory. Alias lookup is not built, so every row's
 `lookup_coverage` is `BASIC_ONLY`.
 
-- **A time budget.** The check takes at most 120 s (`check.BUDGET`),
+- **A time budget.** The plain post's check takes at most 120 s (`check.BUDGET`),
   under App Service's front-end limit. A lookup not finished by then is
   `ERROR` with kind `timeout`, and the rest still download.
 - **A refused sign-in stops the run.** The first `unauthorized` or
@@ -142,6 +142,16 @@ by one.
   request failed and the page stopped. A refused sign-in in any answer
   stops the page, which posts `stopped` with that kind, and the keys not
   yet sent take it, as in one request.
+- **No whole-check budget** on this path: each request has its own. A
+  refused sign-in stops new requests, but up to four already in flight
+  still reach the directory.
+- **Any other failed request** (a non-OK answer, a page that isn't JSON,
+  a network error) stops the page, which posts what it has; the keys not
+  yet answered are `ERROR`, `incomplete`, or the refused sign-in's kind
+  if one came first. A `503` that is not the endpoint's own `no_graph`
+  counts as a failed request.
+- **A column chosen but not yet previewed** goes the plain way: the
+  page's keys are the previewed column's.
 - **Without the script,** *Check addresses* posts to `/check` as above,
   under the whole-check budget. The carried request's limit is 3 MiB, to
   hold the outcomes beside the file.
@@ -181,5 +191,7 @@ keeps no copy.
 
 Logger `utilityapps.email_check.routes`: one `email_check.completed`
 record per check, carrying the row and lookup counts, the count per
-status, the number of groups and the `GraphError` kinds seen. Never an
+status, the number of groups and the `ERROR` kinds seen: a `GraphError`
+kind, `timeout` or `incomplete` (`check.ERROR_KINDS`; carried outcomes
+with any other kind are refused). Never an
 address, a name, an object ID or a cell.

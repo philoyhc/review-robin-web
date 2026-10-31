@@ -169,7 +169,24 @@ def test_keys_the_page_did_not_send_are_error_incomplete(client: TestClient, dir
     del collected["nobody@example.edu"]
     rows = _download(client.post(CHECK, data=_form(outcomes=json.dumps(collected))).text)
     nobody = next(r for r in rows if r["Name"] == "Nobody")
-    assert nobody["status"] == "ERROR" and "incomplete" in nobody["notes"]
+    assert nobody["status"] == "ERROR" and nobody["notes"].startswith("Not looked up: the check stopped first")
+
+
+def test_a_carried_error_with_a_known_kind_is_kept(client: TestClient, directory: Recording) -> None:
+    collected = _collect(client)
+    collected["nobody@example.edu"] = {
+        "status": "ERROR", "match_type": "NONE", "note": "Lookup incomplete (throttled); try again later",
+        "error_kind": "throttled", "user": None,
+    }
+    rows = _download(client.post(CHECK, data=_form(outcomes=json.dumps(collected))).text)
+    assert next(r for r in rows if r["Name"] == "Nobody")["status"] == "ERROR"
+
+
+def test_the_script_holds_back_for_an_unpreviewed_column(client: TestClient) -> None:
+    text = client.post(PREVIEW, data=_form()).text
+    assert "column.value !== previewed" in text
+    assert 'body.error === "no_graph"' in text
+    assert "end(stopped)" in text and 'end("")' not in text
 
 
 def test_a_refused_sign_in_marks_the_rest_with_its_kind(client: TestClient, directory: Recording) -> None:
@@ -190,6 +207,9 @@ def test_a_refused_sign_in_marks_the_rest_with_its_kind(client: TestClient, dire
         json.dumps({"nobody@example.edu": {"status": "MADE_UP", "match_type": "NONE"}}),
         json.dumps({"nobody@example.edu": {"status": "OK", "match_type": "PRIMARY_MAIL", "user": None}}),
         json.dumps({"nobody@example.edu": {"status": "NOT_FOUND", "match_type": "NONE", "note": "x" * 600}}),
+        json.dumps({"nobody@example.edu": {"status": "ERROR", "match_type": "NONE", "error_kind": "someone@x.edu"}}),
+        json.dumps({"nobody@example.edu": {"status": "ERROR", "match_type": "NONE"}}),
+        json.dumps({"nobody@example.edu": {"status": "NOT_FOUND", "match_type": "NONE", "error_kind": "timeout"}}),
     ],
 )
 def test_outcomes_that_do_not_fit_the_file_are_refused(client: TestClient, directory: Recording, outcomes: str) -> None:
