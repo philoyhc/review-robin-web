@@ -4,7 +4,6 @@
 {% block content %}
   <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
   {{ sample_title("Support-activity audit", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# Support-activity events reveal who was seen and when, so only senior
      staff with identifiable access review them, and the review is itself
      an audited read (§11.3). Administrative events are Sys admin's. #}
@@ -20,3 +19,4 @@
     </div>
   </section>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

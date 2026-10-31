@@ -5,7 +5,6 @@
 {% block content %}
   <a class="back" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">‹ {{ chosen.name }}</a>
   {{ sample_title("Flag for formal assignment", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {{ recorded() }}
   {# Flag for formal review or possible assignment (§3.1): senior staff
      review it; no reason is recorded (§7.5). #}
@@ -18,3 +17,4 @@
     <div class="btnrow gap-above-sm"><button type="submit" class="btn btn-primary">Flag for formal assignment</button><a class="btn btn-secondary" href="{{ url('/students/' ~ chosen.id) }}{{ as_query }}">Cancel</a></div>
   </form>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -645,3 +645,35 @@ def test_add_new_slot_sits_under_the_slots_table() -> None:
         button = page.index(">Add new slot</button>")
         assert table_end < button < page.index("</section>", table_end), stage
         assert "btnrow end" in page[page.rindex("<div", 0, button):button], stage
+
+
+@pytest.fixture(scope="module")
+def both() -> TestClient:
+    host, _ = host_with(["residentialops", "supportlogs"])
+    return TestClient(host)
+
+
+SAMPLE_PAGES = [
+    ("residentialops", "/"), ("residentialops", "/ra-leave/history?as=Kai%20Ng"), ("residentialops", "/ra-leave/?as=Hana%20Ito"), ("residentialops", "/ra-leave/staff/"),
+    ("supportlogs", "/?as=Daniel%20Koh"), ("supportlogs", "/log"), ("supportlogs", "/log/safety"),
+]
+
+
+@pytest.mark.parametrize(("app", "path"), SAMPLE_PAGES)
+def test_the_sample_viewer_card_comes_last_and_the_chip_jumps_to_it(both: TestClient, app: str, path: str) -> None:
+    """Author, 2026-10-31: the card goes after the page, and "Viewing as"
+    at the top, naming the viewer's line from the card, links down to it."""
+    page = both.get(f"/{app}{path}").text
+    main = page[page.index('<main class="page">'):page.index("</main>")]
+    card = re.search(r'<nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">.*?</nav>', main, re.S)
+    assert card is not None and main[card.end():].strip() == ""  # nothing after it in <main>
+    chip = re.search(r'<a class="chip chip-info chip-viewing" href="#sample-viewer">Viewing as ([^<]+)<span aria-hidden="true" class="caret"> ▾</span></a>', main)
+    assert chip is not None and main.index(chip.group(0)) < card.start()
+    name, _, line = chip.group(1).partition(", ")
+    assert line and f"<li>{name}: {line}</li>" in card.group(0)
+
+
+def test_a_page_without_the_card_keeps_the_chip_unlinked(both: TestClient) -> None:
+    page = both.get("/residentialops/ra-leave/staff/decide/L-0103?as=Rachel%20Yeo").text
+    assert '<span class="chip chip-info chip-viewing">Viewing as ' in page and 'href="#sample-viewer"' not in page
+    assert 'id="sample-viewer"' not in page

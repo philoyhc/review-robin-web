@@ -1,3 +1,4 @@
+{% from "residential/_sample.html" import viewing_chip %}
 {# RA Leave's shared pieces: a stage or cover status as a chip, never
    color alone (`residentialapps/spec/residentialops_ui.md` §3). #}
 {% macro stage_chip(stage) -%}
@@ -31,9 +32,11 @@
   </div>
 {%- endmacro %}
 
-{# Whom an RA page is drawn for, until identity is wired. #}
-{% macro viewing(me) -%}
-  <span class="chip chip-info">Viewing as {{ me }}</span>
+{# Whom an RA Leave page is drawn for, until identity is wired, with the
+   line its switch gives them; linked to the switch at the page's end, or
+   not on a page without one (author, 2026-10-31). #}
+{% macro viewing(me, linked=true) -%}
+  {{ viewing_chip(me, dict(leave.RA_VIEWERS).get(me) or leave.staff_role(me), linked) }}
 {%- endmacro %}
 
 {# An application's timeline steps: when, what, and the remarks given
@@ -70,7 +73,7 @@
 {# The RA pages' sample viewer switch (audit, 2026-10-29): each viewer
    reaches states the others do not. #}
 {% macro ra_switch(me, leave, here) -%}
-  <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
+  <nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
       {% for name, _ in leave.RA_VIEWERS %}
@@ -84,7 +87,7 @@
 {# The staff pages' sample viewer switch, one person per role, until
    identity is wired. #}
 {% macro staff_switch(me, leave, here) -%}
-  <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
+  <nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
       {% for name, _ in leave.STAFF_VIEWERS %}

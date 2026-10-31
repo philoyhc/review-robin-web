@@ -1,17 +1,30 @@
 {# Placeholders' sample chrome, shared by both applications (segment 1D
    item 1): the title row with its Sample data and Viewing as chips, and the
-   sample viewer card (`residentialapps/spec/residentialops_ui.md` §9). A
+   sample viewer card, which each page puts in base.html's `viewer` block
+   so it comes last (`residentialapps/spec/residentialops_ui.md` §9). A
    choice is {name, what, path}: the page the viewer switch goes to for that
    person, its `?as=` included. #}
+{# Whom the page is drawn for, with the line the viewer card gives them
+   (author, 2026-10-31). Linked, it jumps to the card at the page's end;
+   unlinked on a page without one. #}
+{% macro viewing_chip(me, what="", linked=true) -%}
+  {% if linked %}<a class="chip chip-info chip-viewing" href="#sample-viewer">{% else %}<span class="chip chip-info chip-viewing">{% endif %}Viewing as {{ me }}{% if what %}, {{ what }}{% endif %}{% if linked %}<span aria-hidden="true" class="caret"> ▾</span></a>{% else %}</span>{% endif %}
+{%- endmacro %}
+
+{# The line a choice list gives ``me``. #}
+{% macro what_of(choices, me) -%}
+  {% for c in choices if c.name == me %}{{ c.what }}{% endfor %}
+{%- endmacro %}
+
 {% macro sample_title(heading, me, extra="") -%}
   <div class="ptitle">
     <h1>{{ heading }}</h1>
-    <span class="chips"><span class="chip chip-warn">Sample data</span><span class="chip chip-info">Viewing as {{ me }}</span>{{ extra }}</span>
+    <span class="chips"><span class="chip chip-warn">Sample data</span>{{ viewing_chip(me, what_of(viewer_choices, me)) }}{{ extra }}</span>
   </div>
 {%- endmacro %}
 
 {% macro viewer_card(choices, me) -%}
-  <nav class="card card-pad muted gap-below" aria-label="Sample viewer">
+  <nav id="sample-viewer" class="card card-pad muted viewer-end" aria-label="Sample viewer">
     <span class="subtle small">Sample viewer:</span>
     <span class="chips chip-wrap">
       {% for c in choices %}

@@ -3,7 +3,6 @@
 {% block title %}Staff home{% endblock %}
 {% block content %}
   {{ title("RA Leave", leave, viewing(me)) }}
-  {{ staff_switch(me, leave, here) }}
   {% set mine = leave.queue(me) %}
   <section class="tiles" aria-label="At a glance">
     <a class="tile" href="{{ url('/ra-leave/staff/decide') }}{{ as_query }}"><span class="tile-n">{{ mine | length }}</span><span class="tile-l">Awaiting my decision</span></a>
@@ -41,3 +40,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

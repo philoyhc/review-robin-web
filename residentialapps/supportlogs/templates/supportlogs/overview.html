@@ -4,7 +4,6 @@
 {% block title %}Overview{% endblock %}
 {% block content %}
   {{ sample_title("Overview", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# How support is distributed across the team, where the hotspots are,
      and where reallocation may be needed (§10.1, §10.2–10.6). Aggregate
      view sees counts and staff, never a student's name (roles rule 8). #}
@@ -100,3 +99,4 @@
     </section>
   {% endif %}
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

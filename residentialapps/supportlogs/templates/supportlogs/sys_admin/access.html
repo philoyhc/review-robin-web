@@ -3,7 +3,6 @@
 {% block title %}Access{% endblock %}
 {% block content %}
   {{ sample_title("Access", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# Who may use Support Logs (author, 2026-10-29): the Staff roster is the
      eligibility list, read from Residential Operations and never written;
      the grants are Support Logs' own (roles rule 9). Every member is
@@ -53,3 +52,4 @@
     <p class="sub flush">Holds administration from the platform, with no Staff-roster entry and no row here: grants Sys admin, sees no support content (§3.4).</p>
   </section>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

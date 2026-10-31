@@ -5,7 +5,6 @@
 {% block content %}
   <a class="back" href="{{ url('/ra-leave/history') }}{{ as_query }}">‹ My history</a>
   {{ title(app.leave_type ~ (" · extra leave" if app.appeal else ""), leave, viewing(me) ~ stage_chip(app.stage)) }}
-  {{ ra_switch(me, leave, "/ra-leave/history") }}
   <div class="split">
     <div class="main stack">
       <section class="card card-pad" aria-labelledby="detail-h">
@@ -57,3 +56,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ ra_switch(me, leave, "/ra-leave/history") }}{% endblock %}

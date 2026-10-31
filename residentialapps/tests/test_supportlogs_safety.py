@@ -71,7 +71,8 @@ def test_senior_recipients_find_the_flags_on_overview(client: TestClient) -> Non
 
 def test_the_safety_concern_puts_the_calls_first(client: TestClient) -> None:
     page = client.get("/log/safety").text
-    assert page.index('id="call-h"') < page.index('aria-label="Sample viewer"') < page.index('id="safety-form"')
+    # The calls, then the form; the sample viewer card last (author, 2026-10-31).
+    assert page.index('id="call-h"') < page.index('id="safety-form"') < page.index('aria-label="Sample viewer"')
     assert re.findall(r'<a href="(tel:[^"]+)">([^<]+) <span', page) == [
         (f"tel:{number}", who) for who, number in sample.CRISIS_CONTACTS
     ]

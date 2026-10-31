@@ -440,6 +440,7 @@ on the same Wi-Fi. Nothing to install on theirs.
   networks often do: put the laptop and the phones on your phone's
   hotspot instead, and run the block again for the new address.
 - **Each tester picks who they are** on the page's **Sample viewer** card,
+  at the end of the page (tap **Viewing as …** at the top to jump there),
   or opens the address with `?as=Daniel%20Koh` (frontline) or
   `?as=Sam%20Lee` (senior) on the end. The name in the top bar stays
   yours: it is the fake account, not the viewer.

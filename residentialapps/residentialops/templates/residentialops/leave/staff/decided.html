@@ -3,7 +3,6 @@
 {% block title %}Decided{% endblock %}
 {% block content %}
   {{ title("Decided", leave, viewing(me)) }}
-  {{ staff_switch(me, leave, here) }}
   {% set mine = leave.decided(me) %}
   <section class="card card-pad" aria-labelledby="dec-h">
     <h2 id="dec-h">My decisions <span class="count">· {{ mine | length }}</span></h2>
@@ -20,3 +19,4 @@
     {% else %}<p class="sub">None yet.</p>{% endif %}
   </section>
 {% endblock %}
+{% block viewer %}{{ staff_switch(me, leave, here) }}{% endblock %}

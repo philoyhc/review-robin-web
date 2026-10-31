@@ -3,7 +3,7 @@
 {% block title %}{{ app.ra }} · {{ app.dates }}{% endblock %}
 {% block content %}
   <a class="back" href="{{ url(back_path) }}{{ as_query }}">‹ {{ back_label }}</a>
-  {{ title(app.ra, leave, viewing(me) ~ stage_chip(app.stage)) }}
+  {{ title(app.ra, leave, viewing(me, false) ~ stage_chip(app.stage)) }}
   {% set bal = leave.balance_of(app) %}
   {% set cover_wait = leave.waiting_on_cover(app) %}
   <div class="split">

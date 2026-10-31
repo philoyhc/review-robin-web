@@ -1,9 +1,8 @@
 {% extends "residential/base.html" %}
-{% from "residential/_sample.html" import viewer_card with context %}
+{% from "residential/_sample.html" import viewer_card, viewing_chip, what_of with context %}
 {% block title %}No access{% endblock %}
 {% block content %}
-  <p><span class="chip chip-warn">Sample data</span> <span class="chip chip-info">Viewing as {{ me.name }}</span></p>
-  {{ viewer_card(viewer_choices, me.name) }}
+  <p><span class="chip chip-warn">Sample data</span> {{ viewing_chip(me.name, what_of(viewer_choices, me.name)) }}</p>
   <section class="card card-pad narrow">
     {% if me.grants %}
       <h1 class="denial">You do not have access to this page.</h1>
@@ -14,3 +13,4 @@
     {% endif %}
   </section>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -7,7 +7,6 @@
   {% set recipient = sample.holds(me, sample.RECIPIENT) %}
   <a class="back" href="{{ url(back) }}{{ as_query }}">‹ {{ "Home" if back == "/" else "Overview" }}</a>
   {{ sample_title("Safety flag", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# A flag's detail (UI spec screen 8): every view, acknowledgement and
      closure is audited (§11.3). #}
   <p class="notice" role="note">Viewing this flag is recorded.</p>
@@ -44,3 +43,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

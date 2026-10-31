@@ -146,7 +146,8 @@ def test_the_switcher_shows_the_areas_the_viewer_reaches(client: TestClient) -> 
 
 def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
     """Every link carries `?as=`, a form its hidden `as`; the viewer switch
-    names each person; only the host's landing page goes without."""
+    names each person; only the host's landing page and the in-page jump
+    to the switch (the "Viewing as" chip) go without."""
     pages = [("Priya Raman", "/"), ("Priya Raman", "/log"), ("Priya Raman", "/students/S-08"),
              ("Priya Raman", "/plans/?show=week"), ("Rachel Yeo", "/sys-admin/configuration")]
     for name, path in pages:
@@ -154,7 +155,7 @@ def test_every_link_keeps_the_sample_viewer(client: TestClient) -> None:
         card = page.split('aria-label="Sample viewer"')[1].split("</nav>")[0]
         rest = page.replace(card, "")
         for link in re.findall(r'\bhref="([^"]*)"', FAVICON.sub("", rest)):
-            assert link == "/" or "as=" + quote(name) in link, (path, link)
+            assert link in ("/", "#sample-viewer") or "as=" + quote(name) in link, (path, link)
         assert rest.count("<form") == rest.count(f'<input type="hidden" name="as" value="{name}">'), path
 
 

@@ -4,7 +4,6 @@
 {% block content %}
   <a class="back" href="{{ url('/consultation/') }}{{ as_query }}">‹ Consultation check</a>
   {{ sample_title("Consultation check", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# Each student's state, its named reasons and whom to consult (§10.7):
      current state and recent activity only, no score, no notes (§10.8,
      §11.2). The run, with what it showed, is recorded. #}
@@ -36,3 +35,4 @@
     <dl class="kv">{% for reason, state in sample.CONSULTATION_REASONS %}<dt>{{ reason }}</dt><dd>{{ state }}</dd>{% endfor %}</dl>
   </section>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

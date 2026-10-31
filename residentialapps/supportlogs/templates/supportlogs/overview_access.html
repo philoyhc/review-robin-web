@@ -4,7 +4,6 @@
 {% block content %}
   <a class="back" href="{{ url('/overview/') }}{{ as_query }}">‹ Overview</a>
   {{ sample_title("Who holds access", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {# Administration decides who sees content but sees none, so senior
      staff see what it decided (author, 2026-10-30): each grant's holders
      and the access changes, read-only. Granting stays on Sys admin. #}
@@ -25,3 +24,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

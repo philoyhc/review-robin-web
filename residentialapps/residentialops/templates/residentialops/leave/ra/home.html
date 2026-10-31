@@ -3,7 +3,6 @@
 {% block title %}My leave{% endblock %}
 {% block content %}
   {{ title("My leave", leave, viewing(me)) }}
-  {{ ra_switch(me, leave, here) }}
   {# The balance first, as the spec orders the page (§8.1); its detail is
      the side card, which a phone puts last. #}
   <section class="tiles" aria-label="Available to you">
@@ -70,3 +69,4 @@
     </div>
   </div>
 {% endblock %}
+{% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}

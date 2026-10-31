@@ -4,7 +4,6 @@
 {% block title %}Home{% endblock %}
 {% block content %}
   {{ sample_title("Support Logs", me.name) }}
-  {{ viewer_card(viewer_choices, me.name) }}
   {% if flags %}{{ recorded() }}{{ flags_card(me, closed=true) }}{% endif %}
   {% if places %}
     <p class="sub">Choose where to go. You see only what you can use.</p>
@@ -15,3 +14,4 @@
     </ul>
   {% endif %}
 {% endblock %}
+{% block viewer %}{{ viewer_card(viewer_choices, me.name) }}{% endblock %}

@@ -4,7 +4,6 @@
 {% block title %}Request extra leave{% endblock %}
 {% block content %}
   {{ title("Request extra leave", leave, viewing(me)) }}
-  {{ ra_switch(me, leave, here) }}
   {% if not leave.appeals_on() %}
     <section class="card card-pad"><p class="sub">Extra leave is not offered: appeals are switched off on the Leave policy. Apply within your entitlement on <a href="{{ url('/ra-leave/apply') }}{{ as_query }}">Apply for leave</a>.</p></section>
   {% else %}
@@ -44,3 +43,4 @@
   </div>
   {% endif %}
 {% endblock %}
+{% block viewer %}{{ ra_switch(me, leave, here) }}{% endblock %}
