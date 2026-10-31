@@ -319,6 +319,7 @@ def _render_observers_page(
                 all_observers
             ),
             "existing_count": existing_count,
+            "directory_check": views.last_directory_check(db, review_session, "observers"),
             "upload_problems": views.upload_problems(
                 "observers", issues, missing_confirm=missing_confirm
             ),
