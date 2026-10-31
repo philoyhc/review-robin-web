@@ -604,9 +604,9 @@ def test_each_confirm_key_still_appears_exactly_once(
     page, which is the only place the collision could happen.
     """
     body = _page(client, _session(client, db, "unl-12"))
-    # The Upload card's replace and append ticks share one key (19Z), so
-    # either opens the one Upload; the button stays unique.
-    for key, ticks in (("replace-observers", 2), ("delete-all", 1)):
+    # The Upload card's replace, append and merge ticks share one key
+    # (19Z), so any one opens the one Upload; the button stays unique.
+    for key, ticks in (("replace-observers", 3), ("delete-all", 1)):
         assert body.count(f'data-delete-confirm="{key}"') == ticks, key
         assert body.count(f'data-delete-btn="{key}"') == 1, key
 

@@ -191,7 +191,7 @@ def test_a_replace_without_the_tick_says_so(
     # The three person rosters offer the append tick too (19Z), so the
     # ask names both.
     assert (
-        "Tick replace or append just above Upload, then upload again."
+        "Tick replace, append or merge just above Upload, then upload again."
     ) in response.text
     assert "data-upload-problem-lines" not in response.text
 
@@ -214,7 +214,7 @@ def test_a_relationships_replace_without_the_tick_says_so(
     )
 
     assert response.status_code == 400
-    assert "Tick replace or append just above Upload" in response.text
+    assert "Tick replace, append or merge just above Upload" in response.text
 
 
 def test_a_clean_page_has_no_banner(client: TestClient, db: Session) -> None:
@@ -252,7 +252,7 @@ def test_a_missing_tick_reads_as_one_sentence_unless_the_file_has_problems() -> 
 
     confirm = upload_problems("reviewers", [], missing_confirm=True)
     assert confirm is not None and confirm.lines == []
-    assert confirm.message.startswith("Tick replace or append")
+    assert confirm.message.startswith("Tick replace, append or merge")
     ack = upload_problems("reviewers", [], missing_response_ack=True)
     assert ack is not None and ack.lines == []
     assert ack.message.startswith("This session now holds reviewer responses")

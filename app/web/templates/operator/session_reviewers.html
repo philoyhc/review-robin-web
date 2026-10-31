@@ -406,13 +406,14 @@
                 {# 19Z upsert amendment: append and merge share one line (author,
                    2026-10-31). A div, not a label, since the line holds two ticks;
                    one span after the first tick keeps the rest one flex item.
-                   Merge is drawn, not wired: disabled until rung 10. #}
+                   All three ticks share one exclusive group and one delete-confirm key,
+   so Upload opens on any one (`base.html`). #}
                 <div class="confirm-label upload-mode-line">
                   <input type="checkbox" id="reviewers-upload-append" name="append" value="true"{% if append_checked %} checked{% endif %}
                          data-exclusive-tick="upload-mode" data-delete-confirm="replace-roster">
                   <span><label for="reviewers-upload-append">Yes, append to,</label>
-                  <input type="checkbox" id="reviewers-upload-merge" name="merge" value="true" disabled
-                         data-exclusive-tick="upload-mode">
+                  <input type="checkbox" id="reviewers-upload-merge" name="merge" value="true"{% if merge_checked %} checked{% endif %}
+                         data-exclusive-tick="upload-mode" data-delete-confirm="replace-roster">
                   <label for="reviewers-upload-merge">merge with the existing roster.</label></span>
                 </div>
               </fieldset>

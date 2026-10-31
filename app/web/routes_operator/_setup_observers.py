@@ -124,6 +124,7 @@ def _render_observers_page(
     held_upload_lost: bool = False,
     confirm_replace_checked: bool = False,
     append_checked: bool = False,
+    merge_checked: bool = False,
     both_ticks: bool = False,
     http_status: int = status.HTTP_200_OK,
 ) -> HTMLResponse:
@@ -335,6 +336,7 @@ def _render_observers_page(
             "confirm_replace_checked": confirm_replace_checked,
             # Segment 19Z: the append tick, re-ticked on an ask's render.
             "append_checked": append_checked,
+            "merge_checked": merge_checked,
             "is_ready": is_ready,
             # Segment 19I Item 3 — the gate on the selection surface.
             # ``is_ready`` is only ``status == "ready"``, so gating on it
@@ -907,8 +909,10 @@ async def observers_import_submit(
     file: UploadFile | None = File(default=None),
     held_token: str | None = Form(default=None),
     confirm_replace: str | None = Form(default=None),
-    # Segment 19Z: the card's append tick, beside the replace tick.
+    # Segment 19Z: the card's append and merge ticks, beside the replace
+    # tick.
     append: str | None = Form(default=None),
+    merge: str | None = Form(default=None),
     review_session: ReviewSession = Depends(
         require_observers_enabled_session
     ),
@@ -948,6 +952,8 @@ async def observers_import_submit(
     existing = csv_imports.existing_observer_count(db, review_session.id)
     # An append onto an empty roster is just the roster (19Z).
     appending = append == "true" and existing > 0
+    merging = merge == "true" and existing > 0
+    ticked = (confirm_replace == "true") + appending + merging
 
     def render(
         status_code: int = status.HTTP_200_OK,
@@ -985,6 +991,7 @@ async def observers_import_submit(
                 held_upload is not None and confirm_replace == "true" and not both_ticks
             ),
             append_checked=held_upload is not None and appending and not both_ticks,
+            merge_checked=held_upload is not None and merging and not both_ticks,
             http_status=status_code,
         )
 
@@ -1000,12 +1007,12 @@ async def observers_import_submit(
         )
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
-    if existing > 0 and appending and confirm_replace == "true":
+    if existing > 0 and ticked > 1:
         return render(
             status_code=status.HTTP_400_BAD_REQUEST, both_ticks=True, held_upload=ask()
         )
 
-    if existing > 0 and not appending and confirm_replace != "true":
+    if existing > 0 and ticked == 0:
         # An ask: hold the file so the tick is all the answer needs
         # (segment 19W).
         return render(
@@ -1045,6 +1052,18 @@ async def observers_import_submit(
                 db, token=upload.token, user=user, review_session=review_session
             )
             return render(status_code=status.HTTP_400_BAD_REQUEST)
+    # A merge refuses two file rows on one directory account.
+    if merging:
+        result.issues.extend(
+            csv_imports.merge_conflicts(
+                kind="observers", rows=result.rows, directory=directory_check
+            )
+        )
+        if result.is_blocked:
+            release_hold(
+                db, token=upload.token, user=user, review_session=review_session
+            )
+            return render(status_code=status.HTTP_400_BAD_REQUEST)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
     try:
@@ -1058,6 +1077,8 @@ async def observers_import_submit(
             correlation_id=request_correlation_id(),
             directory=directory_check,
             append=appending,
+            merge=merging,
+            columns=result.columns,
         )
     except csv_imports.AppendConflict as refused:
         db.rollback()

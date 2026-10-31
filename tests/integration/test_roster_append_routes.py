@@ -72,7 +72,7 @@ def test_both_ticks_ask_and_hold_the_file(client: TestClient, db: Session, kind:
 
     asked = _upload(client, url, second, confirm_replace="true", append="true")
     assert asked.status_code == 400
-    assert "Tick replace or append, not both, then upload again." in asked.text
+    assert "Tick only one of replace, append or merge, then upload again." in asked.text
     assert _held(db) == 1
     # Neither tick comes back checked: the ask is to choose.
     assert 'name="append" value="true" checked' not in asked.text
@@ -168,7 +168,7 @@ def test_relationships_append_adds_a_pair_and_refuses_a_held_one(client: TestCli
     assert _pairs(db, s.id) == 1
 
     asked = _upload(client, url, new, append="true", confirm_replace="true")
-    assert asked.status_code == 400 and "not both" in asked.text
+    assert asked.status_code == 400 and "only one of replace, append or merge" in asked.text
 
     assert _upload(client, url, new, append="true").status_code == 303
     assert _pairs(db, s.id) == 2
@@ -238,10 +238,10 @@ def test_an_append_onto_an_empty_roster_is_just_the_roster(client: TestClient, d
 
 
 @pytest.mark.parametrize("kind", ["reviewers", "reviewees", "relationships", "observers"])
-def test_the_merge_tick_shares_appends_line_drawn_and_disabled(client: TestClient, db: Session, kind: str) -> None:
-    """Rung 8's scaffold (author, 2026-10-31): "Yes, append to, [ ] merge
-    with the existing roster." Merge is in the exclusive group, disabled
-    until it is wired, and nothing is shown on an empty roster."""
+def test_the_merge_tick_shares_appends_line(client: TestClient, db: Session, kind: str) -> None:
+    """The author's layout (2026-10-31): "Yes, append to, [ ] merge with
+    the existing roster." Merge is live since rung 10, in the exclusive
+    group and on the Upload key, and nothing is shown on an empty roster."""
     import re
 
     if kind == "relationships":
@@ -258,5 +258,6 @@ def test_the_merge_tick_shares_appends_line_drawn_and_disabled(client: TestClien
     body = line.group(1)
     assert 'name="append"' in body and "Yes, append to," in body
     merge = re.search(r'<input[^>]*name="merge"[^>]*>', body).group(0)
-    assert "disabled" in merge and 'data-exclusive-tick="upload-mode"' in merge
+    assert "disabled" not in merge and 'data-exclusive-tick="upload-mode"' in merge
+    assert "data-delete-confirm=" in merge
     assert "merge with the existing roster." in body

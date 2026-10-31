@@ -392,11 +392,11 @@ def test_the_replace_roster_key_appears_exactly_once(client, db):
     rs = _with_reviewers(client, db, "rc-keys")
     html = _markup(_page(client, rs))
 
-    # Two ticks, by design since 19Z: the Upload card's replace and
-    # append ticks share the key so either opens Upload. A third would be
-    # a copied card.
-    assert html.count('data-delete-confirm="replace-roster"') == 2, (
-        "a replace-roster tick beyond the Upload card's pair is on the page"
+    # Three ticks, by design since 19Z: the Upload card's replace, append
+    # and merge ticks share the key so any one opens Upload. A fourth would
+    # be a copied card.
+    assert html.count('data-delete-confirm="replace-roster"') == 3, (
+        "a replace-roster tick beyond the Upload card's three is on the page"
     )
     assert html.count('data-delete-btn="replace-roster"') == 1, (
         "a second replace-roster button is on the page; `sync` resolves "

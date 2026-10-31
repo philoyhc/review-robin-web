@@ -52,6 +52,7 @@ from app.services import session_lifecycle as lifecycle
 from app.services import session_owners, session_tags
 from app.services import sessions as sessions_service
 from app.services import unit_of_work
+from app.services.responses import GroupAnswersWouldClear
 from app.web import breadcrumbs, views
 from app.web.date_filters import (
     display_timezone_context_processor,
@@ -1012,6 +1013,8 @@ async def _handle_import(
     parse_fn,
     save_fn,
     append: str | None = None,
+    merge: str | None = None,
+    acknowledge_group_clear: str | None = None,
 ) -> HTMLResponse | RedirectResponse:
     """Shared Reviewers / Reviewees CSV-import handler.
 
@@ -1028,7 +1031,14 @@ async def _handle_import(
     ``append`` is the card's append tick (segment 19Z): the file's rows
     are added and nothing is replaced, so no response-loss ack applies.
     A row already on the roster, or on a directory account already
-    there, refuses the file as its problems."""
+    there, refuses the file as its problems.
+
+    ``merge`` is the merge tick (the upsert amendment): matched rows are
+    updated, the rest added. A Reviewees merge whose tag changes would
+    clear saved group answers asks first with the count, as the row
+    editor does; its tick is ``acknowledge_group_clear``, a field of its
+    own, since the card's hidden ``acknowledge_response_loss`` already
+    carries ``true`` for a replace."""
     _require_editable(review_session)
     upload = await read_upload(
         db,
@@ -1066,6 +1076,8 @@ async def _handle_import(
     # Decision): only a direct POST can send one, as the card shows no
     # ticks there.
     appending = append == "true" and existing > 0
+    merging = merge == "true" and existing > 0
+    ticked = (confirm_replace == "true") + appending + merging
 
     def render(
         status_code: int = status.HTTP_200_OK,
@@ -1074,6 +1086,7 @@ async def _handle_import(
         missing_response_ack: bool = False,
         both_ticks: bool = False,
         held_upload: dict[str, str] | None = None,
+        group_clear: dict[str, object] | None = None,
     ) -> HTMLResponse:
         context: dict[str, object] = {
             # These two are the ids the page's own controls point at.
@@ -1140,9 +1153,14 @@ async def _handle_import(
             "confirm_replace_checked": (
                 held_upload is not None and confirm_replace == "true" and not both_ticks
             ),
-            # Segment 19Z: the append tick, likewise. Neither comes back
-            # on the both-ticks ask, which asks the operator to choose.
+            # Segment 19Z: the append and merge ticks, likewise. None
+            # comes back on the both-ticks ask, which asks the operator
+            # to choose.
             "append_checked": held_upload is not None and appending and not both_ticks,
+            "merge_checked": held_upload is not None and merging and not both_ticks,
+            # A Reviewees merge refused for clearing group answers: the
+            # count and line, offered back with a tick in the card.
+            "group_clear": group_clear,
             "breadcrumbs": breadcrumbs.operator_session_child(
                 review_session, crumb_label
             ),
@@ -1272,14 +1290,14 @@ async def _handle_import(
         )
         return render(status_code=status.HTTP_400_BAD_REQUEST)
 
-    if existing > 0 and appending and confirm_replace == "true":
+    if existing > 0 and ticked > 1:
         return render(
             status_code=status.HTTP_400_BAD_REQUEST,
             both_ticks=True,
             held_upload=ask(),
         )
 
-    if existing > 0 and not appending and confirm_replace != "true":
+    if existing > 0 and ticked == 0:
         return render(
             status_code=status.HTTP_400_BAD_REQUEST,
             missing_confirm=True,
@@ -1295,6 +1313,7 @@ async def _handle_import(
     if (
         existing > 0
         and not appending
+        and not merging
         and acknowledge_response_loss != "true"
         and lifecycle.session_has_responses(db, review_session)
     ):
@@ -1330,6 +1349,22 @@ async def _handle_import(
                 db, token=upload.token, user=user, review_session=review_session
             )
             return render(status_code=status.HTTP_400_BAD_REQUEST)
+    # A merge refuses two file rows on one directory account.
+    if merging:
+        result.issues.extend(
+            csv_imports.merge_conflicts(kind=kind, rows=result.rows, directory=directory_check)
+        )
+        if result.is_blocked:
+            release_hold(
+                db, token=upload.token, user=user, review_session=review_session
+            )
+            return render(status_code=status.HTTP_400_BAD_REQUEST)
+    extra: dict[str, object] = {}
+    if merging:
+        extra["merge"] = True
+        extra["columns"] = result.columns
+        if kind == "reviewees":
+            extra["acknowledged_loss"] = acknowledged_loss(acknowledge_group_clear)
     # The service locks the session row (findings Bc4): wait for it off
     # the event loop.
     try:
@@ -1344,12 +1379,22 @@ async def _handle_import(
             field_labels_captured=result.field_labels,
             directory=directory_check,
             append=appending,
+            **extra,
         )
     except csv_imports.AppendConflict as refused:
         db.rollback()
         result.issues.extend(refused.issues)
         release_hold(db, token=upload.token, user=user, review_session=review_session)
         return render(status_code=status.HTTP_400_BAD_REQUEST)
+    except GroupAnswersWouldClear as exc:
+        # Rolled back in the save's own unit; roll back again before the
+        # hold commits, so nothing of the refused merge rides with it.
+        db.rollback()
+        return render(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            held_upload=ask(),
+            group_clear={"count": exc.count, "message": str(exc), "surface": "import"},
+        )
     release_hold(db, token=upload.token, user=user, review_session=review_session)
     # 19P.1 rung 3c — a successful import lands back with the panel still
     # open, matching the two controls that moved before it (the labels
