@@ -3517,6 +3517,19 @@
       body.ui-v2 .upload-mode .confirm-label + .confirm-label {
         margin-top: var(--space-2);
       }
+      /* Append and merge on one line (19Z): the line's own labels keep
+         `.confirm-label`'s weight, not the global bold, and the merge
+         tick sits inline in the sentence. */
+      body.ui-v2 .upload-mode-line label {
+        display: inline;
+        margin: 0;
+        font-weight: normal;
+      }
+      body.ui-v2 .upload-mode-line span input[type="checkbox"] {
+        display: inline;
+        margin: 0 var(--space-1) 0 var(--space-2);
+        vertical-align: -2px;
+      }
 
       body.ui-v2 .session-expander-body {
         display: flex;

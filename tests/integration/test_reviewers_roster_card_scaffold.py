@@ -435,9 +435,9 @@ def test_a_pill_confirm_keeps_its_sentence_in_one_piece(client, db):
     html = _markup(_page(client, rs))
 
     labels = re.findall(r'<label class="confirm-label">.*?</label>', html, re.S)
-    # The Danger Zone's confirm, and the Upload card's replace and append
-    # ticks (19Z): three labels, each held to the one-span rule.
-    assert len(labels) == 3, (
+    # The Danger Zone's confirm and the Upload card's replace tick. The
+    # append / merge line (19Z) is a div holding two ticks, not a label.
+    assert len(labels) == 2, (
         f"expected the Danger Zone's and the upload's confirms, got "
         f"{len(labels)}"
     )
