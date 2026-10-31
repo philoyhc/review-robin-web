@@ -1,0 +1,25 @@
+{# The latest import's directory check (segment 21F, rung 4b): how its
+   addresses resolved through the directory, from the import's audit
+   event (`views.last_directory_check`). A row resolved by mail or by
+   sign-in name is tied to that person's account; a row not found,
+   ambiguous or not checked matches by its address, as before. Nothing
+   shows for an import that ran no check or had no address to check. The
+   unchecked wording names no cause: no directory access and failed
+   lookups look the same in the counts (Codex, #3429). #}
+{% if directory_check %}
+  <p class="muted" data-directory-check>
+    {% if directory_check.checked %}
+      Directory check of the last import ({{ directory_check.at | format_datetime }}):
+      {{ directory_check.by_mail }} matched by mail,
+      {{ directory_check.by_upn }} by sign-in name,
+      {{ directory_check.not_found }} not found,
+      {{ directory_check.ambiguous }} ambiguous{% if directory_check.not_checked %},
+      {{ directory_check.not_checked }} not checked{% endif %}.
+      Not-found and ambiguous addresses still work; they match by the address as written.
+    {% else %}
+      The last import's addresses ({{ directory_check.at | format_datetime }}) weren't
+      checked against the directory, so its rows match by the address as written.
+      Importing the file again tries the check again.
+    {% endif %}
+  </p>
+{% endif %}

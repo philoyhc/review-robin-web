@@ -194,3 +194,56 @@ def test_mail_for_a_row_given_by_upn_goes_to_the_directory_mail() -> None:
     assert directory_accounts.recipient(by_upn) == "jane.tan@example.edu"
     assert directory_accounts.recipient(unbound) == "guest@other.example"
     assert directory_accounts.recipient(no_mail) == "lab01@example.edu"
+
+
+# --- rung 4b: the counts on the Setup page ---
+
+
+def test_the_setup_page_shows_the_last_imports_directory_check(
+    client: TestClient, db: Session, directory: FakeDirectory
+) -> None:
+    session = _session(client, db, "dir-page")
+    page = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1")
+    assert "data-directory-check" not in page.text  # no import yet
+    csv = (
+        "ReviewerName,ReviewerEmail\n"
+        "Jane,e0123456@example.edu\nOffice,office@example.edu\nNobody,nobody@example.edu\n"
+    ).encode()
+    client.post(
+        f"/operator/sessions/{session.public_id}/reviewers/import",
+        files={"file": ("r.csv", csv, "text/csv")},
+        follow_redirects=False,
+    )
+    text = client.get(f"/operator/sessions/{session.public_id}/reviewers?unlocked=1").text
+    line = text[text.index("data-directory-check") :].split("</p>")[0]
+    assert "0 matched by mail" in line and "1 by sign-in name" in line
+    assert "1 not found" in line and "1 ambiguous" in line
+    assert "not checked" not in line
+
+
+def test_an_unchecked_import_says_so(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(_setup_observers, "directory_or_none", lambda request: None)
+    session = _session(client, db, "dir-page-none")
+    client.post(
+        f"/operator/sessions/{session.public_id}/observers/import",
+        files={"file": ("o.csv", b"ObserverName,ObserverEmail\nJane,e0123456@example.edu\n", "text/csv")},
+        follow_redirects=False,
+    )
+    text = client.get(f"/operator/sessions/{session.public_id}/observers?unlocked=1").text
+    assert "checked against the directory" in text and "Importing the file again" in text
+    assert "no directory access" not in text  # the counts can't tell why (Codex, #3429)
+
+
+def test_an_import_with_no_address_to_check_shows_nothing(
+    client: TestClient, db: Session, directory: FakeDirectory
+) -> None:
+    session = _session(client, db, "dir-page-anon")
+    client.post(
+        f"/operator/sessions/{session.public_id}/reviewees/import",
+        files={"file": ("e.csv", b"RevieweeName,RevieweeEmail\nAnon,STU-0001\n", "text/csv")},
+        follow_redirects=False,
+    )
+    text = client.get(f"/operator/sessions/{session.public_id}/reviewees?unlocked=1").text
+    assert "data-directory-check" not in text

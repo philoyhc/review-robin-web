@@ -320,6 +320,7 @@ def _render_reviewees_page(
                 all_reviewees
             ),
             "existing_count": csv_imports.existing_reviewee_count(db, review_session.id),
+            "directory_check": views.last_directory_check(db, review_session, "reviewees"),
             "assignment_count": csv_imports.existing_assignment_count(db, review_session.id),
             "upload_problems": None,
             "is_ready": is_ready,
