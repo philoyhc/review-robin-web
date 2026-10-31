@@ -32,6 +32,13 @@ BUDGET = 120.0
 #: Failures that mean the token, not the address: the first stops every
 #: lookup not yet started, as each would fail the same way.
 SIGN_IN_KINDS = frozenset({"unauthorized", "forbidden"})
+#: The page's batches (segment U2): at most this many keys per lookup
+#: request, each request under its own budget.
+BATCH_MAX = 25
+BATCH_BUDGET = 60.0
+#: What the outcomes a page carries back may hold (segment U2).
+MATCH_TYPES = frozenset({"PRIMARY_MAIL", "UPN", "NONE", "MULTIPLE"})
+_FIELD_MAX = 512
 
 
 @dataclass(frozen=True)
@@ -112,9 +119,93 @@ def look_up_all(
     }
 
 
-def run(upload: csvio.Upload, column: int, directory: Directory) -> Result:
+def outcome_json(outcome: Outcome) -> dict:
+    """One outcome as the lookup endpoint returns it and the page carries
+    it back to `/check` (segment U2)."""
+    user = outcome.user
+    return {
+        "status": outcome.status,
+        "match_type": outcome.match_type,
+        "note": outcome.note,
+        "error_kind": outcome.error_kind,
+        "user": None
+        if user is None
+        else {
+            "id": user.id,
+            "display_name": user.display_name,
+            "mail": user.mail,
+            "user_principal_name": user.user_principal_name,
+        },
+    }
+
+
+class OutcomesRejected(ValueError):
+    """Carried outcomes that don't fit the file or the shape `outcome_json` writes."""
+
+
+def _text(value: object, *, optional: bool = False) -> str | None:
+    if value is None and optional:
+        return None
+    if not isinstance(value, str) or len(value) > _FIELD_MAX:
+        raise OutcomesRejected("a field is not a short string")
+    return value
+
+
+def outcomes_from_json(data: object, keys: Iterable[str]) -> dict[str, Outcome]:
+    """Carried outcomes, checked against the file's keys. The shape is
+    checked, not the truth: they come from the super-admin's own page and
+    go only into the super-admin's own download (segment U2)."""
+    if not isinstance(data, dict):
+        raise OutcomesRejected("the outcomes are not an object")
+    allowed = set(keys)
+    outcomes: dict[str, Outcome] = {}
+    for key, raw in data.items():
+        if key not in allowed:
+            raise OutcomesRejected("an outcome names an address the file does not have")
+        if not isinstance(raw, dict):
+            raise OutcomesRejected("an outcome is not an object")
+        status = raw.get("status")
+        match_type = raw.get("match_type")
+        if status not in STATUSES or status == "INVALID_INPUT" or match_type not in MATCH_TYPES:
+            raise OutcomesRejected("an outcome has an unknown status or match type")
+        user_raw = raw.get("user")
+        user = None
+        if user_raw is not None:
+            if not isinstance(user_raw, dict):
+                raise OutcomesRejected("an outcome's account is not an object")
+            user = DirectoryUser(
+                _text(user_raw.get("id")),
+                _text(user_raw.get("display_name")),
+                _text(user_raw.get("mail"), optional=True),
+                _text(user_raw.get("user_principal_name")),
+            )
+        if (status in RESOLVED) != (user is not None):
+            raise OutcomesRejected("an outcome's account does not fit its status")
+        outcomes[key] = Outcome(
+            status, match_type, user, _text(raw.get("note", "")), _text(raw.get("error_kind", ""))
+        )
+    return outcomes
+
+
+def run(
+    upload: csvio.Upload,
+    column: int,
+    directory: Directory | None,
+    *,
+    carried: dict[str, Outcome] | None = None,
+    stopped: str = "",
+) -> Result:
+    """Check the file: look every key up, or, with ``carried``, take the
+    outcomes the page's batches collected (segment U2). A key they lack is
+    `ERROR`: ``stopped``'s kind when a refused sign-in stopped the batches,
+    else `incomplete`."""
     keys = [csvio.lookup_key(row[column]) for row in upload.rows]
-    outcomes = look_up_all(directory, (k for k in keys if k is not None))
+    if carried is None:
+        assert directory is not None
+        outcomes = look_up_all(directory, (k for k in keys if k is not None))
+    else:
+        missing = _error(stopped if stopped in SIGN_IN_KINDS else "incomplete")
+        outcomes = {k: carried.get(k, missing) for k in keys if k is not None}
 
     # Duplicate groups (spec §7): an account reached by two or more distinct
     # addresses, numbered in the order the file first names it.

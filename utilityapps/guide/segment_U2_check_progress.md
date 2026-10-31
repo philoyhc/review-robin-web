@@ -44,7 +44,7 @@ The checker's first real-tenant run went through on 2026-10-31, the day of Cordw
 
 ## Judgment calls — decided
 
-- **Batches run one at a time, five keys each** (`BATCH_MAX` 25 caps a request). That is close to today's four in flight, so Graph sees the same load.
+- **Batches run one at a time, five keys each** (`BATCH_MAX` 25 caps a request). That is close to today's four in flight, so Graph sees the same load. *Changed at build (2026-10-31):* one key per request, four in flight, so the count drops by one per address as asked, with the same load on Graph.
 - **The script lives inline in `preview.html`,** as RRW's progressive-enhancement scripts do. No asset pipeline.
 - **The batch budget is 60 s,** far above a five-key batch. It bounds a stuck request well under the front end's limit.
 
@@ -58,6 +58,10 @@ Taken 2026-10-31 at `92f4ed2`.
 | Preview template rows | 4, reordered | `grep -c "<tr>" utilityapps/templates/email_check/preview.html` |
 | Checker test files | 4 | `ls utilityapps/tests/test_email_check_*.py` |
 | Spec sections touched | 3 ("Preview", "Check", "Result") | `grep -n "^## " utilityapps/spec/email_check.md` |
+
+## Status
+
+Open. Plan `#3420`. Rungs 2 and 3 landed together in `#3421`, since rung 3 was built while rung 2 waited on CI. One `diff-reviewer` read covers both, on `1a6cafd..HEAD`. The decision changed at build: one key per request, four in flight (Judgment calls).
 
 ## PR ladder
 

@@ -30,7 +30,7 @@ line saying why, rather than checked in part:
 |---|---|
 | No file was chosen | choosing one |
 | The request says no size (no `Content-Length`) | uploading again |
-| The request is over its limit, read from `Content-Length` before anything is parsed: the upload's whole multipart request over 1 MiB (`MAX_BYTES`), so a file a few hundred bytes under it is the largest taken; the preview's carried copy over 2 MiB | the limit in KiB |
+| The request is over its limit, read from `Content-Length` before anything is parsed: the upload's whole multipart request over 1 MiB (`MAX_BYTES`), so a file a few hundred bytes under it is the largest taken; the preview's carried copy (with the page's outcomes, segment U2) over 3 MiB | the limit in KiB |
 | Over 1 MiB (`MAX_BYTES`) once read | the limit in KiB |
 | Not UTF-8 | saving as CSV UTF-8 |
 | A NUL character | that it is not a CSV |
@@ -115,6 +115,36 @@ that is the fake directory. Alias lookup is not built, so every row's
 With no delegated token the check stops before any lookup: the preview
 returns with a `503` and says the directory can't be reached, and
 nothing is checked.
+
+### From the page, counting down
+
+With its script, the preview runs the check itself (segment U2). The
+preview page carries the distinct keys as JSON (`#check-keys`), and
+*Check addresses* sends them to `POST /email-check/lookup` one key per
+request, four in flight. After each answer, *Addresses to check* drops
+by one.
+
+- **`POST /email-check/lookup`**: super-admin only. The body is JSON
+  `{"keys": [...]}`, `Content-Type: application/json` and at most 16 KiB.
+  It takes 1–25 keys (`check.BATCH_MAX`), each already a lookup key.
+  It answers `{"outcomes": {key: outcome}}`, `no-store`, each request
+  under its own 60 s budget (`check.BATCH_BUDGET`).
+  - Refusals: another content type `415`, too large `413`, bad JSON or
+    keys `400`, no delegated token `503`. On the `503` the page falls back
+    to the plain post, which shows the preview's alert.
+- **When the last key is back,** the page posts the file, the column and
+  the outcomes (`outcomes`, JSON) to `/check`. The result is built from
+  them and nothing is looked up again. Outcomes are checked for shape against
+  the file, not for truth (they come from the super-admin's own page): a key the file lacks, an unknown status or
+  match type, `INVALID_INPUT`, an account that doesn't fit its status, or
+  a field over 512 characters re-renders the upload page with a `400`.
+- **A key with no outcome** is `ERROR`, kind `incomplete`: a lookup
+  request failed and the page stopped. A refused sign-in in any answer
+  stops the page, which posts `stopped` with that kind, and the keys not
+  yet sent take it, as in one request.
+- **Without the script,** *Check addresses* posts to `/check` as above,
+  under the whole-check budget. The carried request's limit is 3 MiB, to
+  hold the outcomes beside the file.
 
 ## Classification
 

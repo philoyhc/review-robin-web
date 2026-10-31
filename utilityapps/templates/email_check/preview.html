@@ -26,9 +26,10 @@
         <tr><th scope="row">Rows</th><td class="n">{{ counts.rows }}</td></tr>
         <tr><th scope="row">Blank or not an address: kept, not checked</th><td class="n">{{ counts.invalid }}</td></tr>
         <tr><th scope="row">Repeats of an address already in the file: checked once</th><td class="n">{{ counts.repeated }}</td></tr>
-        <tr><th scope="row">Addresses to check</th><td class="n">{{ counts.distinct }}</td></tr>
+        <tr><th scope="row">Addresses to check</th><td class="n" id="to-check">{{ counts.distinct }}</td></tr>
       </table>
-      <p class="note">Nothing has been looked up yet.</p>
+      <p class="note" id="check-note" aria-live="polite">Nothing has been looked up yet.</p>
+      <script type="application/json" id="check-keys">{{ counts.keys | list | tojson }}</script>
     {% endif %}
     {% if no_graph %}
       <div class="card alert" role="alert">
@@ -36,8 +37,110 @@
       </div>
     {% endif %}
     <div class="actions">
-      <button class="btn primary" type="submit" formaction="{{ url('/email-check/check') }}"{% if column is none or no_graph %} disabled{% endif %}>Check addresses</button>
+      <button class="btn primary" type="submit" id="check-button" formaction="{{ url('/email-check/check') }}"{% if column is none or no_graph %} disabled{% endif %}>Check addresses</button>
       <a class="btn secondary" href="{{ url('/email-check/') }}">Start over</a>
     </div>
+    <input type="hidden" name="outcomes" id="check-outcomes" disabled>
+    <input type="hidden" name="stopped" id="check-stopped" disabled>
   </form>
+  {% if counts and not no_graph %}
+  <script>
+    // Segment U2: check in batches from the page, counting down. Without
+    // this script the button posts the whole check to /check, as before.
+    (function () {
+      var button = document.getElementById("check-button");
+      var keysNode = document.getElementById("check-keys");
+      if (!button || !keysNode || !window.fetch) { return; }
+      var lookupUrl = {{ url('/email-check/lookup') | tojson }};
+      var checkUrl = {{ url('/email-check/check') | tojson }};
+      var workers = 4;
+      var signInKinds = ["unauthorized", "forbidden"];
+      var form = button.form;
+      var counter = document.getElementById("to-check");
+      var note = document.getElementById("check-note");
+
+      function finish(outcomes, stopped) {
+        var field = document.getElementById("check-outcomes");
+        field.value = JSON.stringify(outcomes);
+        field.disabled = false;
+        var stop = document.getElementById("check-stopped");
+        stop.value = stopped;
+        stop.disabled = false;
+        form.action = checkUrl;
+        form.submit();
+      }
+
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        var keys = JSON.parse(keysNode.textContent);
+        var outcomes = {};
+        var left = keys.length;
+        var nextIndex = 0;
+        var running = 0;
+        var stopped = "";
+        var done = false;
+        button.disabled = true;
+        note.textContent = "Checking…";
+
+        function end(why) {
+          if (done) { return; }
+          done = true;
+          finish(outcomes, why);
+        }
+
+        // One address per request, four in flight, as the server's own
+        // pool does: the count drops by one as each comes back.
+        function pump() {
+          if (done) { return; }
+          if (stopped || (nextIndex >= keys.length && running === 0)) {
+            if (running === 0) { end(stopped); }
+            return;
+          }
+          while (!stopped && running < workers && nextIndex < keys.length) {
+            send(keys[nextIndex]);
+            nextIndex += 1;
+          }
+        }
+
+        function send(key) {
+          running += 1;
+          fetch(lookupUrl, {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "Accept": "application/json"},
+            body: JSON.stringify({keys: [key]}),
+            credentials: "same-origin"
+          }).then(function (response) {
+            if (response.status === 503) {
+              // No directory access: the plain post shows the preview's alert.
+              done = true;
+              form.action = checkUrl;
+              form.submit();
+              return null;
+            }
+            if (!response.ok) { throw new Error("lookup " + response.status); }
+            return response.json();
+          }).then(function (body) {
+            running -= 1;
+            if (body === null || done) { return; }
+            var outcome = body.outcomes[key];
+            if (outcome) {
+              outcomes[key] = outcome;
+              if (outcome.status === "ERROR" && signInKinds.indexOf(outcome.error_kind) !== -1) {
+                stopped = outcome.error_kind;
+              }
+            }
+            left -= 1;
+            counter.textContent = String(left);
+            pump();
+          }).catch(function () {
+            // What was looked up is kept; the rest download as ERROR (incomplete).
+            running -= 1;
+            end("");
+          });
+        }
+        pump();
+      });
+    })();
+  </script>
+  {% endif %}
 {% endblock %}
