@@ -616,6 +616,7 @@ def parse_reviewer_csv(content: bytes) -> ParseResult:
             tag_2=_none_if_blank(raw, "ReviewerTag2"),
             tag_3=_none_if_blank(raw, "ReviewerTag3"),
             status=status,
+            status_given=bool(_cell(raw, "Status")),
         )
         length_issues = cell_length_issues(
             row,
@@ -751,6 +752,7 @@ def parse_reviewee_csv(content: bytes) -> ParseResult:
             tag_2=_none_if_blank(raw, "RevieweeTag2"),
             tag_3=_none_if_blank(raw, "RevieweeTag3"),
             status=status,
+            status_given=bool(_cell(raw, "Status")),
         )
         length_issues = cell_length_issues(
             row,
@@ -915,6 +917,7 @@ def parse_observer_csv(content: bytes) -> ParseResult:
             display_name=_none_if_blank(raw, "ObserverName"),
             tag_1=_none_if_blank(raw, "ObserverTag1"),
             status=status,
+            status_given=bool(_cell(raw, "Status")),
             cohort_rule=cohort_rule,
         )
         length_issues = cell_length_issues(
@@ -1133,23 +1136,25 @@ def _merge_rows(
     rows: list[Any],
     to_kwargs: Any,
     directory: DirectoryCheck | None,
-    status_given: bool,
     correlation_id: str,
-) -> tuple[int, int, int, set[str]]:
+) -> tuple[int, int, int]:
     """Merge ``rows`` into ``existing`` (segment 19Z, upsert amendment).
-    Returns ``(added, updated, unchanged, changed_fields)``.
+    Returns ``(added, updated, unchanged)``.
 
     A row matches an existing one by its folded address, or by the
     directory account its address resolved to; the lowest id answers a
     roster already holding two. A matched row takes every non-blank
-    cell, Status only when the file has the column, and keeps its
-    address; an unbound row whose own address resolved is bound. Each
+    cell, Status only where its cell was filled in (``status_given``),
+    and keeps its address; an unbound row whose own address resolved is bound. Each
     updated row writes its ``*.updated`` event. Any other row is added.
 
     A name change on a row matched by account is checked against the
     other rosters at the row's **kept** address, which the route's check
     over the file's addresses cannot see; a conflict refuses the merge
     (`AppendConflict`) before any row is touched (Codex, #3440)."""
+    # Local: observers imports this module.
+    from app.services.observers import same_cohort_rule
+
     spec = _IDENTITY_ROSTERS[kind]
     by_address: dict[str, Any] = {}
     by_account: dict[str, Any] = {}
@@ -1158,9 +1163,11 @@ def _merge_rows(
         if held.directory_object_id:
             by_account.setdefault(normalize_object_id(held.directory_object_id), held)
     added = updated = unchanged = 0
-    changed_fields: set[str] = set()
-    planned: list[tuple[Any, dict[str, Any], Any]] = []
+    planned: list[tuple[Any, Any, dict[str, Any], Any]] = []
     issues: list[ValidationIssue] = []
+    # Two file rows landing on one existing row (one by address, one by
+    # account) are one person twice: refused, not applied in turn.
+    claimed: dict[int, int] = {}
     for index, row in enumerate(rows, start=1):
         kwargs = to_kwargs(row, session.id)
         address = kwargs.get(spec["model_attr"])
@@ -1194,10 +1201,26 @@ def _merge_rows(
                             problem=f"{spec['field']} is used under a different name in another roster",
                         )
                     )
-        planned.append((held, kwargs, account))
+        if held is not None:
+            first = claimed.setdefault(held.id, index)
+            if first != index:
+                issues.append(
+                    ValidationIssue(
+                        severity=Severity.error,
+                        source=kind,
+                        row_number=index,
+                        field=spec["field"],
+                        message=(
+                            f"{spec['field']} '{address}' is the same {spec['label']} "
+                            f"as row {first}."
+                        ),
+                        problem=f"{spec['field']} names a {spec['label']} another row also names",
+                    )
+                )
+        planned.append((held, row, kwargs, account))
     if issues:
         raise AppendConflict(issues)
-    for held, kwargs, account in planned:
+    for held, row, kwargs, account in planned:
         if held is None:
             if directory is not None:
                 kwargs.update(directory_accounts.columns(account))
@@ -1208,7 +1231,9 @@ def _merge_rows(
         for name, value in kwargs.items():
             if name in _MERGE_KEEPS or value is None:
                 continue
-            if name == "status" and not status_given:
+            if name == "status" and not getattr(row, "status_given", False):
+                continue
+            if name == "cohort_rule" and same_cohort_rule(held.cohort_rule, value):
                 continue
             if getattr(held, name) != value:
                 changes[name] = [getattr(held, name), value]
@@ -1221,7 +1246,6 @@ def _merge_rows(
             continue
         for name, (_, value) in changes.items():
             setattr(held, name, value)
-        changed_fields.update(changes)
         audit.write_event(
             db,
             event_type=f"{spec['label']}.updated",
@@ -1234,7 +1258,7 @@ def _merge_rows(
         )
         updated += 1
     db.flush()
-    return added, updated, unchanged, changed_fields
+    return added, updated, unchanged
 
 
 def _identity_holders(
@@ -1840,7 +1864,6 @@ def _save(
             rows=rows,
             to_kwargs=to_kwargs,
             directory=directory,
-            status_given="Status" in columns,
             correlation_id=correlation_id,
         )
         if merge
@@ -1916,7 +1939,7 @@ def _save(
             extra={
                 "session_id": session.id,
                 "source": source_label,
-                "new": len(rows),
+                "new": merged[0] if merged is not None else len(rows),
                 "replaced": replaced,
                 **({"mode": "append", "kept": kept} if append else {}),
                 **({"mode": "upsert"} if merge else {}),

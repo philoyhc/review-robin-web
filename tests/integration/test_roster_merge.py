@@ -71,7 +71,7 @@ def test_a_merge_updates_matched_rows_adds_the_rest_and_keeps_the_absent(db: Ses
 
 def test_status_changes_only_when_the_file_has_the_column(db: Session) -> None:
     review_session, owner, ana, _ = _seeded(db, "mrg-status")
-    row = ReviewerImportRow(name="Ana", email="ana@example.edu", status="inactive")
+    row = ReviewerImportRow(name="Ana", email="ana@example.edu", status="inactive", status_given=True)
     _merge_reviewers(db, review_session, owner, [ReviewerImportRow(name="Ana", email="ana@example.edu")],
                      columns=frozenset({"ReviewerName", "ReviewerEmail"}))
     assert _reviewer(db, review_session.id, "ana@example.edu").status == "active"
@@ -228,3 +228,34 @@ def test_a_merge_that_binds_a_reviewer_recomputes_self_review(db: Session) -> No
                      [ReviewerImportRow(name="Jane", email="e0123456@example.edu")], directory=directory)
     db.expire_all()
     assert db.get(Assignment, row.id).is_self_review is True
+
+
+def test_a_blank_status_cell_keeps_the_stored_status(client, db: Session) -> None:
+    """A Status column with a blank cell parses as `active`; a merge
+    keeps the row's stored status rather than writing that default."""
+    review_session, owner, ana, _ = _seeded(db, "mrg-blank")
+    ana.status = "inactive"
+    db.commit()
+    parsed = csv_imports.parse_reviewer_csv(
+        b"ReviewerName,ReviewerEmail,Status\nAna,ana@example.edu,\nCy,cy@example.edu,inactive\n"
+    )
+    assert [r.status_given for r in parsed.rows] == [False, True]
+    _merge_reviewers(db, review_session, owner, parsed.rows, columns=parsed.columns)
+    assert _reviewer(db, review_session.id, "ana@example.edu").status == "inactive"
+    assert _reviewer(db, review_session.id, "cy@example.edu").status == "inactive"
+
+
+def test_two_file_rows_landing_on_one_row_refuse_the_merge(db: Session) -> None:
+    """Jane's row is bound at `jane.tan@`. One file row names that address
+    (its own lookup failed), another her UPN (resolved): both would update
+    her row, so the merge is refused."""
+    review_session, owner = _session(db, "mrg-claimed")
+    db.add(Reviewer(session_id=review_session.id, name="Jane", email="jane.tan@example.edu", directory_object_id=JANE_OID))
+    db.commit()
+    directory = DirectoryCheck(accounts={"e0123456@example.edu": JANE}, counts={})
+    with pytest.raises(AppendConflict) as refused:
+        _merge_reviewers(db, review_session, owner, [
+            ReviewerImportRow(name="Jane", email="jane.tan@example.edu", tag_1="A"),
+            ReviewerImportRow(name="Jane", email="e0123456@example.edu", tag_1="B"),
+        ], directory=directory)
+    assert [i.row_number for i in refused.value.issues] == [2]

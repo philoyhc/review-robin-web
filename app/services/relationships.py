@@ -256,6 +256,7 @@ def parse_relationship_csv(
             tag_2=_none_if_blank(raw, "PairContextTag2"),
             tag_3=_none_if_blank(raw, "PairContextTag3"),
             status=status_raw,
+            status_given=bool(_cell(raw, "Status")),
         )
         length_issues = cell_length_issues(
             row,
@@ -484,7 +485,7 @@ def save_relationships(
             changes: dict[str, list[object]] = {}
             for name in ("tag_1", "tag_2", "tag_3", "status"):
                 value = getattr(row, name)
-                if value is None or (name == "status" and "Status" not in columns):
+                if value is None or (name == "status" and not row.status_given):
                     continue
                 if getattr(held, name) != value:
                     changes[name] = [getattr(held, name), value]

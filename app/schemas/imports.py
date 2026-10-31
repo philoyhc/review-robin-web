@@ -16,6 +16,10 @@ class ReviewerImportRow(BaseModel):
     # validated by the parser; defaults to "active" (a CSV without a
     # Status column re-imports everyone active, as before).
     status: str = "active"
+    # Segment 19Z: whether the Status cell was filled in. A blank cell, or
+    # no Status column, still parses as ``active``, but a merge keeps the
+    # row's stored status rather than writing that default.
+    status_given: bool = False
 
 
 class RevieweeImportRow(BaseModel):
@@ -26,6 +30,10 @@ class RevieweeImportRow(BaseModel):
     tag_2: str | None = None
     tag_3: str | None = None
     status: str = "active"
+    # Segment 19Z: whether the Status cell was filled in. A blank cell, or
+    # no Status column, still parses as ``active``, but a merge keeps the
+    # row's stored status rather than writing that default.
+    status_given: bool = False
 
 
 class ObserverImportRow(BaseModel):
@@ -40,6 +48,10 @@ class ObserverImportRow(BaseModel):
     display_name: str | None = None
     tag_1: str | None = None
     status: str = "active"
+    # Segment 19Z: whether the Status cell was filled in. A blank cell, or
+    # no Status column, still parses as ``active``, but a merge keeps the
+    # row's stored status rather than writing that default.
+    status_given: bool = False
     # Segment 18P PR B — the per-observer cohort match rule
     # (``CohortRuleSet`` shape, already schema-validated by the
     # parser), or ``None`` when the CohortRule cell is blank / absent.
@@ -59,3 +71,7 @@ class RelationshipImportRow(BaseModel):
     tag_2: str | None = None
     tag_3: str | None = None
     status: str = "active"
+    # Segment 19Z: whether the Status cell was filled in. A blank cell, or
+    # no Status column, still parses as ``active``, but a merge keeps the
+    # row's stored status rather than writing that default.
+    status_given: bool = False
