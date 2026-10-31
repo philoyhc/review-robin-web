@@ -1,6 +1,6 @@
 # Segment U2 — The Email Address Checker counts down
 
-**Opened:** 2026-10-31 · **Theme:** the preview reads in the order its numbers add up, and *Check addresses* counts down as addresses are checked · **Related:** `utilityapps/spec/email_check.md` (the contract), `utilityapps/guide/archive/segment_U1_email_checker.md` (the build)
+**Opened:** 2026-10-31 · **Closed:** 2026-10-31 · **Theme:** the preview reads in the order its numbers add up, and *Check addresses* counts down as addresses are checked · **Related:** `utilityapps/spec/email_check.md` (the contract), `utilityapps/guide/archive/segment_U1_email_checker.md` (the build)
 
 ## Opportunity
 
@@ -61,7 +61,16 @@ Taken 2026-10-31 at `92f4ed2`.
 
 ## Status
 
-Open. Plan `#3420`. Rungs 2 and 3 landed together in `#3421`, since rung 3 was built while rung 2 waited on CI. One `diff-reviewer` read covers both, on `1a6cafd..HEAD`. The decision changed at build: one key per request, four in flight (Judgment calls). The read found nothing blocking and nine points, fixed in `#3421` unless noted: a column changed but not previewed now takes the plain path; a network error keeps a refused sign-in's kind; only the endpoint's own `no_graph` 503 falls back; carried error kinds are allowlisted (`check.ERROR_KINDS`); the `incomplete` note reads plainly; a page restored from the back/forward cache resets; plan and spec wording. Kept as specified: one failed request stops the page.
+**Closed 2026-10-31, in three PRs:** plan `#3420`, rungs 2–3 together in `#3421` (rung 3 was built while rung 2 waited on CI), and this close.
+
+Decision changed at build: one key per request, four in flight, rather than batches of five, so the count drops by one per address as asked (Judgment calls).
+
+Reads:
+- **`diff-reviewer`**, once, on `1a6cafd..56fecc1`'s first two commits. Nothing blocking; nine points. Fixed in `#3421`: an unpreviewed column, a network error dropping a refused sign-in's kind, any 503 taken as `no_graph`, carried error kinds unchecked before the log, the `incomplete` note, back/forward-cache restore, plan and spec wording. Kept as specified: one failed request stops the page.
+- **Codex**, two findings, both fixed in `#3421`: the column could change mid-run, and the `no_graph` fallback did not post the column.
+- **`spec-writer`** at the close: two refusals added to the spec's lists. One flag left on purpose: over-limit messages name the file's 1024 KiB limit even when the carried request, which also holds the outcomes, is what was too large. The file's own limit is what a user can act on.
+
+Still owed: the author sees the countdown move on a real file. Easy Auth's answer to a `fetch` after the session has expired can only be seen in production.
 
 ## PR ladder
 
