@@ -135,7 +135,7 @@ change on `main` that makes it necessary; every one of them has landed.
    - **Deep links:** signed out, open a deep link such as
      `/reviewrobin/operator/sessions`; sign-in returns to it. Sign out
      (`/.auth/logout`, the host's) and sign in again from `/`, which
-     redirects to `/reviewrobin/`.
+     lists the mounted applications; its link opens `/reviewrobin/`.
    - **Probes:** both health paths answer `{"status": "ok"}`, signed
      out.
    - **Request handling:** a missing page such as
@@ -293,8 +293,9 @@ Expected response:
 {"status": "ok"}
 ```
 
-The root endpoint `/` does not serve a JSON body. Once 21D is deployed it
-302-redirects to `/reviewrobin/`, RRW's root, which sends a signed-in
+The root endpoint `/` does not serve a JSON body. It is the host's
+landing page, listing the mounted applications; `/reviewrobin/`, RRW's
+root, sends a signed-in
 operator to `/reviewrobin/operator/sessions` and anyone else to
 `/reviewrobin/me`. `/health` is the host's liveness endpoint and
 `/reviewrobin/health` is RRW's.

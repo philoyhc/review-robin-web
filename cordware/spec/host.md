@@ -57,7 +57,7 @@ point.
 ## The host's part in `root_path`
 
 The host rewrites no application's URLs. It emits URLs only on its own
-landing page (§ Landing page), where its redirect and links carry the
+landing page (§ Landing page), where its links carry the
 request's `root_path` before the application's path. For an application,
 the host's part is the mount: Starlette's `Mount` sets `root_path` in the
 ASGI scope to the mount path before the application runs, and an
