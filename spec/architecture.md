@@ -220,8 +220,10 @@ logging; RRW logs under named `app.*` loggers via
 
 What a browser meets at the mount's edge:
 
-- `/` is the host's. With RRW the only application it redirects (302) to
-  `/reviewrobin/`, RRW's role-aware root.
+- `/` is the host's landing page, listing the mounted applications
+  (RRW among them) with the viewer's sign-in details
+  (`cordware/spec/host.md` "Landing page"); RRW's role-aware root is
+  `/reviewrobin/`.
 - `/reviewrobin` redirects (307, Starlette's slash redirect) to
   `/reviewrobin/`.
 - A root path from before the mount, such as `/operator/sessions`, answers

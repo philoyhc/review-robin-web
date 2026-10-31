@@ -42,9 +42,11 @@ def test_each_runs_alone(name: str) -> None:
     host, _ = host_with((name,))
     client = TestClient(host)
     assert client.get(HEALTH[name]).json() == {"status": "ok"}
+    # `/` lists the lone application rather than redirecting to it
+    # (Cordware's landing page, author, 2026-10-31).
     landing = client.get("/", follow_redirects=False)
-    assert landing.status_code == 302
-    assert landing.headers["location"] == f"{REGISTRY[name].path}/"
+    assert landing.status_code == 200
+    assert f'href="{REGISTRY[name].path}/"' in landing.text
     other = next(n for n in HEALTH if n != name)
     assert client.get(HEALTH[other]).status_code == 404
 

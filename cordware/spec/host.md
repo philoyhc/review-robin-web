@@ -79,25 +79,33 @@ serve `GET /`. The host registers it before any mount, so it answers ahead of
 an application; if an application is mounted at `/`, the host registers
 nothing there and the application owns `/`.
 
-| Mounted | `/` answers |
-|---|---|
-| Exactly one application | A 302 redirect to that application's path with its trailing slash (`/reviewrobin/` for RRW), prefixed by the request's `root_path`. |
-| None, or two or more | A page listing each mounted application, in mount order, as a link to its path with its title (registry name if the title is empty), and a host-level `Sign out` link to `/.auth/logout`. With none mounted it says no applications are running. |
+`/` answers with a page listing each mounted application, in mount order,
+as a link to its path with its trailing slash and the request's
+`root_path` (`/reviewrobin/` for RRW), titled by its registry title
+(registry name if empty), and a host-level `Sign out` link to
+`/.auth/logout`. With none mounted it says no applications are running.
+**One application is listed like any other** (author, 2026-10-31): the
+302 redirect a lone application took (ruled 2026-10-21) is withdrawn, as
+it hid the sign-in details on a deployment mounting only one.
 
 The page requires no sign-in and has no roles: it lists what is mounted,
 not what a viewer may use, and each application gates its own routes.
 
-For diagnosis (author, 2026-10-26) the listing page also shows **Sign-in
-details**, from `current_identity` (`cordware/spec/identity.md`): name,
-email, object ID (`principal_id`: the Entra object ID under Easy Auth,
-`FAKE_AUTH_PRINCIPAL_ID` under fake auth), provider, whether the identity
-came from Easy Auth headers or fake auth, and whether it is the super-admin.
-Under Easy Auth a collapsed list shows the principal header's claims, as
-`extract_claims` reads them; the fake identity has none. Signed out, it
-says so, without counting a refusal. The details are the viewer's own, so
-the response is `Cache-Control: no-store`. The one-application redirect
-shows nothing, so a deployment that mounts one application never shows
-them.
+For diagnosis (author, 2026-10-26; rows extended 2026-10-31) the page
+also shows **Sign-in details**, from `current_identity`
+(`cordware/spec/identity.md`), to everyone signed in: name; **Matched
+as** (`email`, the address the applications match on); **UPN** and
+**Mail** (`upn`, `mail`, as Entra gives them, `FAKE_AUTH_UPN` /
+`FAKE_AUTH_MAIL` under fake auth); object ID (`principal_id`: the Entra
+object ID under Easy Auth, `FAKE_AUTH_PRINCIPAL_ID` under fake auth);
+provider; whether the identity came from Easy Auth headers or fake auth;
+and whether it is the super-admin. An absent field reads "—", never an
+error. **Only a super-admin** also sees the principal header's claims,
+as `extract_claims` reads them, collapsed under "Sign-in claims": the
+full list is a diagnostic and carries session internals (author,
+2026-10-31). The fake identity has none. Signed out, it says so, without
+counting a refusal. The details are the viewer's own, so the response is
+`Cache-Control: no-store`.
 
 The landing template carries its own inline style and extends nothing of
 RRW's. Its favicon, inline SVG as Residential's are, is a white two-ply cord

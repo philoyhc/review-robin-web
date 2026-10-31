@@ -51,15 +51,23 @@
       {% if identity %}
         <dl>
           <dt>Name</dt><dd>{{ identity.name or "—" }}</dd>
-          <dt>Email</dt><dd>{{ identity.email or "—" }}</dd>
+          {# The address the applications match on (`Identity.email`): the
+             mail when the emailaddress claim is present, else the sign-in
+             name. UPN and Mail beside it, as Entra gives them. #}
+          <dt>Matched as</dt><dd>{{ identity.email or "—" }}</dd>
+          <dt>UPN</dt><dd>{{ identity.upn or "—" }}</dd>
+          <dt>Mail</dt><dd>{{ identity.mail or "—" }}</dd>
           <dt>Object ID</dt><dd>{{ identity.principal_id or "—" }}</dd>
           <dt>Provider</dt><dd>{{ identity.provider or "—" }}</dd>
           <dt>Source</dt><dd>{{ "Fake local identity (ALLOW_FAKE_AUTH)" if identity.is_fake else "Easy Auth headers" }}</dd>
           <dt>Super-admin</dt><dd>{{ "Yes" if identity.is_super_admin else "No" }}</dd>
         </dl>
+        {# A super-admin's alone (author, 2026-10-31): the full list is a
+           diagnostic and carries session internals. Never for the fake
+           identity. #}
         {% if claims %}
           <details>
-            <summary>Claims from Easy Auth ({{ claims | length }})</summary>
+            <summary>Sign-in claims ({{ claims | length }})</summary>
             <table>
               {% for claim in claims %}
                 <tr><td>{{ claim.typ }}</td><td>{{ claim.val }}</td></tr>
