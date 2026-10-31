@@ -40,6 +40,7 @@ from app.db.models import (
 from app.db.session import get_db
 from app.services import assignments, csv_imports, date_formatting, directory_accounts
 from app.services import field_labels as field_labels_service
+from app.services.users import is_verified as users_service_is_verified
 from app.services import instruments as instruments_service
 from app.services import (
     held_uploads,
@@ -79,6 +80,8 @@ _templates = Jinja2Templates(
 )
 urls.install(_templates)
 _templates.env.globals["app_version"] = settings.app_version
+# 19Z, accounts item: a ``users`` row bound to its person in the directory.
+_templates.env.globals["account_verified"] = users_service_is_verified
 _templates.env.globals["display_field_label"] = (
     instruments_service.display_field_label
 )

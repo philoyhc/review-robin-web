@@ -37,6 +37,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ReviewSession, SessionOperator, User
 from app.services import audit
 from app.services.email_identity import normalize_email
+from app.services.users import is_verified
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,7 @@ def list_owners(db: Session, review_session: ReviewSession) -> list[OwnerRow]:
             display_name=user.display_name,
             role=sess_op.role,
             joined_at=sess_op.created_at,
-            verified=bool((user.external_principal_id or "").strip()),
+            verified=is_verified(user),
         )
         for sess_op, user in rows
     ]

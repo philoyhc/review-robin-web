@@ -731,8 +731,10 @@ def invite_user(
     # nothing, and the row is created unbound, as before. A local run's
     # directory is the five fake people, and the accounts invited there
     # are made up, so it checks nothing either.
-    directory = None if is_local() else directory_or_none(request)
-    outcome = directory_accounts.look_up_one(directory, email)
+    def look_up():
+        directory = None if is_local() else directory_or_none(request)
+        return directory_accounts.look_up_one(directory, email)
+
     try:
         invited = users_service.invite(
             db,
@@ -740,7 +742,7 @@ def invite_user(
             email=email,
             is_operator=True,
             is_sys_admin=invite_as_sys_admin == "true",
-            directory=outcome,
+            directory=look_up,
         )
     except users_service.UserOperationError as exc:
         url = f"{_ACCOUNTS_URL}?invite_error={quote(exc.code, safe='')}"

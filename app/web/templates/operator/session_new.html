@@ -258,7 +258,7 @@
             <th class="col-shrink">Action</th>
           </tr>
           <tr>
-            <td>{{ account_address(user.external_principal_id, user.email) }}</td>
+            <td>{{ account_address(account_verified(user), user.email) }}</td>
             <td>{{ user.display_name or "—" }}</td>
             <td>owner</td>
             <td>—</td>
@@ -275,7 +275,7 @@
                  autocomplete="off" placeholder="email">
           <datalist id="session-owners-candidates">
             {% for candidate in new_session_owner_candidates %}
-              <option value="{{ candidate.email }}"{% if candidate.external_principal_id %} data-verified{% endif %}>{{ candidate.display_label }}</option>
+              <option value="{{ candidate.email }}"{% if account_verified(candidate) %} data-verified{% endif %}>{{ candidate.display_label }}</option>
             {% endfor %}
           </datalist>
           <div class="card-action-row">

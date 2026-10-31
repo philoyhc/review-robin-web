@@ -31,9 +31,11 @@ and apply the invariants:
 ``invite`` creates a pre-seeded ``users`` row before the invitee's
 first Entra sign-in. ``get_or_create_user`` matches by email on
 sign-in (``find_signed_in_user``), so the invitee lands on the
-pre-seeded row without overriding the flags this module set. The
-row is stored with no principal id; that first sign-in records it, so
-the principal-id match below reaches invited accounts too.
+pre-seeded row without overriding the flags this module set. A row
+whose address the directory resolved is stored with the person's object
+id (19Z, accounts item), so the principal-id match below finds it at
+once; any other is stored with none, and that first sign-in records it,
+so the match reaches invited accounts too.
 
 ``find_signed_in_user`` matches the Entra object id before the email
 (findings P5): the row whose ``external_principal_id`` matches takes a
@@ -43,6 +45,7 @@ and session ownership.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -50,6 +53,7 @@ from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from cordware.graph import Outcome
+from cordware.settings import identity_settings
 
 from app.auth.identity import AuthenticatedUser
 from app.auth.roles import is_super_admin, super_admin_configured
@@ -63,7 +67,7 @@ from app.db.models import (
 )
 from app.logging_config import get_logger
 from app.services import audit, directory_accounts
-from app.services.email_identity import normalize_email
+from app.services.email_identity import normalize_email, normalize_object_id
 
 log = get_logger(__name__)
 
@@ -109,7 +113,8 @@ def find_signed_in_user(
     resolve deterministically rather than raising
     ``MultipleResultsFound``. An email match with no stored principal
     id records this one, under the same exclusions, so an invited row
-    (``invite`` stores none) is found by principal id from then on.
+    stored unbound is found by principal id from then on (one bound at
+    invite already was).
     Audited as ``workspace.user_principal_recorded``, with no actor: from
     then on that identity decides the row. A non-empty
     stored principal id that differs is never overwritten: no row with
@@ -136,7 +141,10 @@ def find_signed_in_user(
         rows = list(
             db.execute(
                 select(User)
-                .where(User.external_principal_id == principal_id)
+                .where(
+                    func.lower(func.trim(User.external_principal_id))
+                    == normalize_object_id(principal_id)
+                )
                 .order_by(User.id.desc())
             ).scalars()
         )
@@ -206,7 +214,8 @@ def _move_to_email(db: Session, target: User, new_email: str) -> None:
 def _absorbable(db: Session, holder: User) -> bool:
     """Whether ``holder`` — the row already holding the signed-in
     identity's new email — can fold into the principal-id row: it
-    carries no principal id, and nothing
+    carries no principal id (an invite bound in the directory carries
+    its person's, and is never folded into another), and nothing
     but flags and session memberships, so it has never been signed in
     to. Anything a sign-in leaves behind (a principal id, an audit row
     it acted in, a session it created, a rehydrate stash, a data shape)
@@ -296,8 +305,11 @@ def _write_email_change(db: Session, target: User, new_email: str) -> None:
 def is_verified(user: User) -> bool:
     """Whether ``user`` is bound to its person in the directory (19Z,
     accounts item): an Entra object id from a checked invite or a
-    sign-in."""
-    return bool((user.external_principal_id or "").strip())
+    sign-in. The fake sign-in's constant id (``FAKE_AUTH_PRINCIPAL_ID``,
+    a local run's) is no one's, so it never counts, as 21F's matchers
+    hold it."""
+    principal = normalize_object_id(user.external_principal_id)
+    return bool(principal) and principal != normalize_object_id(identity_settings.fake_auth_principal_id)
 
 
 @dataclass(frozen=True)
@@ -1023,15 +1035,16 @@ def _invite_principal(db: Session, email: str, outcome: Outcome | None) -> str |
                 else f"{email} is not in the institution's directory, so they could not sign in."
             ),
         )
+    object_id = normalize_object_id(account.object_id)
     holder = db.execute(
-        select(User).where(User.external_principal_id == account.object_id)
+        select(User).where(func.lower(func.trim(User.external_principal_id)) == object_id)
     ).scalars().first()
     if holder is not None:
         raise UserOperationError(
             code="account_exists",
             message=f"{email} is the same person as the account {holder.email}.",
         )
-    return account.object_id
+    return object_id
 
 
 def invite(
@@ -1041,7 +1054,7 @@ def invite(
     email: str,
     is_operator: bool = True,
     is_sys_admin: bool = False,
-    directory: Outcome | None = None,
+    directory: Callable[[], Outcome | None] | None = None,
     correlation_id: str | None = None,
 ) -> User:
     """Pre-seed a ``users`` row before the invitee's first Entra
@@ -1052,8 +1065,9 @@ def invite(
     it takes the same super-admin guard as ``promote``.
 
     **Checked against the directory** (segment 19Z, accounts item):
-    ``directory`` is the address's lookup outcome, ``None`` when none
-    ran. An address that resolves to one account binds its object id as
+    ``directory`` looks the address up, called only once the cheaper
+    refusals have passed; it, or its outcome, is ``None`` when no lookup
+    can run. An address that resolves to one account binds its object id as
     ``external_principal_id``, the id sign-in matches first, so the
     person finds this row whichever address they sign in with. Not
     found (``not_in_directory``), ambiguous (``ambiguous_in_directory``)
@@ -1080,11 +1094,10 @@ def invite(
             ),
         )
 
-    principal_id = _invite_principal(db, email_normalised, directory)
-
     if is_sys_admin:
         _guard_actor_super_admin(actor)
         is_operator = True
+    principal_id = _invite_principal(db, email_normalised, directory() if directory else None)
     user = User(
         email=email_normalised,
         is_operator=is_operator,
@@ -1104,6 +1117,7 @@ def invite(
                 "is_operator": is_operator,
                 "is_sys_admin": is_sys_admin,
                 "directory_verified": principal_id is not None,
+                "external_principal_id": principal_id,
             }
         ),
         refs={"target_user_id": user.id},
