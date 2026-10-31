@@ -37,13 +37,13 @@ After append shipped (`#3437`), the author asked for upsert too, ruled "go with 
 
 None is shown on an empty roster. All three are mutually exclusive, none is ticked by default, and Upload stays disabled until one is. Merge is the upsert: a file row already on the roster updates that row, and any other row is added, as in append. Rows absent from the file are kept.
 
-**And a Validate warning for two rows on one directory account,** on each person roster. It lifts the deferred entry's Validate half into this segment, so a second row for one person is flagged however it arrived: upsert, append, replace or the Add form.
+**And a Validate warning for two rows on one directory account,** on each person roster. It lifts the deferred entry's Validate half into this segment, so a second row for one person is flagged however it arrived (upsert, append, replace or the Add form), as long as both rows are bound to the account.
 
-**Rejected:** *looking up the roster's unbound rows on an upsert*, to catch an existing row the directory never resolved. It can double the lookup on a 1,500-row roster inside one 120-second budget; the Validate warning catches the same case afterwards.
+**Rejected:** *looking up the roster's unbound rows on an upsert*, to catch an existing row the directory never resolved. It can double the lookup on a 1,500-row roster inside one 120-second budget. The cost is a gap: an existing row the directory never resolved, matched by a file address for the same person, is added as a second row that nothing flags (Codex, `#3438`).
 
 ## Semantics — upsert
 
-- **Matching.** A row matches by its folded address; on Relationships, by its resolved pair. A new address is a new row, and an address change stays a single-row edit. A file row whose address resolves to a directory account bound on the roster updates that bound row and **keeps its stored address**, since matching and mail already follow the account. An unresolved file address, or an unbound existing row, can't be matched by account: the row is added, and the Validate warning names the pair.
+- **Matching.** A row matches by its folded address; on Relationships, by its resolved pair. A new address is a new row, and an address change stays a single-row edit. A file row whose address resolves to a directory account bound on the roster updates that bound row and **keeps its stored address**, since matching and mail already follow the account. An unresolved file address, or an unbound existing row, can't be matched by account, so the row is added. The Validate warning names the pair only when both rows are bound. An unbound existing row stays unflagged until something binds it: re-uploading the roster with replace, or editing its address (Codex, `#3438`).
 - **Blank cells and absent columns keep the existing value.** A file can carry only the columns it changes; nothing is cleared by an upsert. Observers' cohort rule is a column like any other.
 - **Status** changes only where the Status column is present. Deactivating a reviewer or reviewee excludes their assignments, as the single-row edit does.
 - **A name change applies** if it passes the cross-roster name check, which on upsert compares against every roster with the updated row's own old name set aside. A failure refuses the file, naming the row.
