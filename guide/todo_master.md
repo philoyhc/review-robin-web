@@ -61,7 +61,9 @@ concluding** (decision 2026-09-05) and independent of each other.
 3. **19Z — Append to a roster** (not gated on Azure). The four roster
    pages' Upload cards gain an append tick beside the replace tick
    (mutually exclusive, neither ticked by default), so a late batch adds
-   rows without deleting assignments or responses. A row already on the roster, or on an account already
+   rows without deleting assignments or responses. Append shipped
+   (`#3437`); an upsert tick and a Validate warning for two rows on one
+   directory account follow (author, 2026-10-31). A row already on the roster, or on an account already
    there, refuses the file (author, 2026-10-31).
    **Plan:** `guide/segment_19Z_roster_append.md`.
 
