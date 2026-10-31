@@ -60,6 +60,12 @@ def test_the_owners_card_pills_a_verified_owner(client: TestClient, db: Session)
     _bind(db, "bob@example.edu")
     page = _home(client, review_session)
     assert "bob@example.edu" in PILL.findall(page)
+    # The name too (author, 2026-10-31).
+    bob = db.execute(select(User).where(User.email == "bob@example.edu")).scalar_one()
+    bob.display_name = "Bob Bound"
+    db.commit()
+    page = _home(client, review_session)
+    assert '<span class="pill pill-count pill-address" title="Matched to a directory account" data-directory-matched>Bob Bound</span>' in page
 
 
 def test_the_new_session_picker_marks_a_verified_candidate(client: TestClient, db: Session) -> None:
