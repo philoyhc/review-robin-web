@@ -41,7 +41,7 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 
 **Rejected:** *looking up the roster's unbound rows on an upsert*, to catch an existing row the directory never resolved. It can double the lookup on a 1,500-row roster inside one 120-second budget. The cost is a gap: an existing row the directory never resolved, matched by a file address for the same person, is added as a second row that nothing flags (Codex, `#3438`).
 
-**Item: matched addresses as pills** (author, 2026-10-31, after production went live on RRW `920f5c7`). In the three roster tables and the Assignments table, an address bound to a directory account reads as the plain display pill (`pill pill-count`), its case kept, with a "Matched to a directory account" tooltip. Any other address stays plain code. One macro, `operator/partials/_roster_address.html`, renders all five cells. Relationships and the Invitations / Responses pages stay plain: the item names the three roster tables and Assignments, and a later ask can widen it.
+**Item: matched addresses as pills** (author, 2026-10-31, after production went live on RRW `920f5c7`). In the three roster tables and the Assignments table, an address bound to a directory account reads as the plain display pill (`pill pill-count`), its case kept, with a "Matched to a directory account" tooltip. Any other address stays plain code. One macro, `operator/partials/_roster_address.html`, renders all five cells. Widened the same day (author): the Relationships table, the Invitations and Responses tables, and their per-reviewer / per-reviewee drill-ins take the same macro, eleven cells in all.
 
 ## Semantics — upsert
 
@@ -127,6 +127,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 9. **Upsert in the services.** `mode="upsert"` through `_save` and `save_relationships`: matching (address, pair, account), blank-keeps, Status only when its column is present, the name check, per-row `*.updated` events, and the counts. Service tests. Must not touch a route.
 10. **Wire upsert on the four cards, then close.** Wiring, the tag-change group-clear ask on the person rosters, route tests; the cumulative `diff-reviewer` read of rungs 7–10 (base: `main` before rung 7). Then the close: `spec-writer` on the doc-impact specs, and the author's browser check of each card.
 11. **Matched addresses as pills** (the item above). Must not touch a route or service.
+12. **Pills on Relationships, Invitations and Responses** (the widening). Same macro; must not touch a route or service.
 
 ## Definition of done
 
@@ -140,7 +141,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - An upsert updates matched rows (by address, pair, or bound account, keeping the stored address), adds the rest, keeps absent rows, and leaves blank cells and absent columns as they were (tests).
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
-- A bound address is a display pill in the roster and Assignments tables; an unbound one is plain code (tests).
+- A bound address is a display pill in the roster, Relationships, Assignments, Invitations and Responses tables and the two drill-ins; an unbound one is plain code (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -161,7 +162,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 
 ## Doc impact
 
-- `spec/setup_pages.md` — the Upload card's Append and Upsert ticks, exclusivity and copy, for the four roster pages; the roster tables show a bound address as a pill.
+- `spec/setup_pages.md` — the Upload card's Append and Upsert ticks, exclusivity and copy, for the four roster pages; the roster and Relationships tables show a bound address as a pill.
 - `spec/csv_contracts.md` — §3: append and upsert modes for the four importers, the already-on-the-roster rule, matching on upsert, blank-keeps, label upsert, and the audit `context`.
 - `spec/assignments.md` — an append leaves assignments in place and marks them stale; the table's address cells show a bound address as a pill.
 - `docs/security_posture.md` — the replace tick's description gains its Append counterpart.
@@ -169,6 +170,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/operator_button_audit.md` — the Upload rows open on either tick; the second shared confirm-checkbox script (`data-exclusive-tick`).
 - `spec/extract_data.md` — the pairing's unique-key note, which a shared Upload key now qualifies.
 - `spec/validate_page.md` — the three `*.duplicate_account` soft rules (upsert amendment).
+- `spec/operations_pages.md` — the Invitations and Responses tables and their drill-ins show a bound address as a pill (pills item, widened).
 - `spec/architecture.md` — "Audit-event detail schema": the `*.imported` counts `new` / `kept` (append) and `new` / `updated` / `unchanged` (upsert) with `context.mode`, and the per-row `*.updated` events a merge writes.
 - `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": its Validate half shipped; the entry narrows to refusing at upload (at close).
 - `guide/todo_master.md` — the queue entry, deleted at close.

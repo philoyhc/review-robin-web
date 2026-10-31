@@ -1,5 +1,6 @@
 """A roster address bound to a directory account reads as a display pill
-in the roster and Assignments tables (segment 19Z, author 2026-10-31);
+in the roster, Relationships, Assignments, Invitations and Responses
+tables and their drill-ins (segment 19Z, author 2026-10-31);
 an unbound address stays plain code."""
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import Assignment, Observer, Reviewee, Reviewer
+from app.db.models import Assignment, Observer, Relationship, Reviewee, Reviewer
 from app.services.instruments import ensure_default_instrument
 
 from .test_held_upload_setup_cards import _session
@@ -32,7 +33,11 @@ def _seed(client: TestClient, db: Session, code: str):
     instrument = ensure_default_instrument(db, s)
     db.add(Assignment(session_id=s.id, reviewer_id=bound_r.id, reviewee_id=plain_e.id, instrument_id=instrument.id))
     db.add(Assignment(session_id=s.id, reviewer_id=plain_r.id, reviewee_id=bound_e.id, instrument_id=instrument.id))
+    s.relationships_enabled = True
+    db.add(Relationship(session_id=s.id, reviewer_id=bound_r.id, reviewee_id=plain_e.id))
+    db.add(Relationship(session_id=s.id, reviewer_id=plain_r.id, reviewee_id=bound_e.id))
     db.commit()
+    s.ids = {"bound_r": bound_r.id, "plain_r": plain_r.id, "bound_e": bound_e.id, "plain_e": plain_e.id}
     return s
 
 
@@ -58,3 +63,37 @@ def test_the_assignments_table_pills_bound_addresses_on_both_sides(client: TestC
     html = client.get(f"/operator/sessions/{s.public_id}/assignments").text
     assert sorted(PILL.findall(html)) == ["Jane.Tan@example.edu", "e0123456@example.edu"]
     assert "<code>pat@example.edu</code>" in html and "<code>STU-0001</code>" in html
+
+
+@pytest.mark.parametrize("page", ["relationships", "invitations", "responses"])
+def test_the_relationships_invitations_and_responses_tables_pill_bound_addresses(
+    client: TestClient, db: Session, page: str
+) -> None:
+    s = _seed(client, db, f"pill-{page}")
+    response = client.get(f"/operator/sessions/{s.public_id}/{page}")
+    assert response.status_code == 200
+    html = response.text
+    expected = {
+        "relationships": ["Jane.Tan@example.edu", "e0123456@example.edu"],
+        "invitations": ["e0123456@example.edu"],
+        "responses": ["Jane.Tan@example.edu"],
+    }[page]
+    assert sorted(PILL.findall(html)) == expected
+    plain = {"relationships": "pat@example.edu", "invitations": "pat@example.edu", "responses": "STU-0001"}[page]
+    assert f"<code>{plain}</code>" in html
+
+
+@pytest.mark.parametrize(
+    ("path", "bound"),
+    [
+        ("invitations/reviewers/{bound_r}", True),
+        ("invitations/reviewers/{plain_r}", False),
+        ("responses/{bound_e}/detail", True),
+        ("responses/{plain_e}/detail", False),
+    ],
+)
+def test_the_drill_in_headers_pill_a_bound_address(client: TestClient, db: Session, path: str, bound: bool) -> None:
+    s = _seed(client, db, f"pill-d-{path.split('/')[0]}-{bound}")
+    response = client.get(f"/operator/sessions/{s.public_id}/" + path.format(**s.ids))
+    assert response.status_code == 200
+    assert bool(PILL.findall(response.text)) is bound
