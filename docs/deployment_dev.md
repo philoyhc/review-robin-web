@@ -167,6 +167,10 @@ sends the applications the App Service's own host name, so that host sets
 `CORDWARE_PUBLIC_ORIGIN` (segment 21E) rather than trusting a forwarded
 header. The value is kept privately with the deployment.
 
+**The first release is interim** (author, 2026-10-31): the host and
+Cordware Utilities alone, which need no migrations, with Review Robin
+switched off until the full release deploy can migrate its database.
+
 **One Azure host** (author, 2026-10-24): the dev slot is not revived for
 the institutional release. Segment 21D's live check under real Easy
 Auth runs on that release ("CI/CD workflow" above). This document stays

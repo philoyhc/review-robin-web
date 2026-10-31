@@ -7,9 +7,10 @@ built (segment U1, closed 2026-10-30). Production carries its runtime code
 from 2026-10-30: Cordware's import rules split `utilityapps/` and import
 everything but its prose and tests. The import of 2026-10-31 brought the
 favicon below. `/utilities/health` is excluded from
-sign-in. The application stays switched off until its first release, which
-waits on Cordware's release deploy. The real-tenant smoke test is
-Cordware's, at that release.
+sign-in. Its first release is Cordware's interim one (2026-10-31): the host
+and Utilities alone, deployed without migrations, with Review Robin off until
+the full release deploy can migrate its database. The real-tenant smoke test
+is Cordware's, at that release.
 
 **Identity** (author, 2026-10-30): the name **Cordware Utilities**, mounted at
 `/utilities`. Its accent is **amber `#b45309`**; white on it is about 5:1.

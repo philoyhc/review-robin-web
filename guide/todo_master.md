@@ -27,9 +27,10 @@ Two sibling registers hold the open work that is not queued here:
 ### After segment 21
 
 - **Segment 21D's live check** under real Easy Auth runs on the
-  institutional deployment's first release, not on the dev slot, which stays
-  dormant (author, 2026-10-24: one Azure host is enough;
-  `docs/deployment_dev.md` "CI/CD workflow").
+  institutional deployment's first release of Review Robin, not on the dev
+  slot, which stays dormant (author, 2026-10-24: one Azure host is enough;
+  `docs/deployment_dev.md` "CI/CD workflow"). The interim release of
+  2026-10-31 carries the host and Cordware Utilities only.
 
 ### Queued segments
 
