@@ -43,7 +43,12 @@ None is shown on an empty roster. All three are mutually exclusive, none is tick
 
 **Item: matched addresses as pills** (author, 2026-10-31, after production went live on RRW `920f5c7`). In the three roster tables and the Assignments table, an address bound to a directory account reads as the plain display pill (`pill pill-count`), its case kept, with a "Matched to a directory account" tooltip. Any other address stays plain code. One macro, `operator/partials/_roster_address.html`, renders all five cells. Widened the same day (author): the Relationships table, the Invitations and Responses tables, and their per-reviewer / per-reviewee drill-ins take the same macro, eleven cells in all.
 
-## Semantics — upsert
+**Item: accounts verified in the directory** (author, 2026-10-31, after production). Someone who cannot sign in to the institution cannot be an operator or a sys-admin, yet Accounts › Invite takes any address. Owners are drawn only from existing operators (`session_owners.add_owner`), so the invite is the one gate.
+
+- **The invite looks the address up** (21F's `look_up_all`, on the inviting admin's delegated token). An account that resolves to one person is created with its Entra object ID in `external_principal_id`, the column sign-in matches first (`users.find_signed_in_user`), so whoever signs in as that person finds the account, whichever of their addresses they use. The address is kept as written.
+- **Refused:** not found, ambiguous, and an object ID another account already holds (one person, one account; else sign-in would pick between two rows). That last refusal also keeps sign-in's absorb safe: `users._absorbable` reads a blank principal as "never signed in", so a bound invite is never folded into another row, and none can exist for the same person.
+- **Verified** reads as an account with a non-blank `external_principal_id`: one bound at invite, or one that has signed in. The Accounts table, Session Home's Owners card and New session's owners picker show a verified address as the roster pill (`_roster_address.html`, "Matched to a directory account"); others stay plain code. No migration and no backfill: an account unbound today binds itself at its first sign-in, as it does now.
+
 
 - **Matching.** A row matches by its folded address; on Relationships, by its resolved pair. A new address is a new row, and an address change stays a single-row edit. A file row whose address resolves to a directory account bound on the roster updates that bound row and **keeps its stored address**, since matching and mail already follow the account. An unresolved file address, or an unbound existing row, can't be matched by account, so the row is added. The Validate warning names the pair only when both rows are bound. An unbound existing row stays unflagged until something binds it: re-uploading the roster with replace, or editing its address (Codex, `#3438`).
 - **Blank cells and absent columns keep the existing value.** A file can carry only the columns it changes; nothing is cleared by an upsert. Observers' cohort rule is a column like any other.
@@ -128,6 +133,9 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 10. **Wire upsert on the four cards, then close.** Wiring, the tag-change group-clear ask on the person rosters, route tests; the cumulative `diff-reviewer` read of rungs 7–10 (base: `main` before rung 7). Then the close: `spec-writer` on the doc-impact specs, and the author's browser check of each card.
 11. **Matched addresses as pills** (the item above). Must not touch a route or service.
 12. **Pills on Relationships, Invitations and Responses** (the widening). Same macro; must not touch a route or service.
+13. **Accounts: this item's plan.** Prose only.
+14. **Verify on invite.** `users.invite` takes the lookup's outcome: binds the object ID, refuses the three cases; the route hands in the directory; the invite card names a refusal. Service and route tests. Must not touch the pills.
+15. **Verified accounts as pills.** The Accounts table, Owners card and New session owners picker take the pill. Must not touch a service.
 
 ## Definition of done
 
@@ -142,6 +150,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - An upsert's Status, name and tag changes behave as Semantics — upsert says, the tag change asking first (tests).
 - Validate warns, without blocking, on two active rows bound to one account in a roster (tests).
 - A bound address is a display pill in the roster, Relationships, Assignments, Invitations and Responses tables and the two drill-ins; an unbound one is plain code (tests).
+- An invite binds a resolved address's object ID and refuses not found, ambiguous and an account already held (tests); a verified account's address is a pill on Accounts, the Owners card and the New session picker (tests).
 - `## Doc impact` section present and current
 - `python3 tools/close_check.py 19Z` exits 0; any warning adjudicated
 - `spec-writer` run against the doc-impact specs; flags adjudicated
@@ -153,6 +162,8 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - ~~A file row already on the roster~~: refused (author, 2026-10-31).
 - ~~Two ticks or a radio pair~~: two mutually exclusive ticks, neither ticked by default (author, 2026-10-31, after first ruling a radio pair).
 - ~~Two rows on one account on append~~: refused (author, 2026-10-31).
+- ~~An invite whose lookup could not run~~: created unverified and plain, the card saying it was not checked; the person binds at first sign-in (author, 2026-10-31).
+- ~~Sign-in as verification~~: an account that has signed in counts as verified (author, 2026-10-31).
 
 ## Out of scope
 
@@ -173,4 +184,7 @@ Upsert rungs (2026-10-31): rung 7 rode with the amendment (`#3438`), rung 8 `#34
 - `spec/operations_pages.md` — the Invitations and Responses tables and their drill-ins show a bound address as a pill (pills item, widened).
 - `spec/architecture.md` — "Audit-event detail schema": the `*.imported` counts `new` / `kept` (append) and `new` / `updated` / `unchanged` (upsert) with `context.mode`, and the per-row `*.updated` events a merge writes.
 - `guide/deferred_consolidated.md` — "Two rows in one roster bound to one account": its Validate half shipped; the entry narrows to refusing at upload (at close).
+- `spec/permissions.md` — an invite is checked against the directory: bound on a match, refused when not found, ambiguous or already held (accounts item).
+- `spec/settings_inventory.md` — `users.external_principal_id` can also be set by a verified invite (accounts item).
+- `spec/session_owners.md` — the Owners card and the New session picker show a verified owner's address as a pill (accounts item).
 - `guide/todo_master.md` — the queue entry, deleted at close.
