@@ -24,7 +24,7 @@ point.
 
 ## Registry
 
-`REGISTRY` maps an application name to `AppEntry(path, factory, logger, title)`:
+`REGISTRY` maps an application name to `AppEntry(path, factory, logger, title, icon)`:
 
 | Field | Meaning |
 |---|---|
@@ -32,6 +32,7 @@ point.
 | `factory` | `"module:attribute"` string naming a zero-argument callable that returns a complete ASGI application. |
 | `logger` | Logger-name prefix the application logs under (see Logging). |
 | `title` | How the landing page names the application. Defaults to empty, and the page then shows the registry name. |
+| `icon` | The favicon the landing page draws before the title, an inline SVG data URI (`cordware/web/app_icons.py`). Defaults to empty: no icon. Not part of an entry's equality. Each registered application's is a copy of its own templates' favicon, held to it by `cordware/tests/test_landing.py` (author, 2026-10-31). |
 
 - Four entries, in this order:
 
@@ -82,7 +83,8 @@ nothing there and the application owns `/`.
 `/` answers with a page listing each mounted application, in mount order,
 as a link to its path with its trailing slash and the request's
 `root_path` (`/reviewrobin/` for RRW), titled by its registry title
-(registry name if empty), and a host-level `Sign out` link to
+(registry name if empty) after its registry icon (24 px, decorative, empty
+`alt`; none if empty), and a host-level `Sign out` link to
 `/.auth/logout`. With none mounted it says no applications are running.
 **One application is listed like any other** (author, 2026-10-31): the
 302 redirect a lone application took (ruled 2026-10-21) is withdrawn, as

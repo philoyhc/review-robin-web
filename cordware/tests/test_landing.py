@@ -7,13 +7,14 @@ from __future__ import annotations
 import base64
 import json
 import re
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cordware.identity import current_identity, missing_header_count
-from cordware.main import AppEntry, create_app
+from cordware.main import REGISTRY, AppEntry, create_app
 from cordware.settings import IdentitySettings, identity_settings
 
 
@@ -231,3 +232,41 @@ def test_the_page_carries_the_cord_favicon() -> None:
     assert icon.startswith("data:image/svg+xml;utf8,<svg ")
     assert "fill='%23000'" in icon and "stroke='%23fff'" in icon
     assert "#" not in icon  # every hash escaped, or the data URI ends early
+
+
+def test_an_application_s_icon_is_drawn_before_its_title() -> None:
+    """Author, 2026-10-31: each application's own favicon, decorative."""
+    icon = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'/>"
+    registry = {
+        "one": AppEntry(path="/one", factory=f"{__name__}:stub_factory", logger="stub", title="First", icon=icon),
+        "two": _entry("/two", "Second"),
+    }
+    page = TestClient(create_app(apps=("one", "two"), registry=registry)).get("/").text
+    drawn = re.search(r'<a href="/one/"><img src="([^"]*)" alt="" width="24" height="24">First</a>', page)
+    assert drawn is not None
+    assert drawn.group(1).replace("&lt;", "<").replace("&#39;", "'").replace("&gt;", ">") == icon
+    assert '<a href="/two/">Second</a>' in page  # no icon, no image
+
+
+ICON = re.compile(r'<link rel="icon" type="image/svg\+xml"\s+href="([^"]+)"')
+REPO = Path(__file__).resolve().parents[2]
+
+
+def _own_favicon(name: str) -> str:
+    """The favicon an application's own templates carry, read as text (the
+    host never imports an application)."""
+    if name == "reviewrobin":
+        (icon,) = ICON.findall((REPO / "app/web/templates/base.html").read_text(encoding="utf-8"))
+        return icon
+    if name == "utilities":
+        (icon,) = ICON.findall((REPO / "utilityapps/templates/utilities/base.html").read_text(encoding="utf-8"))
+        return icon
+    text = (REPO / "residentialapps/web/templates/residential/base.html").read_text(encoding="utf-8")
+    return ICON.findall(text[text.index(f'app_key == "{name}"'):])[0]
+
+
+@pytest.mark.parametrize("name", list(REGISTRY))
+def test_each_registered_application_s_icon_is_its_own_favicon(name: str) -> None:
+    icon = REGISTRY[name].icon
+    assert icon.startswith("data:image/svg+xml;utf8,<svg ") and "#" not in icon
+    assert icon == _own_favicon(name)
