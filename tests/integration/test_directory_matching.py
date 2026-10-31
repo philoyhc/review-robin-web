@@ -12,6 +12,7 @@ Two negative cases the plan names:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 
 import pytest
@@ -228,7 +229,7 @@ def test_the_chip_strip_describes_the_row_the_gate_opens(
 
     assert shown == [first.id]
     assert len(roster_selects) >= 3
-    assert all("ORDER BY" in sql for sql in roster_selects[:3])
+    assert all(re.search(r"ORDER BY \w+\.id\b", sql) for sql in roster_selects[:3])
 
 
 # --- one person across rosters ---
