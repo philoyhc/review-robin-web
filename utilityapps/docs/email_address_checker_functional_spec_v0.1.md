@@ -16,7 +16,8 @@ Kept here so this proposal and the built contract can be read together
 - **One query** (§5 steps 1–2): `mail eq '…' or userPrincipalName eq '…'`
   per address, through the host's shared Graph helper
   (`cordware/spec/identity.md` "Graph"). The real-tenant smoke test
-  confirms the combined form; splitting it is a one-function change.
+  confirmed the combined form on 2026-10-31; splitting it would be a
+  one-function change.
 - **No server state** (§3, §10): the preview carries the file back in the
   page, and the result page carries the CSV as a `data:` download; the
   server holds neither between requests.
@@ -242,7 +243,7 @@ Do not imply the tool is checking login readiness, entitlement or institutional 
 
 ## 13. Implementation sequence and proof-of-concept gate
 
-**Phase 0 — Validate live Graph capability.** After the pending Web App-side Easy Auth UAMI/FIC assertion wiring and interactive Graph-token validation, test a small set of **real, authorized test accounts** using (i) UPN, (ii) primary `mail`, and (iii) known secondary SMTP aliases. Record whether each lookup works under the actual delegated `User.ReadBasic.All` token and whether aliases can be queried without additional consent. Validate the actual Easy Auth email claim used by Review Robin. Do not record identifiable test data in the public repository.
+**Phase 0 — Validate live Graph capability.** *Done 2026-10-31, at Cordware's first release, but for aliases and token expiry (`utilityapps/README.md`, "Graph").* After the pending Web App-side Easy Auth UAMI/FIC assertion wiring and interactive Graph-token validation, test a small set of **real, authorized test accounts** using (i) UPN, (ii) primary `mail`, and (iii) known secondary SMTP aliases. Record whether each lookup works under the actual delegated `User.ReadBasic.All` token and whether aliases can be queried without additional consent. Validate the actual Easy Auth email claim used by Review Robin. Do not record identifiable test data in the public repository.
 
 **Phase 1 — Build minimum checker.** In RRW, add `utilityapps/` with one Utilities mount, one email-check tool, CSV upload/parser, primary-mail/UPN Graph queries, output and duplicate detection; tests and CI. Alias checks may remain disabled.
 

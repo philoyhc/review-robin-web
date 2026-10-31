@@ -10,7 +10,10 @@ favicon below. `/utilities/health` is excluded from
 sign-in. Its first release is Cordware's interim one (2026-10-31): the host
 and Utilities alone, deployed without migrations, with Review Robin off until
 the full release deploy can migrate its database. The real-tenant smoke test
-is Cordware's, at that release.
+ran at that release and passed (Cordware's private records): a mail
+address, a sign-in name and an unknown address came back `OK`,
+`USE_PRIMARY` and `NOT_FOUND`, and a past class list of student addresses
+classified the same way.
 
 **Identity** (author, 2026-10-30): the name **Cordware Utilities**, mounted at
 `/utilities`. Its accent is **amber `#b45309`**; white on it is about 5:1.
@@ -29,10 +32,13 @@ Rejected:
 Amber can read as "warning", so alerts use the status token `--warn`, never
 the accent.
 
-**Graph, 2026-10-30** (Cordware's private progress report): with a user's
-delegated token, a lookup by UPN works and a lookup by mail needs
-`$filter=mail eq '…'`; calls from application code are not yet proved.
-This is the checker spec's Phase 0, in part.
+**Graph, 2026-10-30 and 2026-10-31** (Cordware's private progress report):
+with a user's delegated token, a lookup by UPN works and a lookup by mail
+needs `$filter=mail eq '…'`. From 2026-10-31 the checker's combined query
+runs from application code in production, for staff and student accounts.
+This is the checker spec's Phase 0, done but for two cases not yet
+exercised: a secondary alias, and the sign-in-again message once the
+token's hour is up.
 
 | Path | What it is |
 |---|---|
