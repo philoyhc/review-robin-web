@@ -223,14 +223,26 @@
               {% include "operator/partials/_held_upload.html" %}
 
               {% if existing_count and existing_count > 0 %}
-                <p>
+                <fieldset class="upload-mode">
+                  <legend class="visually-hidden">What the upload does with the existing relationships</legend>
                   <label class="confirm-label">
                     <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
                            data-delete-confirm="replace-roster">
                     <span>Yes, replace the existing
                     <span class="pill pill-empty">{{ existing_count }} relationship{% if existing_count != 1 %}s{% endif %}</span>.</span>
                   </label>
-                </p>
+                  {# 19Z scaffold: drawn, not wired. Append is the replace tick's
+                     sibling, its own field (`append`), unticked by default as replace
+                     is (author, 2026-10-31). The wiring rung makes the two mutually
+                     exclusive (ticking one unticks the other; both may be unticked)
+                     and lets either enable Upload. Disabled until then. #}
+                  <label class="confirm-label">
+                    <input type="checkbox" name="append" value="true" disabled>
+                    <span>Yes, append to the existing
+                    <span class="pill pill-empty">{{ existing_count }} relationship{% if existing_count != 1 %}s{% endif %}</span>:
+                    every relationship already here stays (not available yet).</span>
+                  </label>
+                </fieldset>
               {% endif %}
 
               {# A replace refused for clearing group answers: the count,

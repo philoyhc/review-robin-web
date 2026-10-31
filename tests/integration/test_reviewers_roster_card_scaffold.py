@@ -287,8 +287,13 @@ def test_the_replace_confirm_is_one_tick_naming_every_loss(client, db):
     upload = re.search(r'id="reviewers-upload-h".*?</section>', html, re.S)
     danger = re.search(r'id="reviewers-danger-h".*?</section>', html, re.S)
     assert upload and danger, "scaffold panel columns not found"
-    ticks = re.findall(r'<input[^>]*type="checkbox"[^>]*>', upload.group(0))
+    # The replace confirm, beside 19Z's append tick; neither is ticked by
+    # default, as both are deliberate confirmations (author, 2026-10-31).
+    ticks = re.findall(r'<input[^>]*name="confirm_replace"[^>]*>', upload.group(0))
     assert len(ticks) == 1, f"expected one replace confirm, got {len(ticks)}"
+    assert "checked" not in ticks[0], "the replace tick ships ticked"
+    appends = re.findall(r'<input[^>]*name="append"[^>]*>', upload.group(0))
+    assert len(appends) == 1 and "checked" not in appends[0], appends
     # Vacuity guard: prove the clause is reachable at all before asserting
     # the two confirms agree about it.
     assert "assignment" in danger.group(0), (
@@ -309,6 +314,8 @@ def test_the_replace_confirm_is_absent_on_an_empty_roster(client, db):
     upload = re.search(r'id="reviewers-upload-h".*?</section>', html, re.S)
     assert upload, "upload column not found"
     assert "replace the existing" not in upload.group(0), upload.group(0)
+    assert 'name="append"' not in upload.group(0), upload.group(0)
+    assert 'name="confirm_replace"' not in upload.group(0), upload.group(0)
     # The card itself still renders: it is informational, and every state
     # it renders in must be whole.
     assert 'id="roster-card"' in html
@@ -425,7 +432,9 @@ def test_a_pill_confirm_keeps_its_sentence_in_one_piece(client, db):
     html = _markup(_page(client, rs))
 
     labels = re.findall(r'<label class="confirm-label">.*?</label>', html, re.S)
-    assert len(labels) == 2, (
+    # The Danger Zone's confirm, and the Upload card's replace and append
+    # ticks (19Z): three labels, each held to the one-span rule.
+    assert len(labels) == 3, (
         f"expected the Danger Zone's and the upload's confirms, got "
         f"{len(labels)}"
     )

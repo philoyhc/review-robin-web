@@ -289,7 +289,8 @@
               {% include "operator/partials/_held_upload.html" %}
 
               {% if existing_count and existing_count > 0 %}
-                <p>
+                <fieldset class="upload-mode">
+                  <legend class="visually-hidden">What the upload does with the existing reviewees</legend>
                   <label class="confirm-label">
                     <input type="checkbox" name="confirm_replace" value="true" required{% if confirm_replace_checked %} checked{% endif %}
                            data-delete-confirm="replace-roster">
@@ -309,6 +310,18 @@
                     <span class="pill pill-empty">{{ status_pills.relationship_count }} relationship{% if status_pills.relationship_count != 1 %}s{% endif %}</span>
                     involving them{% endif %}.</span>
                   </label>
+                  {# 19Z scaffold: drawn, not wired. Append is the replace tick's
+                     sibling, its own field (`append`), unticked by default as replace
+                     is (author, 2026-10-31). The wiring rung makes the two mutually
+                     exclusive (ticking one unticks the other; both may be unticked)
+                     and lets either enable Upload. Disabled until then. #}
+                  <label class="confirm-label">
+                    <input type="checkbox" name="append" value="true" disabled>
+                    <span>Yes, append to the existing
+                    <span class="pill pill-empty">{{ existing_count }} reviewee{% if existing_count != 1 %}s{% endif %}</span>:
+                    every reviewee, assignment and response already here stays (not available yet).</span>
+                  </label>
+                </fieldset>
                   {# The acknowledgment rides with this tick, as it
                      does on the delete gates. Without it
                      `_handle_import` answers 400 with the upload
@@ -320,7 +333,6 @@
                     <input type="hidden" id="reviewees-import-ack"
                            name="acknowledge_response_loss" value="true">
                   {% endif %}
-                </p>
               {% endif %}
 
               <div class="unlock-col-actions">

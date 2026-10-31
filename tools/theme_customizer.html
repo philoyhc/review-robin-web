@@ -3504,6 +3504,20 @@
         margin-top: 3px;
         flex: none;
       }
+      /* The Upload card's replace and append ticks (segment 19Z): a
+         bare fieldset, so the pair reads as the one confirm it grew
+         from. The first keeps `.confirm-label`'s gap from the file
+         input; the second sits close under it, as one choice. */
+      body.ui-v2 .upload-mode {
+        border: 0;
+        margin: 0;
+        padding: 0;
+        min-width: 0;
+      }
+      body.ui-v2 .upload-mode .confirm-label + .confirm-label {
+        margin-top: var(--space-2);
+      }
+      body.ui-v2 .upload-mode input:disabled + span { color: var(--text-subtle); }
 
       body.ui-v2 .session-expander-body {
         display: flex;

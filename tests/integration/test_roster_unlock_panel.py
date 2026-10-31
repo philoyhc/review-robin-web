@@ -311,7 +311,8 @@ def test_each_confirm_sentence_is_one_flex_item(
     card = _card(_get(client, rs, page, "?unlocked=1"), page)
 
     labels = re.findall(r'<label class="confirm-label">(.*?)</label>', card, re.S)
-    assert len(labels) == 2, f"expected the upload + delete-all confirms, got {len(labels)}"
+    # The Upload card's replace and append ticks (19Z) and Delete all.
+    assert len(labels) == 3, f"expected the upload pair + delete-all confirms, got {len(labels)}"
     for body in labels:
         text_after_input = body[body.index(">", body.index("<input")) + 1:]
         assert text_after_input.lstrip().startswith("<span>"), (
